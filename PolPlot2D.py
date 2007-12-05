@@ -172,7 +172,7 @@ class Plotter(wx.Panel):
         # Create the colorbar
         # Provide an empty handle to attach colormap properties
         self.colormapper = mpl.image.FigureImage(self.figure)
-        self.colormapper.set_array(numpy.zeros(1))
+        self.colormapper.set_array(numpy.zeros((1,1)))
         self.figure.colorbar(self.colormapper,self.coloraxes)
 
         # Provide slots for the graph labels
@@ -340,8 +340,8 @@ class Plotter(wx.Panel):
         im = self.menuevent.inaxes.pcolorfast(data.xedges,data.yedges,data.v)
         self.vmin = numpy.min(data.v)
         self.vmax = numpy.max(data.v)
-        self.colormapper.set_clim(self.vmin,self.vmax)
         self.colormapper.add_observer(im)
+        self.colormapper.set_clim(self.vmin,self.vmax)
         self.canvas.draw_idle()
 
     def onGridToggle(self, event):
@@ -439,18 +439,14 @@ class Plotter(wx.Panel):
         # axis.  Second best is to suppress those within 10% of the
         # end of the axis. The current method is to remove the last
         # two, but it doesn't work very well.
-        self.pm.yaxis.get_majorticklabels()[-1].set_visible(False)
-        self.pm.xaxis.get_majorticklabels()[-1].set_visible(False)
-        self.pm.yaxis.get_majorticklabels()[-2].set_visible(False)
-        self.pm.xaxis.get_majorticklabels()[-2].set_visible(False)
+        #self.pm.yaxis.get_majorticklabels()[-1].set_visible(False)
+        #self.pm.xaxis.get_majorticklabels()[-1].set_visible(False)
+        #self.pm.yaxis.get_majorticklabels()[-2].set_visible(False)
+        #self.pm.xaxis.get_majorticklabels()[-2].set_visible(False)
 
         # Set the limits on the colormap
         vmin = self.vmin if self.vmin < self.vmax else 0
         vmax = self.vmax if self.vmin < self.vmax else 1
-        for ax in self.axes:
-            for im in ax.get_images():
-                self.colormapper.add_observer(im)
-                #im.set_clim(vmin=vmin, vmax=vmax)
         self.colormapper.set_clim(vmin=vmin,vmax=vmax)
         #self.colormapper.set_cmap(mpl.cm.cool)
 
@@ -482,12 +478,33 @@ class Plotter(wx.Panel):
         self.vbox.set_text(r"$%s$" % (label))
         pass
 
-    def surface(self,poldata):
-        for ax,data in [(self.pp,poldata.pp),(self.mm,poldata.mm),
-                        (self.pm,poldata.pm),(self.mp,poldata.mp)]:
-            ax.pcolorfast(data.xedges,data.yedges,data.v)
-            self.vmin = min(self.vmin, numpy.min(data.v))
-            self.vmax = max(self.vmax, numpy.max(data.v))
+    def surfacepol(self,poldata):
+        for slice,data in [('++',poldata.pp),('--',poldata.mm),
+                        ('+-',poldata.pm),('-+',poldata.mp)]:
+            self.surface(slice,data)
+        pass
+
+    def surface(self,slice,data):
+        if slice == '++': ax = self.pp
+        elif slice == '+-': ax = self.pm
+        elif slice == '-+': ax = self.mp
+        elif slice == '--': ax = self.mm
+        else: raise ValueError, "expected polarization crosssection"
+        
+        # Should be the following:
+        #    im = ax.pcolor(data.xedges,data.yedges,data.v,shading='flat')
+        # but this won't work in all versions of mpl, so first figure out
+        # if we are using pcolorfast or pcolormesh then adjust the kwargs.
+        try:
+            p=ax.pcolorfast
+            kw={}
+        except AttributeError:
+            p=ax.pcolormesh
+            kw=dict(shading='flat')
+        im = p(data.xedges,data.yedges,data.v,**kw)
+        self.colormapper.add_observer(im)
+        self.vmin = min(self.vmin, numpy.min(data.v))
+        self.vmax = max(self.vmax, numpy.max(data.v))
         pass
 
 
@@ -527,7 +544,7 @@ def demo():
 
     # render the graph to the pylab plotter
     plotter.clear()
-    plotter.surface(d)
+    plotter.surfacepol(d)
     plotter.render()
     
     app.MainLoop()
