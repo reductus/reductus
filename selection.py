@@ -3,43 +3,28 @@
 import wx,os
 import wx.lib.customtreectrl as tree
 
-# EVT_COMMAND_TREE_...
-#    BEGIN/END LABEL_EDIT/DRAG
-#    BEGIN RDRAG
-#    DELETE ITEM
-#    ITEM EXPAND(ED/ING)/COLLAPS(ED/ING)/ACTIVATED
-#    ITEM GETTOOLTIP/MENU
-#    ITEM RIGHT/MIDDLE CLICK
-#    GET/SET INFO
-#    SEL CHANG(ED/ING)
-#    STATE IMAGE_CLICK
-#    KEY DOWN
-# Mouse Events:
-#    item, flags = tree.HitTest(event.GetPosition())
-#        
-
-
 class DataTree(tree.CustomTreeCtrl):
     '''
-    Tree to manage reflectometry datasets.
+    Tree to manage the selection of multiple files.
     '''
 
     def __init__(self, *args, **kwargs):
         kwargs['style'] = tree.TR_DEFAULT_STYLE|tree.TR_HIDE_ROOT
         super(DataTree, self).__init__(*args, **kwargs)
-        #self.Bind(wx.EVT_TREE_ITEM_COLLAPSING, self.OnCollapseItem)
         self.Bind(tree.EVT_TREE_ITEM_EXPANDING, self.OnExpandItem)
         self.Bind(tree.EVT_TREE_SEL_CHANGED, self.OnSelected)
         self.Bind(tree.EVT_TREE_ITEM_CHECKED, self.OnChecked)
         self.AddRoot('')
         self._collapsing = False
 
-    def add(self, path):
+    def root(self, path):
+        item = self.GetRootItem()
+        self.DeleteChildren(item)
         path = os.path.abspath(path)
-        item = self.AppendItem(self.GetRootItem(), path)
         self.SetPyData(item, path)
-        self.SetItemHasChildren(item, os.path.isdir(path))
-        self.Toggle(item)  # Expand the path
+        #self.SetItemHasChildren(item, os.path.isdir(path))
+        #self.Toggle(item)  # Expand the path
+        self.expand(item)
 
     def expand(self, item):
         path = self.GetPyData(item)
@@ -65,36 +50,105 @@ class DataTree(tree.CustomTreeCtrl):
         item = event.GetItem()
         self.expand(item)
 
-    def OnCollapseItem(self, event):
-        # Be prepared, self.CollapseAndReset below may cause
-        # another wx.EVT_TREE_ITEM_COLLAPSING event being triggered.
-        if self._collapsing:
-            event.Veto()
-            return
 
-        self._collapsing = True
-        item = event.GetItem()
-        self.CollapseAndReset(item)
-        self.SetItemHasChildren(item)
-        self._collapsing = False
+# Update notification for paths in path selector
+wxEVT_COMMAND_PATH_UPDATED = wx.NewEventType()
+EVT_PATH_UPDATED = wx.PyEventBinder(wxEVT_COMMAND_PATH_UPDATED, 1)
+class PathUpdatedEvent(wx.PyCommandEvent):
+    def __init__(self, id, value = "", object=None):
+        wx.PyCommandEvent.__init__(self, wxEVT_COMMAND_PATH_UPDATED, id)
+
+        self.value = value
+        self.SetEventObject(object)
+
+    def GetValue(self):
+        """Retrieve the value of the control at the time
+        this event was generated."""
+        return self.value
+
+class PathSelector(wx.Panel):
+    """
+    wx megawidget displaying a label, a path entry box and a button to
+    select the path using the file dialog.
+    """
+    def __init__(self, parent, *args, **kw):
+        label = kw.pop('label','Path')
+        self.color = kw.pop('color',wx.BLACK)
+        self.errorcolor = kw.pop('errorcolor',wx.RED)
+        path = os.path.abspath(kw.pop('path','.'))
+        super(PathSelector,self).__init__(parent, *args, **kw)
+        self.label = wx.StaticText(self, -1, label)
+        self.path = wx.TextCtrl(self, -1, path, style=wx.TE_PROCESS_ENTER)
+        self.button = wx.Button(self, -1, "...")
+        self.Bind(wx.EVT_BUTTON, self.onBrowse, self.button)
+        #self.path.Bind(wx.EVT_TEXT, self.onText)
+        self.path.Bind(wx.EVT_TEXT_ENTER, self.onEnter)
+        
+        sizer = wx.BoxSizer(wx.HORIZONTAL)
+        flag = wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_CENTER_HORIZONTAL|wx.ALL
+        border=2
+        sizer.Add(self.label, flag=flag, border=border)
+        sizer.Add(self.path, 1, flag=flag|wx.GROW|wx.SHRINK, border=2)
+        sizer.Add(self.button, flag=flag, border=2)
+        self.SetSizer(sizer)
+
+    def GetValue(self):
+        return self.path.GetValue()
+
+    def isvalid(self):
+        return os.path.isdir(self.path.GetValue())
+    
+    def validate(self):
+        if self.isvalid():
+            self.path.SetForegroundColour(self.color)
+        else:
+            self.path.SetForegroundColour(self.errorcolor)
+            
+    def onText(self, event):
+        print "onText"
+        self.validate()
+        
+    def onEnter(self, event):
+        # Forward the EVT_TEXT_ENTER events if the value is good
+        #print "receiving 'Enter'"
+        if self.isvalid():
+            self.GetEventHandler().ProcessEvent(event)
+        #event.Skip()
+        pass
+
+    def onBrowse(self, event):
+        oldpath = self.path.GetValue()
+        dlg = wx.DirDialog(self, message="Choose a directory",
+                           style=wx.DD_DIR_MUST_EXIST, defaultPath=oldpath)
+        if dlg.ShowModal() == wx.ID_OK:
+            path = dlg.GetPath()
+            self.path.Replace(0,len(oldpath),path)
+            # TODO: How do I generate a EVT_TEXT_ENTER event?
+            # Emulating a Return key doesn't work:
+            #    self.path.EmulateKeyPress(wx.KeyEvent(wx.WXK_RETURN))
+        dlg.Destroy()
+        pass
+
 
 class SelectionPanel(wx.Panel):
     def __init__(self, *args, **kw):
         root = kw.pop('root',None)
+        if root is None: root = '.'
+
         super(SelectionPanel,self).__init__(*args, **kw)
+        self._path = PathSelector(self,path=root)
+        self.Bind(wx.EVT_TEXT_ENTER, self.onRefresh)
         self._tree = DataTree(self)
+        self._tree.root(root)
 
         sizer = wx.BoxSizer(wx.VERTICAL)
+        sizer.Add(self._path, flag=wx.EXPAND)
         sizer.Add(self._tree, 1, flag=wx.GROW|wx.SHRINK)
         self.SetSizer(sizer)
 
-        # Populate the tree with the list of root directories containing data
-        if root is None: root = '.'
-        self._tree.add(root)
-
-
-    def refresh(self):
-        pass
+    def onRefresh(self, event):
+        #print "refresh list"
+        self._tree.root(self._path.GetValue())
 
 
 def demo():
