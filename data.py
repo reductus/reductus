@@ -20,6 +20,27 @@ def centers_from_edges(x):
     """
     return (x[:-1]+x[1:])/2
 
+def dims(a):
+    return "x".join([str(v) for v in a.shape])
+
+def dict2text(d,indent=0):
+    keys = d.keys()
+    keys.sort()
+    lines = []
+    for key in keys:
+        val = d[key]
+        if isinstance(val,dict):
+            text = "\n"+dict2text(val,indent+2)
+        elif isinstance(val,N.ndarray):
+            text = "array " + dims(val)
+        else:
+            text = str(val)
+        lines.append(" "*indent + key + ": " + text)
+    return "\n".join(lines)
+
+
+class Prop(object): pass
+
 class Data(object):
     """
     Data object.
@@ -33,6 +54,8 @@ class Data(object):
     
     Note: for reflectivity the natural dimensions are x='Qz',y='Qx',z='Qy'
     """
+    format = "unknown"
+    prop = Prop()
     _x,_xedges,dx = None,None,None
     _y,_yedges,dy = None,None,None
     _z,_zedges,dz = None,None,None
@@ -104,14 +127,12 @@ class Data(object):
     # Set attributes on initialization
     def __init__(self, **kw): 
         self.set(**kw)
+        
+    def summary(self):
+        return dict2text(self.prop.__dict__)
 
     def __str__(self):
-        dims = "%d"%(len(self.x))
-        if self.y is not None: 
-            dims += "x%d"%(len(self.y))
-        if self.z is not None:
-            dims += "x%d"%(len(self.z))
-        return "Data(%s)"%(dims)
+        return "Data(%s)"%(dims(self.v))
 
 class PolarizedData(object):
     """
@@ -222,7 +243,7 @@ def peakspol(n=40):
 
 def demo():
     """Smoke test demo"""
-    d = noise2dpol(n=3)
+    d = noisepol2d(n=3)
     print "polarized 2D noise:",d
     print "++",d.pp,d.pp.v
     print "--",d.mm,d.mm.v

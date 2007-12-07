@@ -131,29 +131,40 @@ def cmap_menu(canvas,mapper):
     return menu
 
 class Plotter(wx.Panel):
+    def __init__(self, parent, id = -1, dpi = None, **kwargs):
+        wx.Panel.__init__(self, parent, id=id, **kwargs)
+        self.figure = mpl.figure.Figure(dpi=dpi, figsize=(2,2))
+        self.canvas = FigureCanvasWxAgg(self, -1, self.figure)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        sizer.Add(self.canvas,1,wx.EXPAND)
+        self.SetSizer(sizer)
+    
+class Plotter4(wx.Panel):
     """
     The PlotPanel has a Figure and a Canvas. OnSize events simply set a 
     flag, and the actually redrawing of the
     figure is triggered by an Idle event.
     """
-    def __init__(self, parent, id = -1, color = None,\
-        dpi = None, style = wx.NO_FULL_REPAINT_ON_RESIZE, **kwargs):
+    def __init__(self, parent, id = -1, color = None, dpi = None, **kwargs):
 
         # Set up the panel parameters        
-        wx.Panel.__init__(self, parent, id = id, style = style, **kwargs)
-        self.Bind(wx.EVT_IDLE, self._onIdle)
-        self.Bind(wx.EVT_SIZE, self._onSize)
+        #style = wx.NO_FULL_REPAINT_ON_RESIZE
+        wx.Panel.__init__(self, parent, id = id, **kwargs)
         self.Bind(wx.EVT_CONTEXT_MENU, self.onContextMenu)
 
         # Create the figure        
-        self.figure = mpl.figure.Figure(None, dpi)
-        self.canvas = NoRepaintCanvas(self, -1, self.figure)
+        self.figure = mpl.figure.Figure(dpi=dpi, figsize=(2,2))
+        #self.canvas = NoRepaintCanvas(self, -1, self.figure)
+        self.canvas = FigureCanvasWxAgg(self, -1, self.figure)
         self.canvas.Bind(wx.EVT_MOUSEWHEEL, self.onMouseWheel)
         self.canvas.mpl_connect('key_press_event',self.onKeyPress)
         self.canvas.mpl_connect('button_press_event',self.onButtonPress)
         self.SetColor(color)
         self._resizeflag = True
-        self._SetSize()
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        sizer.Add(self.canvas,1,wx.EXPAND)
+        self.SetSizer(sizer)
+        #self.Fit()
         
         # Create four subplots with no space between them.
         # Leave space for the colorbar.
@@ -172,7 +183,7 @@ class Plotter(wx.Panel):
         # Create the colorbar
         # Provide an empty handle to attach colormap properties
         self.colormapper = mpl.image.FigureImage(self.figure)
-        self.colormapper.set_array(numpy.zeros((1,1)))
+        self.colormapper.set_array(numpy.zeros(1))
         self.figure.colorbar(self.colormapper,self.coloraxes)
 
         # Provide slots for the graph labels
@@ -195,6 +206,10 @@ class Plotter(wx.Panel):
         self.xscale = 'linear'
         self.yscale = 'linear'
         self.zscale = 'linear'
+        
+        # Set up the default plot
+        self.clear()
+        self.render()
 
     def onKeyPress(self,event):
         if not event.inaxes: return
@@ -295,17 +310,6 @@ class Plotter(wx.Panel):
             self._SetSize()
             self.draw()
 
-    def _SetSize(self, pixels = None):
-        """
-        This method can be called to force the Plot to be a desired size, which 
-        defaults to the ClientSize of the panel
-        """
-        if not pixels:
-            pixels = self.GetClientSize()
-        self.canvas.SetSize(pixels)
-        self.figure.set_size_inches(pixels[0]/self.figure.get_dpi(),
-        pixels[1]/self.figure.get_dpi())
-
     def draw(self):
         """Where the actual drawing happens"""
         self.figure.canvas.draw_idle()
@@ -318,32 +322,6 @@ class Plotter(wx.Panel):
         save_canvas(self.canvas,"polplot")
 
     # Context menu implementation
-    def onLoadData(self, evt):
-        """
-        Data load dialog
-        """
-        path = None
-        dlg = wx.FileDialog(self, message="Choose a file", style=wx.FD_OPEN)
-        if dlg.ShowModal() == wx.ID_OK:
-            path = dlg.GetPath()
-        dlg.Destroy()
-        if path is None: return
-
-        import readicp,data
-        fields = readicp.read(path)
-        x = numpy.arange(len(fields['columns']['COUNTS']))+1
-        y = numpy.arange(fields['detector'].shape[1])+1
-        v = numpy.log10(fields['detector'].T+1)
-        data = data.Data(x=x,y=y,v=v)
-        ax = self.menuevent.inaxes
-        #for im in ax.images: im.remove()
-        im = self.menuevent.inaxes.pcolorfast(data.xedges,data.yedges,data.v)
-        self.vmin = numpy.min(data.v)
-        self.vmax = numpy.max(data.v)
-        self.colormapper.add_observer(im)
-        self.colormapper.set_clim(self.vmin,self.vmax)
-        self.canvas.draw_idle()
-
     def onGridToggle(self, event):
         self.grid = not self.grid
         self.render()
@@ -367,9 +345,6 @@ class Plotter(wx.Panel):
         wx.EVT_MENU(self, item.GetId(), self.onGridToggle)
         item = popup.AppendMenu(wx.ID_ANY, "Colourmaps", 
                                 cmap_menu(self.canvas, self.colormapper))
-        if self.menuevent.inaxes and self.menuevent.inaxes != self.coloraxes:
-            popup.Append(315,'&Load data', 'Load data into the current cross section')
-            wx.EVT_MENU(self, 315, self.onLoadData)
         #popup.Append(315,'&Properties...','Properties editor for the graph')
         #wx.EVT_MENU(self, 315, self.onProp)
 
@@ -452,6 +427,9 @@ class Plotter(wx.Panel):
 
         for ax in self.axes: ax.grid(alpha=0.4,visible=self.grid)
         pass
+    
+    def update(self):
+        self.canvas.draw_idle()
 
     def xaxis(self,label,units):
         """xaxis label and units.
@@ -483,6 +461,9 @@ class Plotter(wx.Panel):
                         ('+-',poldata.pm),('-+',poldata.mp)]:
             self.surface(slice,data)
         pass
+    
+    def delete(self, id):
+        id.remove()
 
     def surface(self,slice,data):
         if slice == '++': ax = self.pp
@@ -505,30 +486,7 @@ class Plotter(wx.Panel):
         self.colormapper.add_observer(im)
         self.vmin = min(self.vmin, numpy.min(data.v))
         self.vmax = max(self.vmax, numpy.max(data.v))
-        pass
-
-
-    
-
-class NoRepaintCanvas(FigureCanvasWxAgg):
-    """We subclass FigureCanvasWxAgg, overriding the _onPaint method, so that
-    the draw method is only called for the first two paint events. After that,
-    the canvas will only be redrawn when it is resized.
-    """
-    def __init__(self, *args, **kwargs):
-        FigureCanvasWxAgg.__init__(self, *args, **kwargs)
-        self._drawn = 0
-
-    def _onPaint(self, evt):
-        """
-        Called when wxPaintEvt is generated
-        """
-        if not self._isRealized:
-            self.realize()
-        if self._drawn < 2:
-            self.draw(repaint = False)
-            self._drawn += 1
-        self.gui_repaint(drawDC=wx.PaintDC(self))
+        return im
 
 
 def demo():

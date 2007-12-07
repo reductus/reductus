@@ -54,7 +54,7 @@ def readdata(fh):
 
     X = N.array(rows, 'f')
     Z = N.array(blocks)
-    return X.transpose(),Z
+    return X.T,Z.T
 
 
 def get_tokenized_line(file):
@@ -362,7 +362,7 @@ def asdata(fields):
     d.x = d.prop.columns[d.prop.columnnames[0]]
     if len(d.v.shape) > 1:
         d.ylabel = 'Pixel'
-        d.y = numpy.arange(d.v.shape[1])
+        d.y = numpy.arange(d.v.shape[0])
     return d
 
 def data(filename):
@@ -388,7 +388,7 @@ def plot(filename):
     canvas = pylab.gcf().canvas
     d = data(filename)
     if len(d.v.shape) > 1:
-        pylab.gca().pcolorfast(d.xedges,d.yedges,d.v.T)
+        pylab.gca().pcolorfast(d.xedges,d.yedges,d.v)
         pylab.xlabel(d.xlabel)
         pylab.ylabel(d.ylabel)
     else:
