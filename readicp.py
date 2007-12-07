@@ -2,13 +2,22 @@
 
 # Author: Paul Kienzle
 # Initial version: William Ratcliff
+
+"""
+ICP data reader.
+
+summary(filename)  - reads the header information
+read(filename) - reads header information and data
+"""
+
 import numpy as N
 import datetime
 
 
-def readdata(fh,comments='#',
-             usecols=None, unpack=False):
-
+def readdata(fh):
+    """
+    Read ICP data, including PSD data if lines contain commas.
+    """
     rows = []
     blocks = []
 
@@ -89,6 +98,9 @@ def get_quoted_tokens(file):
     return tokens
 
 def readheader1(file):
+    """
+    Read the tow line summary at the start of the ICP data files.
+    """
     tokens = get_quoted_tokens(file)
     header={}
     header['filename']=tokens[0]
@@ -106,8 +118,8 @@ def readheader1(file):
     polarized_index = line.find("F1: O", 52)
     if polarized_index > 0:
         header['comment'] = line[:polarized_index].rstrip()
-        F1 = '+' if line.find("F1: ON", 52) else '-'
-        F2 = '+' if line.find("F2: ON", 52) else '-'
+        F1 = '+' if line.find("F1: ON", 52)>0 else '-'
+        F2 = '+' if line.find("F2: ON", 52)>0 else '-'
         header['polarization'] = F1+F2
     else:
         header['comment'] = line.rstrip()
@@ -117,7 +129,7 @@ def readheader1(file):
 
 def readiheader(file):
     """
-    Read I-buffer structure, including motors
+    Read I-buffer structure, excluding motors.
     """
     header = {}
     tokenized=get_tokenized_line(file)
@@ -143,6 +155,9 @@ def readiheader(file):
 
 
 def readqheader(file):
+    """
+    Read Q-buffer structure.
+    """
     #experiment info
     tokenized=get_tokenized_line(file)
     header = {}
@@ -254,6 +269,11 @@ def readcolumnheaders(file):
 
 
 def readcolumns(file, columns):
+    '''
+    Read and parse ICP data columns listed in columns.  Return a dict of
+    column name: vector.  If using a position sensitive detector, return 
+    an array of detector values x scan points.
+    '''
     values,detector = readdata(file)
     return dict(zip(columns,values)),detector
 
@@ -272,14 +292,10 @@ def genmotorcolumns(columns,motors):
             columns[M] = vector
     pass
 
-def read(filename):
-    # Open file or gzip file
-    if filename.endswith('.gz'):
-        import gzip
-        file = gzip.open(filename,'r')
-    else:
-        file = open(filename, 'r')
-
+def parseheader(file):
+    """
+    Read and parse ICP header information
+    """
     # Determine FileType
     fields = readheader1(file)
     if fields['scantype']=='I':
@@ -291,18 +307,96 @@ def read(filename):
         fields.update(readqheader(file))
         fields['motors'] = readmotors(file)
     else:
-        raise ValueError, "Invalid scantype in %s"%(filename)
+        raise ValueError, "Unknown scantype"
+    fields['columnnames'] = readcolumnheaders(file)
+    return fields
 
-    #read columns and detector images if available
-    c = readcolumnheaders(file)
-    fields['columns'],fields['detector'] = readcolumns(file,c)
+
+def gzopen(filename):
+    """
+    Open file or gzip file
+    """
+    if filename.endswith('.gz'):
+        import gzip
+        file = gzip.open(filename,'r')
+    else:
+        file = open(filename, 'r')
+    return file
+
+def summary(filename):
+    """
+    Read header from file, returning a dict of fields.
+    """
+    file = gzopen(filename)
+    fields = parseheader(file)
+    file.close()
+    return fields
+
+def read(filename):
+    """
+    Read header and data from file, returning a dict of fields.
+    """
+    file = gzopen(filename)
+    fields = parseheader(file)
     
+    #read columns and detector images if available
+    fields['columns'],fields['detector'] \
+        = readcolumns(file,fields['columnnames'])
+
     # fill in missing motor columns
     genmotorcolumns(fields['columns'],fields['motors'])
     
     file.close()
+    
     return fields
 
-if __name__=='__main__':
+
+def asdata(fields):
+    import data, numpy
+    d = data.Data()
+    for (k,v) in fields.iteritems():
+        setattr(d.prop,k,v)
+    d.vlabel = 'Counts'
+    d.v = d.prop.detector
+    d.xlabel = d.prop.columnnames[0].capitalize()
+    d.x = d.prop.columns[d.prop.columnnames[0]]
+    if len(d.v.shape) > 1:
+        d.ylabel = 'Pixel'
+        d.y = numpy.arange(d.v.shape[1])
+    return d
+
+def data(filename):
+    fields = read(filename)
+    return asdata(fields)
+
+def demo():
+    """
+    Read and print all command line arguments
+    """
     import sys
-    print readbuffer(sys.argv[1])
+    for file in sys.argv[1:]:
+        fields = read(file)
+        keys = fields.keys()
+        keys.sort()
+        for k in keys: print k,fields[k]
+    
+def plot(filename):
+    """
+    Read and print all command line arguments
+    """
+    import sys, pylab, wx
+    canvas = pylab.gcf().canvas
+    d = data(filename)
+    if len(d.v.shape) > 1:
+        pylab.gca().pcolorfast(d.xedges,d.yedges,d.v.T)
+        pylab.xlabel(d.xlabel)
+        pylab.ylabel(d.ylabel)
+    else:
+        pylab.plot(d.x,d.v)
+        pylab.xlabel(d.xlabel)
+        pylab.ylabel(d.vlabel)
+    pylab.show()
+
+if __name__=='__main__':
+    import wx,sys; app = wx.PySimpleApp(); plot(sys.argv[1])
+    #demo()
