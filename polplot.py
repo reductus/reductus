@@ -2,20 +2,25 @@
 """
 
 import wx,numpy,os
+from math import log10, pow
 
 import matplotlib as mpl
 mpl.interactive(False)
 #Use the WxAgg back end. The Wx one takes too long to render
 mpl.use('WXAgg')
 
-
+from copy import deepcopy
 import matplotlib.cm
-from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg
+import matplotlib.colors
+from canvas import FigureCanvas as Canvas
+#from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as Canvas
 from matplotlib.backend_bases import LocationEvent
 from matplotlib.font_manager import FontProperties
 
+import ticker
 
-def _rescale(lo,hi,step,pt=None,bal=None):
+
+def _rescale(lo,hi,step,pt=None,bal=None,scale='linear'):
     """
     Rescale (lo,hi) by step, returning the new (lo,hi)
     The scaling is centered on pt, with positive values of step
@@ -24,12 +29,29 @@ def _rescale(lo,hi,step,pt=None,bal=None):
     
     This is a helper function for step-based zooming.
     """
-    step *= 3   # 1% change is too tiny
-    if step > 0: scale = float(hi-lo)*step/100
-    else: scale = float(hi-lo)*step/(100-step)
-    if bal is None: bal = float(pt-lo)/(hi-lo)
-    lo = lo - bal*scale
-    hi = hi + (1-bal)*scale
+    # Convert values into the correct scale for a linear transformation
+    # TODO: use proper scale transformers
+    if scale=='log': 
+        lo,hi = log10(lo),log10(hi)
+        if pt is not None: pt = log10(pt)
+
+    # Compute delta from axis range * %, or 1-% if persent is negative
+    if step > 0:
+        delta = float(hi-lo)*step/100
+    else:
+        delta = float(hi-lo)*step/(100-step)
+
+    # Add scale factor proportionally to the lo and hi values, preserving the
+    # point under the mouse
+    if bal is None: 
+        bal = float(pt-lo)/(hi-lo)
+    lo = lo - bal*delta
+    hi = hi + (1-bal)*delta
+
+    # Convert transformed values back to the original scale
+    if scale=='log': 
+        lo,hi = pow(10.,lo),pow(10.,hi)
+
     return (lo,hi)
 
 def error_msg(msg, parent=None):
@@ -54,6 +76,7 @@ def save_canvas(canvas,filebase):
     """
     # Code brought with minor modifications from mpl.backends.backend_wx
     # Copyright (C) Jeremy O'Donoghue & John Hunter, 2003-4
+    # Allows the programmer to specify the base for the filename.
     filetypes, exts, filter_index = canvas._get_imagesave_wildcards()
     default_file = filebase + "." + canvas.get_default_filetype()
     dlg = wx.FileDialog(canvas, "Save to file", "", default_file, filetypes,
@@ -130,11 +153,35 @@ def cmap_menu(canvas,mapper):
             wx.EVT_MENU(canvas, item.GetId(), update_cmap(canvas,mapper,m))
     return menu
 
+def bbox_union(bboxes):
+    """
+    Return a Bbox that contains all of the given bboxes.
+    """
+    from matplotlib._transforms import Bbox, Point, Value
+    if len(bboxes) == 1:
+        return bboxes[0]
+
+    x0 = numpy.inf
+    y0 = numpy.inf
+    x1 = -numpy.inf
+    y1 = -numpy.inf
+
+    for bbox in bboxes:
+        xs = bbox.intervalx().get_bounds()
+        ys = bbox.intervaly().get_bounds()
+        x0 = min(x0, numpy.min(xs))
+        y0 = min(y0, numpy.min(ys))
+        x1 = max(x1, numpy.max(xs))
+        y1 = max(y1, numpy.max(ys))
+
+    return Bbox(Point(Value(x0), Value(y0)), Point(Value(x1), Value(y1)))
+
+
 class Plotter(wx.Panel):
     def __init__(self, parent, id = -1, dpi = None, **kwargs):
         wx.Panel.__init__(self, parent, id=id, **kwargs)
         self.figure = mpl.figure.Figure(dpi=dpi, figsize=(2,2))
-        self.canvas = FigureCanvasWxAgg(self, -1, self.figure)
+        self.canvas = Canvas(self, -1, self.figure)
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizer.Add(self.canvas,1,wx.EXPAND)
         self.SetSizer(sizer)
@@ -155,7 +202,7 @@ class Plotter4(wx.Panel):
         # Create the figure        
         self.figure = mpl.figure.Figure(dpi=dpi, figsize=(2,2))
         #self.canvas = NoRepaintCanvas(self, -1, self.figure)
-        self.canvas = FigureCanvasWxAgg(self, -1, self.figure)
+        self.canvas = Canvas(self, -1, self.figure)
         self.canvas.Bind(wx.EVT_MOUSEWHEEL, self.onMouseWheel)
         self.canvas.mpl_connect('key_press_event',self.onKeyPress)
         self.canvas.mpl_connect('button_press_event',self.onButtonPress)
@@ -164,6 +211,9 @@ class Plotter4(wx.Panel):
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizer.Add(self.canvas,1,wx.EXPAND)
         self.SetSizer(sizer)
+        # Construct an idle timer.  This won't be needed when matplotlib
+        # supports draw_idle for wx.
+        #self.idle_timer = wx.CallLater(1,self.onDrawIdle)
         #self.Fit()
         
         # Create four subplots with no space between them.
@@ -183,8 +233,11 @@ class Plotter4(wx.Panel):
         # Create the colorbar
         # Provide an empty handle to attach colormap properties
         self.colormapper = mpl.image.FigureImage(self.figure)
-        self.colormapper.set_array(numpy.zeros(1))
-        self.figure.colorbar(self.colormapper,self.coloraxes)
+        self.colormapper.set_array(numpy.ones(1))
+        vformat = mpl.ticker.LogFormatterMathtext(base=10,labelOnlyBase=False)
+        vlocate = mpl.ticker.LogLocator(base=10)
+        self.figure.colorbar(self.colormapper,self.coloraxes,
+                             ticks=vlocate,format=vformat)
 
         # Provide slots for the graph labels
         self.tbox = self.figure.text(0.5, 0.95, '',
@@ -206,13 +259,22 @@ class Plotter4(wx.Panel):
         self.xscale = 'linear'
         self.yscale = 'linear'
         self.zscale = 'linear'
-        
+        self.vscale = 'log'
+   
         # Set up the default plot
         self.clear()
-        self.render()
+        self.colormapper.set_norm(matplotlib.colors.LogNorm(1.,2.))
+        
+        self._sets = {} # Container for all plotted objects
 
+    def autoaxes(self):
+        bbox = bbox_union([ax.dataLim for ax in self.axes])
+        xlims = bbox.intervalx().get_bounds()
+        ylims = bbox.intervaly().get_bounds()
+        self.pp.axis(xlims+ylims)
+            
     def onKeyPress(self,event):
-        if not event.inaxes: return
+        #if not event.inaxes: return
         # Let me zoom and unzoom even without the scroll wheel
         if event.key == 'a':
             self.zoom(event,5.)
@@ -224,10 +286,10 @@ class Plotter4(wx.Panel):
         # events on an artist by artist basis.
         if event.inaxes == self.coloraxes:
             self.colormapper.set_clim(vmin=self.vmin,vmax=self.vmax)
-            self.canvas.draw_idle()
+            self.draw_idle()
         elif event.inaxes != None:
-            self.pp.axis('auto')
-            self.canvas.draw_idle()
+            self.autoaxes()
+            self.draw_idle()
 
     def onMouseWheel(self,event):
         """Translate mouse wheel events into matplotlib events"""
@@ -250,20 +312,43 @@ class Plotter4(wx.Panel):
 
         # Icky hardcoding of colorbar zoom.
         if ax == self.coloraxes:
+            # rescale colormap: the axes are already scaled to 0..1, 
+            # so use bal instead of pt for centering
             lo,hi = self.colormapper.get_clim()
-            lo,hi = _rescale(lo,hi,step,bal=event.ydata)
+            lo,hi = _rescale(lo,hi,step,bal=event.ydata,scale=self.vscale)
             self.colormapper.set_clim(lo,hi)
+        elif ax != None:
+            # Event occurred inside a plotting area
+            lo,hi = ax.get_xlim()
+            lo,hi = _rescale(lo,hi,step*3,pt=event.xdata)
+            ax.set_xlim((lo,hi))
+
+            lo,hi = ax.get_ylim()
+            lo,hi = _rescale(lo,hi,step*3,pt=event.ydata)
+            ax.set_ylim((lo,hi))
         else:
-            if event.xdata is not None:
+            # Check if zoom happens in the axes
+            xdata,ydata = None,None
+            x,y = event.x,event.y
+            for ax in self.axes:
+                insidex,_ = ax.xaxis.contains(event)
+                if insidex:
+                    xdata,_ = ax.transAxes.inverse_xy_tup((x,y))
+                    #print "xaxis",x,"->",xdata
+                insidey,_ = ax.yaxis.contains(event)
+                if insidey:
+                    _,ydata = ax.transAxes.inverse_xy_tup((x,y))
+                    #print "yaxis",y,"->",ydata
+            if xdata is not None:
                 lo,hi = ax.get_xlim()
-                lo,hi = _rescale(lo,hi,step,pt=event.xdata)
+                lo,hi = _rescale(lo,hi,step*3,bal=xdata)
                 ax.set_xlim((lo,hi))
-            if event.ydata is not None:
+            if ydata is not None:
                 lo,hi = ax.get_ylim()
-                lo,hi = _rescale(lo,hi,step,pt=event.ydata)
+                lo,hi = _rescale(lo,hi,step*3,bal=ydata)
                 ax.set_ylim((lo,hi))
-            
-        self.canvas.draw_idle()
+
+        self.draw_idle()
 
     
     # These are properties which the user should control but for which
@@ -285,7 +370,10 @@ class Plotter4(wx.Panel):
 
     def set_vscale(self, scale='linear'):
         """Alternate between log and linear colormap"""
-        self.mapper = LogNorm(*self.mapper.get_clim())
+        if scale == 'linear':
+            self.colormapper.set_norm(LogNorm(*self.colormapper.get_clim()))
+        else:
+            self.colormapper.set_norm(Norm(*self.colormapper.get_clim()))
         self.vscale = scale
         
     def get_vscale(self):
@@ -301,18 +389,19 @@ class Plotter4(wx.Panel):
         self.figure.set_edgecolor(col)
         self.canvas.SetBackgroundColour(wx.Colour(*rgbtuple))
 
-    def _onSize(self, event):
-        self._resizeflag = True
-
-    def _onIdle(self, evt):
-        if self._resizeflag:
-            self._resizeflag = False
-            self._SetSize()
-            self.draw()
-
-    def draw(self):
-        """Where the actual drawing happens"""
+    '''
+    def draw_idle(self):
+        """Signal a redraw of the display"""
+        #TODO for matplotlib greater than 0.91, draw_idle works in wx
         self.figure.canvas.draw_idle()
+        #self.idle_timer.Restart(10)
+        
+    def onDrawIdle(self):
+        if wx.GetApp().Pending():
+            self.idle_timer.Restart(10)
+        elif self.IsShownOnScreen():
+            self.figure.canvas.draw()
+    '''
 
     # Context menu implementation
     def onSaveImage(self, evt):
@@ -324,8 +413,8 @@ class Plotter4(wx.Panel):
     # Context menu implementation
     def onGridToggle(self, event):
         self.grid = not self.grid
-        self.render()
-        self.canvas.draw_idle()
+        for ax in self.axes: ax.grid(alpha=0.4,visible=self.grid)
+        self.draw()
         
     def onContextMenu(self, event):
         """
@@ -396,11 +485,7 @@ class Plotter4(wx.Panel):
         #self.pp.get_yticklabels()[0].set_visible(False)
         #self.mp.get_xticklabels()[0].set_visible(False)
         self.vmin, self.vmax = numpy.inf,-numpy.inf
-
-
-    def render(self):
-        """Commit the plot after all objects are drawn"""
-        # TODO: this is when the backing store should be swapped in.
+        self.colormapper.set_clim(vmin=1,vmax=10)
 
         # Hide tick labels for interior axes
         for l in self.pp.get_xticklabels(): l.set_visible(False)
@@ -420,17 +505,16 @@ class Plotter4(wx.Panel):
         #self.pm.xaxis.get_majorticklabels()[-2].set_visible(False)
 
         # Set the limits on the colormap
-        vmin = self.vmin if self.vmin < self.vmax else 0
-        vmax = self.vmax if self.vmin < self.vmax else 1
-        self.colormapper.set_clim(vmin=vmin,vmax=vmax)
+        #vmin = self.vmin if self.vmin < self.vmax else 1
+        #vmax = self.vmax if self.vmin < self.vmax else 2
         #self.colormapper.set_cmap(mpl.cm.cool)
+        #self.coloraxes.xaxis.set_major_formatter(mpl.ticker.LogFormatterMathtext())
+        #print "setting formatter---doesn't seem to work"
+        #self.coloraxes.yaxis.set_major_formatter(mpl.ticker.NullFormatter())
 
         for ax in self.axes: ax.grid(alpha=0.4,visible=self.grid)
         pass
     
-    def update(self):
-        self.canvas.draw_idle()
-
     def xaxis(self,label,units):
         """xaxis label and units.
         
@@ -462,9 +546,6 @@ class Plotter4(wx.Panel):
             self.surface(slice,data)
         pass
     
-    def delete(self, id):
-        id.remove()
-
     def surface(self,slice,data):
         if slice == '++': ax = self.pp
         elif slice == '+-': ax = self.pm
@@ -476,16 +557,20 @@ class Plotter4(wx.Panel):
         #    im = ax.pcolor(data.xedges,data.yedges,data.v,shading='flat')
         # but this won't work in all versions of mpl, so first figure out
         # if we are using pcolorfast or pcolormesh then adjust the kwargs.
+        # TODO Ack! adding 1 for the purposes of visualization! Fix log plots!
+        x,y,v = data.xedges,data.yedges,data.v+1
         try:
-            p=ax.pcolorfast
-            kw={}
+            im = ax.pcolorfast(x,y,v)
         except AttributeError:
-            p=ax.pcolormesh
-            kw=dict(shading='flat')
-        im = p(data.xedges,data.yedges,data.v,**kw)
+            im = ax.pcolormesh(x,y,v,shading='flat')
         self.colormapper.add_observer(im)
-        self.vmin = min(self.vmin, numpy.min(data.v))
-        self.vmax = max(self.vmax, numpy.max(data.v))
+        
+        self.vmin = min(self.vmin, numpy.min(v))
+        self.vmax = max(self.vmax, numpy.max(v))
+        self.colormapper.set_clim(vmin=self.vmin,vmax=self.vmax)
+        self.autoaxes()
+        self.canvas.draw_idle()
+        
         return im
 
 
@@ -503,7 +588,6 @@ def demo():
     # render the graph to the pylab plotter
     plotter.clear()
     plotter.surfacepol(d)
-    plotter.render()
     
     app.MainLoop()
     pass
