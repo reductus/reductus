@@ -230,7 +230,7 @@ def readmotors(file):
     E.g.,
     
     M = _readmotors(file)
-    print M['A1'].start
+    print M['a1'].start
     """
     motors = {}
     for i in range(6):
@@ -238,7 +238,7 @@ def readmotors(file):
         arange=dict(start=float(words[1]),
                     step=float(words[2]),
                     stop=float(words[3]))
-        name = words[0] if not words[0].isdigit() else 'A'+words[0]
+        name = words[0] if not words[0].isdigit() else 'a'+words[0]
         motors[name] = arange
     # skip Mot: line
     file.readline()
@@ -248,19 +248,19 @@ def readcolumnheaders(file):
     """
     Get a list of column names. Transform the names of certain
     columns to make our lives easier elsewhere:
-          #1 COUNTS -> COUNTS
-          #2 COUNTS -> COUNTS2
-          MON -> MONITOR
-          MIN -> TIME
-          Q(x) -> QX, Q(y) -> QY, Q(z) -> QZ
+          #1 COUNTS -> counts
+          #2 COUNTS -> counts2
+          MON -> monitor
+          MIN -> time
+          Q(x) -> qx, Q(y) -> qy, Q(z) -> qz
     All column names are uppercase.
     """
     line = file.readline()
-    line = line.upper()
-    for (old,new) in (('#1 COUNTS','COUNTS'),
-                      ('#2 COUNTS','COUNTS2'),
-                      ('MON','MONITOR'),
-                      ('MIN','TIME'),
+    line = line.lower()
+    for (old,new) in (('#1 counts','counts'),
+                      ('#2 counts','counts2'),
+                      (' mon ',' monitor '),
+                      (' min ',' time '),
                       ('(',''),
                       (')',''),
                       ):
@@ -282,7 +282,7 @@ def genmotorcolumns(columns,motors):
     Generate vectors for each of the motors if a vector is not
     already stored in the file.
     """
-    n = len(columns['COUNTS'])
+    n = len(columns['counts'])
     for (M,R) in motors.iteritems():
         if M not in columns:
             if R['step'] != 0.:
