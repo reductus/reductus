@@ -192,7 +192,8 @@ class Plotter4(wx.Panel):
     flag, and the actually redrawing of the
     figure is triggered by an Idle event.
     """
-    def __init__(self, parent, id = -1, color = None, dpi = None, **kwargs):
+    def __init__(self, parent, id = -1, dpi = None, color=None, **kwargs):
+        # TODO: inherit directly from Canvas --- it is after all a panel.
 
         # Set up the panel parameters        
         #style = wx.NO_FULL_REPAINT_ON_RESIZE
@@ -203,11 +204,11 @@ class Plotter4(wx.Panel):
         self.figure = mpl.figure.Figure(dpi=dpi, figsize=(2,2))
         #self.canvas = NoRepaintCanvas(self, -1, self.figure)
         self.canvas = Canvas(self, -1, self.figure)
-        self.canvas.Bind(wx.EVT_MOUSEWHEEL, self.onMouseWheel)
         self.canvas.mpl_connect('key_press_event',self.onKeyPress)
         self.canvas.mpl_connect('button_press_event',self.onButtonPress)
+        self.canvas.mpl_connect('scroll_event',self.onWheel)
+        # TODO use something for pan events
         self.SetColor(color)
-        self._resizeflag = True
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizer.Add(self.canvas,1,wx.EXPAND)
         self.SetSizer(sizer)
@@ -277,38 +278,28 @@ class Plotter4(wx.Panel):
         #if not event.inaxes: return
         # Let me zoom and unzoom even without the scroll wheel
         if event.key == 'a':
-            self.zoom(event,5.)
+            setattr(event,'step',5.)
+            self.onWheel(event)
         elif event.key == 'z':
-            self.zoom(event,-5.)
+            setattr(event,'step',-5.)
+            self.onWheel(event)
 
     def onButtonPress(self,event):
         # TODO: finish binder so that it allows tagging of fully qualified
         # events on an artist by artist basis.
         if event.inaxes == self.coloraxes:
             self.colormapper.set_clim(vmin=self.vmin,vmax=self.vmax)
-            self.draw_idle()
+            self.canvas.draw_idle()
         elif event.inaxes != None:
             self.autoaxes()
-            self.draw_idle()
+            self.canvas.draw_idle()
 
-    def onMouseWheel(self,event):
-        """Translate mouse wheel events into matplotlib events"""
-        # TODO: Wheel events belong inside matplotlib
-        delta = event.GetWheelDelta()
-        rotation = event.GetWheelRotation()
-        rate = event.GetLinesPerAction()
-        step = rate*float(rotation)/delta
-        x = event.GetX()
-        y = self.figure.bbox.height() - event.GetY()
-        # event.Skip()  # Let other handlers act on this event
-        mplevent = LocationEvent("wheel",self.figure.canvas,x,y,guiEvent=event)
-
-        # TODO: step needs to be part of event
-        self.zoom(mplevent,step)
-
-    def zoom(self, event, step):
-        # TODO: handle logscale properly
+    def onWheel(self, event):
+        """
+        Process mouse wheel as zoom events
+        """
         ax = event.inaxes
+        step = event.step
 
         # Icky hardcoding of colorbar zoom.
         if ax == self.coloraxes:
@@ -320,11 +311,11 @@ class Plotter4(wx.Panel):
         elif ax != None:
             # Event occurred inside a plotting area
             lo,hi = ax.get_xlim()
-            lo,hi = _rescale(lo,hi,step*3,pt=event.xdata)
+            lo,hi = _rescale(lo,hi,step,pt=event.xdata)
             ax.set_xlim((lo,hi))
 
             lo,hi = ax.get_ylim()
-            lo,hi = _rescale(lo,hi,step*3,pt=event.ydata)
+            lo,hi = _rescale(lo,hi,step,pt=event.ydata)
             ax.set_ylim((lo,hi))
         else:
             # Check if zoom happens in the axes
@@ -341,14 +332,14 @@ class Plotter4(wx.Panel):
                     #print "yaxis",y,"->",ydata
             if xdata is not None:
                 lo,hi = ax.get_xlim()
-                lo,hi = _rescale(lo,hi,step*3,bal=xdata)
+                lo,hi = _rescale(lo,hi,step,bal=xdata)
                 ax.set_xlim((lo,hi))
             if ydata is not None:
                 lo,hi = ax.get_ylim()
-                lo,hi = _rescale(lo,hi,step*3,bal=ydata)
+                lo,hi = _rescale(lo,hi,step,bal=ydata)
                 ax.set_ylim((lo,hi))
 
-        self.draw_idle()
+        self.canvas.draw_idle()
 
     
     # These are properties which the user should control but for which
@@ -388,20 +379,6 @@ class Plotter4(wx.Panel):
         self.figure.set_facecolor(col)
         self.figure.set_edgecolor(col)
         self.canvas.SetBackgroundColour(wx.Colour(*rgbtuple))
-
-    '''
-    def draw_idle(self):
-        """Signal a redraw of the display"""
-        #TODO for matplotlib greater than 0.91, draw_idle works in wx
-        self.figure.canvas.draw_idle()
-        #self.idle_timer.Restart(10)
-        
-    def onDrawIdle(self):
-        if wx.GetApp().Pending():
-            self.idle_timer.Restart(10)
-        elif self.IsShownOnScreen():
-            self.figure.canvas.draw()
-    '''
 
     # Context menu implementation
     def onSaveImage(self, evt):
