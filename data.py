@@ -32,7 +32,7 @@ def dict2text(d,indent=0):
         if isinstance(val,dict):
             text = "\n"+dict2text(val,indent+2)
         elif isinstance(val,N.ndarray):
-            text = "array " + dims(val)
+            text = "array size " + dims(val)
         else:
             text = str(val)
         lines.append(" "*indent + key + ": " + text)
@@ -55,7 +55,7 @@ class Data(object):
     Note: for reflectivity the natural dimensions are x='Qz',y='Qx',z='Qy'
     """
     format = "unknown"
-    prop = Prop()
+    prop = None # Can't do prop=Prop() because need unique prop per instance
     _x,_xedges,dx = None,None,None
     _y,_yedges,dy = None,None,None
     _z,_zedges,dz = None,None,None
@@ -126,6 +126,7 @@ class Data(object):
 
     # Set attributes on initialization
     def __init__(self, **kw): 
+        self.prop = Prop()
         self.set(**kw)
         
     def summary(self):
