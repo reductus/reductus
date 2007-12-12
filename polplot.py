@@ -235,11 +235,7 @@ class Plotter4(wx.Panel):
         self.coloraxes = self.figure.add_axes([0.88, 0.2, 0.04, 0.6])
         self.colormapper = mpl.image.FigureImage(self.figure)
         self.colormapper.set_array(numpy.ones(1))
-        self.colormapper.set_norm(LogNorm(1.,2.))
-        vformat = mpl.ticker.LogFormatterMathtext(base=10,labelOnlyBase=False)
-        vlocate = mpl.ticker.LogLocator(base=10)
-        self.figure.colorbar(self.colormapper,self.coloraxes,
-                             ticks=vlocate,format=vformat)
+        self.colorbar = self.figure.colorbar(self.colormapper,self.coloraxes)
 
         # Provide slots for the graph labels
         self.tbox = self.figure.text(0.5, 0.95, '',
@@ -261,7 +257,7 @@ class Plotter4(wx.Panel):
         self.xscale = 'linear'
         self.yscale = 'linear'
         self.zscale = 'linear'
-        self.vscale = 'log'
+        self.set_vscale('log')
    
         # Set up the default plot
         self.clear()
@@ -362,9 +358,17 @@ class Plotter4(wx.Panel):
     def set_vscale(self, scale='linear'):
         """Alternate between log and linear colormap"""
         if scale == 'linear':
-            self.colormapper.set_norm(Normalize(*self.colormapper.get_clim()))
+            vmapper = Normalize(*self.colormapper.get_clim())
+            vformat = mpl.ticker.ScalarFormatter()
+            vlocate = mpl.ticker.AutoLocator()
         else:
-            self.colormapper.set_norm(LogNorm(*self.colormapper.get_clim()))
+            vmapper = LogNorm(*self.colormapper.get_clim())
+            vformat = mpl.ticker.LogFormatterMathtext(base=10,labelOnlyBase=False)
+            vlocate = mpl.ticker.LogLocator(base=10)
+        self.colormapper.set_norm(vmapper)
+        self.colorbar.formatter = vformat
+        self.colorbar.locator = vlocate
+        
         self.vscale = scale
         
     def get_vscale(self):
