@@ -168,7 +168,7 @@ def demo():
             super(DemoFrame, self).__init__(*args, **kwargs)
             self.selection = SelectionPanel(self,root='..')
             #self.Bind(tree.EVT_TREE_SEL_CHANGED, self.onSelected)
-            self.selection.Bind(EVT_SELECT_ITEM, self.onChecked)
+            self.selection.Bind(EVT_ITEM_SELECT, self.onChecked)
 
         def onSelected(self, event):
             item = event.GetItem()
