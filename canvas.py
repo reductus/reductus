@@ -14,49 +14,6 @@ from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg, _convert_agg_to
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 from matplotlib.backend_bases import MouseEvent
 
-# TODO: should use the following for a scroll event, rather than
-# pretending it is a mouse event.
-class ScrollEvent(MouseEvent):
-    """
-    A event on the mouse wheel
-
-    The following additional attributes are defined and shown with
-    their default values
-
-    x      = None       # x position - pixels from left of canvas
-    y      = None       # y position - pixels from bottom of canvas
-    inaxes = None       # the Axes instance if mouse us over axes
-    xdata  = None       # x coord of mouse in data coords
-    ydata  = None       # y coord of mouse in data coords
-    step   = None       # the number of steps taken (up is positive)
-    button = None       # 'up' or 'down' (deprecated)
-    key    = None       # the key pressed: None, chr(range(255), shift, win, or control
-     
-    Step should be 1. for a single click.  The wheel event may correspond
-    to more than one click.  High precision wheels may return floating point
-    numbers corresponding to portions of a click.
-    """
-    x      = None       # x position - pixels from left of canvas
-    y      = None       # y position - pixels from right of canvas
-    inaxes = None       # the Axes instance if mouse us over axes
-    xdata  = None       # x coord of mouse in data coords
-    ydata  = None       # y coord of mouse in data coords
-    button = None
-    key    = None
-    step   = None
-
-    def __init__(self, name, canvas, x, y, button, key, step,
-                 guiEvent=None):
-        """
-        x, y in figure coords, 0,0 = bottom, left
-        button pressed 'up' or 'down' (deprecated)
-        """
-        MouseEvent.__init__(self, name, canvas, x, y, button, key,
-                            guiEvent=guiEvent)
-        self.step = step
-
-
-
 class FigureCanvas(FigureCanvasWxAgg):
     """
     Add features to the wx agg canvas for better support of AUI and
@@ -129,8 +86,8 @@ class FigureCanvas(FigureCanvasWxAgg):
         button = 'up' if step >= 0 else 'down'
         self._button = button
         s = 'scroll_event'
-        event = ScrollEvent(s, self, x, y, button, self._key,
-                                 step=step, guiEvent=guiEvent)
+        event = MouseEvent(s, self, x, y, button, self._key, guiEvent=guiEvent)
+        setattr(event,'step',step)
         self.callbacks.process(s, event)
 
 

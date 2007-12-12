@@ -208,7 +208,6 @@ class Plotter4(wx.Panel):
         self.canvas.mpl_connect('button_press_event',self.onButtonPress)
         self.canvas.mpl_connect('scroll_event',self.onWheel)
         # TODO use something for pan events
-        self.SetColor(color)
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizer.Add(self.canvas,1,wx.EXPAND)
         self.SetSizer(sizer)
@@ -224,17 +223,18 @@ class Plotter4(wx.Panel):
         self.mm = self.figure.add_subplot(222,sharex=self.pp,sharey=self.pp)
         self.pm = self.figure.add_subplot(223,sharex=self.pp,sharey=self.pp)
         self.mp = self.figure.add_subplot(224,sharex=self.pp,sharey=self.pp)
+        self.figure.subplots_adjust(left=.1, bottom=.1, top=.9, right=0.85,
+                                    wspace=0.0, hspace=0.0)
         
         self.axes = [self.pp, self.mm, self.pm, self.mp]
         self.grid = True
-        self.coloraxes = self.figure.add_axes([0.88, 0.2, 0.04, 0.6])
-        self.figure.subplots_adjust(left=.1, bottom=.1, top=.9, right=0.85,
-                                    wspace=0.0, hspace=0.0)
 
         # Create the colorbar
         # Provide an empty handle to attach colormap properties
+        self.coloraxes = self.figure.add_axes([0.88, 0.2, 0.04, 0.6])
         self.colormapper = mpl.image.FigureImage(self.figure)
         self.colormapper.set_array(numpy.ones(1))
+        self.colormapper.set_norm(matplotlib.colors.LogNorm(1.,2.))
         vformat = mpl.ticker.LogFormatterMathtext(base=10,labelOnlyBase=False)
         vlocate = mpl.ticker.LogLocator(base=10)
         self.figure.colorbar(self.colormapper,self.coloraxes,
@@ -264,7 +264,6 @@ class Plotter4(wx.Panel):
    
         # Set up the default plot
         self.clear()
-        self.colormapper.set_norm(matplotlib.colors.LogNorm(1.,2.))
         
         self._sets = {} # Container for all plotted objects
 
@@ -302,7 +301,7 @@ class Plotter4(wx.Panel):
         step = event.step
 
         # Icky hardcoding of colorbar zoom.
-        if ax == self.coloraxes:
+        if False and ax == self.coloraxes:
             # rescale colormap: the axes are already scaled to 0..1, 
             # so use bal instead of pt for centering
             lo,hi = self.colormapper.get_clim()
@@ -369,16 +368,6 @@ class Plotter4(wx.Panel):
         
     def get_vscale(self):
         return self.vscale
-    
-
-    def SetColor(self, rgbtuple):
-        """Set figure and canvas colours to be the same"""
-        if not rgbtuple:
-            rgbtuple = wx.SystemSettings.GetColour(wx.SYS_COLOUR_BTNFACE).Get()
-        col = [c/255.0 for c in rgbtuple]
-        self.figure.set_facecolor(col)
-        self.figure.set_edgecolor(col)
-        self.canvas.SetBackgroundColour(wx.Colour(*rgbtuple))
 
     # Context menu implementation
     def onSaveImage(self, evt):
