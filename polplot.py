@@ -16,6 +16,7 @@ from canvas import FigureCanvas as Canvas
 #from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as Canvas
 from matplotlib.backend_bases import LocationEvent
 from matplotlib.font_manager import FontProperties
+from matplotlib.colors import Normalize,LogNorm
 
 import ticker
 
@@ -234,7 +235,7 @@ class Plotter4(wx.Panel):
         self.coloraxes = self.figure.add_axes([0.88, 0.2, 0.04, 0.6])
         self.colormapper = mpl.image.FigureImage(self.figure)
         self.colormapper.set_array(numpy.ones(1))
-        self.colormapper.set_norm(matplotlib.colors.LogNorm(1.,2.))
+        self.colormapper.set_norm(LogNorm(1.,2.))
         vformat = mpl.ticker.LogFormatterMathtext(base=10,labelOnlyBase=False)
         vlocate = mpl.ticker.LogLocator(base=10)
         self.figure.colorbar(self.colormapper,self.coloraxes,
@@ -301,7 +302,7 @@ class Plotter4(wx.Panel):
         step = event.step
 
         # Icky hardcoding of colorbar zoom.
-        if False and ax == self.coloraxes:
+        if ax == self.coloraxes:
             # rescale colormap: the axes are already scaled to 0..1, 
             # so use bal instead of pt for centering
             lo,hi = self.colormapper.get_clim()
@@ -361,9 +362,9 @@ class Plotter4(wx.Panel):
     def set_vscale(self, scale='linear'):
         """Alternate between log and linear colormap"""
         if scale == 'linear':
-            self.colormapper.set_norm(LogNorm(*self.colormapper.get_clim()))
+            self.colormapper.set_norm(Normalize(*self.colormapper.get_clim()))
         else:
-            self.colormapper.set_norm(Norm(*self.colormapper.get_clim()))
+            self.colormapper.set_norm(LogNorm(*self.colormapper.get_clim()))
         self.vscale = scale
         
     def get_vscale(self):
@@ -548,11 +549,12 @@ def demo():
     # Make a frame to show it
     app = wx.PySimpleApp()
     frame = wx.Frame(None,-1,'Plottables')
-    plotter = Plotter(frame)
+    plotter = Plotter4(frame)
     frame.Show()
 
     # render the graph to the pylab plotter
     plotter.clear()
+    plotter.set_vscale('linear')
     plotter.surfacepol(d)
     
     app.MainLoop()
