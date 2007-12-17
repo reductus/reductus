@@ -9,14 +9,25 @@ Return codes are turned into exceptions.
 
 Note: this implementation is incomplete.  Linking is not supported.
 """
+import sys
 import numpy as N
 import ctypes as C
 from ctypes import c_void_p, c_int, c_char_p, byref
 c_void_pp = C.POINTER(c_void_p)
 c_int_p = C.POINTER(c_int)
 
-path=r'C:\\Program Files\\NeXus Data Format\\bin\\'
-libname='libNeXus-0.dll'
+# TODO: check first for libNeXus* in the current directory,
+# then check in various standard places, including the contents
+# of LD_LIBRARY_PATH and the DYLD_LIBRARY_PATH.
+if sys.platform in ('darwin'):
+    path=r'/usr/local/lib'
+    libname='libNeXus.dyld'
+if sys.platform in ('linux','linux2'):
+    path=r'/usr/local/lib'
+    libname='libNeXus.so'
+if sys.platform in ('win32','cygwin'):
+    path=r'C:\\Program Files\\NeXus Data Format\\bin\\'
+    libname='libNeXus-0.dll'
 
 # Open codes
 READ,RDWR,CREATE=1,2,3
@@ -61,7 +72,7 @@ def _build_storage(shape, storage):
     """
     
     if len(shape) == 1 and storage == 'char':
-        arg = C.create_string_buffer(shape[0])
+        arg = C.create_string_buffer(int(shape[0]))
         ret = lambda: arg.value
         size = shape[0]
     else:

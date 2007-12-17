@@ -295,8 +295,10 @@ class Node(object):
     def print_attr(self,indent=0):
         if self.attr is not None:
             #print " "*indent, "Attributes:"
-            for k,v in self.attr.iteritems():
-                print " "*(indent+2),k,":",v.value
+            names = self.attr.keys()
+            names.sort()
+            for k in names:
+                print " "*(indent+2),k,":",self.attr[k].value
 
     def search(self,pattern):
         """
@@ -315,9 +317,11 @@ class Node(object):
         print " "*indent,self.nxclass,":",self.name
         if attr: self.print_attr(indent=indent)
         self.print_value(indent)
-        for k,v in self.children.iteritems():
+        names = self.children.keys()
+        names.sort()
+        for k in names:
             print " "*indent,k
-            v.print_tree(indent+2,attr=attr)
+            self.children[k].print_tree(indent+2,attr=attr)
 
 class Data(Node):
     """
@@ -395,12 +399,13 @@ def demo_ls():
     import sys
     for file in sys.argv[1:]:
         tree = read(file)
-        #tree.print_tree(attr=True)
+        tree.print_tree(attr=True)
+    print "processed",len(sys.argv[1:])
 
 def demo_copy():
     import sys
     copyfile(sys.argv[1],sys.argv[2])
 
 if __name__ == "__main__":
-    #demo_ls()
-    demo_copy()
+    demo_ls()
+    #demo_copy()
