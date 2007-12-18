@@ -2,21 +2,25 @@
 # This program is public domain
 
 """
-Define NeXus file structures.
-Load/save NeXus files.
+Main class:
 
-The NeXus class defines the NeXus file handle and operations on the file.
-tree = read(filename) returns the file structure
-tree points to the Group node for the root of the NeXus file.
-tree.children is set of entries in the file.
-Nodes have name and nxclass attributes.
+NeXus(file,mode) 
+   - structure-based interface to NeXus files.
+
+
+
+Helper classes:
+
+Group(name,class)
+    - NeXus group containing fields
+Data(name)
+    - NeXus data within a field
 """
 
 # TODO: Rather than carrying around the 'storage' name for attributes
 # TODO: and data values, we could be storing them directly as numpy
 # TODO: types.  We should be able to infer type directly from the value,
 # TODO: particularly if we use numpy types for scalars.
-
 
 from copy import copy, deepcopy
 import numpy as N
@@ -25,29 +29,54 @@ import napi
 
 class NeXus:
     """
-    Slightly pretty interface to the NeXus file API.
+    Structure-based interface to the NeXus file API.
 
     Usage:
 
     nx = NeXus(filename, ['r','rw','w'])
+    nx.read()
+      - read the structure of the NeXus file.  This returns a NeXus tree.
+    nx.write(root)
+      - write a NeXus tree to the file.
 
-    nx.path
-      - list of pairs (name,nxclass) representing the currently open dataset.
-      - the final element may be a bare name if the path ends in a dataset
-      e.g., [('entry1','NXentry'),('liquids','NXinstrument'),('detector','NXdetector'),
-    nx.open()
-      - open the file
-    nx.close()
-      - close the file
-    nx.openpath([(name,nxclass),(name,nxclass),...,data])
-      - open the path to data
-    ...etc...  more documentation when we are sure we are keeping the code :-)
+    Example:
+
+      nx = NeXus('REF_L_1346.nxs','r')
+      tree = nx.read()
+      for entry in tree.children.itervalues():
+          process(entry)
+      copy = NeXus('modified.nxs','w')
+      copy.write(tree)
+
+    Note that the large datasets are not loaded immediately.  Instead, the
+    when the data set is requested, the file is reopened, the data read, and
+    the file closed again.  open/close are available for when we want to
+    read/write slabs without the overhead of moving the file cursor each time.
+    The Data nodes in the returned tree hold the node values.
+
+
+
+    Additional functions used by the Data class:
     
-    Note: Currently only file reading is supported.
+    nx.readpath(path,storage='',shape=[])
+      - read data from a particular path in the nexus file.  Storage is
+        one of the NeXus storage classes [u]int[8|16|32], float[32|64], char.
+        Shape is the size of each storage dimension.
+        Note: this function will be subsumed by operations on the data
+        class, and direct read/write calls on the data node.
+    nx.writepath(path,value,storage=NXstorage)
+      - write data to a particular path.  [Not implemented]
+    nx.openpath()
+      - open to a particular data for slab read/write [Not implemented]
+    nx.readslab(path,shape)
+      - return a slab of data. [Not implemented]
+    nx.writeslab(path,shape)
+      - write a slab of data. [Not implementd]
+    nx.open()
+      - open the file; done implicitly on read/write/readpath
+    nx.close()
+      - close the file; done implicitly on read/write/readpath
 
-    Note: even though HDF may support multiple open data sets, the
-    NeXus API does not appear to support them, so we will operate on
-    the assumption that only one data set may be open at a time.
     """
     def __init__(self, filename, access='r'):
         """
@@ -109,10 +138,13 @@ class NeXus:
         will be postponed.  Returns a tree of Group, Data and Link nodes.
         """
         # return to root
+        self.open()
         napi.openpath(self.handle,"/")
-        return self._readgroup()
-    
-    def write(self, root):
+        root = self._readgroup()
+        self.close()
+        return root
+
+    def write(self, forest):
         """
         Write the nexus file structure to the file.  The file is assumed to
         start empty.  
@@ -120,8 +152,12 @@ class NeXus:
         Updating individual nodes can be done using the napi interface, with
         nx.handle as the nexus file handle.
         """
-        links = self._writegroup(root, path="")
+        self.open()
+        links = []
+        for tree in forest.children.itervalues():
+            links += self._writegroup(tree, path="")
         self._writelinks(links)
+        self.close()
 
     def readpath(self, path, storage="", shape=[]):
         """
@@ -247,7 +283,7 @@ class NeXus:
         napi.opendata(self.handle,data.name)
         self._writeattrs(data.attr)
         value = data.read()
-        napi.putdata(self.handle,value,data.storage)
+        if value is not None: napi.putdata(self.handle,value,data.storage)
         napi.closedata(self.handle)
         return []
 
@@ -456,13 +492,9 @@ def copyfile(fromfile,tofile):
     copy command which does the same thing, but it does provide a
     complete demonstration of the read/write capabilities of the library.
     """
-    tree = read(fromfile)
+    forest = read(fromfile)
     file = NeXus(tofile,'w')
-    file.open()
-    for entry in tree.children.itervalues():
-        file.write(entry)
-    file.close()
-    
+    file.write(forest)
 
 def listfile(file):
     """
