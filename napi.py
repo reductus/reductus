@@ -9,7 +9,7 @@ Return codes are turned into exceptions.
 
 Note: this implementation is incomplete.  Linking is not supported.
 """
-import sys
+import sys, os
 import numpy as N
 import ctypes as C
 from ctypes import c_void_p, c_int, c_char_p, byref
@@ -21,7 +21,8 @@ c_int_p = C.POINTER(c_int)
 # of LD_LIBRARY_PATH and the DYLD_LIBRARY_PATH.
 if sys.platform in ('darwin'):
     path=r'/usr/local/lib'
-    libname='libNeXus.dyld'
+    path=os.path.join(os.environ['HOME'],'opt','nexus-4.1.0','lib')
+    libname='libNeXus.dylib'
 if sys.platform in ('linux','linux2'):
     path=r'/usr/local/lib'
     libname='libNeXus.so'
@@ -320,6 +321,7 @@ def makedata(handle, name, shape, storage):
     Corresponds to status=NXmakedata(handle,name,type,rank,dims)
     """
     nxstorage = nxtype[storage]
+    shape = N.array(shape,'i')
     status = lib.nximakedata_(handle,name,nxstorage,len(shape),
                               shape.ctypes.data_as(c_int_p))
     if status == ERROR:
@@ -342,11 +344,16 @@ def compmakedata(handle, name, shape, storage, mode, chunk_shape):
     Corresponds to status=NXmakedata(handle,name,type,rank,dims).
     """
     nxstorage = nxtype[storage]
-    status = lib.nximakedata_(handle,name,nxstorage,len(shape),
-                              shape.ctypes.data,compression[mode],
-                              chunk_shape.ctypes)
+    # Make sure shape/chunk_shape are integers; hope that 32/64 bit issues
+    # with the c int type sort themselves out.
+    shape = N.array(shape,'i')
+    chunk_shape = N.array(chunk_shape,'i')
+    status = lib.nxicompmakedata_(handle,name,nxstorage,len(shape),
+                                  shape.ctypes.data_as(c_int_p),
+                                  compression[mode],
+                                  chunk_shape.ctypes.data_as(c_int_p))
     if status == ERROR:
-        raise ValueError, "Could not create data %s"%(name)
+        raise ValueError, "Could not create compressed data %s"%(name)
 
 lib.nxigetdata_.restype = c_int
 lib.nxigetdata_.argtypes = [c_void_p, c_void_p]
@@ -387,11 +394,17 @@ def putdata(handle, data, storage):
     Corresponds to the status = NXputdata (handle, data)
     """
     if storage == 'char':
+        # String: hand it over as usual for strings.  Assumes the string
+        # is the correct length for the storage area.
+        # TODO: make sure this handles strings containing zeros
         value = data
     elif hasattr(data,'shape') and len(data.shape)>0:
+        # Vector: assume it is of the correct storage class
         value = data.ctypes.data
     else:
-        data = N.zeros((1),storage)
+        # Use numpy array of length one for scalars as a way to make sure
+        # the value is the proper storage class.
+        data = N.array([data],storage)
         value = data.ctypes.data
     status = lib.nxiputdata_(handle,value)
     if status == ERROR:
@@ -503,7 +516,11 @@ def putattr(handle, name, value, storage):
         arg = value.ctypes.data
         length = c_int(len(value))
     else:
-        arg = N.array([value],storage).ctypes.data
+        # Scalar: create a temporary array of the correct length
+        # to hold the scalar and make sure it stays around until the
+        # end of the function.
+        value = N.array([value],storage)
+        arg = value.ctypes.data
         length = 1
     status = lib.nxiputattr_(handle,name,arg,length,nxstorage)
     if status == ERROR:

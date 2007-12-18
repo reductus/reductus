@@ -1,3 +1,17 @@
+#!/usr/bin/env python
+# This program is public domain
+
+"""
+Define NeXus file structures.
+Load/save NeXus files.
+
+The NeXus class defines the NeXus file handle and operations on the file.
+tree = read(filename) returns the file structure
+tree points to the Group node for the root of the NeXus file.
+tree.children is set of entries in the file.
+Nodes have name and nxclass attributes.
+"""
+
 from copy import copy, deepcopy
 import numpy as N
 import os,os.path
@@ -199,7 +213,9 @@ class NeXus:
         attrtype = dict()
         for i in range(self.numattrs()):
             name,value,storage = self.nextattr()
-            attr[name] = Attr(value,storage)
+            pair = Attr(value,storage)
+            attr[name] = pair
+            #print "read attr",name,storage,value
         return attr
 
     def readgroup(self):
@@ -243,6 +259,7 @@ class NeXus:
         the file if no group or data object is open.
         """
         for name,pair in attr.iteritems():
+            #print "write attr",name,pair.storage,pair.value
             napi.putattr(self.handle,name,pair.value,pair.storage)
 
     def writegroup(self, group):
@@ -254,14 +271,23 @@ class NeXus:
         # in and skip those of different classes?
         #print "creating group",group.nxclass,group.name
         napi.makegroup(self.handle, group.name, group.nxclass)
-        napi.opengroup(self.handle, group.name, group.nxclass)
+        self.opengroup(group.name, group.nxclass)
         self.writeattrs(group.attr)
         for child in group.children.itervalues():
             if child.nxclass == 'SDS':
                 # Finally some data, but don't read it if it is big
                 # Instead record the location, type and size
                 #print "creating data",child.name,child.shape,child.storage
-                napi.makedata(self.handle,child.name,child.shape,child.storage)
+                if N.prod(child.shape) > 10000:
+                    # Compress the fastest moving dimension of large datasets
+                    compression = N.ones(len(child.shape),'i')
+                    compression[-1] = child.shape[-1]
+                    napi.compmakedata(self.handle,child.name,child.shape,
+                                      child.storage, 'lzw', compression)
+                else:
+                    # Don't use compression for small datasets
+                    napi.makedata(self.handle,child.name,child.shape,
+                                  child.storage)
                 self.opendata(child.name)
                 self.writeattrs(child.attr)
                 value = child.read()
@@ -269,7 +295,7 @@ class NeXus:
                 self.closedata()
             else:
                 self.writegroup(child)
-        napi.closegroup(self.handle)
+        self.closegroup()
 
 
 def read(filename):
@@ -392,20 +418,27 @@ def copyfile(fromfile,tofile):
     file.close()
     
 
-def demo_ls():
+def listfile(file):
     """
     Read and summarize the set of nexus files passed in on the command line.
     """
-    import sys
-    for file in sys.argv[1:]:
-        tree = read(file)
-        tree.print_tree(attr=True)
-    print "processed",len(sys.argv[1:])
+    tree = read(file)
+    tree.print_tree(attr=True)
 
-def demo_copy():
-    import sys
-    copyfile(sys.argv[1],sys.argv[2])
+def cmdline(argv):
+    op = argv[1] if len(argv) > 1 else ''
+    if op == 'ls': 
+        for f in argv[2:]: listfile(f)
+        print "processed",len(argv[2:])
+    elif op == 'copy' and len(argv)==4: 
+        copyfile(argv[2],argv[3])
+    else: 
+        usage = """
+usage: %s copy fromfile.nxs tofile.nxs
+usage: %s ls *.nxs
+        """%(argv[0],argv[0])
+        print usage
 
 if __name__ == "__main__":
-    demo_ls()
-    #demo_copy()
+    import sys
+    cmdline(sys.argv)
