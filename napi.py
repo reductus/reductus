@@ -12,7 +12,7 @@ Note: this implementation is incomplete.  Linking is not supported.
 import sys, os
 import numpy as N
 import ctypes as C
-from ctypes import c_void_p, c_int, c_char_p, byref
+from ctypes import c_void_p, c_int, c_long, c_char, c_char_p, byref
 c_void_pp = C.POINTER(c_void_p)
 c_int_p = C.POINTER(c_int)
 
@@ -23,12 +23,15 @@ if sys.platform in ('darwin'):
     path=r'/usr/local/lib'
     path=os.path.join(os.environ['HOME'],'opt','nexus-4.1.0','lib')
     libname='libNeXus.dylib'
+    pack_structures = False
 if sys.platform in ('linux','linux2'):
     path=r'/usr/local/lib'
     libname='libNeXus.so'
+    pack_structures = False
 if sys.platform in ('win32','cygwin'):
     path=r'C:\\Program Files\\NeXus Data Format\\bin\\'
     libname='libNeXus-0.dll'
+    pack_structures = False
 
 # Open codes
 READ,RDWR,CREATE=1,2,3
@@ -60,6 +63,14 @@ compression=dict(
     lzw=200,
     rle=300,
     huffman=400)
+
+class c_NXlink(C.Structure):
+    _fields_ = [("iTag", c_long),
+                ("iRef", c_long),
+                ("targetPath", c_char*1024),
+                ("linktype", c_int)]
+    _pack_ = pack_structures
+c_NXlink_p = C.POINTER(c_NXlink)
 
 def _build_storage(shape, storage):
     """
@@ -132,6 +143,9 @@ def flush(handle):
     Raises RuntimeError if this fails.
 
     Corresponds to status = NXflush(&handle)
+    
+    TODO: flush() reopens the handle --- make sure that this fact is invisible
+    TODO: to the caller.
     """
     status = lib.nxiflush_(byref(handle))
     if status == ERROR:
@@ -152,6 +166,21 @@ def makegroup(handle, name, nxclass):
     if status == ERROR:
         raise RuntimeError, "Could not create %s:%s"%(nxclass,name)
 
+lib.nxiopenpath_.restype = c_int
+lib.nxiopenpath_.argtypes = [c_void_p, c_char_p]
+def openpath(handle, path):
+    """
+    Open a particular group '/path/to/group'.  Paths can
+    be relative to the currently open group.
+
+    Raises ValueError.
+    
+    Corresponds to status = NXopenpath(handle, path)
+    """
+    status = lib.nxiopenpath_(handle, path)
+    if status == ERROR:
+        raise ValueError, "Could not open path %s"%(path)
+    
 lib.nxiopengroup_.restype = c_int
 lib.nxiopengroup_.argtypes = [c_void_p, c_char_p, c_char_p]
 def opengroup(handle, name, nxclass):
@@ -525,3 +554,83 @@ def putattr(handle, name, value, storage):
     status = lib.nxiputattr_(handle,name,arg,length,nxstorage)
     if status == ERROR:
         raise ValueError, "Could not write attr %s" % (name)
+
+# ==== Linking ====
+lib.nxigetgroupid_.restype = c_int
+lib.nxigetgroupid_.argtypes = [c_void_p, c_NXlink_p]
+def getgroupID(handle):
+    """
+    Return the id of the current group so we can link to it later.
+    
+    Raises RuntimeError
+    
+    Corresponds to NXgetgroupID(handle, &ID)
+    """
+    ID = c_NXlink()
+    status = lib.nxigetgroupid_(handle,byref(ID))
+    if status == ERROR:
+        raise RuntimeError, "Could not link to group"
+    return ID
+
+lib.nxigetdataid_.restype = c_int
+lib.nxigetdataid_.argtypes = [c_void_p, c_NXlink_p]
+def getdataID(handle):
+    """
+    Return the id of the current data so we can link to it later.
+    
+    Raises RuntimeError
+    
+    Corresponds to NXgetdataID(handle, &ID)
+    """
+    ID = c_NXlink()
+    status = lib.nxigetdataid_(handle,byref(ID))
+    if status == ERROR:
+        raise RuntimeError, "Could not link to data"
+    return ID
+
+lib.nximakelink_.restype = c_int
+lib.nximakelink_.argtypes = [c_void_p, c_NXlink_p]
+def makelink(handle, ID):
+    """
+    Link the currently open group/data item to the previously
+    captured ID.
+    
+    Raises RuntimeError
+    
+    Corresponds to NXmakelink(handle, &ID)
+    """
+    status = lib.nximakelink_(handle,byref(ID))
+    if status == ERROR:
+        raise RuntimeError, "Could not link from current group/data"
+    return ID
+
+lib.nxisameid_.restype = c_int
+lib.nxisameid_.argtypes = [c_void_p, c_NXlink_p, c_NXlink_p]
+def sameID(handle, ID1, ID2):
+    """
+    Return True of ID1 and ID2 point to the same group/data.
+    
+    This should not raise any errors.
+    
+    Corresponds to NXsameID(handle,&ID1,&ID2)
+    """
+    status = lib.nxisameid_(handle, byref(ID1), byref(ID2))
+    return status == OK
+
+lib.nxiopensourcegroup_.restype = c_int
+lib.nxiopensourcegroup_.argtyps = [c_void_p]
+def opensourcegroup(handle):
+    """
+    If the current group/data is a linked to another, open that group/data.
+    
+    Note: it is unclear how can we tell if we are linked, other than
+    perhaps the existence of a 'target' attribute in the current item.
+    
+    Raises RuntimeError
+    
+    Corresponds to NXopensourcegroup(handle)
+    """
+    status = lib.nxiopensourcegroup_(handle)
+    if status == ERROR:
+        raise RuntimeError, "Could not open source group"
+    
