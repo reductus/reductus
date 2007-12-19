@@ -43,7 +43,7 @@ class NeXus:
 
       nx = NeXus('REF_L_1346.nxs','r')
       tree = nx.read()
-      for entry in tree.children.itervalues():
+      for entry in tree.nxdict.itervalues():
           process(entry)
       copy = NeXus('modified.nxs','w')
       copy.write(tree)
@@ -58,7 +58,7 @@ class NeXus:
 
     Additional functions used by the Data class:
     
-    nx.readpath(path,storage='',shape=[])
+    nx.readpath(path,type='',dims=[])
       - read data from a particular path in the nexus file.  Storage is
         one of the NeXus storage classes [u]int[8|16|32], float[32|64], char.
         Shape is the size of each storage dimension.
@@ -68,9 +68,9 @@ class NeXus:
       - write data to a particular path.  [Not implemented]
     nx.openpath()
       - open to a particular data for slab read/write [Not implemented]
-    nx.readslab(path,shape)
+    nx.readslab(path,type,dims)
       - return a slab of data. [Not implemented]
-    nx.writeslab(path,shape)
+    nx.writeslab(path,type,dims)
       - write a slab of data. [Not implementd]
     nx.open()
       - open the file; done implicitly on read/write/readpath
@@ -144,7 +144,7 @@ class NeXus:
         self.close()
         return root
 
-    def write(self, forest):
+    def write(self, tree):
         """
         Write the nexus file structure to the file.  The file is assumed to
         start empty.  
@@ -154,12 +154,14 @@ class NeXus:
         """
         self.open()
         links = []
-        for tree in forest.children.itervalues():
-            links += self._writegroup(tree, path="")
+        # Root node is special --- only write its children.
+        # TODO: maybe want to write root node attributes?
+        for entry in tree.nxdict.itervalues():
+            links += self._writegroup(entry, path="")
         self._writelinks(links)
         self.close()
 
-    def readpath(self, path, storage="", shape=[]):
+    def readpath(self, path, type="", dims=[]):
         """
         Read the data on a particular file path.
         
@@ -168,7 +170,7 @@ class NeXus:
         """
         self.open()
         napi.openpath(self.handle,path)
-        return napi.getdata(self.handle,storage,shape)
+        return napi.getdata(self.handle,type,dims)
 
     def _readattrs(self):
         """
@@ -202,15 +204,28 @@ class NeXus:
             #print "read link %s->%s"%(attr['target'].value,path)
             data = Link(name,attr=attr)
         else:
-            shape,storage = napi.getinfo(self.handle)
-            if N.prod(shape) < 1000:
-                value = napi.getdata(self.handle,storage,shape)
+            dims,type = napi.getinfo(self.handle)
+            if N.prod(dims) < 1000:
+                value = napi.getdata(self.handle,type,dims)
             else:
                 value = None
-            data = Data(name,storage,shape,
+            data = Data(name,type,dims,
                         file=self,path=path,attr=attr,value=value)
         napi.closedata(self.handle)
         return data
+
+    def _readchildren(self,n,path):
+        children = {}
+        for i in range(n):
+            name,nxclass = napi.getnextentry(self.handle)
+            if nxclass == 'SDS':
+                children[name] = self._readdata(name,path)
+            else:
+                #print "open for reading",nxclass,name
+                napi.opengroup(self.handle,name,nxclass)
+                children[name] = self._readgroup()
+                napi.closegroup(self.handle)
+        return children
 
     def _readgroup(self):
         """
@@ -228,20 +243,19 @@ class NeXus:
             #print "read group link %s->%s"%(attr['target'].value,path)
             group = Link(name,attr=attr)
         else:
-            group = Group(nxclass,name,attr)
-            entries = {}
-            for i in range(n):
-                name,nxclass = napi.getnextentry(self.handle)
-                if nxclass == 'SDS':
-                    entries[name] = self._readdata(name,path)
-                else:
-                    #print "open for reading",nxclass,name
-                    napi.opengroup(self.handle,name,nxclass)
-                    entries[name] = self._readgroup()
-                    napi.closegroup(self.handle)
-            group.children = entries
+            children = self._readchildren(n,path)
+            # If we are subclassed with a handler for the particular
+            # NXentry class name use that constructor for the group
+            # rather than the generic Group class.
+            if hasattr(self,nxclass):
+                factory = getattr(self,nxclass)
+            else:
+                factory = self.NXgroup
+            group = factory(nxclass,name,attr=attr,dict=children)
         return group
 
+    def NXroot(self,*args,**kw): return NXroot(*args,**kw)
+    def NXgroup(self,*args,**kw): return NXgroup(*args,**kw)
 
     def _writeattrs(self,attr):
         """
@@ -261,29 +275,29 @@ class NeXus:
         Call writelinks on the list.
         """
         
-        path = path + "/" + data.name
+        path = path + "/" + data.nxname
         #print 'write data',path
 
         # If the data is linked then 
-        if data.target is not None:
-            return [(path, data.target)]
+        if hasattr(data,'_link_target'):
+            return [(path, data._link_target)]
 
         # Finally some data, but don't read it if it is big
         # Instead record the location, type and size
-        #print "creating data",child.name,child.shape,child.storage
-        if N.prod(data.shape) > 10000:
+        #print "creating data",child.nxname,child.nxdims,child.storage
+        if N.prod(data.nxdims) > 10000:
             # Compress the fastest moving dimension of large datasets
-            compression = N.ones(len(data.shape),'i')
-            compression[-1] = data.shape[-1]
-            napi.compmakedata(self.handle, data.name, data.shape, data.storage, 
-                              'lzw', compression)
+            slab_dims = N.ones(len(data.nxdims),'i')
+            slab_dims[-1] = data.nxdims[-1]
+            napi.compmakedata(self.handle, data.nxname, data.nxdims, 
+                              data.nxtype, 'lzw', slab_dims)
         else:
             # Don't use compression for small datasets
-            napi.makedata(self.handle, data.name, data.shape, data.storage)
-        napi.opendata(self.handle,data.name)
-        self._writeattrs(data.attr)
+            napi.makedata(self.handle, data.nxname, data.nxdims, data.nxtype)
+        napi.opendata(self.handle,data.nxname)
+        self._writeattrs(data.nxattr)
         value = data.read()
-        if value is not None: napi.putdata(self.handle,value,data.storage)
+        if value is not None: napi.putdata(self.handle,value,data.nxtype)
         napi.closedata(self.handle)
         return []
 
@@ -295,21 +309,20 @@ class NeXus:
         this routine returns the set of links that need to be written.
         Call writelinks on the list.
         """
-        path = path + "/" + group.name
+        path = path + "/" + group.nxname
         #print 'write group',path
 
         links = []
-        napi.makegroup(self.handle, group.name, group.nxclass)
-        napi.opengroup(self.handle, group.name, group.nxclass)
-        self._writeattrs(group.attr)
-        if group.target is not None:
-            links += [(path, group.target)]
-        for child in group.children.itervalues():
+        napi.makegroup(self.handle, group.nxname, group.nxclass)
+        napi.opengroup(self.handle, group.nxname, group.nxclass)
+        self._writeattrs(group.nxattr)
+        if hasattr(group, '_link_target'):
+            links += [(path, group._link_target)]
+        for child in group.nxdict.itervalues():
             if child.nxclass == 'SDS':
                 links += self._writedata(child,path)
-            elif child.nxclass == '_link':
-                links += [(path+"/"+child.name,child.target)]
-                pass # skip links
+            elif hasattr(child,'_link_target'):
+                links += [(path+"/"+child.nxname,child._link_target)]
             else:
                 links += self._writegroup(child,path)
         napi.closegroup(self.handle)
@@ -328,7 +341,7 @@ class NeXus:
             
         # find gids for targets
         for target in gid.iterkeys():
-            #print "target",target
+            #sprint "target",target
             napi.openpath(self.handle, target)
             # Can't tell from the name if we are linking to a group or
             # to a dataset, so cheat and rely on getdataID to signal
@@ -370,43 +383,54 @@ class Node(object):
     The individual objects may be either SDS data objects or groups.
     """
     nxclass = "unknown"
-    children = None
-    attr = None
-    target = None
+    nxname = "unknown"
+    nxattr = None
+    nxdict = None
 
+    def __str__(self):
+        return "%s:%s"%(self.nxclass,self.nxname)
+    
     def print_attr(self,indent=0):
-        if self.attr is not None:
+        if self.nxattr is not None:
             #print " "*indent, "Attributes:"
-            names = self.attr.keys()
+            names = self.nxattr.keys()
             names.sort()
             for k in names:
-                print " "*(indent+2),k,":",self.attr[k].value
+                print " "*(indent+2),k,":",self.nxattr[k].value
                 
     def readattr(self, name, default=None):
-        return self.attr[name].value if name in self.attr else default
-    
+        return self.nxattr[name].value if name in self.nxattr else default
+
+    def __getattr__(self, key):
+        if key in self.nxattr:
+            return self.nxattr[key].value
+        elif key in self.nxdict:
+            return self.nxdict[key]
+        else:
+            raise AttributeError, "%s:%s does not have %s"%(self.nxclass,self.nxname,key)
+        
     def search(self,pattern):
         """
         Pattern = class:name@attr
         """
-        if self.attr is not None:
-            for k,v in self.attr.iteritems():
+        if self.nxattr is not None:
+            for k,v in self.nxattr.iteritems():
                 pass
-        for k,v in self.children.iteritems():
+        for k,v in self.nxdict.iteritems():
             pass
 
     def print_value(self,indent=0):
         print '\n'.join([(" "*(indent+1))+s for s in str(self).split('\n')])
 
     def print_tree(self,indent=0,attr=False):
-        print " "*indent,self.nxclass,":",self.name
+        print " "*indent,self.nxclass,":",self.nxname
         if attr: self.print_attr(indent=indent)
         self.print_value(indent)
-        names = self.children.keys()
+        names = self.nxdict.keys()
         names.sort()
         for k in names:
             print " "*indent,k
-            self.children[k].print_tree(indent+2,attr=attr)
+            self.nxdict[k].print_tree(indent+2,attr=attr)
 
 class Data(Node):
     """
@@ -418,37 +442,34 @@ class Data(Node):
     to get to the right place.
     Note that this class does not cache a copy of the data.
     """
-    def __init__(self,name,storage,shape,file=None,path=None,
+    def __init__(self,name,type='',dims=[],file=None,path=None,
                  attr=None,value=None):
-        self.file = file
-        self.path = path
+        self._file = file
+        self._path = path
         self.nxclass = "SDS" # Scientific Data Set
-        self.name = name
-        self.storage = storage
-        self.shape = shape
-        self.isstr = self.storage == 'char'
-        self.isscalar = len(shape==1) and shape[0] == 1
+        self.nxname = name
+        self.nxtype = type
+        self.nxdims = dims
+        self.nxdict = {}
+        self.nxattr = {} if attr is None else attr
         self.value = value
-        self.children = {}
-        self.attr = {} if attr is None else attr
 
     def __str__(self):
         if self.value is not None:
             # If the value is already loaded we can maybe do
             # better than just printing the array dimensions.
-            if self.isstr:
+            if self.nxtype == 'char':
                 return self.value
-            elif self.isscalar:
+            elif len(self.nxdims) == 1 and self.nxdims[0]==1:
                 return str(self.value)
-            elif N.prod(self.shape) < 8:
+            elif N.prod(self.nxdims) < 8:
                 return str(self.value)
         # Fall through if data is big or value is otherwise unavailable.
-        dims = 'x'.join([str(n) for n in self.shape])
-        return "Data(%s %s)"%(self.storage,dims)
+        dims = 'x'.join([str(n) for n in self.nxdims])
+        return "Data(%s %s)"%(self.nxtype,dims)
 
     def slab(self,slice):
-        nx.openpath(self)
-        slab = nx.readslab(self,slice)
+        slab = self._file.readslab(self,slice)
         return slab
 
     def read(self):
@@ -457,32 +478,38 @@ class Data(Node):
         """
         if self.value is not None:
             return self.value
-        self.value = self.file.readpath(self.path,storage=self.storage,
-                                        shape=self.shape)
+        self.value = self._file.readpath(self._path,type=self.nxtype,
+                                         dims=self.nxdims)
         return self.value
 
 class Link(Node):
     def __init__(self,name,attr=None):
-        self.children = {}
+        self.nxdict = {}
         self.nxclass = '_link'
-        self.name = name
-        self.attr = {} if attr is None else attr
-        self.target = attr['target'].value
+        self.nxname = name
+        self.nxattr = {} if attr is None else attr
+        self._link_target = self.nxattr['target'].value
     def __str__(self):
-        return "Link(%s)"%(self.target)
+        return "Link(%s)"%(self._link_target)
 
-class Group(Node):
+class NXgroup(Node):
     """
     NeXus group node.  Group nodes have no data associated with them,
     but they do have attributes and children.
     """
-    def __init__(self,nxclass,name,attr=None):
-        self.children = {}
+    def __init__(self,nxclass,name,attr=None,dict={}):
+        self.nxdict = dict
         self.nxclass = nxclass
-        self.name = name
-        self.attr = {} if attr is None else attr
+        self.nxname = name
+        self.nxattr = {} if attr is None else attr
     def print_value(self,indent=0):
         pass
+
+class NXroot(NXgroup):
+    def entries(self):
+        return [entry
+                for entry in self.nxdict.itervalues()
+                if entry.nxclass == 'NXentry']
 
 def copyfile(fromfile,tofile):
     """
