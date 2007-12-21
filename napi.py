@@ -1,6 +1,10 @@
 # This program is public domain
 
+# Author: Paul Kienzle
+
 """
+*** This module has been superceded by nxs.py ***
+
 Provide a ctypes wrapper around the NeXus library for use in Python.
 
 Data values are loaded/stored directly from numpy arrays.
