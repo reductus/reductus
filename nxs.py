@@ -6,9 +6,10 @@
 Wrapper for the NeXus shared library.
 
 WARNING:  We have a memory leak.  Calling open/close costs about 90k a pair.
-The leak appears to be in our use of ctypes, since the underlying napi 
-library doesn't not have a memory leak in these conditions, so it probably
-affects every call.
+This is an eigenbug:
+   - if I test ctypes on a simple library it does not leak
+   - if I use the leak_test1 code in the nexus distribution it doesn't leak
+   - if I remove the open/close call in the wrapper it doesn't leak.
 
 
 nxs looks for libNeXus in the following places in order:
@@ -208,8 +209,8 @@ class NeXus(object):
     lib = _libnexus()
     
     # ==== File ====
-    lib.nxiopen_.restype = c_int
-    lib.nxiopen_.argtypes = [c_char_p, c_int, c_void_pp]
+    #lib.nxiopen_.restype = c_int
+    #lib.nxiopen_.argtypes = [c_char_p, c_int, c_void_pp]
     def __init__(self, filename, mode='r'):
         """
         Open the NeXus file returning a handle.
@@ -248,8 +249,8 @@ class NeXus(object):
             raise RuntimeError, "Could not open %s"%(self.filename)
         self.path = []
 
-    lib.nxiclose_.restype = c_int
-    lib.nxiclose_.argtypes = [c_void_pp]
+    #lib.nxiclose_.restype = c_int
+    #lib.nxiclose_.argtypes = [c_void_pp]
     def close(self):
         """
         Close the NeXus file associated with handle.

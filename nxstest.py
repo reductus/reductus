@@ -17,6 +17,9 @@ def memfootprint():
     print "#classes=",len(classes)
 
 def leak_test1(n = 1000, mode='w5'):
+#    import gc
+#    gc.enable()
+#    gc.set_debug(gc.DEBUG_LEAK)
     filename = "leak_test1.nxs"
     try: os.unlink(filename)
     except OSError: pass
@@ -29,6 +32,7 @@ def leak_test1(n = 1000, mode='w5'):
             memfootprint()
         file.open()
         file.close()
+#        gc.collect()
     os.unlink(filename)
 
 def _show(file, indent=0):
@@ -339,6 +343,6 @@ def test():
     if tests == 0: test_mode('w5',quiet,external)
 
 if __name__ == "__main__":
-    #test()
-    leak_test1(n=10000)
+    test()
+    #leak_test1(n=10000)
     
