@@ -45,9 +45,9 @@ def _show(file, indent=0):
         print "%(prefix)s@%(attr)s: %(value)s" % locals()
     for name,nxclass in file.entries():
         if nxclass == "SDS":
-            shape,storage = file.getinfo()
+            shape,dtype = file.getinfo()
             dims = "x".join([str(x) for x in shape])
-            print "%(prefix)s%(name)s %(storage)s %(dims)s" % locals()
+            print "%(prefix)s%(name)s %(dtype)s %(dims)s" % locals()
             link = file.link()
             if link:
                 print "  %(prefix)s-> %(link)s" % locals()
@@ -83,6 +83,7 @@ def populate(filename,mode):
     file.opengroup("entry","NXentry")
     file.putattr("hugo","namenlos")
     file.putattr("cucumber","passion")
+    #file.putattr("embedded_null","embedded\000null")
     
     # Write character data
     file.makedata("ch_data",'char',[10])
@@ -105,8 +106,8 @@ def populate(filename,mode):
     file.putslab(r8[4,:],[4,0],[1,4])
     file.putslab(r8[0:4,:],[0,0],[4,4])
     file.putattr("ch_attribute","NeXus")
-    file.putattr("i4_attribute",42,storage='int32')
-    file.putattr("r4_attribute",3.14159265,storage='float32')
+    file.putattr("i4_attribute",42,dtype='int32')
+    file.putattr("r4_attribute",3.14159265,dtype='float32')
     dataID = file.getdataID()
     file.closedata()
 
@@ -194,6 +195,7 @@ def check(filename):
     file.opengroup('entry','NXentry')
     
     expect = dict(hugo='namenlos',cucumber='passion')
+    #expect['embedded_null'] = "embedded\000null"
     get = dict((k,v) for k,v in file.attrs())
     same = dicteq(get,expect)
     if not same: fail("/entry attributes are %s"%(get))

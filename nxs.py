@@ -65,7 +65,11 @@ Data types are strings corresponding to the numpy data types:
   'int8' 'int16' 'int32' 'int64'
   'uint8' 'uint16' 'uint32' 'uint64'
 
-  Use 'char' for strings.
+  Use 'char' for strings.  You can use the numpy dtype attribute for the
+  data type.
+
+Dimensions are lists of integers or numpy arrays.  You can use the
+numpy shape attribute for the dimensions.
 
 Compression codes are:
 
@@ -79,9 +83,8 @@ Miscellaneous constants:
   nxs.MAXPATHLEN  - total path length must be shorter than this
 
 
-TODO: Don't know what NOSTRIP constant is for
-TODO: Make named constants for types and compression
-
+TODO: NOSTRIP constant is probably not handled properly,
+TODO: Embedded nulls in strings is not supported
 """
 import sys, os, numpy, ctypes
 
@@ -147,7 +150,7 @@ def is_string_like(obj):
 
 def guess_type(obj):
     """
-    Guess the storage class of an object.
+    Guess the data type of an object.
     """
     if is_string_like(obj): return 'char'
     if hasattr(obj,'shape'): return str(obj.dtype)
@@ -236,7 +239,18 @@ class NeXus(object):
         self.isopen = True
 
     def __del__(self):
+        """
+        Be sure to close the file before deleting the last reference.
+        """
         if self.isopen: self.close()
+
+    
+    def __str__(self):
+        """
+        Return a string representation of the NeXus file handle.
+        """
+        return "NeXus('%s')"%self.filename
+        
 
     def open(self):
         """
@@ -443,7 +457,7 @@ class NeXus(object):
                 "Could not get next entry: %s"%(self._loc())
         ## Note: ignoring storage --- it is useless without dimensions
         #if nxclass == 'SDS':
-        #    storage = pytype_code(storage.value)
+        #    dtype = pytype_code(storage.value)
         #print "group next",nxclass.value, name.value, storage.value
         return name.value,nxclass.value
     
@@ -504,7 +518,7 @@ class NeXus(object):
         a dataset open.
     
         Corresponds to status = NXgetinfo(handle, &rank, dims, &storage),
-        but with storage_class converted from HDF values to numpy compatible
+        but with storage converted from HDF values to numpy compatible
         strings, and rank implicit in the length of the returned dimensions.
         """
         rank = c_int(0)
@@ -515,9 +529,9 @@ class NeXus(object):
         if status == ERROR:
             raise RuntimeError, "Could not get data info: %s"%(self._loc())
         shape = shape[:rank.value]+0
-        storage = pytype_code[storage.value]
-        #print "data info",shape,storage
-        return shape,storage
+        dtype = pytype_code[storage.value]
+        #print "data info",shape,dtype
+        return shape,dtype
 
     lib.nxiopendata_.restype = c_int
     lib.nxiopendata_.argtypes = [c_void_p, c_char_p]
@@ -555,12 +569,13 @@ class NeXus(object):
     
     lib.nximakedata_.restype = c_int
     lib.nximakedata_.argtypes  = [c_void_p, c_char_p, c_int, c_int, c_int_p]
-    def makedata(self, name, storage, shape):
+    def makedata(self, name, dtype=None, shape=None):
         """
-        Create a data element of the given dimensions and storage class.  See
-        getinfo for details on storage class.  This does not open the data
-        for writing.  Set the first dimension to napi.UNLIMITED, for
-        extensible data sets, and use putslab to write individual slabs.
+        Create a data element of the given type and shape.  See getinfo 
+        for details on types.  This does not open the data for writing.
+        
+        Set the first dimension to nxs.UNLIMITED, for extensible data sets, 
+        and use putslab to write individual slabs.
         
         Raises ValueError if it fails.
     
@@ -570,8 +585,8 @@ class NeXus(object):
         # TODO: compmakedata.
         # TODO: With keywords for value and attr, this can be used for
         # TODO: makedata, opendata, putdata, putattr, putattr, ..., closedata
-        #print "Data",name,storage,shape
-        storage = nxtype_code[storage]
+        #print "Data",name,dtype,shape
+        storage = nxtype_code[str(dtype)]
         shape = numpy.array(shape,'i')
         status = self.lib.nximakedata_(self.handle,name,storage,len(shape),
                                   shape.ctypes.data_as(c_int_p))
@@ -581,28 +596,36 @@ class NeXus(object):
     lib.nxicompmakedata_.restype = c_int
     lib.nxicompmakedata_.argtypes  = [c_void_p, c_char_p, c_int, c_int, c_int_p,
                                       c_int, c_int_p]
-    def compmakedata(self, name, storage, shape, mode, chunk_shape):
+    def compmakedata(self, name, dtype=None, shape=None, mode='lzw', 
+                     chunks=None):
         """
-        Create a data element of the given dimensions and storage class.  See
-        getinfo for details on storage class.  Compression mode is one of
-        'none', 'lzw', 'rle' or 'huffman'.  chunk_shape gives the alignment
+        Create a data element of the given dimensions and type.  See
+        getinfo for details on types.  Compression mode is one of
+        'none', 'lzw', 'rle' or 'huffman'.  chunks gives the alignment
         of the compressed chunks in the data file.  It should be of the same
         length as the shape parameter, as there is a separate chunk distance
         for each dimension.
+        
+        Defaults to mode='lzw' with chunk size set to the length of the
+        fastest varying dimension.
     
         Raises ValueError if it fails.
     
         Corresponds to status=NXmakedata(handle,name,type,rank,dims).
         """
-        storage = nxtype_code[storage]
+        storage = nxtype_code[str(dtype)]
         # Make sure shape/chunk_shape are integers; hope that 32/64 bit issues
         # with the c int type sort themselves out.
-        shape = numpy.array(shape,'i')
-        chunk_shape = numpy.array(chunk_shape,'i')
-        status = self.lib.nxicompmakedata_(self.handle,name,storage,len(shape),
-                                      shape.ctypes.data_as(c_int_p),
+        dims = numpy.array(shape,'i')
+        if chunks == None:
+            chunks = numpy.ones(dims.shape)
+            chunks[-1] = shape[-1]
+        else:
+            chunks = numpy.array(chunks,'i')
+        status = self.lib.nxicompmakedata_(self.handle,name,storage,len(dims),
+                                      dims.ctypes.data_as(c_int_p),
                                       compression_code[mode],
-                                      chunk_shape.ctypes.data_as(c_int_p))
+                                      chunks.ctypes.data_as(c_int_p))
         if status == ERROR:
             raise ValueError, \
                 "Could not create compressed data %s: %s"%(name,self._loc())
@@ -619,11 +642,9 @@ class NeXus(object):
     
         Corresponds to the status = NXgetdata (handle, data) function.   
         """
-        # TODO: consider providing a handle to an existing array so that
-        # we don't thrash memory when reading an writing many identically
-        # sized huge datasets.
-        shape,storage = self.getinfo()
-        datafn,pdata,size = self._poutput(storage,shape)
+        # TODO: consider accepting preallocated data so we don't thrash memory
+        shape,dtype = self.getinfo()
+        datafn,pdata,size = self._poutput(dtype,shape)
         status = self.lib.nxigetdata_(self.handle,pdata)
         if status == ERROR:
             raise ValueError, "Could not read data: %s"%(self._loc())
@@ -644,8 +665,8 @@ class NeXus(object):
         Corresponds to status = NXgetslab(handle,data,offset,shape)
         """
         # TODO: consider accepting preallocated data so we don't thrash memory
-        shape,storage = self.getinfo()
-        datafn,pdata,size = self._poutput(storage,slab_shape)
+        shape,dtype = self.getinfo()
+        datafn,pdata,size = self._poutput(dtype,slab_shape)
         slab_offset = numpy.array(slab_offset,'i')
         slab_shape = numpy.array(slab_shape,'i')
         status = self.lib.nxigetslab_(self.handle,pdata,
@@ -666,8 +687,8 @@ class NeXus(object):
     
         Corresponds to the status = NXputdata (handle, data)
         """
-        shape,storage = self.getinfo()
-        data,pdata = self._pinput(data,storage,shape)
+        shape,dtype = self.getinfo()
+        data,pdata = self._pinput(data,dtype,shape)
         status = self.lib.nxiputdata_(self.handle,pdata)
         if status == ERROR:
             raise ValueError, "Could not write data: %s"%(self._loc())
@@ -685,8 +706,8 @@ class NeXus(object):
         
         Corresponds to status = NXputslab(handle,data,offset,shape)
         """
-        shape,storage = self.getinfo()
-        data,pdata = self._pinput(data,storage,slab_shape)
+        shape,dtype = self.getinfo()
+        data,pdata = self._pinput(data,dtype,slab_shape)
         slab_offset = numpy.array(slab_offset,'i')
         slab_shape = numpy.array(slab_shape,'i')
         #print "slab",offset,size,data
@@ -737,19 +758,20 @@ class NeXus(object):
     lib.nxigetnextattr_.argtypes = [c_void_p, c_char_p, c_int_p, c_int_p]
     def getnextattr(self):
         """
-        Returns the name, length, and storage type for the next attribute.
+        Returns the name, length, and data type for the next attribute.
         Call getattrinfo to determine the number of attributes before
-        calling getnextattr. Storage type is returned as a string.  See
-        getinfo for details.  Length seems to be the number of elements
-        in the attribute rather than the number of bytes required to
-        store the entire attribute (NeXus API documentation suggests
-        otherwise).  
-    
+        calling getnextattr. Data type is returned as a string.  See
+        getinfo for details.  Length is the number of elements in the 
+        attribute.
+
         Raises RuntimeError if NeXus returns ERROR or EOD.
-    
+
         Corresponds to status = NXgetnextattr(handle,name,&length,&storage)
-        but with storage_class converted from HDF values to numpy compatible
+        but with storage converted from HDF values to numpy compatible
         strings.
+        
+        Note: NeXus API documentation seems to say that length is the number 
+        of bytes required to store the entire attribute.
         """
         name = ctypes.create_string_buffer(MAXNAMELEN)
         length = c_int(0)
@@ -757,24 +779,24 @@ class NeXus(object):
         status = self.lib.nxigetnextattr_(self.handle,name,byref(length),byref(storage))
         if status == ERROR or status == EOD:
             raise RuntimeError, "Could not get next attr: %s"%(self._loc())
-        storage = pytype_code[storage.value]
-        #print "next attr",name.value,length.value,storage
-        return name.value, length.value, storage
+        dtype = pytype_code[storage.value]
+        #print "next attr",name.value,length.value,dtype
+        return name.value, length.value, dtype
 
     # TODO: Resolve discrepency between NeXus API documentation and
     # TODO: apparent behaviour for getattr/putattr length.
     lib.nxigetattr_.restype = c_int
     lib.nxigetattr_.argtypes = [c_void_p, c_char_p, c_void_p, c_int_p, c_int_p]
-    def getattr(self, name, length, storage):
+    def getattr(self, name, length, dtype):
         """
         Returns the value of the named attribute.  Requires length and
-        storage from getnextattr to allocate the appropriate amount of
+        data type from getnextattr to allocate the appropriate amount of
         space for the attribute.
     
         Corresponds to status = NXgetattr(handle,name,data,&length,&storage)
         """
-        datafn,pdata,size = self._poutput(storage,[length])
-        storage = c_int(nxtype_code[storage])
+        datafn,pdata,size = self._poutput(str(dtype),[length])
+        storage = c_int(nxtype_code[str(dtype)])
         size = c_int(size)
         status = self.lib.nxigetattr_(self.handle,name,pdata,byref(size),byref(storage))
         if status == ERROR:
@@ -784,7 +806,7 @@ class NeXus(object):
 
     lib.nxiputattr_.restype = c_int
     lib.nxiputattr_.argtypes = [c_void_p, c_char_p, c_void_p, c_int, c_int]
-    def putattr(self, name, value, storage = None):
+    def putattr(self, name, value, dtype = None):
         """
         Saves the named attribute.
     
@@ -795,8 +817,11 @@ class NeXus(object):
         Note length is the number of elements to write rather 
         than the number of bytes to write.
         """
-        if storage == None: storage = guess_type(value)
-        if storage == 'char':
+        if dtype == None: 
+            dtype = guess_type(value)
+        else:
+            dtype = str(dtype)
+        if dtype == 'char':
             arg = value
             length = c_int(len(value))
         elif hasattr(value,'shape') and len(value.shape)>0:
@@ -808,10 +833,10 @@ class NeXus(object):
             # Scalar: create a temporary array of the correct length
             # to hold the scalar and make sure it stays around until the
             # end of the function.
-            value = numpy.array([value],storage)
+            value = numpy.array([value],dtype)
             arg = value.ctypes.data
             length = 1
-        storage = c_int(nxtype_code[storage])
+        storage = c_int(nxtype_code[dtype])
         status = self.lib.nxiputattr_(self.handle,name,arg,length,storage)
         if status == ERROR:
             raise ValueError, "Could not write attr %s: %s"%(name,self._loc())
@@ -832,8 +857,8 @@ class NeXus(object):
         n = self.getattrinfo()
         self.initattrdir()
         for i in range(n):
-            name,length,storage = self.getnextattr()
-            value = self.getattr(name,length,storage)
+            name,length,dtype = self.getnextattr()
+            value = self.getattr(name,length,dtype)
             yield name,value
     
     # ==== Linking ====
@@ -945,9 +970,9 @@ class NeXus(object):
         n = self.getattrinfo()
         self.initattrdir()
         for i in range(n):
-            name,length,storage = self.getnextattr()
+            name,length,dtype = self.getnextattr()
             if name == "target":
-                target = self.getattr(name,length,storage)
+                target = self.getattr(name,length,dtype)
                 #print "target %s, path %s"%(target,pathstr)
                 return target if target != pathstr else None
         return None
@@ -1015,7 +1040,7 @@ class NeXus(object):
         pathstr = "/".join(self.path) if not self.path == [] else "root"
         return "%s(%s)"%(self.filename,pathstr)
     
-    def _poutput(self, storage, shape):
+    def _poutput(self, dtype, shape):
         """
         Build space to collect a nexus data element.
         Returns datafn,data,size where
@@ -1023,17 +1048,17 @@ class NeXus(object):
         - pdata is the value to pass to C (effectively a void *)
         - size is the number of bytes in the data block
         Note that ret can return a string, a scalar or an array depending
-        on the storage class and dimensions of the data group.
+        on the data type and shape of the data group.
         """
-        if len(shape) == 1 and storage == 'char':
+        if len(shape) == 1 and dtype == 'char':
             # string - use ctypes allocator
             size = int(shape[0])
             pdata = ctypes.create_string_buffer(size)
             datafn = lambda: pdata.value
         else:
             # numeric - use numpy array
-            if storage=='char': storage = 'uint8'
-            data = numpy.zeros(shape,storage)
+            if dtype=='char': dtype = 'uint8'
+            data = numpy.zeros(shape,dtype)
             if len(shape) == 1 and shape[0] == 1:
                 datafn = lambda: data[0]
             else:
@@ -1042,13 +1067,13 @@ class NeXus(object):
             size = data.nbytes
         return datafn,pdata,size
     
-    def _pinput(self, data, storage, shape):
+    def _pinput(self, data, dtype, shape):
         """
         Convert an input array to a C pointer to a dense array.  This may
         require conversion of the array, so the new array is returned along
         with its pointer.
         """
-        if storage == "char":
+        if dtype == "char":
             # Character data - pad with zeros to the right length
             if not is_string_like(data):
                 raise ValueError,"Expected character data: %s"%(self._loc())
@@ -1057,7 +1082,7 @@ class NeXus(object):
         else:
             # Convert scalars to vectors of length one
             if numpy.prod(shape) == 1 and not hasattr(data,'shape'):
-                data = numpy.array([data],dtype=storage)
+                data = numpy.array([data],dtype=dtype)
             # Check that dimensions match
             # Ick! need to exclude dimensions of length 1 in order to catch
             # array slices such as a[:,1], which only report one dimension
@@ -1066,14 +1091,13 @@ class NeXus(object):
             if len(input_shape) != len(target_shape) or any(input_shape != target_shape):
                 raise ValueError,\
                     "Shape mismatch %s!=%s: %s"%(str(size),str(data.shape),self.filename)
-            if str(data.dtype) != storage:
+            if str(data.dtype) != dtype:
                 raise ValueError,\
-                    "Type mismatch %s!=%s: %s"%(storage,str(data.dtype),self._loc())
+                    "Type mismatch %s!=%s: %s"%(dtype,str(data.dtype),self._loc())
     
-        if storage == 'char':
+        if dtype == 'char':
             # String: hand it over as usual for strings.  Assumes the string
             # is the correct length for the storage area.
-            # TODO: make sure this handles strings containing zeros
             pdata = data
         else:
             # Vector: assume it is of the correct storage class and size
