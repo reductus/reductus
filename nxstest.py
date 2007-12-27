@@ -84,7 +84,7 @@ def populate(filename,mode):
     file.putattr("hugo","namenlos")
     file.putattr("cucumber","passion")
     #file.putattr("embedded_null","embedded\000null")
-    
+
     # Write character data
     file.makedata("ch_data",'char',[10])
     file.opendata("ch_data")
@@ -95,7 +95,7 @@ def populate(filename,mode):
     for var in ['i1','i2','i4','i8','r4']:
         name = var+'_data'
         val = locals()[var]
-        file.makedata(name,str(val.dtype),val.shape)
+        file.makedata(name,val.dtype,val.shape)
         file.opendata(name)
         file.putdata(val)
         file.closedata()
@@ -108,6 +108,9 @@ def populate(filename,mode):
     file.putattr("ch_attribute","NeXus")
     file.putattr("i4_attribute",42,dtype='int32')
     file.putattr("r4_attribute",3.14159265,dtype='float32')
+    ## Oops... NAPI doesn't support array attributes
+    #file.putattr("i4_array",[3,2],dtype='int32')
+    #file.putattr("r4_array",[3.14159265,2.718281828],dtype='float32')
     dataID = file.getdataID()
     file.closedata()
 
@@ -216,6 +219,24 @@ def check(filename):
         file.closedata()
         if not (get == expected).all(): 
             fail("%s retrieved %s"%(dtype,get))
+
+    # Check attribute types
+    file.opendata('r8_data')
+    get = file.getattr("ch_attribute",5,'char')
+    if not get == "NeXus": fail("ch_attribute retrieved %s"%(get))
+    get = file.getattr("i4_attribute",1,'int32')
+    if not get == numpy.int32(42): fail("i4_attribute retrieved %s"%(get))
+    get = file.getattr("r4_attribute",1,'float32')
+    if not get == numpy.float32(3.14159265): fail("r4_attribute retrieved %s"%(get))
+    ## Oops... NAPI doesn't support array attributes
+    #expect = numpy.array([3,2],dtype='int32')
+    #get = file.getattr("i4_array",2,'int32')
+    #if not (get==expect).all(): fail('i4_array retrieved %s'%(get))
+    #expect = numpy.array([3.14159265,2.718281828],dtype='float32')
+    #get = file.getattr("r4_array",2,dtype='float32')
+    #if not (get==expect).all(): fail("r4_array retrieved %s"%(get))
+    file.closedata()
+
 
     # Check reading from compressed datasets
     comp_array=numpy.ones((100,20),dtype='int32')

@@ -163,22 +163,22 @@ _compression_code=dict(
 
 def _is_string_like(obj):
     """
-    Return True if object looks like a string.
+    Return True if object acts like a string.
     """
     # From matplotlib cbook.py John D. Hunter
     # Python 2.2 style licence.  See license.py in matplotlib for details.
-    if hasattr(obj, 'shape'): return 0
+    if hasattr(obj, 'shape'): return False
     try: obj + ''
-    except (TypeError, ValueError): return 0
-    return 1
+    except (TypeError, ValueError): return False
+    return True
 
-def _guess_type(obj):
+def _is_list_like(obj):
     """
-    Guess the data type of an object.
+    Return True if object acts like a list
     """
-    if _is_string_like(obj): return 'char'
-    if hasattr(obj,'shape'): return str(obj.dtype)
-    return str(numpy.array([obj]).dtype)
+    try: obj + []
+    except TypeError: return False
+    return True
 
 def _libnexus():
     """
@@ -820,18 +820,20 @@ class NeXus(object):
         """
         datafn,pdata,size = self._poutput(str(dtype),[length])
         storage = c_int(_nxtype_code[str(dtype)])
+        #print "retrieving",name,length,dtype,size
         size = c_int(size)
         status = self.lib.nxigetattr_(self.handle,name,pdata,_ref(size),_ref(storage))
         if status == ERROR:
             raise ValueError, "Could not read attr %s: %s" % (name,self._loc())
-        #print "attr",name,ret(),size
+        #print "attr",name,datafn(),size
         return datafn()
 
     lib.nxiputattr_.restype = c_int
     lib.nxiputattr_.argtypes = [c_void_p, c_char_p, c_void_p, c_int, c_int]
     def putattr(self, name, value, dtype = None):
         """
-        Saves the named attribute.
+        Saves the named attribute.  The attribute value is a string
+        or a scalar.
     
         Raises ValueError if the attribute could not be saved.
         
@@ -840,27 +842,38 @@ class NeXus(object):
         Note length is the number of elements to write rather 
         than the number of bytes to write.
         """
-        if dtype == None: 
-            dtype = _guess_type(value)
+        # Establish attribute type
+        if dtype == None:
+            # Type is inferred from value
+            if hasattr(value,'dtype'):
+                dtype = str(value.dtype)
+            elif _is_string_like(value):
+                dtype = 'char'
+            else:
+                value = numpy.array(value)
+                dtype = str(value.dtype)
         else:
+            # Set value to type
             dtype = str(dtype)
+            if dtype == 'char' and not _is_string_like(value):
+                raise TypeError, "Expected string for 'char' attribute value"
+            if dtype != 'char':
+                value = numpy.array(value,dtype=dtype)
+
+        # Determine shape
         if dtype == 'char':
-            arg = value
-            length = c_int(len(value))
-        elif hasattr(value,'shape') and len(value.shape)>0:
-            # Array attribute; make contiguous to support array slice inputs
-            value = numpy.ascontiguousvalue(value)
-            arg = value.ctypes.data
-            length = c_int(len(value))
+            length = len(value)
+            data = value
+        elif numpy.prod(value.shape) != 1:
+            # NAPI silently ignores attribute arrays
+            raise TypeError, "Attribute value must be scalar or string"
         else:
-            # Scalar: create a temporary array of the correct length
-            # to hold the scalar and make sure it stays around until the
-            # end of the function.
-            value = numpy.array([value],dtype)
-            arg = value.ctypes.data
             length = 1
+            data = value.ctypes.data
+
+        # Perform the call
         storage = c_int(_nxtype_code[dtype])
-        status = self.lib.nxiputattr_(self.handle,name,arg,length,storage)
+        status = self.lib.nxiputattr_(self.handle,name,data,length,storage)
         if status == ERROR:
             raise ValueError, "Could not write attr %s: %s"%(name,self._loc())
     
@@ -1115,10 +1128,10 @@ class NeXus(object):
             target_shape = numpy.array([i for i in shape if i != 1])
             if len(input_shape) != len(target_shape) or any(input_shape != target_shape):
                 raise ValueError,\
-                    "Shape mismatch %s!=%s: %s"%(str(size),str(data.shape),self.filename)
+                    "Shape mismatch %s!=%s: %s"%(data.shape,shape,self.filename)
             if str(data.dtype) != dtype:
                 raise ValueError,\
-                    "Type mismatch %s!=%s: %s"%(dtype,str(data.dtype),self._loc())
+                    "Type mismatch %s!=%s: %s"%(dtype,data.dtype,self._loc())
     
         if dtype == 'char':
             # String: hand it over as usual for strings.  Assumes the string
