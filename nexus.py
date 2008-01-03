@@ -12,9 +12,9 @@ NeXus(file,mode)
 Helper classes:
 
 Group(name,class)
-    - NeXus group containing fields
+    - NeXus group containing nodes
 Data(name)
-    - NeXus data within a field
+    - NeXus data within a node
 """
 
 # TODO: Rather than carrying around the 'storage' name for attributes
@@ -43,7 +43,7 @@ class NeXus(nxs.NeXus):
 
       nx = NeXus('REF_L_1346.nxs','r')
       tree = nx.read()
-      for entry in tree.nxdict.itervalues():
+      for entry in tree.nxnode.itervalues():
           process(entry)
       copy = NeXus('modified.nxs','w')
       copy.write(tree)
@@ -98,7 +98,7 @@ class NeXus(nxs.NeXus):
         links = []
         # Root node is special --- only write its children.
         # TODO: maybe want to write root node attributes?
-        for entry in tree.nxdict.itervalues():
+        for entry in tree.nxnode.itervalues():
             links += self._writegroup(entry, path="")
         self._writelinks(links)
         self.close()
@@ -144,7 +144,7 @@ class NeXus(nxs.NeXus):
         if 'target' in attr and attr['target'].value != path:
             # This is a linked dataset; don't try to load it.
             #print "read link %s->%s"%(attr['target'].value,path)
-            data = Link(name,attr=attr)
+            data = Link(name,nxclass='SDS',attr=attr)
         else:
             dims,type = self.getinfo()
             if N.prod(dims) < 1000:
@@ -183,7 +183,7 @@ class NeXus(nxs.NeXus):
         if 'target' in attr and attr['target'].value != path:
             # This is a linked group; don't try to load it.
             #print "read group link %s->%s"%(attr['target'].value,path)
-            group = Link(name,attr=attr)
+            group = Link(name,nxclass=nxclass,attr=attr)
         else:
             children = self._readchildren(n,path)
             # If we are subclassed with a handler for the particular
@@ -193,7 +193,7 @@ class NeXus(nxs.NeXus):
                 factory = getattr(self,nxclass)
             else:
                 factory = self.Group
-            group = factory(nxclass,name,attr=attr,dict=children)
+            group = factory(nxclass,name,attr=attr,node=children)
         return group
 
     def NXroot(self,*args,**kw): return NXroot(*args,**kw)
@@ -260,7 +260,7 @@ class NeXus(nxs.NeXus):
         self._writeattrs(group.nxattr)
         if hasattr(group, '_link_target'):
             links += [(path, group._link_target)]
-        for child in group.nxdict.itervalues():
+        for child in group.nxnode.itervalues():
             if child.nxclass == 'SDS':
                 links += self._writedata(child,path)
             elif hasattr(child,'_link_target'):
@@ -301,9 +301,6 @@ class NeXus(nxs.NeXus):
                 #print "link %s -> %s"%(parent,target)
                 self.openpath(parent)
                 self.makelink(gid[target])
-        
-            
-
 
 def read(filename):
     file = NeXus(filename,'r')
@@ -326,7 +323,7 @@ class Node(object):
     nxclass = "unknown"
     nxname = "unknown"
     nxattr = None
-    nxdict = None
+    nxnode = None
 
     def __str__(self):
         return "%s:%s"%(self.nxclass,self.nxname)
@@ -368,7 +365,7 @@ class Node(object):
         
         However improve readability significantly over the alternative:
         
-            root.findclass("NXentry")[0].findclass("NXinstrument")[0].nxdict['definition'].value
+            root.findclass("NXentry")[0].findclass("NXinstrument")[0].nxnode['definition'].value
         
         Another issue to consider is supplying default values for missing
         information, e.g., if there is no slit 4, set slit 4 to infinitely open.
@@ -377,7 +374,7 @@ class Node(object):
              s.get('NXinstrument.monochromator.wavelength_error',0.01)
 
         Consider using fixed attributes for the different namespaces, NX for
-        classes, F for fields, and A for attributes:
+        classes, N for nodes, and A for attributes:
             root.NX.entry.NX.instrument.F.definition.value
         Consider using a naming convention in which all real attributes have
         lowercase names and 
@@ -385,8 +382,8 @@ class Node(object):
         """
         if key in self.nxattr:
             return self.nxattr[key].value
-        elif key in self.nxdict:
-            return self.nxdict[key]
+        elif key in self.nxnode:
+            return self.nxnode[key]
         else:
             match = self.findclass(key)
             if len(match) == 1: 
@@ -402,7 +399,7 @@ class Node(object):
         E.g., root.match("NXentry") returns the set of entries
         """
         return [entry
-                for entry in self.nxdict.itervalues()
+                for entry in self.nxnode.itervalues()
                 if entry.nxclass == nxclass]
         
     def search(self,pattern):
@@ -412,7 +409,7 @@ class Node(object):
         if self.nxattr is not None:
             for k,v in self.nxattr.iteritems():
                 pass
-        for k,v in self.nxdict.iteritems():
+        for k,v in self.nxnode.iteritems():
             pass
 
     def print_name(self,indent=0):
@@ -427,7 +424,7 @@ class Node(object):
             names = self.nxattr.keys()
             names.sort()
             for k in names:
-                print " "*indent+k,":",self.nxattr[k].value
+                print " "*indent+"@%s = %s"%(k,self.nxattr[k].value)
                 
     def print_tree(self,indent=0,attr=False):
         # Print node
@@ -435,10 +432,10 @@ class Node(object):
         if attr: self.print_attr(indent=indent+2)
         self.print_value(indent=indent+2)
         # Print children
-        names = self.nxdict.keys()
+        names = self.nxnode.keys()
         names.sort()
         for k in names:
-            self.nxdict[k].print_tree(indent=indent+2,attr=attr)
+            self.nxnode[k].print_tree(indent=indent+2,attr=attr)
 
 class Data(Node):
     """
@@ -458,7 +455,7 @@ class Data(Node):
         self.nxname = name
         self.nxtype = dtype
         self.nxdims = shape
-        self.nxdict = {}
+        self.nxnode = {}
         self.nxattr = {} if attr is None else attr
         self.value = value
 
@@ -476,12 +473,15 @@ class Data(Node):
 
     def print_value(self,indent=0):
         v = str(self)
-        if v != "":
+        if '\n' in v:
             print '\n'.join([(" "*indent)+s for s in v.split('\n')])
 
     def print_name(self,indent=0):
         dims = 'x'.join([str(n) for n in self.nxdims])
-        print " "*indent + "%s : Data(%s %s)"%(self.nxname, self.nxtype,dims)
+        v = str(self)
+        if '\n' in v or v == "":
+            v = "%s(%s)"%(self.nxtype, dims)
+        print " "*indent + "%s = %s"%(self.nxname, v)
 
     def slab(self,slice):
         slab = self._file.readslab(self,slice)
@@ -497,22 +497,25 @@ class Data(Node):
         return self.value
 
 class Link(Node):
-    def __init__(self,name,attr=None):
-        self.nxdict = {}
-        self.nxclass = '_link'
+    def __init__(self,name,nxclass="",attr=None):
+        self.nxnode = {}
+        self.nxclass = nxclass
         self.nxname = name
         self.nxattr = {} if attr is None else attr
         self._link_target = self.nxattr['target'].value
     def __str__(self):
         return "Link(%s)"%(self._link_target)
+    def print_tree(self,indent=0,attr=False):
+        print " "*indent+self.nxname,'->',self._link_target
+
 
 class Group(Node):
     """
     NeXus group node.  Group nodes have no data associated with them,
     but they do have attributes and children.
     """
-    def __init__(self,nxclass,name,attr=None,dict={}):
-        self.nxdict = dict
+    def __init__(self,nxclass,name,attr=None,node={}):
+        self.nxnode = node
         self.nxclass = nxclass
         self.nxname = name
         self.nxattr = {} if attr is None else attr
