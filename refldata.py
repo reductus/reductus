@@ -1,5 +1,7 @@
 # This program is public domain
 
+import datetime
+
 """
 Reflectometry data representation.
 
@@ -57,8 +59,11 @@ data file format.
 """
 
 import numpy
-from numpy import inf, pi, sin, cos, asin, atan2, sqrt
+from numpy import inf, pi, sin, cos, arcsin, arctan2, sqrt
 
+# TODO: attribute documentation and units should be integrated with the
+# TODO: definition of the attributes.  Value attributes should support
+# TODO: unit conversion 
 class Slit(object):
     """
     Define a slit for the instrument.  This is needed for correct resolution
@@ -113,7 +118,7 @@ class Sample(object):
         is independent of angle in this direction.
     thickness (inf millimetre)
         Thickness of the sample.
-    substrate_sld (inv milliAngstrom^2)
+    substrate_sld (10^-6 Angstrom^-2)
         To plot Fresnel reflectivity we need to know the substrate
         scattering length density.  The default is to assume silicon.
     shape ('rectangular')
@@ -136,7 +141,7 @@ class Sample(object):
     environment ({})
         Sample environment data.  See Environment class for a list of
         common environment data.
-    """
+    """        
     description = ''
     width = inf
     length = inf
@@ -145,10 +150,12 @@ class Sample(object):
     angle_x = 0
     angle_y = 0
     rotation = 0
+    substrate_sld = 2.07 # silicon substrate for neutrons
 
     def __init__(self, **kw): 
         self.environment = {}
         _set(self,kw)
+    
     
 class Environment(object):
     """
@@ -246,10 +253,10 @@ class Detector(object):
         [nx,1].  For area detectors, this should be [nx,ny].
     distance (metre)
         Distance from the sample to the detector
-    width_x (nx x millimetre)
+    width_x (nx millimetre)
         Widths of the pixes in the primary direction (vertical for 
         horizontal geometry, horizontal for vertical geometry).
-    width_y (ny x millimetre)
+    width_y (ny millimetre)
         Widths of the pixels in the secondary direction.
     center_x (millimeter)
         Location of the center pixel in the primary direction relative
@@ -257,15 +264,15 @@ class Detector(object):
     center_y (millimetre)
         Location of the center pixel in the secondary direction relative
         to the detector arm.
-    angle_x (n x 0 degree)
+    angle_x (n degree)
         Angle of the detector arm relative to the main beam in the
         primary direction. This may be constant or an array of length n 
         for the number of measurements in the scan.
-    angle_y (n x 0 degree)
+    angle_y (n degree)
         Angle of the detector arm relative to the main beam in the
         secondary direction. This may be constant or an array of length n 
         for the number of measurements in the scan.
-    rotation (0 degree)
+    rotation (degree)
         Angle of rotation of the detector relative to the beam.  This
         will affect how vertical integration in the region of interest
         is calculated.  Ideally the detector would not be rotated, though
@@ -273,11 +280,12 @@ class Detector(object):
 
     Efficiency
     ==========
-    efficiency (nx x ny x [0-1])
+    efficiency (nx x ny %)
         Efficiency of the individual pixels; this is an array of the same
         shape as the detector, giving the relative efficiency of each pixel,
         or 1 if the efficiency is unknown.
-    saturation (k x [[0-1], [0-1], counts/second])
+        TODO: do we need variance?
+    saturation (k [%, counts/second])
         Given a measurement of a given number of counts versus expected 
         number of counts on the detector (e.g., as estimated by scanning 
         a narrow slit across the detector to measure the beam profile, 
@@ -290,6 +298,7 @@ class Detector(object):
         inefficiency will be normalized when comparing the measured
         reflection to the measured beam).  Beyond the highest count 
         rate, the detector is considered saturated.
+        TODO: do we need variance?
 
         Note: Given the nature of the detectors (detecting ionization 
         caused by neutron capture) there is undoubtably a local 
@@ -305,8 +314,8 @@ class Detector(object):
         Wavelength resolution of the beam for each channel using 1-sigma
         gaussian approximation dL, expressed as 100*dL/L.  The actual
         wavelength distribution is considerably more complicated, being
-        approximately square multi-sheet monochromators and highly skewed
-        on TOF machines.
+        approximately square for multi-sheet monochromators and highly 
+        skewed on TOF machines.
     time_of_flight (k+1 ms)
         Time boundaries for time-of-flight measurement
     counts (nx x ny x k counts OR n x nx x ny counts)
@@ -373,33 +382,70 @@ class ROI(object):
 
 class Monitor(object):
     """
-    Define the monitor properties.
+    Define the monitor properties.  
+    
+    The monitor is essential to the normalization of reflectometry data.
+    Reflectometry is the number of neutrons detected divided by the 
+    number of neutrons incident on the sample.  To compute this ratio, 
+    the incident and detected neutrons must be normalized to the neutron
+    rate, either counts per monitor count, counts per second or counts 
+    per unit of source power (e.g., coulombs of protons incident on the
+    detector, or megawatt hours of reactor power).
 
-    distance (metre)
-        Distance from the sample.  If the monitor is after the second
-        slit, the monitor value can be used to estimate the the counts
-        on the detector, scaled by the sampled fraction.   Otherwise
-        a full slit scan is required to normalize the reflectivity.
-    sampled_fraction ([0,1])
-        Portion of the neutrons that are sampled by the monitor.
     counts (n x k counts)
         Number of counts measured.  For scanning instruments there is
-        a separate count for each measurement.  For TOF instruments there
-        is a separate count for each time channel.  For whitebeam 
-        instruments there is a single count for the measurement.
-    count_time (n x seconds)
+        a separate count for each of the n measurements.  For TOF 
+        instruments there is a separate count for each of k time 
+        channels.  Counts may be absent, in which case normalization
+        must be by time or by monitor.  In some circumstances the
+        user may generate a counts vector, for example by estimating
+        the count rate by other means, in order to combine data
+        measured by time with data measured by monitor when the
+        monitor values are otherwise unreliable.  Variance is assumed
+        to be the number of counts, after any necessary rebinning.
+    count_time (n seconds)
         Duration of the measurement.  For scanning instruments, there is
-        a separate duration for each measurement.
-    start_time (n x seconds)
+        a separate duration for each measurement.  For TOF, this is a
+        single value equal to the duration of the entire measurement.
+    source_power (n source_power_units)
+        The source power for each measurement.  For situations when the 
+        monitor cannot be trusted (which can happen from time to time on 
+        some instruments), we can use the number of protons incident on 
+        the target (proton charge) or the energy of the source (reactor 
+        power integrated over the duration of the measurement) as a proxy
+        for the monitor.  So long as the we normalize both the slit
+        measurement and the reflectivity measurement by the power, this
+        should give us a reasonable estimate of the reflectivity.  If
+        the information is available, this will be a better proxy for
+        monitor than measurement duration.
+    base ('time' | 'counts' | 'power')
+        The measurement rate basis which should be used to normalize 
+        the data.  This is initialized by the file loader, but may
+        be overridden during reduction.
+    start_time (n seconds)
         For scanning instruments the start of each measurement relative 
         to start of the scan.  Note that this is not simply sum of the
         count times because there may be motor movement between
-        measurements.
+        measurements.  The start time is required to align the measurement
+        values with environment parameters, and for calculation of He3
+        polarization.  For TOF, this should be zero.
+    distance (metre)
+        Distance from the sample.  This is not used by reduction but
+        may be of interest to the user.
+    sampled_fraction ([0,1])
+        Portion of the neutrons that are sampled by the monitor.  If the 
+        monitor is after the second slit, the monitor value can be used to 
+        estimate the the counts on the detector, scaled by the sampled 
+        fraction.   Otherwise a full slit scan is required to normalize 
+        the reflectivity.  This is the inverse of the detector to monitor
+        ratio used to normalize data on some instruments.
     time_of_flight (k+1 millisecond)
-        Time boundaries for time-of-flight measurements
-    base ('time' | 'counts')
-        The basis of the monitor; this is for information only, and
-        is not used in reduction.
+        Time boundaries for the time-of-flight measurement
+    source_power_units ('coulombs' | 'megawatthours')
+        Units for source power.
+    monitor_rate (counts/second)
+        For normalizing by counts when only count time is recorded, we
+        need an estimate of the monitor rate during the measurement.
     """
     distance = None
     sampled_fraction = None
@@ -411,6 +457,56 @@ class Monitor(object):
 
     def __init__(self, **kw): _set(self,kw)
 
+class Moderator(object):
+    """
+    Time of flight calculations require information about the moderator.
+    Primarily this is the length of the flight path from moderator to
+    monitor or detector required to compute wavelength.
+    
+    Moderator temperature is also recorded.  The user should probably
+    be warned when working with datasets with different moderator
+    temperatures since this is likely to affect the wavelength
+    spectrum of the beam.
+    
+    distance (metre)
+        Distance from moderator to sample.  This is negative since the
+        monitor is certainly before the sample.
+    temperature (kelvin)
+        Temperature of the moderator
+    type (string)
+        For information only at this point.
+    """
+    distance = None
+    temperature = None
+    type = 'Unknown'
+    
+    def __init__(self, **kw): _set(self, kw)
+
+
+class Warning(object):
+    """
+    A warning is an information message and a possible set of actions to
+    take in response to the warning.
+    
+    The user interface can query the message and the action list, generate
+    a dialog on the basis of the information.  Actions may have associated
+    attributes that need to be set for the action to complete.
+    """
+    pass
+
+class WarningWavelength(Warning):
+    """
+    Unexpected wavelength warning.
+    
+    This warning is attached to any dataset which has an unexpected
+    wavelength stored in the file (more than 1% different from the
+    default wavelength for the instrument).
+    
+    Various actions can be done in response to the warning, including
+    always taking the default value for this instrument, overriding for
+    every value in the dataset
+    """
+    pass
 
 class ReflData(object):
     """
@@ -460,7 +556,10 @@ class ReflData(object):
         Starting date and time of the measurement.
     duration (second)
         Duration of the measurement.
-    radiation ('neutron' or 'xray')    
+    probe ('neutron' or 'xray')
+        Type of radiation used to probe the sample.
+    warnings
+        List of warnings generated when the file was loaded
     """
     geometry = "vertical"
     radiation = "neutron"
@@ -475,6 +574,7 @@ class ReflData(object):
     polarization = ''
     roi = None
     reversed = False
+    warnings = None
 
     def __init__(self, **kw):
         # Note: because _set is ahead of the following, the caller will not
@@ -488,6 +588,7 @@ class ReflData(object):
         self.slit4 = Slit
         self.detector = Detector
         self.monitor = Monitor
+        self.warnings = None
         
     def set_defaults(self, instrument):
         self.instrument = instrument
@@ -514,9 +615,6 @@ def _set(object,kw):
         else:
             raise AttributeError, "Unknown attribute %s"%(k)
 
-
-
-
 def AB_to_QxQz(sample_angle, detector_angle, wavelength):
     A,B = sample_angle, detector_angle
     Qz = 2*pi/wavelength * ( sin(pi/180*(B - A)) + sin(pi/180*A))
@@ -531,9 +629,9 @@ def QxQz_to_AB(Qx, Qz, wavelength):
     #   if theta > 90, theta -= 360
     #   alpha = theta + beta/2
     #   if Qz < 0, alpha += 180
-    beta = asin(wavelength/(4*pi) * sqrt(Qx**2+Qz**2)) * 360/pi
+    beta = arcsin(wavelength/(4*pi) * sqrt(Qx**2+Qz**2)) * 360/pi
     beta[Qz<0] *= -1
-    theta = atan2(Qx,Qz) * 180/pi
+    theta = arctan2(Qx,Qz) * 180/pi
     theta[theta>90] -= 360
     alpha = theta + beta/2
     alpha[Qz<0] += 180
