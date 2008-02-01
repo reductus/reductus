@@ -26,6 +26,9 @@ from copy import copy, deepcopy
 import numpy as N
 import os,os.path
 import nxs
+import nxsunit
+
+
 
 class NeXus(nxs.NeXus):
     """
@@ -33,11 +36,14 @@ class NeXus(nxs.NeXus):
 
     Usage:
 
-    nx = NeXus(filename, ['r','rw','w'])
-    nx.read()
+    file = NeXus(filename, ['r','rw','w'])
+    root = file.read()
       - read the structure of the NeXus file.  This returns a NeXus tree.
-    nx.write(root)
+    file.write(root)
       - write a NeXus tree to the file.
+    data = file.readpath(path)
+      - read data from a particular path
+          
 
     Example:
 
@@ -53,25 +59,6 @@ class NeXus(nxs.NeXus):
     the file closed again.  open/close are available for when we want to
     read/write slabs without the overhead of moving the file cursor each time.
     The Data nodes in the returned tree hold the node values.
-
-
-
-    Additional functions used by the Data class:
-    
-    nx.readpath(path)
-      - read data from a particular path in the nexus file.
-    nx.writepath(path,value,storage=NXstorage)
-      - write data to a particular path.  [Not implemented]
-    nx.openpath()
-      - open to a particular data for slab read/write [Not implemented]
-    nx.readslab(path,type,dims)
-      - return a slab of data. [Not implemented]
-    nx.writeslab(path,type,dims)
-      - write a slab of data. [Not implementd]
-    nx.open()
-      - open the file; done implicitly on read/write/readpath
-    nx.close()
-      - close the file; done implicitly on read/write/readpath
 
     """
     def read(self):
@@ -324,6 +311,7 @@ class Node(object):
     nxname = "unknown"
     nxattr = None
     nxnode = None
+    nxunit = nxsunit.Converter('')
 
     def __str__(self):
         return "%s:%s"%(self.nxclass,self.nxname)
@@ -392,83 +380,96 @@ class Node(object):
                 raise AttributeError, \
                     "%s:%s does not have %s"%(self.nxclass,self.nxname,key)
 
-    def findclass(self,nxclass):
+    def nodes(self):
         """
-        Return the set of subclasses that have a particular classname.
-        
-        E.g., root.match("NXentry") returns the set of entries
+        Iterate over entry name and value.
         """
-        return [entry
-                for entry in self.nxnode.itervalues()
-                if entry.nxclass == nxclass]
-        
-    def search(self,pattern):
-        """
-        Pattern = class:name@attr
-        """
-        if self.nxattr is not None:
-            for k,v in self.nxattr.iteritems():
-                pass
-        for k,v in self.nxnode.iteritems():
-            pass
+        for name,entry in self.nxnode.iteritems():
+            yield name,entry
 
-    def print_name(self,indent=0):
-        print " "*indent+self.nxname,':',self.nxclass
+    def match(self, nxclass):
+        """
+        Find all child nodes have the particular class.
+        """
+        match = [E for (name,E) in self.nxnode.iteritems() if E==nxclass]
+        return match
 
-    def print_value(self,indent=0):
-        pass
+    def find(self, nxclass):
+        """
+        Find the child node with the given class.
+        """
+        L = self.match(nxclass)
+        if len(L) != 1: raise IOError, "Missing class %s"%(nxclass)
+    
+    def str_name(self,indent=0):
+        return " "*indent+self.nxname,':',self.nxclass,'\n'
+
+    def str_value(self,indent=0):
+        return ""
 
     def print_attr(self,indent=0):
+        result = ""
         if self.nxattr is not None:
             #print " "*indent, "Attributes:"
             names = self.nxattr.keys()
             names.sort()
             for k in names:
-                print " "*indent+"@%s = %s"%(k,self.nxattr[k].value)
-                
-    def print_tree(self,indent=0,attr=False):
+                result += " "*indent+"@%s = %s\n"%(k,self.nxattr[k].value)
+
+    def str_tree(self,indent=0,attr=False):
         # Print node
-        self.print_name(indent=indent)
-        if attr: self.print_attr(indent=indent+2)
-        self.print_value(indent=indent+2)
+        result = self.str_name(indent=indent)
+        if attr: result += self.str_attr(indent=indent+2)
+        result += self.str_value(indent=indent+2)
         # Print children
         names = self.nxnode.keys()
         names.sort()
         for k in names:
-            self.nxnode[k].print_tree(indent=indent+2,attr=attr)
+            result += self.nxnode[k].str_tree(indent=indent+2,attr=attr)
 
 class Data(Node):
     """
     NeXus data node.
+    
     Operations are querying type and dimensions, reading the entire
     data block or reading a single slab.
-    The NeXus file class keeps track of where the file cursor is
-    pointing at any given time, opening and closing groups as necessary
-    to get to the right place.
-    Note that this class does not cache a copy of the data.
+    
+    # Read the entire array
+    node.read(units="mm")    # read the entire dataset as millimeters
+
+    # Read a Ni x Nj x Nk array one slab at a time
+    node.open()
+    steps = node.nxdims[0]*node.nxdims[1]
+    size = [1,1,node.nxdims[2]]
+    for i in range(node.nxdims[0]):
+        for j in range(node.nxdims[1]):
+            value = node.slab([i,j,0],size) # Read counts
+    node.close()
     """
     def __init__(self,name,dtype='',shape=[],file=None,path=None,
                  attr=None,value=None):
         self._file = file
         self._path = path
+        self._value = value
         self.nxclass = "SDS" # Scientific Data Set
         self.nxname = name
         self.nxtype = dtype
         self.nxdims = shape
         self.nxnode = {}
         self.nxattr = {} if attr is None else attr
-        self.value = value
+        units = attr['units'].value if 'units' in attr else None
+        self.nxunit = nxsunit.Converter(units)
 
     def __str__(self):
-        if self.value is not None:
+        if self._value is not None:
             # If the value is already loaded we can maybe do
             # better than just printing the array dimensions.
             if self.nxtype == 'char':
-                return self.value
+                return self._value
             elif len(self.nxdims) == 1 and self.nxdims[0]==1:
-                return str(self.value)
+                return str(self._value)
             elif N.prod(self.nxdims) < 8:
-                return str(self.value)
+                return str(self._value)
         return ""
 
     def print_value(self,indent=0):
@@ -483,18 +484,37 @@ class Data(Node):
             v = "%s(%s)"%(self.nxtype, dims)
         print " "*indent + "%s = %s"%(self.nxname, v)
 
-    def slab(self,slice):
-        slab = self._file.readslab(self,slice)
-        return slab
+    def open(self):
+        """
+        Open the datapath for reading slab by slab.
+        """
+        self._file.open()
+        self._file.openpath(self._path)
 
-    def read(self):
+    def slab(self, offset, size, units=""):
         """
-        Possibly delayed read of data.
+        Read a single slab of data anchored at offset of dimensions size.
+        Convert the data to the appropriate units before returning.
+        
+        Attribute nxdims returns the size of the dataset.
         """
-        if self.value is not None:
-            return self.value
-        self.value = self._file.readpath(self._path)
-        return self.value
+        value = self._file.getslab(self,offset,size)
+        return self.nxunit(value,units)
+    
+    def close(self):
+        """
+        Close the file associated the data after slabs are all read.
+        """
+        self._file.close()
+
+    def read(self, units=""):
+        """
+        Read the data.
+        """
+        if self._value is None:
+            self._value = self._file.readpath(self._path)
+        
+        return self.nxunit(self._value,units)
 
 class Link(Node):
     def __init__(self,name,nxclass="",attr=None):
