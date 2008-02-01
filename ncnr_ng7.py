@@ -1,18 +1,20 @@
 import os
-import reflectometry.reduction.icpformat as icp
+import icpformat as icp
+import refldata
 
 def register_extensions(registry):
     for file in ['.ng7']:
-        registry[file] = NG7Icp
-        registry[file+'.gz'] = NG7Icp
+        registry[file] = readentries
+        registry[file+'.gz'] = readentries
+
+def readentries(filename):
+    # ICP files have one entry per filename
+    return [NG7Icp(filename)]
 
 class NG7Icp(refldata.ReflData):
-    radiation = "neutron"
+    probe = "neutron"
     format = "NCNR ICP (NG-7)"
-    @staticmethod
-    def dataset(filename):
-        return os.path.basename(filename)[:5]
-    
+
     def __init__(self, filename):
         super(ReflIcp,self).__init__(args, kw)
         self.filename = os.path.abspath(filename)
@@ -32,7 +34,7 @@ class NG7Icp(refldata.ReflData):
         self.name = fields['filename']
         self.description = fields['comment']
         self.dataset = self.name[:5]
-        
+
         if fields['count_type']=='TIME':
             # Override the default monitor base of 'counts'
             self.monitor.base='time'
@@ -49,18 +51,19 @@ class NG7Icp(refldata.ReflData):
         """
         Pencil detector on NG-7.
         """
-        #    rate     efficiency   uncertainty
+        #    rate     correction factor
         NG7monitor_calibration = """
-              304     1.0           0;
-             1788     1.0074        0;
-             6812     1.0672        0;
-            13536     1.1399        0;
-            19426     1.2151        0;
-            24022     1.2944        0;
-            27771     1.370         0;
-            31174     1.429         0
+              304     1.0   ;
+             1788     1.0074;
+             6812     1.0672;
+            13536     1.1399;
+            19426     1.2151;
+            24022     1.2944;
+            27771     1.370 ;
+            31174     1.429 ;
         """
-        self.detector.efficiency = numpy.matrix(NG7monitor_calibration).A
+        C = numpy.matrix(Ng7monitor_calibration)
+        self.detector.saturation = numpy.array(C[0,:],100./C[1,:])
         # The following widths don't really matter for point detectors, but
         # for completeness we can put in the values.
         self.detector.width_x = 25.4*6 # mm TODO: Is NG-1 pencil det. 6" long?
@@ -68,7 +71,7 @@ class NG7Icp(refldata.ReflData):
         self.detector.center_x = 0
         self.detector.center_y = 0
         self.detector.rotation = 0
-    
+
     def _psd(self):
         """
         PSD on NG-7.
@@ -94,7 +97,7 @@ class NG7Icp(refldata.ReflData):
             Mon1, Exp = fields['Mon1'],fields['Exp']
             Qz = fields['columns']['qz']
             self.monitor.counts = prefactor*(monitor + Mon1 * abs(Qz)**Exp)
-        
+
         if 'S1' in fields['columns']:
             self.slit1.x = fields['columns']['S1']
         if 'S2' in fields['columns']:
@@ -103,8 +106,8 @@ class NG7Icp(refldata.ReflData):
             self.slit3.x = fields['columns']['S3']
         if 'S4' in fields['columns']:
             self.slit4.x = fields['columns']['S4']
-        if 'qx' in fields['columns'] and 'qz' in fields['columns']:
-            qx,qz = fields['columns']['qx'],fields['columns']['qz']
+        if 'qz' in fields['columns']:
+            qx = fields['columns'] if 'qx' in fields['columns'] else 0
+            qz = fields['columns']['qz']
             A,B = refldata.QxQz_to_AB(qx,qz,self.detector.wavelength)
             self.sample.angle_x,self.detector.angle_x = A,B
-        # TODO: where do we put qx/qz if only one is available?

@@ -7,20 +7,23 @@ These may change periodically, so be sure to check for updates.
 
 import numpy
 from numpy import inf
-import reflectometry.reduction.icpformat as icp
+import refldata
+import icpformat as icp
 
 def register_extensions(registry):
     for file in ['.na1', '.nb1', '.nc1', '.nd1', '.ng1']:
-        registry[file] = NG1Icp
-        registry[file+'.gz'] = NG1Icp
+        registry[file] = readentries
+        registry[file+'.gz'] = readentries
 
     for file in ['.ca1', '.cb1', '.cc1', '.cd1', '.cg1']:
-        registry[file] = NG1Icp
-        registry[file+'.gz'] = NG1Icp
+        registry[file] = readentries
+        registry[file+'.gz'] = readentries
 
+def readentries(filename):
+    return [NG1Icp(filename)]
 
 class NG1Icp(refldata.ReflData):
-    radiation = "neutron"
+    probe = "neutron"
     format = "NCNR ICP"
 
     # The following allows the user to override the wavelength 
@@ -144,10 +147,7 @@ class NG1Icp(refldata.ReflData):
             # and computing the time based on that rate.
             pass
 
-        """  This does not belong in self.qx/self.qz
         # Figure out Qx-Qz for sample angle/detector center
         if self.sample.angle_x != None and self.detector.angle_x != None:
             A,B = self.sample.angle_x, self.detector.angle_x
             Qx,Qz = refldata.AB_to_QxQz(A,B,self.detector.wavelength)
-            self.qx,self.qz = Qx,Qz
-        """
