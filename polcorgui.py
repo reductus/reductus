@@ -4,9 +4,27 @@ GUI driver for the polarization correction code polcor.
 
 import sys
 import wx,wx.aui
-import icpformat
 from selection import SelectionPanel, EVT_ITEM_SELECT, EVT_ITEM_VIEW
 from polplot import Plotter, Plotter4
+
+# Set up a file extension registry; use this to classify the available
+# datasets in a directory tree, and to mark and load the files in the
+# tree.
+class Registry:
+    def __init__(self): self.registry = None
+    def __in__(self, ext):
+        return ext in self.registry
+    def associate(self,ext,factory):
+        if extension in self.registry:
+            self.registry[ext].insert(0,factory)
+        else:
+            self.registry[ext] = [factory]
+registry = Registry()
+
+#import nexusref, 
+import ncnr_ng1, ncnr_ng7
+for m in [ncnr_ng1, ncnr_ng7]:
+    m.register_extensions(registry)
 
 
 
