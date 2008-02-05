@@ -5,7 +5,7 @@ Sample data from NG-1:
 """
 
 import numpy, os
-from reduction.data import Data,PolarizedData
+from reflectometry.reduction.data import Data,PolarizedData
 
 PATH = os.path.dirname(os.path.realpath(__file__))
 

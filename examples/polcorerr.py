@@ -12,8 +12,7 @@ doplot = False
 
 
 import numpy,math,pylab
-#import reflectometry.reduction as reflred
-import reduction as reflred
+import reflectometry.reduction as reflred
 
 eff = reflred.PolarizationEfficiency()
 

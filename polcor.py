@@ -347,7 +347,7 @@ def correct_efficiency(eff, data):
     return X, dX
 
 def demo():
-    import e3a12 as dataset
+    from .examples import e3a12 as dataset
     eff = PolarizationEfficiency(beam=dataset.slits())
     for attr in ["Ic","fp","rp","ff","rf"]:
         print attr,getattr(eff,attr)
