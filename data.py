@@ -79,10 +79,12 @@ class Data(object):
         See help(Data) for details.
         """
         for (key,val) in kw.iteritems():
-            if hasattr(self,key):
-                setattr(self,key,val)
-            else:
-                raise AttributeError,"unknown attribute "+key
+            # FIXME: properties are not attributes...how to test for them?
+            #if hasattr(self,key):
+            #    setattr(self,key,val)
+            #else:
+            #    raise AttributeError,"unknown attribute "+key
+            setattr(self,key,val)
 
     # Store variance but allow 1-sigma uncertainty interface
     def _getdv(self): return N.sqrt(self.variance)
@@ -147,9 +149,18 @@ class PolarizedData(object):
     zlabel,zunits='Qy','inv A'
     vlabel,vunits='Reflectivity',None
 
-    def __init__(self):
+    def __init__(self, **kw):
         self.pp,self.pm,self.mp,self.mm = Data(),Data(),Data(),Data()
+        self.set(**kw)
 
+    def set(self,**kw):
+        for k,v in kw.iteritems(): 
+            if hasattr(self,k): setattr(self,k,v)
+
+    def __str__(self):
+        return "\n".join(["++"+str(self.pp),"--"+str(self.mm),
+                          "+-"+str(self.pm),"-+"+str(self.mp)])
+    
     def ispolarized(self):
         return True
     
@@ -192,7 +203,7 @@ def refl(n=100,noise=0.02):
     noise = relative error in simulated data points
     """
     Q = N.linspace(0.,0.5,n)
-    dQ = N.ones(Q)*0.001
+    dQ = Q*0.001
     f = N.sqrt(Q**2 - 16*N.pi*2.07e-6 + 0j)
     R = N.abs( (Q-f)/(Q+f) )**2
     dR = noise*R
@@ -253,4 +264,6 @@ def demo():
     print "x,y",d.mp.x,d.mp.y
     print "edges x,y",d.mp.xedges,d.mp.yedges
 
-if __name__ == "__main__": demo()
+if __name__ == "__main__": 
+    #demo()
+    print refl()
