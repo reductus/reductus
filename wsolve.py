@@ -183,7 +183,6 @@ def wsolve(A,y,dy=1,rcond=1e-12):
     SVinv = vh.T.conj()/s
     Uy = N.dot(u.T.conj(), y)
     x = N.dot(SVinv, Uy)
-    print x
 
     DoF = y.shape[0] - x.shape[0]
     rnorm = N.linalg.norm(y - N.dot(A,x))
