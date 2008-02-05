@@ -52,6 +52,7 @@ class Plotter(wx.Panel):
                 self.intensity.errorbar(data.x,data.v,data.dv,'+')
             self.intensity.semilogy(eff.beam.pp.x,eff.Ic,'+')
         ax.legend()
+        ax.set_yscale('log')
         self.canvas.draw_idle()
     
     def update_efficiency(self):
