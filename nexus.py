@@ -12,9 +12,9 @@ NeXus(file,mode)
 Helper classes:
 
 Group(name,class)
-    - NeXus group containing fields
+    - NeXus group containing nodes
 Data(name)
-    - NeXus data within a field
+    - NeXus data within a node
 """
 
 # TODO: Rather than carrying around the 'storage' name for attributes
@@ -25,25 +25,31 @@ Data(name)
 from copy import copy, deepcopy
 import numpy as N
 import os,os.path
-import napi
+import nxs
+import nxsunit
 
-class NeXus:
+
+
+class NeXus(nxs.NeXus):
     """
     Structure-based interface to the NeXus file API.
 
     Usage:
 
-    nx = NeXus(filename, ['r','rw','w'])
-    nx.read()
+    file = NeXus(filename, ['r','rw','w'])
+    root = file.read()
       - read the structure of the NeXus file.  This returns a NeXus tree.
-    nx.write(root)
+    file.write(root)
       - write a NeXus tree to the file.
+    data = file.readpath(path)
+      - read data from a particular path
+          
 
     Example:
 
       nx = NeXus('REF_L_1346.nxs','r')
       tree = nx.read()
-      for entry in tree.nxdict.itervalues():
+      for entry in tree.nxnode.itervalues():
           process(entry)
       copy = NeXus('modified.nxs','w')
       copy.write(tree)
@@ -54,84 +60,7 @@ class NeXus:
     read/write slabs without the overhead of moving the file cursor each time.
     The Data nodes in the returned tree hold the node values.
 
-
-
-    Additional functions used by the Data class:
-    
-    nx.readpath(path,type='',dims=[])
-      - read data from a particular path in the nexus file.  Storage is
-        one of the NeXus storage classes [u]int[8|16|32], float[32|64], char.
-        Shape is the size of each storage dimension.
-        Note: this function will be subsumed by operations on the data
-        class, and direct read/write calls on the data node.
-    nx.writepath(path,value,storage=NXstorage)
-      - write data to a particular path.  [Not implemented]
-    nx.openpath()
-      - open to a particular data for slab read/write [Not implemented]
-    nx.readslab(path,type,dims)
-      - return a slab of data. [Not implemented]
-    nx.writeslab(path,type,dims)
-      - write a slab of data. [Not implementd]
-    nx.open()
-      - open the file; done implicitly on read/write/readpath
-    nx.close()
-      - close the file; done implicitly on read/write/readpath
-
     """
-    def __init__(self, filename, access='r'):
-        """
-        Create a file handle for interacting with NeXus files.
-        """
-        # TODO: consider modes 'w4','w5' and 'wx' to control file type.
-        if access=='r':
-            mode = napi.READ
-        elif access=='rw':
-            mode = napi.RDWR
-        elif access=='w':
-            mode = napi.CREATE5
-        else:
-            raise ValueError, "expected open as 'r', 'rw' or 'w'"
-        if (mode == napi.READ or mode == napi.RDWR) \
-           and not os.path.isfile(filename):
-            raise ValueError, "file %s does not exist"%(filename)
-        self.filename = filename
-        self.mode = mode
-        self.isopen = False
-        #self.path = [] # Currently open group/data
-
-    def __del__(self):
-        """
-        Make sure the file is closed before deleting.
-        """
-        self.close()
-
-    def __str__(self):
-        """
-        Return a string representation of the NeXus file handle.
-        """
-        return "NeXus(%s)"%self.filename
-        
-    def open(self):
-        """
-        Open the nexus file handle.  You will need to use nx.opengroup()
-        repeatedly, followed by nx.opendata() before reading a dataset,
-        or alternatively use nx.openpath() to open the file at the correct
-        location for reading.
-        """
-        if self.isopen: return
-        self.handle = napi.open(self.filename, self.mode)
-        self.isopen = True
-
-    def close(self):
-        """
-        Close the nexus file handle.  Use nx.openpath(path) to
-        reopen the file for reading data.  Use nx.close() after
-        reading if you need to free system resources.
-        """
-        if not self.isopen: return
-        self.isopen = False
-        napi.close(self.handle)
-        
     def read(self):
         """
         Read the nexus file structure from the file.  Reading of large datasets
@@ -139,7 +68,7 @@ class NeXus:
         """
         # return to root
         self.open()
-        napi.openpath(self.handle,"/")
+        self.openpath("/")
         root = self._readgroup()
         self.close()
         return root
@@ -156,12 +85,12 @@ class NeXus:
         links = []
         # Root node is special --- only write its children.
         # TODO: maybe want to write root node attributes?
-        for entry in tree.nxdict.itervalues():
+        for entry in tree.nxnode.itervalues():
             links += self._writegroup(entry, path="")
         self._writelinks(links)
         self.close()
 
-    def readpath(self, path, type="", dims=[]):
+    def readpath(self, path):
         """
         Read the data on a particular file path.
         
@@ -169,8 +98,8 @@ class NeXus:
         string depending on the shape and storage class.
         """
         self.open()
-        napi.openpath(self.handle,path)
-        return napi.getdata(self.handle,type,dims)
+        self.openpath(path)
+        return self.getdata()
 
     def _readattrs(self):
         """
@@ -181,12 +110,12 @@ class NeXus:
         # for each item in the class
         attr = dict()
         attrtype = dict()
-        for i in range(napi.getattrinfo(self.handle)):
-            name,length,storage = napi.getnextattr(self.handle)
-            value = napi.getattr(self.handle, name, length, storage)
-            pair = Attr(value,storage)
+        for i in range(self.getattrinfo()):
+            name,length,nxtype = self.getnextattr()
+            value = self.getattr(name, length, nxtype)
+            pair = Attr(value,nxtype)
             attr[name] = pair
-            #print "read attr",name,storage,value
+            #print "read attr",name,nxtype,value
         return attr
 
     def _readdata(self,name,path):
@@ -197,34 +126,34 @@ class NeXus:
         # Finally some data, but don't read it if it is big
         # Instead record the location, type and size
         path = "/"+path+"/"+name
-        napi.opendata(self.handle, name)
+        self.opendata(name)
         attr = self._readattrs()
         if 'target' in attr and attr['target'].value != path:
             # This is a linked dataset; don't try to load it.
             #print "read link %s->%s"%(attr['target'].value,path)
-            data = Link(name,attr=attr)
+            data = Link(name,nxclass='SDS',attr=attr)
         else:
-            dims,type = napi.getinfo(self.handle)
+            dims,type = self.getinfo()
             if N.prod(dims) < 1000:
-                value = napi.getdata(self.handle,type,dims)
+                value = self.getdata()
             else:
                 value = None
             data = Data(name,type,dims,
                         file=self,path=path,attr=attr,value=value)
-        napi.closedata(self.handle)
+        self.closedata()
         return data
 
     def _readchildren(self,n,path):
         children = {}
         for i in range(n):
-            name,nxclass = napi.getnextentry(self.handle)
+            name,nxclass = self.getnextentry()
             if nxclass == 'SDS':
                 children[name] = self._readdata(name,path)
             else:
                 #print "open for reading",nxclass,name
-                napi.opengroup(self.handle,name,nxclass)
+                self.opengroup(name,nxclass)
                 children[name] = self._readgroup()
-                napi.closegroup(self.handle)
+                self.closegroup()
         return children
 
     def _readgroup(self):
@@ -234,14 +163,14 @@ class NeXus:
         # TODO: does it make sense to read without recursing?
         # TODO: can we specify which NXclasses we are interested
         # in and skip those of different classes?
-        n,path,nxclass = napi.getgroupinfo(self.handle)
+        n,path,nxclass = self.getgroupinfo()
         name = path.split("/")[-1]
         #print "reading group",path,name
         attr = self._readattrs()
         if 'target' in attr and attr['target'].value != path:
             # This is a linked group; don't try to load it.
             #print "read group link %s->%s"%(attr['target'].value,path)
-            group = Link(name,attr=attr)
+            group = Link(name,nxclass=nxclass,attr=attr)
         else:
             children = self._readchildren(n,path)
             # If we are subclassed with a handler for the particular
@@ -250,12 +179,12 @@ class NeXus:
             if hasattr(self,nxclass):
                 factory = getattr(self,nxclass)
             else:
-                factory = self.NXgroup
-            group = factory(nxclass,name,attr=attr,dict=children)
+                factory = self.Group
+            group = factory(nxclass,name,attr=attr,node=children)
         return group
 
     def NXroot(self,*args,**kw): return NXroot(*args,**kw)
-    def NXgroup(self,*args,**kw): return NXgroup(*args,**kw)
+    def Group(self,*args,**kw): return Group(*args,**kw)
 
     def _writeattrs(self,attr):
         """
@@ -263,8 +192,8 @@ class NeXus:
         the file if no group or data object is open.
         """
         for name,pair in attr.iteritems():
-            #print "write attr",name,pair.storage,pair.value
-            napi.putattr(self.handle,name,pair.value,pair.storage)
+            #print "write attr",name,pair.nxtype,pair.value
+            self.putattr(name,pair.value,pair.nxtype)
 
     def _writedata(self, data, path):
         """
@@ -284,21 +213,21 @@ class NeXus:
 
         # Finally some data, but don't read it if it is big
         # Instead record the location, type and size
-        #print "creating data",child.nxname,child.nxdims,child.storage
+        #print "creating data",child.nxname,child.nxdims,child.nxtype
         if N.prod(data.nxdims) > 10000:
             # Compress the fastest moving dimension of large datasets
             slab_dims = N.ones(len(data.nxdims),'i')
             slab_dims[-1] = data.nxdims[-1]
-            napi.compmakedata(self.handle, data.nxname, data.nxdims, 
-                              data.nxtype, 'lzw', slab_dims)
+            self.compmakedata(data.nxname, data.nxtype, data.nxdims, 
+                              'lzw', slab_dims)
         else:
             # Don't use compression for small datasets
-            napi.makedata(self.handle, data.nxname, data.nxdims, data.nxtype)
-        napi.opendata(self.handle,data.nxname)
+            self.makedata(data.nxname, data.nxtype, data.nxdims)
+        self.opendata(data.nxname)
         self._writeattrs(data.nxattr)
         value = data.read()
-        if value is not None: napi.putdata(self.handle,value,data.nxtype)
-        napi.closedata(self.handle)
+        if value is not None: self.putdata(value)
+        self.closedata()
         return []
 
     def _writegroup(self, group, path):
@@ -313,19 +242,19 @@ class NeXus:
         #print 'write group',path
 
         links = []
-        napi.makegroup(self.handle, group.nxname, group.nxclass)
-        napi.opengroup(self.handle, group.nxname, group.nxclass)
+        self.makegroup(group.nxname, group.nxclass)
+        self.opengroup(group.nxname, group.nxclass)
         self._writeattrs(group.nxattr)
         if hasattr(group, '_link_target'):
             links += [(path, group._link_target)]
-        for child in group.nxdict.itervalues():
+        for child in group.nxnode.itervalues():
             if child.nxclass == 'SDS':
                 links += self._writedata(child,path)
             elif hasattr(child,'_link_target'):
                 links += [(path+"/"+child.nxname,child._link_target)]
             else:
                 links += self._writegroup(child,path)
-        napi.closegroup(self.handle)
+        self.closegroup()
         return links
 
     def _writelinks(self, links):
@@ -342,14 +271,14 @@ class NeXus:
         # find gids for targets
         for target in gid.iterkeys():
             #sprint "target",target
-            napi.openpath(self.handle, target)
+            self.openpath(target)
             # Can't tell from the name if we are linking to a group or
             # to a dataset, so cheat and rely on getdataID to signal
             # an error if we are not within a group.
             try:
-                gid[target] = napi.getdataID(self.handle)
+                gid[target] = self.getdataID()
             except RuntimeError:
-                gid[target] = napi.getgroupID(self.handle)
+                gid[target] = self.getgroupID()
 
         # link sources to targets
         for path,target in links:
@@ -357,25 +286,21 @@ class NeXus:
                 # ignore self-links
                 parent = "/".join(path.split("/")[:-1])
                 #print "link %s -> %s"%(parent,target)
-                napi.openpath(self.handle, parent)
-                napi.makelink(self.handle, gid[target])
-        
-            
-
+                self.openpath(parent)
+                self.makelink(gid[target])
 
 def read(filename):
-    nx = NeXus(filename,'r')
-    nx.open()
-    tree = nx.read()
-    nx.close()
+    file = NeXus(filename,'r')
+    tree = file.read()
+    file.close()
     return tree
 
 class Attr(object):
     """
-    Attributes need to keep track of storage class as well as attribute value.
+    Attributes need to keep track of nxtype as well as attribute value.
     """
-    def __init__(self,value=None,storage='char'):
-        self.value,self.storage = value,storage
+    def __init__(self,value=None,nxtype='char'):
+        self.value,self.nxtype = value,nxtype
 
 class Node(object):
     """
@@ -385,131 +310,240 @@ class Node(object):
     nxclass = "unknown"
     nxname = "unknown"
     nxattr = None
-    nxdict = None
+    nxnode = None
+    nxunit = nxsunit.Converter('')
 
     def __str__(self):
         return "%s:%s"%(self.nxclass,self.nxname)
     
+    def readattr(self, name, default=None):
+        return self.nxattr[name].value if name in self.nxattr else default
+
+    def __getattr__(self, key):
+        """
+        Shimmer the various pieces of information in the nexus class and
+        present them in a common namespace.
+        
+        if the key is in the attribute list, return the attribute value
+        if the key is the name of a group element (which must be unique)
+           return the group element
+        if the key matches the class of a group element (and if only one
+           group element matches) return that element
+
+        e.g., for a single entry file, the following indicates the type
+        of measurement in that file:
+        
+           root.NXentry.NXinstrument.definition.value
+
+        private fields are tagged with a leading _
+        public fields are tagged with nx (e.g., nxclass)
+
+        TODO: It's not clear that this is a good idea.
+        
+        1. name collision: there may be attributes of and fields of the
+        same class which have the same name, particularly if the instution
+        has added private names to the nexus file.
+        2. name collision: there may be multiple entries in a group with
+        the same class name; this can lead to runtime errors when e.g., an
+        institution decides to store all four polarization cross sections
+        as different entries in the same file.
+        3. name collision: private fields added by a subclass may conflict
+        with names in nexus file
+        4. name collision: method names are in the same namespace.
+        
+        However improve readability significantly over the alternative:
+        
+            root.findclass("NXentry")[0].findclass("NXinstrument")[0].nxnode['definition'].value
+        
+        Another issue to consider is supplying default values for missing
+        information, e.g., if there is no slit 4, set slit 4 to infinitely open.
+        This is done in dict using: s.get('name',default), but we may want to 
+        do this on a multilevel namespace.  Here is a not-so-good example:
+             s.get('NXinstrument.monochromator.wavelength_error',0.01)
+
+        Consider using fixed attributes for the different namespaces, NX for
+        classes, N for nodes, and A for attributes:
+            root.NX.entry.NX.instrument.F.definition.value
+        Consider using a naming convention in which all real attributes have
+        lowercase names and 
+            root.NXentry.NXinstrument.Fdefinition
+        """
+        if key in self.nxattr:
+            return self.nxattr[key].value
+        elif key in self.nxnode:
+            return self.nxnode[key]
+        else:
+            match = self.findclass(key)
+            if len(match) == 1: 
+                return match[0]
+            else:
+                raise AttributeError, \
+                    "%s:%s does not have %s"%(self.nxclass,self.nxname,key)
+
+    def nodes(self):
+        """
+        Iterate over entry name and value.
+        """
+        for name,entry in self.nxnode.iteritems():
+            yield name,entry
+
+    def match(self, nxclass):
+        """
+        Find all child nodes have the particular class.
+        """
+        match = [E for (name,E) in self.nxnode.iteritems() if E==nxclass]
+        return match
+
+    def find(self, nxclass):
+        """
+        Find the child node with the given class.
+        """
+        L = self.match(nxclass)
+        if len(L) != 1: raise IOError, "Missing class %s"%(nxclass)
+    
+    def str_name(self,indent=0):
+        return " "*indent+self.nxname,':',self.nxclass,'\n'
+
+    def str_value(self,indent=0):
+        return ""
+
     def print_attr(self,indent=0):
+        result = ""
         if self.nxattr is not None:
             #print " "*indent, "Attributes:"
             names = self.nxattr.keys()
             names.sort()
             for k in names:
-                print " "*(indent+2),k,":",self.nxattr[k].value
-                
-    def readattr(self, name, default=None):
-        return self.nxattr[name].value if name in self.nxattr else default
+                result += " "*indent+"@%s = %s\n"%(k,self.nxattr[k].value)
 
-    def __getattr__(self, key):
-        if key in self.nxattr:
-            return self.nxattr[key].value
-        elif key in self.nxdict:
-            return self.nxdict[key]
-        else:
-            raise AttributeError, "%s:%s does not have %s"%(self.nxclass,self.nxname,key)
-        
-    def search(self,pattern):
-        """
-        Pattern = class:name@attr
-        """
-        if self.nxattr is not None:
-            for k,v in self.nxattr.iteritems():
-                pass
-        for k,v in self.nxdict.iteritems():
-            pass
-
-    def print_value(self,indent=0):
-        print '\n'.join([(" "*(indent+1))+s for s in str(self).split('\n')])
-
-    def print_tree(self,indent=0,attr=False):
-        print " "*indent,self.nxclass,":",self.nxname
-        if attr: self.print_attr(indent=indent)
-        self.print_value(indent)
-        names = self.nxdict.keys()
+    def str_tree(self,indent=0,attr=False):
+        # Print node
+        result = self.str_name(indent=indent)
+        if attr: result += self.str_attr(indent=indent+2)
+        result += self.str_value(indent=indent+2)
+        # Print children
+        names = self.nxnode.keys()
         names.sort()
         for k in names:
-            print " "*indent,k
-            self.nxdict[k].print_tree(indent+2,attr=attr)
+            result += self.nxnode[k].str_tree(indent=indent+2,attr=attr)
 
 class Data(Node):
     """
     NeXus data node.
+    
     Operations are querying type and dimensions, reading the entire
     data block or reading a single slab.
-    The NeXus file class keeps track of where the file cursor is
-    pointing at any given time, opening and closing groups as necessary
-    to get to the right place.
-    Note that this class does not cache a copy of the data.
+    
+    # Read the entire array
+    node.read(units="mm")    # read the entire dataset as millimeters
+
+    # Read a Ni x Nj x Nk array one slab at a time
+    node.open()
+    steps = node.nxdims[0]*node.nxdims[1]
+    size = [1,1,node.nxdims[2]]
+    for i in range(node.nxdims[0]):
+        for j in range(node.nxdims[1]):
+            value = node.slab([i,j,0],size) # Read counts
+    node.close()
     """
-    def __init__(self,name,type='',dims=[],file=None,path=None,
+    def __init__(self,name,dtype='',shape=[],file=None,path=None,
                  attr=None,value=None):
         self._file = file
         self._path = path
+        self._value = value
         self.nxclass = "SDS" # Scientific Data Set
         self.nxname = name
-        self.nxtype = type
-        self.nxdims = dims
-        self.nxdict = {}
+        self.nxtype = dtype
+        self.nxdims = shape
+        self.nxnode = {}
         self.nxattr = {} if attr is None else attr
-        self.value = value
+        units = attr['units'].value if 'units' in attr else None
+        self.nxunit = nxsunit.Converter(units)
 
     def __str__(self):
-        if self.value is not None:
+        if self._value is not None:
             # If the value is already loaded we can maybe do
             # better than just printing the array dimensions.
             if self.nxtype == 'char':
-                return self.value
+                return self._value
             elif len(self.nxdims) == 1 and self.nxdims[0]==1:
-                return str(self.value)
+                return str(self._value)
             elif N.prod(self.nxdims) < 8:
-                return str(self.value)
-        # Fall through if data is big or value is otherwise unavailable.
+                return str(self._value)
+        return ""
+
+    def print_value(self,indent=0):
+        v = str(self)
+        if '\n' in v:
+            print '\n'.join([(" "*indent)+s for s in v.split('\n')])
+
+    def print_name(self,indent=0):
         dims = 'x'.join([str(n) for n in self.nxdims])
-        return "Data(%s %s)"%(self.nxtype,dims)
+        v = str(self)
+        if '\n' in v or v == "":
+            v = "%s(%s)"%(self.nxtype, dims)
+        print " "*indent + "%s = %s"%(self.nxname, v)
 
-    def slab(self,slice):
-        slab = self._file.readslab(self,slice)
-        return slab
+    def open(self):
+        """
+        Open the datapath for reading slab by slab.
+        """
+        self._file.open()
+        self._file.openpath(self._path)
 
-    def read(self):
+    def slab(self, offset, size, units=""):
         """
-        Possibly delayed read of data.
+        Read a single slab of data anchored at offset of dimensions size.
+        Convert the data to the appropriate units before returning.
+        
+        Attribute nxdims returns the size of the dataset.
         """
-        if self.value is not None:
-            return self.value
-        self.value = self._file.readpath(self._path,type=self.nxtype,
-                                         dims=self.nxdims)
-        return self.value
+        value = self._file.getslab(self,offset,size)
+        return self.nxunit(value,units)
+    
+    def close(self):
+        """
+        Close the file associated the data after slabs are all read.
+        """
+        self._file.close()
+
+    def read(self, units=""):
+        """
+        Read the data.
+        """
+        if self._value is None:
+            self._value = self._file.readpath(self._path)
+        
+        return self.nxunit(self._value,units)
 
 class Link(Node):
-    def __init__(self,name,attr=None):
-        self.nxdict = {}
-        self.nxclass = '_link'
+    def __init__(self,name,nxclass="",attr=None):
+        self.nxnode = {}
+        self.nxclass = nxclass
         self.nxname = name
         self.nxattr = {} if attr is None else attr
         self._link_target = self.nxattr['target'].value
     def __str__(self):
         return "Link(%s)"%(self._link_target)
+    def print_tree(self,indent=0,attr=False):
+        print " "*indent+self.nxname,'->',self._link_target
 
-class NXgroup(Node):
+
+class Group(Node):
     """
     NeXus group node.  Group nodes have no data associated with them,
     but they do have attributes and children.
     """
-    def __init__(self,nxclass,name,attr=None,dict={}):
-        self.nxdict = dict
+    def __init__(self,nxclass,name,attr=None,node={}):
+        self.nxnode = node
         self.nxclass = nxclass
         self.nxname = name
         self.nxattr = {} if attr is None else attr
     def print_value(self,indent=0):
         pass
 
-class NXroot(NXgroup):
-    def entries(self):
-        return [entry
-                for entry in self.nxdict.itervalues()
-                if entry.nxclass == 'NXentry']
+class NXroot(Group):
+    def datasets(self): return self.findclass("NXentry")
 
 def copyfile(fromfile,tofile):
     """
@@ -520,7 +554,7 @@ def copyfile(fromfile,tofile):
     complete demonstration of the read/write capabilities of the library.
     """
     forest = read(fromfile)
-    file = NeXus(tofile,'w')
+    file = NeXus(tofile,'w5')
     file.write(forest)
 
 def listfile(file):

@@ -4,9 +4,27 @@ GUI driver for the polarization correction code polcor.
 
 import sys
 import wx,wx.aui
-import icpformat
 from selection import SelectionPanel, EVT_ITEM_SELECT, EVT_ITEM_VIEW
 from polplot import Plotter, Plotter4
+
+# Set up a file extension registry; use this to classify the available
+# datasets in a directory tree, and to mark and load the files in the
+# tree.
+class Registry:
+    def __init__(self): self.registry = None
+    def __in__(self, ext):
+        return ext in self.registry
+    def associate(self,ext,factory):
+        if extension in self.registry:
+            self.registry[ext].insert(0,factory)
+        else:
+            self.registry[ext] = [factory]
+registry = Registry()
+
+#import nexusref, 
+import ncnr_ng1, ncnr_ng7
+for m in [ncnr_ng1, ncnr_ng7]:
+    m.register_extensions(registry)
 
 
 
@@ -56,16 +74,24 @@ class Reduction(wx.Panel):
         self.selector.Bind(EVT_ITEM_VIEW, self.onView)
 
     def load(self, filename):
-        # Try loading data
+        # Check if it is already loaded
+        if filename in self.data:
+            return self.data[filename]
+        
+        # Try loading data, guessing format from file extension
+        ext = os.path.splitext(filename)[1]
         try:
-            if filename in self.data:
-                data = self.data[filename]
-            else:
+            if ext in ['.nxs']:
+                data = nxsformat.data(filename)
+            elif ext in ['.na1','.nb1','.nc1','.nd1','.ng1',
+                         '.ca1','.cb1','.cc1','.cd1','.cg1',
+                         '.ng7']:
                 data = icpformat.data(filename)
-                if data.prop.polarization == "":
-                    # TODO Temporary hack: unpolarized data dumped into ++ 
-                    data.prop.polarization = "++"
-                self.data[filename] = data
+
+            if data.prop.polarization == "":
+                # TODO Temporary hack: unpolarized data dumped into ++ 
+                data.prop.polarization = "++"
+            self.data[filename] = data
         except:
             print "unable to laod %s\n  %s"%(filename, sys.exc_value)
             data = None

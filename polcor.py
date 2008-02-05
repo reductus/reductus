@@ -111,7 +111,7 @@ The FRbalance should vary between 0 (front polarizer is 100% efficient)
 through 0.5 (distribute inefficiency equally) to 1 (rear polarizer 
 is 100% efficient).  The particular formula used is:  
 
-     F = (F*R)^FRratio
+     F = (F*R)^FRbalance
      R = (F*R)/F
 
 The min_intensity and min_efficiency numbers are used to bound
@@ -156,8 +156,15 @@ for the theory?
 
 """
 
+# relative import hack
+if __name__ == "__main__": __path__ = "."
+# Boilerplate to allow relative imports for apps.
+if __name__ == '__main__':
+    import os; __path__=[os.path.dirname(os.path.realpath(__file__))]; del os
+
 import numpy as N
 from .data import PolarizedData
+from .wsolve import wsolve
 
 
 class PolarizationEfficiency(object):
@@ -167,41 +174,34 @@ class PolarizationEfficiency(object):
     
     E.g.,
         eff = PolarizationEfficiency(beam)
-        data.apply(eff)        
+        data.apply(eff)
+
     """
-    
+
     min_efficiency = 0.7
     min_intensity = 1e-2
+    _beam = PolarizedData()
+    _FRbalance = 0.5
 
 
     # Define the correction parameters
-    _beam = PolarizedData()
     def _getbeam(self): return self._beam
     def _setbeam(self, beam):
-        if not I.isaligned():
+        if not beam.isaligned():
             raise ValueError, "polarization efficiency correction needs aligned intensity measurements"
         self._beam = beam
         self._compute_efficiency()
-    beam = property(_getbeam,_setbeam,doc="measured beam intensity")
+    beam = property(_getbeam,_setbeam,
+                    doc="measured beam intensity")
 
-    def _getFRbal(self): return self._FRbal
-    def _setFRbal(self,val):
+    def _getFRbalance(self): return self._FRbalance
+    def _setFRbalance(self,val):
         if val > 1: val = 1
         elif val < 0: val = 0
-        self._FRbal = val
+        self._FRbalance = val
         self._compute_efficiency()
-    FRbalance = property(_getFRbal,_setFRbal,"relative balance of front to back efficiency")
-
-    def _geteff(self):
-        if self.beam == None: 
-            raise ValueError, "need to set beam before calculating polarization efficiency"
-        if not hasattr(self,'_eff'): 
-            self._eff = compute_efficiency(self.FRratio, self.beam)
-        return self._eff
-    # Note: no setter for the efficiency --- it is a lazy value
-    def _deleff(self): del self._eff
-    eff = property(_geteff,None,_deleff,"computed efficiency correction factors")
-
+    FRbalance = property(_getFRbalance,_setFRbalance,
+                         doc="relative balance of front to back efficiency")
 
     @property
     def x(self): return (1-2*self.ff)    
@@ -214,20 +214,24 @@ class PolarizationEfficiency(object):
     @property
     def beta(self): return 0.5*self.Ic
 
-    def __init__(self, beam=None, FRratio = 0.5):
-        """Define the polarization efficiency correction for the beam"""
-        self.beam = beam
-        self.FRratio = FRratio
+    def __init__(self, **kw):
+        """Define the polarization efficiency correction for the beam
+        beam: measured beam intensity for all four cross sections
+        FRbalance: portion of efficiency to assign to front versus rear
+        """
+        for k,v in kw.iteritems(): 
+            assert hasattr(self,k), "No %s in %s"%(k,self.__class__.__name__)
+            setattr(self,k,v)
 
     def __call__(self, data):
         """Apply the correction to the data"""
-        if not data.isaligned(): raise ValueError, "need aligned data"
+        assert data.isaligned(), "need aligned data"
     
-        q,X,dX = correct_efficiency(self, data)
-        data.pp.x, data.pp.y, data.pp.dy = q, X[:,0], dX[:,0]
-        data.pm.x, data.pm.y, data.pm.dy = q, X[:,1], dX[:,1]
-        data.mp.x, data.mp.y, data.mp.dy = q, X[:,2], dX[:,2]
-        data.mm.x, data.mm.y, data.mm.dy = q, X[:,3], dX[:,3]
+        X,dX = correct_efficiency(self, data)
+        data.pp.v, data.pp.dv = X[0,:], dX[0,:]
+        data.pm.v, data.pm.dv = X[1,:], dX[1,:]
+        data.mp.v, data.mp.dv = X[2,:], dX[2,:]
+        data.mm.v, data.mm.dv = X[3,:], dX[3,:]
     
     def _compute_efficiency(self):
         """
@@ -237,7 +241,7 @@ class PolarizationEfficiency(object):
         The minimum intensity is 1e-10.  The minimum efficiency is 0.9.
     
         The returned values are systematically related to the efficiencies:
-          I: intensity is 2*beta
+          Ic: intensity is 2*beta
           fp: front polarizer efficiency is F
           rp: rear polarizer efficiency is R
           ff: front flipper efficiency is (1-x)/2
@@ -249,10 +253,11 @@ class PolarizationEfficiency(object):
         """
     
         # Beam intensity normalization.
-        beam = self.beam
-        pp,pm,mp,mm = beam.pp.y,beam.pm.y,beam.mp.y,beam.mm.y
+        beam = self._beam
+        assert beam.isaligned(), "need aligned data"
+        pp,pm,mp,mm = beam.pp.v,beam.pm.v,beam.mp.v,beam.mm.v
         Ic = (pp*mm-pm*mp) / (pp+mm-pm-mp)
-        Ireject = clip(I, self.min_intensity, N.inf)
+        Ireject = clip(Ic, self.min_intensity, N.inf)
         
         # F and R are the front and rear polarizer efficiencies.  Each 
         # is limited below by min_efficiency and above by 1 (since they 
@@ -274,12 +279,12 @@ class PolarizationEfficiency(object):
         ff = (1-x)/2
         rf = (1-y)/2
         
-        ffreject = clip(ff, min_efficiency, 1)
-        rfreject = clip(rf, min_efficiency, 1)
+        ffreject = clip(ff, self.min_efficiency, 1)
+        rfreject = clip(rf, self.min_efficiency, 1)
     
-        reject = N.unique(N.array([FRreject, Ireject, ffreject, rfreject]))
+        reject = N.unique(N.hstack([FRreject, Ireject, ffreject, rfreject]))
     
-        self.I, self.fp, self.ff, self.rp, self.rp = Ic,fp,ff,rp,rf
+        self.Ic, self.fp, self.ff, self.rp, self.rf = Ic,fp,ff,rp,rf
         self.reject = reject
 
     
@@ -290,7 +295,7 @@ def clip(field,lo,hi,nanval=0.):
     values are clipped to the nanval default.
     """
     reject = N.where(N.isnan(field) | (field<lo) | (field>hi))
-    field[N.isnan()] = nanval
+    field[N.isnan(field)] = nanval
     field[field<lo] = lo
     field[field>hi] = hi
     return reject
@@ -304,57 +309,49 @@ def correct_efficiency(eff, data):
     Ry = eff.R*eff.y
     beta = eff.beta
 
-    Y = N.array([ data.pp.y, data.pm.y, data.mp.y, data.mm.y ]) / beta
-    dY = N.array([ data.pp.dy, data.pm.dy, data.mp.dy, data.mm.dy ]) / beta
+    Y = N.array([ data.pp.v, data.pm.v, data.mp.v, data.mm.v ]) / beta
+    dY = N.array([ data.pp.dv, data.pm.dv, data.mp.dv, data.mm.dv ]) / beta
 
     # Note:  John's code has an extra factor of four here, 
     # which roughly corresponds to the elements of sqrt(diag(inv(Y'Y))), 
     # the latter giving values in the order of 3.9 for one example 
     # dataset.  Is there an analytic reason it should be four?
-    H = N.array([(1+F)*(1+R), (1+Fx)*(1+R), (1+F)*(1+Ry), (1+Fx)*(1+Ry),
-         (1-F)*(1+R), (1-Fx)*(1+R), (1-F)*(1+Ry), (1-Fx)*(1+Ry),
-         (1+F)*(1-R), (1+Fx)*(1-R), (1+F)*(1-Ry), (1+Fx)*(1-Ry),
-         (1-F)*(1-R), (1-Fx)*(1-R), (1-F)*(1-Ry), (1-Fx)*(1-Ry),
-         ])
+    H = N.array([
+                 (1+F)*(1+R), (1+Fx)*(1+R), (1+F)*(1+Ry), (1+Fx)*(1+Ry),
+                 (1-F)*(1+R), (1-Fx)*(1+R), (1-F)*(1+Ry), (1-Fx)*(1+Ry),
+                 (1+F)*(1-R), (1+Fx)*(1-R), (1+F)*(1-Ry), (1+Fx)*(1-Ry),
+                 (1-F)*(1-R), (1-Fx)*(1-R), (1-F)*(1-Ry), (1-Fx)*(1-Ry),
+                 ])
 
     X = N.zeros(Y.shape)
     dX = N.zeros(dY.shape)
     reject = []
-    for i in range(H.shape[0]):
+    for i in xrange(H.shape[1]):
         # Extract and solve each set of equations
         # Note: it may be faster to compute the pseudo-inverses as a
         # a preprocessing step so that the code below is simply a matrix
         # multiply.  This will only be true if the same intensity scan
         # is used for multiple slit scans.
-        A = N.reshape(H[i,:],(4,4))
-        y = Y[i,:].T
-        dy = dY[i,:].T
+        A = N.reshape(H[:,i],(4,4))
+        y = Y[:,i].T
+        dy = dY[:,i].T
         try:
-            x,dx = wsolve(A,y,dy)
+            s = wsolve(A,y,dy)
+            x,dx = N.ravel(s.x),N.ravel(s.std)
         except ValueError:
             x,dx = y,dy
             reject.append(i)
-        X[i,:] = x
-        dX[i,:] = dx
+        X[:,i] = x
+        dX[:,i] = dx
 
     return X, dX
 
+def demo():
+    import e3a12 as dataset
+    eff = PolarizationEfficiency(beam=dataset.slits())
+    for attr in ["Ic","fp","rp","ff","rf"]:
+        print attr,getattr(eff,attr)
+    data = dataset.spec()
+    #data.appy(eff)
 
-def wsolve(A,y,dy,rcond=1e-12):
-    """
-    Given a linear system y = A*x + e(dy), estimates x their variance
-    """
-    # Apply weighting
-    A, y = (1/dy)[:,N.newaxis]*N.array(A), (1/dy)*y
-    # Solve: x = V inv(S) U' b
-    u,s,vh = N.svd(N.mat(A))
-    # FIXME what to do with illconditioned systems?
-    if any(s<rcond*s[0]): raise ValueError, "matrix is singular"
-    #s[s<rcond*s[0]] = 0.
-    x = vh.H * N.mat((1/s)[:,N.newaxis] * N.array(u.H)) * b
-    # covariance matrix A'A is VSSV'
-    # inv(A'A)  is V inv(S)**2 V'
-    # diag(inv(A'A)) is sumsq(inv(S) V')
-    dx = N.sqrt(N.sum( ((1/s)[:,N.newaxis]*N.array(vh))**2 ))
-    return x,dx
-
+if __name__ == "__main__": demo()

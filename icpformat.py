@@ -13,7 +13,6 @@ read(filename) - reads header information and data
 import numpy as N
 import datetime
 
-
 def readdata(fh):
     """
     Read ICP data, including PSD data if lines contain commas.
@@ -23,18 +22,29 @@ def readdata(fh):
 
     line = fh.readline().rstrip()
     while line != '':
-        # Check for comment mark
-        skip = (line[0] == '#')
-        if not skip:
-           rows.append([float(val) for val in line.split()])
+        # While it might be easy to check for a comment mark on the beginning
+        # of the line, supporting this is ill-adviced.  First, users should
+        # be strongly discouraged from modifying the original data.
+        # Second, sequencing against the automatically generated motor
+        # columns will become more complicated.  Let's make life easier
+        # and put the masking in the application rather than the data reader.
+
+        # Process the instrument configuration line and move to the next line
+        rows.append([float(val) for val in line.split()])
         line = fh.readline().rstrip()
 
-        # Build up a multiline detector block
+        # Build up a multiline detector block by joining all lines that
+        # end with a comma.
         b = []
         while line[-1]==',':
             b += line[1:-1].split(',')
             line = fh.readline().rstrip()
+        # Process the next line which doesn't end in a comma.  If we have
+        # already seen lines with commas, then this line is a continuation
+        # of the block.  If we haven't seen lines with commas yet, check if
+        # the whole block is on a single line.
         if b is not []:
+            # Extending multiline block
             b += line[1:].split(',')
             line = fh.readline().rstrip()
         elif line.find(',') > 0:
@@ -42,16 +52,23 @@ def readdata(fh):
             b = line[1:].split(',')
             line = fh.readline().rstrip()
 
-        if not skip:
-            if b is not []:
-                # Have a detector block so add it
-                blocks.append(N.array([int(v) for v in b]))
-            elif blocks is not []:
-                # Oops...missing a detector block.
-                # sometimes ICP drops lines so just elide the measurement
-                del rows[-1]
-            # Otherwise no detector block and don't need one
+        if b is not []:
+            # Have a detector block so add it
+            blocks.append(N.array([int(v) for v in b]))
+        elif blocks is not []:
+            # Oops...missing a detector block.  Set it to zero counts
+            # of the same size as the last block
+            blocks.append(N.zeros(blocks[-1].shape,'i'))
+        # Otherwise no detector block and don't need one
+        # Note: this strategy fails to identify that the first 
+        # detector block is missing
 
+    # recover from missing leading detector blocks
+    if len(blocks) > 0 and len(blocks) < len(rows):
+        blank = N.zeros(blocks[0].shape,'i')
+        blocks = [blank]*(len(blocks)-len(rows)) + blocks
+
+    # Convert data to arrays
     X = N.array(rows, 'f')
     Z = N.array(blocks)
     return X.T,Z.T
@@ -107,9 +124,10 @@ def readheader1(file):
     timestamp = datetime.datetime(2000,1,1)
     header['date']=timestamp.strptime(tokens[1],'%b %d %Y %H:%M')
     header['scantype'] = tokens[2]
-    header['monitor']=float(tokens[3])*float(tokens[4])
+    header['prefactor'] = float(tokens[3])
+    header['monitor']=float(tokens[4])
     header['count_type']=tokens[5]
-    header['points']=float(tokens[6])
+    header['points']=int(tokens[6])
     header['data_type']=tokens[7]
     #skip over names of fields 
     file.readline()
@@ -131,26 +149,42 @@ def readiheader(file):
     """
     Read I-buffer structure, excluding motors.
     """
-    header = {}
+    # Read in fields and field names
     tokenized=get_tokenized_line(file)
-    collimations=[] #in stream order
-    collimations.append(float(tokenized[0]))
-    collimations.append(float(tokenized[1]))
-    collimations.append(float(tokenized[2]))
-    collimations.append(float(tokenized[3]))
-    header['collimations']=collimations
-    mosaic=[] #order is monochromator, sample, mosaic
-    mosaic.append(float(tokenized[4]))
-    mosaic.append(float(tokenized[5]))
-    mosaic.append(float(tokenized[6]))
-    header['mosaic']=mosaic
-    header['wavelength']=float(tokenized[7])
-    header['Tstart']=float(tokenized[8])
-    header['Tstep']=float(tokenized[9])
-    header['Hfield']=float(tokenized[10])
+    fieldnames = file.readline()
     #print tokenized
-    #skip field names of experiment info
-    file.readline()
+    #print fieldnames
+
+    header = {}
+    if "Collimation" in fieldnames:
+        #Collimation    Mosaic    Wavelength   T-Start   Incr.   H-field #Det    
+        collimations=[] #in stream order
+        collimations.append(float(tokenized[0]))
+        collimations.append(float(tokenized[1]))
+        collimations.append(float(tokenized[2]))
+        collimations.append(float(tokenized[3]))
+        mosaic=[] #order is monochromator, sample, mosaic
+        mosaic.append(float(tokenized[4]))
+        mosaic.append(float(tokenized[5]))
+        mosaic.append(float(tokenized[6]))
+        header['collimations']=collimations
+        header['mosaic']=mosaic
+        header['wavelength']=float(tokenized[7])
+        header['Tstart']=float(tokenized[8])
+        header['Tstep']=float(tokenized[9])
+        header['Hfield']=float(tokenized[10])
+    else:
+        #Mon1    Exp   Dm      Wavel  T-Start  Incr. Hf(Tesla) #Det SclFac
+        header['Mon1']=float(tokenized[0])
+        header['Exp']=float(tokenized[1])
+        header['Dm']=float(tokenized[2])
+        header['wavelength']=float(tokenized[3])
+        header['Tstart']=float(tokenized[4])
+        header['Tstep']=float(tokenized[5])
+        header['Hfield']=float(tokenized[6])
+        header['numDet']=float(tokenized[7])
+        header['SclFac']=float(tokenized[8])
+
     return header
 
 
@@ -287,6 +321,7 @@ def genmotorcolumns(columns,motors):
         if M not in columns:
             if R['step'] != 0.:
                 vector = N.arange(R['start'],R['step'],R['stop'])
+                vector = vector[:n]+0  # truncate to # points measured
             else:
                 vector = R['start'] * N.ones(n)
             columns[M] = vector
@@ -329,6 +364,9 @@ def summary(filename):
     """
     file = gzopen(filename)
     fields = parseheader(file)
+    data1 = file.readline()
+    data2 = file.readline()
+    fields['PSD'] = (',' in data2)
     file.close()
     return fields
 
@@ -342,6 +380,7 @@ def read(filename):
     #read columns and detector images if available
     fields['columns'],fields['detector'] \
         = readcolumns(file,fields['columnnames'])
+    fields['PSD'] = (fields['detector'].size>0)
 
     # fill in missing motor columns
     genmotorcolumns(fields['columns'],fields['motors'])
@@ -368,6 +407,40 @@ def asdata(fields):
 def data(filename):
     fields = read(filename)
     return asdata(fields)
+
+# TODO: need message/question functions
+def message(text): pass
+def question(text): return True
+
+def check_wavelength(fields, default, overrides):
+    """
+    ICP sometimes records the incorrect wavelength in the file.  Make
+    sure the right value is being used.  Be annoying about it so that
+    if the wavelength was changed for a legitimate reason the user can
+    override.  L is the value in the file.  dectector.wavelength should
+    already be set to the default for the instrument.
+    """
+    filename = fields['filename']
+    dataset = filename[:5]
+    wavelength = fields['wavelength']
+    if dataset in overrides:
+        # yuck! If already overridden for a particular file in
+        # a dataset, override for all files in the dataset.
+        wavelength = overrides[dataset]
+        message("Using wavelength %s for %s"%(wavelength,dataset))
+    elif L == 0:
+        # yuck! If stored value is 0, use the default
+        wavelength = default
+        message("Using default wavelength %s for %s"%(wavelength,filename))
+    elif abs(L-wavelength)/L > 0.01:
+        # yuck! Value differs significantly from the default
+        if question("ICP recorded a wavelength of %s in %s. \
+Do you want to use the default wavelength %s instead?"\
+          %(wavelength,filename,default)):
+            wavelength = default
+    # Regardless of how the value was obtained, use that value for 
+    # the entire dataset
+    return wavelength
 
 def demo():
     """
