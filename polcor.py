@@ -178,6 +178,7 @@ class PolarizationEfficiency(object):
 
     """
 
+    properties = ['FRbalance','min_efficiency','min_intensity']
     min_efficiency = 0.7
     min_intensity = 1e-2
     _beam = PolarizedData()
@@ -225,6 +226,7 @@ class PolarizationEfficiency(object):
 
     def __call__(self, data):
         """Apply the correction to the data"""
+        assert data.ispolarized(), "need polarized data"
         assert data.isaligned(), "need aligned data"
     
         X,dX = correct_efficiency(self, data)
@@ -232,6 +234,7 @@ class PolarizationEfficiency(object):
         data.pm.v, data.pm.dv = X[1,:], dX[1,:]
         data.mp.v, data.mp.dv = X[2,:], dX[2,:]
         data.mm.v, data.mm.dv = X[3,:], dX[3,:]
+        return data
     
     def _compute_efficiency(self):
         """
