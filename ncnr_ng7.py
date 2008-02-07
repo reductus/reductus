@@ -1,6 +1,11 @@
+"""
+Data file reader for NCNR NG-7 data.  
+
+"""
+
 import os
-import icpformat as icp
-import refldata
+from . import icpformat
+from . import refldata
 
 def register_extensions(registry):
     for file in ['.ng7']:
@@ -15,18 +20,21 @@ class NG7Icp(refldata.ReflData):
     probe = "neutron"
     format = "NCNR ICP (NG-7)"
 
-    def __init__(self, filename):
-        super(ReflIcp,self).__init__(args, kw)
+    def __init__(self, filename, *args, **kw):
+        super(NG7Icp,self).__init__(*args, **kw)
         self.filename = os.path.abspath(filename)
 
-        self.detector.distance = 36*25.4/1000.  # NG-1 detector closer than slit 4?
+        # Note: these constants likely depend on the date that the file 
+        # was created.
+        # Why is NG-1 detector closer than slit 4?
+        self.detector.distance = 36*25.4 # mm 
         self.slit1.distance = -75*25.4 # mm
         self.slit2.distance = -14*25.4 # mm
         self.slit3.distance = 9*25.4 # mm
         self.slit4.distance = 42*25.4 # mm
         self.detector.rotation = 0 # degrees
 
-        fields = icp.summary(filename)
+        fields = icpformat.summary(filename)
         if fields['scantype'] != 'I':
             raise TypeError, "Only I-Buffers supported for NG-7"
 
@@ -85,7 +93,7 @@ class NG7Icp(refldata.ReflData):
         self.detector.center_x = 0
         self.detector.width_y = 100 # TODO: Is NG-7 PSD width 10 cm?
 
-    def load(self):
+    def loadframes(self):
         fields = icp.read(self.filename)
         self.detector.wavelength \
             = icp.check_wavelength(fields, 4.76, NG7Icp._wavelength_override)

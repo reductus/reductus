@@ -1,6 +1,6 @@
 # This program is public domain
 
-import datetime
+import datetime, weakref
 
 """
 Reflectometry data representation.
@@ -55,7 +55,23 @@ detector to the reduction and analysis program.
 Some information about the measurements may be missing
 from the files, or recorded incorrectly.  Changes and
 additions to the metadata must be recorded in any reduced
-data file format.
+data file format, along with a list of transformations
+that went into the reduction.
+
+Note that many file format contain hard-coded instrument 
+parameters which may vary occasionally over time.   We 
+need a systematic way of dealing with these.  Putting them 
+in configuration files is a bad idea because then the results 
+of the analysis will depend on the machine on which they were
+run.  The safest approach is to use the file data in order
+to select the correct values for the constants, and update
+the data reader whenever the instrument configuration
+changes.HT e alternative is to store the instrument
+configuration at a fixed URI which can be maintained by
+the instrument scientist, or possibly even leaving the
+data loader source code with the instrument scientist.  As of
+this writing, none of these have been done.
+
 """
 
 import numpy
@@ -69,10 +85,10 @@ class Slit(object):
     Define a slit for the instrument.  This is needed for correct resolution
     calculations and for ab initio footprint calculations.
 
-    distance (inf metre)
+    distance (inf millimetre)
         Distance from sample.  Positive numbers are after the sample,
         negative numbers are before the sample along the beam path.
-    offset (4 x 0 metre)
+    offset (4 x 0 millimetre)
         Offset of the slit blades relative to the distance from the sample.
         For vertical geometry, this is left, right, up, down.  For horizontal
         geometry this is up, down, left, right.  Offset + distance gives the
@@ -91,14 +107,15 @@ class Slit(object):
         Slit opening in the secondary direction.  This may be a constant 
         (fixed slits) or of length n for the number of measurements.
     """
+    properties = ['distance','offset','x','y','shape']
     distance = inf
     offset = [0.]*4
     x = inf
     y = inf
-    shape = "rectangular"
+    shape = "rectangular" # rectangular or circular
     
     def __init__(self, **kw): _set(self,kw)
-
+    def __str__(self): return _str(self)
 
 class Sample(object):
     """
@@ -141,20 +158,24 @@ class Sample(object):
     environment ({})
         Sample environment data.  See Environment class for a list of
         common environment data.
-    """        
+    """
+    properties = ['description','width','length','thickness','shape',
+                  'angle_x','angle_y','rotation','substrate_sld']
     description = ''
-    width = inf
-    length = inf
-    thickness = inf
-    shape = 'rectangular'
-    angle_x = 0
-    angle_y = 0
-    rotation = 0
-    substrate_sld = 2.07 # silicon substrate for neutrons
+    width = inf  # mm
+    length = inf  # mm
+    thickness = inf # mm
+    shape = 'rectangular' # rectangular or circular or irregular
+    angle_x = 0 # degree
+    angle_y = 0 # degree
+    rotation = 0 # degree
+    substrate_sld = 2.07 # inv A  (silicon substrate for neutrons)
 
     def __init__(self, **kw): 
         self.environment = {}
         _set(self,kw)
+    def __str__(self): return _str(self)
+            
     
     
 class Environment(object):
@@ -225,16 +246,18 @@ class Beamstop(object):
     ispresent (False)
         True if beamstop is present in the experiment.
     """
-    distance = 0
-    width = 0
-    length = 0
-    shape = 'rectangular'
-    x_offset = 0
-    y_offset = 0
+    properties = ['distance','width','length','shape',
+                  'x_offset','y_offset','ispresent']
+    distance = 0 # mm
+    width = 0 # mm
+    length = 0 # mm
+    shape = 'rectangular' # rectangular or circular
+    x_offset = 0 # mm
+    y_offset = 0 # mm
     ispresent = False
 
     def __init__(self, **kw): _set(self,kw)
-    
+    def __str__(self): return _str(self)
 
 class Detector(object):
     """
@@ -245,13 +268,13 @@ class Detector(object):
 
     Geometry
     ========
-    shape (2 x pixels)
+    dims (2 x pixels)
         Dimensions of the detector.  The first component is the number of
         pixels in the primary direction the second component is the number
         of pixels in the secondary direction.  For pencil detectors this
         should be [1,1].  For position sensitive detectors, this should be
         [nx,1].  For area detectors, this should be [nx,ny].
-    distance (metre)
+    distance (millimetre)
         Distance from the sample to the detector
     width_x (nx millimetre)
         Widths of the pixes in the primary direction (vertical for 
@@ -285,7 +308,7 @@ class Detector(object):
         shape as the detector, giving the relative efficiency of each pixel,
         or 1 if the efficiency is unknown.
         TODO: do we need variance?
-    saturation (k [%, counts/second])
+    saturation (k [%, counts/second, uncertainty])
         Given a measurement of a given number of counts versus expected 
         number of counts on the detector (e.g., as estimated by scanning 
         a narrow slit across the detector to measure the beam profile, 
@@ -297,18 +320,19 @@ class Detector(object):
         detector is considered to be 100% efficient (any baseline
         inefficiency will be normalized when comparing the measured
         reflection to the measured beam).  Beyond the highest count 
-        rate, the detector is considered saturated.
-        TODO: do we need variance?
+        rate, the detector is considered saturated.  The uncertainty
+        is just the sqrt(counts)/time.
+        
 
         Note: Given the nature of the detectors (detecting ionization 
         caused by neutron capture) there is undoubtably a local 
-        saturation level, but this is likely masked by the fact
-        that the electronics can only detect one event at a time
-        regardless of where it occurs on the detector.
+        saturation level, but this is likely masked by the usual
+        detector electronics which can only detect one event at a
+        time regardless of where it occurs on the detector.
 
     Measurement
     ===========
-    wavelength (k nm)
+    wavelength (k nanometre)
         Wavelength for each channel
     wavelength_resolution (k %)
         Wavelength resolution of the beam for each channel using 1-sigma
@@ -316,34 +340,36 @@ class Detector(object):
         wavelength distribution is considerably more complicated, being
         approximately square for multi-sheet monochromators and highly 
         skewed on TOF machines.
-    time_of_flight (k+1 ms)
+    time_of_flight (k+1 millisecond)
         Time boundaries for time-of-flight measurement
     counts (nx x ny x k counts OR n x nx x ny counts)
         nx x ny detector pixels
         n number of measurements
         k time/wavelength channels
     """
-    shape = [1,1]
-    distance = None
-    width_x = 1
-    width_y = 1
-    center_x = 0
-    center_y = 0
-    angle_x = 0
-    angle_y = 0
-    rotation = 0
-    efficiency = 1
-    saturation = inf
-    wavelength = 1
-    time_of_flight = None
+    properties=["dims",'distance','width_x','width_y','center_x','center_y',
+                'angle_x','angle_y','rotation','efficiency','saturation',
+                'wavelength','time_of_flight','counts']
+    dims = [1,1] # i,j
+    distance = None # mm
+    width_x = 1  # mm
+    width_y = 1  # mm
+    center_x = 0 # mm
+    center_y = 0 # mm
+    angle_x = 0  # degree
+    angle_y = 0  # degree
+    rotation = 0 # degree
+    efficiency = 1 # proportion
+    saturation = inf # counts/sec
+    wavelength = 1 # angstrom
+    time_of_flight = None  # ms
     # counts is a property (see below).
 
     # Raw counts are cached in memory and loaded on demand.
     # Rebinned and integrated counts for the region of interest
     # are stored in memory.
     def loadframes(self):
-        print "loading individual frames"
-        pass
+        raise NotImplementedError, "File format must supply loadframes method"
     _pcounts = None
     def _getcounts(self):
         if self._pcounts == None:
@@ -358,6 +384,7 @@ class Detector(object):
     counts = property(_getcounts)
 
     def __init__(self, **kw): _set(self,kw)
+    def __str__(self): return _str(self)
 
 
 class ROI(object):
@@ -373,12 +400,14 @@ class ROI(object):
     xlo, xhi (pixels)
     ylo, yhi (pixels)
     """
+    properties = ['xlo','xhi','ylo','yhi']
     xlo = None
     xhi = None
     ylo = None
     yhi = None
     
     def __init__(self, **kw): _set(self,kw)
+    def __str__(self): return _str(self)
 
 class Monitor(object):
     """
@@ -447,6 +476,9 @@ class Monitor(object):
         For normalizing by counts when only count time is recorded, we
         need an estimate of the monitor rate during the measurement.
     """
+    properties = ['distance','sampled_fraction','counts','start_time',
+                  'count_time','time_of_flight','base','monitor_rate',
+                  'source_power','source_power_units']
     distance = None
     sampled_fraction = None
     counts = None
@@ -454,8 +486,12 @@ class Monitor(object):
     count_time = None
     time_of_flight = None
     base = 'counts'
+    source_power = 0
+    source_power_units = "MW"
+    monitor_rate = 0 # counts/sec
 
     def __init__(self, **kw): _set(self,kw)
+    def __str__(self): return _str(self)
 
 class Moderator(object):
     """
@@ -476,12 +512,13 @@ class Moderator(object):
     type (string)
         For information only at this point.
     """
+    properties = ['distance','temperature','type']
     distance = None
     temperature = None
     type = 'Unknown'
     
     def __init__(self, **kw): _set(self, kw)
-
+    def __str__(self): return _str(self)
 
 class Warning(object):
     """
@@ -542,11 +579,14 @@ class ReflData(object):
 
     File details
     ============
-    file (handle)
-        Format specific file handle, for actions like showing the summary, 
-        updating the data and reading the frames.
     instrument (string)
         Name of a particular instrument
+    probe ('neutron' or 'xray')
+        Type of radiation used to probe the sample.
+    path (string)
+        Location of the datafile
+    entry (string)
+        Entry identifier if more than one entry per file
     name (string)
         Name of the dataset.  This may be a combination of filename and
         entry number.
@@ -556,13 +596,23 @@ class ReflData(object):
         Starting date and time of the measurement.
     duration (second)
         Duration of the measurement.
-    probe ('neutron' or 'xray')
-        Type of radiation used to probe the sample.
     warnings
         List of warnings generated when the file was loaded
+
+    Format specific fields (ignored by reduction software)
+    ======================
+    file (handle)
+        Format specific file handle, for actions like showing the summary, 
+        updating the data and reading the frames.
     """
+    properties = ['instrument','geometry','probe','points','channels',
+                  'name','description','date','duration','attenuator',
+                  'polarization','reversed','warnings']
     geometry = "vertical"
-    radiation = "neutron"
+    probe = "unknown"
+    format = "unknown"
+    path = "unknown"
+    entry = ""
     points = 1
     channels = 1
     name = ""
@@ -572,7 +622,6 @@ class ReflData(object):
     file = None
     attenuator = 1.
     polarization = ''
-    roi = None
     reversed = False
     warnings = None
 
@@ -581,14 +630,15 @@ class ReflData(object):
         # be able to specify sample, slit, detector or monitor on creation,
         # but will instead have to use those items provided by the class.
         _set(self,kw)
-        self.sample = Sample
-        self.slit1 = Slit
-        self.slit2 = Slit
-        self.slit3 = Slit
-        self.slit4 = Slit
-        self.detector = Detector
-        self.monitor = Monitor
+        self.sample = Sample()
+        self.slit1 = Slit()
+        self.slit2 = Slit()
+        self.slit3 = Slit()
+        self.slit4 = Slit()
+        self.detector = Detector()
+        self.monitor = Monitor()
         self.warnings = None
+        self.roi = ROI()
         
     def set_defaults(self, instrument):
         self.instrument = instrument
@@ -598,6 +648,20 @@ class ReflData(object):
             M.default_refldata(self)
         except ModuleError:
             raise TypeError, "Could not set defaults for %s"%(instrument0)
+
+    def __str__(self):
+        base = [_str(self)]
+        others = [str(s) for s in [self.slit1,self.slit2,self.slit3,self.slit4,
+                                   self.sample,self.detector,self.monitor,
+                                   self.roi]]
+        return "\n".join(base+others)
+        
+
+def _str(object):
+    cls = object.__class__.__name__
+    props = [a+"="+str(getattr(object,a)) for a in object.properties]
+    return "<%s %s>"%(cls,"\n  ".join(props))
+
 
 def _set(object,kw):
     '''
@@ -720,32 +784,3 @@ def shadow(f, beamstop, frame):
         # the detector.
         pass
     return mask
-
-# Rebinning operations
-class LinearBinning(object):
-    """
-    Desired time binning for the dataset.
-    
-    start (1 Angstrom)
-    stop (inf Angstrom)
-    step (0.1 Angstrom)
-    """
-    start = 1.
-    stop = inf
-    step = None
-    def __init__(self, **kw): _set(self,kw)
-
-class LogBinning(object):
-    """
-    Desired time binning for the dataset.
-
-    start (1 Angstrom)
-    stop (inf Angstrom)
-    step (1 %)
-    """
-    start = 1.
-    stop = inf
-    step = 1.
-    def __init__(self, **kw): _set(self,kw)
-
-

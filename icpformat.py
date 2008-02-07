@@ -267,15 +267,14 @@ def readmotors(file):
     print M['a1'].start
     """
     motors = {}
-    for i in range(6):
+    while True:  # read until 'Mot:' line
         words=get_tokenized_line(file)
+        if words[0] == 'Mot:': break
         arange=dict(start=float(words[1]),
                     step=float(words[2]),
                     stop=float(words[3]))
         name = words[0] if not words[0].isdigit() else 'a'+words[0]
         motors[name] = arange
-    # skip Mot: line
-    file.readline()
     return motors
 
 def readcolumnheaders(file):
@@ -333,16 +332,17 @@ def parseheader(file):
     """
     # Determine FileType
     fields = readheader1(file)
-    if fields['scantype']=='I':
+    scantype = fields['scantype']
+    if scantype=='I':
         fields.update(readiheader(file))
         fields['motors'] = readmotors(file)
-    elif self.header['scantype']=='Q':
+    elif scantype=='Q':
         fields.update(readqheader(file))
-    elif header['scantype']=='B':
+    elif scantype=='B':
         fields.update(readqheader(file))
         fields['motors'] = readmotors(file)
     else:
-        raise ValueError, "Unknown scantype"
+        raise ValueError, "Unknown scantype %s"%scantype
     fields['columnnames'] = readcolumnheaders(file)
     return fields
 

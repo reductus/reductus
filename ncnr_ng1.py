@@ -5,10 +5,10 @@ Default settings for the NCNR NG-1 reflectometer.
 These may change periodically, so be sure to check for updates.
 """
 
-import numpy
+import numpy,os
 from numpy import inf
-import refldata
-import icpformat as icp
+from . import refldata
+from . import icpformat
 
 def register_extensions(registry):
     for file in ['.na1', '.nb1', '.nc1', '.nd1', '.ng1']:
@@ -36,7 +36,7 @@ class NG1Icp(refldata.ReflData):
         """
         # Detector saturates at 15000 counts/s.  The efficiency curve above 
         # 15000 has not been measured.
-        self.detector.efficiency = numpy.array([1,0,15000],'f')
+        self.detector.saturation = numpy.array([[1,15000,0]],'f')
         # The following widths don't really matter for point detectors, but
         # for completeness we can put in the values.
         self.detector.width_x = 150 # mm   TODO: What is the precise value?
@@ -61,11 +61,12 @@ class NG1Icp(refldata.ReflData):
         self.detector.center_x = 0
         self.detector.width_y = 20  # mm; TODO: Is NG-1 PSD about 10 cm x 2 cm
     
-    def __init__(self, fields):
-        super(ReflIcp,self).__init__(args, kw)
-        self.filename = os.path.abspath(filename)
+    def __init__(self, filename, *args, **kw):
+        super(NG1Icp,self).__init__(*args, **kw)
+        self.path = os.path.abspath(filename)
 
-        self.detector.distance = 36*25.4/1000.  # NG-1 detector closer than slit 4?
+        # NG-1 detector closer than slit 4?
+        self.detector.distance = 36*25.4 # mm
         self.slit1.distance = -75*25.4 # mm
         self.slit2.distance = -14*25.4 # mm
         self.slit3.distance = 9*25.4 # mm
@@ -74,7 +75,7 @@ class NG1Icp(refldata.ReflData):
         
         fields = icpformat.summary(self.filename)
         if fields['scantype'] != 'I':
-            raise TypeError, "Only I-Buffers supported for NG-7"
+            raise TypeError, "Only I-Buffers supported for %s"%self.format
 
         self.date = fields['date']
         self.name = fields['filename']
@@ -92,7 +93,7 @@ class NG1Icp(refldata.ReflData):
             self._pencil_detector()
         self.display_monitor = fields['monitor']*fields['prefactor']
 
-    def load(self):
+    def loadframes(self):
         fields = icp.read(self.filename)
         
         self.detector.wavelength \
