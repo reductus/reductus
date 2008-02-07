@@ -1,0 +1,16 @@
+'ibeam006.ng1' 'Mar 27 2002 17:29' 'I'      30000.    1  'NEUT'   51  'RAW'
+  Filename         Date            Scan       Mon    Prf  Base   #pts  Type
+ibeam                                             
+ 15  20  40  99   0  0  0     1.5402     0.00000 0.00000   0.00000    2
+ Collimation      Mosaic    Wavelength   T-Start   Incr.   H-field #Det
+  1       0.20000    0.00000    0.20000
+  2       0.20000    0.00000    0.20000
+  3       0.00000    0.00000    0.00000
+  4       0.00000    0.00000    0.00000
+  5       0.80000    0.00000    0.80000
+  6       1.00000    0.00000    1.00000
+ Mot:    Start       Step      End
+    MIN       COUNTS 
+     0.35       76503
+     0.37       76469
+     0.35       76526
