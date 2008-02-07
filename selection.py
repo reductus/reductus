@@ -34,13 +34,14 @@ class Datasets:
 
     # The following pattern matches:
     #    name ([^.]*?), the *? meaning match as few characters as possible
-    #    seq ([0-9]{1,3}), the {1,3} meaning match up to three digits
+    #    seq ([0-9]{1,3})?, the {1,3} matches one to three digits, ()? optional
     #    junk [^.0-9], stuff after the sequence number such as bkg
     #    ext  ([.].*)?, with ()? being an optional group
     # Note that name is empty if there is no sequence number, meaning
     # unsequenced items will all be dumped into the same dataset.
-    pattern = re.compile('^([^.]*?)(:?([0-9]{1,3})[^.0-9]*)?([.].*)?$')
-
+    pattern = re.compile('^(?P<name>[^.]*?)(?P<seq>[0-9]{1,3})?(?P<junk>[^.0-9]*?)(?P<ext>[.].*)?$')
+    #match = pattern.match('Field5T4345bkg.uxd')
+    #dict((a,match.group(a)+"") for a in ['name','seq','junk','ext'])
     
     class Dataset:
         count = 0
@@ -104,10 +105,10 @@ class Datasets:
         self.seen.add(filename)
         base = os.path.basename(filename)
         match = self.pattern.match(base)
-        name = match.group(1)
-        seq = match.group(2)
+        name = match.group('name')
+        seq = match.group('seq')
         seq = int(seq) if seq is not None else 0
-        ext = match.group(3)
+        ext = match.group('ext')
         if ext in self.extensions or self.extensions is None:
             item = base+ext
             if item not in self.dataset:
