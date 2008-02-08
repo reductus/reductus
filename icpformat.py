@@ -36,14 +36,15 @@ def readdata(fh):
         # Build up a multiline detector block by joining all lines that
         # end with a comma.
         b = []
-        while line[-1]==',':
+        while len(line)>0 and line[-1]==',':
             b += line[1:-1].split(',')
             line = fh.readline().rstrip()
+            
         # Process the next line which doesn't end in a comma.  If we have
         # already seen lines with commas, then this line is a continuation
         # of the block.  If we haven't seen lines with commas yet, check if
         # the whole block is on a single line.
-        if b is not []:
+        if b != []:
             # Extending multiline block
             b += line[1:].split(',')
             line = fh.readline().rstrip()
@@ -52,10 +53,10 @@ def readdata(fh):
             b = line[1:].split(',')
             line = fh.readline().rstrip()
 
-        if b is not []:
+        if b != []:
             # Have a detector block so add it
             blocks.append(N.array([int(v) for v in b]))
-        elif blocks is not []:
+        elif blocks != []:
             # Oops...missing a detector block.  Set it to zero counts
             # of the same size as the last block
             blocks.append(N.zeros(blocks[-1].shape,'i'))
@@ -114,333 +115,340 @@ def get_quoted_tokens(file):
                 
     return tokens
 
-def readheader1(file):
-    """
-    Read the tow line summary at the start of the ICP data files.
-    """
-    tokens = get_quoted_tokens(file)
-    header={}
-    header['filename']=tokens[0]
-    timestamp = datetime.datetime(2000,1,1)
-    header['date']=timestamp.strptime(tokens[1],'%b %d %Y %H:%M')
-    header['scantype'] = tokens[2]
-    header['prefactor'] = float(tokens[3])
-    header['monitor']=float(tokens[4])
-    header['count_type']=tokens[5]
-    header['points']=int(tokens[6])
-    header['data_type']=tokens[7]
-    #skip over names of fields 
-    file.readline()
-    #comment and polarization
-    line = file.readline()
-    polarized_index = line.find("F1: O", 52)
-    if polarized_index > 0:
-        header['comment'] = line[:polarized_index].rstrip()
-        F1 = '+' if line.find("F1: ON", 52)>0 else '-'
-        F2 = '+' if line.find("F2: ON", 52)>0 else '-'
-        header['polarization'] = F1+F2
-    else:
-        header['comment'] = line.rstrip()
-        header['polarization'] = ""
-    return header
+class Lattice(object): pass
+class Motor(object): pass
+class MotorSet(object): pass
+class ColumnSet(object): pass
+
+class ICP(object):
+    def __init__(self, path):
+        self.path = path
+
+    def readheader1(self):
+        """
+        Read the tow line summary at the start of the ICP data files.
+        """
+
+        file = self.file
+        tokens = get_quoted_tokens(file)
+        self.filename=tokens[0]
+        self.timestamp = datetime.datetime(2000,1,1)
+        self.date=self.timestamp.strptime(tokens[1],'%b %d %Y %H:%M')
+        self.scantype = tokens[2]
+        self.prefactor = float(tokens[3])
+        self.monitor=float(tokens[4])
+        self.count_type=tokens[5]
+        self.points=int(tokens[6])
+        self.data_type=tokens[7]
+
+        #skip over names of fields 
+        file.readline()
+
+        #comment and polarization
+        line = file.readline()
+        polarized_index = line.find("F1: O", 52)
+        if polarized_index > 0:
+            self.comment = line[:polarized_index].rstrip()
+            F1 = '+' if line.find("F1: ON", 52)>0 else '-'
+            F2 = '+' if line.find("F2: ON", 52)>0 else '-'
+            self.polarization = F1+F2
+        else:
+            self.comment = line.rstrip()
+            self.polarization = ""
 
 
-def readiheader(file):
-    """
-    Read I-buffer structure, excluding motors.
-    """
-    # Read in fields and field names
-    tokenized=get_tokenized_line(file)
-    fieldnames = file.readline()
-    #print tokenized
-    #print fieldnames
+    def readiheader(self):
+        """
+        Read I-buffer structure, excluding motors.
+        """
+        file = self.file
+        
+        # Read in fields and field names
+        tokenized=get_tokenized_line(file)
+        fieldnames = file.readline()
+        #print tokenized
+        #print fieldnames
 
-    header = {}
-    if "Collimation" in fieldnames:
-        #Collimation    Mosaic    Wavelength   T-Start   Incr.   H-field #Det    
-        collimations=[] #in stream order
-        collimations.append(float(tokenized[0]))
-        collimations.append(float(tokenized[1]))
-        collimations.append(float(tokenized[2]))
-        collimations.append(float(tokenized[3]))
-        mosaic=[] #order is monochromator, sample, mosaic
-        mosaic.append(float(tokenized[4]))
-        mosaic.append(float(tokenized[5]))
-        mosaic.append(float(tokenized[6]))
-        header['collimations']=collimations
-        header['mosaic']=mosaic
-        header['wavelength']=float(tokenized[7])
-        header['Tstart']=float(tokenized[8])
-        header['Tstep']=float(tokenized[9])
-        header['Hfield']=float(tokenized[10])
-    else:
+        #Collimation    Mosaic    Wavelength   T-Start   Incr.   H-field #Det
+        self.collimations = [float(s) for s in tokenized[0:4]]
+        self.mosaic = [float(s) for s in tokenized[4:7]]
+        self.wavelength=float(tokenized[7])
+        self.Tstart=float(tokenized[8])
+        self.Tstep=float(tokenized[9])
+        self.Hfield=float(tokenized[10])
+
+    def readrheader(self):
+        """
+        Read R-buffer structure, excluding motors.
+        """
+        file = self.file
+        # Read in fields and field names
+        tokenized=get_tokenized_line(file)
+        fieldnames = file.readline()
+        #print tokenized
+        #print fieldnames
+
         #Mon1    Exp   Dm      Wavel  T-Start  Incr. Hf(Tesla) #Det SclFac
-        header['Mon1']=float(tokenized[0])
-        header['Exp']=float(tokenized[1])
-        header['Dm']=float(tokenized[2])
-        header['wavelength']=float(tokenized[3])
-        header['Tstart']=float(tokenized[4])
-        header['Tstep']=float(tokenized[5])
-        header['Hfield']=float(tokenized[6])
-        header['numDet']=float(tokenized[7])
-        header['SclFac']=float(tokenized[8])
+        self.Mon1=float(tokenized[0])
+        self.Exp=float(tokenized[1])
+        self.Dm=float(tokenized[2])
+        self.wavelength=float(tokenized[3])
+        self.Tstart=float(tokenized[4])
+        self.Tstep=float(tokenized[5])
+        self.Hfield=float(tokenized[6])
+        self.numDet=float(tokenized[7])
+        self.SclFac=float(tokenized[8])
 
-    return header
-
-
-def readqheader(file):
-    """
-    Read Q-buffer structure.
-    """
-    #experiment info
-    tokenized=get_tokenized_line(file)
-    header = {}
-    collimations=[] #in stream order
-    collimations.append(float(tokenized[0]))
-    collimations.append(float(tokenized[1]))
-    collimations.append(float(tokenized[2]))
-    collimations.append(float(tokenized[3]))
-    header['collimations']=collimations
-    mosaic=[] #order is monochromator, sample, mosaic
-    mosaic.append(float(tokenized[4]))
-    mosaic.append(float(tokenized[5]))
-    mosaic.append(float(tokenized[6]))
-    header['mosaic']=mosaic
-    orient1=[]
-    orient1.append(float(tokenized[7]))
-    orient1.append(float(tokenized[8]))
-    orient1.append(float(tokenized[9]))
-    header['orient1']=orient1
-    #ignore the "angle" field
-    orient2=[]
-    orient2.append(float(tokenized[11]))
-    orient2.append(float(tokenized[12]))
-    orient2.append(float(tokenized[13]))
-    header['orient2']=orient2
-    #skip line with field names
-    file.readline()
-    tokenized=get_tokenized_line(file)
-    lattice={}
-    lattice['a']=float(tokenized[0])
-    lattice['b']=float(tokenized[1])
-    lattice['c']=float(tokenized[2])
-    lattice['alpha']=float(tokenized[3])
-    lattice['beta']=float(tokenized[4])
-    lattice['gamma']=float(tokenized[5])
-    header['lattice']=lattice
-    #skip line with field names
-    file.readline()
-    tokenized=get_tokenized_line(file)
-    header['ecenter']=float(tokenized[0])
-    header['deltae']=float(tokenized[1])
-    header['ef']=float(tokenized[2])
-    header['monochromator_dspacing']=float(tokenized[3])
-    header['analyzer_dspacing']=float(tokenized[4])
-    header['tstart']=float(tokenized[5])
-    header['tstep']=float(tokenized[6])
-    tokenized=get_tokenized_line(file)
-    header['Efixed']=tokenized[4]
-    tokenized=get_tokenized_line(file)
-    qcenter=[]
-    qstep=[]
-    qcenter.append(float(tokenized[0]))
-    qcenter.append(float(tokenized[1]))
-    qcenter.append(float(tokenized[2]))
-    qstep.append(float(tokenized[3]))
-    qstep.append(float(tokenized[4]))
-    qstep.append(float(tokenized[5]))
-    header['qcenter']=qcenter
-    header['qstep']=qstep
-    header['hfield']=float(tokenized[6])
-    #skip line describing fields
-    file.readline()
-    return
-
-
-def readmotors(file):
-    """
-    Read the 6 motor lines, returning a dictionary of
-    motor names and start-step-stop values.
-    E.g.,
+    def readqheader(self):
+        """
+        Read Q-buffer structure.
+        """
+        file = self.file
+        #experiment info
+        tokenized=get_tokenized_line(file)
+        self.collimations=[float(s) for s in tokenized[0:4]]
+        self.mosaic=[float(s) for s in tokenized[4:7]]
+        orient1=[float(s) for s in tokenized[7:10]]
+        #ignore the "angle" field
+        orient2=[float(s) for s in tokenized[11:14]]
+        #skip line with field names
+        file.readline()
+        tokenized=get_tokenized_line(file)
+        lattice=Lattice()
+        lattice.a=float(tokenized[0])
+        lattice.b=float(tokenized[1])
+        lattice.c=float(tokenized[2])
+        lattice.alpha=float(tokenized[3])
+        lattice.beta=float(tokenized[4])
+        lattice.gamma=float(tokenized[5])
+        self.lattice=lattice
+        #skip line with field names
+        file.readline()
+        tokenized=get_tokenized_line(file)
+        self.ecenter=float(tokenized[0])
+        self.deltae=float(tokenized[1])
+        self.ef=float(tokenized[2])
+        self.monochromator_dspacing=float(tokenized[3])
+        self.analyzer_dspacing=float(tokenized[4])
+        self.tstart=float(tokenized[5])
+        self.tstep=float(tokenized[6])
+        tokenized=get_tokenized_line(file)
+        self.Efixed=tokenized[4]
+        tokenized=get_tokenized_line(file)
+        self.qcenter=[float(s) for s in tokenized[0:3]]
+        self.qstep=[float(s) for s in tokenized[3:6]]
+        self.hfield=float(tokenized[6])
+        #skip line describing fields
+        file.readline()
     
-    M = _readmotors(file)
-    print M['a1'].start
-    """
-    motors = {}
-    while True:  # read until 'Mot:' line
-        words=get_tokenized_line(file)
-        if words[0] == 'Mot:': break
-        arange=dict(start=float(words[1]),
-                    step=float(words[2]),
-                    stop=float(words[3]))
-        name = words[0] if not words[0].isdigit() else 'a'+words[0]
-        motors[name] = arange
-    return motors
+    def check_wavelength(self, default, overrides):
+        """
+        ICP sometimes records the incorrect wavelength in the file.  Make
+        sure the right value is being used.  Be annoying about it so that
+        if the wavelength was changed for a legitimate reason the user can
+        override.  L is the value in the file.  dectector.wavelength should
+        already be set to the default for the instrument.
+        """
+        dataset = self.filename[:5]
+        wavelength = self.wavelength
+        if dataset in overrides:
+            # yuck! If already overridden for a particular file in
+            # a dataset, override for all files in the dataset.
+            wavelength = overrides[dataset]
+            message("Using wavelength %s for %s"%(wavelength,dataset))
+        elif wavelength == 0:
+            # yuck! If stored value is 0, use the default
+            wavelength = default
+            message("Using default wavelength %s for %s"\
+                    %(wavelength,self.path))
+        elif abs(default-wavelength)/default > 0.01:
+            # yuck! Value differs significantly from the default
+            if question("ICP recorded a wavelength of %s in %s. \
+    Do you want to use the default wavelength %s instead?"\
+              %(wavelength,self.path,default)):
+                wavelength = default
+        # Regardless of how the value was obtained, use that value for 
+        # the entire dataset
+        return wavelength
 
-def readcolumnheaders(file):
-    """
-    Get a list of column names. Transform the names of certain
-    columns to make our lives easier elsewhere:
-          #1 COUNTS -> counts
-          #2 COUNTS -> counts2
-          MON -> monitor
-          MIN -> time
-          Q(x) -> qx, Q(y) -> qy, Q(z) -> qz
-    All column names are uppercase.
-    """
-    line = file.readline()
-    line = line.lower()
-    for (old,new) in (('#1 counts','counts'),
-                      ('#2 counts','counts2'),
-                      (' mon ',' monitor '),
-                      (' min ',' time '),
-                      ('(',''),
-                      (')',''),
-                      ):
-        line = line.replace(old,new)
-    return line.split()
+    
+    def readmotors(self):
+        """
+        Read the 6 motor lines, returning a dictionary of
+        motor names and start-step-stop values.
+        E.g.,
+        
+        M = _readmotors(file)
+        print M['a1'].start
+        """
+        self.motor = MotorSet()
+        while True:  # read until 'Mot:' line
+            words=get_tokenized_line(self.file)
+            if words[0] == 'Mot:': break
+            motor = Motor()
+            motor.start=float(words[1])
+            motor.step=float(words[2])
+            motor.stop=float(words[3])
+            name = words[0] if not words[0].isdigit() else 'a'+words[0]
+            setattr(self.motor,name,motor)
+    
+    def readcolumnheaders(self):
+        """
+        Get a list of column names. Transform the names of certain
+        columns to make our lives easier elsewhere:
+              #1 COUNTS -> counts
+              #2 COUNTS -> counts2
+              MON -> monitor
+              MIN -> time
+              Q(x) -> qx, Q(y) -> qy, Q(z) -> qz
+        All column names are uppercase.
+        """
+        line = self.file.readline()
+        line = line.lower()
+        for (old,new) in (('#1 counts','counts'),
+                          ('#2 counts','counts2'),
+                          (' mon ',' monitor '),
+                          (' min ',' time '),
+                          ('(',''),
+                          (')',''),
+                          ):
+            line = line.replace(old,new)
+        self.columnnames = line.split()
+    
+    
+    def readcolumns(self):
+        '''
+        Read and parse ICP data columns listed in columns.  Return a dict of
+        column name: vector.  If using a position sensitive detector, return 
+        an array of detector values x scan points.
+        '''
+        values,detector = readdata(self.file)
+        self.column = ColumnSet()
+        for (c,v) in zip(self.columnnames,values):
+            setattr(self.column,c,v)
+        self.detector = detector
+        self.counts = detector if detector.size > 0 else self.column.counts
+        self.points = len(self.column.counts)
+        
+    def genmotorcolumns(self):
+        """
+        Generate vectors for each of the motors if a vector is not
+        already stored in the file.
+        """
+        for (M,R) in self.motor.__dict__.iteritems():
+            if not hasattr(self.column,M):
+                if R.step != 0.:
+                    vector = N.arange(R.start,R.step,R.stop)
+                    # truncate to number of points measured
+                    vector = vector[:self.points]+0  
+                else:
+                    vector = R.start * N.ones(self.points)
+                setattr(self.column,M,vector)
+        pass
+    
+    def parseheader(self):
+        """
+        Read and parse ICP header information
+        """
+        # Determine FileType
+        file = self.file
+        self.readheader1()
+        if self.scantype=='I':
+            self.readiheader()
+            self.readmotors()
+        elif self.scantype=='Q':
+            self.readqheader()
+        elif self.scantype=='B':
+            self.readqheader()
+            self.readmotors()
+        elif self.scantype=='R':
+            self.readrheader()
+            self.readmotors()
+        else:
+            raise ValueError, "Unknown scantype %s in ICP file"%scantype
+        self.readcolumnheaders()
 
+    def summary(self):
+        """
+        Read header from file, returning a dict of fields.
+        """
+        self.file = gzopen(self.path)
+        self.parseheader()
+        data1 = self.file.readline()
+        data2 = self.file.readline()
+        self.PSD = (',' in data2)
+        self.file.close()
+    
+    def read(self):
+        """
+        Read header and data from file, returning a dict of fields.
+        """
+        self.file = gzopen(self.path)
+        self.parseheader()
+        
+        #read columns and detector images if available
+        self.readcolumns()
+        self.PSD = (self.detector.size>0)
+    
+        # fill in missing motor columns
+        self.genmotorcolumns()
 
-def readcolumns(file, columns):
-    '''
-    Read and parse ICP data columns listed in columns.  Return a dict of
-    column name: vector.  If using a position sensitive detector, return 
-    an array of detector values x scan points.
-    '''
-    values,detector = readdata(file)
-    return dict(zip(columns,values)),detector
+        self.file.close()
 
-def genmotorcolumns(columns,motors):
-    """
-    Generate vectors for each of the motors if a vector is not
-    already stored in the file.
-    """
-    n = len(columns['counts'])
-    for (M,R) in motors.iteritems():
-        if M not in columns:
-            if R['step'] != 0.:
-                vector = N.arange(R['start'],R['step'],R['stop'])
-                vector = vector[:n]+0  # truncate to # points measured
-            else:
-                vector = R['start'] * N.ones(n)
-            columns[M] = vector
-    pass
+    def __contains__(self, column):
+        return hasattr(self.column,column)
+    
+    def counts(self):
+        if self.detector.size > 1:
+            return self.detector
+        else:
+            return self.column.counts
 
-def parseheader(file):
-    """
-    Read and parse ICP header information
-    """
-    # Determine FileType
-    fields = readheader1(file)
-    scantype = fields['scantype']
-    if scantype=='I':
-        fields.update(readiheader(file))
-        fields['motors'] = readmotors(file)
-    elif scantype=='Q':
-        fields.update(readqheader(file))
-    elif scantype=='B':
-        fields.update(readqheader(file))
-        fields['motors'] = readmotors(file)
-    else:
-        raise ValueError, "Unknown scantype %s"%scantype
-    fields['columnnames'] = readcolumnheaders(file)
-    return fields
+def read(filename):
+    """Read an ICP file and return the corresponding ICP file object"""
+    icp = ICP(filename)
+    icp.read()
+    return icp
 
+def summary(filename):
+    """Read an ICP file header and return the corresponding ICP file object"""
+    icp = ICP(filename)
+    icp.summary()
+    return icp
 
-def gzopen(filename):
+def gzopen(filename,mode='r'):
     """
     Open file or gzip file
     """
     if filename.endswith('.gz'):
         import gzip
-        file = gzip.open(filename,'r')
+        file = gzip.open(filename, mode)
     else:
-        file = open(filename, 'r')
+        file = open(filename, mode)
     return file
 
-def summary(filename):
-    """
-    Read header from file, returning a dict of fields.
-    """
-    file = gzopen(filename)
-    fields = parseheader(file)
-    data1 = file.readline()
-    data2 = file.readline()
-    fields['PSD'] = (',' in data2)
-    file.close()
-    return fields
-
-def read(filename):
-    """
-    Read header and data from file, returning a dict of fields.
-    """
-    file = gzopen(filename)
-    fields = parseheader(file)
-    
-    #read columns and detector images if available
-    fields['columns'],fields['detector'] \
-        = readcolumns(file,fields['columnnames'])
-    fields['PSD'] = (fields['detector'].size>0)
-
-    # fill in missing motor columns
-    genmotorcolumns(fields['columns'],fields['motors'])
-    
-    file.close()
-    
-    return fields
-
-
-def asdata(fields):
+def asdata(icp):
     import data, numpy
     d = data.Data()
-    for (k,v) in fields.iteritems():
+    for (k,v) in icp.__dict__.iteritems():
         setattr(d.prop,k,v)
     d.vlabel = 'Counts'
-    d.v = d.prop.detector
+    d.v = d.prop.counts
     d.xlabel = d.prop.columnnames[0].capitalize()
-    d.x = d.prop.columns[d.prop.columnnames[0]]
+    d.x = getattr(d.prop.column, d.prop.columnnames[0])
     if len(d.v.shape) > 1:
         d.ylabel = 'Pixel'
         d.y = numpy.arange(d.v.shape[0])
     return d
 
 def data(filename):
-    fields = read(filename)
-    return asdata(fields)
+    icp = ICP(filename)
+    icp.read()
+    return asdata(icp)
 
 # TODO: need message/question functions
 def message(text): pass
 def question(text): return True
-
-def check_wavelength(fields, default, overrides):
-    """
-    ICP sometimes records the incorrect wavelength in the file.  Make
-    sure the right value is being used.  Be annoying about it so that
-    if the wavelength was changed for a legitimate reason the user can
-    override.  L is the value in the file.  dectector.wavelength should
-    already be set to the default for the instrument.
-    """
-    filename = fields['filename']
-    dataset = filename[:5]
-    wavelength = fields['wavelength']
-    if dataset in overrides:
-        # yuck! If already overridden for a particular file in
-        # a dataset, override for all files in the dataset.
-        wavelength = overrides[dataset]
-        message("Using wavelength %s for %s"%(wavelength,dataset))
-    elif L == 0:
-        # yuck! If stored value is 0, use the default
-        wavelength = default
-        message("Using default wavelength %s for %s"%(wavelength,filename))
-    elif abs(L-wavelength)/L > 0.01:
-        # yuck! Value differs significantly from the default
-        if question("ICP recorded a wavelength of %s in %s. \
-Do you want to use the default wavelength %s instead?"\
-          %(wavelength,filename,default)):
-            wavelength = default
-    # Regardless of how the value was obtained, use that value for 
-    # the entire dataset
-    return wavelength
 
 def demo():
     """
@@ -452,7 +460,7 @@ def demo():
         keys = fields.keys()
         keys.sort()
         for k in keys: print k,fields[k]
-    
+
 def plot(filename):
     """
     Read and print all command line arguments

@@ -1,9 +1,10 @@
+# This program is public domain
 """
 Data file reader for NCNR NG-7 data.  
 
 """
 
-import os
+import os, numpy
 from . import icpformat
 from . import refldata
 
@@ -12,17 +13,22 @@ def register_extensions(registry):
         registry[file] = readentries
         registry[file+'.gz'] = readentries
 
-def readentries(filename):
-    # ICP files have one entry per filename
-    return [NG7Icp(filename)]
+def readentries(path):
+    # ICP files have one entry per file
+    return [NG7Icp(path)]
 
 class NG7Icp(refldata.ReflData):
+    # Instrument description
     probe = "neutron"
     format = "NCNR ICP (NG-7)"
 
-    def __init__(self, filename, *args, **kw):
+    # The following allows the user to override the wavelength 
+    # all files in a dataset to compensate for an incorrectly
+    # recorded wavelength in ICP.
+    _wavelength_override = {}
+    def __init__(self, path, *args, **kw):
         super(NG7Icp,self).__init__(*args, **kw)
-        self.filename = os.path.abspath(filename)
+        self.path = os.path.abspath(path)
 
         # Note: these constants likely depend on the date that the file 
         # was created.
@@ -34,20 +40,20 @@ class NG7Icp(refldata.ReflData):
         self.slit4.distance = 42*25.4 # mm
         self.detector.rotation = 0 # degrees
 
-        fields = icpformat.summary(filename)
-        if fields['scantype'] != 'I':
-            raise TypeError, "Only I-Buffers supported for NG-7"
+        data = icpformat.summary(path)
+        if data.scantype != 'R':
+            raise TypeError, "Only R-Buffers supported for NG-7"
 
-        self.date = fields['date']
-        self.name = fields['filename']
-        self.description = fields['comment']
+        self.date = data.date
+        self.name = data.filename
+        self.description = data.comment
         self.dataset = self.name[:5]
 
-        if fields['count_type']=='TIME':
+        if data.count_type=='TIME':
             # Override the default monitor base of 'counts'
             self.monitor.base='time'
 
-        if fields['PSD']:
+        if data.PSD:
             self.instrument = 'NCNR NG-7 PSD'
             self._psd()
         else:
@@ -55,12 +61,16 @@ class NG7Icp(refldata.ReflData):
             self._pencil_detector()
         self.display_monitor = 1
 
+        # Callback for lazy data
+        self.detector.loadcounts = self.loadcounts
+
+
     def _pencil_detector(self):
         """
         Pencil detector on NG-7.
         """
         #    rate     correction factor
-        NG7monitor_calibration = """
+        calibration = """
               304     1.0   ;
              1788     1.0074;
              6812     1.0672;
@@ -68,10 +78,11 @@ class NG7Icp(refldata.ReflData):
             19426     1.2151;
             24022     1.2944;
             27771     1.370 ;
-            31174     1.429 ;
+            31174     1.429
         """
-        C = numpy.matrix(Ng7monitor_calibration)
-        self.detector.saturation = numpy.array(C[0,:],100./C[1,:])
+        C = numpy.matrix(calibration).A
+        C[1,:] = 1/C[1,:] # Use efficiency rather than attenuation
+        self.detector.saturation = C
         # The following widths don't really matter for point detectors, but
         # for completeness we can put in the values.
         self.detector.width_x = 25.4*6 # mm TODO: Is NG-1 pencil det. 6" long?
@@ -85,7 +96,7 @@ class NG7Icp(refldata.ReflData):
         PSD on NG-7.
         """
         # TODO: NG-7 PSD saturates at 8000 counts/s?
-        self.detector.efficiency = numpy.array([1,0,8000],'f')
+        self.detector.efficiency = numpy.array([1,8000,0],'f')
         minbin = 9
         maxbin = 246
         width = 100
@@ -93,29 +104,32 @@ class NG7Icp(refldata.ReflData):
         self.detector.center_x = 0
         self.detector.width_y = 100 # TODO: Is NG-7 PSD width 10 cm?
 
-    def loadframes(self):
-        fields = icp.read(self.filename)
+    def loadcounts(self):
+        data = icpformat.read(self.path)
+        return data.counts
+
+    def load(self):
+        data = icpformat.read(self.path)
         self.detector.wavelength \
-            = icp.check_wavelength(fields, 4.76, NG7Icp._wavelength_override)
-        if 'monitor' in fields['columns']:
-            self.monitor.counts = fields['columns']['monitor']
-        elif 'qz' in fields['columns']:
+            = data.check_wavelength(4.76, NG7Icp._wavelength_override)
+        if 'monitor' in data:
+            self.monitor.counts = data.column.monitor
+        elif 'qz' in data:
             # NG7 automatically increases count times as Qz increases
-            monitor, prefactor = fields['monitor'],fields['prefactor']
-            Mon1, Exp = fields['Mon1'],fields['Exp']
-            Qz = fields['columns']['qz']
+            monitor, prefactor = data.monitor,data.prefactor
+            Mon1, Exp = data.Mon1,data.Exp
+            Qz = data.column.qz
             self.monitor.counts = prefactor*(monitor + Mon1 * abs(Qz)**Exp)
 
-        if 'S1' in fields['columns']:
-            self.slit1.x = fields['columns']['S1']
-        if 'S2' in fields['columns']:
-            self.slit2.x = fields['columns']['S2']
-        if 'S3' in fields['columns']:
-            self.slit3.x = fields['columns']['S3']
-        if 'S4' in fields['columns']:
-            self.slit4.x = fields['columns']['S4']
-        if 'qz' in fields['columns']:
-            qx = fields['columns'] if 'qx' in fields['columns'] else 0
-            qz = fields['columns']['qz']
+        if 's1' in data: self.slit1.x = data.column.s1
+        if 's2' in data: self.slit2.x = data.column.s2
+        if 's3' in data: self.slit3.x = data.column.s3
+        if 's4' in data: self.slit4.x = data.column.s4
+        if 'qz' in data:
+            qx = data.column.qx if 'qx' in data else 0
+            qz = data.column.qz
             A,B = refldata.QxQz_to_AB(qx,qz,self.detector.wavelength)
             self.sample.angle_x,self.detector.angle_x = A,B
+
+        # TODO: if the dataset is large, set up a weak reference instead
+        self.detector.counts = data.counts

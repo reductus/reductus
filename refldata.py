@@ -58,20 +58,7 @@ additions to the metadata must be recorded in any reduced
 data file format, along with a list of transformations
 that went into the reduction.
 
-Note that many file format contain hard-coded instrument 
-parameters which may vary occasionally over time.   We 
-need a systematic way of dealing with these.  Putting them 
-in configuration files is a bad idea because then the results 
-of the analysis will depend on the machine on which they were
-run.  The safest approach is to use the file data in order
-to select the correct values for the constants, and update
-the data reader whenever the instrument configuration
-changes.HT e alternative is to store the instrument
-configuration at a fixed URI which can be maintained by
-the instrument scientist, or possibly even leaving the
-data loader source code with the instrument scientist.  As of
-this writing, none of these have been done.
-
+See notes in properties.py regarding dated values.
 """
 
 import numpy
@@ -259,6 +246,11 @@ class Beamstop(object):
     def __init__(self, **kw): _set(self,kw)
     def __str__(self): return _str(self)
 
+def loadcounts_dummy():
+    raise NotImplementedError,\
+       "Data format must set detector.counts or detector.loadcounts"
+def pcounts_empty(): return None
+
 class Detector(object):
     """
     Define the detector properties.  Note that this defines a virtual
@@ -363,25 +355,29 @@ class Detector(object):
     saturation = inf # counts/sec
     wavelength = 1 # angstrom
     time_of_flight = None  # ms
-    # counts is a property (see below).
+    loadcounts = loadcounts_dummy
 
     # Raw counts are cached in memory and loaded on demand.
     # Rebinned and integrated counts for the region of interest
     # are stored in memory.
-    def loadframes(self):
-        raise NotImplementedError, "File format must supply loadframes method"
-    _pcounts = None
+    #_pcounts = lambda:None
+    _pcounts = pcounts_empty
     def _getcounts(self):
-        if self._pcounts == None:
-            counts = self.loadframes()
+        counts = self._pcounts()
+        if counts is None:
+            counts = self.loadcounts()
             self._pcounts = weakref.ref(counts)
-        else:
-            counts = self._pcounts()
-            if counts is None:
-                counts = self.loadframes()
-                self._pcounts = weakref.ref(counts)
         return counts
-    counts = property(_getcounts)
+    def _setcounts(self, value):
+        # File formats which are small do not need to use weak references,
+        # however, for convenience the should use the same interface, which
+        # is value() rather than value.
+        def static(): return value
+        self._pcounts = static
+        #self._pcounts = lambda:value
+    def _delcounts(self):
+        _pcounts = lambda:None
+    counts = property(_getcounts,_setcounts,_delcounts)
 
     def __init__(self, **kw): _set(self,kw)
     def __str__(self): return _str(self)
@@ -607,7 +603,7 @@ class ReflData(object):
     """
     properties = ['instrument','geometry','probe','points','channels',
                   'name','description','date','duration','attenuator',
-                  'polarization','reversed','warnings']
+                  'polarization','reversed','warnings','path','entry']
     geometry = "vertical"
     probe = "unknown"
     format = "unknown"
@@ -683,6 +679,7 @@ def AB_to_QxQz(sample_angle, detector_angle, wavelength):
     A,B = sample_angle, detector_angle
     Qz = 2*pi/wavelength * ( sin(pi/180*(B - A)) + sin(pi/180*A))
     Qx = 2*pi/wavelength * ( cos(pi/180*(B - A)) - cos(pi/180*A))
+    return Qx,Qz
 
 def QxQz_to_AB(Qx, Qz, wavelength):
     # Algorithm for converting Qx-Qz to alpha-beta:

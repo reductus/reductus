@@ -1,14 +1,41 @@
 # This program is public domain
 """
-Default settings for the NCNR NG-1 reflectometer.
-
-These may change periodically, so be sure to check for updates.
+Data file reader for NCNR NG-1 data.  
 """
 
 import numpy,os
 from numpy import inf
-from . import refldata
-from . import icpformat
+from . import refldata, icpformat, properties
+
+
+# Instrument parameters
+# As instrument parameters change add additional lines to this file
+# indicating the new value and the date of the change.  The order of
+# the entries does not matter.  The timestamp on the file will
+# determine which value will be used.
+# The format of the entries should be:
+#      default.NAME = (VALUE, 'YYYY-MM-DD')  # value in effect after DD/MM/YYYY
+#      default.NAME = (VALUE, '')          # value in effect at commissioning
+default = properties.DatedValues()
+default.wavelength = (4.76,'')  # in case ICP records the wrong value
+
+# Detector saturates at 15000 counts/s.  The efficiency curve above 
+# 15000 has not been measured.
+default.saturation = (numpy.array([[1,15000,0]]),'')
+
+    
+# NG-1 detector closer than slit 4?
+default.detector_distance = (36*25.4, '') # mm
+default.psd_width = (20, '') # mm; TODO: Is NG-1 PSD about 10 cm x 2 cm
+default.slit1_distance = (-75*25.4, '') # mm
+default.slit2_distance = (-14*25.4, '') # mm
+default.slit3_distance = (9*25.4, '') # mm
+default.slit4_distance = (42*25.4, '') # mm
+
+
+# TODO: finish moving instrument defaults up here.
+
+# =====================================================================
 
 def register_extensions(registry):
     for file in ['.na1', '.nb1', '.nc1', '.nd1', '.ng1']:
@@ -19,8 +46,8 @@ def register_extensions(registry):
         registry[file] = readentries
         registry[file+'.gz'] = readentries
 
-def readentries(filename):
-    return [NG1Icp(filename)]
+def readentries(path):
+    return [NG1Icp(path)]
 
 class NG1Icp(refldata.ReflData):
     probe = "neutron"
@@ -34,9 +61,7 @@ class NG1Icp(refldata.ReflData):
         """
         Pencil detector on NG-1.
         """
-        # Detector saturates at 15000 counts/s.  The efficiency curve above 
-        # 15000 has not been measured.
-        self.detector.saturation = numpy.array([[1,15000,0]],'f')
+        self.detector.saturation = self.default.saturation
         # The following widths don't really matter for point detectors, but
         # for completeness we can put in the values.
         self.detector.width_x = 150 # mm   TODO: What is the precise value?
@@ -55,81 +80,98 @@ class NG1Icp(refldata.ReflData):
         # strong a beam so there is little need.
         self.detector.efficiency = numpy.array([1,0,8000],'f')
         minbin = 1
-        maxbin = 256
+        maxbin = 512
         width = 25.4*4 # mm
-        self.detector.width_x = numpy.ones(256,'f')*(width/(maxbin-minbin))
+        self.detector.width_x = numpy.ones(512,'f')*(width/(maxbin-minbin))
         self.detector.center_x = 0
         self.detector.width_y = 20  # mm; TODO: Is NG-1 PSD about 10 cm x 2 cm
     
-    def __init__(self, filename, *args, **kw):
+    def _psd2d(self):
+        """
+        2D PSD on NG-1.
+        """
+        # Detector saturates at 8000 counts/s.  Maybe could use efficiency
+        # calibrations like on NG-7 to support higher count rates, though
+        # in practice one risks damaging the detector by exposing it to too
+        # strong a beam so there is little need.
+        self.detector.efficiency = numpy.array([1,0,8000],'f')
+        minbin = 1
+        maxbin = 512
+        width = 25.4*4 # mm
+        self.detector.width_x = numpy.ones(256,'f')*(width/(maxbin-minbin))
+        self.detector.center_x = 0
+        self.detector.width_y = self.default.psd_width
+    
+    def __init__(self, path, *args, **kw):
         super(NG1Icp,self).__init__(*args, **kw)
-        self.path = os.path.abspath(filename)
+        self.path = os.path.abspath(path)
 
-        # NG-1 detector closer than slit 4?
-        self.detector.distance = 36*25.4 # mm
-        self.slit1.distance = -75*25.4 # mm
-        self.slit2.distance = -14*25.4 # mm
-        self.slit3.distance = 9*25.4 # mm
-        self.slit4.distance = 42*25.4 # mm
-        self.detector.rotation = 0 # degrees
-        
-        fields = icpformat.summary(self.filename)
-        if fields['scantype'] != 'I':
+        data = icpformat.summary(self.path)
+        if data.scantype != 'I':
             raise TypeError, "Only I-Buffers supported for %s"%self.format
 
-        self.date = fields['date']
-        self.name = fields['filename']
-        self.description = fields['comment']
+        self.default = default(data.date)
+        self.date = data.date
+        self.name = data.filename
+        self.description = data.comment
         self.dataset = self.name[:5]
 
-        if fields['scantype'] != 'I':
-            raise TypeError, "Only I-Buffers supported for NG-1"
+        # Plug in instrument defaults
+        self.detector.distance = self.default.dectector_distance
+        self.slit1.distance = self.default.slit1_distance
+        self.slit2.distance = self.default.slit2_distance
+        self.slit3.distance = self.default.slit3_distance
+        self.slit4.distance = self.default.slit4_distance
+        self.detector.rotation = 0 # degrees
         
-        if fields['PSD']:
+
+        if data.PSD:
             self.instrument = 'NCNR NG-1 PSD'
             self._psd()
         else:
             self.instrument = 'NCNR NG-1'
             self._pencil_detector()
-        self.display_monitor = fields['monitor']*fields['prefactor']
+        self.display_monitor = data.monitor*data.prefactor
+        
+        # Callback for lazy data
+        self.detector.loadcounts = self.loadcounts
 
-    def loadframes(self):
-        fields = icp.read(self.filename)
+    def loadcounts(self):
+        data = icpformat.read(self.path)
+        return data.counts
+
+    def load(self):
+        data = icpformat.read(self.path)
         
         self.detector.wavelength \
-            = icp.check_wavelength(fields, 4.75, NG1Icp._wavelength_override)
+            = data.check_wavelength(self.default.wavelength, 
+                                    NG1Icp._wavelength_override)
 
         # Slits are either stored in the file or available from the
         # motor information.  For non-reflectometry scans they may
         # not be available.
-        if 'A1' in fields['columns']:
-            self.slit1.x = fields['columns']['A1']
-        if 'A2' in fields['columns']:
-            self.slit2.x = fields['columns']['A2']
-        if 'A5' in fields['columns']:
-            self.slit3.x = fields['columns']['A5']
-        if 'A6' in fields['columns']:
-            self.slit4.x = fields['columns']['A6']
+        if 'A1' in data: self.slit1.x = data.column.A1
+        if 'A2' in data: self.slit2.x = data.column.A2
+        if 'A5' in data: self.slit3.x = data.column.A5
+        if 'A6' in data: self.slit4.x = data.column.A6
 
         # Angles are either stored in the file or can be calculated
         # from the motor details.  For non-reflectometry scans they
         # may not be available.
-        if 'A3' in fields['columns']:
-            self.sample.angle_x = fields['columns']['A3']
-        if 'A4' in fields['columns']:
-            self.detector.angle_x = fields['columns']['A4']
-
+        if 'A3' in data: self.sample.angle_x = data.column.A3
+        if 'A4' in data: self.detector.angle_x = data.column.A4
+        
         # Polarization was extracted from the comment line
-        self.polarization = fields['polarization']
+        self.polarization = data.polarization
 
         # Monitor counts may be recorded or may be inferred from header
-        if 'monitor' in fields['columns']:
+        if 'monitor' in data:
             # Prefer the monitor column if it exists
-            self.monitor.counts = fields['columns']['monitors']
-        elif fields['count_type'] == 'NEUT':
+            self.monitor.counts = data.column.monitor
+        elif data.count_type == 'NEUT':
             # if count by neutron, the 'monitor' field stores counts
             self.monitor.counts \
-                = fields['monitor']*fields['prefactor']*numpy.ones(pts,'i')
+                = data.monitor*data.prefactor*numpy.ones(data.points,'i')
         else:
             # Need monitor rate for normalization; the application
             # will have to provide the means of setting the rate
@@ -137,11 +179,15 @@ class NG1Icp(refldata.ReflData):
             pass
 
         # Counting time may be recorded or may be inferred from header
-        if fields['count_type'] == 'TIME':
+        if data.count_type == 'TIME':
+            # Prefer the target value to the time column when counting by
+            # time because the time column is recorded in minutes rather
+            # than seconds and is not precise enough.
             # if count by time, the 'monitor' field stores seconds
-            self.monitor.count_time = fields['monitor']*numpy.ones(pts,'f')
-        elif 'time' in fields['columns']:
-            self.monitor.count_time = files['columns']['time']
+            self.monitor.count_time \
+                = data.monitor*data.prefactor*numpy.ones(data.points,'f')
+        elif 'time' in data:
+            self.monitor.count_time = data.column.time # TODO *60?
         else:
             # Need monitor rate for normalization; the application
             # will have to provide the means of setting the rate

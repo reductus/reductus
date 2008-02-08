@@ -12,16 +12,7 @@ cross sections.
 
 A correction has a string name that can be stored in a log file.
 
-A correction has a property sheet which currently is a list of
-names of attributes for the correction.  The attributes are
-assumed to be floating point values.  These need to be made richer 
-so that properties contain names, labels and units for real valued 
-properties, choice lists for string valued properties, and more 
-sophisticated options such as reflectometry model definition panes 
-for reflectometry model properties.
-
-We should probably support to/from xml for the purposes of
-saving and reloading corrections.
+See properties.py for a discussion of correction parameters.
 
 We may want to support an undo/redo stack, either by providing
 an undo method for reversing the effect of the correction, or
