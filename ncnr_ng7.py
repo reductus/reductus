@@ -114,6 +114,8 @@ class NG7Icp(refldata.ReflData):
             = data.check_wavelength(4.76, NG7Icp._wavelength_override)
         if 'monitor' in data:
             self.monitor.counts = data.column.monitor
+        if 'time' in data:
+            self.monitor.count_time = data.column.time*60
         elif 'qz' in data:
             # NG7 automatically increases count times as Qz increases
             monitor, prefactor = data.monitor,data.prefactor

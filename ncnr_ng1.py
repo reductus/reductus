@@ -110,14 +110,14 @@ class NG1Icp(refldata.ReflData):
         if data.scantype != 'I':
             raise TypeError, "Only I-Buffers supported for %s"%self.format
 
-        self.default = default(data.date)
+        self.default = default(str(data.date))
         self.date = data.date
         self.name = data.filename
         self.description = data.comment
         self.dataset = self.name[:5]
 
         # Plug in instrument defaults
-        self.detector.distance = self.default.dectector_distance
+        self.detector.distance = self.default.detector_distance
         self.slit1.distance = self.default.slit1_distance
         self.slit2.distance = self.default.slit2_distance
         self.slit3.distance = self.default.slit3_distance
@@ -187,7 +187,7 @@ class NG1Icp(refldata.ReflData):
             self.monitor.count_time \
                 = data.monitor*data.prefactor*numpy.ones(data.points,'f')
         elif 'time' in data:
-            self.monitor.count_time = data.column.time # TODO *60?
+            self.monitor.count_time = data.column.time*60
         else:
             # Need monitor rate for normalization; the application
             # will have to provide the means of setting the rate
@@ -198,3 +198,5 @@ class NG1Icp(refldata.ReflData):
         if self.sample.angle_x != None and self.detector.angle_x != None:
             A,B = self.sample.angle_x, self.detector.angle_x
             Qx,Qz = refldata.AB_to_QxQz(A,B,self.detector.wavelength)
+            
+        self.detector.counts = data.counts
