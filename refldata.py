@@ -447,6 +447,13 @@ class Monitor(object):
         The measurement rate basis which should be used to normalize 
         the data.  This is initialized by the file loader, but may
         be overridden during reduction.
+    time_step (seconds)
+        The count_time timer has a reporting unit, e.g. second, or
+        millisecond, or in the case of NCNR ICP files, hundredths of
+        a minute.  The measurement uncertainty for the count time
+        is assumed to be uniform over the time_step, centered on
+        the reported time, with a gaussian approximation of uncertainty
+        being sqrt(time_step/12).
     start_time (n seconds)
         For scanning instruments the start of each measurement relative 
         to start of the scan.  Note that this is not simply sum of the
@@ -473,13 +480,14 @@ class Monitor(object):
         need an estimate of the monitor rate during the measurement.
     """
     properties = ['distance','sampled_fraction','counts','start_time',
-                  'count_time','time_of_flight','base','monitor_rate',
-                  'source_power','source_power_units']
+                  'count_time','time_step','time_of_flight','base',
+                  'monitor_rate','source_power','source_power_units']
     distance = None
     sampled_fraction = None
     counts = None
     start_time = None
     count_time = None
+    time_step = 0
     time_of_flight = None
     base = 'counts'
     source_power = 0
@@ -651,7 +659,9 @@ class ReflData(object):
                                    self.sample,self.detector,self.monitor,
                                    self.roi]]
         return "\n".join(base+others)
-        
+
+    def apply(self, correction):
+        correction(self)
 
 def _str(object):
     cls = object.__class__.__name__
