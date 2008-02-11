@@ -26,10 +26,12 @@ Example:
   data.apply(ratiocor.water_ratio(D2O=15))
 
 """
+# Boilerplate to allow relative imports for apps.
+if __name__ == '__main__':
+    import os; __path__=[os.path.dirname(os.path.realpath(__file__))]; del os
 
 from math import *
 import reflectometry.model1d as reflfit
-import reflectometry.reduction as reflred
 
 class RatioCorrection(object):
     model = None
@@ -46,22 +48,25 @@ class RatioCorrection(object):
     def __str__(self):
         return self.name if name else "RatioCorrection"
 
-def water_ratio(D2O=0,**kw):
+def water_ratio(D2O=0,probe=None,**kw):
     """
     Compute the incident intensity assuming that data measures a 
     reflection off water.
     
     D2O = percentage is the portion that is deuterated, from 0 to 100.
+    probe = 'neutron' or 'xray'
 
     Returns a correction object that can be applied to data.    
     """
     # SLDs calculated with NBCU.XLS from the NCNR website.
-    if data.radiation == 'neutron':
+    if probe == 'neutron':
         rho_H2O,mu_H2O = -0.560, 0.001
         rho_D2O,mu_D2O = 5.756, 0.00
-    else:
+    elif probe == 'xray':
         rho_H2O,mu_H2O = 9.466, 0.098
         rho_D2O,mu_D2O = 8.516, 0.089
+    else:
+        raise ValueError, "water_ratio needs probe 'neutron' or 'xray'"
     rho = ((100-D2O)*(rho_H2O) + D2O*rho_H2O)/100.
     mu = ((100-D2O)*(mu_H2O) + D2O*mu_H2O)/100.
     m = reflfit.Model()
@@ -71,7 +76,7 @@ def water_ratio(D2O=0,**kw):
     name = "RatioCorrection(water,D2O=%d)"%D2O
     return RatioCorrection(m, name)
     
-def intensity_ratio(data=data,model=model):
+def intensity_ratio(data=None,model=None):
     """
     Compute the incident intensity assuming that data measures a 
     reflection off the given model.
@@ -88,3 +93,10 @@ def intensity_ratio(data=data,model=model):
     Ri = model.reflectivity(Qi,L)
     R = reflfit.convolve(Qi,Ri,Q,dQ)
     data.R, data.dR = data.R/R, data.dR/R
+
+def demo():
+    from .examples import ng7 as dataset
+    spec = dataset.spec()[0]
+    spec.apply(water_ratio(D2O=20,probe=spec.probe))
+    
+if __name__ == "__main__": demo()

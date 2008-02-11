@@ -16,24 +16,52 @@ from . import refldata, icpformat, properties
 # The format of the entries should be:
 #      default.NAME = (VALUE, 'YYYY-MM-DD')  # value in effect after DD/MM/YYYY
 #      default.NAME = (VALUE, '')          # value in effect at commissioning
-default = properties.DatedValues()
-default.wavelength = (4.76,'')  # in case ICP records the wrong value
+
+# =====================================================================
+# NG-1 defaults
+ng1default = properties.DatedValues()
+ng1default.wavelength = (4.76,'')  # in case ICP records the wrong value
 
 # Detector saturates at 15000 counts/s.  The efficiency curve above 
 # 15000 has not been measured.
-default.saturation = (numpy.array([[1,15000,0]]),'')
+ng1default.saturation = (numpy.array([[1,15000,0]]),'')
+ng1default.psd_saturation = (numpy.array([[1,8000,0]]),'')
 
     
 # NG-1 detector closer than slit 4?
-default.detector_distance = (36*25.4, '') # mm
-default.psd_width = (20, '') # mm; TODO: Is NG-1 PSD about 10 cm x 2 cm
-default.slit1_distance = (-75*25.4, '') # mm
-default.slit2_distance = (-14*25.4, '') # mm
-default.slit3_distance = (9*25.4, '') # mm
-default.slit4_distance = (42*25.4, '') # mm
+ng1default.detector_distance = (36*25.4, '') # mm
+ng1default.psd_width = (20, '') # mm; TODO: Is NG-1 PSD about 10 cm x 2 cm
+ng1default.slit1_distance = (-75*25.4, '') # mm
+ng1default.slit2_distance = (-14*25.4, '') # mm
+ng1default.slit3_distance = (9*25.4, '') # mm
+ng1default.slit4_distance = (42*25.4, '') # mm
+ng1default.monitor_timestep = (60./100,'') # s ; ICP records 1/100ths of min 
 
+ng1default = properties.DatedValues()
+ng1default.wavelength = (5.0,'')  # in case ICP records the wrong value
 
-# TODO: finish moving instrument defaults up here.
+# =====================================================================
+# CG-1 defaults
+
+# Detector saturates at 15000 counts/s.  The efficiency curve above 
+# 15000 has not been measured.
+cg1default.saturation = (numpy.array([[1,15000,0]]),'')
+cg1default.psd_saturation = (numpy.array([[1,8000,0]]),'')
+
+    
+# NG-1 detector closer than slit 4?
+cg1default.detector_distance = (1600., '') # mm
+cg1default.psd_width = (211, '') # mm; TODO: Is NG-1 PSD about 10 cm x 2 cm
+cg1default.slit1_distance = (-75*25.4, '') # mm
+cg1default.slit2_distance = (-14*25.4, '') # mm
+cg1default.slit3_distance = (9*25.4, '') # mm
+cg1default.slit4_distance = (42*25.4, '') # mm
+cg1default.monitor_timestep = (60./100,'') # s ; ICP records 1/100ths of min 
+cg1default.psd_minbin = (1,'')
+cg1default.psd_maxbin = (608,'')
+cg1default.psd_width = (100,'')
+cg1default.psd_pixels = (608,'')
+cg1default.monitor_timestep = (60./100,'') # s ; ICP records 1/100ths of min 
 
 # =====================================================================
 
@@ -110,11 +138,19 @@ class NG1Icp(refldata.ReflData):
         if data.scantype != 'I':
             raise TypeError, "Only I-Buffers supported for %s"%self.format
 
-        self.default = default(str(data.date))
         self.date = data.date
         self.name = data.filename
         self.description = data.comment
         self.dataset = self.name[:5]
+
+        # Lookup defaults
+        ext = os.path.ext(data.filename).lower()
+        if ext.startswith('c'):
+            self.instrument = "NCNR AND/R"
+            self.default = cg1default(str(data.date))
+        else:
+            self.instrument = "NCNR NG-1"
+            self.default = ng1default(str(data.date))
 
         # Plug in instrument defaults
         self.detector.distance = self.default.detector_distance
@@ -123,13 +159,12 @@ class NG1Icp(refldata.ReflData):
         self.slit3.distance = self.default.slit3_distance
         self.slit4.distance = self.default.slit4_distance
         self.detector.rotation = 0 # degrees
-        
+        self.monitor.time_step = self.default.monitor_timestep
 
         if data.PSD:
-            self.instrument = 'NCNR NG-1 PSD'
+            self.instrument += " PSD"
             self._psd()
         else:
-            self.instrument = 'NCNR NG-1'
             self._pencil_detector()
         self.display_monitor = data.monitor*data.prefactor
         

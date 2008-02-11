@@ -157,7 +157,6 @@ for the theory?
 """
 
 # relative import hack
-if __name__ == "__main__": __path__ = "."
 # Boilerplate to allow relative imports for apps.
 if __name__ == '__main__':
     import os; __path__=[os.path.dirname(os.path.realpath(__file__))]; del os

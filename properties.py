@@ -20,14 +20,52 @@ parameters which may vary occasionally over time.   We
 need a systematic way of dealing with these.  Putting them 
 in configuration files is a bad idea because then the results 
 of the analysis will depend on the machine on which they were
-run.  The safest approach is to use the file data in order
+run.  The safest approach is to use the file date in order
 to select the correct values for the constants, and update
 the data reader whenever the instrument configuration
-changes. The alternative is to store the instrument
-configuration at a fixed URI which can be maintained by
-the instrument scientist, or possibly even leaving the
-data loader source code with the instrument scientist.  
-See NG1/NG7 for an example.
+changes.  
+
+Keeping the data reader up to date on the users machine will
+be a challenge.  A portal strategy reduces the problem because
+then only the portal versions need to be updated.  Placing the 
+data reader at a fixed URI and making it trivial for the user to 
+update to the new version when they load the file will be important 
+for assuring that they are using the most up to date information 
+available.
+
+Example:
+
+
+# Instrument parameters
+# As instrument parameters change add additional lines to this file
+# indicating the new value and the date of the change.  The order of
+# the entries does not matter.  The timestamp on the file will
+# determine which value will be used.
+# The format of the entries should be:
+#      default.NAME = (VALUE, 'YYYY-MM-DD')  # value in effect after DD/MM/YYYY
+#      default.NAME = (VALUE, '')          # value in effect at commissioning
+default = properties.DatedValues()
+default.wavelength = (4.76,'')  # in case ICP records the wrong value
+
+# Detector saturates at 15000 counts/s.  The efficiency curve above 
+# 15000 has not been measured.
+default.saturation = (numpy.array([[1,15000,0]]),'')
+
+    
+default.detector_distance = (36*25.4, '') # mm
+default.psd_width = (20, '') # mm
+default.slit1_distance = (-75*25.4, '') # mm
+default.slit2_distance = (-14*25.4, '') # mm
+default.slit3_distance = (9*25.4, '') # mm
+default.slit4_distance = (42*25.4, '') # mm
+default.detector_distance = (48*25.4, '2004-02-15')
+
+class Data:
+     def load(filename):
+         data = readheaders(filename)
+         self.default = default(str(data.date))
+         self.detector.distance = self.default.detector_distance
+         ...
 """
 
 import re

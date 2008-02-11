@@ -17,7 +17,7 @@ def load(seqlist,base='jul04'):
             for seq in seqlist]
 
 def slits():
-    return load('ibeam',[36])
+    return load([36])
 
 def back():
     return load([31,32])
@@ -31,3 +31,4 @@ def rock():
 
 if __name__ == "__main__":
     print spec()[0]
+    
