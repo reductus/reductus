@@ -74,9 +74,12 @@ class DatedValuesInstance: pass
 class DatedValues(object):
     def __init__(self):
         self.__dict__['_parameters'] = {}
+
     def __setattr__(self, name, pair):
         """
-        Record the parameter value on a specific date.
+        Record the parameter value and the date it was set.  The pair should
+        contain the value and the date.  The assignment will look like:
+            datedvalue.name = (value, 'yyyy-mm-dd')
         """
         # Check that the date is valid
         value,date = pair
@@ -87,10 +90,13 @@ class DatedValues(object):
         if name not in self._parameters:
             self._parameters[name] = []
         self._parameters[name].append(pair)
+
     def __call__(self, date):
-        parameters = self._parameters
+        """
+        Recover the parameter value for a specific date.
+        """
         instance = DatedValuesInstance()
-        for name,values in parameters.iteritems():
+        for name,values in self._parameters.iteritems():
             # Sort parameter entries by date
             values.sort(lambda a,b: cmp(a[0],b[0]))
             for v,d in values:
