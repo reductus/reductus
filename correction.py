@@ -36,8 +36,10 @@ class Correction(object):
         in the process.  The data is returned, allowing users to
         apply multiple corrections in one step:
              C2(C1(data))
+        Each correction must add a log entry to the data set.
         """
         raise NotImplementedError
+        data.log(str(self))
         return data
 
     def __str__(self):
