@@ -25,7 +25,7 @@ default.wavelength = (4.76,'')  # in case ICP records the wrong value
 # 15000 has not been measured.
 default.saturation = (numpy.array([[1,15000,0]]),'')
 
-    
+
 # NG-1 detector closer than slit 4?
 default.detector_distance = (2000., '') # mm
 default.psd_width = (100, '') # mm
@@ -143,7 +143,7 @@ class NG7Icp(refldata.ReflData):
         self.detector.width_x = numpy.ones(pixels,'f')*(width/(maxbin-minbin))
         self.detector.center_x = 0
         self.detector.width_y = self.default.psd_height
-        
+
     def loadcounts(self):
         data = icpformat.read(self.path)
         return data.counts
@@ -169,9 +169,9 @@ class NG7Icp(refldata.ReflData):
         if 's3' in data: self.slit3.x = data.column.s3
         if 's4' in data: self.slit4.x = data.column.s4
         if 'qz' in data:
-            qx = data.column.qx if 'qx' in data else 0
-            qz = data.column.qz
-            A,B = refldata.QxQz_to_AB(qx,qz,self.detector.wavelength)
+            Qx = data.column.qx if 'qx' in data else 0
+            Qz = data.column.qz
+            A,B = refldata.QxQzL_to_AB(Qx,Qz,self.detector.wavelength)
             self.sample.angle_x,self.detector.angle_x = A,B
 
         # TODO: if the dataset is large, set up a weak reference instead
