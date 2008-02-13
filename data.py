@@ -54,8 +54,6 @@ class Data(object):
     
     Note: for reflectivity the natural dimensions are x='Qz',y='Qx',z='Qy'
     """
-    format = "unknown"
-    prop = None # Can't do prop=Prop() because need unique prop per instance
     _x,_xedges,dx = None,None,None
     _y,_yedges,dy = None,None,None
     _z,_zedges,dz = None,None,None
@@ -64,27 +62,6 @@ class Data(object):
     ylabel,yunits='y',None
     zlabel,zunits='z',None
     vlabel,vunits='v',None
-    def add(self, **kw):
-        """
-        Set a value for an attribute, creating a new one if it is
-        not already present.
-        """
-        for (key,val) in kw.iteritems: setattr(self,key,val)
-
-    def set(self, **kw):
-        """
-        Set a value for an attribute.  Raise an AttributeError if
-        the attribute is not already present.
-        
-        See help(Data) for details.
-        """
-        for (key,val) in kw.iteritems():
-            # FIXME: properties are not attributes...how to test for them?
-            #if hasattr(self,key):
-            #    setattr(self,key,val)
-            #else:
-            #    raise AttributeError,"unknown attribute "+key
-            setattr(self,key,val)
 
     # Store variance but allow 1-sigma uncertainty interface
     def _getdv(self): return N.sqrt(self.variance)
@@ -127,12 +104,19 @@ class Data(object):
     zedges = property(_getzedges,_setzedges,'z edges')
 
     # Set attributes on initialization
-    def __init__(self, **kw): 
-        self.prop = Prop()
-        self.set(**kw)
+    def __init__(self): 
+        self.log = []
         
     def summary(self):
         return dict2text(self.prop.__dict__)
+
+    def log(self,msg):
+        """Record corrections that have been applied to the data"""
+        self.log.append(msg)
+        
+    def apply(self, correction):
+        """Apply a correction to the data."""
+        correction(self)
 
     def __str__(self):
         return "Data(%s)"%(dims(self.v))
@@ -171,7 +155,9 @@ class PolarizedData(object):
 
     def apply(self, correction):
         """Apply a correction to the data."""
+        n = len(data.log)
         correction(self)
+        assert len(data.log)>n, "Correction %s not logged"%str(correction)
 
     def spin_asymmetry(self):
         """
