@@ -17,14 +17,16 @@ Usage:
 
     data.appy(AngleCorrection(angle=0.01)
 """
+from . import refldata
 
-class AngleCorrection(object):
+class AdjustAlignment(object):
     """
-    Angle Correction object.  Must implement the correction interface.
+    Adjust Q if there is reason to believe either the detector
+    or the sample is rotated.
     """
     properties = ["angle"]
     angle = 0. # degrees
-    
+
     def __init__(self, angle=0.):
         """Define the angle offset correction for the data.
         angle: rotation in degrees away from the beam
@@ -34,17 +36,12 @@ class AngleCorrection(object):
     def __call__(self, data):
         """Apply the angle correction to the data"""
         assert not data.ispolarized(), "need unpolarized data"
-        
-        Qz = adjust_angle(data,angle=self.angle)
-        data.Q = Qz
+
+        data.sample.angle_x += angle
+        data.detector.angle_x -= angle
+        data.resetQ()
+        data.log(str(self))
         return data
 
-def adjust_angle(data,angle=0.):
-    """
-    Adjust Q if there is reason to believe either the detector
-    or the sample is rotated.
-    """
-    theta_in = data.theta_in + angle
-    theta_out = data.theta_out - angle
-    Qz = 2*pi/data.wavelenth*(sin(theta_out*pi/180) - sin(theta_in*pi/180))
-    return Qz
+    def __str__(self):
+        return "AdjustAlignment(angle=%g)"%angle
