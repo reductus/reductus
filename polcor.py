@@ -227,13 +227,17 @@ class PolarizationEfficiency(object):
         """Apply the correction to the data"""
         assert data.ispolarized(), "need polarized data"
         assert data.isaligned(), "need aligned data"
-    
+
         X,dX = correct_efficiency(self, data)
         data.pp.v, data.pp.dv = X[0,:], dX[0,:]
         data.pm.v, data.pm.dv = X[1,:], dX[1,:]
         data.mp.v, data.mp.dv = X[2,:], dX[2,:]
         data.mm.v, data.mm.dv = X[3,:], dX[3,:]
+        data.log(str(self))
         return data
+
+    def __str__(self):
+        return "PolarizationEfficiency('%s')"%self.beam.name
     
     def _compute_efficiency(self):
         """
