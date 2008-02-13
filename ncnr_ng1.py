@@ -27,7 +27,6 @@ ng1default.wavelength = (4.76,'')  # in case ICP records the wrong value
 ng1default.saturation = (numpy.array([[1,15000,0]]),'')
 ng1default.psd_saturation = (numpy.array([[1,8000,0]]),'')
 
-    
 # NG-1 detector closer than slit 4?
 ng1default.detector_distance = (36*25.4, '') # mm
 ng1default.psd_width = (20, '') # mm; TODO: Is NG-1 PSD about 10 cm x 2 cm
@@ -37,18 +36,16 @@ ng1default.slit3_distance = (9*25.4, '') # mm
 ng1default.slit4_distance = (42*25.4, '') # mm
 ng1default.monitor_timestep = (60./100,'') # s ; ICP records 1/100ths of min 
 
-ng1default = properties.DatedValues()
-ng1default.wavelength = (5.0,'')  # in case ICP records the wrong value
-
 # =====================================================================
 # CG-1 defaults
+cg1default = properties.DatedValues()
+cg1default.wavelength = (5.0,'')  # in case ICP records the wrong value
 
 # Detector saturates at 15000 counts/s.  The efficiency curve above 
 # 15000 has not been measured.
 cg1default.saturation = (numpy.array([[1,15000,0]]),'')
 cg1default.psd_saturation = (numpy.array([[1,8000,0]]),'')
 
-    
 # NG-1 detector closer than slit 4?
 cg1default.detector_distance = (1600., '') # mm
 cg1default.psd_width = (211, '') # mm; TODO: Is NG-1 PSD about 10 cm x 2 cm
@@ -97,7 +94,7 @@ class NG1Icp(refldata.ReflData):
         self.detector.center_x = 0 # mm
         self.detector.center_y = 0 # mm
         self.detector.rotation = 0 # degree
-    
+
     def _psd(self):
         """
         PSD on NG-1.
@@ -113,7 +110,7 @@ class NG1Icp(refldata.ReflData):
         self.detector.width_x = numpy.ones(512,'f')*(width/(maxbin-minbin))
         self.detector.center_x = 0
         self.detector.width_y = 20  # mm; TODO: Is NG-1 PSD about 10 cm x 2 cm
-    
+
     def _psd2d(self):
         """
         2D PSD on NG-1.
@@ -129,7 +126,7 @@ class NG1Icp(refldata.ReflData):
         self.detector.width_x = numpy.ones(256,'f')*(width/(maxbin-minbin))
         self.detector.center_x = 0
         self.detector.width_y = self.default.psd_width
-    
+
     def __init__(self, path, *args, **kw):
         super(NG1Icp,self).__init__(*args, **kw)
         self.path = os.path.abspath(path)
@@ -144,7 +141,7 @@ class NG1Icp(refldata.ReflData):
         self.dataset = self.name[:5]
 
         # Lookup defaults
-        ext = os.path.ext(data.filename).lower()
+        ext = os.path.splitext(data.filename)[1].lower()
         if ext.startswith('c'):
             self.instrument = "NCNR AND/R"
             self.default = cg1default(str(data.date))
@@ -167,7 +164,7 @@ class NG1Icp(refldata.ReflData):
         else:
             self._pencil_detector()
         self.display_monitor = data.monitor*data.prefactor
-        
+
         # Callback for lazy data
         self.detector.loadcounts = self.loadcounts
 
@@ -177,7 +174,7 @@ class NG1Icp(refldata.ReflData):
 
     def load(self):
         data = icpformat.read(self.path)
-        
+
         self.detector.wavelength \
             = data.check_wavelength(self.default.wavelength, 
                                     NG1Icp._wavelength_override)
@@ -185,17 +182,17 @@ class NG1Icp(refldata.ReflData):
         # Slits are either stored in the file or available from the
         # motor information.  For non-reflectometry scans they may
         # not be available.
-        if 'A1' in data: self.slit1.x = data.column.A1
-        if 'A2' in data: self.slit2.x = data.column.A2
-        if 'A5' in data: self.slit3.x = data.column.A5
-        if 'A6' in data: self.slit4.x = data.column.A6
+        if 'a1' in data: self.slit1.x = data.column.a1
+        if 'a2' in data: self.slit2.x = data.column.a2
+        if 'a5' in data: self.slit3.x = data.column.a5
+        if 'a6' in data: self.slit4.x = data.column.a6
 
         # Angles are either stored in the file or can be calculated
         # from the motor details.  For non-reflectometry scans they
         # may not be available.
-        if 'A3' in data: self.sample.angle_x = data.column.A3
-        if 'A4' in data: self.detector.angle_x = data.column.A4
-        
+        if 'a3' in data: self.sample.angle_x = data.column.a3
+        if 'a4' in data: self.detector.angle_x = data.column.a4
+
         # Polarization was extracted from the comment line
         self.polarization = data.polarization
 
@@ -229,9 +226,5 @@ class NG1Icp(refldata.ReflData):
             # and computing the time based on that rate.
             pass
 
-        # Figure out Qx-Qz for sample angle/detector center
-        if self.sample.angle_x != None and self.detector.angle_x != None:
-            A,B = self.sample.angle_x, self.detector.angle_x
-            Qx,Qz = refldata.AB_to_QxQz(A,B,self.detector.wavelength)
-            
+        # TODO: if counts are huge we may want to make this lazy
         self.detector.counts = data.counts
