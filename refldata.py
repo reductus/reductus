@@ -437,7 +437,7 @@ class Monitor(object):
         monitor cannot be trusted (which can happen from time to time on 
         some instruments), we can use the number of protons incident on 
         the target (proton charge) or the energy of the source (reactor 
-        power integrated over the duration of the measurement) as a proxy
+        power integrated over the duration of each measurement) as a proxy
         for the monitor.  So long as the we normalize both the slit
         measurement and the reflectivity measurement by the power, this
         should give us a reasonable estimate of the reflectivity.  If
@@ -475,6 +475,8 @@ class Monitor(object):
         Time boundaries for the time-of-flight measurement
     source_power_units ('coulombs' | 'megawatthours')
         Units for source power.
+    source_power_variance (n source_power_units)
+        Variance in the measured source power
     monitor_rate (counts/second)
         For normalizing by counts when only count time is recorded, we
         need an estimate of the monitor rate during the measurement.
@@ -487,11 +489,12 @@ class Monitor(object):
     counts = None
     start_time = None
     count_time = None
-    time_step = 0
+    time_step = 1 # Default to nearest second
     time_of_flight = None
     base = 'counts'
-    source_power = 0
+    source_power = 1 # Default to 1 MW power
     source_power_units = "MW"
+    source_power_variance = 0
     monitor_rate = 0 # counts/sec
 
     def __init__(self, **kw): _set(self,kw)
@@ -629,6 +632,22 @@ class ReflData(object):
     reversed = False
     warnings = None
 
+    def _dR(self): return sqrt(self.varR)
+    dR = property(_dR)
+
+    # Data representation for generic plotter as (x,y,z,v)
+    # TODO: subclass Data so we get pixel edges calculations
+    def _getx(self): return self.Qz
+    def _gety(self): return self.Qx
+    def _getz(self): return self.Qy
+    def _getv(self): return self.R
+    def _getdv(self): return sqrt(self.varR)
+    x,xlabel,xunits = property(_getx),"Qx","inv A"
+    y,ylabel,yunits = property(_gety),"Qy","inv A"
+    z,zlabel,zunits = property(_getz),"Qz","inv A"
+    v,dv = property(_getv),property(_getdv)
+    # vlabel and vunits depend on monitor normalization
+
     def __init__(self, **kw):
         # Note: because _set is ahead of the following, the caller will not
         # be able to specify sample, slit, detector or monitor on creation,
@@ -644,15 +663,6 @@ class ReflData(object):
         self.warnings = None
         self.roi = ROI()
         
-    def set_defaults(self, instrument):
-        self.instrument = instrument
-        if instrument == None: return
-        try:
-            M = __import__(instrument)
-            M.default_refldata(self)
-        except ModuleError:
-            raise TypeError, "Could not set defaults for %s"%(instrument0)
-
     def __str__(self):
         base = [_str(self)]
         others = [str(s) for s in [self.slit1,self.slit2,self.slit3,self.slit4,
@@ -662,11 +672,23 @@ class ReflData(object):
 
     def apply(self, correction):
         correction(self)
+        self.log.append(correction.log())
+        return self
 
+    def resetQ(self):
+        A,B = self.sample.angle_x,self.detector.angle_x
+        L = self.detector.wavelength
+        Qx,Qz = ABL_to_QxQz(A,B,L)
+        self.Qx,self.Qz = Qx,Qz
+        
 def _str(object):
+    """
+    Helper function: document data object by convert attributes listed in 
+    properties into a string.
+    """
     cls = object.__class__.__name__
     props = [a+"="+str(getattr(object,a)) for a in object.properties]
-    return "<%s %s>"%(cls,"\n  ".join(props))
+    return "%s %s"%(cls,"\n  ".join(props))
 
 
 def _set(object,kw):
@@ -685,14 +707,20 @@ def _set(object,kw):
         else:
             raise AttributeError, "Unknown attribute %s"%(k)
 
-def AB_to_QxQz(sample_angle, detector_angle, wavelength):
+def ABL_to_QxQz(sample_angle, detector_angle, wavelength):
+    """
+    Compute Qx,Qz given incident and reflected angles and wavelength
+    """
     A,B = sample_angle, detector_angle
     Qz = 2*pi/wavelength * ( sin(pi/180*(B - A)) + sin(pi/180*A))
     Qx = 2*pi/wavelength * ( cos(pi/180*(B - A)) - cos(pi/180*A))
     return Qx,Qz
 
-def QxQz_to_AB(Qx, Qz, wavelength):
-    # Algorithm for converting Qx-Qz to alpha-beta:
+def QxQzL_to_AB(Qx, Qz, wavelength):
+    """
+    Guess incident and reflected angles given Qx, Qz and wavelength
+    """
+    # Algorithm for converting Qx-Qz-lambda to alpha-beta:
     #   beta = 2 asin(L/(2 pi) sqrt(Qx^2+Qz^2)/2) * 180/pi 
     #        = asin(L/(4 pi) sqrt(Qx^2+Qz^2)) * 360/pi
     #   if Qz < 0, negate beta
@@ -707,6 +735,17 @@ def QxQz_to_AB(Qx, Qz, wavelength):
     alpha = theta + beta/2
     alpha[Qz<0] += 180
     return alpha,beta
+
+def QxQzA_to_BL(Qx,Qz,alpha):
+    """
+    Guess reflected angle and wavelength given Qx, Qz and incident angle.
+    """
+    theta = arctan2(Qx,Qz) * 180/pi
+    theta[theta>90] -= 360
+    beta = 2*(alpha-theta)
+    beta[beta>180] -= 360
+    wavelength = 4*pi*sin(beta*pi/360) / sqrt(Qx**2 +Qz**2)
+    return beta,wavelength
 
 
 # Ignore the remainder of this file --- I don't yet have the computational
