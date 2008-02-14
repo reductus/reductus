@@ -105,9 +105,9 @@ class NG7Icp(refldata.ReflData):
         self.detector.rotation = 0 # degrees
         self.monitor.time_step = self.default.monitor_timestep
 
-        if data.count_type=='TIME':
-            # Override the default monitor base of 'counts'
-            self.monitor.base='time'
+        #if data.count_type=='TIME':
+        #    # Override the default monitor base of 'counts'
+        #    self.monitor.base='time'
 
         if data.PSD:
             self.instrument = 'NCNR NG-7 PSD'
@@ -153,16 +153,26 @@ class NG7Icp(refldata.ReflData):
         self.detector.wavelength \
             = data.check_wavelength(self.default.wavelength, 
                                     NG7Icp._wavelength_override)
-        if 'monitor' in data:
-            self.monitor.counts = data.column.monitor
-        if 'time' in data:
-            self.monitor.count_time = data.column.time*60
-        elif 'qz' in data:
+
+        if 'qz' in data:
             # NG7 automatically increases count times as Qz increases
             monitor, prefactor = data.monitor,data.prefactor
             Mon1, Exp = data.Mon1,data.Exp
             Qz = data.column.qz
-            self.monitor.counts = prefactor*(monitor + Mon1 * abs(Qz)**Exp)
+            automonitor = prefactor*(monitor + Mon1 * abs(Qz)**Exp)
+            if data.count_type == 'NEUT':
+                self.monitor.counts = automonitor
+            elif data.count_type == 'TIME':
+                self.monitor.count_time = automonitor
+            else:
+                raise ValueError, "Expected count type 'NEUT' or 'TIME' in "+self.path
+
+        if 'monitor' in data:
+            self.monitor.counts = data.column.monitor
+        if 'time' in data:
+            self.monitor.count_time = data.column.time*60
+
+        self.monitor.base = 'counts' if self.monitor.counts is not None else 'time'
 
         if 's1' in data: self.slit1.x = data.column.s1
         if 's2' in data: self.slit2.x = data.column.s2
