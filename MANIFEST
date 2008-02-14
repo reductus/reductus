@@ -1,0 +1,47 @@
+Data format:
+
+  data.py      - generic 3-d data container
+  refldata.py  - definition of in-memory reflectometry data
+  properties.py - date-tagged constants for varying instrument parameters
+
+Nexus support:
+
+  nxs.py       - NAPI wrapper
+  nxsunit.py   - simple unit converter
+  nxstest.py   - NAPI wrapper test
+  nexus.py     - generic nexus file reader
+  nexusref.py  - loader for NeXus refldata (not tested!)
+
+ICP file support:
+
+  icpformat.py - generic ICP reader
+  ncnr_ng1.py  - instrument specific formats
+  ncnr_ng7.py
+ 
+Data transformations:
+
+  correction.py - template and ideas
+  anglecor.py   - angle correction
+  normalize.py  - monitor normalization
+  polcor.py     - polarization correction
+  ratiocor.py   - estimate intensity from water measurement
+  rebincor.py   - stub to wrap rebinning code (not implemented)
+  reverse.py    - for reflectivity of the back of the sample
+  err1d.py      - simple 1D error propagation
+  wsolve.py     - weighted linear system solver
+
+Application support:
+
+  selection.py  - File selector
+
+Plotting support:
+
+  polplot.py    - 2-D polarized data plot
+  polcorplot.py - polarization efficiency plot
+  limits.py     - collect data limits
+
+Matplotlib extensions
+  canvas.py     - support for wx canvas
+  binder.py     - support for objects on canvas
+  ticker.py     - better log tic mark positions
+
