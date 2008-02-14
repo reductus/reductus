@@ -605,6 +605,17 @@ class ReflData(object):
         Duration of the measurement.
     warnings
         List of warnings generated when the file was loaded
+    intent (string)
+        Purpose of the measurement.
+        intensity: Normalization scan for computing absolute reflection
+        specular: Specular intensity measurement
+        q_offset: Background measurement, offset from Qx=0 in Q
+        sample_offset: Background measurement, sample rotated
+        detector_offset: Background measurement, detector moved
+        slice: Slice through Qx-Qz
+        area: Measurement of a region of Qx-Qz plane
+        alignment: Sample alignment measurement
+        other: Some other kind of measurement
 
     Format specific fields (ignored by reduction software)
     ======================
@@ -631,9 +642,11 @@ class ReflData(object):
     polarization = ''
     reversed = False
     warnings = None
+    messages = None
 
-    def _dR(self): return sqrt(self.varR)
-    dR = property(_dR)
+    def _getdR(self): return sqrt(self.varR)
+    def _setdR(self, dR): self.varR = dR**2
+    dR = property(_getdR,_setdR)
 
     # Data representation for generic plotter as (x,y,z,v)
     # TODO: subclass Data so we get pixel edges calculations
@@ -660,8 +673,9 @@ class ReflData(object):
         self.slit4 = Slit()
         self.detector = Detector()
         self.monitor = Monitor()
-        self.warnings = None
+        self.warnings = []
         self.roi = ROI()
+        self.messages = []
         
     def __str__(self):
         base = [_str(self)]
@@ -670,11 +684,18 @@ class ReflData(object):
                                    self.roi]]
         return "\n".join(base+others)
 
+    def log(self,msg):
+        """Record corrections that have been applied to the data"""
+        self.messages.append(msg)
+        
     def apply(self, correction):
+        """Apply a correction to the data."""
+        n = len(self.messages)
         correction(self)
-        self.log.append(correction.log())
+        assert len(self.messages)>n, "Correction %s not logged"%str(correction)
         return self
-
+        # TODO: inherit from Data?
+ 
     def resetQ(self):
         A,B = self.sample.angle_x,self.detector.angle_x
         L = self.detector.wavelength

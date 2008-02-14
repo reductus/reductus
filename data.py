@@ -105,7 +105,7 @@ class Data(object):
 
     # Set attributes on initialization
     def __init__(self): 
-        self.log = []
+        self.messages = []
         
     def summary(self):
         return dict2text(self.prop.__dict__)
@@ -116,7 +116,10 @@ class Data(object):
         
     def apply(self, correction):
         """Apply a correction to the data."""
+        n = len(self.messages)
         correction(self)
+        assert len(self.messages)>n, "Correction %s not logged"%str(correction)
+        return self
 
     def __str__(self):
         return "Data(%s)"%(dims(self.v))
