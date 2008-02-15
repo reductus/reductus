@@ -11,7 +11,8 @@ read(filename) - reads header information and data
 """
 
 import numpy as N
-import datetime
+import datetime,sys
+from . import _reduction
 
 def readdata(fh):
     """
@@ -21,10 +22,11 @@ def readdata(fh):
     blocks = []
 
     line = fh.readline().rstrip()
+    linenum = 1
     while line != '':
         # While it might be easy to check for a comment mark on the beginning
         # of the line, supporting this is ill-adviced.  First, users should
-        # be strongly discouraged from modifying the original data.
+        # be strongly discouraged from modifying the original data.    
         # Second, sequencing against the automatically generated motor
         # columns will become more complicated.  Let's make life easier
         # and put the masking in the application rather than the data reader.
@@ -32,47 +34,64 @@ def readdata(fh):
         # Process the instrument configuration line and move to the next line
         rows.append([float(val) for val in line.split()])
         line = fh.readline().rstrip()
+        linenum += 1
 
         # Build up a multiline detector block by joining all lines that
-        # end with a comma.
+        # contain a comma
         b = []
-        while len(line)>0 and line[-1]==',':
-            b += line[1:-1].split(',')
-            line = fh.readline().rstrip()
-            
-        # Process the next line which doesn't end in a comma.  If we have
-        # already seen lines with commas, then this line is a continuation
-        # of the block.  If we haven't seen lines with commas yet, check if
-        # the whole block is on a single line.
-        if b != []:
-            # Extending multiline block
-            b += line[1:].split(',')
-            line = fh.readline().rstrip()
-        elif line.find(',') > 0:
-            # The whole block is on one line
-            b = line[1:].split(',')
-            line = fh.readline().rstrip()
+        while ',' in line:
+            b.append(line)
+            line = fh.readline()
+            linenum += 1
+
+		# If last line ended with a comma then the last number for the
+		# the current block is on the current line.
+        if b != [] and b[-1].rstrip()[-1] == ",":
+            b.append(line)
+            line = fh.readline()
+            linenum += 1
 
         if b != []:
             # Have a detector block so add it
-            blocks.append(N.array([int(v) for v in b]))
+            s = "".join(b)
+            # You can use numpy's string to matrix converter if for some
+            # reason _reduction doesn't compile, but it is horribly slow.
+            #z = N.matrix(s,'i').A
+            if blocks != []:
+                # Have an existing block, so we know what size to allocate
+                z = N.empty(blocks[0].shape,'i')
+                i,j = _reduction.str2imat(s,z)
+                if i*j != z.size: 
+                    raise IOError,"Inconsistent dims at line %d"%linenum
+            else:
+                # No existing block.  Worst case is 2 bytes per int.
+                n = int(len(s)/2+1)
+                z = N.empty(n,'i')
+                i,j = _reduction.str2imat(s,z)
+                # Keep the actual size
+                if i==1 or j==1:
+                    z = z[:i*j].reshape(i*j)
+                else:
+                    z = z[:i*j].reshape(i,j)
+            blocks.append(z)
+
         elif blocks != []:
             # Oops...missing a detector block.  Set it to zero counts
             # of the same size as the last block
             blocks.append(N.zeros(blocks[-1].shape,'i'))
         # Otherwise no detector block and don't need one
         # Note: this strategy fails to identify that the first 
-        # detector block is missing
+        # detector block is missing; those will be filled in later.
 
     # recover from missing leading detector blocks
-    if len(blocks) > 0 and len(blocks) < len(rows):
+    if blocks != [] and len(blocks) < len(rows):
         blank = N.zeros(blocks[0].shape,'i')
         blocks = [blank]*(len(blocks)-len(rows)) + blocks
 
     # Convert data to arrays
     X = N.array(rows, 'f')
     Z = N.array(blocks)
-    return X.T,Z.T
+    return X,Z
 
 
 def get_tokenized_line(file):
@@ -324,7 +343,7 @@ class ICP(object):
         '''
         values,detector = readdata(self.file)
         self.column = ColumnSet()
-        for (c,v) in zip(self.columnnames,values):
+        for (c,v) in zip(self.columnnames,values.T):
             setattr(self.column,c,v)
         self.detector = detector
         self.counts = detector if detector.size > 0 else self.column.counts

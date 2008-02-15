@@ -9,6 +9,7 @@ def configuration(parent_package='',
                   ):
     config = Configuration('reduction', parent_package, top_path)
 
+    config.add_subpackage('lib')
     config.add_data_files('*.py')
     
     return config
