@@ -13,7 +13,7 @@ import reflectometry.reduction as reflred
 PATH = os.path.dirname(os.path.realpath(__file__))
 
 def load(seqlist,base='jul04'):
-    return [reflred.load_ng7(os.path.join(PATH,"%s%03d.ng7"%(base,seq)))
+    return [reflred.load(os.path.join(PATH,"%s%03d.ng7"%(base,seq)))
             for seq in seqlist]
 
 def slits():

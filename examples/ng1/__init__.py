@@ -16,7 +16,7 @@ import reflectometry.reduction as reflred
 PATH = os.path.dirname(os.path.realpath(__file__))
 
 def load(seqlist,base='psih1'):
-    return [reflred.load_ng1(os.path.join(PATH,"%s%03d.ng1"%(base,seq)))
+    return [reflred.load(os.path.join(PATH,"%s%03d.ng1"%(base,seq)))
             for seq in seqlist]
 
 def slits():
