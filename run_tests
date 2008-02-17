@@ -1,0 +1,61 @@
+#!/usr/bin/env python
+# This program is public domain
+"""
+Simple test suite: if any module in the current directory has a test()
+function, then import that module and run the test.
+
+If called with a command line argument, run tests for each function
+named on the command line.
+"""
+
+import sys,glob,traceback
+
+def print_error(msg,indent=2):
+    print msg
+    #print "  ",str(sys.exc_type),sys.exc_value
+    errtext = traceback.format_exc(0).rstrip()
+    for line in ["  "+s for s in errtext.split('\n')]:
+        print " "*(indent-1),line
+
+def run_tests(package, module_list):
+    passing=[]
+    failing=[]
+    missing=[]
+    for module_name in module_list:
+        print "%s:"%module_name,
+        sys.stdout.flush()
+        # First try importing the module
+        try:
+            module = __import__(package+'.'+module_name, fromlist=['test'],level=0)
+        except:
+            print_error("Import failed")
+            failing.append(module_name)
+	    continue
+        if not hasattr(module,'test'):
+            print "No tests"
+            missing.append(module_name)
+	    continue
+        # Then try running the test, 
+        try:
+            module.test()
+            print "Tests passed"
+            passing.append(module_name)
+        except:
+            print_error("Tests failed")
+            failing.append(module_name)
+    print "=============="
+    #if passing != []: print "passing:",passing
+    if missing != []: print "untested:"," ".join(missing)
+    if failing != []: print "failing:"," ".join(failing)
+    print "#pass=%d  #fail=%d  #missing=%d"%(len(passing),len(failing),len(missing))
+
+def all_tests(package):
+     run_tests(package, [file[:-3] for file in glob.glob("*.py")])
+
+if __name__ == "__main__":
+    package = 'reflectometry.reduction'
+    if len(sys.argv) > 1:
+        run_tests(package, sys.argv[1:])
+    else:
+        all_tests(package)
+

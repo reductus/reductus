@@ -10,10 +10,12 @@ def configuration(parent_package='',
     config = Configuration('reduction', parent_package, top_path)
 
     config.add_subpackage('lib')
-    config.add_data_files('*.py')
+    config.add_data_dir('examples')
     
     return config
 
+# Don't test setup.py
+def test(): pass
 
 if __name__ == '__main__':
     setup(**configuration(top_path='').todict())

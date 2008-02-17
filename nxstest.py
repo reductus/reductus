@@ -348,12 +348,14 @@ def test_mode(mode,quiet=True,external=False):
         show_structure(filename)
     failures = check(filename)
     if external: failures += test_external(mode,quiet)
+    if quiet:
+        os.remove(filename)
     return failures
 
 def test():
     tests = 0
-    quiet = True if '-q' in sys.argv else False
-    external = True if '-x' in sys.argv else False
+    quiet = ('-v' not in sys.argv)
+    external = ('-x' in sys.argv)
     if 'hdf4' in sys.argv: 
         test_mode('w4',quiet,external)
         tests += 1
