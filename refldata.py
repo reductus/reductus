@@ -246,11 +246,6 @@ class Beamstop(object):
     def __init__(self, **kw): _set(self,kw)
     def __str__(self): return _str(self)
 
-def loadcounts_dummy():
-    raise NotImplementedError,\
-       "Data format must set detector.counts or detector.loadcounts"
-def pcounts_empty(): return None
-
 class Detector(object):
     """
     Define the detector properties.  Note that this defines a virtual
@@ -355,13 +350,18 @@ class Detector(object):
     saturation = inf # counts/sec
     wavelength = 1 # angstrom
     time_of_flight = None  # ms
-    loadcounts = loadcounts_dummy
 
     # Raw counts are cached in memory and loaded on demand.
     # Rebinned and integrated counts for the region of interest
     # are stored in memory.
     #_pcounts = lambda:None
-    _pcounts = pcounts_empty
+    def loadcounts(self):
+        """Load the data"""
+        raise NotImplementedError,\
+           "Data format must set detector.counts or detector.loadcounts"
+    def _pcounts(self):
+        """Simulated empty weak reference"""
+        return None
     def _getcounts(self):
         counts = self._pcounts()
         if counts is None:
