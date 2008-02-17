@@ -9,17 +9,13 @@ cannot be expected to be matched precisely in limited precision
 machines (the target results were computed using 100 digit arithmetic).
 The individual tests vary, but relative error should be between 1e-8 
 and 1e-16.
-
-We also do a MC simulation as a basic sanity check.  For large N the
-computed parameters do indeed converge to the mean of the parameters.
-Parameter uncertainty estimates are not supported by MC.
 """
 
 ## Author: Paul Kienzle
 ## This program is public domain
 
 import numpy as N
-from reduction.wsolve import wpolyfit
+from reflectometry.reduction.wsolve import wpolyfit
 
 def show_result(name,p,dp,Ep,Edp):
     # compute relative error
@@ -42,6 +38,10 @@ def check_uncertainty(n=10000):
     This function computes a number of fits to simulated data
     to determine how well the values and uncertainties reported
     by the wpolyfit solver correspond to individual fits of the data.
+
+    For large N the reported parameters do indeed converge to the mean 
+    parameter values for fits to resampled data.  Reported parameter 
+    uncertainty estimates are not supported by MC.
     """
     ##          x         y          dy
     data = N.matrix("""
