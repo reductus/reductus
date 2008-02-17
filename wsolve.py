@@ -228,4 +228,26 @@ def demo():
     pylab.plot(px,N.polyval(p,px))
     pylab.show()
 
-if __name__ == "__main__": demo()
+def test():
+    """
+    smoke test...make sure the function continues to return the same
+    result for a particular system.
+    """
+    x = N.array([0,1,2,3,4],'d')
+    y = N.array([  2.5,   7.9,  13.9,  21.1,  44.4],'d')
+    dy = N.array([ 1.7,  2.4,  3.6,  4.8,  6.2],'d')
+    p,dp = wpolyfit(x,y,dy,1)
+
+    #print "Tp = [%.16g, %.16g]"%(p[0],p[1])
+    #print "Tdp = [%.16g, %.16g]"%(dp[0],dp[1])
+    Tp = N.array([7.787249069840737, 1.503992847461524])
+    Tdp = N.array([1.522338103010216, 2.117633626902384])
+    
+    perr = N.max(N.abs(p-Tp))
+    dperr = N.max(N.abs(dp-Tdp))
+    assert  perr < 1e-15,"||p-Tp||=%g"%perr
+    assert  dperr < 1e-15,"||dp-Tdp||=%g"%dperr
+
+if __name__ == "__main__": 
+    test()
+#    demo()
