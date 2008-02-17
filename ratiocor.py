@@ -1,6 +1,6 @@
 # This program is public domain
 """
-RatioCorrection estimates an intensity scan based on the measured 
+RatioIntensity estimates an intensity scan based on the measured 
 intensity from a known scatterer.
 
 You need to perform this type of scan on reflectometers whose beam 
@@ -23,19 +23,27 @@ Example:
 
   # Compute the intensity scan assuming that data measures
   # the specular reflection off 85% water, 15% deuterated water.
-  data.apply(ratiocor.water_ratio(D2O=15))
+  data.apply(WaterIntensity(D2O=15))
 
 """
-# Boilerplate to allow relative imports for apps.
-if __name__ == '__main__':
-    import os; __path__=[os.path.dirname(os.path.realpath(__file__))]; del os
+from __future__ import with_statement
 
 from math import *
 import reflectometry.model1d as reflfit
-from .fresnel import Fresnel
+from reflectometry.reduction.fresnel import Fresnel
 import numpy
 
-class RatioCorrection(object):
+__all__ = ['RatioIntensity', 'WaterIntensity']
+
+class RatioIntensity(object):
+    """
+    Compute the incident intensity assuming that data measures a 
+    reflection off known sample.
+
+    model = reflectometry.model1d.model
+
+    Returns a correction object that can be applied to data.    
+    """
     model = None
     
     def __init__(self, model):
@@ -47,9 +55,9 @@ class RatioCorrection(object):
         return data
 
     def __str__(self):
-        return "RatioCorrection(%s)"%str(model)
+        return "RatioIntensity(%s)"%str(model)
 
-class WaterRatio(object):
+class WaterIntensity(object):
     """
     Compute the incident intensity assuming that data measures a 
     reflection off water.
@@ -70,8 +78,8 @@ class WaterRatio(object):
         else:
             raise ValueError, "water_ratio needs probe 'neutron' or 'xray'"
         D2O = self._D2O
-        self.model.rho = ((100-D2O)*(rho_H2O) + D2O*rho_H2O)/100.
-        self.model.mu = ((100-D2O)*(mu_H2O) + D2O*mu_H2O)/100.
+        self.model.rho = 1e-6*((100-D2O)*(rho_H2O) + D2O*rho_H2O)/100.
+        self.model.mu = 1e-6*((100-D2O)*(mu_H2O) + D2O*mu_H2O)/100.
         
     def _setD2O(self, D2O):
         self._D2O = D2O
@@ -86,7 +94,7 @@ class WaterRatio(object):
     D2O = property(_getD2O,_setD2O)
     probe = property(_getprobe,_setprobe)
 
-    def __init__(self,D2O=0,probe=None):
+    def __init__(self,D2O=0,probe=None,background=0):
         self.model = Fresnel(sigma=3)
         self._probe = probe
         self._D2O = D2O
@@ -98,7 +106,10 @@ class WaterRatio(object):
         return data
 
     def __str__(self):
-        return "WaterRatio(D2O=%d,probe=%s)"%(self._D2O,self._probe)
+        if self._D2O == 0:
+            return "WaterIntensity(probe='%s')"%self._probe
+        else:
+            return "WaterIntensity(D2O=%d,probe='%s')"%(self._D2O,self._probe)
 
 def intensity_ratio(data=None,model=None):
     """
@@ -127,11 +138,30 @@ def intensity_ratio(data=None,model=None):
     data.R, data.dR = data.R/R, data.dR/R
 
 def demo():
-    from .examples import ng7 as dataset
-    from .normalize import Normalize
+    import pylab
+    from reflectometry.reduction import normalize
+    from reflectometry.reduction.examples import ng7 as dataset
     spec = dataset.spec()[0]
-    spec.apply(Normalize())
-    spec.apply(WaterRatio(D2O=20,probe=spec.probe))
-    print spec
+    water = WaterIntensity(D2O=20,probe=spec.probe)
+    spec.apply(normalize())
+    theory = water.model(spec.Qz,spec.detector.wavelength)
+
+    pylab.subplot(211)
+    pylab.title('Data normalized to water scattering (%g%% D2O)'%water.D2O)
+    pylab.xlabel('Qz (inv Ang)')
+    pylab.ylabel('Reflectivity')
+    pylab.semilogy(spec.Qz,theory,'-',label='expected')
+    scale = theory[0]/spec.R[0]
+    pylab.errorbar(spec.Qz,scale*spec.R,scale*spec.dR,fmt='.',label='measured')
+
+    spec.apply(water)
+    pylab.subplot(212)
+    #pylab.title('Intensity correction factor')
+    pylab.xlabel('Slit 1 opening (mm)')
+    pylab.ylabel('Incident intensity')
+    pylab.yscale('log')
+    pylab.errorbar(spec.slit1.x,spec.R,spec.dR,fmt='.',label='correction')
+
+    pylab.show()
 
 if __name__ == "__main__": demo()
