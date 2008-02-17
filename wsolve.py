@@ -209,7 +209,7 @@ def wpolyfit(x,y,dy=1,deg=None,origin=False):
         dp = N.hstack((dp,0))
     return p,dp
 
-def demo1():
+def demo():
     import pylab
     
     # Make fake data
@@ -228,4 +228,4 @@ def demo1():
     pylab.plot(px,N.polyval(p,px))
     pylab.show()
 
-if __name__ == "__main__": demo1()
+if __name__ == "__main__": demo()
