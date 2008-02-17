@@ -1,20 +1,15 @@
 # This code is in the public domain
 
-from polcor import *
-from normalize import *
+# Define data file formats
+from reflectometry.reduction.formats import *
 
-def load_ng7(file):
-    "NCNR NG-7 file loader"
-    from .ncnr_ng7 import NG7Icp
-    data = NG7Icp(file)
-    data.load()
-    data.resetQ()
-    return data
+# ========= Data corrections ========
+def normalize(*args, **kw):
+    """Normalization correction; should be applied first"""
+    from reflectometry.reduction.normalize import Normalize
+    return Normalize(*args, **kw)
 
-def load_ng1(file):
-    "NCNR NG-7 file loader"
-    from .ncnr_ng1 import NG1Icp
-    data = NG1Icp(file)
-    data.load()
-    data.resetQ()
-    return data
+def polcor(*args, **kw):
+    """Normalization correction; should be applied first"""
+    from reflectometry.reduction.polcor import PolarizationEfficiency
+    return PolarizationEfficiency(*args, **kw)

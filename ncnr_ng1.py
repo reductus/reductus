@@ -5,7 +5,7 @@ Data file reader for NCNR NG-1 data.
 
 import numpy,os
 from numpy import inf
-from . import refldata, icpformat, properties
+from reflectometry.reduction import refldata, icpformat, properties
 
 
 # Instrument parameters
@@ -61,15 +61,6 @@ cg1default.psd_pixels = (608,'')
 cg1default.monitor_timestep = (60./100,'') # s ; ICP records 1/100ths of min 
 
 # =====================================================================
-
-def register_extensions(registry):
-    for file in ['.na1', '.nb1', '.nc1', '.nd1', '.ng1']:
-        registry[file] = readentries
-        registry[file+'.gz'] = readentries
-
-    for file in ['.ca1', '.cb1', '.cc1', '.cd1', '.cg1']:
-        registry[file] = readentries
-        registry[file+'.gz'] = readentries
 
 def readentries(path):
     return [NG1Icp(path)]

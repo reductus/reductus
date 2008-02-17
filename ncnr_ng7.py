@@ -5,9 +5,9 @@ Data file reader for NCNR NG-7 data.
 """
 
 import os, numpy
-from . import icpformat
-from . import refldata
-from . import properties
+from reflectometry.reduction import icpformat
+from reflectometry.reduction import refldata
+from reflectometry.reduction import properties
 
 
 # Instrument parameters
@@ -62,15 +62,6 @@ default.psd_pixels = (256,'')
 default.monitor_timestep = (60./100,'') # s ; ICP records 1/100ths of min 
 
 # ===================================================================
-
-def register_extensions(registry):
-    for file in ['.ng7']:
-        registry[file] = readentries
-        registry[file+'.gz'] = readentries
-
-def readentries(path):
-    # ICP files have one entry per file
-    return [NG7Icp(path)]
 
 class NG7Icp(refldata.ReflData):
     # Instrument description

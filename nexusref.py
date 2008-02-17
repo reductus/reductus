@@ -4,18 +4,7 @@
 Load a NeXus file into a reflectometry data structure.
 """
 
-import refldata
-
-def register_extensions(registry):
-    registry['.nxs'] = readentries
-
-def readentries(filename):
-    tree = nexus.read(filename)
-    ret = []
-    for name,entry in tree.nodes():
-        if entry.nxclass == 'NXentry':
-            ret.append(NeXusRefl(entry,filename))
-    return ret
+from reflectometry.reduction import refldata, nexus
 
 class NeXusRefl(refldata.ReflData):
     format = "NeXus"
