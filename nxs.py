@@ -1144,5 +1144,8 @@ class NeXus(object):
             
         return data,pdata
     
+# tests provided by nxstest.py
+def test(): pass
+
 
 __id__ = "$ID$"
