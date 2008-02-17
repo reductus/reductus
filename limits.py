@@ -8,6 +8,7 @@ limits(x,dv=0) returns floor,ceiling for a single dataset.
 """
 
 from copy import copy
+from numpy import inf
 
 def limits(v, dv=0):
     """

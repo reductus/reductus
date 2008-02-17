@@ -1,3 +1,5 @@
+# This program is public domain
+from numpy import inf
 
 # Rebinning operations
 class LinearBinning(object):
