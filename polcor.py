@@ -162,8 +162,8 @@ if __name__ == '__main__':
     import os; __path__=[os.path.dirname(os.path.realpath(__file__))]; del os
 
 import numpy as N
-from .data import PolarizedData
-from .wsolve import wsolve
+from reflectometry.reduction.data import PolarizedData
+from reflectometry.reduction.wsolve import wsolve
 
 
 class PolarizationEfficiency(object):
@@ -343,10 +343,11 @@ def correct_efficiency(eff, data):
         dy = dY[:,i].T
         try:
             s = wsolve(A,y,dy)
-            x,dx = N.ravel(s.x),N.ravel(s.std)
         except ValueError:
             x,dx = y,dy
             reject.append(i)
+        else:
+            x,dx = N.ravel(s.x),N.ravel(s.std)
         X[:,i] = x
         dX[:,i] = dx
 

@@ -5,7 +5,7 @@ Monitor normalization correction.
 """
 
 from numpy import sqrt
-from . import err1d
+from reflectometry.reduction import err1d
 
 class Normalize(object):
     def __init__(self, base='auto'):

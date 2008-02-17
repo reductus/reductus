@@ -12,7 +12,7 @@ read(filename) - reads header information and data
 
 import numpy as N
 import datetime,sys
-from . import _reduction
+from reflectometry.reduction import _reduction
 
 def readdata(fh):
     """
@@ -89,7 +89,7 @@ def readdata(fh):
         blocks = [blank]*(len(blocks)-len(rows)) + blocks
 
     # Convert data to arrays
-    X = N.array(rows, 'f')
+    X = N.array(rows, 'd')
     Z = N.array(blocks)
     return X,Z
 

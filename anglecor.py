@@ -17,7 +17,7 @@ Usage:
 
     data.appy(AngleCorrection(angle=0.01)
 """
-from . import refldata
+from reflectometry.reduction import refldata
 
 class AdjustAlignment(object):
     """
