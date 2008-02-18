@@ -7,7 +7,7 @@ Test cases are taken from the NIST Statistical Reference Datasets
 These problems are chosen to challenge statistical software, and
 cannot be expected to be matched precisely in limited precision
 machines (the target results were computed using 100 digit arithmetic).
-The individual tests vary, but relative error should be between 1e-8 
+The individual tests vary, but relative error should be between 1e-8
 and 1e-16.
 """
 
@@ -32,15 +32,15 @@ def show_result(name,p,dp,Ep,Edp):
     for i in xrange(len(p)):
         print "%12.5g  %12.5g %12.5g"%(dp[i],Edp[i],err_dp[i])
     print "-"*39
-    
+
 def check_uncertainty(n=10000):
     """
     This function computes a number of fits to simulated data
     to determine how well the values and uncertainties reported
     by the wpolyfit solver correspond to individual fits of the data.
 
-    For large N the reported parameters do indeed converge to the mean 
-    parameter values for fits to resampled data.  Reported parameter 
+    For large N the reported parameters do indeed converge to the mean
+    parameter values for fits to resampled data.  Reported parameter
     uncertainty estimates are not supported by MC.
     """
     ##          x         y          dy
@@ -75,7 +75,7 @@ def check_uncertainty(n=10000):
     input('Press <Enter> to see some sample regression lines: ');
     t = [x(1), x(length(x))];
     [p,s] = wpolyfit(x,y,dy,1); dp=sqrt(sumsq(inv(s.R'))'/s.df)*s.normr;
-    hold off; 
+    hold off;
     for i=1:15, plot(t,polyval(p(:)+randn(size(dp)).*dp,t),'-g;;'); hold on; end
     errorbar(x,y,dy,"~b;;");
     [yf,dyf]=polyconf(p,x,s,0.05,'ci');
@@ -206,11 +206,11 @@ def run_tests():
                 -0.402962525080404E-04    0.896632837373868E-05
                 """).A
     check("Filippelli, A., NIST.",data,target)
-            
+
 
 ##Procedure:     Linear Least Squares Regression
 ##
-##Reference:     Pontius, P., NIST. 
+##Reference:     Pontius, P., NIST.
 ##               Load Cell Calibration.
 ##
 ##Model:         Quadratic Class
@@ -308,9 +308,9 @@ def run_tests():
     check("Eberhardt, K., NIST", data, target, origin=True)
 
 
-#Reference:     Wampler, R. H. (1970). 
-#               A Report of the Accuracy of Some Widely-Used Least 
-#               Squares Computer Programs. 
+#Reference:     Wampler, R. H. (1970).
+#               A Report of the Accuracy of Some Widely-Used Least
+#               Squares Computer Programs.
 #               Journal of the American Statistical Association, 65, 549-565.
 #
 #Model:         Polynomial Class
@@ -357,9 +357,9 @@ def run_tests():
            """).A
     check("Wampler1",data,target)
 
-##Reference:     Wampler, R. H. (1970). 
-##               A Report of the Accuracy of Some Widely-Used Least 
-##               Squares Computer Programs. 
+##Reference:     Wampler, R. H. (1970).
+##               A Report of the Accuracy of Some Widely-Used Least
+##               Squares Computer Programs.
 ##               Journal of the American Statistical Association, 65, 549-565.
 ##Model:         Polynomial Class
 ##               6 Parameters (B0,B1,...,B5)
@@ -405,9 +405,9 @@ def run_tests():
     check("Wampler2", data, target)
 
 
-##Reference:   Wampler, R. H. (1970). 
-##             A Report of the Accuracy of Some Widely-Used Least 
-##             Squares Computer Programs. 
+##Reference:   Wampler, R. H. (1970).
+##             A Report of the Accuracy of Some Widely-Used Least
+##             Squares Computer Programs.
 ##             Journal of the American Statistical Association, 65, 549-565.
 ##
 ##Model:       Polynomial Class
@@ -543,7 +543,7 @@ def run_tests():
             10958421    20
             """).A
     check("Wampler5", data, target)
-    
+
 if __name__ == "__main__":
     #check_uncertainty(n=10000)
     run_tests()

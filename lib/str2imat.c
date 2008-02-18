@@ -1,4 +1,4 @@
-/* public domain 
+/* public domain
 
 jazz:
   LIBZ="-L/data/people/pkienzle/packages/zlib-1.4.4 -lz"

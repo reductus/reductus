@@ -15,7 +15,7 @@ def loadABCD(file):
         A = numpy.loadtxt(os.path.join(PATH,file+ext))
         d.x,d.v,d.dv = A[:,0],A[:,1],A[:,2]
     return data
-    
+
 
 def slits():
     data = loadABCD('e3a12042.slit')
@@ -31,7 +31,7 @@ def spec():
         A = numpy.loadtxt(os.path.join(PATH,'e3a12026.spec'+ext))
         d.x,d.v,d.dv = A[:,0],A[:,1],A[:,2]
     return data
-    
+
 
 if __name__ == "__main__":
     print slits()

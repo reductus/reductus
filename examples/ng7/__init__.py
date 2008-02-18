@@ -31,4 +31,4 @@ def rock():
 
 if __name__ == "__main__":
     print spec()[0]
-    
+

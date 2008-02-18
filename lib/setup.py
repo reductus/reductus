@@ -16,7 +16,7 @@ def configuration(parent_package='',
     # Extension reflmodule
     sources = [join(config.package_path,s)
                for s in ('reduction.cc','str2imat.c')]
-                       
+
     config.add_extension('_reduction',
                          sources=sources,
                          )
