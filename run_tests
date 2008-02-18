@@ -13,7 +13,7 @@ import sys,glob,traceback
 def print_error(msg,indent=2):
     print msg
     #print "  ",str(sys.exc_type),sys.exc_value
-    errtext = traceback.format_exc(0).rstrip()
+    errtext = traceback.format_exc(1).rstrip()
     for line in ["  "+s for s in errtext.split('\n')]:
         print " "*(indent-1),line
 
@@ -55,7 +55,7 @@ def all_tests(package):
 if __name__ == "__main__":
     package = 'reflectometry.reduction'
     if len(sys.argv) > 1:
-        run_tests(package, sys.argv[1:])
+        run_tests(package, [file[:-3] for file in sys.argv[1:]])
     else:
         all_tests(package)
 

@@ -1,85 +1,146 @@
 # This program is public domain
 
 """
-Error propogation algorithms for 1-D data.
+Error propogation algorithms for simple arithmetic
+
+Warning: like the underlying numpy library, the inplace operations
+may return values of the wrong type if some of the arguments are
+integers, so be sure to create them with floating point inputs.
 """
 
+
+from __future__ import division  # Get true division
+import numpy
+
 def div(X,varX, Y,varY):
-    varZ = (varX + varY * (X/Y)**2) / Y**2
-    Z = X/Y
+    """Division with error propagation"""
+    # Direct algorithm:
+    #   Z = X/Y
+    #   varZ = (varX/X**2 + varY/Y**2) * Z**2
+    #        = (varX + varY * Z**2) / Y**2
+    # Indirect algorithm to minimize intermediates
+    Z = X/Y      # truediv => Z is a float
+    varZ = Z**2  # Z is a float => varZ is a float
+    varZ *= varY
+    varZ += varX
+    T = Y**2     # Doesn't matter if T is float or int
+    varZ /= T
     return Z, varZ
 
 def mul(X,varX, Y,varY):
-    varZ = Y**2 * varX + X**2 * varY
+    """Multiplication with error propagation"""
+    # Direct algorithm:
     Z = X * Y
+    varZ = Y**2 * varX + X**2 * varY
+    # Indirect algorithm won't ensure floating point results
+    #   varZ = Y**2
+    #   varZ *= varX
+    #   Z = X**2   # Using Z to hold the temporary
+    #   Z *= varY
+    #   varZ += Z
+    #   Z[:] = X
+    #   Z *= Y
     return Z, varZ
 
 def sub(X,varX, Y, varY):
-    varZ = X**2 + Y**2
+    """Subtraction with error propagation"""
     Z = X - Y
+    varZ = varX + varY
     return Z, varZ
 
 def add(X,varX, Y,varY):
-    varZ = X**2 + Y**2
+    """Addition with error propagation"""
     Z = X + Y
+    varZ = varX + varY
     return Z, varZ
 
-def inv(X,varX):
-    varZ = varX/X**4
-    Z = 1/Z
+def exp(X,varX):
+    """Exponentiation with error propagation"""
+    Z = numpy.exp(X)
+    varZ = varX * Z**2
+    return Z,varZ
+
+def log(X,varX):
+    """Logarithm with error propagation"""
+    Z = numpy.log(X)
+    varZ = varX / X**2
+    return Z,varZ
+
+# Confirm this formula before using it
+# def pow(X,varX, Y,varY):
+#    Z = X**Y
+#    varZ = (Y**2 * varX/X**2 + varY * numpy.log(X)**2) * Z**2
+#    return Z,varZ
+#
+
+def pow(X,varX,n):
+    """X**n with error propagation"""
+    # Direct algorithm
+    #   Z = X**n
+    #   varZ = n*n * varX/X**2 * Z**2
+    # Indirect algorithm to minimize intermediates
+    Z = X**n
+    varZ = varX/X
+    varZ /= X
+    varZ *= Z
+    varZ *= Z
+    varZ *= n**2
     return Z, varZ
 
-def pavg(X,varX,dQX, Y,varY,dQY, tol=1e-10):
-    """
-    Average to values assuming poisson statistics for uncertainties.
+def div_inplace(X,varX, Y,varY):
+    """In-place division with error propagation"""
+    # Z = X/Y
+    # varZ = (varX + varY * (X/Y)**2) / Y**2 = (varX + varY * Z**2) / Y**2
+    X /= Y     # X now has Z = X/Y
+    T = X**2   # create T with Z**2
+    T *= varY  # T now has varY * Z**2
+    varX += T  # varX now has varX + varY*Z**2
+    del T   # may want to use T[:] = Y for vectors
+    T = Y   # reuse T for Y
+    T **=2     # T now has Y**2
+    varX /= T  # varX now has varZ
+    return X,varX
 
-## Join run 1 and run 2, averaging the points that are near to each other.
-## If only one run is given, then nearby points will be averaged.
-##
-## To average y1, ..., yn, use:
-##     w = sum( y/dy^2 )
-##     y = sum( (y/dy)^2 )/w
-##     dy = sqrt ( y/w )
-## Note that pavg(y1,...,yn) == pavg(y1,pavg(y2, ..., pavg(yn-1,yn)...))
-## to machine precision, as tested against for example
-##     pavg(logspace(-10,10,10))
-##
-## The above formula gives the expected result for combining two
-## measurements, assuming there is no uncertainty in the monitor:
-##    measure N counts during M monitors
-##    rate:                   r = N/M
-##    rate uncertainty:      dr = sqrt(N)/M
-##    weighted rate:          r/dr^2 = (N/M) / (N/M^2) =  M
-##    weighted rate squared:  r^2/dr^2 = (N^2/M) / (N/M^2) = N
-##
-##    for two measurements Na, Nb
-##    w = ra/dra^2 + rb/drb^2 = Ma + Mb
-##    y = ((ra/dra)^2 + (rb/drb)^2)/w = (Na + Nb)/(Ma + Mb)
-##    dy = sqrt(y/w) = sqrt( (Na + Nb)/ w^2 ) = sqrt(Na+Nb)/(Ma + Mb)
-##
-## We are actually using a more complicated expression for rate which
-## includes attenuators and for rate uncertainty which includes attenuator
-## and monitor uncertainty propogated using gaussian statistics, so in
-## practice it will be:
-##    r = A*N/M
-##   dr = sqrt( A^2*(1+N/M)*N/M^2 + (dA*N/M)^2 )
-##
-## Comparing the separately measured versus the combined values for
-## e.g., Na = 7, Ma=2000, Nb=13, Mb=4000, Aa=Ab=1, dAa=dAb=0
-## yields a relative error on the order of 1e-6.  Below the critical
-## edge, with the monitor rate 10% of the detector rate,
-## e.g., Na=20400, Ma=2000, Nb=39500, Mb=4000
-## yields a relative error on the order of 0.02%.
-##
-## Computing monitor uncertainty is useful for estimating the
-## uncertainty in your reduced data.  For example, the error bars
-## scale by a factor of 3 below the critical edge in the example above.
-## Using Poisson error propogation is important in low count regions
-## only, and there only marginally so.
-##
-## We can't mix points with significantly different resolution dQ.
-##
-## See also test_run_avg
+def mul_inplace(X,varX, Y,varY):
+    """In-place multiplication with error propagation"""
+    # Z = X * Y
+    # varZ = Y**2 * varX + X**2 * varY
+    T = Y**2   # create T with Y**2
+    varX *= T  # varX now has Y**2 * varX
+    del T   # may want to use T[:] = X for vectors
+    T = X   # reuse T for X**2 * varY
+    T **=2     # T now has X**2
+    T *= varY  # T now has X**2 * varY
+    varX += T  # varX now has varZ
+    X *= Y     # X now has Z
+    return X,varX
 
-    """
-    raise NotImplementedError
+def sub_inplace(X,varX, Y, varY):
+    """In-place subtraction with error propagation"""
+    # Z = X - Y
+    # varZ = varX + varY
+    X -= Y
+    varX += varY
+    return X,varX
+
+def add_inplace(X,varX, Y,varY):
+    """In-place addition with error propagation"""
+    # Z = X + Y
+    # varZ = varX + varY
+    X += Y
+    varX += varY
+    return X,varX
+
+def pow_inplace(X,varX,n):
+    """In-place X**n with error propagation"""
+    # Direct algorithm
+    #   Z = X**n
+    #   varZ = abs(n) * varX/X**2 * Z**2
+    # Indirect algorithm to minimize intermediates
+    varX /= X
+    varX /= X     # varX now has varX/X**2
+    X **= n       # X now has Z = X**n
+    varX *= X     
+    varX *= X     # varX now has varX/X**2 * Z**2
+    varX *= n**2  # varX now has varZ
+    return X,varX
