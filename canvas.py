@@ -24,14 +24,14 @@ class FigureCanvas(FigureCanvasWxAgg):
     def __init__(self, *args, **kw):
         super(FigureCanvas,self).__init__(*args, **kw)
         self._isRendered = False
-        
+
         # Create an timer for handling draw_idle requests
         # If there are events pending when the timer is
         # complete, reset the timer and continue.  The
         # alternative approach, binding to wx.EVT_IDLE,
         # doesn't behave as nicely.
         self.idletimer = wx.CallLater(1,self._onDrawIdle)
- 
+
         # Support for mouse wheel
         self.Bind(wx.EVT_MOUSEWHEEL, self._onMouseWheel)
 
@@ -52,7 +52,7 @@ class FigureCanvas(FigureCanvasWxAgg):
             self.gui_repaint(drawDC=drawDC)
         else:
             self._isRendered = False
-    
+
     # Belongs in backends/backend_wx
     def draw_idle(self, *args, **kwargs):
         """
@@ -107,7 +107,7 @@ class FigureCanvas(FigureCanvasWxAgg):
             self.realize()
 
         # Need to draw the graph the first time it is shown otherwise
-        # it is a black canvas.  After that we can use the rendered 
+        # it is a black canvas.  After that we can use the rendered
         # bitmap for updates.
         if self._isRendered:
             #print "painting rendered"

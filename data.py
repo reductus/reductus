@@ -51,7 +51,7 @@ class Data(object):
     Multi-dimensional data can be regular or irregular.  If it is irregular,
     the size of x,y,z must match the size of z.  If it is regular,
     the size of each vector x,y,z must match the corresponding dimension of v.
-    
+
     Note: for reflectivity the natural dimensions are x='Qz',y='Qx',z='Qy'
     """
     _x,_xedges,dx = None,None,None
@@ -104,16 +104,16 @@ class Data(object):
     zedges = property(_getzedges,_setzedges,'z edges')
 
     # Set attributes on initialization
-    def __init__(self): 
+    def __init__(self):
         self.messages = []
-        
+
     def summary(self):
         return dict2text(self.prop.__dict__)
 
     def log(self,msg):
         """Record corrections that have been applied to the data"""
         self.log.append(msg)
-        
+
     def apply(self, correction):
         """Apply a correction to the data."""
         n = len(self.messages)
@@ -141,16 +141,16 @@ class PolarizedData(object):
         self.set(**kw)
 
     def set(self,**kw):
-        for k,v in kw.iteritems(): 
+        for k,v in kw.iteritems():
             if hasattr(self,k): setattr(self,k,v)
 
     def __str__(self):
         return "\n".join(["++"+str(self.pp),"--"+str(self.mm),
                           "+-"+str(self.pm),"-+"+str(self.mp)])
-    
+
     def ispolarized(self):
         return True
-    
+
     def isaligned(self):
         """Return true if all four cross sections are aligned."""
         # TODO: perform the check (monoref only)
@@ -178,7 +178,7 @@ class PolarizedData(object):
             pp, Vpp = interp(x,self.pp)
             mm, Vmm = interp(x,self.mm)
         v = (pp-mm)/(pp+mm)
-        V = v**2 * ( (1/(pp-mm) - 1/(pp+mm))**2 * Vpp 
+        V = v**2 * ( (1/(pp-mm) - 1/(pp+mm))**2 * Vpp
                      + (1/(pp-mm) + 1/(pp+mm))**2 * Vmm )
         result = Data(x,v,variance=V,
                       xlabel=self.xlabel, xunits=self.xunits,
@@ -253,6 +253,6 @@ def demo():
     print "x,y",d.mp.x,d.mp.y
     print "edges x,y",d.mp.xedges,d.mp.yedges
 
-if __name__ == "__main__": 
+if __name__ == "__main__":
     #demo()
     print refl()

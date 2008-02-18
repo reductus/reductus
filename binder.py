@@ -8,7 +8,7 @@ class Selection:
     """
     # TODO: We need some way to check in prop matches, preferably
     # TODO: without imposing structure on prop.
-        
+
     artist=None
     prop={}
     def __init__(self,artist=None,prop={}):
@@ -32,12 +32,12 @@ class BindArtist:
     # Track doubleclick
     dclick_threshhold = 0.25
     _last_button, _last_time = None, 0
-    
+
     # Mouse/keyboard events we can bind to
     events= ['enter','leave','motion','click','dclick','drag','release',
              'scroll','key','keyup']
     # TODO: Need our own event structure
-    
+
     def __init__(self,figure):
         canvas = figure.canvas
 
@@ -55,18 +55,18 @@ class BindArtist:
         try:
             canvas.mpl_disconnect(canvas.button_pick_id)
             canvas.mpl_disconnect(canvas.scroll_pick_id)
-        except: 
+        except:
             pass
-        
+
         self.canvas = canvas
         self.figure = figure
         self.clearall()
-        
+
     def clear(self, *artists):
         """
         self.clear(h1,h2,...)
             Remove connections for artists h1, h2, ...
-            
+
         Use clearall() to reset all connections.
         """
 
@@ -77,11 +77,11 @@ class BindArtist:
         if self._current.artist in artists: self._current = Selection()
         if self._hasclick.artist in artists: self._hasclick = Selection()
         if self._haskey.artist in artists: self._haskey = Selection()
-        
+
     def clearall(self):
         """
         Clear connections to all artists.
-        
+
         Use clear(h1,h2,...) to reset specific artists.
         """
         # Don't monitor any actions
@@ -99,9 +99,9 @@ class BindArtist:
         """
         In case we need to disconnect from the canvas...
         """
-        try: 
+        try:
             for cid in self._connections: self.canvas.mpl_disconnect(cid)
-        except: 
+        except:
             pass
         self._connections = []
 
@@ -110,10 +110,10 @@ class BindArtist:
 
     def __call__(self,trigger,artist,action):
         """Register a callback for an artist to a particular trigger event.
-        
+
         usage:
             self.connect(eventname,artist,action)
-    
+
         where:
             eventname is a string
             artist is the particular graph object to respond to the event
@@ -133,7 +133,7 @@ class BindArtist:
             release: mouse button released for the artist
             key: key pressed when mouse is on the artist
             keyrelease: key released for the artist
-    
+
         The event received by action has a number of attributes:
             name is the event name which was triggered
             artist is the object which triggered the event
@@ -143,9 +143,9 @@ class BindArtist:
             key is the key being pressed/released
             shift,control,alt,meta are flags which are true if the
                 corresponding key is pressed at the time of the event.
-            details is a dictionary of artist specific details, such as the 
+            details is a dictionary of artist specific details, such as the
                 id(s) of the point that were clicked.
-                
+
         When receiving an event, first check the modifier state to be
         sure it applies.  E.g., the callback for 'press' might be:
             if event.button == 1 and event.shift: process Shift-click
@@ -173,7 +173,7 @@ class BindArtist:
         #print "==> added",artist,[artist],"to",trigger,":",self._actions[trigger].keys()
 
         # Maintain a list of all artists
-        if artist not in self._artists: 
+        if artist not in self._artists:
             self._artists.append(artist)
 
     def trigger(self,actor,action,ev):
@@ -183,14 +183,14 @@ class BindArtist:
         """
         if action not in self.events:
             raise ValueError, "Trigger expects "+", ".join(self.events)
-        
+
         # Tag the event with modifiers
         for mod in ('alt','control','shift','meta'):
             setattr(ev,mod,getattr(self,mod))
         setattr(ev,'artist',None)
         setattr(ev,'action',action)
         setattr(ev,'prop',{})
-        
+
         # Fallback scheme.  If the event does not return false, pass to parent.
         processed = False
         artist,prop = actor.artist,actor.prop
@@ -220,7 +220,7 @@ class BindArtist:
         #print "searching in",self._artists
         for artist in self._artists:
             # TODO: should contains() return false if invisible?
-            if not artist.get_visible(): 
+            if not artist.get_visible():
                 continue
             # TODO: optimization - exclude artists not inaxes
             inside,prop = artist.contains(event)
@@ -228,7 +228,7 @@ class BindArtist:
                 found.artist,found.prop = artist,prop
                 break
         #print "found",found.artist
-        
+
         # TODO: how to check if prop is equal?
         if found != self._current:
             self.trigger(self._current,'leave',event)
@@ -236,7 +236,7 @@ class BindArtist:
         self._current = found
 
         return found
-        
+
     def _onMotion(self,event):
         """
         Track enter/leave/motion through registered artists; all
@@ -245,7 +245,7 @@ class BindArtist:
         ## Can't kill double-click on motion since Windows produces
         ## spurious motion events.
         #self._last_button = None
-        
+
         # Dibs on the motion event for the clicked artist
         if self._hasclick:
             # Make sure the x,y data use the coordinate system of the
@@ -265,7 +265,7 @@ class BindArtist:
         Process button click
         """
         import time
-        
+
         # Check for double-click
         event_time = time.time()
         #print event_time,self._last_time,self.dclick_threshhold
@@ -278,7 +278,7 @@ class BindArtist:
             action = 'dclick'
         self._last_button = event.button
         self._last_time = event_time
-        
+
         # If an artist is already dragging, feed any additional button
         # presses to that artist.
         # TODO: do we want to force a single button model on the user?
@@ -323,7 +323,7 @@ class BindArtist:
         """
         self.trigger(self._hasclick,'release',event)
         self._hasclick = Selection()
-            
+
     def _onKey(self,event):
         """
         Process key click
@@ -332,7 +332,7 @@ class BindArtist:
         # TODO: Do we need an explicit focus command for keyboard?
         # TODO: Can we tab between items?
         # TODO: How do unhandled events get propogated to axes, figure and
-        # TODO: finally to application?  Do we need to implement a full tags 
+        # TODO: finally to application?  Do we need to implement a full tags
         # TODO: architecture a la Tk?
         # TODO: Do modifiers cause a grab?  Does the artist see the modifiers?
         if event.key in ('alt','meta','control','shift'):
@@ -345,7 +345,7 @@ class BindArtist:
             found = self._find_current(event)
         self.trigger(found,'key',event)
         self._haskey = found
-    
+
     def _onKeyRelease(self,event):
         """
         Process key release
@@ -353,7 +353,7 @@ class BindArtist:
         if event.key in ('alt','meta','control','shift'):
             setattr(self,event.key,False)
             return
-        
+
         if self._haskey:
             self.trigger(self._haskey,'keyup',event)
         self._haskey = Selection()

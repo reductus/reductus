@@ -28,7 +28,7 @@ class Fresnel:
             + 8j*pi*mu_s/L*choose(Q<0,(0,1))
         Q = abs(Q)
         f = sqrt(Q**2 - S)  # fresnel coefficient
-        
+
         # Compute reflectivity amplitude, with adjustment for roughness
         amp = (Q-f)/(Q+f) * exp(-0.5*self.sigma**2*Q*f)
         # Note: we do not need to check for a divide by zero.

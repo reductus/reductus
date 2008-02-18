@@ -1,6 +1,6 @@
 # This program is public domain
 """
-Data file reader for NCNR NG-1 data.  
+Data file reader for NCNR NG-1 data.
 """
 
 import numpy,os
@@ -22,7 +22,7 @@ from reflectometry.reduction import refldata, icpformat, properties
 ng1default = properties.DatedValues()
 ng1default.wavelength = (4.76,'')  # in case ICP records the wrong value
 
-# Detector saturates at 15000 counts/s.  The efficiency curve above 
+# Detector saturates at 15000 counts/s.  The efficiency curve above
 # 15000 has not been measured.
 ng1default.saturation = (numpy.array([[1,15000,0]]),'')
 ng1default.psd_saturation = (numpy.array([[1,8000,0]]),'')
@@ -34,14 +34,14 @@ ng1default.slit1_distance = (-75*25.4, '') # mm
 ng1default.slit2_distance = (-14*25.4, '') # mm
 ng1default.slit3_distance = (9*25.4, '') # mm
 ng1default.slit4_distance = (42*25.4, '') # mm
-ng1default.monitor_timestep = (60./100,'') # s ; ICP records 1/100ths of min 
+ng1default.monitor_timestep = (60./100,'') # s ; ICP records 1/100ths of min
 
 # =====================================================================
 # CG-1 defaults
 cg1default = properties.DatedValues()
 cg1default.wavelength = (5.0,'')  # in case ICP records the wrong value
 
-# Detector saturates at 15000 counts/s.  The efficiency curve above 
+# Detector saturates at 15000 counts/s.  The efficiency curve above
 # 15000 has not been measured.
 cg1default.saturation = (numpy.array([[1,15000,0]]),'')
 cg1default.psd_saturation = (numpy.array([[1,8000,0]]),'')
@@ -53,12 +53,12 @@ cg1default.slit1_distance = (-75*25.4, '') # mm
 cg1default.slit2_distance = (-14*25.4, '') # mm
 cg1default.slit3_distance = (9*25.4, '') # mm
 cg1default.slit4_distance = (42*25.4, '') # mm
-cg1default.monitor_timestep = (60./100,'') # s ; ICP records 1/100ths of min 
+cg1default.monitor_timestep = (60./100,'') # s ; ICP records 1/100ths of min
 cg1default.psd_minbin = (1,'')
 cg1default.psd_maxbin = (608,'')
 cg1default.psd_width = (100,'')
 cg1default.psd_pixels = (608,'')
-cg1default.monitor_timestep = (60./100,'') # s ; ICP records 1/100ths of min 
+cg1default.monitor_timestep = (60./100,'') # s ; ICP records 1/100ths of min
 
 # =====================================================================
 
@@ -69,7 +69,7 @@ class NG1Icp(refldata.ReflData):
     probe = "neutron"
     format = "NCNR ICP"
 
-    # The following allows the user to override the wavelength 
+    # The following allows the user to override the wavelength
     # all files in a dataset to compensate for an incorrectly
     # recorded wavelength in ICP.
     _wavelength_override = {}
@@ -167,7 +167,7 @@ class NG1Icp(refldata.ReflData):
         data = icpformat.read(self.path)
 
         self.detector.wavelength \
-            = data.check_wavelength(self.default.wavelength, 
+            = data.check_wavelength(self.default.wavelength,
                                     NG1Icp._wavelength_override)
 
         # Slits are either stored in the file or available from the

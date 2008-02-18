@@ -20,14 +20,14 @@ class Datasets:
     The sequence number is assumed to be at most three digits, and to
     be the last three digits before the extension.  The dataset includes
     both the sequence number and the extension.
-    
+
     For each dataset there is a count of the number of files in the
     dataset (max 1000) and the starting and ending sequence numbers.
     The filenames associated with the smallest and largest sequence
     numbers are retained so the starting and ending time can be read
     from the directory or the file (using method latest()).  The entire
     list of files in the dataset is also available.
-    
+
     Only files in the set of valid extensions are considered datasets.
     All others are classed as 'other'.
     '''
@@ -42,7 +42,7 @@ class Datasets:
     pattern = re.compile('^(?P<name>[^.]*?)(?P<seq>[0-9]{1,3})?(?P<junk>[^.0-9]*?)(?P<ext>[.].*)?$')
     #match = pattern.match('Field5T4345bkg.uxd')
     #dict((a,match.group(a)+"") for a in ['name','seq','junk','ext'])
-    
+
     class Dataset:
         count = 0
         files = None
@@ -74,12 +74,12 @@ class Datasets:
 
     def walk(self, pattern="", recurse=False, revisit=False):
         """
-        Walk a file pattern adding all new files into the list 
+        Walk a file pattern adding all new files into the list
         of available datasets.  The pattern has an implicit '*'
         at the end, thus matching all leading elements.  If recurse
         is true, then enter subdirectories.  If revisit is true,
         revisit subdirectories that have already been visited.
-        
+
         Note: the goal of revisit is to support refresh on the
         list of available files, however revisiting a whole
         subtree can be expensive.  Ideally this would run in
@@ -119,7 +119,7 @@ class Datasets:
     def __add__(self, other):
         """
         Merge two datasets (e.g., from different subtrees)
-        
+
         Not sure yet if this is necessary --- maybe we want to enter
         the subtrees and see what is available?
         """
@@ -183,9 +183,9 @@ class PathSelector(wx.Panel):
     """
     wx megawidget displaying a label, a path entry box and a button to
     select the path using the file dialog.
-    
+
     Events:
-    
+
     self.Bind(EVT_PATH_SELECTED, self.onPath)
     ...
     def onPath(self, event): print "path",event.path
@@ -202,7 +202,7 @@ class PathSelector(wx.Panel):
         self.Bind(wx.EVT_BUTTON, self.onBrowse, self.button)
         self.path.Bind(wx.EVT_TEXT, self.onText)
         self.path.Bind(wx.EVT_TEXT_ENTER, self.onEnter)
-        
+
         sizer = wx.BoxSizer(wx.HORIZONTAL)
         flag = wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_CENTER_HORIZONTAL|wx.ALL
         border=2
@@ -216,7 +216,7 @@ class PathSelector(wx.Panel):
 
     def isvalid(self):
         return os.path.isdir(self.path.GetValue())
-    
+
     def validate(self):
         # TODO Change the background to pink if the text is invalid;
         # the following doesn't seem to force a repaint, even when followed
@@ -226,12 +226,12 @@ class PathSelector(wx.Panel):
             self.path.SetForegroundColour(self.validcolor)
         else:
             self.path.SetForegroundColour(self.errorcolor)
-            
+
     def onText(self, event):
         # This is the text before it is changed rather than after
         self.validate()
         self.path.Refresh()
-        
+
     def onEnter(self, event):
         if self.isvalid():
             wx.PostEvent(self,PathSelectedEvent(path=self.path.GetValue()))
@@ -294,14 +294,14 @@ def demo():
         def onSelected(self, event):
             item = event.GetItem()
             print "selected",item
-            
+
         def onChecked(self, event):
             print "checked",event.data,event.enabled
 
     frame = DemoFrame(None)
     frame.Show()
 
-if __name__ == "__main__": 
+if __name__ == "__main__":
     app = wx.App(False)
     demo()
     app.MainLoop()

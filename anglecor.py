@@ -9,7 +9,7 @@ allows you to adjust Q as if the data were taken at a slightly
 different angle.
 
 Note that this adjust will fail to properly account for the change
-in intensity due to the neutrons at the unexpected reflection angle 
+in intensity due to the neutrons at the unexpected reflection angle
 being filtered by the back slits or missing the sample.  Whether this
 is significant depends on the details of the sample geometry.
 

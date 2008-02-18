@@ -45,6 +45,6 @@ class Normalize(object):
 
         data.log("Normalize('%s')"%base)
         return data
-    
+
     def __str__(self):
         return "Normalize('%s')"%self.base

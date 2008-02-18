@@ -35,7 +35,7 @@ def load_class(class_name):
                         fromlist=[class_name])
     cls = getattr(module,class_name)
     return cls
-    
+
 def normalize(*args, **kw):
     """Normalization correction; should be applied first"""
     from reflectometry.reduction.normalize import Normalize

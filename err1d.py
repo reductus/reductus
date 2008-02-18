@@ -71,10 +71,10 @@ def pavg(X,varX,dQX, Y,varY,dQY, tol=1e-10):
 ## e.g., Na=20400, Ma=2000, Nb=39500, Mb=4000
 ## yields a relative error on the order of 0.02%.
 ##
-## Computing monitor uncertainty is useful for estimating the 
-## uncertainty in your reduced data.  For example, the error bars 
-## scale by a factor of 3 below the critical edge in the example above.  
-## Using Poisson error propogation is important in low count regions 
+## Computing monitor uncertainty is useful for estimating the
+## uncertainty in your reduced data.  For example, the error bars
+## scale by a factor of 3 below the critical edge in the example above.
+## Using Poisson error propogation is important in low count regions
 ## only, and there only marginally so.
 ##
 ## We can't mix points with significantly different resolution dQ.

@@ -1,6 +1,6 @@
 # This program is public domain
 """
-File extension registry.  
+File extension registry.
 
 This provides routines for opening files based on extension,
 and registers the built-in file extensions.
@@ -15,16 +15,16 @@ class ExtensionRegistry(object):
     Note that there may be multiple loaders for the same extension.
 
     Example:
-        
+
     registry = ExtensionRegistry()
-    
+
     # Add an association by setting an element
     registry['.zip'] = unzip
-    
+
     # Multiple extensions for one loader
     registry['.tgz'] = untar
     registry['.tar.gz'] = untar
-    
+
     # Multiple loaders for one extension
     registry['.cx'] = cx1
     registry['.cx'] = cx2
@@ -34,7 +34,7 @@ class ExtensionRegistry(object):
     registry.lookup('hello.cx') -> [cx3,cx2,cx1]
 
     # Run loader on a filename
-    registry.load('hello.cx') -> 
+    registry.load('hello.cx') ->
         try:
             return cx3('hello.cx')
         except:
@@ -110,4 +110,3 @@ def test():
     else: raise AssertError,"No error raised for missing extension"
 
 if __name__ == "__main__": test()
-    

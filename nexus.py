@@ -4,7 +4,7 @@
 """
 Main class:
 
-NeXus(file,mode) 
+NeXus(file,mode)
    - structure-based interface to NeXus files.
 
 
@@ -43,7 +43,7 @@ class NeXus(nxs.NeXus):
       - write a NeXus tree to the file.
     data = file.readpath(path)
       - read data from a particular path
-          
+
 
     Example:
 
@@ -76,8 +76,8 @@ class NeXus(nxs.NeXus):
     def write(self, tree):
         """
         Write the nexus file structure to the file.  The file is assumed to
-        start empty.  
-        
+        start empty.
+
         Updating individual nodes can be done using the napi interface, with
         nx.handle as the nexus file handle.
         """
@@ -93,7 +93,7 @@ class NeXus(nxs.NeXus):
     def readpath(self, path):
         """
         Read the data on a particular file path.
-        
+
         Returns a numpy array containing the data, a python scalar, or a
         string depending on the shape and storage class.
         """
@@ -198,16 +198,16 @@ class NeXus(nxs.NeXus):
     def _writedata(self, data, path):
         """
         Write the given data node.
-        
+
         Links cannot be written until the linked group is created, so
         this routine returns the set of links that need to be written.
         Call writelinks on the list.
         """
-        
+
         path = path + "/" + data.nxname
         #print 'write data',path
 
-        # If the data is linked then 
+        # If the data is linked then
         if hasattr(data,'_link_target'):
             return [(path, data._link_target)]
 
@@ -218,7 +218,7 @@ class NeXus(nxs.NeXus):
             # Compress the fastest moving dimension of large datasets
             slab_dims = N.ones(len(data.nxdims),'i')
             slab_dims[-1] = data.nxdims[-1]
-            self.compmakedata(data.nxname, data.nxtype, data.nxdims, 
+            self.compmakedata(data.nxname, data.nxtype, data.nxdims,
                               'lzw', slab_dims)
         else:
             # Don't use compression for small datasets
@@ -233,7 +233,7 @@ class NeXus(nxs.NeXus):
     def _writegroup(self, group, path):
         """
         Write the given group structure, including the data.
-        
+
         Links cannot be written until the linked group is created, so
         this routine returns the set of links that need to be written.
         Call writelinks on the list.
@@ -263,11 +263,11 @@ class NeXus(nxs.NeXus):
         returned by writegroup.
         """
         gid = {}
-        
+
         # identify targets
         for path,target in links:
             gid[target] = None
-            
+
         # find gids for targets
         for target in gid.iterkeys():
             #sprint "target",target
@@ -315,7 +315,7 @@ class Node(object):
 
     def __str__(self):
         return "%s:%s"%(self.nxclass,self.nxname)
-    
+
     def readattr(self, name, default=None):
         return self.nxattr[name].value if name in self.nxattr else default
 
@@ -323,7 +323,7 @@ class Node(object):
         """
         Shimmer the various pieces of information in the nexus class and
         present them in a common namespace.
-        
+
         if the key is in the attribute list, return the attribute value
         if the key is the name of a group element (which must be unique)
            return the group element
@@ -332,14 +332,14 @@ class Node(object):
 
         e.g., for a single entry file, the following indicates the type
         of measurement in that file:
-        
+
            root.NXentry.NXinstrument.definition.value
 
         private fields are tagged with a leading _
         public fields are tagged with nx (e.g., nxclass)
 
         TODO: It's not clear that this is a good idea.
-        
+
         1. name collision: there may be attributes of and fields of the
         same class which have the same name, particularly if the instution
         has added private names to the nexus file.
@@ -350,14 +350,14 @@ class Node(object):
         3. name collision: private fields added by a subclass may conflict
         with names in nexus file
         4. name collision: method names are in the same namespace.
-        
+
         However improve readability significantly over the alternative:
-        
+
             root.findclass("NXentry")[0].findclass("NXinstrument")[0].nxnode['definition'].value
-        
+
         Another issue to consider is supplying default values for missing
         information, e.g., if there is no slit 4, set slit 4 to infinitely open.
-        This is done in dict using: s.get('name',default), but we may want to 
+        This is done in dict using: s.get('name',default), but we may want to
         do this on a multilevel namespace.  Here is a not-so-good example:
              s.get('NXinstrument.monochromator.wavelength_error',0.01)
 
@@ -365,7 +365,7 @@ class Node(object):
         classes, N for nodes, and A for attributes:
             root.NX.entry.NX.instrument.F.definition.value
         Consider using a naming convention in which all real attributes have
-        lowercase names and 
+        lowercase names and
             root.NXentry.NXinstrument.Fdefinition
         """
         if key in self.nxattr:
@@ -374,7 +374,7 @@ class Node(object):
             return self.nxnode[key]
         else:
             match = self.findclass(key)
-            if len(match) == 1: 
+            if len(match) == 1:
                 return match[0]
             else:
                 raise AttributeError, \
@@ -400,7 +400,7 @@ class Node(object):
         """
         L = self.match(nxclass)
         if len(L) != 1: raise IOError, "Missing class %s"%(nxclass)
-    
+
     def str_name(self,indent=0):
         return " "*indent+self.nxname,':',self.nxclass,'\n'
 
@@ -430,10 +430,10 @@ class Node(object):
 class Data(Node):
     """
     NeXus data node.
-    
+
     Operations are querying type and dimensions, reading the entire
     data block or reading a single slab.
-    
+
     # Read the entire array
     node.read(units="mm")    # read the entire dataset as millimeters
 
@@ -495,12 +495,12 @@ class Data(Node):
         """
         Read a single slab of data anchored at offset of dimensions size.
         Convert the data to the appropriate units before returning.
-        
+
         Attribute nxdims returns the size of the dataset.
         """
         value = self._file.getslab(self,offset,size)
         return self.nxunit(value,units)
-    
+
     def close(self):
         """
         Close the file associated the data after slabs are all read.
@@ -513,7 +513,7 @@ class Data(Node):
         """
         if self._value is None:
             self._value = self._file.readpath(self._path)
-        
+
         return self.nxunit(self._value,units)
 
 class Link(Node):
@@ -548,7 +548,7 @@ class NXroot(Group):
 def copyfile(fromfile,tofile):
     """
     Copy the complete structure from one named NeXus file to another.
-    
+
     Not terribly useful of course since the operating system has a
     copy command which does the same thing, but it does provide a
     complete demonstration of the read/write capabilities of the library.
@@ -573,12 +573,12 @@ def cmdline(argv):
         ls f1.nxs f2.nxs ...
     """
     op = argv[1] if len(argv) > 1 else ''
-    if op == 'ls': 
+    if op == 'ls':
         for f in argv[2:]: listfile(f)
         print "processed",len(argv[2:])
-    elif op == 'copy' and len(argv)==4: 
+    elif op == 'copy' and len(argv)==4:
         copyfile(argv[2],argv[3])
-    else: 
+    else:
         usage = """
 usage: %s copy fromfile.nxs tofile.nxs
 usage: %s ls *.nxs

@@ -26,7 +26,7 @@ def readdata(fh):
     while line != '':
         # While it might be easy to check for a comment mark on the beginning
         # of the line, supporting this is ill-adviced.  First, users should
-        # be strongly discouraged from modifying the original data.    
+        # be strongly discouraged from modifying the original data.
         # Second, sequencing against the automatically generated motor
         # columns will become more complicated.  Let's make life easier
         # and put the masking in the application rather than the data reader.
@@ -61,7 +61,7 @@ def readdata(fh):
                 # Have an existing block, so we know what size to allocate
                 z = N.empty(blocks[0].shape,'i')
                 i,j = _reduction.str2imat(s,z)
-                if i*j != z.size: 
+                if i*j != z.size:
                     raise IOError,"Inconsistent dims at line %d"%linenum
             else:
                 # No existing block.  Worst case is 2 bytes per int.
@@ -80,7 +80,7 @@ def readdata(fh):
             # of the same size as the last block
             blocks.append(N.zeros(blocks[-1].shape,'i'))
         # Otherwise no detector block and don't need one
-        # Note: this strategy fails to identify that the first 
+        # Note: this strategy fails to identify that the first
         # detector block is missing; those will be filled in later.
 
     # recover from missing leading detector blocks
@@ -131,7 +131,7 @@ def get_quoted_tokens(file):
                 curtoken = [c]
             else:
                 curtoken.append(c)
-                
+
     return tokens
 
 class Lattice(object): pass
@@ -160,7 +160,7 @@ class ICP(object):
         self.points=int(tokens[6])
         self.data_type=tokens[7]
 
-        #skip over names of fields 
+        #skip over names of fields
         file.readline()
 
         #comment and polarization
@@ -181,7 +181,7 @@ class ICP(object):
         Read I-buffer structure, excluding motors.
         """
         file = self.file
-        
+
         # Read in fields and field names
         tokenized=get_tokenized_line(file)
         fieldnames = file.readline()
@@ -259,7 +259,7 @@ class ICP(object):
         self.hfield=float(tokenized[6])
         #skip line describing fields
         file.readline()
-    
+
     def check_wavelength(self, default, overrides):
         """
         ICP sometimes records the incorrect wavelength in the file.  Make
@@ -286,17 +286,17 @@ class ICP(object):
     Do you want to use the default wavelength %s instead?"\
               %(wavelength,self.path,default)):
                 wavelength = default
-        # Regardless of how the value was obtained, use that value for 
+        # Regardless of how the value was obtained, use that value for
         # the entire dataset
         return wavelength
 
-    
+
     def readmotors(self):
         """
         Read the 6 motor lines, returning a dictionary of
         motor names and start-step-stop values.
         E.g.,
-        
+
         M = _readmotors(file)
         print M['a1'].start
         """
@@ -310,7 +310,7 @@ class ICP(object):
             motor.stop=float(words[3])
             name = words[0] if not words[0].isdigit() else 'a'+words[0]
             setattr(self.motor,name,motor)
-    
+
     def readcolumnheaders(self):
         """
         Get a list of column names. Transform the names of certain
@@ -333,12 +333,12 @@ class ICP(object):
                           ):
             line = line.replace(old,new)
         self.columnnames = line.split()
-    
-    
+
+
     def readcolumns(self):
         '''
         Read and parse ICP data columns listed in columns.  Return a dict of
-        column name: vector.  If using a position sensitive detector, return 
+        column name: vector.  If using a position sensitive detector, return
         an array of detector values x scan points.
         '''
         values,detector = readdata(self.file)
@@ -348,7 +348,7 @@ class ICP(object):
         self.detector = detector
         self.counts = detector if detector.size > 0 else self.column.counts
         self.points = len(self.column.counts)
-        
+
     def genmotorcolumns(self):
         """
         Generate vectors for each of the motors if a vector is not
@@ -359,12 +359,12 @@ class ICP(object):
                 if R.step != 0.:
                     vector = N.arange(R.start,R.step,R.stop)
                     # truncate to number of points measured
-                    vector = vector[:self.points]+0  
+                    vector = vector[:self.points]+0
                 else:
                     vector = R.start * N.ones(self.points)
                 setattr(self.column,M,vector)
         pass
-    
+
     def parseheader(self):
         """
         Read and parse ICP header information
@@ -397,18 +397,18 @@ class ICP(object):
         data2 = self.file.readline()
         self.PSD = (',' in data2)
         self.file.close()
-    
+
     def read(self):
         """
         Read header and data from file, returning a dict of fields.
         """
         self.file = gzopen(self.path)
         self.parseheader()
-        
+
         #read columns and detector images if available
         self.readcolumns()
         self.PSD = (self.detector.size>0)
-    
+
         # fill in missing motor columns
         self.genmotorcolumns()
 
@@ -416,7 +416,7 @@ class ICP(object):
 
     def __contains__(self, column):
         return hasattr(self.column,column)
-    
+
     def counts(self):
         if self.detector.size > 1:
             return self.detector

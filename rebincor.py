@@ -5,11 +5,11 @@ from numpy import inf
 class LinearBinning(object):
     """
     Desired time binning for the dataset.
-    
+
     start (0 Angstrom)
     stop (inf Angstrom)
     step (0.1 Angstrom)
-    
+
     Note that the limit will automatically cut off at the time bin
     boundaries, so can be infinite.
     """

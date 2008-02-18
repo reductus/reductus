@@ -18,7 +18,7 @@ class ReverseCorrection(object):
         data.detector.angle_x = -data.detector.angle_x
         return data
     def __str__(self): return "ReverseCorrection"
-    
+
 class FrontCorrection(object):
     """Assume all reflection is off the top surface, reversing the sense
     of negative angles."""
@@ -27,5 +27,4 @@ class FrontCorrection(object):
         data.detector.angle_x = abs(data.detector.angle_x)
         return data
     def __str__(self): return "FrontCorrection"
-    
-        
+

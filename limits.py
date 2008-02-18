@@ -23,47 +23,47 @@ def limits(v, dv=0):
 class Limits(object):
     """
     Collect data limits, used for selecting ranges in colour maps for example.
-    
+
     A Limits() object has the following attributes:
-    
+
       ceiling - the maximum absolute data value
       floor   - 1/2 the min absolute value at least 1/2-sigma away from zero
       min     - the minimum data value
       max     - the maximum data value
-    
+
     The limits are collected by adding data sets to a limits object:
-    
+
        L = Limits()
        for f in frames:
            L.add(f, dv=sqrt(f))
-    
+
     Alternatively you can use the union operator:
-    
+
        L = Limits()
        for f in frames:
            L |= Limits(f, dv=sqrt(f))
 
     The computed attributes are robust against values all identically
     zero, returning instead a ceiling of 1 and a floor of 1/2.  Other
-    situations may still cause problems such as infinities in the 
-    data (infinite limits are hard to represent in a colour scale) or 
+    situations may still cause problems such as infinities in the
+    data (infinite limits are hard to represent in a colour scale) or
     all data being identical but non-zero (in which case floor==ceiling).
 
-    Regarding the choice of floor, the main goal of limits is to 
-    avoid insignificant numbers on the log scale.  The simplest algorithm 
-    is to test v-dv > 0, which is to say that we are asking for 1-sigma 
-    significance.  However, it is useful to distinguish pixels with a 
-    single count from those with zero counts on a 2-D detector, 
-    but 1 +/- 1 would fail this test.  Changing the test to v-dv >= 0 
-    also includes points with 0 +/- 0, which we definitely want to 
-    exclude.  So instead we change the test to 1/2-sigma, which 
+    Regarding the choice of floor, the main goal of limits is to
+    avoid insignificant numbers on the log scale.  The simplest algorithm
+    is to test v-dv > 0, which is to say that we are asking for 1-sigma
+    significance.  However, it is useful to distinguish pixels with a
+    single count from those with zero counts on a 2-D detector,
+    but 1 +/- 1 would fail this test.  Changing the test to v-dv >= 0
+    also includes points with 0 +/- 0, which we definitely want to
+    exclude.  So instead we change the test to 1/2-sigma, which
     catches 1 +/- 1 and skips 0 +/- 0.
     """
     _floor = inf
     _ceiling = -inf
     _min = inf
     _max = -inf
-    def _getfloor(self): 
+    def _getfloor(self):
         return self._floor/2 if self._floor<inf else self.ceiling/2
     def _getceiling(self):
         return self._ceiling if self._ceiling>0 else 1
@@ -86,13 +86,13 @@ class Limits(object):
         v = numpy.array(v)
         ceiling = abs(v).max()
         if ceiling > self._ceiling: self._ceiling = ceiling
-        
+
         # Protect against no values being significant
         nz = v[abs(v)-dv/2>0]
         if len(nz) > 0:
             floor = abs(nz).min()
             if floor < self._floor: self._floor = floor
-        
+
         min = v.min()
         max = v.max()
         if min < self._min: self._min = min

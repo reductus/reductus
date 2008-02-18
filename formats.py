@@ -7,7 +7,7 @@ Reflectometry reduction file formats.
         Use measurement.load() to load the data for each measurement.
     load('path/to/file.ext')
         Load the data and metadata for all measurements in the file.  This
-        is a convenience function which returns a single measurement if 
+        is a convenience function which returns a single measurement if
         there is only one measurement in the file, otherwise it returns
         a list of measurements.
     register_format('.ext',loader)
@@ -18,7 +18,7 @@ Supported formats are:
      ICP on NCNR NG-1 and NG-7
      NeXus on SNS Liquids and Magnetic
 
-The loader should return a list of ReflData objects, with a method for 
+The loader should return a list of ReflData objects, with a method for
 load() to load the data.  See reflectometry.reduction.refldata for details.
 
 Loaders are tried in the reverse order that they are registered.
@@ -38,7 +38,7 @@ def loadmeta(file):
 
 def load(file):
     """
-    Load reflectometry measurement description and data.  If there are 
+    Load reflectometry measurement description and data.  If there are
     multiple measurements in the file, return a list of measurements.
     """
     measurements = registry.load(file)
@@ -87,7 +87,7 @@ for ext in ['.ca1', '.cb1', '.cc1', '.cd1', '.cg1']:
 
 def test():
     # demostrate loading of NG-7 files; just check that the file
-    # is found and loaded properlty, not that it 
+    # is found and loaded properlty, not that it
     import os.path
     root = os.path.dirname(__file__)
     ng7file = os.path.join(root,'examples','ng7','jul04032.ng7')

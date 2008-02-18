@@ -54,7 +54,7 @@ class NeXusRefl(refldata.ReflData):
                 elif index == 3:
                     self.slit4.distance = d
                     index += 1
-                
+
     def _load_TOFRAW(self):
         self.probe = 'neutron'
         # Use proton charge as a proxy for monitor; we will use the
@@ -64,7 +64,7 @@ class NeXusRefl(refldata.ReflData):
             = entry.proton_charge.read(self.monitor.source_power_units)
         self.monitor.count_time = entry.duration.read('seconds')
         self.monitor.base = 'power'
-        
+
         # TODO: we are not yet reading the monitor values for the
         # reflectometers since they are not yet in place.  When they
         # are in place, it will be problematic since it will not
@@ -75,13 +75,13 @@ class NeXusRefl(refldata.ReflData):
 
         sample = entry.find('NXsample')
         self.sample.description = sample.name.value
-        
+
         # TODO: entry has sample changer position, which is a
         # way of saying we have no idea what sample is in the
         # beam.  I hope the control software handles this
         # properly!
 
-        instrument = entry.find('NXinstrument')            
+        instrument = entry.find('NXinstrument')
         self._load_slits(instrument)
         moderator = instrument.find('NXmoderator')
         self.moderator.distance = moderator.distance.read('meters')

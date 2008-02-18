@@ -27,12 +27,12 @@ def _rescale(lo,hi,step,pt=None,bal=None,scale='linear'):
     The scaling is centered on pt, with positive values of step
     driving lo/hi away from pt and negative values pulling them in.
     If bal is given instead of point, it is already in [0,1] coordinates.
-    
+
     This is a helper function for step-based zooming.
     """
     # Convert values into the correct scale for a linear transformation
     # TODO: use proper scale transformers
-    if scale=='log': 
+    if scale=='log':
         lo,hi = log10(lo),log10(hi)
         if pt is not None: pt = log10(pt)
 
@@ -44,13 +44,13 @@ def _rescale(lo,hi,step,pt=None,bal=None,scale='linear'):
 
     # Add scale factor proportionally to the lo and hi values, preserving the
     # point under the mouse
-    if bal is None: 
+    if bal is None:
         bal = float(pt-lo)/(hi-lo)
     lo = lo - bal*delta
     hi = hi + (1-bal)*delta
 
     # Convert transformed values back to the original scale
-    if scale=='log': 
+    if scale=='log':
         lo,hi = pow(10.,lo),pow(10.,hi)
 
     return (lo,hi)
@@ -101,7 +101,7 @@ def update_cmap(canvas,mapper,mapname):
         mapper.set_cmap(mpl.cm.__dict__[mapname])
         canvas.draw_idle()
     return fn
-    
+
 def cmap_menu(canvas,mapper):
     """
     Create a menu of available colourmaps.
@@ -115,7 +115,7 @@ def cmap_menu(canvas,mapper):
     menu = wx.Menu()
     mlab = ['autumn','winter','spring','summer',
             'gray','bone','copper','pink',
-            'cool','hot',                
+            'cool','hot',
             'hsv','jet','spectral',
             #'binary',   # Seems to be a reverse of gray
             'prism','flag']
@@ -141,8 +141,8 @@ def cmap_menu(canvas,mapper):
             #'gist_yarg',  # Seems to be a reverse of gray
             ]
     gist_r = [m+'_r' for m in gist]
-    
- 
+
+
     #maps = mpl.cm.cmapnames
     #maps.sort()
     separator = False
@@ -186,22 +186,22 @@ class Plotter(wx.Panel):
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizer.Add(self.canvas,1,wx.EXPAND)
         self.SetSizer(sizer)
-    
+
 class Plotter4(wx.Panel):
     """
-    The PlotPanel has a Figure and a Canvas. OnSize events simply set a 
+    The PlotPanel has a Figure and a Canvas. OnSize events simply set a
     flag, and the actually redrawing of the
     figure is triggered by an Idle event.
     """
     def __init__(self, parent, id = -1, dpi = None, color=None, **kwargs):
         # TODO: inherit directly from Canvas --- it is after all a panel.
 
-        # Set up the panel parameters        
+        # Set up the panel parameters
         #style = wx.NO_FULL_REPAINT_ON_RESIZE
         wx.Panel.__init__(self, parent, id = id, **kwargs)
         self.Bind(wx.EVT_CONTEXT_MENU, self.onContextMenu)
 
-        # Create the figure        
+        # Create the figure
         self.figure = mpl.figure.Figure(dpi=dpi, figsize=(2,2))
         #self.canvas = NoRepaintCanvas(self, -1, self.figure)
         self.canvas = Canvas(self, -1, self.figure)
@@ -216,7 +216,7 @@ class Plotter4(wx.Panel):
         # supports draw_idle for wx.
         #self.idle_timer = wx.CallLater(1,self.onDrawIdle)
         #self.Fit()
-        
+
         # Create four subplots with no space between them.
         # Leave space for the colorbar.
         # Use a common set of axes.
@@ -226,7 +226,7 @@ class Plotter4(wx.Panel):
         self.mp = self.figure.add_subplot(224,sharex=self.pp,sharey=self.pp)
         self.figure.subplots_adjust(left=.1, bottom=.1, top=.9, right=0.85,
                                     wspace=0.0, hspace=0.0)
-        
+
         self.axes = [self.pp, self.mm, self.pm, self.mp]
         self.grid = True
 
@@ -258,10 +258,10 @@ class Plotter4(wx.Panel):
         self.yscale = 'linear'
         self.zscale = 'linear'
         self.set_vscale('log')
-   
+
         # Set up the default plot
         self.clear()
-        
+
         self._sets = {} # Container for all plotted objects
 
     def autoaxes(self):
@@ -269,7 +269,7 @@ class Plotter4(wx.Panel):
         xlims = bbox.intervalx().get_bounds()
         ylims = bbox.intervaly().get_bounds()
         self.pp.axis(xlims+ylims)
-            
+
     def onKeyPress(self,event):
         #if not event.inaxes: return
         # Let me zoom and unzoom even without the scroll wheel
@@ -299,7 +299,7 @@ class Plotter4(wx.Panel):
 
         # Icky hardcoding of colorbar zoom.
         if ax == self.coloraxes:
-            # rescale colormap: the axes are already scaled to 0..1, 
+            # rescale colormap: the axes are already scaled to 0..1,
             # so use bal instead of pt for centering
             lo,hi = self.colormapper.get_clim()
             lo,hi = _rescale(lo,hi,step,bal=event.ydata,scale=self.vscale)
@@ -337,21 +337,21 @@ class Plotter4(wx.Panel):
 
         self.canvas.draw_idle()
 
-    
+
     # These are properties which the user should control but for which
     # a particular plottable might want to set a reasonable default.
     # For now leave control with the plottable.
     def set_xscale(self, scale='linear'):
         for axes in self.axes: axes.set_xscale(scale)
         self.xscale = scale
-        
+
     def get_xscale(self):
         return self.xscale
 
     def set_yscale(self, scale='linear'):
         for axes in self.axes: axes.set_yscale(scale)
         self.yscale = scale
-        
+
     def get_yscale(self):
         return self.yscale
 
@@ -368,9 +368,9 @@ class Plotter4(wx.Panel):
         self.colormapper.set_norm(vmapper)
         self.colorbar.formatter = vformat
         self.colorbar.locator = vlocate
-        
+
         self.vscale = scale
-        
+
     def get_vscale(self):
         return self.vscale
 
@@ -386,24 +386,24 @@ class Plotter4(wx.Panel):
         self.grid = not self.grid
         for ax in self.axes: ax.grid(alpha=0.4,visible=self.grid)
         self.draw()
-        
+
     def onContextMenu(self, event):
         """
         Default context menu for a plot panel
         """
         # Define a location event for the position of the popup
-        
+
         # TODO: convert from screen coords to window coords
         x,y = event.GetPosition()
         self.menuevent = LocationEvent("context",self.figure.canvas,
                                        x,y,guiEvent=event)
-        
+
         popup = wx.Menu()
         item = popup.Append(wx.ID_ANY,'&Save image', 'Save image as PNG')
         wx.EVT_MENU(self, item.GetId(), self.onSaveImage)
         item = popup.Append(wx.ID_ANY,'&Grid on/off', 'Toggle grid lines')
         wx.EVT_MENU(self, item.GetId(), self.onGridToggle)
-        item = popup.AppendMenu(wx.ID_ANY, "Colourmaps", 
+        item = popup.AppendMenu(wx.ID_ANY, "Colourmaps",
                                 cmap_menu(self.canvas, self.colormapper))
         #popup.Append(315,'&Properties...','Properties editor for the graph')
         #wx.EVT_MENU(self, 315, self.onProp)
@@ -411,15 +411,15 @@ class Plotter4(wx.Panel):
         pos = event.GetPosition()
         pos = self.ScreenToClient(pos)
         self.PopupMenu(popup, pos)
-        
-    
+
+
     ## The following is plottable functionality
     def properties(self,prop):
         """Set some properties of the graph.
-        
+
         The set of properties is not yet determined.
         """
-        # The particulars of how they are stored and manipulated (e.g., do 
+        # The particulars of how they are stored and manipulated (e.g., do
         # we want an inventory internally) is not settled.  I've used a
         # property dictionary for now.
         #
@@ -437,14 +437,14 @@ class Plotter4(wx.Panel):
 
     def clear(self):
         """Reset the plot"""
-        
+
         # TODO: Redraw is brutal.  Render to a backing store and swap in
         # TODO: rather than redrawing on the fly?
         # TODO: Want to retain graph properties such as grids and limits
         for ax in self.axes:
             ax.clear()
             ax.hold(True)
-        
+
         # Label the four cross sections
         props = dict(va='center',ha='left',
                      bbox=dict(facecolor='yellow',alpha=0.67))
@@ -463,7 +463,7 @@ class Plotter4(wx.Panel):
         for l in self.mm.get_xticklabels(): l.set_visible(False)
         for l in self.mm.get_yticklabels(): l.set_visible(False)
         for l in self.mp.get_yticklabels(): l.set_visible(False)
-        
+
         # TODO: Hide tick labels from pm that might overlap neighbours
         # The proper algorithm would be to suppress all tick labels
         # which are within half the font height of the end of the
@@ -485,12 +485,12 @@ class Plotter4(wx.Panel):
 
         for ax in self.axes: ax.grid(alpha=0.4,visible=self.grid)
         pass
-    
+
     def xaxis(self,label,units):
         """xaxis label and units.
-        
+
         Axis labels know about units.
-        
+
         We need to do this so that we can detect when axes are not
         commesurate.  Currently this is ignored other than for formatting
         purposes.
@@ -498,7 +498,7 @@ class Plotter4(wx.Panel):
         if units != "": label = label + " (" + units + ")"
         self.xbox.set_text(r"$%s$" % (label))
         pass
-    
+
     def yaxis(self,label,units):
         """yaxis label and units."""
         if units != "": label = label + " (" + units + ")"
@@ -516,14 +516,14 @@ class Plotter4(wx.Panel):
                         ('+-',poldata.pm),('-+',poldata.mp)]:
             self.surface(slice,data)
         pass
-    
+
     def surface(self,slice,data):
         if slice == '++': ax = self.pp
         elif slice == '+-': ax = self.pm
         elif slice == '-+': ax = self.mp
         elif slice == '--': ax = self.mm
         else: raise ValueError, "expected polarization crosssection"
-        
+
         # Should be the following:
         #    im = ax.pcolor(data.xedges,data.yedges,data.v,shading='flat')
         # but this won't work in all versions of mpl, so first figure out
@@ -535,13 +535,13 @@ class Plotter4(wx.Panel):
         except AttributeError:
             im = ax.pcolormesh(x,y,v,shading='flat')
         self.colormapper.add_observer(im)
-        
+
         self.vmin = min(self.vmin, numpy.min(v))
         self.vmax = max(self.vmax, numpy.max(v))
         self.colormapper.set_clim(vmin=self.vmin,vmax=self.vmax)
         self.autoaxes()
         self.canvas.draw_idle()
-        
+
         return im
 
 
@@ -560,7 +560,7 @@ def demo():
     plotter.clear()
     plotter.set_vscale('linear')
     plotter.surfacepol(d)
-    
+
     app.MainLoop()
     pass
 

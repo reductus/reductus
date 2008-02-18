@@ -48,7 +48,7 @@ class Reduction(wx.Panel):
         sizer = wx.BoxSizer()
         sizer.Add(container, 1, wx.EXPAND)
         self.SetSizer(sizer)
-        
+
         self.selector.Bind(EVT_ITEM_SELECT, self.onSelect)
         self.selector.Bind(EVT_ITEM_VIEW, self.onView)
 
@@ -56,7 +56,7 @@ class Reduction(wx.Panel):
         # Check if it is already loaded
         if filename in self.data:
             return self.data[filename]
-        
+
         # Try loading data, guessing format from file extension
         try:
             data = registry.load(filename)
@@ -65,7 +65,7 @@ class Reduction(wx.Panel):
             data = None
         else:
             if data.prop.polarization == "":
-                # TODO Temporary hack: unpolarized data dumped into ++ 
+                # TODO Temporary hack: unpolarized data dumped into ++
                 data.prop.polarization = "++"
             self.data[filename] = data
         return data
@@ -79,7 +79,7 @@ class Reduction(wx.Panel):
             #   focuswin = wx.Window.FindFocus()
             #   self.metadata.SetFocus()
             #   ...
-            #   if focuswin: focuswin.SetFocus()            
+            #   if focuswin: focuswin.SetFocus()
             #self.metadata.SetFocus()
             pt = self.metadata.GetInsertionPoint()
             self.metadata.Replace(0,self.metadata.GetLastPosition(),data.summary())
@@ -92,8 +92,8 @@ class Reduction(wx.Panel):
             #self.metadata.EmulateKeyPress(kevent)
             #print "Setting point to",pt
             self.metadata.ShowPosition(pt)
-            
- 
+
+
     def onSelect(self, event):
         filename = event.data
         if event.enabled == True:
@@ -122,7 +122,7 @@ def demo():
     reduction = Reduction(frame)
     frame.SetSize((600,400))
     frame.Show()
-    
+
 if __name__ == "__main__":
     app = wx.PySimpleApp(False)
     demo()

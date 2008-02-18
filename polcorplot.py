@@ -30,17 +30,17 @@ class Plotter(wx.Panel):
         self.intensity = self.figure.add_subplot(211)
         mpl.pyplot.setp(self.intensity.get_xticklabels(), visible=False)
         self.efficiency = self.figure.add_subplot(212, sharex=self.intensity)
-        
+
         self.raw = None
         self.smooth = None
-    
+
     def update_intensity(self):
         ax = self.intensity
         ax.clear()
         ax.set_ylabel("Counts")
         if self.raw is not None:
             eff = self.raw
-            for data,label in zip([eff.beam.pp, eff.beam.pm, 
+            for data,label in zip([eff.beam.pp, eff.beam.pm,
                                    eff.beam.mp, eff.beam.mm],
                                   ['$++$','$+-$','$-+$','$--$']):
                 self.intensity.errorbar(data.x,data.v,yerr=data.dv,
@@ -54,7 +54,7 @@ class Plotter(wx.Panel):
         ax.legend()
         ax.set_yscale('log')
         self.canvas.draw_idle()
-    
+
     def update_efficiency(self):
         ax = self.efficiency
         ax.clear()
@@ -83,7 +83,7 @@ class Plotter(wx.Panel):
 def demo():
     from .examples import e3a12 as data
     from .polcor import PolarizationEfficiency
-    
+
     # Get some data
     beam = data.slits()
     eff = PolarizationEfficiency(beam=beam)
@@ -96,8 +96,8 @@ def demo():
 
     # render the graph to the pylab plotter
     plotter.plot(eff)
-    
-    app.MainLoop()
-    pass    
 
-if __name__ == "__main__": demo()      
+    app.MainLoop()
+    pass
+
+if __name__ == "__main__": demo()

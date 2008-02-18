@@ -30,7 +30,7 @@ class LogFormatterMathtext(ticker.LogFormatter):
         # Make sure sign shows up properly
         if x < 0: b = -b
 
-        if not isDecade and self.labelOnlyBase: 
+        if not isDecade and self.labelOnlyBase:
             s = ''
         elif not isDecade:
             #if usetex:
@@ -132,15 +132,15 @@ class LogLocator(ticker.Locator):
         b=self._base
 
         linvmin, linvmax = self.viewInterval.get_bounds()
-        
+
         vmin = math.log(linvmin)/math.log(b)
         vmax = math.log(linvmax)/math.log(b)
         if vmax<vmin:
             vmin, vmax = vmax, vmin
         if vmax-vmin <= 1.:
             return self.linear_tics(linvmin, linvmax)
-        
-        
+
+
         ticklocs = []
 
         numdec = math.floor(vmax)-math.ceil(vmin)

@@ -1,6 +1,6 @@
 # This program is public domain
 """
-Data file reader for NCNR NG-7 data.  
+Data file reader for NCNR NG-7 data.
 
 """
 
@@ -21,7 +21,7 @@ from reflectometry.reduction import properties
 default = properties.DatedValues()
 default.wavelength = (4.76,'')  # in case ICP records the wrong value
 
-# Detector saturates at 15000 counts/s.  The efficiency curve above 
+# Detector saturates at 15000 counts/s.  The efficiency curve above
 # 15000 has not been measured.
 default.saturation = (numpy.array([[1,15000,0]]),'')
 
@@ -59,7 +59,7 @@ default.psd_minbin = (9,'')
 default.psd_maxbin = (246,'')
 default.psd_width = (100,'')
 default.psd_pixels = (256,'')
-default.monitor_timestep = (60./100,'') # s ; ICP records 1/100ths of min 
+default.monitor_timestep = (60./100,'') # s ; ICP records 1/100ths of min
 
 # ===================================================================
 
@@ -69,7 +69,7 @@ class NG7Icp(refldata.ReflData):
     format = "NCNR ICP"
     instrument = "NCNR NG-7"
 
-    # The following allows the user to override the wavelength 
+    # The following allows the user to override the wavelength
     # all files in a dataset to compensate for an incorrectly
     # recorded wavelength in ICP.
     _wavelength_override = {}
@@ -142,7 +142,7 @@ class NG7Icp(refldata.ReflData):
     def load(self):
         data = icpformat.read(self.path)
         self.detector.wavelength \
-            = data.check_wavelength(self.default.wavelength, 
+            = data.check_wavelength(self.default.wavelength,
                                     NG7Icp._wavelength_override)
 
         if 'qz' in data:

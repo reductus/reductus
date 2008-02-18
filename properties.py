@@ -3,10 +3,10 @@
 """
 A correction has a property sheet which currently is a list of
 names of attributes for the correction.  The attributes are
-assumed to be floating point values.  These need to be made richer 
-so that properties contain names, labels and units for real valued 
-properties, choice lists for string valued properties, and more 
-sophisticated options such as reflectometry model definition panes 
+assumed to be floating point values.  These need to be made richer
+so that properties contain names, labels and units for real valued
+properties, choice lists for string valued properties, and more
+sophisticated options such as reflectometry model definition panes
 for reflectometry model properties.  Note that some properties
 are read-only.  Note that changes to properties must be logged,
 at least as properties are used to represent and override metadata
@@ -15,22 +15,22 @@ in the data file format.
 We should probably support to/from xml for the purposes of
 saving and reloading corrections.
 
-Many data file format assume hard-coded instrument 
-parameters which may vary occasionally over time.   We 
-need a systematic way of dealing with these.  Putting them 
-in configuration files is a bad idea because then the results 
+Many data file format assume hard-coded instrument
+parameters which may vary occasionally over time.   We
+need a systematic way of dealing with these.  Putting them
+in configuration files is a bad idea because then the results
 of the analysis will depend on the machine on which they were
 run.  The safest approach is to use the file date in order
 to select the correct values for the constants, and update
 the data reader whenever the instrument configuration
-changes.  
+changes.
 
 Keeping the data reader up to date on the users machine will
 be a challenge.  A portal strategy reduces the problem because
-then only the portal versions need to be updated.  Placing the 
-data reader at a fixed URI and making it trivial for the user to 
-update to the new version when they load the file will be important 
-for assuring that they are using the most up to date information 
+then only the portal versions need to be updated.  Placing the
+data reader at a fixed URI and making it trivial for the user to
+update to the new version when they load the file will be important
+for assuring that they are using the most up to date information
 available.
 
 Example:
@@ -47,11 +47,11 @@ Example:
 default = properties.DatedValues()
 default.wavelength = (4.76,'')  # in case ICP records the wrong value
 
-# Detector saturates at 15000 counts/s.  The efficiency curve above 
+# Detector saturates at 15000 counts/s.  The efficiency curve above
 # 15000 has not been measured.
 default.saturation = (numpy.array([[1,15000,0]]),'')
 
-    
+
 default.detector_distance = (36*25.4, '') # mm
 default.psd_width = (20, '') # mm
 default.slit1_distance = (-75*25.4, '') # mm

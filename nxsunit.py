@@ -12,8 +12,8 @@ need now.  It does not support the complete dimensional analysis provided
 by the package udunits on which NeXus is based, or even the units used
 in the NeXus definition files.
 
-Unlike other units packages, such as that in DANSE, this package does 
-not carry the units along with the value, but merely provides a conversion 
+Unlike other units packages, such as that in DANSE, this package does
+not carry the units along with the value, but merely provides a conversion
 function for transforming values.
 
 Usage example:
@@ -48,11 +48,11 @@ import math
 
 # Limited form of units for returning objects of a specific type.
 # Maybe want to do full units handling with e.g., pyre's
-# unit class. For now lets keep it simple.  Note that 
+# unit class. For now lets keep it simple.  Note that
 def _build_metric_units(name,abbr):
     """
     Construct standard SI names for the given unit.
-    Builds e.g., 
+    Builds e.g.,
         s, ns
         second, nanosecond, nano*second
         seconds, nanoseconds
@@ -88,7 +88,7 @@ def _build_all_units():
     time.update(_build_plural_units(hour=3600,day=24*3600,week=7*24*3600))
 
     # Note: seconds are used for time
-    angle = _build_plural_units(degree=1, minute=1/60., 
+    angle = _build_plural_units(degree=1, minute=1/60.,
                   arcminute=1/60., arcsecond=1/3600., radian=180/math.pi)
     angle.update(deg=1, arcmin=1/60., arcsec=1/3600., rad=180/math.pi)
 
@@ -103,22 +103,22 @@ def _build_all_units():
 
     charge = _build_metric_units('coulomb','C')
     charge.update({'microAmp*hour':0.0036})
-    
+
     sld = { '10^-6 Angstrom^-2': 1e-6, 'Angstrom^-2': 1}
-    Q = { 'invAng': 1, 'invAngstroms': 1, 
+    Q = { 'invAng': 1, 'invAngstroms': 1,
           '10^-3 Angstrom^-1': 1e-3, 'nm^-1': 10 }
 
-    unknown = {None:1, '???':1, '': 1}    
-    
+    unknown = {None:1, '???':1, '': 1}
 
-    dims = [unknown, distance, time, angle, frequency, 
+
+    dims = [unknown, distance, time, angle, frequency,
             temperature, charge, sld, Q]
     return dims
-    
+
 class Converter(object):
     """
     Unit converter for NeXus style units.
-    
+
     """
     # Define the units, using both American and European spelling.
     scalemap = None
@@ -135,16 +135,16 @@ class Converter(object):
         self.scalemap = {'': 1}
         self.scalebase = 1
         #raise ValueError, "Unknown unit %s"%name
-        
+
     def scale(self, units=""):
         if units == "" or self.scalemap is None: return 1
         return self.scalebase/self.scalemap[units]
-    
+
     def __call__(self, value, units=""):
         # Note: calculating a*1 rather than simply returning a would produce
         # an unnecessary copy of the array, which in the case of the raw
         # counts array would be bad.  Sometimes copying and other times
-        # not copying is also bad, but copy on modify semantics isn't 
+        # not copying is also bad, but copy on modify semantics isn't
         # supported.
         if units == "" or self.scalemap is None: return value
         return value * (self.scalebase/self.scalemap[units])
@@ -158,7 +158,6 @@ def test():
     _check(45,Converter('nanokelvin')(45))  # 45 nK -> 45 nK
     # TODO: more tests
     print "All tests pass"
-    
+
 if __name__ == "__main__":
     test()
-    

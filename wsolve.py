@@ -1,11 +1,11 @@
 """
 Solve a potentially over-determined system with uncertainty in
-the values. 
+the values.
 
 Given: A x = y +/- dy
 Use:   s = wsolve(A,y,dy)
 
-wsolve uses the singular value decomposition for increased accuracy.  
+wsolve uses the singular value decomposition for increased accuracy.
 Estimates the uncertainty for the solution from the scatter in the data.
 
 The returned object s provides:
@@ -23,7 +23,7 @@ Example: weighted system
 import numpy,wsolve
 A = numpy.matrix("1,2,3;2,1,3;1,1,1",'d').A
 xin = numpy.array([1,2,3],'d')
-dy = numpy.array([0.2,0.01,0.1]) 
+dy = numpy.array([0.2,0.01,0.1])
 y = numpy.random.normal(numpy.dot(A,xin),dy)
 print A,y,dy
 s = wsolve.wsolve(A,y,dy)
@@ -36,10 +36,10 @@ with x,y datasets selected from a normal distribution centered
 on y with width 10*dy instead of dy you will see that the
 variance in the parameters indeed increases by a factor of 100.
 However, if the error bars really do increase by a factor of 10
-you should expect a corresponding increase in the scatter of 
+you should expect a corresponding increase in the scatter of
 the data, which will increase the variance computed by the fit,
 so indeed the dataset carries its own information about the
-variance of the data, with the weight vector serving only to 
+variance of the data, with the weight vector serving only to
 provide relative weighting between the points.
 """
 
@@ -59,7 +59,7 @@ import numpy as N
 class Confidence(object):
     """
     Confidence object returned from linear solver.
-    
+
     Stored properties:
     DoF = len(y)-len(x) = degrees of freedom
     rnorm = 2-norm of the residuals y-Ax
@@ -77,17 +77,17 @@ class Confidence(object):
     """
     def __init__(self, x=None, DoF=None, SVinv=None, rnorm=None):
         """
-        
+
         """
         # V,S where USV' = A
         self.x = x
         self.DoF = DoF
         self.rnorm = rnorm
         self._SVinv = SVinv
-        
+
     # covariance matrix invC = A'A  = (USV')'USV' = VSU'USV' = VSSV'
     # C = inv(A'A) = inv(VSSV') = inv(V')inv(SS)inv(V) = Vinv(SS)V'
-    # diag(inv(A'A)) is sum of the squares of the columns inv(S) V' 
+    # diag(inv(A'A)) is sum of the squares of the columns inv(S) V'
     # and is also the sum of the squares of the rows of V inv(S)
     def _cov(self):
         # FIXME: don't know if we need to scale by C, but it will
@@ -117,28 +117,28 @@ class Confidence(object):
         s = stats.t.ppf(1-alpha/2,self.DoF)*S.normr/sqrt(self.DoF)
         dy = s*sqrt(pred+N.sum( (N.dot(self.invR,A))**2, axis=0))
         return y,dy
-    
+
     def ci(self, A, sigma=1):
         """
-        Compute the calculated values and the confidence intervals 
+        Compute the calculated values and the confidence intervals
         for the linear model evaluated at A.
-        
+
         sigma=1 corresponds to a 1-sigma confidence interval
         """
         print "wsolve.Confidence.ci is not yet tested"
         alpha = erfc(sigma/sqrt(2))
         return _interval(A,alpha,0)
-    
+
     def pi(self, A, p=0.05):
         """
         Compute the calculated values and the prediction intervals
         for the linear model evaluated at A.
-        
+
         p = 1-alpha = 0.05 corresponds to 95% prediction interval
         """
         print "wsolve.Confidence.pi is not yet tested"
         return _interval(A,p,1)
-    
+
 def wsolve(A,y,dy=1,rcond=1e-12):
     """
     Given a linear system y = A*x + e(dy), estimates x,dx
@@ -164,12 +164,12 @@ def wsolve(A,y,dy=1,rcond=1e-12):
     # Since dy is a row vector, this divides each row of A by the corresponding
     # element of dy.
     if dy.ndim == 2:  A,y = A/dy,y/dy
-    
+
     # Singular value decomposition: A = U S V.H
     # Since A is an array, U, S, VH are also arrays
     # The zero indicates an economy decomposition, with u nxm rathern than nxn
     u,s,vh = N.linalg.svd(A,0)
-    
+
     # FIXME what to do with ill-conditioned systems?
     #if s[-1]<rcond*s[0]: raise ValueError, "matrix is singular"
     #s[s<rcond*s[0]] = 0.  # Can't do this because 1/s below will fail
@@ -211,7 +211,7 @@ def wpolyfit(x,y,dy=1,deg=None,origin=False):
 
 def demo():
     import pylab
-    
+
     # Make fake data
     x = N.linspace(-15,5,15)
     th = N.polyval([.2,3,1,5],x)  # polynomial
@@ -242,12 +242,12 @@ def test():
     #print "Tdp = [%.16g, %.16g]"%(dp[0],dp[1])
     Tp = N.array([7.787249069840737, 1.503992847461524])
     Tdp = N.array([1.522338103010216, 2.117633626902384])
-    
+
     perr = N.max(N.abs(p-Tp))
     dperr = N.max(N.abs(dp-Tdp))
     assert  perr < 1e-15,"||p-Tp||=%g"%perr
     assert  dperr < 1e-15,"||dp-Tdp||=%g"%dperr
 
-if __name__ == "__main__": 
+if __name__ == "__main__":
     test()
 #    demo()

@@ -27,7 +27,7 @@ def leak_test1(n = 1000, mode='w5'):
     file.close()
     print "File should exist now"
     for i in range(n):
-        if i%100 == 0: 
+        if i%100 == 0:
             print "loop count %d"%i
             memfootprint()
         file.open()
@@ -65,7 +65,7 @@ def show_structure(filename):
     file = nxs.open(filename)
     print "=== File",file.inquirefile()
     _show(file)
-    
+
 
 def populate(filename,mode):
     i1 = numpy.arange(4,dtype='uint8')
@@ -90,7 +90,7 @@ def populate(filename,mode):
     file.opendata("ch_data")
     file.putdata("NeXus data")
     file.closedata()
-    
+
     # Write numeric data
     for var in ['i1','i2','i4','i8','r4']:
         name = var+'_data'
@@ -99,7 +99,7 @@ def populate(filename,mode):
         file.opendata(name)
         file.putdata(val)
         file.closedata()
-    
+
     # Write r8_data
     file.makedata('r8_data','float64',[5,4])
     file.opendata('r8_data')
@@ -117,7 +117,7 @@ def populate(filename,mode):
     # Create the NXdata group
     file.makegroup("data","NXdata")
     file.opengroup("data","NXdata")
-    
+
     # .. demonstrate linking
     file.makelink(dataID)
 
@@ -155,7 +155,7 @@ def populate(filename,mode):
     file.makenamedlink('renLinkGroup',sampleID)
     file.makenamedlink('renLinkData',dataID)
     file.closegroup()
-    
+
     file.close()
     return filename
 
@@ -173,11 +173,11 @@ def dicteq(a,b):
         if k not in b:
             print k,"not in",b
             return False
-        if v != b[k]: 
+        if v != b[k]:
             print v,"not equal",b[k]
             return False
     for k,v in b.iteritems():
-        if k not in a: 
+        if k not in a:
             print k,"not in",a
             return False
     return True
@@ -194,9 +194,9 @@ def check(filename):
         if name not in ['file_time','HDF_version','HDF5_Version','XML_version',
                         'NeXus_version','file_name']:
             fail("attribute %s unexpected"%(name))
-    
+
     file.opengroup('entry','NXentry')
-    
+
     expect = dict(hugo='namenlos',cucumber='passion')
     #expect['embedded_null'] = "embedded\000null"
     get = dict((k,v) for k,v in file.attrs())
@@ -217,7 +217,7 @@ def check(filename):
         file.opendata(name+'_data')
         get = file.getdata()
         file.closedata()
-        if not (get == expected).all(): 
+        if not (get == expected).all():
             fail("%s retrieved %s"%(dtype,get))
 
     # Check attribute types
@@ -251,7 +251,7 @@ def check(filename):
         fail("compressed data differs")
         print get
     file.closegroup() #/entry
-        
+
     # Check read slab (e.g., from extensible)
 
     # Check links
@@ -270,7 +270,7 @@ def check(filename):
     file.closegroup() #/entry
     if not (file.sameID(dataid,data2id)):
         fail("/entry/data/r8_data not linked to /entry/r8_data")
-    
+
     # Check openpath and getslab
     file.openpath('/entry/data/comp_data')
     get = file.getslab([4,4],[5,3])
@@ -304,14 +304,14 @@ def populate_external(filename,mode):
 def check_external(filename,mode):
     ext = dict(w5='.h5',w4='.hdf',wx='.xml')[mode]
     file = nxs.open(filename,'rw')
-    
+
     file.openpath('/entry1/start_time')
     time = file.getdata()
-    
+
     get = file.inquirefile()
     expected = 'nxfile://data/dmc01'+ext
     if expected != get: fail("first external file returned %s"%(get))
-    
+
     file.openpath('/entry2/sample/sample_name')
     sample = file.getdata()
 
@@ -324,9 +324,9 @@ def check_external(filename,mode):
     if remote is None:
         fail("failed to identify /entry1 as external")
     remote = file.isexternalgroup('entry3','NXentry')
-    if remote is not None: 
+    if remote is not None:
         fail('incorrectly identified /entry3 as external')
-    
+
     file.close()
 
 def test_external(mode,quiet=True):
@@ -356,13 +356,13 @@ def test():
     tests = 0
     quiet = ('-v' not in sys.argv)
     external = ('-x' in sys.argv)
-    if 'hdf4' in sys.argv: 
+    if 'hdf4' in sys.argv:
         test_mode('w4',quiet,external)
         tests += 1
     if 'xml' in sys.argv:
         test_mode('wx',quiet,external)
         tests += 1
-    if 'hdf5' in sys.argv: 
+    if 'hdf5' in sys.argv:
         test_mode('w5',quiet,external)
         tests += 1
     if tests == 0: test_mode('w5',quiet,external)
@@ -370,4 +370,4 @@ def test():
 if __name__ == "__main__":
     test()
     #leak_test1(n=10000)
-    
+

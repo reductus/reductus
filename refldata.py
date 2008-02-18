@@ -21,27 +21,27 @@ Conceptually each data point is a tuple:
     sample environment
 
 Reflectometers are either vertical or horizontal geometry.
-For vertical geometry (sample surface parallel to gravity), 
-x refers to horizontal slit opening and horizontal detector 
-pixels.  For horizontal geometry (sample surface perpendicular 
-to gravity) x refers to vertical slit opening and vertical 
-detector pixels. Other than gravitational corrections to 
-resolution and detector pixels, the analysis for the two 
-instrument types should be identical. 
+For vertical geometry (sample surface parallel to gravity),
+x refers to horizontal slit opening and horizontal detector
+pixels.  For horizontal geometry (sample surface perpendicular
+to gravity) x refers to vertical slit opening and vertical
+detector pixels. Other than gravitational corrections to
+resolution and detector pixels, the analysis for the two
+instrument types should be identical.
 
 Monochromatic reflectometers have a single wavelength per
-measurement but scan the measurements.  Time-of-flight and 
+measurement but scan the measurements.  Time-of-flight and
 polychromatic reflectometers have multiple wavelengths per
 measurement but perform one measurement.  In either case
-a dataset consists of detector frames versus Q.  We will 
-ignore scans on multichannel instruments since these can 
-be treated as combined independent scans with non-overlapping 
+a dataset consists of detector frames versus Q.  We will
+ignore scans on multichannel instruments since these can
+be treated as combined independent scans with non-overlapping
 data, and handled outside this data structure.
 
-Data points are gathered together into measurements.  Some 
-files may have multiple measurements, and other measurements 
-may be spread over multiple files.  Files may be local or 
-remote, ascii or binary.  It is up to the individual format 
+Data points are gathered together into measurements.  Some
+files may have multiple measurements, and other measurements
+may be spread over multiple files.  Files may be local or
+remote, ascii or binary.  It is up to the individual format
 reader to assign map measurements to files.
 
 Different polarization states will be treated as belonging
@@ -66,7 +66,7 @@ from numpy import inf, pi, sin, cos, arcsin, arctan2, sqrt
 
 # TODO: attribute documentation and units should be integrated with the
 # TODO: definition of the attributes.  Value attributes should support
-# TODO: unit conversion 
+# TODO: unit conversion
 class Slit(object):
     """
     Define a slit for the instrument.  This is needed for correct resolution
@@ -83,7 +83,7 @@ class Slit(object):
         numbers occurring before the sample position and positive numbers
         after.
     shape (shape='rectangular')
-        Whether we have slit blades ('rectangular') or a circular 
+        Whether we have slit blades ('rectangular') or a circular
         aperature ('circular').
     x (n x inf millimetre)
         Slit opening in the primary direction.  For vertical geometry
@@ -91,7 +91,7 @@ class Slit(object):
         the vertical opening.  This may be a constant (fixed slits) or
         of length n for the number of measurements.
     y (n x inf millimetre)
-        Slit opening in the secondary direction.  This may be a constant 
+        Slit opening in the secondary direction.  This may be a constant
         (fixed slits) or of length n for the number of measurements.
     """
     properties = ['distance','offset','x','y','shape']
@@ -100,13 +100,13 @@ class Slit(object):
     x = inf
     y = inf
     shape = "rectangular" # rectangular or circular
-    
+
     def __init__(self, **kw): _set(self,kw)
     def __str__(self): return _str(self)
 
 class Sample(object):
     """
-    Define the sample geometry.  Size and shape areneeded for correct 
+    Define the sample geometry.  Size and shape areneeded for correct
     resolution calculations and for ab initio footprint calculations.
     Angles are needed for correct calculation of Q.  Rotation and
     environment are for display to the user.
@@ -115,7 +115,7 @@ class Sample(object):
         Sample description, if available from the file.
     width (inf millimetre)
         Width of the sample in the primary direction.  For fixed slits
-        the footprint of the beam on the sample decreases with angle 
+        the footprint of the beam on the sample decreases with angle
         in this direction.
     length (inf millimetre)
         Width of the sample in the secondary direction.  The footprint
@@ -129,7 +129,7 @@ class Sample(object):
         Shape is 'circular' or 'rectangular'
     angle_x (n x 0 degree)
         Angle between neutron beam and sample surface in the primary
-        direction.  This may be constant or an array of length n for 
+        direction.  This may be constant or an array of length n for
         the number of measurements.
     angle_y (n x 0 degree)
         Angle between the neutron beam and sample surface in the
@@ -158,13 +158,13 @@ class Sample(object):
     rotation = 0 # degree
     substrate_sld = 2.07 # inv A  (silicon substrate for neutrons)
 
-    def __init__(self, **kw): 
+    def __init__(self, **kw):
         self.environment = {}
         _set(self,kw)
     def __str__(self): return _str(self)
-            
-    
-    
+
+
+
 class Environment(object):
     """
     Define sample environment data for the measurements such as
@@ -180,12 +180,12 @@ class Environment(object):
     The average, max and min over all scan points, and the
     value, max and min for a particular scan point may be
     available.
-    
+
     Some measurements are directional, and will have a polar
     and azimuthal angle associated with them.  This may be
     constant for the entire scan, or stored separately with
     each magnitude measurement.
-    
+
     name
         Name of environment variable
     units
@@ -200,7 +200,7 @@ class Environment(object):
         Measurement time relative to start
     polar_angle (degree)
     azimuthal_angle (degree)
-        Provide orientation relative to the sample surface for 
+        Provide orientation relative to the sample surface for
         directional parameters:
         * x is polar 0, azimuthal 0
         * y is polar 90, azimuthal 0
@@ -215,7 +215,7 @@ class Beamstop(object):
     detector class to compute the shadow of the beamstop on the
     detector.  The beamstop is assumed to be centered on the
     direct beam regardless of the position of the detector.
-    
+
     distance (0 millimetre)
         Distance from sample to beamstop.  Note: this will need to
         be subtracted from the distance from detector to beamstop.
@@ -264,7 +264,7 @@ class Detector(object):
     distance (millimetre)
         Distance from the sample to the detector
     width_x (nx millimetre)
-        Widths of the pixes in the primary direction (vertical for 
+        Widths of the pixes in the primary direction (vertical for
         horizontal geometry, horizontal for vertical geometry).
     width_y (ny millimetre)
         Widths of the pixels in the secondary direction.
@@ -276,11 +276,11 @@ class Detector(object):
         to the detector arm.
     angle_x (n degree)
         Angle of the detector arm relative to the main beam in the
-        primary direction. This may be constant or an array of length n 
+        primary direction. This may be constant or an array of length n
         for the number of measurements in the scan.
     angle_y (n degree)
         Angle of the detector arm relative to the main beam in the
-        secondary direction. This may be constant or an array of length n 
+        secondary direction. This may be constant or an array of length n
         for the number of measurements in the scan.
     rotation (degree)
         Angle of rotation of the detector relative to the beam.  This
@@ -296,23 +296,23 @@ class Detector(object):
         or 1 if the efficiency is unknown.
         TODO: do we need variance?
     saturation (k [%, counts/second, uncertainty])
-        Given a measurement of a given number of counts versus expected 
-        number of counts on the detector (e.g., as estimated by scanning 
-        a narrow slit across the detector to measure the beam profile, 
-        then measuring increasingly large portions of the beam profile), 
-        this can be converted to an efficiency correction per count rate 
-        which can be applied to all data read with this detector.  The 
-        value for deadtime should be a tuple of three vectors: efficiency, 
+        Given a measurement of a given number of counts versus expected
+        number of counts on the detector (e.g., as estimated by scanning
+        a narrow slit across the detector to measure the beam profile,
+        then measuring increasingly large portions of the beam profile),
+        this can be converted to an efficiency correction per count rate
+        which can be applied to all data read with this detector.  The
+        value for deadtime should be a tuple of three vectors: efficiency,
         uncertainty and count rate.  Below the lowest count rate the
         detector is considered to be 100% efficient (any baseline
         inefficiency will be normalized when comparing the measured
-        reflection to the measured beam).  Beyond the highest count 
+        reflection to the measured beam).  Beyond the highest count
         rate, the detector is considered saturated.  The uncertainty
         is just the sqrt(counts)/time.
-        
 
-        Note: Given the nature of the detectors (detecting ionization 
-        caused by neutron capture) there is undoubtably a local 
+
+        Note: Given the nature of the detectors (detecting ionization
+        caused by neutron capture) there is undoubtably a local
         saturation level, but this is likely masked by the usual
         detector electronics which can only detect one event at a
         time regardless of where it occurs on the detector.
@@ -325,7 +325,7 @@ class Detector(object):
         Wavelength resolution of the beam for each channel using 1-sigma
         gaussian approximation dL, expressed as 100*dL/L.  The actual
         wavelength distribution is considerably more complicated, being
-        approximately square for multi-sheet monochromators and highly 
+        approximately square for multi-sheet monochromators and highly
         skewed on TOF machines.
     time_of_flight (k+1 millisecond)
         Time boundaries for time-of-flight measurement
@@ -386,7 +386,7 @@ class Detector(object):
 class ROI(object):
     """
     Detector region of interest.
-    
+
     Defines a rectangular region of interest on the detector which
     is used for defining frames.  This can be used for example to
     split a single detector with both polarization states (via
@@ -401,26 +401,26 @@ class ROI(object):
     xhi = None
     ylo = None
     yhi = None
-    
+
     def __init__(self, **kw): _set(self,kw)
     def __str__(self): return _str(self)
 
 class Monitor(object):
     """
-    Define the monitor properties.  
-    
+    Define the monitor properties.
+
     The monitor is essential to the normalization of reflectometry data.
-    Reflectometry is the number of neutrons detected divided by the 
-    number of neutrons incident on the sample.  To compute this ratio, 
+    Reflectometry is the number of neutrons detected divided by the
+    number of neutrons incident on the sample.  To compute this ratio,
     the incident and detected neutrons must be normalized to the neutron
-    rate, either counts per monitor count, counts per second or counts 
+    rate, either counts per monitor count, counts per second or counts
     per unit of source power (e.g., coulombs of protons incident on the
     detector, or megawatt hours of reactor power).
 
     counts (n x k counts)
         Number of counts measured.  For scanning instruments there is
-        a separate count for each of the n measurements.  For TOF 
-        instruments there is a separate count for each of k time 
+        a separate count for each of the n measurements.  For TOF
+        instruments there is a separate count for each of k time
         channels.  Counts may be absent, in which case normalization
         must be by time or by monitor.  In some circumstances the
         user may generate a counts vector, for example by estimating
@@ -433,10 +433,10 @@ class Monitor(object):
         a separate duration for each measurement.  For TOF, this is a
         single value equal to the duration of the entire measurement.
     source_power (n source_power_units)
-        The source power for each measurement.  For situations when the 
-        monitor cannot be trusted (which can happen from time to time on 
-        some instruments), we can use the number of protons incident on 
-        the target (proton charge) or the energy of the source (reactor 
+        The source power for each measurement.  For situations when the
+        monitor cannot be trusted (which can happen from time to time on
+        some instruments), we can use the number of protons incident on
+        the target (proton charge) or the energy of the source (reactor
         power integrated over the duration of each measurement) as a proxy
         for the monitor.  So long as the we normalize both the slit
         measurement and the reflectivity measurement by the power, this
@@ -444,7 +444,7 @@ class Monitor(object):
         the information is available, this will be a better proxy for
         monitor than measurement duration.
     base ('time' | 'counts' | 'power')
-        The measurement rate basis which should be used to normalize 
+        The measurement rate basis which should be used to normalize
         the data.  This is initialized by the file loader, but may
         be overridden during reduction.
     time_step (seconds)
@@ -455,7 +455,7 @@ class Monitor(object):
         the reported time, with a gaussian approximation of uncertainty
         being sqrt(time_step/12).
     start_time (n seconds)
-        For scanning instruments the start of each measurement relative 
+        For scanning instruments the start of each measurement relative
         to start of the scan.  Note that this is not simply sum of the
         count times because there may be motor movement between
         measurements.  The start time is required to align the measurement
@@ -465,10 +465,10 @@ class Monitor(object):
         Distance from the sample.  This is not used by reduction but
         may be of interest to the user.
     sampled_fraction ([0,1])
-        Portion of the neutrons that are sampled by the monitor.  If the 
-        monitor is after the second slit, the monitor value can be used to 
-        estimate the the counts on the detector, scaled by the sampled 
-        fraction.   Otherwise a full slit scan is required to normalize 
+        Portion of the neutrons that are sampled by the monitor.  If the
+        monitor is after the second slit, the monitor value can be used to
+        estimate the the counts on the detector, scaled by the sampled
+        fraction.   Otherwise a full slit scan is required to normalize
         the reflectivity.  This is the inverse of the detector to monitor
         ratio used to normalize data on some instruments.
     time_of_flight (k+1 millisecond)
@@ -505,12 +505,12 @@ class Moderator(object):
     Time of flight calculations require information about the moderator.
     Primarily this is the length of the flight path from moderator to
     monitor or detector required to compute wavelength.
-    
+
     Moderator temperature is also recorded.  The user should probably
     be warned when working with datasets with different moderator
     temperatures since this is likely to affect the wavelength
     spectrum of the beam.
-    
+
     distance (metre)
         Distance from moderator to sample.  This is negative since the
         monitor is certainly before the sample.
@@ -523,7 +523,7 @@ class Moderator(object):
     distance = None
     temperature = None
     type = 'Unknown'
-    
+
     def __init__(self, **kw): _set(self, kw)
     def __str__(self): return _str(self)
 
@@ -531,7 +531,7 @@ class Warning(object):
     """
     A warning is an information message and a possible set of actions to
     take in response to the warning.
-    
+
     The user interface can query the message and the action list, generate
     a dialog on the basis of the information.  Actions may have associated
     attributes that need to be set for the action to complete.
@@ -541,11 +541,11 @@ class Warning(object):
 class WarningWavelength(Warning):
     """
     Unexpected wavelength warning.
-    
+
     This warning is attached to any dataset which has an unexpected
     wavelength stored in the file (more than 1% different from the
     default wavelength for the instrument).
-    
+
     Various actions can be done in response to the warning, including
     always taking the default value for this instrument, overriding for
     every value in the dataset
@@ -577,7 +577,7 @@ class ReflData(object):
         beam instruments, the number of analysers.
     reversed (False)
         True if the measurement is reversed, in which case sample
-        and detector angles need to be negated and pixel directions 
+        and detector angles need to be negated and pixel directions
         reversed when computing pixel coordinates.
     roi
         Region of interest on the detector.
@@ -620,7 +620,7 @@ class ReflData(object):
     Format specific fields (ignored by reduction software)
     ======================
     file (handle)
-        Format specific file handle, for actions like showing the summary, 
+        Format specific file handle, for actions like showing the summary,
         updating the data and reading the frames.
     """
     properties = ['instrument','geometry','probe','points','channels',
@@ -676,7 +676,7 @@ class ReflData(object):
         self.warnings = []
         self.roi = ROI()
         self.messages = []
-        
+
     def __str__(self):
         base = [_str(self)]
         others = [str(s) for s in [self.slit1,self.slit2,self.slit3,self.slit4,
@@ -687,7 +687,7 @@ class ReflData(object):
     def log(self,msg):
         """Record corrections that have been applied to the data"""
         self.messages.append(msg)
-        
+
     def apply(self, correction):
         """Apply a correction to the data."""
         n = len(self.messages)
@@ -695,16 +695,16 @@ class ReflData(object):
         assert len(self.messages)>n, "Correction %s not logged"%str(correction)
         return self
         # TODO: inherit from Data?
- 
+
     def resetQ(self):
         A,B = self.sample.angle_x,self.detector.angle_x
         L = self.detector.wavelength
         Qx,Qz = ABL_to_QxQz(A,B,L)
         self.Qx,self.Qz = Qx,Qz
-        
+
 def _str(object):
     """
-    Helper function: document data object by convert attributes listed in 
+    Helper function: document data object by convert attributes listed in
     properties into a string.
     """
     cls = object.__class__.__name__
@@ -719,7 +719,7 @@ def _set(object,kw):
     the class does not define the given attribute.
 
     Example:
-    
+
         def __init__(self, **kw): _set(self,kw)
     '''
     for k,v in kw.iteritems():
@@ -742,7 +742,7 @@ def QxQzL_to_AB(Qx, Qz, wavelength):
     Guess incident and reflected angles given Qx, Qz and wavelength
     """
     # Algorithm for converting Qx-Qz-lambda to alpha-beta:
-    #   beta = 2 asin(L/(2 pi) sqrt(Qx^2+Qz^2)/2) * 180/pi 
+    #   beta = 2 asin(L/(2 pi) sqrt(Qx^2+Qz^2)/2) * 180/pi
     #        = asin(L/(4 pi) sqrt(Qx^2+Qz^2)) * 360/pi
     #   if Qz < 0, negate beta
     #   theta = atan2(Qx,Qz) * 180/pi
@@ -821,10 +821,10 @@ class Reader(ReflData):
 
     def frame(self,index):
         """
-        Return the 2-D detector frame for the given index k.  For 
+        Return the 2-D detector frame for the given index k.  For
         multichannel instruments, index is the index for the channel
         otherwise index is the measurement number.
-        
+
         The result is undefined if the detector is not a 2-D detector.
         """
         if self.channels > 1:
@@ -836,10 +836,10 @@ class Reader(ReflData):
 
 def shadow(f, beamstop, frame):
     """
-    Construct a mask for the detector frame indicating which pixels 
+    Construct a mask for the detector frame indicating which pixels
     are outside the shadow of the beamstop.  This pixels should not
     be used when estimating sample background.  Note that this becomes
-    considerably more tricky when angular divergence and gravity 
+    considerably more tricky when angular divergence and gravity
     are taken into account.  The mask should include enough of the
     penumbra that these effects can be ignored.
 

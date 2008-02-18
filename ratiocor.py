@@ -1,9 +1,9 @@
 # This program is public domain
 """
-RatioIntensity estimates an intensity scan based on the measured 
+RatioIntensity estimates an intensity scan based on the measured
 intensity from a known scatterer.
 
-You need to perform this type of scan on reflectometers whose beam 
+You need to perform this type of scan on reflectometers whose beam
 profile changes as a function of angle, thus making it impossible
 to measure the beam intensity directly.
 
@@ -16,7 +16,7 @@ reflection.
 
 We will also assume that the intensity scan and the measured
 reflection are performed on blanks with identical geometery
-so the footprint is the same on both.  No footprint correction 
+so the footprint is the same on both.  No footprint correction
 will be required.
 
 Example:
@@ -37,15 +37,15 @@ __all__ = ['RatioIntensity', 'WaterIntensity']
 
 class RatioIntensity(object):
     """
-    Compute the incident intensity assuming that data measures a 
+    Compute the incident intensity assuming that data measures a
     reflection off known sample.
 
     model = reflectometry.model1d.model
 
-    Returns a correction object that can be applied to data.    
+    Returns a correction object that can be applied to data.
     """
     model = None
-    
+
     def __init__(self, model):
         self.model = model
 
@@ -59,13 +59,13 @@ class RatioIntensity(object):
 
 class WaterIntensity(object):
     """
-    Compute the incident intensity assuming that data measures a 
+    Compute the incident intensity assuming that data measures a
     reflection off water.
-    
+
     D2O = percentage is the portion that is deuterated, from 0 to 100.
     probe = 'neutron' or 'xray'
 
-    Returns a correction object that can be applied to data.    
+    Returns a correction object that can be applied to data.
     """
     def _set_fresnel_coefficients(self):
         # SLDs calculated with NBCU.XLS from the NCNR website.
@@ -80,7 +80,7 @@ class WaterIntensity(object):
         D2O = self._D2O
         self.model.rho = 1e-6*((100-D2O)*(rho_H2O) + D2O*rho_H2O)/100.
         self.model.mu = 1e-6*((100-D2O)*(mu_H2O) + D2O*mu_H2O)/100.
-        
+
     def _setD2O(self, D2O):
         self._D2O = D2O
         self._set_fresnel_coefficients
@@ -113,7 +113,7 @@ class WaterIntensity(object):
 
 def intensity_ratio(data=None,model=None):
     """
-    Compute the incident intensity assuming that data measures a 
+    Compute the incident intensity assuming that data measures a
     reflection off the given model.
 
     Returns a copy of the dataset that can be subsequently written

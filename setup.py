@@ -11,7 +11,7 @@ def configuration(parent_package='',
 
     config.add_subpackage('lib')
     config.add_data_dir('examples')
-    
+
     return config
 
 # Don't test setup.py
