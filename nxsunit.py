@@ -157,7 +157,6 @@ def test():
     _check(0.003,Converter('microseconds')(3,units='ms')) # 3 us -> 0.003 ms
     _check(45,Converter('nanokelvin')(45))  # 45 nK -> 45 nK
     # TODO: more tests
-    print "All tests pass"
 
 if __name__ == "__main__":
     test()
