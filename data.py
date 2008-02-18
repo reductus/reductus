@@ -1,3 +1,16 @@
+# This program is public domain
+"""
+Data was the initial foray into a data representation for reflectometry,
+and in particular for polarization correction, which was the first task.
+
+It's main attributes is that it defines standard names for the data
+axes x,y,z and values v, as well as a holder for labels and units.
+
+Many of the ideas of data are preserved and live on in refldata.  At
+some point refldata may be made to inherit from data, but for data
+will act as a platform for developing plotting ideas, and is not part
+of the main reflectometry code.
+"""
 import numpy as N
 
 def edges_from_centers(x):
@@ -21,9 +34,15 @@ def centers_from_edges(x):
     return (x[:-1]+x[1:])/2
 
 def dims(a):
+    """
+    Printable form for matrix dimensions.
+    """
     return "x".join([str(v) for v in a.shape])
 
 def dict2text(d,indent=0):
+    """
+    Display the contents of a dictionary with some formatting.
+    """
     keys = d.keys()
     keys.sort()
     lines = []
@@ -38,8 +57,6 @@ def dict2text(d,indent=0):
         lines.append(" "*indent + key + ": " + text)
     return "\n".join(lines)
 
-
-class Prop(object): pass
 
 class Data(object):
     """
@@ -108,11 +125,12 @@ class Data(object):
         self.messages = []
 
     def summary(self):
+        """Return a text description of the contents of data"""
         return dict2text(self.prop.__dict__)
 
     def log(self,msg):
         """Record corrections that have been applied to the data"""
-        self.log.append(msg)
+        self.messages.append(msg)
 
     def apply(self, correction):
         """Apply a correction to the data."""
@@ -139,8 +157,10 @@ class PolarizedData(object):
     def __init__(self, **kw):
         self.pp,self.pm,self.mp,self.mm = Data(),Data(),Data(),Data()
         self.set(**kw)
+        self.messages = []
 
     def set(self,**kw):
+        """Set a number of attributes simultaneously"""
         for k,v in kw.iteritems():
             if hasattr(self,k): setattr(self,k,v)
 
@@ -149,18 +169,20 @@ class PolarizedData(object):
                           "+-"+str(self.pm),"-+"+str(self.mp)])
 
     def ispolarized(self):
+        """Indicates that the data is polarized data."""
         return True
 
     def isaligned(self):
-        """Return true if all four cross sections are aligned."""
+        """Test if all four cross sections have the same Q values."""
         # TODO: perform the check (monoref only)
         return True
 
     def apply(self, correction):
         """Apply a correction to the data."""
-        n = len(data.log)
+        n = len(self.message)
         correction(self)
-        assert len(data.log)>n, "Correction %s not logged"%str(correction)
+        assert len(self.message)>n, "Correction %s not logged"%str(correction)
+        return self
 
     def spin_asymmetry(self):
         """
@@ -223,6 +245,7 @@ def noise2d(n=40,noise=0.02,bkg=1e-10):
     return data
 
 def noisepol2d(n=40):
+    """Example 2D polarized data: positive noise"""
     pp = noise2d(n,noise=0.05)
     pm = noise2d(n,noise=0.3); pm.v *= 0.2;
     mp = noise2d(n,noise=0.3); mp.v *= 0.2;
@@ -233,6 +256,7 @@ def noisepol2d(n=40):
     return data
 
 def peakspol(n=40):
+    """Example 2D polarized data: peaks function"""
     pp = peaks(n,noise=0.05)
     pm = peaks(n,noise=0.3); pm.v *= 0.4;
     mp = peaks(n,noise=0.3); mp.v *= 0.4;
