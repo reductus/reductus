@@ -108,6 +108,9 @@ class NG7Icp(refldata.ReflData):
             self._pencil_detector()
         self.display_monitor = 1
 
+        # Set initial Qz
+        self.resetQ() 
+
         # Callback for lazy data
         self.detector.loadcounts = self.loadcounts
 
@@ -174,6 +177,9 @@ class NG7Icp(refldata.ReflData):
             Qz = data.column.qz
             A,B = refldata.QxQzL_to_AB(Qx,Qz,self.detector.wavelength)
             self.sample.angle_x,self.detector.angle_x = A,B
+
+        # Set initial Qz
+        self.resetQ() 
 
         # TODO: if the dataset is large, set up a weak reference instead
         self.detector.counts = data.counts

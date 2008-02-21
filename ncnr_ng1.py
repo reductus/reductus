@@ -159,6 +159,10 @@ class NG1Icp(refldata.ReflData):
         # Callback for lazy data
         self.detector.loadcounts = self.loadcounts
 
+        # Set initial Qz
+        self.resetQ() 
+
+
     def loadcounts(self):
         data = icpformat.read(self.path)
         return data.counts
@@ -216,6 +220,9 @@ class NG1Icp(refldata.ReflData):
             # will have to provide the means of setting the rate
             # and computing the time based on that rate.
             pass
+
+        # Set initial Qz
+        self.resetQ() 
 
         # TODO: if counts are huge we may want to make this lazy
         self.detector.counts = data.counts

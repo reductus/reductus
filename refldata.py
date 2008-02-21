@@ -1,7 +1,4 @@
 # This program is public domain
-
-import datetime, weakref
-
 """
 Reflectometry data representation.
 
@@ -60,6 +57,10 @@ that went into the reduction.
 
 See notes in properties.py regarding dated values.
 """
+
+
+import datetime
+import weakref
 
 import numpy
 from numpy import inf, pi, sin, cos, arcsin, arctan2, sqrt
@@ -333,6 +334,16 @@ class Detector(object):
         nx x ny detector pixels
         n number of measurements
         k time/wavelength channels
+        
+    Runtime Facilities
+    ==================
+    loadcounts (function returning counts)
+        Counts can be assigned using 
+            data.detector.counts = weakref.ref(counts)
+        When the counts field is accessed, the reference will be resolved.
+        If it yields None, then loadcounts will be called and assigned to
+        counts as a weak reference.  In this way large datasets can be
+        removed from memory when not in active use.
     """
     properties=["dims",'distance','width_x','width_y','center_x','center_y',
                 'angle_x','angle_y','rotation','efficiency','saturation',
@@ -372,8 +383,11 @@ class Detector(object):
         # File formats which are small do not need to use weak references,
         # however, for convenience the should use the same interface, which
         # is value() rather than value.
-        def static(): return value
-        self._pcounts = static
+        if isinstance(value,weakref.ref):
+            self._pcounts = value
+        else:
+            def static(): return value
+            self._pcounts = static
         #self._pcounts = lambda:value
     def _delcounts(self):
         _pcounts = lambda:None
