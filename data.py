@@ -121,8 +121,9 @@ class Data(object):
     zedges = property(_getzedges,_setzedges,'z edges')
 
     # Set attributes on initialization
-    def __init__(self):
+    def __init__(self,**kw):
         self.messages = []
+        for k,v in kw.iteritems(): setattr(self,k,v)
 
     def summary(self):
         """Return a text description of the contents of data"""
