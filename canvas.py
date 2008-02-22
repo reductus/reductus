@@ -64,7 +64,7 @@ class FigureCanvas(FigureCanvasWxAgg):
         """Translate mouse wheel events into matplotlib events"""
         # Determine mouse location
         x = evt.GetX()
-        y = self.figure.bbox.height() - evt.GetY()
+        y = self.figure.bbox.height - evt.GetY()
 
         # Convert delta/rotation/rate into a floating point step size
         delta = evt.GetWheelDelta()
