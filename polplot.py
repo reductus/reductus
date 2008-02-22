@@ -158,7 +158,7 @@ def bbox_union(bboxes):
     """
     Return a Bbox that contains all of the given bboxes.
     """
-    from matplotlib._transforms import Bbox, Point, Value
+    from matplotlib.transforms import Bbox
     if len(bboxes) == 1:
         return bboxes[0]
 
@@ -168,14 +168,14 @@ def bbox_union(bboxes):
     y1 = -numpy.inf
 
     for bbox in bboxes:
-        xs = bbox.intervalx().get_bounds()
-        ys = bbox.intervaly().get_bounds()
+        xs = bbox.intervalx
+        ys = bbox.intervaly
         x0 = min(x0, numpy.min(xs))
         y0 = min(y0, numpy.min(ys))
         x1 = max(x1, numpy.max(xs))
         y1 = max(y1, numpy.max(ys))
 
-    return Bbox(Point(Value(x0), Value(y0)), Point(Value(x1), Value(y1)))
+    return Bbox([[x0, y0], [x1, y1]])
 
 
 class Plotter(wx.Panel):
@@ -266,9 +266,9 @@ class Plotter4(wx.Panel):
 
     def autoaxes(self):
         bbox = bbox_union([ax.dataLim for ax in self.axes])
-        xlims = bbox.intervalx().get_bounds()
-        ylims = bbox.intervaly().get_bounds()
-        self.pp.axis(xlims+ylims)
+        xlims = bbox.intervalx
+        ylims = bbox.intervaly
+        self.pp.axis(list(xlims)+list(ylims))
 
     def onKeyPress(self,event):
         #if not event.inaxes: return
