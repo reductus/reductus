@@ -3,10 +3,14 @@
 Reflectometry reduction file formats.
 
 === File formats ===
+
 Supported formats are:
 
      ICP on NCNR NG-1 and NG-7
      NeXus on SNS Liquids and Magnetic
+
+The list of available formats can be found at runtime using 
+reflectometry.reduction.formats()
 
 Sample data for some of these formats is available in datadir.  In ipython
 type the following:
@@ -230,12 +234,12 @@ def nexus(file):
 # Register extensions with file formats
 register_format('.ng7', icp_ng7)
 register_format('.ng7.gz', icp_ng7)
-register_format('NCNR ng7',icp_ng7)
+register_format('NCNR NG-7',icp_ng7)
 
 register_format('.nxs', nexus)
 register_format('NeXus', nexus)
 
-register_format('NCNR ng1', icp_ng1)
+register_format('NCNR NG-1', icp_ng1)
 for ext in ['.na1', '.nb1', '.nc1', '.nd1', '.ng1']:
         register_format(ext, icp_ng1)
         register_format(ext+'.gz', icp_ng1)
