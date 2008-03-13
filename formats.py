@@ -255,5 +255,6 @@ def test():
     assert load(ng7file).detector.wavelength == 4.76
     assert load(ng1file).name == 'gsip4007.ng1'
     assert loadmeta(cg1file).name == 'psdca022.cg1'
+    assert formats() == ['NCNR ng1','NCNR ng7','NeXus']
 
 if __name__ == "__main__": test()
