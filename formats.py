@@ -118,40 +118,55 @@ function interface.
 """
 
 import os.path
-from reflectometry.reduction.registry import ExtensionRegistry
-__all__ = ['loadmeta','load','register_format','datadir']
+#from reflectometry.reduction.
+from registry import ExtensionRegistry
+__all__ = ['loadmeta','load','formats','register_format','datadir']
 
 datadir = os.path.join(os.path.dirname(__file__),'examples')
 
 
 # Shared registry for all reflectometry formats
 registry = ExtensionRegistry()
-def loadmeta(file):
+def loadmeta(file, format=None):
     """
     Load the measurement description from the file but not the data.
     Use measurement.load() to load the data for each measurement.
 
     Returns a single measurement if there is only one measurement in 
     the file, otherwise it returns a list of measurements.
+    
+    Use formats() to list available file formats.
     """
-    measurements = registry.load(file)
+    measurements = registry.load(file, format=format)
     return measurements[0] if len(measurements)==1 else measurements
 
-def load(file):
+def load(file, format=None):
     """
     Load the reflectometry measurement description and the data.  
     
 
     Returns a single measurement if there is only one measurement in 
     the file, otherwise it returns a list of measurements.
+    
+    Use formats() to list available file formats.
     """
-    measurements = registry.load(file)
+    measurements = registry.load(file, format=format)
     for data in measurements: data.load() # Load the dataset
     return measurements[0] if len(measurements)==1 else measurements
+
+def formats():
+    return registry.formats()
 
 def register_format(ext,loader):
     """
     Register loader for a file extension.
+
+    For each normal file extension for the format, call
+        register_format('.ext',loader)
+    You should also register the format name as
+        register_format('name',loader)
+    This allows the user to recover the specific loader using:
+        load('path',format='name')
 
     The loader has the following signature:
     
@@ -215,8 +230,12 @@ def nexus(file):
 # Register extensions with file formats
 register_format('.ng7', icp_ng7)
 register_format('.ng7.gz', icp_ng7)
-register_format('.nxs', nexus)
+register_format('NCNR ng7',icp_ng7)
 
+register_format('.nxs', nexus)
+register_format('NeXus', nexus)
+
+register_format('NCNR ng1', icp_ng1)
 for ext in ['.na1', '.nb1', '.nc1', '.nd1', '.ng1']:
         register_format(ext, icp_ng1)
         register_format(ext+'.gz', icp_ng1)
@@ -235,6 +254,6 @@ def test():
     cg1file = os.path.join(root,'examples','cg1area','psdca022.cg1.gz')
     assert load(ng7file).detector.wavelength == 4.76
     assert load(ng1file).name == 'gsip4007.ng1'
-    assert loadmeta(cg1file)[0].name == 'psdca022.cg1'
+    assert loadmeta(cg1file).name == 'psdca022.cg1'
 
 if __name__ == "__main__": test()

@@ -29,6 +29,9 @@ class ExtensionRegistry(object):
     registry['.cx'] = cx1
     registry['.cx'] = cx2
     registry['.cx'] = cx3
+    
+    # Can also register a format name for explicit control from caller
+    registry['cx3'] = cx3
 
     # Retrieve loaders for a file name
     registry.lookup('hello.cx') -> [cx3,cx2,cx1]
@@ -42,6 +45,10 @@ class ExtensionRegistry(object):
                 return cx2('hello.cx')
             except:
                 return cx1('hello.cx')
+
+    # Load in a specific format ignoring extension
+    registry.load('hello.cx',format='cx3') ->
+        return cx3('hello.cx')
     """
     def __init__(self):
         self.loaders = {}
@@ -53,10 +60,25 @@ class ExtensionRegistry(object):
         return self.loaders[ext]
     def __contains__(self, ext):
         return ext in self.loaders
+    def formats(self, name=True, ext=False):
+        """
+        Return a list of the registered formats.  If name=True then
+        named formats are returned.  If ext=True then extensions
+        are returned.
+        """
+        names = [a for a in self.loaders.keys() if not a.startswith('.')]
+        exts = [a for a in self.loaders.keys() if a.startswith('.')]
+        names.sort()
+        exts.sort()
+        ret = []
+        if name: ret += names
+        if ext: ret += exts
+        return ret
+        
     def lookup(self, path):
         """
         Return the loader associated with the file type of path.
-        """
+        """        
         file = os.path.basename(path)
         idx = file.find('.')
         ext = file[idx:] if idx >= 0 else ''
@@ -64,14 +86,17 @@ class ExtensionRegistry(object):
             return self.loaders[ext]
         except:
             raise ValueError, "Unknown file type '%s'"%ext
-    def load(self, path):
+    def load(self, path, format=None):
         """
         Call the loader for the file type of path.
 
         Raises ValueError if no loader is available.
         May raise a loader-defined exception if loader fails.
         """
-        loaders = self.lookup(path)
+        if format is None:
+            loaders = self.lookup(path)
+        else:
+            loaders = self.loaders[format]
         for fn in loaders:
             try:
                 return fn(path)
@@ -92,6 +117,7 @@ def test():
     reg['.cx.gz'] = new_cx
     reg['.cx1'] = fail_cx
     reg['.cx2'] = fail_cx
+    reg['new_cx'] = new_cx
 
     # Two loaders associated with .cx
     assert reg.lookup('hello.cx') == [new_cx,cx]
@@ -99,6 +125,10 @@ def test():
     assert reg.load('hello.cx') == 'new_cx'
     # Make sure the next loader applies if the first fails
     assert reg.load('hello.cx1') == 'cx'
+    # Make sure the format override works
+    assert reg.load('hello.cx1',format='.cx.gz') == 'new_cx'
+    # Make sure the format override works
+    assert reg.load('hello.cx1',format='new_cx') == 'new_cx'
     # Make sure the case of all loaders failing is correct
     try:  reg.load('hello.cx2')
     except CxError: pass # correct failure
@@ -108,5 +138,7 @@ def test():
     except ValueError,msg:
         assert str(msg)=="Unknown file type '.missing'",'Message: <%s>'%(msg)
     else: raise AssertError,"No error raised for missing extension"
+    assert reg.formats() == ['new_cx']
+    assert reg.formats(name=False,ext=True) == ['.cx','.cx.gz','.cx1','.cx2']
 
 if __name__ == "__main__": test()
