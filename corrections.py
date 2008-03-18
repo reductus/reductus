@@ -29,7 +29,8 @@ def load_class(class_name):
     map = dict(Normalize='normalize',
                PolarizationEfficiency='polcor',
                WaterIntensity='ratiocor',
-               RaitioIntensity='ratiocor')
+               RatioIntensity='ratiocor',
+               AreaCorrection='areacor')
     module_name = map[class_name]
     module = __import__('reflectometry.reduction.'+module_name,
                         fromlist=[class_name])
@@ -55,3 +56,13 @@ def ratio_intensity(*args, **kw):
     """Intensity estimate from reflection off a standard sample"""
     from reflectometry.reduction.ratiocor import RatioIntensity
     return RatioIntensity(*args, **kw)
+
+def measured_area_correction(*args, **kw):
+    """Detector area correction from file"""
+    from reflectometry.reduction.areacor import measured_area_correction
+    return measured_area_correction(*args,**kw)
+
+def area_correction(*args, **kw):
+    """Detector area correction from file"""
+    from reflectometry.reduction.areacor import AreaCorrection
+    return AreaCorrection(*args,**kw)

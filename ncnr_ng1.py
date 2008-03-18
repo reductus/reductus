@@ -226,3 +226,11 @@ class NG1Icp(refldata.ReflData):
 
         # TODO: if counts are huge we may want to make this lazy
         self.detector.counts = data.counts
+
+    def area_correction(self):
+        import areacor
+        nx,ny = self.detector.dims[0:2]
+        Lx,Ly = self.detector.width_x,self.detector.width_y
+        wx = (1+0.15*cos(2*pi*numpy.arange(0,nx)/32))*Lx/nx
+        wy = (1+0.15*cos(2*pi*numpy.arange(0,ny)/32))*Ly/ny
+        return areacor.AreaCorrection(wx,wy,source=".15*cos(2 pi i/32)")
