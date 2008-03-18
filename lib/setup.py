@@ -18,6 +18,7 @@ def configuration(parent_package='',
                for s in ('reduction.cc','str2imat.c')]
 
     config.add_extension('_reduction',
+                         include_dirs=[config.package_path],
                          sources=sources,
                          )
 
