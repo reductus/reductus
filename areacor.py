@@ -1,22 +1,31 @@
 # This program is public domain
 """
-Correction from counts per pixel to counts per unit area on the detector.
+Correct from counts per pixel to counts per unit area on the detector.
 
 == Usage ==
 
+    # construct the correction based on a detector measurement
     from reflectometry.reduction import load, measured_area_correction
     floodfill = load('detector measurement')
     areacor = measured_area_correction(floodfill)
     
+    # apply the correction
     data = load(d).apply(areacor)
+
+If you want to the pixels to have equal area then you need to include
+a rebin=True flag:
+
+    areacor = measured_area_correction(floodfill,rebin=True)
+
+You can also set the areacor.rebin attribute directly.
 
 If you know the pixel widths in x and y then you don't have to extract
 them from a measurement, but can instead use:
 
     areacor = area_correction(wx,wy,source="provenance")
 
-This is used in some file formats which supply an area_correction()
-method to return the default area correction. 
+Certain instruments have predefined area corrections, which are
+returned by the area_correction() method of the refldata object.
 
 
 == Theory ==
@@ -58,7 +67,17 @@ Minimize the log probability by setting the derivative to zero:
     d/dw_i log P = 0 
         => D = C_i/w_i 
         => w_i = C_i/D = C_i L/C
+
+The above applies independently in x and y using the sum of the pixels
+across that detector dimension.  Small detector rotations and misaligned
+wires will lead to artificial broadening.
+
+The theory does not apply if there are other detector artifacts, such as
+pixel efficiency variation.  Sliding the detector across a narrow slit
+will show if there is efficiency variation across the detector.  We do not
+attempt to correct for this.
 """
+
 from reflectometry.reduction import refldata,rebin2d
 
 def measured_area_correction(data, rebin=False):
