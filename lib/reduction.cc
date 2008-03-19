@@ -52,13 +52,12 @@ PyObject* Prebin(PyObject *obj, PyObject *args)
   INVECTOR(Iin_obj,Iin,nIin);
   INVECTOR(out_obj,out,nout);
   OUTVECTOR(Iout_obj,Iout,nIout);
-std::cout << "1drebin "<< nin << " " << nIin << " ";
-std::cout << nout << " " << nIout << std::endl << std::flush;
   if (nin != nIin+1 || nout != nIout+1) {
-    PyErr_SetString(PyExc_ValueError, "_reduction.rebin: must have one more bin edges than bins");
+    PyErr_SetString(PyExc_ValueError, 
+    	"_reduction.rebin: must have one more bin edges than bins");
     return NULL;
   }
-  rebin_counts<double>(nin,in,Iin,nout,out,Iout);
+  rebin_counts<double>(nIin,in,Iin,nIout,out,Iout);
   return Py_BuildValue("");
 }
 
@@ -82,10 +81,9 @@ PyObject* Prebin2d(PyObject *obj, PyObject *args)
   INVECTOR(xout_obj,xout,nxout);
   INVECTOR(yout_obj,yout,nyout);
   OUTVECTOR(Iout_obj,Iout,nIout);
-std::cout << "2drebin " << nxin << " " << nyin << " " << nIin << " ";
-std::cout << nxout << " " << nyout << " " << nIout << std::endl << std::flush;
   if ((nxin-1)*(nyin-1) != nIin || (nxout-1)*(nyout-1) != nIout) {
-    PyErr_SetString(PyExc_ValueError, "_reduction.rebin2D: must have one more bin edges than bins");
+    PyErr_SetString(PyExc_ValueError, 
+    	"_reduction.rebin2d: must have one more bin edges than bins");
     return NULL;
   }
   rebin_counts_2D<double>(nxin,xin,nyin,yin,Iin,nxout,xout,nyout,yout,Iout);

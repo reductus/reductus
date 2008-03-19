@@ -18,7 +18,6 @@ def rebin(x,I,xo,Io=None):
     """
     x,I,xo = [_input(v) for v in (x,I,xo)]
     Io = _output(Io,[len(xo)-1])
-    print len(x),len(I),len(xo),len(Io)
     _reduction.rebin(x,I,xo,Io)
     return Io
 
@@ -37,7 +36,6 @@ def rebin2d(x,y,I,xo,yo,Io=None):
     """
     x,y,I,xo,yo = [_input(v) for v in (x,y,I,xo,yo)]
     Io = _output(Io,[xo.shape[0]-1,yo.shape[0]-1])
-    print x.size,y.size,I.size,xo.size,yo.size,Io.size
     _reduction.rebin2d(x,y,I,xo,yo,Io)
     return Io
 
@@ -110,7 +108,6 @@ def _uniform_test(x,y):
     ox = numpy.arange(nx+1)
     oy = numpy.arange(ny+1)
     target = numpy.ones([nx,ny],'d')
-    print xedges,yedges
     _check2d(xedges,yedges,z,ox,oy,target)
 
 def _nonuniform_test(x,y,z,ox,oy,oz):
