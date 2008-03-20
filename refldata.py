@@ -228,8 +228,7 @@ class Beamstop(object):
     length (0 millimetre)
         Width of the beamstop in the secondary direction.  For circular
         beamstops, this is the diameter.
-    x_offset (0 millimetre)
-    y_offset (0 millimetre)
+    offset (2 x millimetre)
         Offset of the beamstop from the center of the beam.
     ispresent (False)
         True if beamstop is present in the experiment.
@@ -240,8 +239,7 @@ class Beamstop(object):
     width = 0 # mm
     length = 0 # mm
     shape = 'rectangular' # rectangular or circular
-    x_offset = 0 # mm
-    y_offset = 0 # mm
+    offset = [0,0] # mm
     ispresent = False
 
     def __init__(self, **kw): _set(self,kw)
@@ -252,37 +250,38 @@ class Detector(object):
     Define the detector properties.  Note that this defines a virtual
     detector.  The real detector may have e.g., multiple beam paths
     incident upon it, and be split into two virtual detectors when
-    the file is loaded.
+    the file is loaded.  
+    
+    Direction x refers to the primary direction,  and direction y to 
+    the secondary direction.  For vertical geometry, the primary
+    direction is in the horizontal plane and the secondary direction
+    is in the vertical plane.  For horizontal geometry these are
+    reversed.  This allows the reduction software to be simpler,
+    but may complicate file loading from formats which store values
+    in absolute geometry.
 
     Geometry
     ========
     dims (2 x pixels)
-        Dimensions of the detector.  The first component is the number of
-        pixels in the primary direction the second component is the number
-        of pixels in the secondary direction.  For pencil detectors this
+        Dimensions of the detector, [nx,ny].  For pencil detectors this
         should be [1,1].  For position sensitive detectors, this should be
         [nx,1].  For area detectors, this should be [nx,ny].
     distance (millimetre)
-        Distance from the sample to the detector
-    width_x (nx millimetre)
-        Widths of the pixes in the primary direction (vertical for
-        horizontal geometry, horizontal for vertical geometry).
-    width_y (ny millimetre)
-        Widths of the pixels in the secondary direction.
-    center_x (millimeter)
-        Location of the center pixel in the primary direction relative
-        to the detector arm.
-    center_y (millimetre)
-        Location of the center pixel in the secondary direction relative
-        to the detector arm.
-    angle_x (n degree)
-        Angle of the detector arm relative to the main beam in the
-        primary direction. This may be constant or an array of length n
-        for the number of measurements in the scan.
-    angle_y (n degree)
-        Angle of the detector arm relative to the main beam in the
-        secondary direction. This may be constant or an array of length n
-        for the number of measurements in the scan.
+        Distance from the sample to the detector.
+    size (2 x millimetre)
+        Detector size, [x,y].  Default is 1 mm x 1 mm.
+    solid_angle (2 x radian)
+        Detector solid angle [x,y], calculated from distance and size.
+    center (2 x millimetre)
+        Location of the center pixel [x,y] relative to the detector arm.
+    widths_x (nx x millimetre)
+    widths_y (ny x millimetre)
+        Pixel widths in x and y.  We assume no space between the pixels.
+    angle_x (n x degree)
+    angle_y (n x degree)
+        Angle of the detector arm relative to the main beam in x and y.
+        This may be constant or an array of length n for the number of 
+        measurements in the scan.
     rotation (degree)
         Angle of rotation of the detector relative to the beam.  This
         will affect how vertical integration in the region of interest
@@ -345,15 +344,15 @@ class Detector(object):
         counts as a weak reference.  In this way large datasets can be
         removed from memory when not in active use.
     """
-    properties=["dims",'distance','width_x','width_y','center_x','center_y',
+    properties=["dims",'distance','size','center','widths_x','widths_y',
                 'angle_x','angle_y','rotation','efficiency','saturation',
                 'wavelength','time_of_flight','counts']
     dims = [1,1] # i,j
     distance = None # mm
-    width_x = 1  # mm
-    width_y = 1  # mm
-    center_x = 0 # mm
-    center_y = 0 # mm
+    size = [1,1]  # mm
+    center = [0,0] # mm
+    widths_x = 1 # mm
+    widths_y = 1 # mm
     angle_x = 0  # degree
     angle_y = 0  # degree
     rotation = 0 # degree
@@ -361,6 +360,12 @@ class Detector(object):
     saturation = inf # counts/sec
     wavelength = 1 # angstrom
     time_of_flight = None  # ms
+
+    def _solid_angle(self):
+        """Detector solid angle [x,y] (radians)"""
+        return 2*arctan2(numpy.asarray(self.size)/2.,self.distance)
+    solid_angle = property(_solid_angle,doc=_solid_angle.__doc__)
+  
 
     # Raw counts are cached in memory and loaded on demand.
     # Rebinned and integrated counts for the region of interest
@@ -392,6 +397,7 @@ class Detector(object):
     def _delcounts(self):
         _pcounts = lambda:None
     counts = property(_getcounts,_setcounts,_delcounts)
+    
 
     def __init__(self, **kw): _set(self,kw)
     def __str__(self): return _str(self)
@@ -697,6 +703,10 @@ class ReflData(object):
                                    self.sample,self.detector,self.monitor,
                                    self.roi]]
         return "\n".join(base+others)
+
+    def warn(self,msg):
+        """Record a warning that should be displayed to the user"""
+        self.warnings.append(msg)
 
     def log(self,msg):
         """Record corrections that have been applied to the data"""

@@ -4,7 +4,7 @@ Data file reader for NCNR NG-1 data.
 """
 
 import numpy,os
-from numpy import inf
+from numpy import inf,cos,pi,arctan2
 from reflectometry.reduction import refldata, icpformat, properties
 
 
@@ -29,7 +29,8 @@ ng1default.psd_saturation = (numpy.array([[1,8000,0]]),'')
 
 # NG-1 detector closer than slit 4?
 ng1default.detector_distance = (36*25.4, '') # mm
-ng1default.psd_width = (20, '') # mm; TODO: Is NG-1 PSD about 10 cm x 2 cm
+ng1default.pencil_size = ((100,20), '') # mm
+ng1default.psd_size = ((200,170), '') # mm
 ng1default.slit1_distance = (-75*25.4, '') # mm
 ng1default.slit2_distance = (-14*25.4, '') # mm
 ng1default.slit3_distance = (9*25.4, '') # mm
@@ -48,16 +49,12 @@ cg1default.psd_saturation = (numpy.array([[1,8000,0]]),'')
 
 # NG-1 detector closer than slit 4?
 cg1default.detector_distance = (1600., '') # mm
-cg1default.psd_width = (211, '') # mm; TODO: Is NG-1 PSD about 10 cm x 2 cm
+cg1default.pencil_size = ((100,20), '') # mm
+cg1default.psd_size = ((200,170), '') # mm
 cg1default.slit1_distance = (-75*25.4, '') # mm
 cg1default.slit2_distance = (-14*25.4, '') # mm
 cg1default.slit3_distance = (9*25.4, '') # mm
 cg1default.slit4_distance = (42*25.4, '') # mm
-cg1default.monitor_timestep = (60./100,'') # s ; ICP records 1/100ths of min
-cg1default.psd_minbin = (1,'')
-cg1default.psd_maxbin = (608,'')
-cg1default.psd_width = (100,'')
-cg1default.psd_pixels = (608,'')
 cg1default.monitor_timestep = (60./100,'') # s ; ICP records 1/100ths of min
 
 # =====================================================================
@@ -69,59 +66,11 @@ class NG1Icp(refldata.ReflData):
     probe = "neutron"
     format = "NCNR ICP"
 
-    # The following allows the user to override the wavelength
-    # all files in a dataset to compensate for an incorrectly
-    # recorded wavelength in ICP.
-    _wavelength_override = {}
-    def _pencil_detector(self):
-        """
-        Pencil detector on NG-1.
-        """
-        self.detector.saturation = self.default.saturation
-        # The following widths don't really matter for point detectors, but
-        # for completeness we can put in the values.
-        self.detector.width_x = 150 # mm   TODO: What is the precise value?
-        self.detector.width_y = 20 # mm   TODO: What is the precise value?
-        self.detector.center_x = 0 # mm
-        self.detector.center_y = 0 # mm
-        self.detector.rotation = 0 # degree
-
-    def _psd(self):
-        """
-        PSD on NG-1.
-        """
-        # Detector saturates at 8000 counts/s.  Maybe could use efficiency
-        # calibrations like on NG-7 to support higher count rates, though
-        # in practice one risks damaging the detector by exposing it to too
-        # strong a beam so there is little need.
-        self.detector.efficiency = numpy.array([1,0,8000],'f')
-        minbin = 1
-        maxbin = 512
-        width = 25.4*4 # mm
-        self.detector.width_x = numpy.ones(512,'f')*(width/(maxbin-minbin))
-        self.detector.center_x = 0
-        self.detector.width_y = 20  # mm; TODO: Is NG-1 PSD about 10 cm x 2 cm
-
-    def _psd2d(self):
-        """
-        2D PSD on NG-1.
-        """
-        # Detector saturates at 8000 counts/s.  Maybe could use efficiency
-        # calibrations like on NG-7 to support higher count rates, though
-        # in practice one risks damaging the detector by exposing it to too
-        # strong a beam so there is little need.
-        self.detector.efficiency = numpy.array([1,0,8000],'f')
-        minbin = 1
-        maxbin = 512
-        width = 25.4*4 # mm
-        self.detector.width_x = numpy.ones(256,'f')*(width/(maxbin-minbin))
-        self.detector.center_x = 0
-        self.detector.width_y = self.default.psd_width
-
     def __init__(self, path, *args, **kw):
         super(NG1Icp,self).__init__(*args, **kw)
         self.path = os.path.abspath(path)
 
+        # Load file header
         data = icpformat.summary(self.path)
         if data.scantype != 'I':
             raise TypeError, "Only I-Buffers supported for %s"%self.format
@@ -131,7 +80,7 @@ class NG1Icp(refldata.ReflData):
         self.description = data.comment
         self.dataset = self.name[:5]
 
-        # Lookup defaults
+        # Lookup defaults as of the current date
         ext = os.path.splitext(data.filename)[1].lower()
         if ext.startswith('c'):
             self.instrument = "NCNR AND/R"
@@ -149,12 +98,21 @@ class NG1Icp(refldata.ReflData):
         self.detector.rotation = 0 # degrees
         self.monitor.time_step = self.default.monitor_timestep
 
+        # Initialize detector information
         if data.PSD:
             self.instrument += " PSD"
-            self._psd()
+            self.detector.saturation = self.default.psd_saturation
+            self.detector.size = self.default.psd_size
         else:
-            self._pencil_detector()
+            self.detector.saturation = self.default.saturation
+            self.detector.size = self.default.pencil_size
         self.display_monitor = data.monitor*data.prefactor
+
+
+        # Warn incorrect wavelength
+        if data.wavelength != self.default.wavelength:
+            self.warn("Unexpected wavelength: expected %g but got %g"\
+                      %(self.default.wavelength,data.wavelength))
 
         # Callback for lazy data
         self.detector.loadcounts = self.loadcounts
@@ -164,15 +122,20 @@ class NG1Icp(refldata.ReflData):
 
 
     def loadcounts(self):
+        # Load the counts from the data file
         data = icpformat.read(self.path)
         return data.counts
 
     def load(self):
+        # Load the icp data
         data = icpformat.read(self.path)
-
-        self.detector.wavelength \
-            = data.check_wavelength(self.default.wavelength,
-                                    NG1Icp._wavelength_override)
+        
+        if data.ndim == 1:
+            self.detector.dims = (1,1)
+        elif data.ndim == 2:
+            self.detector.dims = (data.ndim[1],1)
+        else:
+            self.detector.dims = (data.ndim[1],data.ndim[2])
 
         # Slits are either stored in the file or available from the
         # motor information.  For non-reflectometry scans they may
@@ -228,9 +191,12 @@ class NG1Icp(refldata.ReflData):
         self.detector.counts = data.counts
 
     def area_correction(self):
+        """
+        Returns the default area correction that can be applied to the data.
+        """
         import areacor
-        nx,ny = self.detector.dims[0:2]
-        Lx,Ly = self.detector.width_x,self.detector.width_y
-        wx = (1+0.15*cos(2*pi*numpy.arange(0,nx)/32))*Lx/nx
-        wy = (1+0.15*cos(2*pi*numpy.arange(0,ny)/32))*Ly/ny
-        return areacor.AreaCorrection(wx,wy,source=".15*cos(2 pi i/32)")
+        nx,ny = self.detector.dims
+        Ax,Ay = self.detector.solid_angle
+        wx = (1+0.15*cos(2*pi*numpy.arange(nx)/32.))/nx * Ax
+        wy = (1+0.15*cos(2*pi*numpy.arange(ny)/32.))/ny * Ay
+        return areacor.AreaCorrection(wx,wy,source="15% * cos(2 pi k/32)")
