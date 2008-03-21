@@ -277,7 +277,7 @@ def run_tests():
               0.732059160401003E-06    0.157817399981659E-09;
              -0.316081871345029E-14    0.486652849992036E-16
              """).A
-    check("Pontius, P., NIST",data,target,tol=1e-12)
+    check("Pontius, P., NIST",data,target,tol=5e-12)
 
 
 #Procedure:     Linear Least Squares Regression
@@ -458,7 +458,7 @@ def run_tests():
           2611612.    19;
           3369180.    20
           """).A
-    check("Wampler3",data,target,tol=1e-10)
+    check("Wampler3",data,target,tol=5e-10)
 
 ##Model:         Polynomial Class
 ##               6 Parameters (B0,B1,...,B5)
