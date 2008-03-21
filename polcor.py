@@ -156,11 +156,6 @@ for the theory?
 
 """
 
-# relative import hack
-# Boilerplate to allow relative imports for apps.
-if __name__ == '__main__':
-    import os; __path__=[os.path.dirname(os.path.realpath(__file__))]; del os
-
 import numpy as N
 from reflectometry.reduction.data import PolarizedData
 from reflectometry.reduction.wsolve import wsolve
@@ -354,7 +349,7 @@ def correct_efficiency(eff, data):
     return X, dX
 
 def demo():
-    from .examples import e3a12 as dataset
+    from examples import e3a12 as dataset
     eff = PolarizationEfficiency(beam=dataset.slits())
     for attr in ["Ic","fp","rp","ff","rf"]:
         print attr,getattr(eff,attr)

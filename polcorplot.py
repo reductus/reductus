@@ -6,9 +6,6 @@ This is a pair of plots locked together, one plot showing the intensity
 scans for the individual cross-sections, and the estimated 2*beta, the
 other showing the efficiencies of the front/back polarizers and flippers.
 """
-# Boilerplate to allow relative imports for apps.
-if __name__ == '__main__':
-    import os; __path__=[os.path.dirname(os.path.realpath(__file__))]; del os
 
 import wx
 import matplotlib as mpl
@@ -81,8 +78,8 @@ class Plotter(wx.Panel):
         self.update_intensity()
 
 def demo():
-    from .examples import e3a12 as data
-    from .polcor import PolarizationEfficiency
+    from examples import e3a12 as data
+    from polcor import PolarizationEfficiency
 
     # Get some data
     beam = data.slits()
