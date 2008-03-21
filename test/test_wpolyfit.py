@@ -14,24 +14,30 @@ and 1e-16.
 ## Author: Paul Kienzle
 ## This program is public domain
 
+import sys
 import numpy as N
 from reflectometry.reduction.wsolve import wpolyfit
 
-def show_result(name,p,dp,Ep,Edp):
+VERBOSE=1
+
+def show_result(name,p,dp,Ep,Edp,tol=2e-16):
     # compute relative error
-    err_p = abs((p-Ep)/Ep)
-    err_dp = abs((dp-Edp)/Edp)
+    err_p = abs((p-Ep)/Ep) if (Ep!=0).all() else abs(p-Ep)
+    err_dp = abs((dp-Edp)/Edp) if (Edp!=0).all() else abs(dp-Edp)
     # If expected value is zero use absolute error
     err_p[Ep==0] = p[Ep==0]
     err_dp[Edp==0] = dp[Edp==0]
-    print "Test:",name
-    print "parameter   expected value   rel. error"
-    for i in xrange(len(p)):
-        print "%12.5g  %12.5g %12.5g"%(p[i],Ep[i],err_p[i])
-    print "p-error     expected value   rel. error"
-    for i in xrange(len(p)):
-        print "%12.5g  %12.5g %12.5g"%(dp[i],Edp[i],err_dp[i])
-    print "-"*39
+    if VERBOSE>0:
+        print "Test:",name
+        print "parameter   expected value   rel. error"
+        for i in xrange(len(p)):
+            print "%12.5g  %12.5g %12.5g"%(p[i],Ep[i],err_p[i])
+        print "p-error     expected value   rel. error"
+        for i in xrange(len(p)):
+            print "%12.5g  %12.5g %12.5g"%(dp[i],Edp[i],err_dp[i])
+        print "-"*39
+    assert (err_p<tol).all() and (err_dp<tol).all(),\
+        "wsolve %s exceeded tolerance of %g"%(name,tol)
 
 def check_uncertainty(n=10000):
     """
@@ -84,7 +90,7 @@ def check_uncertainty(n=10000):
     """
 
 
-def check(name,data,target,origin=False):
+def check(name,data,target,origin=False,tol=2e-16):
     """
     name   data set name
     data   [y,x]
@@ -92,7 +98,7 @@ def check(name,data,target,origin=False):
     """
     p,dp = wpolyfit(data[:,1],data[:,0],deg=target.shape[0]-1,origin=origin)
     Ep,Edp = N.flipud(target).T
-    show_result(name,p,dp,Ep,Edp)
+    show_result(name,p,dp,Ep,Edp,tol=tol)
 
 
 def run_tests():
@@ -205,7 +211,7 @@ def run_tests():
                 -0.246781078275479E-02    0.535617408889821E-03;
                 -0.402962525080404E-04    0.896632837373868E-05
                 """).A
-    check("Filippelli, A., NIST.",data,target)
+    check("Filippelli, A., NIST.",data,target,tol=1e-7)
 
 
 ##Procedure:     Linear Least Squares Regression
@@ -271,7 +277,7 @@ def run_tests():
               0.732059160401003E-06    0.157817399981659E-09;
              -0.316081871345029E-14    0.486652849992036E-16
              """).A
-    check("Pontius, P., NIST",data,target)
+    check("Pontius, P., NIST",data,target,tol=1e-12)
 
 
 #Procedure:     Linear Least Squares Regression
@@ -305,7 +311,7 @@ def run_tests():
           2.07438016528926     0.165289256198347E-01
           """).A
 
-    check("Eberhardt, K., NIST", data, target, origin=True)
+    check("Eberhardt, K., NIST", data, target, origin=True, tol=1e-14)
 
 
 #Reference:     Wampler, R. H. (1970).
@@ -355,7 +361,7 @@ def run_tests():
            2613660    19;
            3368421    20
            """).A
-    check("Wampler1",data,target)
+    check("Wampler1",data,target, tol=1e-8)
 
 ##Reference:     Wampler, R. H. (1970).
 ##               A Report of the Accuracy of Some Widely-Used Least
@@ -402,7 +408,7 @@ def run_tests():
            51.16209   19;
            63.00000   20
            """).A
-    check("Wampler2", data, target)
+    check("Wampler2", data, target, tol=1e-12)
 
 
 ##Reference:   Wampler, R. H. (1970).
@@ -452,7 +458,7 @@ def run_tests():
           2611612.    19;
           3369180.    20
           """).A
-    check("Wampler3",data,target)
+    check("Wampler3",data,target,tol=1e-10)
 
 ##Model:         Polynomial Class
 ##               6 Parameters (B0,B1,...,B5)
@@ -497,7 +503,7 @@ def run_tests():
             3444321   20
             """).A
 
-    check("Wampler4", data, target);
+    check("Wampler4", data, target,tol=1e-8);
 
 
 ##Model:         Polynomial Class
@@ -542,8 +548,10 @@ def run_tests():
            -17866340    19;
             10958421    20
             """).A
-    check("Wampler5", data, target)
+    check("Wampler5", data, target, tol=5e-7)
 
 if __name__ == "__main__":
+    if '-q' in sys.argv: VERBOSE=0
     #check_uncertainty(n=10000)
     run_tests()
+    print >>sys.stderr,"OK"
