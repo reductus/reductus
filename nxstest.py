@@ -1,9 +1,23 @@
+#!/usr/bin/env python
+
 # This program is public domain
 
 # Author: Paul Kienzle
 
 """
 NeXus tests converted to python.
+
+python nxstest.py [-v -x] [hdf4] [hdf5] [xml]
+    Run tests
+
+    -v for verbose; shows structure and leaves files in place
+    -x for testing external linkage
+    hdf4 hdf5 xml
+        for running specific backend tests.  You can specify multiple
+        backends in a single run. Default is hdf5
+
+python nxstest.py -d file
+    Show structure of a single file
 """
 
 import nxs,os,numpy,sys
@@ -368,6 +382,9 @@ def test():
     if tests == 0: test_mode('w5',quiet,external)
 
 if __name__ == "__main__":
-    test()
+    if len(sys.argv) == 3 and sys.argv[1]=='-d':
+        show_structure(sys.argv[2])
+    else:
+        test()
     #leak_test1(n=10000)
 

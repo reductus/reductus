@@ -242,16 +242,25 @@ class NeXus(object):
         """
         Open the NeXus file returning a handle.
 
+        mode can be one of the following:
+            nxs.ACC_READ      'r'
+            nxs.ACC_RDWR      'rw'
+            nxs.ACC_CREATE    'w'
+            nxs.ACC_CREATE4   'w4'
+            nxs.ACC_CREATE5   'w5'
+            nxs.ACC_CREATEXML 'wx'
+
         Raises RuntimeError if the file could not be opened, with the
         filename as part of the error message.
 
         Corresponds to NXopen(filename,mode,&handle)
         """
-        # Convert open mode from string to integer and check it is valid
         self.isopen = False
+
+        # Convert open mode from string to integer and check it is valid
         if mode in _nxopen_mode: mode = _nxopen_mode[mode]
         if mode not in _nxopen_mode.values():
-            raise ValueError, "Invalid open mode %s",str(mode)
+            raise ValueError, "Invalid open mode %s",mode
 
         self.filename, self.mode = filename, mode
         self.handle = c_void_p(None)
@@ -464,7 +473,9 @@ class NeXus(object):
         """
         Return the next entry in the group as name,nxclass tuple.
 
-        Raises RuntimeError if this fails, or if there is no next entry.
+        Returns None,None if there are no more entries.
+        
+        Raises RuntimeError if NeXus reports an error.
 
         Corresponds to NXgetnextentry(handle,name,nxclass,&storage).
 
@@ -476,7 +487,9 @@ class NeXus(object):
         nxclass = ctypes.create_string_buffer(MAXNAMELEN)
         storage = c_int(0)
         status = self.lib.nxigetnextentry_(self.handle,name,nxclass,_ref(storage))
-        if status == ERROR or status ==EOD:
+        if status == EOD:
+            return None,None
+        if status == ERROR:
             raise RuntimeError, \
                 "Could not get next entry: %s"%(self._loc())
         ## Note: ignoring storage --- it is useless without dimensions
@@ -494,23 +507,30 @@ class NeXus(object):
 
         This automatically opens the corresponding group/data for you,
         and closes it when you are done.  Do not rely on any paths
-        remaining open between calls to process.
+        remaining open between elements as we restore the current
+        path each time.
 
         This does not correspond to an existing NeXus API function,
         but instead combines the work of initgroupdir/getnextentry
         and open/close on data and group.
         """
         # To preserve the semantics we must read in the whole list
-        # first, then process the entries one by one.
+        # first, then process the entries one by one.  Keep track
+        # of the path so we can restore it between entries.
         n,path,_ = self.getgroupinfo()
         #print "path",path
         path = "/"+path if not path == "root" else "/"
+
+        # Read list of entries
         self.initgroupdir()
         L = []
-        for i in range(n):
-            L.append(self.getnextentry())
-        for i in range(n):
-            name,nxclass = L[i]
+        while True:
+            name,nxclass = self.getnextentry()
+            if name is None: break
+            L.append((name,nxclass))
+
+        # Process each entry
+        for name,nxclass in L:
             self.openpath(path)  # Reset the file cursor
             if nxclass == "SDS":
                 self.opendata(name)
@@ -787,7 +807,8 @@ class NeXus(object):
         getinfo for details.  Length is the number of elements in the
         attribute.
 
-        Raises RuntimeError if NeXus returns ERROR or EOD.
+        Returns None,None,None on end of data.
+        Raises RuntimeError if NeXus reports an error.
 
         Corresponds to NXgetnextattr(handle,name,&length,&storage)
         but with storage converted from HDF values to numpy compatible
@@ -800,6 +821,8 @@ class NeXus(object):
         length = c_int(0)
         storage = c_int(0)
         status = self.lib.nxigetnextattr_(self.handle,name,_ref(length),_ref(storage))
+        if status == EOD:
+            return None,None,None
         if status == ERROR or status == EOD:
             raise RuntimeError, "Could not get next attr: %s"%(self._loc())
         dtype = _pytype_code[storage.value]
@@ -890,10 +913,10 @@ class NeXus(object):
         This does not correspond to an existing NeXus API function, but
         combines the work of attrinfo/initattrdir/getnextattr/getattr.
         """
-        n = self.getattrinfo()
         self.initattrdir()
-        for i in range(n):
+        while True:
             name,length,dtype = self.getnextattr()
+            if name is None: return
             value = self.getattr(name,length,dtype)
             yield name,value
 
