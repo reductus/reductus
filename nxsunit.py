@@ -43,30 +43,40 @@ can be used for other unit conversion tasks.
 # UDUnits:
 #  http://www.unidata.ucar.edu/software/udunits/udunits-1/udunits.txt
 
+from __future__ import division
 import math
 
 
 # Limited form of units for returning objects of a specific type.
 # Maybe want to do full units handling with e.g., pyre's
 # unit class. For now lets keep it simple.  Note that
-def _build_metric_units(name,abbr):
+def _build_metric_units(unit,abbr):
     """
     Construct standard SI names for the given unit.
     Builds e.g.,
         s, ns
         second, nanosecond, nano*second
         seconds, nanoseconds
-    Includes prefixes for milli, mili, micro and nano.
+    Includes prefixes for femto through peta.
 
+    Ack! Allows, e.g., Coulomb and coulomb even though Coulomb is not
+    a unit because some NeXus files store it that way!
+    
     Returns a dictionary of names and scales.
     """
-    prefix = dict(milli=1e-3,mili=1e-3,micro=1e-6,nano=1e-9)
-    short_prefix = dict(m=1e-3,u=1e-6,n=1e-9)
-    map = {name:1,name+'s':1,abbr:1}
-    map.update([(P+name,scale) for (P,scale) in prefix.iteritems()])
-    map.update([(P+'*'+name,scale) for (P,scale) in prefix.iteritems()])
-    map.update([(P+name+'s',scale) for (P,scale) in prefix.iteritems()])
+    prefix = dict(peta=1e15,tera=1e12,giga=1e9,mega=1e6,kilo=1e3,
+                  deci=1e-1,centi=1e-2,milli=1e-3,mili=1e-3,micro=1e-6,
+                  nano=1e-9,pico=1e-12,femto=1e-15)
+    short_prefix = dict(P=1e15,T=1e12,G=1e9,M=1e6,k=1e3,
+                        d=1e-1,c=1e-2,m=1e-3,u=1e-6,
+                        n=1e-9,p=1e-12,f=1e-15)
+    map = {abbr:1}
     map.update([(P+abbr,scale) for (P,scale) in short_prefix.iteritems()])
+    for name in [unit,unit.capitalize()]:
+        map.update({name:1,name+'s':1})
+        map.update([(P+name,scale) for (P,scale) in prefix.iteritems()])
+        map.update([(P+'*'+name,scale) for (P,scale) in prefix.iteritems()])
+        map.update([(P+name+'s',scale) for (P,scale) in prefix.iteritems()])
     return map
 
 def _build_plural_units(**kw):
@@ -82,6 +92,7 @@ def _build_all_units():
     distance = _build_metric_units('meter','m')
     distance.update(_build_metric_units('metre','m'))
     distance.update(_build_plural_units(micron=1e-6, Angstrom=1e-10))
+    distance.update({'A':1e-10, 'Ang':1e-10})
 
     time = _build_metric_units('second','s')
     # Note: minutes are used for angle
@@ -147,7 +158,10 @@ class Converter(object):
         # not copying is also bad, but copy on modify semantics isn't
         # supported.
         if units == "" or self.scalemap is None: return value
-        return value * (self.scalebase/self.scalemap[units])
+        try:
+            return value * (self.scalebase/self.scalemap[units])
+        except KeyError:
+            raise KeyError("%s not in %s"%(units," ".join(self.scalemap.keys())))
 
 def _check(expect,get):
     if expect != get: raise ValueError, "Expected %s but got %s"%(expect,get)
@@ -157,6 +171,7 @@ def test():
     _check(0.003,Converter('microseconds')(3,units='ms')) # 3 us -> 0.003 ms
     _check(45,Converter('nanokelvin')(45))  # 45 nK -> 45 nK
     # TODO: more tests
+    _check(0.5,Converter('seconds')(1800,units='hours')) # 1800 -> 0.5 hr
 
 if __name__ == "__main__":
     test()

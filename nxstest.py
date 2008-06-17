@@ -49,36 +49,9 @@ def leak_test1(n = 1000, mode='w5'):
 #        gc.collect()
     os.unlink(filename)
 
-def _show(file, indent=0):
-    prefix = ' '*indent
-    link = file.link()
-    if link:
-        print "%(prefix)s-> %(link)s" % locals()
-        return
-    for attr,value in file.attrs():
-        print "%(prefix)s@%(attr)s: %(value)s" % locals()
-    for name,nxclass in file.entries():
-        if nxclass == "SDS":
-            shape,dtype = file.getinfo()
-            dims = "x".join([str(x) for x in shape])
-            print "%(prefix)s%(name)s %(dtype)s %(dims)s" % locals()
-            link = file.link()
-            if link:
-                print "  %(prefix)s-> %(link)s" % locals()
-            else:
-                for attr,value in file.attrs():
-                    print "  %(prefix)s@%(attr)s: %(value)s" % locals()
-                if numpy.prod(shape) < 8:
-                    value = file.getdata()
-                    print "  %s%s"%(prefix,str(value))
-        else:
-            print "%(prefix)s%(name)s %(nxclass)s" % locals()
-            _show(file, indent+2)
-
 def show_structure(filename):
     file = nxs.open(filename)
-    print "=== File",file.inquirefile()
-    _show(file)
+    file.show()
 
 
 def populate(filename,mode):

@@ -316,6 +316,9 @@ class Node(object):
     def __str__(self):
         return "%s:%s"%(self.nxclass,self.nxname)
 
+    def __repr__(self):
+        return "NeXusNode('%s','%s')"%(self.nxclass,self.nxname)
+
     def readattr(self, name, default=None):
         return self.nxattr[name].value if name in self.nxattr else default
 
@@ -353,7 +356,7 @@ class Node(object):
 
         However improve readability significantly over the alternative:
 
-            root.findclass("NXentry")[0].findclass("NXinstrument")[0].nxnode['definition'].value
+            root.find("NXentry")[0].find("NXinstrument")[0].nxnode['definition'].value
 
         Another issue to consider is supplying default values for missing
         information, e.g., if there is no slit 4, set slit 4 to infinitely open.
@@ -373,12 +376,15 @@ class Node(object):
         elif key in self.nxnode:
             return self.nxnode[key]
         else:
-            match = self.findclass(key)
+            match = self.find(key)
             if len(match) == 1:
                 return match[0]
+            elif len(match) == 0:
+                raise AttributeError, \
+                    "%s:%s does not have nxclass '%s'"%(self.nxclass,self.nxname,key)
             else:
                 raise AttributeError, \
-                    "%s:%s does not have %s"%(self.nxclass,self.nxname,key)
+                    "%s:%s has more than one nxclass '%s'"%(self.nxclass,self.nxname,key)
 
     def nodes(self):
         """
@@ -387,27 +393,19 @@ class Node(object):
         for name,entry in self.nxnode.iteritems():
             yield name,entry
 
-    def match(self, nxclass):
-        """
-        Find all child nodes have the particular class.
-        """
-        match = [E for (name,E) in self.nxnode.iteritems() if E==nxclass]
-        return match
-
     def find(self, nxclass):
         """
-        Find the child node with the given class.
+        Find all child nodes that have a particular class.
         """
-        L = self.match(nxclass)
-        if len(L) != 1: raise IOError, "Missing class %s"%(nxclass)
+        return [E for (name,E) in self.nxnode.iteritems() if E.nxclass==nxclass]
 
     def str_name(self,indent=0):
-        return " "*indent+self.nxname,':',self.nxclass,'\n'
+        return " "*indent+self.nxname+':'+self.nxclass+'\n'
 
     def str_value(self,indent=0):
         return ""
 
-    def print_attr(self,indent=0):
+    def str_attr(self,indent=0):
         result = ""
         if self.nxattr is not None:
             #print " "*indent, "Attributes:"
@@ -415,6 +413,7 @@ class Node(object):
             names.sort()
             for k in names:
                 result += " "*indent+"@%s = %s\n"%(k,self.nxattr[k].value)
+        return result
 
     def str_tree(self,indent=0,attr=False):
         # Print node
@@ -426,6 +425,7 @@ class Node(object):
         names.sort()
         for k in names:
             result += self.nxnode[k].str_tree(indent=indent+2,attr=attr)
+        return result
 
 class Data(Node):
     """
@@ -472,17 +472,20 @@ class Data(Node):
                 return str(self._value)
         return ""
 
-    def print_value(self,indent=0):
+    def str_value(self,indent=0):
         v = str(self)
         if '\n' in v:
-            print '\n'.join([(" "*indent)+s for s in v.split('\n')])
+            v = '\n'.join([(" "*indent)+s for s in v.split('\n')])
+        return v+'\n'
 
-    def print_name(self,indent=0):
+    def str_tree(self,indent=0,attr=False):
         dims = 'x'.join([str(n) for n in self.nxdims])
         v = str(self)
         if '\n' in v or v == "":
             v = "%s(%s)"%(self.nxtype, dims)
-        print " "*indent + "%s = %s"%(self.nxname, v)
+        v = " "*indent + "%s = %s"%(self.nxname, v)+'\n'
+        if attr: v += self.str_attr(indent=indent+2)
+        return v
 
     def open(self):
         """
@@ -515,6 +518,8 @@ class Data(Node):
             self._value = self._file.readpath(self._path)
 
         return self.nxunit(self._value,units)
+    
+    value = property(read,doc="The data in default units; see also read() and slab()")
 
 class Link(Node):
     def __init__(self,name,nxclass="",attr=None):
@@ -525,8 +530,8 @@ class Link(Node):
         self._link_target = self.nxattr['target'].value
     def __str__(self):
         return "Link(%s)"%(self._link_target)
-    def print_tree(self,indent=0,attr=False):
-        print " "*indent+self.nxname,'->',self._link_target
+    def str_tree(self,indent=0,attr=False):
+        return " "*indent+self.nxname+' -> '+self._link_target+'\n'
 
 
 class Group(Node):
@@ -539,8 +544,8 @@ class Group(Node):
         self.nxclass = nxclass
         self.nxname = name
         self.nxattr = {} if attr is None else attr
-    def print_value(self,indent=0):
-        pass
+    def str_value(self,indent=0):
+        return ""
 
 class NXroot(Group):
     def datasets(self): return self.findclass("NXentry")
@@ -562,7 +567,7 @@ def listfile(file):
     Read and summarize the named nexus file.
     """
     tree = read(file)
-    tree.print_tree(attr=True)
+    print tree.str_tree(attr=True)
 
 def cmdline(argv):
     """

@@ -9,34 +9,6 @@ Further details available at:
 
     http://www.reflectometry.org/danse
 
-=== Installation ===
-
-The reflectometry reduction library is not presently released, but is
-available by directly accessing the reflectometry svn repository.  Make
-sure your machine has gcc, gfortran, svn, python, numpy, matplotlib,
-ipython and scipy installed.  Instructions should be available at the
-[[http://danse.us|DANSE site]], along with resources for learning Python.
-
-Retrieve the danse repository:
-
-   $ svn co svn://danse.us/reflectometry/trunk reflectometry
-
-Change into the reflectometry directory and type:
-
-   $ python setup.py
-   
-Run python and load the library:
-
-   $ ipython -pylab
-   import reflectometry.reduction as red
-   data = red.load(red.datadir+'/ng7/jul04039.ng7')
-   print red.summary(data)
-
-Frequent users will want to modify the ipython startup file to execute
-the import statement automatically at startup.
-
-File readers for the various instrument formats load the data into a
-standard reflectometry data object.
 
 === Getting Started ===
 

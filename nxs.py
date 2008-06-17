@@ -537,11 +537,13 @@ class NeXus(object):
             else:
                 self.opengroup(name,nxclass)
             yield name,nxclass
-            ##Don't need the following given that openpath resets the cursor
-            #if nxclass == "SDS":
-            #    self.closedata()
-            #else:
-            #    self.closegroup()
+            # Close the group when you are done, leaving the file
+            # cursor in the same position as when the 'entries'
+            # iteration was started.
+            if nxclass == "SDS":
+                self.closedata()
+            else:
+                self.closegroup()
 
     # ==== Data ====
     lib.nxigetinfo_.restype = c_int
@@ -1167,7 +1169,53 @@ class NeXus(object):
 
         return data,pdata
 
-# tests provided by nxstest.py
+    def show(self, path=None, indent=0):
+        """
+        Print the structure of a NeXus file from the current node.
+        
+        TODO: Break this into a tree walker and a visitor.
+        """
+        oldpath = "/"+"/".join(self.path)
+        if not path: path = oldpath
+        self.openpath(path)
+        
+        print "=== File",self.inquirefile(),path
+        self._show(indent=indent)
+        self.openpath(oldpath)
+
+    def _show(self, indent=0):
+        """
+        Print the structure of a NeXus file from the current node.
+        
+        TODO: Break this into a tree walker and a visitor.
+        """
+        prefix = ' '*indent
+        link = self.link()
+        if link:
+            print "%(prefix)s-> %(link)s" % locals()
+            return
+        for attr,value in self.attrs():
+            print "%(prefix)s@%(attr)s: %(value)s" % locals()
+        for name,nxclass in self.entries():
+            if nxclass == "SDS":
+                shape,dtype = self.getinfo()
+                dims = "x".join([str(x) for x in shape])
+                print "%(prefix)s%(name)s %(dtype)s %(dims)s" % locals()
+                link = self.link()
+                if link:
+                    print "  %(prefix)s-> %(link)s" % locals()
+                else:
+                    for attr,value in self.attrs():
+                        print "  %(prefix)s@%(attr)s: %(value)s" % locals()
+                    if numpy.prod(shape) < 8:
+                        value = self.getdata()
+                        print "  %s%s"%(prefix,str(value))
+            else:
+                print "%(prefix)s%(name)s %(nxclass)s" % locals()
+                self._show(indent=indent+2)
+    
+
+# tests are provided by nxstest.py
 def test(): pass
 
 

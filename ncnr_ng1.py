@@ -130,9 +130,9 @@ class NG1Icp(refldata.ReflData):
         # Load the icp data
         data = icpformat.read(self.path)
         
-        if data.ndim == 1:
+        if data.counts.ndim == 1:
             self.detector.dims = (1,1)
-        elif data.ndim == 2:
+        elif data.counts.ndim == 2:
             self.detector.dims = (data.ndim[1],1)
         else:
             self.detector.dims = (data.ndim[1],data.ndim[2])

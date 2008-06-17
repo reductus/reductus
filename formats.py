@@ -223,13 +223,8 @@ def icp_ng1(file):
 
 def nexus(file):
     """NeXus file loader"""
-    from reflectometry.reduction import nexusref, nexus
-    tree = nexus.read(file)
-    measurements = []
-    for name,entry in tree.nodes():
-        if entry.nxclass == 'NXentry':
-            measurements.append(nexusref.NeXusRefl(entry,file))
-    return measurements
+    from reflectometry.reduction.nexusref import load_entries
+    return load_entries(file)
 
 # Register extensions with file formats
 register_format('.ng7', icp_ng7)
@@ -259,6 +254,6 @@ def test():
     assert load(ng7file).detector.wavelength == 4.76
     assert load(ng1file).name == 'gsip4007.ng1'
     assert loadmeta(cg1file).name == 'psdca022.cg1'
-    assert formats() == ['NCNR ng1','NCNR ng7','NeXus']
+    assert formats() == ['NCNR NG-1','NCNR NG-7','NeXus'],formats()
 
 if __name__ == "__main__": test()

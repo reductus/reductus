@@ -14,8 +14,5 @@ def configuration(parent_package='',
 
     return config
 
-# Don't test setup.py
-def test(): pass
-
 if __name__ == '__main__':
     setup(**configuration(top_path='').todict())

@@ -3,20 +3,50 @@
 """
 Load a NeXus file into a reflectometry data structure.
 """
+import os
 
 from reflectometry.reduction import refldata, nexus
 
+def load_entries(filename):
+    """
+    Load the summary info for all entries in a NeXus file.
+    """
+    tree = nexus.read(filename)
+    measurements = []
+    for name,entry in tree.nodes():
+        if entry.nxclass == 'NXentry':
+            measurements.append(NeXusRefl(entry,filename))
+    return measurements
+
+
 class NeXusRefl(refldata.ReflData):
+    """
+    NeXus reflectometry entry.
+    
+    See `reflectometry.reduction.refldata.ReflData` for details.
+    """
     format = "NeXus"
 
     def __init__(self, entry, filename):
-        super(ReflIcp,self).__init__(args, kw)
+        super(NeXusRefl,self).__init__()
         self.filename = os.path.abspath(filename)
 
-        if entry.definition == "TOFRAW":
-            self._load_TOFRAW(entry)
+        if entry.definition.value == "TOFRAW":
+            self.entry = entry
         else:
             raise ValueError, "NeXusRefl only supports TOFRAW format"
+
+        # Callback for lazy data
+        self.detector.loadcounts = self.loadcounts
+
+        # Set initial Qz
+        self.resetQ() 
+
+
+    def loadcounts(self):
+        # Load the counts from the data file
+        counts = self.entry.NXinstrument.NXdetector.data.read()
+        return counts
 
     def _load_slits(self, instrument):
         """
@@ -24,7 +54,7 @@ class NeXusRefl(refldata.ReflData):
         NXaperature components by distance and assign them according
         to serial order, negative aperatures first and positive second.
         """
-        instrument.match('NXaperature')
+        slits = instrument.find('NXaperature')
         # Note: only supports to aperatures before and after.
         # Assumes x and y aperatures are coupled in the same
         # component.  This will likely be wrong for some instruments,
@@ -55,7 +85,9 @@ class NeXusRefl(refldata.ReflData):
                     self.slit4.distance = d
                     index += 1
 
-    def _load_TOFRAW(self):
+    def load(self):
+        entry = self.entry
+        self.instrument = entry.NXinstrument.name.value
         self.probe = 'neutron'
         # Use proton charge as a proxy for monitor; we will use the
         # real monitor when it comes available.
@@ -73,7 +105,7 @@ class NeXusRefl(refldata.ReflData):
         # if it is using one or the other without hardcoding details
         # of SNS Liquids into the reduction process.
 
-        sample = entry.find('NXsample')
+        sample = entry.NXsample
         self.sample.description = sample.name.value
 
         # TODO: entry has sample changer position, which is a
@@ -81,9 +113,9 @@ class NeXusRefl(refldata.ReflData):
         # beam.  I hope the control software handles this
         # properly!
 
-        instrument = entry.find('NXinstrument')
+        instrument = entry.NXinstrument
         self._load_slits(instrument)
-        moderator = instrument.find('NXmoderator')
+        moderator = instrument.NXmoderator
         self.moderator.distance = moderator.distance.read('meters')
-        self.moderator.type = moderator.type.read()
+        self.moderator.type = moderator.type.value
         self.moderator.temperature = moderator.temperature.read('kelvin')

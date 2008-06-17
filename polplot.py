@@ -265,6 +265,7 @@ class Plotter4(wx.Panel):
         self._sets = {} # Container for all plotted objects
 
     def autoaxes(self):
+        return
         bbox = bbox_union([ax.dataLim for ax in self.axes])
         xlims = bbox.intervalx
         ylims = bbox.intervaly

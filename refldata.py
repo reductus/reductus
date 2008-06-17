@@ -693,6 +693,7 @@ class ReflData(object):
         self.slit4 = Slit()
         self.detector = Detector()
         self.monitor = Monitor()
+        self.moderator = Moderator()
         self.warnings = []
         self.roi = ROI()
         self.messages = []
