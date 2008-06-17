@@ -129,13 +129,14 @@ class NG1Icp(refldata.ReflData):
     def load(self):
         # Load the icp data
         data = icpformat.read(self.path)
-        
         if data.counts.ndim == 1:
             self.detector.dims = (1,1)
         elif data.counts.ndim == 2:
-            self.detector.dims = (data.ndim[1],1)
+            self.detector.dims = (data.counts.shape[1],1)
+        elif data.counts.ndim == 3:
+            self.detector.dims = (data.counts.shape[1],data.counts.shape[2])
         else:
-            self.detector.dims = (data.ndim[1],data.ndim[2])
+            raise RuntimeError("Data has too many dimensions in "+self.path)
 
         # Slits are either stored in the file or available from the
         # motor information.  For non-reflectometry scans they may
