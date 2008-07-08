@@ -29,18 +29,16 @@ print A,y,dy
 s = wsolve.wsolve(A,y,dy)
 print "xin,x,dx", xin, s.x, s.std
 
-Note there is a counter-intuitive result that scaling the
-uncertainty in the data does not affect the uncertainty in
-the fit.  Indeed, if you perform a monte carlo simulation
-with x,y datasets selected from a normal distribution centered
-on y with width 10*dy instead of dy you will see that the
-variance in the parameters indeed increases by a factor of 100.
-However, if the error bars really do increase by a factor of 10
-you should expect a corresponding increase in the scatter of
-the data, which will increase the variance computed by the fit,
-so indeed the dataset carries its own information about the
-variance of the data, with the weight vector serving only to
-provide relative weighting between the points.
+Note there is a counter-intuitive result that scaling the estimated
+uncertainty in the data does not affect the computed uncertainty in
+the fit.  This is the correct result --- if the data were indeed
+selected from a process with ten times the uncertainty, you would
+expect the scatter in the data to increase by a factor of ten as
+well.  When this new data set is fitted, it will show a computed
+uncertainty increased by the same factor.  Monte carlo simulations
+bear this out.  The conclusion is that the dataset carries its own
+information about the variance in the data, and the weight vector
+serves only to provide relative weighting between the points.
 """
 
 # FIXME: test second example
