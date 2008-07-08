@@ -113,6 +113,7 @@ class NG1Icp(refldata.ReflData):
         if data.wavelength != self.default.wavelength:
             self.warn("Unexpected wavelength: expected %g but got %g"\
                       %(self.default.wavelength,data.wavelength))
+        self.detector.wavelength = data.wavelength
 
         # Callback for lazy data
         self.detector.loadcounts = self.loadcounts
