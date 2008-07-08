@@ -17,9 +17,11 @@ for huge arrays.
 
 from __future__ import division
 
-from math import *
 import numpy
 import err1d
+from formatnum import format_uncertainty
+
+__all__ = ['Uncertainty']
 
 # TODO: rename to Measurement and add support for units?
 # TODO: C implementation of *,/,**?
@@ -145,7 +147,12 @@ class Uncertainty(object):
         return Uncertainty(numpy.abs(self.x),self.variance)
 
     def __str__(self):
-        return str(self.x)+" +/- "+str(numpy.sqrt(self.variance))
+        #return str(self.x)+" +/- "+str(numpy.sqrt(self.variance))
+        if numpy.isscalar(self.x):
+            return format_uncertainty(self.x,numpy.sqrt(self.variance))
+        else:
+            return [format_uncertainty(v,dv) 
+                    for v,dv in zip(self.x,numpy.sqrt(self.variance))]
     def __repr__(self):
         return "Uncertainty(%s,%s)"%(str(self.x),str(self.variance))
 
@@ -299,7 +306,12 @@ def test():
     z = A*B
     assert (z.x == 5*4).all() and (z.variance == (5**2*2 + 4**2*3)).all()
     z = A/B
-    assert (z.x == 5./4).all() and (abs(z.variance - (3./5**2 + 2./4**2)*(5./4)**2) < 1e-15).all()
+    assert (z.x == 5./4).all()
+    assert (abs(z.variance - (3./5**2 + 2./4**2)*(5./4)**2) < 1e-15).all()
     
+    # printing; note that sqrt(3) ~ 1.7
+    assert str(Uncertainty(5,3)) == "5.0(17)"
+    assert str(Uncertainty(15,3)) == "15.0(17)"
+    assert str(Uncertainty(151.23356,0.324185**2)) == "151.23(32)"
 
 if __name__ == "__main__": test()
