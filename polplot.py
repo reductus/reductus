@@ -126,7 +126,7 @@ def cmap_menu(canvas,mapper):
               'Blues','Greens','Greys','Oranges','Purples','Reds',
               'Pastel1','Pastel2',
               'Set1','Set2','Set3',
-              'BrBG','BUGn','BuPu','GnBu',
+              'BrBG','BuGn','BuPu','GnBu',
               'OrRd',
               'PiYG','PRGn','PuBu','PuBuGn',
               'PuOr','PuRd',
