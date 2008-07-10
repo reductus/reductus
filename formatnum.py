@@ -58,6 +58,8 @@ def format_uncertainty(value,uncertainty):
 
 
 def test():
+    value_str = format_uncertainty  # Changed name after testing
+
     # val_place > err_place
     assert value_str(1235670,766000) == "1.24(77)e6"
     assert value_str(123567.,76600) == "124(77)e3"
