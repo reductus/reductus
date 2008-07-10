@@ -21,12 +21,14 @@ The following defines a context menu with mapper::
 
 The assumption is that mapper and canvas are attributes of the panel for
 which the context menu is defined.  When the new colour map is selected,
-the mapper will be reset and the figure redrawn.  
+the mapper will be reset and the figure redrawn.
 
-Note that mapper and canvas are not required.  In anycase, the OnSelect 
-method of CMapMenu will be invoked with the new colormap name.  This
-can be used, for example, to set a new default colormap in a persistent
-store, or to coordinate the colormaps on multiple canvases.
+Sometimes you will want to do more than just update the mapper for the
+current canvas.  You may for example want to record the new colormap name
+in the application settings file so that it will be there when the
+application is reloaded.  To do this, call CMapMenu(callback=self.OnColormap).
+This will call the method OnColormap with the parameter name giving the
+name of the colormap.
 """
 
 import wx
@@ -102,7 +104,7 @@ class CMapMenu(wx.Menu):
     """
     Menu tree binding to a list of colormaps.
     """
-    def __init__(self, mapper=None, canvas=None):
+    def __init__(self, mapper=None, canvas=None, callback=None):
         """
         Define a context menu for selecting colormaps.
 
@@ -111,7 +113,7 @@ class CMapMenu(wx.Menu):
         """
         wx.Menu.__init__(self)
 
-        self.mapper,self.canvas = mapper,canvas
+        self.mapper,self.canvas,self.callback = mapper,canvas,callback
         self.selected = None
         self.mapid = {}
         for name in grouped_colormaps():
@@ -135,28 +137,8 @@ class CMapMenu(wx.Menu):
             self.mapper.set_cmap(matplotlib.cm.get_cmap(name))
         if self.canvas:
             self.canvas.draw_idle()
-        self.OnSelect(name)
-
-    def OnSelect(self,name):
-        """
-        Action to take when the color is selected.
-
-        Override this method to perform a specific action.
-        """
-
-    def Popup(self,window,position=None):
-        """
-        Popup the colourmap menu on the window at the selected position.
-
-        Returns the name of the colourmap selected, or None if no 
-        selection was made.
-
-        The actual colourmap is available using::
-             matplotlib.cm.get_cmap(name)
-        """
-        self.selected = None
-        window.PopupMenu(self,position)
-        return self.selected
+        if self.callback:
+            self.callback(name)
 
 def demo():
     class Frame(wx.Frame):
@@ -164,7 +146,10 @@ def demo():
             wx.Frame.__init__(self, parent=None, title="Hello")
             self.Bind(wx.EVT_RIGHT_DOWN, self.OnContext)
         def OnContext(self, evt):
-            print CMapMenu().Popup(self,evt.GetPositionTuple())
+            self.PopupMenu(CMapMenu(callback=self.OnColormap),
+                           evt.GetPositionTuple())
+        def OnColormap(self, name):
+            print "Selected colormap",name
 
     app = wx.App(redirect=False)
     Frame().Show()
