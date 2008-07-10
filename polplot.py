@@ -17,6 +17,7 @@ from canvas import FigureCanvas as Canvas
 from matplotlib.backend_bases import LocationEvent
 from matplotlib.font_manager import FontProperties
 from matplotlib.colors import Normalize,LogNorm
+from cmapmenu import CMapMenu
 
 import ticker
 
@@ -95,64 +96,6 @@ def save_canvas(canvas,filebase):
         except Exception, e:
             error_msg(str(e))
     return
-
-def update_cmap(canvas,mapper,mapname):
-    def fn(event):
-        mapper.set_cmap(mpl.cm.__dict__[mapname])
-        canvas.draw_idle()
-    return fn
-
-def cmap_menu(canvas,mapper):
-    """
-    Create a menu of available colourmaps.
-    """
-    # TODO: add bitmaps showing the colormaps into the menu
-    # TODO: only include useful maps
-    # TODO: provide reversal as a transformation on colorbar
-    # TODO: provide better names on the menu
-    # TODO: add bright, graded_hsv and random
-
-    menu = wx.Menu()
-    mlab = ['autumn','winter','spring','summer',
-            'gray','bone','copper','pink',
-            'cool','hot',
-            'hsv','jet','spectral',
-            #'binary',   # Seems to be a reverse of gray
-            'prism','flag']
-    mlab_r = [m+'_r' for m in mlab]
-    brewer = ['Accent','Dark2',
-              'Spectral',
-              'Paired',
-              'Blues','Greens','Greys','Oranges','Purples','Reds',
-              'Pastel1','Pastel2',
-              'Set1','Set2','Set3',
-              'BrBG','BuGn','BuPu','GnBu',
-              'OrRd',
-              'PiYG','PRGn','PuBu','PuBuGn',
-              'PuOr','PuRd',
-              'RdBu','RdGy','RdPu',
-              'RdYlBu','RdYlGn',
-              'YlGn','YlGnBu','YlOrBr','YlOrRd',
-              ]
-    brewer_r = [m+'_r' for m in brewer]
-    gist = ['gist_ncar','gist_rainbow',
-            'gist_stern','gist_earth',
-            'gist_gray','gist_heat',
-            #'gist_yarg',  # Seems to be a reverse of gray
-            ]
-    gist_r = [m+'_r' for m in gist]
-
-
-    #maps = mpl.cm.cmapnames
-    #maps.sort()
-    separator = False
-    for set in [gist, gist_r, mlab, mlab_r, brewer, brewer_r]:
-        if separator: menu.AppendSeparator()
-        separator = True
-        for m in set:
-            item = menu.Append(wx.ID_ANY,m)
-            wx.EVT_MENU(canvas, item.GetId(), update_cmap(canvas,mapper,m))
-    return menu
 
 def bbox_union(bboxes):
     """
@@ -396,7 +339,7 @@ class Plotter4(wx.Panel):
 
         # TODO: convert from screen coords to window coords
         x,y = event.GetPosition()
-        self.menuevent = LocationEvent("context",self.figure.canvas,
+        self.menuevent = LocationEvent("context",self.canvas,
                                        x,y,guiEvent=event)
 
         popup = wx.Menu()
@@ -405,7 +348,7 @@ class Plotter4(wx.Panel):
         item = popup.Append(wx.ID_ANY,'&Grid on/off', 'Toggle grid lines')
         wx.EVT_MENU(self, item.GetId(), self.onGridToggle)
         item = popup.AppendMenu(wx.ID_ANY, "Colourmaps",
-                                cmap_menu(self.canvas, self.colormapper))
+                                CMapMenu(mapper=self.colormapper, canvas=self.canvas))
         #popup.Append(315,'&Properties...','Properties editor for the graph')
         #wx.EVT_MENU(self, 315, self.onProp)
 
