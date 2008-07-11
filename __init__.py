@@ -14,16 +14,14 @@ Further details available at:
 
 Once you have the reduction library installed you will need to do
 a little bit of reading to see what is available.  The following
-is a good order to proceed.
+is a good order to proceed::
 
-# Reflectometry data format
+   # Reflectometry data format
    help red.refldata
-# Loading data and saving results
+   # Loading data and saving results
    help red.formats
-# Data transformations
+   # Data transformations
    help red.corrections
-# Plotting data
-   help red.plots
 
 === Acknowledgements ===
 
