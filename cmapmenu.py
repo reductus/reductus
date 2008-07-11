@@ -30,10 +30,10 @@ application is reloaded.  To do this, call CMapMenu(callback=self.OnColormap).
 This will call the method OnColormap with the parameter name giving the
 name of the colormap.
 """
-
+import sys
 import wx
-import matplotlib.cm
 import numpy
+import matplotlib.cm
 
 def colorbar_bitmap(colormap,length,thickness=10,orientation='horizontal'):
     """
@@ -113,6 +113,7 @@ class CMapMenu(wx.Menu):
         """
         wx.Menu.__init__(self)
 
+        bar_length = 32 if not sys.platform in ['darwin'] else 16
         self.mapper,self.canvas,self.callback = mapper,canvas,callback
         self.selected = None
         self.mapid = {}
@@ -120,10 +121,11 @@ class CMapMenu(wx.Menu):
             if name is None:
                 self.AppendSeparator()
             else:
-                item = self.Append(wx.ID_ANY,name)
+                item = wx.MenuItem(self, wx.ID_ANY, name)
                 map = matplotlib.cm.get_cmap(name)
-                icon = colorbar_bitmap(map,16,thickness=16)
+                icon = colorbar_bitmap(map,bar_length,thickness=16)
                 item.SetBitmap(icon)
+		self.AppendItem(item)
                 self.Bind(wx.EVT_MENU, 
                           _menu_callback(self._OnSelect,name),
                           id=item.GetId())
