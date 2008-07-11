@@ -347,8 +347,8 @@ class Plotter4(wx.Panel):
         wx.EVT_MENU(self, item.GetId(), self.onSaveImage)
         item = popup.Append(wx.ID_ANY,'&Grid on/off', 'Toggle grid lines')
         wx.EVT_MENU(self, item.GetId(), self.onGridToggle)
-        item = popup.AppendMenu(wx.ID_ANY, "Colourmaps",
-                                CMapMenu(mapper=self.colormapper, canvas=self.canvas))
+        cmaps = CMapMenu(self, mapper=self.colormapper, canvas=self.canvas)
+        item = popup.AppendMenu(wx.ID_ANY, "Colourmaps", cmaps)
         #popup.Append(315,'&Properties...','Properties editor for the graph')
         #wx.EVT_MENU(self, 315, self.onProp)
 

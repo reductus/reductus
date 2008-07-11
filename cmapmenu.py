@@ -17,7 +17,7 @@ The following defines a context menu with mapper::
         item = popup.Append(wx.ID_ANY,'&Grid on/off', 'Toggle grid lines')
         wx.EVT_MENU(self, item.GetId(), self.onGridToggle)
         item = popup.AppendMenu(wx.ID_ANY, "Colourmaps",
-                                CMapMenu(self.mapper,self.canvas))
+                                CMapMenu(self, self.mapper, self.canvas))
 
 The assumption is that mapper and canvas are attributes of the panel for
 which the context menu is defined.  When the new colour map is selected,
@@ -98,22 +98,29 @@ def grouped_colormaps():
 
     return gist + [None] + mlab + [None] + brewer
 
-def _menu_callback(callback, name):
-    return lambda evt: callback(name)
+def event_callback(callback, **kw):
+    """
+    Add keyword arguments to the event callback.
+    """
+    return lambda evt: callback(evt,**kw)
 class CMapMenu(wx.Menu):
     """
     Menu tree binding to a list of colormaps.
     """
-    def __init__(self, mapper=None, canvas=None, callback=None):
+    def __init__(self, window,
+                 mapper=None, canvas=None, callback=None):
         """
         Define a context menu for selecting colormaps.
 
+        Need a window to use as the event handler.
         If mapper is defined, it will be updated with the new colormap.
         If canvas is defined, it will update on idle.
         """
         wx.Menu.__init__(self)
 
+        # OS X needs 16x16 icons; Windows and Linux can be longer
         bar_length = 32 if not sys.platform in ['darwin'] else 16
+        bar_height = 16
         self.mapper,self.canvas,self.callback = mapper,canvas,callback
         self.selected = None
         self.mapid = {}
@@ -123,14 +130,14 @@ class CMapMenu(wx.Menu):
             else:
                 item = wx.MenuItem(self, wx.ID_ANY, name)
                 map = matplotlib.cm.get_cmap(name)
-                icon = colorbar_bitmap(map,bar_length,thickness=16)
+                icon = colorbar_bitmap(map,bar_length,thickness=bar_height)
                 item.SetBitmap(icon)
 		self.AppendItem(item)
-                self.Bind(wx.EVT_MENU, 
-                          _menu_callback(self._OnSelect,name),
-                          id=item.GetId())
+                window.Bind(wx.EVT_MENU, 
+                            event_callback(self._OnSelect, name=name),
+                            id=item.GetId())
 
-    def _OnSelect(self, name):
+    def _OnSelect(self, event, name=None):
         """
         When selected, record the name and call the subclass OnSelect method.
         """
@@ -148,10 +155,22 @@ def demo():
             wx.Frame.__init__(self, parent=None, title="Hello")
             self.Bind(wx.EVT_RIGHT_DOWN, self.OnContext)
         def OnContext(self, evt):
-            self.PopupMenu(CMapMenu(callback=self.OnColormap),
-                           evt.GetPositionTuple())
+            popup = wx.Menu()
+            item = popup.Append(wx.ID_ANY,'&Save image', 'Save image as PNG')
+            wx.EVT_MENU(self, item.GetId(), self.OnSaveImage)
+            item = popup.Append(wx.ID_ANY,'&Grid on/off', 'Toggle grid lines')
+            wx.EVT_MENU(self, item.GetId(), self.OnGridToggle)
+            cmapmenu = CMapMenu(self)
+            item = popup.AppendMenu(wx.ID_ANY, "Colourmaps", cmapmenu)
+
+            #popup = cmapmenu
+            self.PopupMenu(popup, evt.GetPositionTuple())
         def OnColormap(self, name):
             print "Selected colormap",name
+        def OnSaveImage(self, event):
+            print "Saving image..."
+        def OnGridToggle(self, event):
+            print "Toggling grid..."
 
     app = wx.App(redirect=False)
     Frame().Show()
