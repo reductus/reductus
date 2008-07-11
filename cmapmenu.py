@@ -132,7 +132,7 @@ class CMapMenu(wx.Menu):
                 map = matplotlib.cm.get_cmap(name)
                 icon = colorbar_bitmap(map,bar_length,thickness=bar_height)
                 item.SetBitmap(icon)
-		self.AppendItem(item)
+                self.AppendItem(item)
                 window.Bind(wx.EVT_MENU, 
                             event_callback(self._OnSelect, name=name),
                             id=item.GetId())
