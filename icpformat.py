@@ -137,7 +137,9 @@ def get_quoted_tokens(file):
 class Lattice(object): pass
 class Motor(object): pass
 class MotorSet(object): pass
-class ColumnSet(object): pass
+class ColumnSet(object):
+    def __getitem__(self, k):
+        return getattr(self,k)
 
 class ICP(object):
     def __init__(self, path):
@@ -447,14 +449,13 @@ def gzopen(filename,mode='r'):
     return file
 
 def asdata(icp):
-    import data, numpy
+    import numpy
+    import data
     d = data.Data()
-    for (k,v) in icp.__dict__.iteritems():
-        setattr(d.prop,k,v)
     d.vlabel = 'Counts'
-    d.v = d.prop.counts
-    d.xlabel = d.prop.columnnames[0].capitalize()
-    d.x = getattr(d.prop.column, d.prop.columnnames[0])
+    d.v = icp.counts
+    d.xlabel = icp.columnnames[0].capitalize()
+    d.x = icp.column[icp.columnnames[0]]
     if len(d.v.shape) > 1:
         d.ylabel = 'Pixel'
         d.y = numpy.arange(d.v.shape[0])
@@ -474,17 +475,20 @@ def demo():
     Read and print all command line arguments
     """
     import sys
+    if len(sys.argv) < 2:
+        print "usage: python icpformat.py file*"
     for file in sys.argv[1:]:
         fields = read(file)
-        keys = fields.keys()
+        keys = fields.__dict__.keys()
         keys.sort()
-        for k in keys: print k,fields[k]
+        for k in keys: print k,getattr(fields,k)
 
 def plot(filename):
     """
     Read and print all command line arguments
     """
-    import sys, pylab, wx
+    import pylab
+
     canvas = pylab.gcf().canvas
     d = data(filename)
     if len(d.v.shape) > 1:
@@ -497,6 +501,13 @@ def plot(filename):
         pylab.ylabel(d.vlabel)
     pylab.show()
 
+def plot_demo():
+    import sys 
+    if len(sys.argv) != 2:
+        print "usage: python icpformat.py file"
+    else:
+        plot(sys.argv[1])
+
 if __name__=='__main__':
-    import wx,sys; app = wx.PySimpleApp(); plot(sys.argv[1])
+    plot_demo()
     #demo()
