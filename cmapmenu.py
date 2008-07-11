@@ -30,10 +30,12 @@ application is reloaded.  To do this, call CMapMenu(callback=self.OnColormap).
 This will call the method OnColormap with the parameter name giving the
 name of the colormap.
 """
+__all__ = ['CMapMenu']
+
 import sys
 import wx
 import numpy
-import matplotlib.cm
+from matplotlib import cm
 
 def colorbar_bitmap(colormap,length,thickness=10,orientation='horizontal'):
     """
@@ -58,7 +60,7 @@ def all_colormaps():
     Iterate over the available colormaps
     """
     maps = [name 
-            for name in matplotlib.cm.datad.keys() 
+            for name in cm.datad.keys()
             if not name.endswith("_r")]
     maps.sort()
     return maps
@@ -129,7 +131,7 @@ class CMapMenu(wx.Menu):
                 self.AppendSeparator()
             else:
                 item = wx.MenuItem(self, wx.ID_ANY, name)
-                map = matplotlib.cm.get_cmap(name)
+                map = cm.get_cmap(name)
                 icon = colorbar_bitmap(map,bar_length,thickness=bar_height)
                 item.SetBitmap(icon)
                 self.AppendItem(item)
@@ -143,34 +145,51 @@ class CMapMenu(wx.Menu):
         """
         self.selected = name
         if self.mapper: 
-            self.mapper.set_cmap(matplotlib.cm.get_cmap(name))
+            self.mapper.set_cmap(cm.get_cmap(name))
         if self.canvas:
             self.canvas.draw_idle()
         if self.callback:
             self.callback(name)
 
 def demo():
+    
+    from matplotlib.image import FigureImage
+    from matplotlib.figure import Figure
+    from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as Canvas
     class Frame(wx.Frame):
         def __init__(self):
-            wx.Frame.__init__(self, parent=None, title="Hello")
-            self.Bind(wx.EVT_RIGHT_DOWN, self.OnContext)
+            wx.Frame.__init__(self, parent=None, title="Colourmap Selection")
+
+            self.figure = Figure(dpi=80, figsize=(2,2))
+            self.canvas = Canvas(self, -1, self.figure)
+            self.axes = self.figure.gca()
+            x = y = numpy.linspace(-3,3,80)
+            X,Y = numpy.meshgrid(x,y)
+            V = numpy.sin(Y**2+X**2)
+            self.mapper = FigureImage(self.figure)
+            im = self.axes.pcolor(x,y,V,shading='flat')
+            self.mapper.add_observer(im)
+
+            sizer = wx.BoxSizer(wx.VERTICAL)
+            sizer.Add(self.canvas,1,wx.EXPAND)
+            self.SetSizer(sizer)
+
+            self.canvas.Bind(wx.EVT_RIGHT_DOWN, self.OnContext)
+
+
         def OnContext(self, evt):
             popup = wx.Menu()
-            item = popup.Append(wx.ID_ANY,'&Save image', 'Save image as PNG')
-            wx.EVT_MENU(self, item.GetId(), self.OnSaveImage)
             item = popup.Append(wx.ID_ANY,'&Grid on/off', 'Toggle grid lines')
             wx.EVT_MENU(self, item.GetId(), self.OnGridToggle)
-            cmapmenu = CMapMenu(self)
+            cmapmenu = CMapMenu(self, callback = self.OnColormap,
+                                mapper=self.mapper, canvas=self.canvas)
             item = popup.AppendMenu(wx.ID_ANY, "Colourmaps", cmapmenu)
-
-            #popup = cmapmenu
             self.PopupMenu(popup, evt.GetPositionTuple())
         def OnColormap(self, name):
             print "Selected colormap",name
-        def OnSaveImage(self, event):
-            print "Saving image..."
         def OnGridToggle(self, event):
-            print "Toggling grid..."
+            self.axes.grid()
+            self.canvas.draw_idle()
 
     app = wx.App(redirect=False)
     Frame().Show()
