@@ -12,8 +12,8 @@ mpl.use('WXAgg')
 from copy import deepcopy
 import matplotlib.cm
 import matplotlib.colors
-from canvas import FigureCanvas as Canvas
-#from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as Canvas
+#from canvas import FigureCanvas as Canvas
+from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as Canvas
 from matplotlib.backend_bases import LocationEvent
 from matplotlib.font_manager import FontProperties
 from matplotlib.colors import Normalize,LogNorm
@@ -478,7 +478,13 @@ class Plotter4(wx.Panel):
             im = ax.pcolorfast(x,y,v)
         except AttributeError:
             im = ax.pcolormesh(x,y,v,shading='flat')
-        self.colormapper.add_observer(im)
+        #self.colormapper.add_observer(im)
+        def on_changed(m):
+            print "changed",m
+            self.colorbar.set_cmap(m.get_cmap())
+            self.colorbar.set_clim(m.get_clim())
+            self.colorbar.update_bruteforce(m)
+        self.colormapper.callbacksSM.connect('changed',on_changed)
 
         self.vmin = min(self.vmin, numpy.min(v))
         self.vmax = max(self.vmax, numpy.max(v))
@@ -493,6 +499,7 @@ def demo():
     import data
     # Get some data
     d = data.peakspol(n=355)
+    #d = data.peakspol(n=1000)
 
     # Make a frame to show it
     app = wx.PySimpleApp()
