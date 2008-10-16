@@ -141,7 +141,8 @@ class CMapMenu(wx.Menu):
 
     def _OnSelect(self, event, name=None):
         """
-        When selected, record the name and call the subclass OnSelect method.
+        When selected, record the name, update the mapper and invoke the
+        callback.
         """
         self.selected = name
         if self.mapper: 
