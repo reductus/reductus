@@ -47,6 +47,11 @@ def polarization_efficiency(*args, **kw):
     from reflectometry.reduction.polcor import PolarizationEfficiency
     return PolarizationEfficiency(*args, **kw)
 
+def smooth(*args, **kw):
+    """Data smoothing using 1-D moving window least squares filter"""
+    from reflectometry.reduction.smooth import Smooth
+    return Smooth(*args, **kw)
+
 def water_intensity(*args, **kw):
     """Intensity estimate from water scatter"""
     from reflectometry.reduction.ratiocor import WaterIntensity

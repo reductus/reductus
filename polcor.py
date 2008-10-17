@@ -5,7 +5,7 @@ Polarized neutron measurements select a particular neutron spin state
 for the incident and reflected neutrons.  Experiments which probe the
 interaction between spin state and sample must first determine the
 efficiency with which each spin state can be selected and apply that
-effect to the data before presenting it to the user.
+effect to the data before presenting it to the user.[1]
 
 The way that spin states are selected will vary between instruments.
 Some instruments will have a polarizing supermirror+flipper
@@ -153,7 +153,7 @@ TODO: with both spin up and spin down neutrons in sample simultaneously
 in some proportion, do the cross sections need to be coherently to account
 for the theory?
 
-
+[1] C.F. Majkrzak (1996). Physica B 221, 342-356.
 """
 
 import numpy as N
@@ -172,12 +172,18 @@ class PolarizationEfficiency(object):
 
     """
 
-    properties = ['FRbalance','min_efficiency','min_intensity']
+    properties = ['FRbalance','min_efficiency','min_intensity',
+                  'clip','spinflip']
     min_efficiency = 0.7
+    """Minimum efficiency cutoff"""
     min_intensity = 1e-2
+    """Minimum intensity cutoff"""
+    clip = True
+    """Perform clipping to keep efficiencies physical"""
+    spinflip = True
+    """Correct both spinflip and non-spinflip data if available"""
     _beam = PolarizedData()
     _FRbalance = 0.5
-
 
     # Define the correction parameters
     def _getbeam(self): return self._beam
@@ -185,7 +191,7 @@ class PolarizationEfficiency(object):
         if not beam.isaligned():
             raise ValueError, "polarization efficiency correction needs aligned intensity measurements"
         self._beam = beam
-        self._compute_efficiency()
+        self.__update()
     beam = property(_getbeam,_setbeam,
                     doc="measured beam intensity")
 
@@ -194,7 +200,7 @@ class PolarizationEfficiency(object):
         if val > 1: val = 1
         elif val < 0: val = 0
         self._FRbalance = val
-        self._compute_efficiency()
+        self.__update()
     FRbalance = property(_getFRbalance,_setFRbalance,
                          doc="relative balance of front to back efficiency")
 
@@ -210,38 +216,50 @@ class PolarizationEfficiency(object):
     def beta(self): return 0.5*self.Ic
 
     def __init__(self, **kw):
-        """Define the polarization efficiency correction for the beam
-        beam: measured beam intensity for all four cross sections
-        FRbalance: portion of efficiency to assign to front versus rear
         """
+        Define the polarization efficiency correction for the beam
+        
+        Keywords:
+            beam: measured beam intensity for all four cross sections
+            FRbalance: portion of efficiency to assign to front versus rear
+            clip: [True|False] force efficiencies below 100%
+            spinflip: [True|False] compute spinflip correction 
+        """
+        self.__dirty = False
+        self.set(**kw)
+
+    def set(self, **kw):
+        """
+        Update a set of correction parameters.
+        """
+        self.__initializing = True
         for k,v in kw.iteritems():
             assert hasattr(self,k), "No %s in %s"%(k,self.__class__.__name__)
             setattr(self,k,v)
+        self.__initializing = False
+        if self.__dirty: self.__update()
+        
 
     def __call__(self, data):
         """Apply the correction to the data"""
         assert data.ispolarized(), "need polarized data"
         assert data.isaligned(), "need aligned data"
 
-        X,dX = correct_efficiency(self, data)
-        data.pp.v, data.pp.dv = X[0,:], dX[0,:]
-        data.pm.v, data.pm.dv = X[1,:], dX[1,:]
-        data.mp.v, data.mp.dv = X[2,:], dX[2,:]
-        data.mm.v, data.mm.dv = X[3,:], dX[3,:]
+        correct_efficiency(self, data)
         data.log(str(self))
         return data
 
     def __str__(self):
         return "PolarizationEfficiency('%s')"%self.beam.name
 
-    def _compute_efficiency(self):
+    def __update(self):
         """
         Compute polarizer and flipper efficiencies from the intensity data.
 
         If clip is true, reject points above or below particular efficiencies.
         The minimum intensity is 1e-10.  The minimum efficiency is 0.9.
 
-        The returned values are systematically related to the efficiencies:
+        The computed values are systematically related to the efficiencies:
           Ic: intensity is 2*beta
           fp: front polarizer efficiency is F
           rp: rear polarizer efficiency is R
@@ -252,20 +270,26 @@ class PolarizationEfficiency(object):
 
         See PolarizationEfficiency.pdf for details on the calculation.
         """
+        if self.__initializing: 
+            self.__dirty = True
+            return
+        else:
+            self.__dirty = False
 
         # Beam intensity normalization.
         beam = self._beam
         assert beam.isaligned(), "need aligned data"
         pp,pm,mp,mm = beam.pp.v,beam.pm.v,beam.mp.v,beam.mm.v
         Ic = (pp*mm-pm*mp) / (pp+mm-pm-mp)
-        Ireject = clip(Ic, self.min_intensity, N.inf)
+        reject = (Ic!=Ic)  # Reject nothing initially
+        if self.clip: reject |= clip(Ic, self.min_intensity, N.inf)
 
         # F and R are the front and rear polarizer efficiencies.  Each
         # is limited below by min_efficiency and above by 1 (since they
         # are not neutron sources).  Keep a list of points that are
         # rejected because they are outside this range.
         FR = pp/Ic - 1
-        FRreject = clip(FR, self.min_efficiency**2, 1)
+        if self.clip: reject |= clip(FR, self.min_efficiency**2, 1)
         fp = FR ** self.FRbalance
         rp = FR / fp
 
@@ -280,28 +304,23 @@ class PolarizationEfficiency(object):
         ff = (1-x)/2
         rf = (1-y)/2
 
-        ffreject = clip(ff, self.min_efficiency, 1)
-        rfreject = clip(rf, self.min_efficiency, 1)
-
-        reject = N.unique(N.hstack([FRreject, Ireject, ffreject, rfreject]))
+        if self.clip: reject |= clip(ff, self.min_efficiency, 1)
+        if self.clip: reject |= clip(rf, self.min_efficiency, 1)
 
         self.Ic, self.fp, self.ff, self.rp, self.rf = Ic,fp,ff,rp,rf
         self.reject = reject
-
-
 
 def clip(field,lo,hi,nanval=0.):
     """clip the values to the range, returning the indices of the values
     which were clipped.  Note that this modifies field in place. NaN
     values are clipped to the nanval default.
     """
-    reject = N.where(N.isnan(field) | (field<lo) | (field>hi))
-    field[N.isnan(field)] = nanval
-    field[field<lo] = lo
-    field[field>hi] = hi
+    idx = N.isnan(field); field[idx] = nanval; reject = idx
+    idx = field<lo;       field[idx] = lo;     reject |= idx
+    idx = field>hi;       field[idx] = hi;     reject |= idx
     return reject
 
-def correct_efficiency(eff, data):
+def correct_efficiency(eff, data, spinflip=True):
     """Apply the efficiency correction in eff to the data."""
 
     F = eff.F
@@ -310,50 +329,74 @@ def correct_efficiency(eff, data):
     Ry = eff.R*eff.y
     beta = eff.beta
 
-    Y = N.array([ data.pp.v, data.pm.v, data.mp.v, data.mm.v ]) / beta
-    dY = N.array([ data.pp.dv, data.pm.dv, data.mp.dv, data.mm.dv ]) / beta
+    # Don't compute spinflip correction if spinflip data is absent
+    if spinflip and data.pm and data.mp:
+        spinflip = False
 
-    # Note:  John's code has an extra factor of four here,
-    # which roughly corresponds to the elements of sqrt(diag(inv(Y'Y))),
-    # the latter giving values in the order of 3.9 for one example
-    # dataset.  Is there an analytic reason it should be four?
-    H = N.array([
-                 (1+F)*(1+R), (1+Fx)*(1+R), (1+F)*(1+Ry), (1+Fx)*(1+Ry),
-                 (1-F)*(1+R), (1-Fx)*(1+R), (1-F)*(1+Ry), (1-Fx)*(1+Ry),
-                 (1+F)*(1-R), (1+Fx)*(1-R), (1+F)*(1-Ry), (1+Fx)*(1-Ry),
-                 (1-F)*(1-R), (1-Fx)*(1-R), (1-F)*(1-Ry), (1-Fx)*(1-Ry),
-                 ])
+    if spinflip:
+        Y = N.vstack([ data.pp.v, data.pm.v, data.mp.v, data.mm.v ]) / beta
+        dY = N.vstack([ data.pp.dv, data.pm.dv, data.mp.dv, data.mm.dv ]) / beta
 
+        # Note:  John's code has an extra factor of four here,
+        # which roughly corresponds to the elements of sqrt(diag(inv(Y'Y))),
+        # the latter giving values in the order of 3.9 for one example
+        # dataset.  Is there an analytic reason it should be four?
+        H = N.array([
+                     [(1+F)*(1+R), (1+Fx)*(1+R), (1+F)*(1+Ry), (1+Fx)*(1+Ry)],
+                     [(1-F)*(1+R), (1-Fx)*(1+R), (1-F)*(1+Ry), (1-Fx)*(1+Ry)],
+                     [(1+F)*(1-R), (1+Fx)*(1-R), (1+F)*(1-Ry), (1+Fx)*(1-Ry)],
+                     [(1-F)*(1-R), (1-Fx)*(1-R), (1-F)*(1-Ry), (1-Fx)*(1-Ry)],
+                     ])
+    else:
+        Y = N.array([ data.pp.v, data.mm.v ]) / beta
+        dY = N.array([ data.pp.dv, data.mm.dv ]) / beta
+        H = N.array([
+                     [(1+F)*(1+R), (1+Fx)*(1+Ry)],
+                     [(1-F)*(1-R), (1-Fx)*(1-Ry)],
+                     ])
+        
+
+    # Extract and solve each set of equations
+    # Note: it may be faster to compute the pseudo-inverses as a
+    # a preprocessing step so that the code below is simply a matrix
+    # multiply.  This will only be true if the same intensity scan
+    # is used for multiple slit scans.
     X = N.zeros(Y.shape)
     dX = N.zeros(dY.shape)
-    reject = []
+    reject = eff.reject&True
     for i in xrange(H.shape[1]):
-        # Extract and solve each set of equations
-        # Note: it may be faster to compute the pseudo-inverses as a
-        # a preprocessing step so that the code below is simply a matrix
-        # multiply.  This will only be true if the same intensity scan
-        # is used for multiple slit scans.
-        A = N.reshape(H[:,i],(4,4))
-        y = Y[:,i].T
-        dy = dY[:,i].T
+        A = H[:,:,i]
+        y = Y[:,i]
+        dy = dY[:,i]
         try:
             s = wsolve(A,y,dy)
         except ValueError:
+            reject[i] = True
             x,dx = y,dy
-            reject.append(i)
         else:
-            x,dx = N.ravel(s.x),N.ravel(s.std)
+            x,dx = s.x,s.std
         X[:,i] = x
         dX[:,i] = dx
 
-    return X, dX
+    if spinflip:
+        data.pp.v, data.pp.dv = X[0,:], dX[0,:]
+        data.pm.v, data.pm.dv = X[1,:], dX[1,:]
+        data.mp.v, data.mp.dv = X[2,:], dX[2,:]
+        data.mm.v, data.mm.dv = X[3,:], dX[3,:]
+    else:
+        data.pp.v, data.pp.dv = X[0,:], dX[0,:]
+        data.mm.v, data.mm.dv = X[1,:], dX[1,:]
+    if hasattr(data.reject):
+        data.reject |= reject
+    else:
+        data.reject = reject
 
 def demo():
-    from examples import e3a12 as dataset
+    from reflectometry.reduction.examples import e3a12 as dataset
     eff = PolarizationEfficiency(beam=dataset.slits())
     for attr in ["Ic","fp","rp","ff","rf"]:
         print attr,getattr(eff,attr)
     data = dataset.spec()
-    #data.appy(eff)
+    data.apply(eff)
 
 if __name__ == "__main__": demo()

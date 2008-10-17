@@ -7,12 +7,14 @@ scans for the individual cross-sections, and the estimated 2*beta, the
 other showing the efficiencies of the front/back polarizers and flippers.
 """
 
+import numpy
 import wx
 import matplotlib as mpl
 mpl.interactive(False)
 mpl.use('WXAgg')
 import matplotlib.pyplot
-from canvas import FigureCanvas as Canvas
+#from canvas import FigureCanvas as Canvas
+from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as Canvas
 
 
 class Plotter(wx.Panel):
@@ -37,17 +39,20 @@ class Plotter(wx.Panel):
         ax.set_ylabel("Counts")
         if self.raw is not None:
             eff = self.raw
-            for data,label in zip([eff.beam.pp, eff.beam.pm,
-                                   eff.beam.mp, eff.beam.mm],
-                                  ['$++$','$+-$','$-+$','$--$']):
+            for data,label,color in zip([eff.beam.pp, eff.beam.pm,
+                                         eff.beam.mp, eff.beam.mm],
+                                         ['$I++$','$I+-$','$I-+$','$I--$'],
+                                         ['r','g','b','m']):
                 self.intensity.errorbar(data.x,data.v,yerr=data.dv,
-                                        fmt='+',label=label)
-            self.intensity.plot(eff.beam.pp.x,eff.Ic,'+',label='$I_c$')
+                                        fmt='x'+color,label=label)
+            self.intensity.plot(eff.beam.pp.x,eff.Ic,'xc',label='$I_c$')
         if self.smooth is not None:
             eff = self.smooth
-            for data in [eff.beam.pp, eff.beam.pm, eff.beam.mp, eff.beam.mm]:
-                self.intensity.errorbar(data.x,data.v,data.dv,'+')
-            self.intensity.semilogy(eff.beam.pp.x,eff.Ic,'+')
+            for data,color in zip([eff.beam.pp, eff.beam.pm, 
+                                   eff.beam.mp, eff.beam.mm],
+                                  ['r','g','b','m']):
+                self.intensity.errorbar(data.x,data.v,data.dv,fmt='-'+color)
+            self.intensity.semilogy(eff.beam.pp.x,eff.Ic,'-c')
         ax.legend()
         ax.set_yscale('log')
         self.canvas.draw_idle()
@@ -60,14 +65,18 @@ class Plotter(wx.Panel):
         if self.raw is not None:
             eff = self.raw
             ax.set_xlabel("%s (%s)"%(eff.beam.xlabel, eff.beam.xunits))
-            for y,lab in zip([eff.fp, eff.ff, eff.rf, eff.rp],
-                             ['F pol','F flip','R pol','R flip']):
-                self.efficiency.plot(eff.beam.pp.x, 100*y,'+',label=lab)
+            for y,lab,color in zip([eff.fp, eff.ff, eff.rf, eff.rp],
+                                   ['F pol','F flip','R pol','R flip'],
+                                   ['r','g','b','m']):
+                self.efficiency.plot(eff.beam.pp.x, 100*y,'x'+color,label=lab)
         if self.smooth is not None:
             eff = self.smooth
             ax.set_xlabel("%s (%s)"%(eff.beam.xlabel, eff.beam.xunits))
-            for y in [eff.fp, eff.ff, eff.rf, eff.rp]:
-                self.efficiency.plot(eff.beam.pp.x, 100*y,'-')
+            for y,color in zip([eff.fp, eff.ff, eff.rf, eff.rp],
+                               ['r','g','b','m']):
+                self.efficiency.plot(eff.beam.pp.x, 100*y,'-'+color)
+        ax.set_ylim(ymax=105)
+        ax.axhspan(100,1000,facecolor='0.8',alpha=0.5)
         ax.legend()
         self.canvas.draw_idle()
 
@@ -80,10 +89,14 @@ class Plotter(wx.Panel):
 def demo():
     from examples import e3a12 as data
     from polcor import PolarizationEfficiency
+    from smooth import Smooth
 
-    # Get some data
+    # Get a slit scan and compute the raw efficiency
     beam = data.slits()
-    eff = PolarizationEfficiency(beam=beam)
+    eff = PolarizationEfficiency(beam=beam, FRbalance=0.6, clip=False)
+    # Smooth it and comput the smoothed efficiency
+    beam.apply(Smooth(degree=2,span=13))
+    effsmooth = PolarizationEfficiency(beam=beam, FRbalance=0.6, clip=True)
 
     # Make a frame to show it
     app = wx.PySimpleApp()
@@ -92,7 +105,7 @@ def demo():
     frame.Show()
 
     # render the graph to the pylab plotter
-    plotter.plot(eff)
+    plotter.plot(eff, effsmooth)
 
     app.MainLoop()
     pass

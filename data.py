@@ -178,11 +178,15 @@ class PolarizedData(object):
         # TODO: perform the check (monoref only)
         return True
 
+    def log(self,msg):
+        """Record corrections that have been applied to the data"""
+        self.messages.append(msg)
+
     def apply(self, correction):
         """Apply a correction to the data."""
-        n = len(self.message)
+        n = len(self.messages)
         correction(self)
-        assert len(self.message)>n, "Correction %s not logged"%str(correction)
+        assert len(self.messages)>n, "Correction %s not logged"%str(correction)
         return self
 
     def spin_asymmetry(self):

@@ -328,7 +328,7 @@ class PolynomialModel(object):
         """
         Evaluate the polynomial at x.
         """
-        return N.polyval(x)
+        return N.polyval(self.coeff,x)
 
     def ci(self, x, sigma=1):
         """
@@ -418,6 +418,7 @@ def test():
     assert dperr < 1e-15,"||dp-Tdp||=%g"%dperr
     assert cierr < 1e-15,"||ci-Tci||=%g"%cierr
     assert pierr < 1e-15,"||pi-Tpi||=%g"%pierr
+    assert py == poly(px),"direct call to poly function fails"
 
 if __name__ == "__main__":
     test()
