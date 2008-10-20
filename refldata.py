@@ -5,7 +5,7 @@ Reflectometry data representation.
 Need to support collections of data from TOF, monochromatic
 and white beam instruments.
 
-Conceptually each data point is a tuple:
+Conceptually each data point is a tuple::
 
     incident angles (sample tilt and rotation)
     reflected angles (polar angle of detector pixel)

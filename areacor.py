@@ -2,7 +2,10 @@
 """
 Correct from counts per pixel to counts per unit area on the detector.
 
-== Usage ==
+Usage
+=====
+
+Example::
 
     # construct the correction based on a detector measurement
     from reflectometry.reduction import load, measured_area_correction
@@ -13,21 +16,22 @@ Correct from counts per pixel to counts per unit area on the detector.
     data = load(d).apply(areacor)
 
 If you want to the pixels to have equal area then you need to include
-a rebin=True flag:
+a rebin=True flag::
 
     areacor = measured_area_correction(floodfill,rebin=True)
 
 You can also set the areacor.rebin attribute directly.
 
 If you know the pixel widths in x and y then you don't have to extract
-them from a measurement, but can instead use:
+them from a measurement, but can instead use::
 
     areacor = area_correction(wx,wy,source="provenance")
 
 Certain instruments have predefined area corrections, which are
 returned by the area_correction() method of the refldata object.
 
-== Limitations ==
+Limitations
+===========
 
 The correction applies independently in x and y using the sum of the pixels
 across that detector dimension.  Small detector rotations and misaligned
@@ -54,7 +58,8 @@ the pixels could be further scaled by this variation.  The scale factor
 should be S = nx*ny * F/sum(F), where F is the corrected detector image.
 This is not implemented here.
 
-== Theory ==
+Theory
+======
 
 Assuming the pixels have none uniform area, we can estimate the area
 of each pixel by looking at the counts across the detector in a floodfill
@@ -198,4 +203,4 @@ class AreaCorrection(object):
         return data
 
     def __str__(self):
-        return "AreaCorrection('%s')"%source
+        return "AreaCorrection('%s')"%self.source

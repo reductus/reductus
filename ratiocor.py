@@ -19,11 +19,11 @@ reflection are performed on blanks with identical geometery
 so the footprint is the same on both.  No footprint correction
 will be required.
 
-Example:
+Example::
 
-  # Compute the intensity scan assuming that data measures
-  # the specular reflection off 85% water, 15% deuterated water.
-  data.apply(WaterIntensity(D2O=15))
+    # Compute the intensity scan assuming that data measures
+    # the specular reflection off 85% water, 15% deuterated water.
+    data.apply(WaterIntensity(D2O=15))
 
 """
 from __future__ import with_statement

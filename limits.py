@@ -24,20 +24,20 @@ class Limits(object):
     """
     Collect data limits, used for selecting ranges in colour maps for example.
 
-    A Limits() object has the following attributes:
+    A Limits() object has the following attributes::
 
       ceiling - the maximum absolute data value
       floor   - 1/2 the min absolute value at least 1/2-sigma away from zero
       min     - the minimum data value
       max     - the maximum data value
 
-    The limits are collected by adding data sets to a limits object:
+    The limits are collected by adding data sets to a limits object::
 
        L = Limits()
        for f in frames:
            L.add(f, dv=sqrt(f))
 
-    Alternatively you can use the union operator:
+    Alternatively you can use the union operator::
 
        L = Limits()
        for f in frames:

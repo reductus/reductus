@@ -14,7 +14,8 @@ class ExtensionRegistry(object):
 
     Note that there may be multiple loaders for the same extension.
 
-    Example:
+    Example
+    =======
 
     registry = ExtensionRegistry()
 

@@ -1,4 +1,5 @@
-"""PolPlot2D is a panel for 4 cross-section 2D polarized reflectometry data.
+"""
+PolPlot2D is a panel for 4 cross-section 2D polarized reflectometry data.
 """
 
 import wx,numpy,os

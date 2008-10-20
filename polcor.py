@@ -24,14 +24,14 @@ Q, either due to increased divergence or wavelength dependence.
 ===============================
 
 To perform a polarization data reduction you must first have measured
-beam data under different polarization conditions:
+beam data under different polarization conditions::
 
     pp spin up incident, spin up reflected
     pm spin up incident, spin down measured
     mp spin down incident, spin up measured
     mm spin down incident, spin down measured
 
-These data are passed into the correction using a PolarizedData container:
+These data are passed into the correction using a PolarizedData container::
 
     I = PolarizedData()
     I.xlabel, P.xunits = 'Slit 1', 'mm'   # On TOF, maybe 'wavelength','nm'
@@ -64,7 +64,7 @@ Even if the data are already aligned across the four cross sections,
 it is still desirable to smooth the polarized data prior to estimating
 because the efficiency estimate is unstable.
 
-Use alignment or smoothing corrections to make your data regular:
+Use alignment or smoothing corrections to make your data regular::
 
     I.apply(align)    # use linear interpolation to regrid the data
     I.apply(smooth)   # a weighted irregular Savitsky-Golay filter
@@ -74,12 +74,12 @@ Use alignment or smoothing corrections to make your data regular:
 ====================================
 
 The polarization efficiency correction is controlled by the
-PolarizationEfficiency class:
+PolarizationEfficiency class::
 
     eff = PolarizationEfficiency(I)
 
 Once the class is constructed and the resulting efficiency attributes
-are available:
+are available::
 
     eff.fp front polarizer efficiency
     eff.ff front flipper efficiency
@@ -88,7 +88,7 @@ are available:
     eff.Ic overall beam intensity
 
 The formalism from Majkrzak, et al. (see attached PDF) defines the
-following, which are attributes to the efficiency object:
+following, which are attributes to the efficiency object::
 
     eff.F = fp
     eff.R = rp
@@ -97,7 +97,7 @@ following, which are attributes to the efficiency object:
     eff.beta = Ic/2
 
 There are a few attributes of the class that will change how the
-efficiencies are calculated:
+efficiencies are calculated::
 
     eff.min_intensity = 1e-2
     eff.min_efficiency = 0.7
@@ -109,7 +109,7 @@ product FR of the front and rear polarization efficiencies, and
 the user must decide how to distribute the remainder.
 The FRbalance should vary between 0 (front polarizer is 100% efficient)
 through 0.5 (distribute inefficiency equally) to 1 (rear polarizer
-is 100% efficient).  The particular formula used is:
+is 100% efficient).  The particular formula used is::
 
      F = (F*R)^FRbalance
      R = (F*R)/F
