@@ -521,10 +521,11 @@ class NXslab_context(object):
         self._close_on_exit = not self._file.isopen
         self._file.open() # Force file open even if closed
         self._file.openpath(self._path)
+        return self
 
-    def __exit__(self):
+    def __exit__(self, *args):
         """
-        Close the file associated the data after slabs are all read.
+        Close the file associated the data after reading.
         """
         if self._close_on_exit:
             self._file.close()
@@ -543,10 +544,10 @@ class NXslab_context(object):
 
         Corresponds to NXgetslab(handle,data,offset,shape)
         """
-        value = self._file.getslab(self,offset,size)
+        value = self._file.getslab(offset,size)
         return self._converter(value,units)
 
-    def put(self, data, offset, shape):
+    def put(self, data, offset):
         """
         Put a slab into the data array.
 
@@ -557,7 +558,7 @@ class NXslab_context(object):
 
         Corresponds to NXputslab(handle,data,offset,shape)
         """
-        self._file.putslab(self, data, offset, shape)
+        self._file.putslab(data, offset, data.shape)
         
 class SDS(NXnode):
     """
@@ -827,11 +828,11 @@ class Unknown(NXnode):
         return "Unknown('%s','%s')"%(self.nxname,self.nxclass)
 
 # File level operations
-def read(filename):
+def read(filename, mode='r'):
     """
     Read a NeXus file, returning a tree of nodes
     """
-    file = NeXus(filename,'r')
+    file = NeXus(filename,mode)
     tree = file.read()
     file.close()
     return tree
