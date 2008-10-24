@@ -13,15 +13,19 @@ This wrapper needs the location of the libNeXus precompiled binary. It
 looks in the following places in order:
     os.environ['NEXUSLIB']                  - All
     directory containing nxs.py             - All
-    C:\Program Files\NeXus Data Format\bin  - Windows
+    os.environ['NEXUSDIR']\bin              - Windows
     os.environ['LD_LIBRARY_PATH']           - Unix
     os.environ['DYLD_LIBRARY_PATH']         - Darwin
+    PREFIX/lib                              - Unix and Darwin
     /usr/local/lib                          - Unix and Darwin
     /usr/lib                                - Unix and Darwin
 
-On Windows it looks for libNeXus.dll and libNeXus-0.dll
+On Windows it looks for libNeXus.dll and libNeXus-0.dll;
+NEXUSDIR defaults to r'C:\Program Files\NeXus Data Format'
 On OS X it looks for libNeXus.dylib
 On Unix it looks for libNeXus.so
+PREFIX defaults to /usr/local, but is replaced by the value of
+--prefix during configure.
 
 The import will raise an OSError exception if the library wasn't found
 or couldn't be loaded.  Note that on Windows in particular this may be
@@ -184,6 +188,9 @@ def _libnexus():
     """
     Load the NeXus library whereever it may be.
     """
+    # this will get changed as part of the install process
+    # it should correspond to --prefix specified to ./configure
+    nxprefix = '/usr/local'
     # NEXUSLIB takes precedence
     if 'NEXUSLIB' in os.environ:
         file = os.environ['NEXUSLIB']
@@ -197,9 +204,15 @@ def _libnexus():
     # Default names and locations to look for the library are system dependent
     filedir = os.path.dirname(__file__)
     if sys.platform in ('win32','cygwin'):
+        # NEXUSDIR is set by the Windows installer for NeXus
+        if 'NEXUSDIR' in os.environ:
+            winnxdir = os.environ['NEXUSDIR']
+        else:
+            winnxdir =  'C:/Program Files/NeXus Data Format'
+
         files += [filedir+"/libNeXus.dll",
                   filedir+"/libNeXus-0.dll",
-                  'C:/Program Files/NeXus Data Format/bin/libNeXus-0.dll']
+                  winnxdir + '/bin/libNeXus-0.dll']
     else:
         if sys.platform in ('darwin'):
             lib = 'libNeXus.dylib'
@@ -209,7 +222,7 @@ def _libnexus():
             ldenv = 'LD_LIBRARY_PATH'
         # Search the load library path as well as the standard locations
         ldpath = [p for p in os.environ.get(ldenv,'').split(':') if p != '']
-        stdpath = ['/usr/local/lib','/usr/lib']
+        stdpath = [ nxprefix+'/lib', '/usr/local/lib', '/usr/lib']
         files += [os.path.join(p,lib) for p in [filedir]+ldpath+stdpath]
 
     # Given a list of files, try loading the first one that is available.
@@ -260,14 +273,17 @@ class NeXus(object):
         # Convert open mode from string to integer and check it is valid
         if mode in _nxopen_mode: mode = _nxopen_mode[mode]
         if mode not in _nxopen_mode.values():
-            raise ValueError, "Invalid open mode %s",mode
+            raise ValueError, "Invalid open mode %s",str(mode)
 
         self.filename, self.mode = filename, mode
         self.handle = c_void_p(None)
         self.path = []
         status = self.lib.nxiopen_(filename,mode,_ref(self.handle))
         if status == ERROR:
-            op = 'open' if mode in [ACC_READ, ACC_RDWR] else 'create'
+            if mode in [ACC_READ, ACC_RDWR]:
+                op = 'open'
+            else:
+                op = 'create'
             raise RuntimeError, "Could not %s %s"%(op,filename)
         self.isopen = True
 
@@ -290,7 +306,10 @@ class NeXus(object):
         Opens the NeXus file handle if it is not already open.
         """
         if self.isopen: return
-        mode = ACC_READ if self.mode==ACC_READ else ACC_RDWR
+        if self.mode==ACC_READ:
+            mode = ACC_READ
+        else:
+            mode = ACC_RDWR
         status = self.lib.nxiopen_(self.filename,mode,_ref(self.handle))
         if status == ERROR:
             raise RuntimeError, "Could not open %s"%(self.filename)
@@ -375,7 +394,10 @@ class NeXus(object):
         if status == ERROR:
             raise ValueError, "Could not open %s in %s"%(path,self._loc())
         n,path,nxclass = self.getgroupinfo()
-        self.path = path.split('/') if path != 'root' else []
+        if path != 'root':
+            self.path = path.split('/')
+        else:
+            self.path = []
 
 
     lib.nxiopengrouppath_.restype = c_int
@@ -394,7 +416,10 @@ class NeXus(object):
         if status == ERROR:
             raise ValueError, "Could not open %s in %s"%(path,self.filename)
         n,path,nxclass = self.getgroupinfo()
-        self.path = path.split('/') if path != 'root' else []
+        if path != 'root':
+            self.path = path.split('/')
+        else:
+            self.path = []
 
 
     lib.nxiopengroup_.restype = c_int
@@ -473,9 +498,7 @@ class NeXus(object):
         """
         Return the next entry in the group as name,nxclass tuple.
 
-        Returns None,None if there are no more entries.
-        
-        Raises RuntimeError if NeXus reports an error.
+        Raises RuntimeError if this fails, or if there is no next entry.
 
         Corresponds to NXgetnextentry(handle,name,nxclass,&storage).
 
@@ -487,9 +510,7 @@ class NeXus(object):
         nxclass = ctypes.create_string_buffer(MAXNAMELEN)
         storage = c_int(0)
         status = self.lib.nxigetnextentry_(self.handle,name,nxclass,_ref(storage))
-        if status == EOD:
-            return None,None
-        if status == ERROR:
+        if status == ERROR or status == EOD:
             raise RuntimeError, \
                 "Could not get next entry: %s"%(self._loc())
         ## Note: ignoring storage --- it is useless without dimensions
@@ -507,7 +528,7 @@ class NeXus(object):
 
         This automatically opens the corresponding group/data for you,
         and closes it when you are done.  Do not rely on any paths
-        remaining open between elements as we restore the current
+        remaining open between entries as we restore the current
         path each time.
 
         This does not correspond to an existing NeXus API function,
@@ -519,17 +540,16 @@ class NeXus(object):
         # of the path so we can restore it between entries.
         n,path,_ = self.getgroupinfo()
         #print "path",path
-        path = "/"+path if not path == "root" else "/"
+        if not path == "root":
+            path = "/"+path
+        else:
+            path = "/"
 
         # Read list of entries
         self.initgroupdir()
         L = []
-        while True:
-            name,nxclass = self.getnextentry()
-            if name is None: break
-            L.append((name,nxclass))
-
-        # Process each entry
+        for i in range(n):
+            L.append(self.getnextentry())
         for name,nxclass in L:
             self.openpath(path)  # Reset the file cursor
             if nxclass == "SDS":
@@ -537,13 +557,6 @@ class NeXus(object):
             else:
                 self.opengroup(name,nxclass)
             yield name,nxclass
-            # Close the group when you are done, leaving the file
-            # cursor in the same position as when the 'entries'
-            # iteration was started.
-            if nxclass == "SDS":
-                self.closedata()
-            else:
-                self.closegroup()
 
     # ==== Data ====
     lib.nxigetinfo_.restype = c_int
@@ -809,8 +822,7 @@ class NeXus(object):
         getinfo for details.  Length is the number of elements in the
         attribute.
 
-        Returns None,None,None on end of data.
-        Raises RuntimeError if NeXus reports an error.
+        Raises RuntimeError if NeXus returns ERROR or EOD.
 
         Corresponds to NXgetnextattr(handle,name,&length,&storage)
         but with storage converted from HDF values to numpy compatible
@@ -823,8 +835,6 @@ class NeXus(object):
         length = c_int(0)
         storage = c_int(0)
         status = self.lib.nxigetnextattr_(self.handle,name,_ref(length),_ref(storage))
-        if status == EOD:
-            return None,None,None
         if status == ERROR or status == EOD:
             raise RuntimeError, "Could not get next attr: %s"%(self._loc())
         dtype = _pytype_code[storage.value]
@@ -916,9 +926,9 @@ class NeXus(object):
         combines the work of attrinfo/initattrdir/getnextattr/getattr.
         """
         self.initattrdir()
-        while True:
+        n = self.getattrinfo()
+        for i in range(n):
             name,length,dtype = self.getnextattr()
-            if name is None: return
             value = self.getattr(name,length,dtype)
             yield name,value
 
@@ -1037,7 +1047,10 @@ class NeXus(object):
             if name == "target":
                 target = self.getattr(name,length,dtype)
                 #print "target %s, path %s"%(target,pathstr)
-                return target if target != pathstr else None
+                if target != pathstr:
+                    return target
+                else:
+                    return None
         return None
 
     # ==== External linking ====
@@ -1090,8 +1103,10 @@ class NeXus(object):
         url = ctypes.create_string_buffer(maxnamelen)
         status = self.lib.nxiisexternalgroup_(self.handle,name,nxclass,
                                               url,maxnamelen)
-        return None if status == ERROR else url.value
-
+        if status == ERROR:
+            return None
+        else:
+            return url.value
 
     # ==== Utility functions ====
     def _loc(self):
@@ -1100,7 +1115,10 @@ class NeXus(object):
 
         This is an extension to the NeXus API.
         """
-        pathstr = "/".join(self.path) if not self.path == [] else "root"
+        if not self.path == []:
+            pathstr = "/".join(self.path)
+        else:
+            pathstr = "root"
         return "%s(%s)"%(self.filename,pathstr)
 
     def _poutput(self, dtype, shape):
@@ -1151,7 +1169,7 @@ class NeXus(object):
             # array slices such as a[:,1], which only report one dimension
             input_shape = numpy.array([i for i in data.shape if i != 1])
             target_shape = numpy.array([i for i in shape if i != 1])
-            if len(input_shape) != len(target_shape) or any(input_shape != target_shape):
+            if len(input_shape) != len(target_shape) or (input_shape != target_shape).any():
                 raise ValueError,\
                     "Shape mismatch %s!=%s: %s"%(data.shape,shape,self.filename)
             if str(data.dtype) != dtype:
@@ -1172,13 +1190,13 @@ class NeXus(object):
     def show(self, path=None, indent=0):
         """
         Print the structure of a NeXus file from the current node.
-        
+
         TODO: Break this into a tree walker and a visitor.
         """
         oldpath = "/"+"/".join(self.path)
         if not path: path = oldpath
         self.openpath(path)
-        
+
         print "=== File",self.inquirefile(),path
         self._show(indent=indent)
         self.openpath(oldpath)
@@ -1186,7 +1204,7 @@ class NeXus(object):
     def _show(self, indent=0):
         """
         Print the structure of a NeXus file from the current node.
-        
+
         TODO: Break this into a tree walker and a visitor.
         """
         prefix = ' '*indent
@@ -1213,10 +1231,6 @@ class NeXus(object):
             else:
                 print "%(prefix)s%(name)s %(nxclass)s" % locals()
                 self._show(indent=indent+2)
-    
-
-# tests are provided by nxstest.py
-def test(): pass
 
 
 __id__ = "$ID$"

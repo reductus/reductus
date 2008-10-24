@@ -112,6 +112,7 @@ if you want to change the nature of the tree.  The properties of these
 classes are closely coupled to the behaviour of read/write so refer to
 the source if you need to do this.
 """
+__all__ = ['read', 'write', 'dir']
 
 from copy import copy, deepcopy
 import numpy
@@ -604,7 +605,10 @@ class SDS(NXnode):
         self.nxgroup = group
         # Convert NeXus attributes to python attributes
         self._setattrs(attrs)
-        units = attrs['units'].nxdata if 'units' in attrs else None
+        if 'units' in attrs:
+            units = attrs['units'].nxdata
+        else:
+            units = None
         self._converter = nxsunit.Converter(units)
         self.nxslab = NXslab_context(file, path, self._converter)
 
@@ -854,7 +858,10 @@ def demo(argv):
         copy fromfile.nxs tofile.nxs
         ls f1.nxs f2.nxs ...
     """
-    op = argv[1] if len(argv) > 1 else ''
+    if len(argv) > 1:
+        op = argv[1]
+    else:
+        op = 'help'
     if op == 'ls':
         for f in argv[2:]: dir(f)
     elif op == 'copy' and len(argv)==4:
