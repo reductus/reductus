@@ -168,7 +168,7 @@ class AreaCorrection(object):
         self.source = source
         self.rebin = rebin
 
-    def __call__(self, data):
+    def apply(self, data):
         """Apply the area correction to the data"""
         nx,ny = self.wx.shape[0],self.wy.shape[1]
         assert data.detector.dims == [nx,ny], \
@@ -200,7 +200,6 @@ class AreaCorrection(object):
             # Normalize pixels by area
             fail.data.detector.counts /= self.wx
             data.detector.counts /= self.wy
-        return data
 
     def __str__(self):
         return "AreaCorrection('%s')"%self.source

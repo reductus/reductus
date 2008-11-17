@@ -10,24 +10,24 @@ ReverseCorrection
 FrontCorrection
 """
 
-class ReverseCorrection(object):
+from reflectometry.reduction.correction import Correction
+
+class ReverseCorrection(Correction):
     """
     Reverse the sense of the reflection angles, making positive angles
     negative and vice versa
     """
-    def __call__(self,data):
+    def apply(self,data):
         data.sample.angle_x = -data.sample.angle_x
         data.detector.angle_x = -data.detector.angle_x
-        return data
-    def __str__(self): return "ReverseCorrection"
+    def __str__(self): return "ReverseCorrection()"
 
-class FrontCorrection(object):
+class FrontCorrection(Correction):
     """
     Assume all reflection is off the top surface, reversing the sense
     of negative angles.
     """
-    def __call__(self,data):
+    def apply(self,data):
         data.sample.angle_x = abs(data.sample.angle_x)
         data.detector.angle_x = abs(data.detector.angle_x)
-        return data
-    def __str__(self): return "FrontCorrection"
+    def __str__(self): return "FrontCorrection()"

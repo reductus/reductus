@@ -30,12 +30,13 @@ from __future__ import with_statement
 
 from math import *
 import reflectometry.model1d as reflfit
+from reflectometry.reduction.correction import Correction
 from reflectometry.reduction.fresnel import Fresnel
 import numpy
 
 __all__ = ['RatioIntensity', 'WaterIntensity']
 
-class RatioIntensity(object):
+class RatioIntensity(Correction):
     """
     Compute the incident intensity assuming that data measures a
     reflection off known sample.
@@ -49,15 +50,13 @@ class RatioIntensity(object):
     def __init__(self, model):
         self.model = model
 
-    def __call__(self, data):
+    def apply(self, data):
         intensity_ratio(data=data,model=self.model)
-        data.log(str(self))
-        return data
 
     def __str__(self):
         return "RatioIntensity(%s)"%str(model)
 
-class WaterIntensity(object):
+class WaterIntensity(Correction):
     """
     Compute the incident intensity assuming that data measures a
     reflection off water.
@@ -100,10 +99,8 @@ class WaterIntensity(object):
         self._D2O = D2O
         self._set_fresnel_coefficients()
 
-    def __call__(self,data):
+    def apply(self,data):
         intensity_ratio(data=data,model=self.model)
-        data.log(str(self))
-        return data
 
     def __str__(self):
         if self._D2O == 0:

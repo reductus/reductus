@@ -5,9 +5,10 @@ Monitor normalization correction.
 """
 
 from numpy import sqrt
+from reflectometry.reduction.correction import Correction
 from reflectometry.reduction import err1d
 
-class Normalize(object):
+class Normalize(Correction):
     def __init__(self, base='auto'):
         """
         Define the kind of monitor normalization.
@@ -15,7 +16,7 @@ class Normalize(object):
         """
         self.base = base
 
-    def __call__(self, data):
+    def apply(self, data):
         base = data.monitor.base if self.base == 'auto' else self.base
         C = data.detector.counts
         varC = C # Poisson stats
@@ -42,9 +43,6 @@ class Normalize(object):
         data.R,data.varR = err1d.div(C,varC,M,varM)
         data.vunits = units
         data.vlabel = 'Intensity'
-
-        data.log("Normalize('%s')"%base)
-        return data
 
     def __str__(self):
         return "Normalize('%s')"%self.base

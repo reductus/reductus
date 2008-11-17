@@ -196,7 +196,7 @@ class NG1Icp(refldata.ReflData):
         """
         Returns the default area correction that can be applied to the data.
         """
-        import areacor
+        from reflectometry.reduction import areacor
         nx,ny = self.detector.dims
         Ax,Ay = self.detector.solid_angle
         wx = (1+0.15*cos(2*pi*numpy.arange(nx)/32.))/nx * Ax

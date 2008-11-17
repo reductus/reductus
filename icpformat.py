@@ -44,8 +44,8 @@ def readdata(fh):
             line = fh.readline()
             linenum += 1
 
-                # If last line ended with a comma then the last number for the
-                # the current block is on the current line.
+        # If last line ended with a comma then the last number for the
+        # the current block is on the current line.
         if b != [] and b[-1].rstrip()[-1] == ",":
             b.append(line)
             line = fh.readline()

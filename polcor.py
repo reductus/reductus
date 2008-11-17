@@ -157,11 +157,12 @@ for the theory?
 """
 
 import numpy as N
+from reflectometry.reduction.correction import Correction
 from reflectometry.reduction.data import PolarizedData
 from reflectometry.reduction.wsolve import wsolve
 
 
-class PolarizationEfficiency(object):
+class PolarizationEfficiency(Correction):
     """
     Polarization efficiency correction object.  Create a correction object
     from a polarized direct beam measurement and apply it to measured data.
@@ -240,14 +241,12 @@ class PolarizationEfficiency(object):
         if self.__dirty: self.__update()
 
 
-    def __call__(self, data):
+    def apply(self, data):
         """Apply the correction to the data"""
         assert data.ispolarized(), "need polarized data"
         assert data.isaligned(), "need aligned data"
 
         correct_efficiency(self, data)
-        data.log(str(self))
-        return data
 
     def __str__(self):
         return "PolarizationEfficiency('%s')"%self.beam.name

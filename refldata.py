@@ -57,7 +57,7 @@ that went into the reduction.
 
 See notes in properties.py regarding dated values.
 """
-
+__all__ = ['ReflData']
 
 import datetime
 import weakref
@@ -712,14 +712,6 @@ class ReflData(object):
     def log(self,msg):
         """Record corrections that have been applied to the data"""
         self.messages.append(msg)
-
-    def apply(self, correction):
-        """Apply a correction to the data."""
-        n = len(self.messages)
-        correction(self)
-        assert len(self.messages)>n, "Correction %s not logged"%str(correction)
-        return self
-        # TODO: inherit from Data?
 
     def resetQ(self):
         A,B = self.sample.angle_x,self.detector.angle_x

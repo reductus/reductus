@@ -11,7 +11,7 @@ some point refldata may be made to inherit from data, but for data
 will act as a platform for developing plotting ideas, and is not part
 of the main reflectometry code.
 """
-import numpy as N
+import numpy
 
 def edges_from_centers(x):
     """
@@ -21,7 +21,7 @@ def edges_from_centers(x):
     there is insufficient information to uniquely reconstruct the edges
     given the centers.
     """
-    z = N.zeros(len(x)+1)
+    z = numpy.zeros(len(x)+1)
     z[1:-1] = centers_from_edges(x)
     z[0] = x[0] - (z[1]-x[0])
     z[-1] = x[-1] + (x[-1]-z[-2])
@@ -50,7 +50,7 @@ def dict2text(d,indent=0):
         val = d[key]
         if isinstance(val,dict):
             text = "\n"+dict2text(val,indent+2)
-        elif isinstance(val,N.ndarray):
+        elif isinstance(val,numpy.ndarray):
             text = "array size " + dims(val)
         else:
             text = str(val)
@@ -81,7 +81,7 @@ class Data(object):
     vlabel,vunits='v',None
 
     # Store variance but allow 1-sigma uncertainty interface
-    def _getdv(self): return N.sqrt(self.variance)
+    def _getdv(self): return numpy.sqrt(self.variance)
     def _setdv(self,dv): self.variance = dv**2
     dv = property(_getdv,_setdv,'1-sigma uncertainty')
 
@@ -133,13 +133,6 @@ class Data(object):
         """Record corrections that have been applied to the data"""
         self.messages.append(msg)
 
-    def apply(self, correction):
-        """Apply a correction to the data."""
-        n = len(self.messages)
-        correction(self)
-        assert len(self.messages)>n, "Correction %s not logged"%str(correction)
-        return self
-
     def __str__(self):
         return "Data(%s)"%(dims(self.v))
 
@@ -182,13 +175,6 @@ class PolarizedData(object):
         """Record corrections that have been applied to the data"""
         self.messages.append(msg)
 
-    def apply(self, correction):
-        """Apply a correction to the data."""
-        n = len(self.messages)
-        correction(self)
-        assert len(self.messages)>n, "Correction %s not logged"%str(correction)
-        return self
-
     def spin_asymmetry(self):
         """
         Return the spin asymmetry for the pp and mm crosssections.
@@ -218,25 +204,25 @@ def refl(n=100,noise=0.02):
     n = number of data points
     noise = relative error in simulated data points
     """
-    Q = N.linspace(0.,0.5,n)
+    Q = numpy.linspace(0.,0.5,n)
     dQ = Q*0.001
-    f = N.sqrt(Q**2 - 16*N.pi*2.07e-6 + 0j)
-    R = N.abs( (Q-f)/(Q+f) )**2
+    f = numpy.sqrt(Q**2 - 16*numpy.pi*2.07e-6 + 0j)
+    R = numpy.abs( (Q-f)/(Q+f) )**2
     dR = noise*R
-    R = R + dR*N.random.randn(n)
+    R = R + dR*numpy.random.randn(n)
     data = Data(x=Q,dx=dQ,v=R,dv=dR,xlabel='Q',xunits='inv A',vlabel='R')
     return data
 
 def peaks(n=40,noise=0.02):
     """Example 2D data: peaks function"""
     nr,nc = n,n+5
-    x = N.linspace(-3,3,nr)
-    y = N.linspace(-3,3,nc)
-    [X,Y] = N.meshgrid(x,y)
-    v = 3*(1-X)**2*N.exp(-X**2 - (Y+1)**2) \
-          - 10*(X/5 - X**3 - Y**5)*N.exp(-X**2-Y**2) \
-          - 1/3*N.exp(-(X+1)**2 - Y**2)
-    v = v + noise*N.random.randn(nc,nr)
+    x = numpy.linspace(-3,3,nr)
+    y = numpy.linspace(-3,3,nc)
+    [X,Y] = numpy.meshgrid(x,y)
+    v = 3*(1-X)**2*numpy.exp(-X**2 - (Y+1)**2) \
+          - 10*(X/5 - X**3 - Y**5)*numpy.exp(-X**2-Y**2) \
+          - 1/3*numpy.exp(-(X+1)**2 - Y**2)
+    v = v + noise*numpy.random.randn(nc,nr)
     data = Data(x=x,y=y,v=v)
     return data
 

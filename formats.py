@@ -114,17 +114,21 @@ the NeXus format, all the metadata from the head file will be preserved.
 
 New formats can be created and register using
 
-    red.register_format(loader)
+    red.formats.register(loader)
 
-See the register_format documentation for a description of the loader
+See the formats.register documentation for a description of the loader
 function interface.
+
+Currently available formats are returned from::
+
+    red.formats.available()
 
 """
 
 import os.path
 #from reflectometry.reduction.
 from registry import ExtensionRegistry
-__all__ = ['loadmeta','load','formats','register_format','datadir']
+__all__ = ['loadmeta','load','datadir']
 
 datadir = os.path.join(os.path.dirname(__file__),'examples')
 
@@ -158,17 +162,20 @@ def load(file, format=None):
     for data in measurements: data.load() # Load the dataset
     return measurements[0] if len(measurements)==1 else measurements
 
-def formats():
+def available():
+    """
+    Return a list of available file formats.
+    """
     return registry.formats()
 
-def register_format(ext,loader):
+def register(ext,loader):
     """
     Register loader for a file extension.
 
     For each normal file extension for the format, call
-        register_format('.ext',loader)
+        register('.ext',loader)
     You should also register the format name as
-        register_format('name',loader)
+        register('name',loader)
     This allows the user to recover the specific loader using:
         load('path',format='name')
 
@@ -227,21 +234,21 @@ def nexus(file):
     return load_entries(file)
 
 # Register extensions with file formats
-register_format('.ng7', icp_ng7)
-register_format('.ng7.gz', icp_ng7)
-register_format('NCNR NG-7',icp_ng7)
+register('.ng7', icp_ng7)
+register('.ng7.gz', icp_ng7)
+register('NCNR NG-7',icp_ng7)
 
-register_format('.nxs', nexus)
-register_format('NeXus', nexus)
+register('.nxs', nexus)
+register('NeXus', nexus)
 
-register_format('NCNR NG-1', icp_ng1)
+register('NCNR NG-1', icp_ng1)
 for ext in ['.na1', '.nb1', '.nc1', '.nd1', '.ng1']:
-    register_format(ext, icp_ng1)
-    register_format(ext+'.gz', icp_ng1)
+    register(ext, icp_ng1)
+    register(ext+'.gz', icp_ng1)
 
 for ext in ['.ca1', '.cb1', '.cc1', '.cd1', '.cg1']:
-    register_format(ext, icp_ng1)
-    register_format(ext+'.gz', icp_ng1)
+    register(ext, icp_ng1)
+    register(ext+'.gz', icp_ng1)
 
 def test():
     # demostrate loading of NG-7 files; just check that the file
@@ -254,6 +261,6 @@ def test():
     assert load(ng7file).detector.wavelength == 4.76
     assert load(ng1file).name == 'gsip4007.ng1'
     assert loadmeta(cg1file).name == 'psdca022.cg1'
-    assert formats() == ['NCNR NG-1','NCNR NG-7','NeXus'],formats()
+    assert available() == ['NCNR NG-1','NCNR NG-7','NeXus'],available()
 
 if __name__ == "__main__": test()

@@ -1,6 +1,8 @@
 # This program is public domain
 """
 Data corrections for reflectometry.
+
+
 """
 
 # TODO Autogenerate these entries from the corrections themselves.
@@ -9,37 +11,11 @@ Data corrections for reflectometry.
 # TODO the complete description of constructor arguments and function
 # TODO description.
 
-# TODO Find a way to do lazy importing.  Corrections are
-# TODO stored as class name in the log file, but they are not
-# TODO available as top level names in reflred.  Instead we
-# TODO provide a lookup function to import the class given
-# TODO the correction.
-
-def load_class(class_name):
-    """
-    Returns the named class from whatever submodule it happens to live in.
-
-    This allows us to keep smaller files and shorter load times by delaying
-    the loading of corrections until they are needed, though at some
-    inconvenience to the developer.  For the most part developers will be
-    able to use the equivalent factory method to return an item of the class,
-    generally using the lower case class name with underscore separating the
-    words.
-    """
-    map = dict(Normalize='normalize',
-               PolarizationEfficiency='polcor',
-               WaterIntensity='ratiocor',
-               RatioIntensity='ratiocor',
-               AreaCorrection='areacor')
-    module_name = map[class_name]
-    module = __import__('reflectometry.reduction.'+module_name,
-                        fromlist=[class_name])
-    cls = getattr(module,class_name)
-    return cls
+# TODO find a better way to delay loading of symbols
 
 def normalize(*args, **kw):
     """Normalization correction; should be applied first"""
-    from reflectometry.reduction.normalize import Normalize
+    from reflectometry.reduction.normcor import Normalize
     return Normalize(*args, **kw)
 
 def polarization_efficiency(*args, **kw):
@@ -49,7 +25,7 @@ def polarization_efficiency(*args, **kw):
 
 def smooth(*args, **kw):
     """Data smoothing using 1-D moving window least squares filter"""
-    from reflectometry.reduction.smooth import Smooth
+    from reflectometry.reduction.smoothcor import Smooth
     return Smooth(*args, **kw)
 
 def water_intensity(*args, **kw):

@@ -19,9 +19,9 @@ Usage
 
     data.appy(AdjustAlignment(offset=0.01)
 """
-from reflectometry.reduction import refldata
+from reflectometry.reduction.correction import Correction
 
-class AdjustAlignment(object):
+class AdjustAlignment(Correction):
     """
     Adjust Q if there is reason to believe either the detector
     or the sample is rotated.
@@ -35,15 +35,13 @@ class AdjustAlignment(object):
         """
         self.offset = offset
 
-    def __call__(self, data):
+    def apply(self, data):
         """Apply the angle correction to the data"""
         assert not data.ispolarized(), "need unpolarized data"
 
         data.sample.angle_x += self.offset
         data.detector.angle_x -= self.offset
         data.resetQ()
-        data.log(str(self))
-        return data
 
     def __str__(self):
         return "AdjustAlignment(offset=%g)"%offset

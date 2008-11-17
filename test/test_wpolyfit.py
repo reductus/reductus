@@ -63,15 +63,15 @@ def check_uncertainty(n=10000):
         x = N.linspace(2,4,12)
         y = 3*x+5
         dy = y
-    p,dp = wpolyfit(x,y,dy=dy,deg=1)
+    p = wpolyfit(x,y,dy=dy,degree=1)
     P=N.empty((2,n),'d')
     for i in xrange(n):
-        #pi = N.polyfit(x,N.random.normal(y,dy),deg=1)
-        pi,dpi = wpolyfit(x,N.random.normal(y,dy),dy=dy,deg=1)
-        P[:,i] = pi
+        #pi = N.polyfit(x,N.random.normal(y,dy),degree=1)
+        pi = wpolyfit(x,N.random.normal(y,dy),dy=dy,degree=1)
+        P[:,i] = pi.coeff
     #print "P",P
     Ep,Edp = N.mean(P,1),N.std(P,1)
-    show_result("uncertainty check",p,dp,Ep,Edp)
+    show_result("uncertainty check",p.coeff,p.std,Ep,Edp)
 
     if False:
         import pylab
@@ -96,9 +96,9 @@ def check(name,data,target,origin=False,tol=2e-16):
     data   [y,x]
     target [p,dp] but low to high rather than high to low
     """
-    p,dp = wpolyfit(data[:,1],data[:,0],deg=target.shape[0]-1,origin=origin)
+    p = wpolyfit(data[:,1],data[:,0],degree=target.shape[0]-1,origin=origin)
     Ep,Edp = N.flipud(target).T
-    show_result(name,p,dp,Ep,Edp,tol=tol)
+    show_result(name,p.coeff,p.std,Ep,Edp,tol=tol)
 
 
 def run_tests():

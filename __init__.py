@@ -16,12 +16,13 @@ Once you have the reduction library installed you will need to do
 a little bit of reading to see what is available.  The following
 is a good order to proceed::
 
+   import reflectometry.reduction as red
    # Reflectometry data format
-   help red.refldata
+   help(red.refldata)
    # Loading data and saving results
-   help red.formats
+   help(red.formats)
    # Data transformations
-   help red.corrections
+   help(red.corrections)
 
 === Acknowledgements ===
 

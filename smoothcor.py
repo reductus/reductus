@@ -17,10 +17,11 @@ __all__ = ['Smooth']
 
 import numpy
 
+from reflectometry.reduction.correction import Correction
 from reflectometry.reduction.wsolve import wpolyfit
 
 
-class Smooth(object):
+class Smooth(Correction):
     """
     Moving window 1-D polynomial least squares smoothing filter.
 
@@ -44,7 +45,7 @@ class Smooth(object):
             setattr(self,k,v)
         assert self.span%2==1, "Span must be odd"
 
-    def __call__(self, data):
+    def apply(self, data):
         """Apply the correction to the data"""
         if data.ispolarized():
             lines = [data.pp, data.pm, data.mp, data.mm]
@@ -53,7 +54,6 @@ class Smooth(object):
         for L in lines:
             v,dv = smooth(L.x, L.v, L.dv, degree=self.degree, span=self.span)
             L.v,L.dv = v,dv
-        data.log(str(self))
 
     def __str__(self):
         return "Smooth(degree=%d,span=%d)"%(self.degree,self.span)
