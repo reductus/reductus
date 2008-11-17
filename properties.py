@@ -4,8 +4,8 @@
 Support for rarely varying instrument configuration parameters.
 
 Instrument configuration parameters will change throughout the
-lifetime of an instrument.  For example, the properties of the 
-beam such as wavelength and wavelength divergence will change 
+lifetime of an instrument.  For example, the properties of the
+beam such as wavelength and wavelength divergence will change
 when a new monochromator is installed on the instrument.  Ideally,
 all such parameters would be encoded in the data file (this is
 one goal of the NeXus file format), but this is not the case for
@@ -46,7 +46,7 @@ The following parameters are needed for the NG71reflectometer::
     config = properties.DatedValues()
     config.wavelength = (4.76,'')  # in case ICP records the wrong value
 
-    # Detector response is uniform below 15000 counts/s.  The efficiency 
+    # Detector response is uniform below 15000 counts/s.  The efficiency
     # curve above 15000 has not been measured.
     config.saturation = (numpy.array([[1,15000,0]]),'')
 
@@ -91,8 +91,8 @@ The defaults are used as follows::
 
 # TODO: property sheet editor
 # Once the file parameters are loaded the values are displayed to
-# the user on a property sheet.  Values different from the default 
-# are highlighted.  Users can edit the values, with changes noted in 
+# the user on a property sheet.  Values different from the default
+# are highlighted.  Users can edit the values, with changes noted in
 # the reduction log so that data history is preserved.
 
 # TODO: XML support

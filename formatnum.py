@@ -9,7 +9,7 @@ __all__ = ['format_uncertainty']
 def format_uncertainty(value,uncertainty):
     """
     Given a value and an uncertainty, return a concise string representation.
-    
+
     The returned string uses only the number of digits warranted by the
     uncertainty in the measurement.
     """
@@ -19,7 +19,7 @@ def format_uncertainty(value,uncertainty):
     # Process sign
     sign = "-" if value < 0 else ""
     value = abs(value)
-    
+
     # Represent error as (##) at the end of the digit string
     val_place = int(math.floor(math.log10(value)))
     err_place = int(math.floor(math.log10(uncertainty)))
@@ -91,7 +91,7 @@ def test():
     assert value_str(12356700,764) == "12.3567(76)e6"
     assert value_str(123567000,7640) == "123.567(76)e6"
     assert value_str(1235670000,76400) == "1.23567(76)e9"
-    
+
     # val_place == err_place
     assert value_str(123567,764000) == "0.12(76)e6"
     assert value_str(12356.7,76400) == "12(76)e3"
@@ -161,4 +161,3 @@ def test():
 
 
 if __name__ == "__main__": test()
-    

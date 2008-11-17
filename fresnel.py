@@ -9,7 +9,7 @@ from numpy import sqrt, exp, real, conj, pi, log, abs, choose
 class Fresnel:
     """
     Function for computing the Fresnel reflectivity for a single interface.
-    
+
     rho,Vrho
         scattering length density of substrate and vacuum
     mu,Vmu

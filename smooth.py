@@ -23,9 +23,9 @@ from reflectometry.reduction.wsolve import wpolyfit
 class Smooth(object):
     """
     Moving window 1-D polynomial least squares smoothing filter.
-    
-    The parameters are the polynomial order and the window size.  
-    The window size is the number of consecutive points used to 
+
+    The parameters are the polynomial order and the window size.
+    The window size is the number of consecutive points used to
     smooth the data.  The window size must be odd.
     """
 
@@ -61,7 +61,7 @@ class Smooth(object):
 # TODO: check for equal spacing and use Savitsky-Golay since it will
 # TODO: be orders of magnitude faster. Precompute the SG coefficients
 # TODO: in the Smooth class.
-    
+
 
 def smooth(x, y, dy=None, degree=2, span=5):
     """
@@ -97,7 +97,7 @@ def demo():
     data.apply(Smooth(degree=2,span=7))
     pylab.semilogy(data.pp.x, data.pp.v, '-g',
                    data.pp.x, data.pp.v-data.pp.dv, '-.g',
-                   data.pp.x, data.pp.v+data.pp.dv, '-.g')    
+                   data.pp.x, data.pp.v+data.pp.dv, '-.g')
     pylab.show()
 
 if __name__ == "__main__": demo()

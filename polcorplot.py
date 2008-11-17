@@ -48,7 +48,7 @@ class Plotter(wx.Panel):
             self.intensity.plot(eff.beam.pp.x,eff.Ic,'xc',label='$I_c$')
         if self.smooth is not None:
             eff = self.smooth
-            for data,color in zip([eff.beam.pp, eff.beam.pm, 
+            for data,color in zip([eff.beam.pp, eff.beam.pm,
                                    eff.beam.mp, eff.beam.mm],
                                   ['r','g','b','m']):
                 self.intensity.errorbar(data.x,data.v,data.dv,fmt='-'+color)

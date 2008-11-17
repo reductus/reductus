@@ -218,12 +218,12 @@ class PolarizationEfficiency(object):
     def __init__(self, **kw):
         """
         Define the polarization efficiency correction for the beam
-        
+
         Keywords:
             beam: measured beam intensity for all four cross sections
             FRbalance: portion of efficiency to assign to front versus rear
             clip: [True|False] force efficiencies below 100%
-            spinflip: [True|False] compute spinflip correction 
+            spinflip: [True|False] compute spinflip correction
         """
         self.__dirty = False
         self.set(**kw)
@@ -238,7 +238,7 @@ class PolarizationEfficiency(object):
             setattr(self,k,v)
         self.__initializing = False
         if self.__dirty: self.__update()
-        
+
 
     def __call__(self, data):
         """Apply the correction to the data"""
@@ -270,7 +270,7 @@ class PolarizationEfficiency(object):
 
         See PolarizationEfficiency.pdf for details on the calculation.
         """
-        if self.__initializing: 
+        if self.__initializing:
             self.__dirty = True
             return
         else:
@@ -354,7 +354,7 @@ def correct_efficiency(eff, data, spinflip=True):
                      [(1+F)*(1+R), (1+Fx)*(1+Ry)],
                      [(1-F)*(1-R), (1-Fx)*(1-Ry)],
                      ])
-        
+
 
     # Extract and solve each set of equations
     # Note: it may be faster to compute the pseudo-inverses as a

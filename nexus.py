@@ -62,7 +62,7 @@ on which facility is storing the file.  This makes life difficult
 for reduction and analysis programs which must know the units they
 are working with.  Our solution to this problem is to allow you to
 retrieve data from the file in particular units.  For example, if
-detector distance is stored in the file using millimeters you can 
+detector distance is stored in the file using millimeters you can
 retrieve them in meters using::
     entry.instrument.detector.distance.nxdata_as('m')
 See help for nxsunit for more details on the unit formats supported.
@@ -87,12 +87,12 @@ functions __enter__ and __exit__::
     ... do the slab functions ...
     node.nxslab.__exit__()
 
-You can traverse the tree by component class instead of component name.  
+You can traverse the tree by component class instead of component name.
 Since there may be multiple components of the same class in one group
-you will need to specify which one to use.  For example, 
-tree.NXentry[0].NXinstrument[0].NXdetector[0].distance references the 
-first detector of the first instrument of the first entry.  Unfortunately, 
-there is no guarantee regarding the order of the entries, and it may vary 
+you will need to specify which one to use.  For example,
+tree.NXentry[0].NXinstrument[0].NXdetector[0].distance references the
+first detector of the first instrument of the first entry.  Unfortunately,
+there is no guarantee regarding the order of the entries, and it may vary
 from call to call, so the above is of limited utility.
 
 The nxplot() method for groups uses matplotlib to plot the data.  You
@@ -156,17 +156,17 @@ class NeXus(nxs.NeXus):
         Read the nexus file structure from the file.  Reading of large datasets
         will be postponed.  Returns a tree of NXgroup, NXattr, SDS and
         NXlink nodes.
-        
+
         Subclasses can provide methods for individual NeXus classes such
-        as NXbeam or NXdata.  Brave users can also specialize NXgroup, 
-        NXattr, SDS and NXlink methods.  
+        as NXbeam or NXdata.  Brave users can also specialize NXgroup,
+        NXattr, SDS and NXlink methods.
         """
         self.open()
         self.openpath("/")
         root = self._readgroup()
         self.close()
         root.nxgroup = None
-        
+
         # Resolve links
         self._readlinks(root)
         return root
@@ -284,7 +284,7 @@ class NeXus(nxs.NeXus):
             for node in children.values():
                 node.nxgroup = group
         return group
-    
+
     def _readlinks(self, root):
         """
         Convert linked nodes into direct references.
@@ -296,7 +296,7 @@ class NeXus(nxs.NeXus):
                     link = getattr(link,level)
                 entry.nxlink = link
 
-    # Allow subclasses to override 
+    # Allow subclasses to override
     def NXattr(self, *args, **kw): return NXattr(*args, **kw)
     def SDS(self, *args, **kw): return SDS(*args, **kw)
     def NXgroup(self,*args,**kw): return NXgroup(*args, **kw)
@@ -426,7 +426,7 @@ class NXnode(object):
     """
     Abstract base class for elements in NeXus files.
     The individual objects may be either SDS data objects or groups.
-    
+
     Children should be accessible directly as object attributes.
     NeXus attributes accessible using .Aname rather than .name.
     """
@@ -444,11 +444,11 @@ class NXnode(object):
         for k,v in attrs.items():
             setattr(self, 'A'+k, v)
     def _attrs(self):
-        return dict([(k[1:],v) 
+        return dict([(k[1:],v)
                      for k,v in self.__dict__.items()
                      if isinstance(v,NXattr)])
     def _entries(self):
-        return dict([(k,v) 
+        return dict([(k,v)
                      for k,v in self.__dict__.items()
                      if isinstance(v,NXnode) and not k.startswith('nx')])
     nxattrs = property(_attrs,doc="NeXus attributes for node")
@@ -492,7 +492,7 @@ class NXnode(object):
             for k in names:
                 result += entries[k]._str_name(indent=indent+2)
         return result
-    
+
     def nxdir(self,attrs=False,recursive=False):
         """Print directory"""
         print self._str_tree(attrs=attrs,recursive=recursive)
@@ -503,12 +503,12 @@ class NXnode(object):
 class NXslab_context(object):
     """
     Context manager for NeXus fields.
-    
+
     The context manager opens the file and positions the cursor to the
     correct field.  Data can then be read or written using the get() and
     put() methods.  See SDS for details on how to use this class.
     """
-    
+
     def __init__(self, file, path, unit_converter):
         self._file = file
         self._path = path
@@ -536,7 +536,7 @@ class NXslab_context(object):
 
         Offsets are 0-origin.  Shape can be inferred from the data.
         Offset and shape must each have one entry per dimension.
-        
+
         If units are specified, convert the values to the given units
         before returning them.
 
@@ -559,7 +559,7 @@ class NXslab_context(object):
         Corresponds to NXputslab(handle,data,offset,shape)
         """
         self._file.putslab(data, offset, data.shape)
-        
+
 class SDS(NXnode):
     """
     NeXus data node SDS.
@@ -568,7 +568,7 @@ class SDS(NXnode):
     data block or reading a single slab.
 
     Attributes:
-    
+
     nxname - dataset name
     nxclass - SDS (Scientific Data Set)
     nxattrs - attributes for the data
@@ -580,7 +580,7 @@ class SDS(NXnode):
     nxslab - context manager for reading/writing slabs
 
     Example:
-    
+
     # Read the entire array
     node.nxdata      # The dataset in stored units
     node.nxdata_as(units="mm")    # read the entire dataset as millimeters
@@ -653,14 +653,14 @@ class SDS(NXnode):
 class NXlink(NXnode):
     """
     NeXus linked node.
-    
+
     The real node will be accessible by following the nxlink attribute.
     """
     def __init__(self,name,nxclass="",attrs={},group=None):
         self.nxclass = nxclass
         self.nxname = name
         self.nxlink = None  # This will be filled at the end of read
-        self.nxgroup = None 
+        self.nxgroup = None
         # Convert NeXus attributes to python attributes
         self._setattrs(attrs)
         self._link_target = attrs['target'].nxdata
@@ -719,23 +719,23 @@ class PylabPlotter(object):
                 myopts=copy(opts)
                 myopts.setdefault('fmt','o')
                 myopts.setdefault('linestyle','None')
-                pylab.errorbar(axis_data[0], signal.nxdata, 
+                pylab.errorbar(axis_data[0], signal.nxdata,
                                numpy.sqrt(signal.nxdata), **myopts)
             else:
                 pylab.scatter(axis_data[0], signal.nxdata, **opts)
             pylab.xlabel(label(axes[0]))
             pylab.ylabel(label(signal))
             pylab.title(title)
- 
+
         #Two dimensional plot
         elif len(signal.nxdims) == 2:
             #gridplot = pylab.pcolormesh
             gridplot = imshow_irregular
             if signal.Aunits.nxdata == 'counts':
-                gridplot(axis_data[1], axis_data[0], 
+                gridplot(axis_data[1], axis_data[0],
                          numpy.log10(signal.nxdata+1), **opts)
             else:
-                gridplot(axis_data[1], axis_data[0], 
+                gridplot(axis_data[1], axis_data[0],
                          signal.nxdata, **opts)
             pylab.xlabel(label(axes[1]))
             pylab.ylabel(label(axes[0]))
@@ -747,7 +747,7 @@ class PylabPlotter(object):
     @staticmethod
     def show():
         import pylab
-        pylab.show()    
+        pylab.show()
 
 class NXgroup(NXnode):
     """
@@ -787,7 +787,7 @@ class NXgroup(NXnode):
         """
         Plot data contained within the group.
         """
-        
+
         # Find a plottable signal
         for node in self.nxentries.values():
             if 'signal' in node.nxattrs:
@@ -795,7 +795,7 @@ class NXgroup(NXnode):
                 break
         else:
             raise RuntimeError('No plottable signal')
-        
+
         # Find the associated axes
         if hasattr(signal,'Aaxes'):
             axes = [getattr(self,a) for a in signal.Aaxes.nxdata.split(':')]
@@ -874,7 +874,7 @@ def demo(argv):
             tree = getattr(tree,entry)
         tree.nxplot()
         tree._plotter.show()
-            
+
     else:
         usage = """
 usage: %s cmd [args]

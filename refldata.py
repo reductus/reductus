@@ -250,9 +250,9 @@ class Detector(object):
     Define the detector properties.  Note that this defines a virtual
     detector.  The real detector may have e.g., multiple beam paths
     incident upon it, and be split into two virtual detectors when
-    the file is loaded.  
-    
-    Direction x refers to the primary direction,  and direction y to 
+    the file is loaded.
+
+    Direction x refers to the primary direction,  and direction y to
     the secondary direction.  For vertical geometry, the primary
     direction is in the horizontal plane and the secondary direction
     is in the vertical plane.  For horizontal geometry these are
@@ -280,7 +280,7 @@ class Detector(object):
     angle_x (n x degree)
     angle_y (n x degree)
         Angle of the detector arm relative to the main beam in x and y.
-        This may be constant or an array of length n for the number of 
+        This may be constant or an array of length n for the number of
         measurements in the scan.
     rotation (degree)
         Angle of rotation of the detector relative to the beam.  This
@@ -333,11 +333,11 @@ class Detector(object):
         nx x ny detector pixels
         n number of measurements
         k time/wavelength channels
-        
+
     Runtime Facilities
     ==================
     loadcounts (function returning counts)
-        Counts can be assigned using 
+        Counts can be assigned using
             data.detector.counts = weakref.ref(counts)
         When the counts field is accessed, the reference will be resolved.
         If it yields None, then loadcounts will be called and assigned to
@@ -365,7 +365,7 @@ class Detector(object):
         """Detector solid angle [x,y] (radians)"""
         return 2*arctan2(numpy.asarray(self.size)/2.,self.distance)
     solid_angle = property(_solid_angle,doc=_solid_angle.__doc__)
-  
+
 
     # Raw counts are cached in memory and loaded on demand.
     # Rebinned and integrated counts for the region of interest
@@ -397,7 +397,7 @@ class Detector(object):
     def _delcounts(self):
         _pcounts = lambda:None
     counts = property(_getcounts,_setcounts,_delcounts)
-    
+
 
     def __init__(self, **kw): _set(self,kw)
     def __str__(self): return _str(self)

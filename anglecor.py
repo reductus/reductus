@@ -11,7 +11,7 @@ different angle.
 Note that this adjustment will fail to properly account for the change
 in intensity due to the neutrons at the unexpected reflection angle
 being filtered by the back slits, or due to the unexpected sample
-footprint poorly estimating the beam spill.  Whether these effects are 
+footprint poorly estimating the beam spill.  Whether these effects are
 significant depends on the details of the experiment geometry.
 
 Usage

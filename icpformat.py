@@ -44,8 +44,8 @@ def readdata(fh):
             line = fh.readline()
             linenum += 1
 
-		# If last line ended with a comma then the last number for the
-		# the current block is on the current line.
+                # If last line ended with a comma then the last number for the
+                # the current block is on the current line.
         if b != [] and b[-1].rstrip()[-1] == ",":
             b.append(line)
             line = fh.readline()
@@ -502,7 +502,7 @@ def plot(filename):
     pylab.show()
 
 def plot_demo():
-    import sys 
+    import sys
     if len(sys.argv) != 2:
         print "usage: python icpformat.py file"
     else:

@@ -22,7 +22,7 @@ def load_entries(filename):
 class NeXusRefl(refldata.ReflData):
     """
     NeXus reflectometry entry.
-    
+
     See `reflectometry.reduction.refldata.ReflData` for details.
     """
     format = "NeXus"
@@ -40,7 +40,7 @@ class NeXusRefl(refldata.ReflData):
         self.detector.loadcounts = self.loadcounts
 
         # Set initial Qz
-        self.resetQ() 
+        self.resetQ()
 
 
     def loadcounts(self):

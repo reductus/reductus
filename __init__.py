@@ -1,7 +1,7 @@
 # This code is in the public domain
 """
 The DANSE Reflectometry data reduction library will use a data flow
-architecture consisting of file readers, various corrections, 
+architecture consisting of file readers, various corrections,
 plotters and file writers.  Many operations work on sets of files,
 so we also provide tools for displaying and selecting files.
 

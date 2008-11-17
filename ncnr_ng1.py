@@ -119,7 +119,7 @@ class NG1Icp(refldata.ReflData):
         self.detector.loadcounts = self.loadcounts
 
         # Set initial Qz
-        self.resetQ() 
+        self.resetQ()
 
 
     def loadcounts(self):
@@ -187,7 +187,7 @@ class NG1Icp(refldata.ReflData):
             pass
 
         # Set initial Qz
-        self.resetQ() 
+        self.resetQ()
 
         # TODO: if counts are huge we may want to make this lazy
         self.detector.counts = data.counts

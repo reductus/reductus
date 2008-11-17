@@ -140,7 +140,7 @@ def pow_inplace(X,varX,n):
     varX /= X
     varX /= X     # varX now has varX/X**2
     X **= n       # X now has Z = X**n
-    varX *= X     
+    varX *= X
     varX *= X     # varX now has varX/X**2 * Z**2
     varX *= n**2  # varX now has varZ
     return X,varX

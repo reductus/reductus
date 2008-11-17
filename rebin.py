@@ -8,11 +8,11 @@ from reflectometry.reduction import _reduction
 def rebin(x,I,xo,Io=None):
     """
     Rebin a vector.
-    
+
     x are the existing bin edges
     xo are the new bin edges
     I are the existing counts (one fewer than edges)
-    
+
     Io will be used if present, but be sure that it is a contiguous
     array of the correct shape and size.
     """
@@ -24,11 +24,11 @@ def rebin(x,I,xo,Io=None):
 def rebin2d(x,y,I,xo,yo,Io=None):
     """
     Rebin a matrix.
-    
+
     x,y are the existing bin edges
     xo,yo are the new bin edges
     I is the existing counts (one fewer than edges in each direction)
-    
+
     Io will be used if present; this allows you to pass in a slice
     of an 3-D matrix, though it must be a contiguous slice for this
     to work.  Otherwise you can simply assign the return value of
@@ -45,13 +45,13 @@ def _input(v, dtype='d'):
     if possible.
     """
     v = numpy.asarray(v,dtype=dtype)
-    if not v.flags.contiguous: 
+    if not v.flags.contiguous:
         v = numpy.array(v,dtype=dtype)
     return v
 
 def _output(v, shape, dtype=numpy.float64):
     """
-    Create a contiguous array of the correct shape and type to hold a 
+    Create a contiguous array of the correct shape and type to hold a
     returned array, reusing an existing array if possible.
     """
     if v is None:
@@ -73,7 +73,7 @@ def _check1d(from_bins,val,to_bins,target):
 def _test1d():
     # Split a value
     _check1d([1,2,3,4],[10,20,30],[1,2.5,4],[20,40])
-    
+
     # bin is a superset of rebin
     _check1d([0,1,2,3,4],[5,10,20,30],[1,2.5,3],[20,10]);
 
@@ -81,7 +81,7 @@ def _test1d():
     _check1d([ 1,   2,   3,   4,   5,  6],
              [   10,  20,  30,  40,  50],
              [ 2.5, 3.5], [25])
-    
+
     # one bin to many
     _check1d([1,   2,   3,   4,   5,  6],
              [10,  20,  30,  40,  50],
@@ -125,7 +125,7 @@ def _test2d():
                      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1])
     _nonuniform_test([-1,2,4],
                      [0,1,3],
-                     [3,2,6,4], 
+                     [3,2,6,4],
                      [1,2],
                      [1,2],
                      [1])

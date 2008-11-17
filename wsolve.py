@@ -60,7 +60,7 @@ import numpy as N
 
 # Grab erfc from scipy if it is available; if not then we can only
 # calculate confidence intervals for sigma = 1
-try: 
+try:
     from scipy import stats
     from scipy.special import erfc
 except:
@@ -73,13 +73,13 @@ class LinearModel(object):
     Model evaluator for linear solution to Ax = y.
 
     Computes a confidence interval (range of likely values for the
-    mean at x) or a prediction interval (range of likely values 
+    mean at x) or a prediction interval (range of likely values
     seen when measuring at x).  The prediction interval tells
     you the width of the distribution at x.  This should be the same
     regardless of the number of measurements you have for the value
     at x.  The confidence interval tells you how well you know the
     mean at x.  It should get smaller as you increase the number of
-    measurements.  Error bars in the physical sciences usually show 
+    measurements.  Error bars in the physical sciences usually show
     a 1-alpha confidence value of erfc(1/sqrt(2)), representing
     a 1 sigma standandard deviation of uncertainty in the mean.
 
@@ -90,9 +90,9 @@ class LinearModel(object):
     where for confidence intervals::
 
         var(x' p) = sigma^2 (x' inv(A'A) x)
-        
+
     and for prediction intervals::
-    
+
         var(x' p) = sigma^2 (1 + x' inv(A'A) x)
 
 
@@ -103,7 +103,7 @@ class LinearModel(object):
         x = solution to the equation Ax = y
 
     Computed properties::
-    
+
         cov = covariance matrix [ inv(A'A); O(n^3) ]
         var = parameter variance [ diag(cov); O(n^2)]
         std = standard deviation of parameters [ sqrt(var); O(n^2) ]
@@ -174,7 +174,7 @@ class LinearModel(object):
         #
         # Since x is a vector, t t' is the inner product sum(t**2).
         # Note that LAPACK allows us to do this simultaneously for many
-        # different x using sqrt(sum(T**2,axis=1)), with T = X' Vinv(S). 
+        # different x using sqrt(sum(T**2,axis=1)), with T = X' Vinv(S).
         #
         # Note: sqrt(F(1-a;1,df)) = T(1-a/2;df)
         #
@@ -183,7 +183,7 @@ class LinearModel(object):
         t = N.dot(X,self._SVinv)
         dy = s*N.sqrt(pred + N.sum( t**2, axis=1))
         return y,dy
-    
+
     def __call__(self, A):
         """
         Return the prediction for a linear system at points in the
@@ -283,9 +283,9 @@ class PolynomialModel(object):
         rnorm = 2-norm of the residuals y-Ax
         coeff = coefficients
         degree = polynomial degree
-        
+
     Computed properties::
-    
+
         cov = covariance matrix [ inv(A'A); O(n^3) ]
         var = coefficient variance [ diag(cov); O(n^2)]
         std = standard deviation of coefficients [ sqrt(var); O(n^2) ]
@@ -323,7 +323,7 @@ class PolynomialModel(object):
     std = property(_std,doc="result standard deviation")
     p = property(_p,doc="probability of rejection")
 
-        
+
     def __call__(self, x):
         """
         Evaluate the polynomial at x.
@@ -351,7 +351,7 @@ class PolynomialModel(object):
     def __str__(self):
         # TODO: better polynomial pretty printing using formatnum
         return "Polynomial(%s)"%self.coeff
-    
+
 def wpolyfit(x,y,dy=1,degree=None,origin=False):
     """
     Return the polynomial of degree n that

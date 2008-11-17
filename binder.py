@@ -364,4 +364,3 @@ class BindArtist:
         """
         found = self._find_current(event)
         self.trigger(found,'scroll',event)
-

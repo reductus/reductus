@@ -31,4 +31,3 @@ class FrontCorrection(object):
         data.detector.angle_x = abs(data.detector.angle_x)
         return data
     def __str__(self): return "FrontCorrection"
-

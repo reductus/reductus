@@ -21,12 +21,12 @@ class ExtensionRegistry(object):
 
     # Add an association by setting an element
     registry['.zip'] = unzip
-    
+
     # Multiple extensions for one loader
     registry['.tgz'] = untar
     registry['.tar.gz'] = untar
 
-    # Generic extensions to use after trying more specific extensions; 
+    # Generic extensions to use after trying more specific extensions;
     # these will be checked after the more specific extensions fail.
     registry['.gz'] = gunzip
 
@@ -37,7 +37,7 @@ class ExtensionRegistry(object):
 
     # Show registered extensions
     print registry.extensions()
-    
+
     # Can also register a format name for explicit control from caller
     registry['cx3'] = cx3
     print registry.formats()
@@ -86,9 +86,9 @@ class ExtensionRegistry(object):
     def lookup(self, path):
         """
         Return the loader associated with the file type of path.
-        
+
         Raises ValueError if file type is not known.
-        """        
+        """
         # Find matching extensions
         extlist = [ext for ext in self.extensions() if path.endswith(ext)]
         # Sort matching extensions by decreasing order of length
@@ -114,7 +114,7 @@ class ExtensionRegistry(object):
 
         Raises ValueError if no loader is available.
         Raises KeyError if format is not available.
-        May raise a loader-defined exception if loader fails.        
+        May raise a loader-defined exception if loader fails.
         """
         if format is None:
             loaders = self.lookup(path)

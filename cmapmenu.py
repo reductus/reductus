@@ -54,12 +54,12 @@ def colorbar_bitmap(colormap,length,thickness=10,orientation='horizontal'):
     else:
         raise ValueError,"expected orientation [V]ertical or [H]orizontal"
     return bitmap
-    
+
 def all_colormaps():
     """
     Iterate over the available colormaps
     """
-    maps = [name 
+    maps = [name
             for name in cm.datad.keys()
             if not name.endswith("_r")]
     maps.sort()
@@ -135,7 +135,7 @@ class CMapMenu(wx.Menu):
                 icon = colorbar_bitmap(map,bar_length,thickness=bar_height)
                 item.SetBitmap(icon)
                 self.AppendItem(item)
-                window.Bind(wx.EVT_MENU, 
+                window.Bind(wx.EVT_MENU,
                             event_callback(self._OnSelect, name=name),
                             id=item.GetId())
 
@@ -145,7 +145,7 @@ class CMapMenu(wx.Menu):
         callback.
         """
         self.selected = name
-        if self.mapper: 
+        if self.mapper:
             self.mapper.set_cmap(cm.get_cmap(name))
         if self.canvas:
             self.canvas.draw_idle()
@@ -153,7 +153,7 @@ class CMapMenu(wx.Menu):
             self.callback(name)
 
 def demo():
-    
+
     from matplotlib.image import FigureImage
     from matplotlib.figure import Figure
     from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as Canvas
@@ -198,4 +198,3 @@ def demo():
 
 
 if __name__ == "__main__": demo()
-

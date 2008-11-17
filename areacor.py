@@ -39,7 +39,7 @@ wires will lead to artificial broadening.
 
 The correction does not apply if there are other detector artifacts, such as
 pixel efficiency variation.  Sliding the detector across a narrow slit and
-summing the total counts across the detector will show any efficiency 
+summing the total counts across the detector will show any efficiency
 variation.  We do not attempt to correct for this.
 
 This theory also assumes the floodfill is uniform, which will depend on
@@ -95,8 +95,8 @@ Minimize the log probability by setting the derivative to zero:
     d/dw_i log P = d/dw_i log P_i
                  = d/dw_i (-D w_i) + C_i d/dw_i log D w_i
                  = -D + C_i D / (D w_i)
-    d/dw_i log P = 0 
-        => D = C_i/w_i 
+    d/dw_i log P = 0
+        => D = C_i/w_i
         => w_i = C_i/D = L * C_i / C
 """
 
@@ -118,11 +118,11 @@ def measured_area_correction(data, rebin=False):
     per unit area, the pixel boundaries will be adjusted so that
     they have equal area using standard rebinning techniques.
 
-    For main beam scans, the data will need to be normalized to 
+    For main beam scans, the data will need to be normalized to
     the same number of incident neutrons on all frames, and all
-    frames summed together.  Time of flight data will need to be 
-    combined into a single file, with the time channels collapsed 
-    to a single channel containing all the wavelengths of interest 
+    frames summed together.  Time of flight data will need to be
+    combined into a single file, with the time channels collapsed
+    to a single channel containing all the wavelengths of interest
     for each measurement, and the resulting frames normalized and
     summed.  In any case this preprocessing should happen once
     for each beam scan, resulting in a small file that can be applied

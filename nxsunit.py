@@ -68,7 +68,7 @@ def _build_metric_units(unit,abbr):
 
     Ack! Allows, e.g., Coulomb and coulomb even though Coulomb is not
     a unit because some NeXus files store it that way!
-    
+
     Returns a dictionary of names and scales.
     """
     prefix = dict(peta=1e15,tera=1e12,giga=1e9,mega=1e6,kilo=1e3,

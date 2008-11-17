@@ -9,7 +9,7 @@ Supported formats are:
      ICP on NCNR NG-1 and NG-7
      NeXus on SNS Liquids and Magnetic
 
-The list of available formats can be found at runtime using 
+The list of available formats can be found at runtime using
 reflectometry.reduction.formats()
 
 Sample data for some of these formats is available in datadir.  In ipython
@@ -21,9 +21,9 @@ type the following:
 === Loading files ===
 
 Data files are loaded using:
- 
+
     data = red.load('path/to/file')
-    
+
 This creates a reflectometry data object in memory whose fields can be
 accessed directly (see below).  Note that some data formats can store
 multiple measurements in the file, so the returned value may be a list
@@ -34,7 +34,7 @@ data, or data.component.field for specific components such as detectors
 or slits.  Within ipython, type data.<Tab> to see the fields available.
 See help(refldata) for a complete description of all the fields.
 
-Some datasets are huge and can take substantial time to load.  Instead 
+Some datasets are huge and can take substantial time to load.  Instead
 of loading the entire dataset, you can use:
 
     data = red.loadmeta('path/to/file')
@@ -58,10 +58,10 @@ Saving files is the inverse of loading:
     red.save(data, 'arbitraryfilename', format='.ext')  #
 
 This saves the contents of data into the file of type '.ext'.  Alternatively,
-the data can be saved to an arbitrary filename if the format='.ext' 
-keyword is given.  If the extension is missing, '.dat' is used.  
+the data can be saved to an arbitrary filename if the format='.ext'
+keyword is given.  If the extension is missing, '.dat' is used.
 
-If no filename is given, then 
+If no filename is given, then
 
 The save function can be used to convert from one file format to
 another.  This is can be useful for comparing the results of reduction
@@ -71,7 +71,7 @@ After normalizing by monitor, the data may be in various states of reduction:
 
 * refl - specular reflectivity, Q dQ R dR wavelength
 * spec - specular intensity, not yet corrected by slits
-* back - background estimate 
+* back - background estimate
 * slit - intensity measurement for slit corrections
 * rock - slice through the Qx-Qz plane
 * qxqz - 2-D data
@@ -105,7 +105,7 @@ data, and .nxs for an NeXus/HDF5 versions of the same information.
 
 Note that the reduction process combines many files into one.  Storing
 details such as the sample description from all these files is impractical,
-and so only one 'head' file will be chosen.  This will be the file on 
+and so only one 'head' file will be chosen.  This will be the file on
 which all the corrections have been applied, or the file with the lowest
 sequence number if multiple files have been combined.  When saving to
 the NeXus format, all the metadata from the head file will be preserved.
@@ -136,9 +136,9 @@ def loadmeta(file, format=None):
     Load the measurement description from the file but not the data.
     Use measurement.load() to load the data for each measurement.
 
-    Returns a single measurement if there is only one measurement in 
+    Returns a single measurement if there is only one measurement in
     the file, otherwise it returns a list of measurements.
-    
+
     Use formats() to list available file formats.
     """
     measurements = registry.load(file, format=format)
@@ -146,12 +146,12 @@ def loadmeta(file, format=None):
 
 def load(file, format=None):
     """
-    Load the reflectometry measurement description and the data.  
-    
+    Load the reflectometry measurement description and the data.
 
-    Returns a single measurement if there is only one measurement in 
+
+    Returns a single measurement if there is only one measurement in
     the file, otherwise it returns a list of measurements.
-    
+
     Use formats() to list available file formats.
     """
     measurements = registry.load(file, format=format)
@@ -173,7 +173,7 @@ def register_format(ext,loader):
         load('path',format='name')
 
     The loader has the following signature:
-    
+
         [data1, data2, ...] = loader('path/to/file.ext')
 
     The loader should raise an exception if file is not of the correct
@@ -181,13 +181,13 @@ def register_format(ext,loader):
     in reverse order in which the they were registered.  If all loaders
     fail, the exception raised by the first loader will be forwarded to
     the application.
-    
+
     The returned objects should support the ReflData interface and
-    include enough metadata so that guess_intent() can guess the 
+    include enough metadata so that guess_intent() can guess the
     kind and extent of the measurement it contains.  The metadata need
     not be correct, if for example the length and the actual values of
     the motors are not known until the file is completely read in.
-    
+
     After initialization, the application will make a call to data.load()
     to read in the complete metadata.  In order to support large datasets,
     data.detector.counts can use weak references.  In that case the
@@ -199,12 +199,12 @@ def register_format(ext,loader):
 
     Both loader() and data.load() should call the self.resetQ() before
     returning in order to set the Qx-Qz values from the instrument geometry.
-    
+
     File formats should provide a save() class method.  This method
     will take a ReflData object plus a filename and save it to the file.
 
     See source in refldata.py for a description of the ReflData format.
-    
+
     See source in ncnr_ng1.py for a complete example.
 
     """
@@ -236,12 +236,12 @@ register_format('NeXus', nexus)
 
 register_format('NCNR NG-1', icp_ng1)
 for ext in ['.na1', '.nb1', '.nc1', '.nd1', '.ng1']:
-        register_format(ext, icp_ng1)
-        register_format(ext+'.gz', icp_ng1)
+    register_format(ext, icp_ng1)
+    register_format(ext+'.gz', icp_ng1)
 
 for ext in ['.ca1', '.cb1', '.cc1', '.cd1', '.cg1']:
-        register_format(ext, icp_ng1)
-        register_format(ext+'.gz', icp_ng1)
+    register_format(ext, icp_ng1)
+    register_format(ext+'.gz', icp_ng1)
 
 def test():
     # demostrate loading of NG-7 files; just check that the file
