@@ -712,8 +712,14 @@ class ReflData(object):
     def log(self,msg):
         """Record corrections that have been applied to the data"""
         self.messages.append(msg)
+    
+    def apply(self,correction):
+        """Allow alternative syntax: data.apply(correction)"""
+        self.log(str(correction))
+        correction.apply(self)
 
     def resetQ(self):
+        """Recompute Qx,Qz from geometry and wavelength"""
         A,B = self.sample.angle_x,self.detector.angle_x
         L = self.detector.wavelength
         Qx,Qz = ABL_to_QxQz(A,B,L)
