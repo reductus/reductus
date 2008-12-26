@@ -154,6 +154,14 @@ class CMapMenu(wx.Menu):
 
 def demo():
 
+    class ChangeCM(object):
+        def __init__(self,im):
+            self.im = im
+        def __call__(self, m):
+            self.im.set_cmap(m.get_cmap())
+            self.im.set_clim(m.get_clim())
+            #self.im.update_bruteforce(m)
+
     from matplotlib.image import FigureImage
     from matplotlib.figure import Figure
     from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as Canvas
@@ -169,7 +177,11 @@ def demo():
             V = numpy.sin(Y**2+X**2)
             self.mapper = FigureImage(self.figure)
             im = self.axes.pcolor(x,y,V,shading='flat')
-            self.mapper.add_observer(im)
+            try:
+                cb = self.mapper.callbacksSM.connect('changed', ChangeCM(im))
+            except AttributeError:   # Using 0.91 style
+                self.mapper.add_observer(im)
+            #self.figure.colorbar(self.mapper)
 
             sizer = wx.BoxSizer(wx.VERTICAL)
             sizer.Add(self.canvas,1,wx.EXPAND)
