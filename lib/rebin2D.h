@@ -4,6 +4,7 @@
 #include <iostream>
 #include <vector>
 
+#include "rebin.h"
 
 template <class Real> void
 print_bins(const std::string &message,
@@ -20,7 +21,7 @@ print_bins(const std::string &message,
 
 template <class Real> void
 print_bins(const std::string &message,
-	   const std::vector<Real> &x, 
+	   const std::vector<Real> &x,
 	   const std::vector<Real> &y,
 	   const std::vector<Real> &z)
 {
@@ -37,37 +38,31 @@ print_bins(const std::string &message,
 // TODO: make this code the basis of rebin_counts.
 template <class Real> void
 rebin_counts_portion(const int Nold, const Real xold[], const Real Iold[],
-		     const int Nnew, const Real xnew[], Real Inew[], 
+		     const int Nnew, const Real xnew[], Real Inew[],
 		     Real ND_portion)
 {
-  // Note: inspired by rebin from OpenGenie, but using counts per bin 
+  // Note: inspired by rebin from OpenGenie, but using counts per bin
   // rather than rates.
 
   // Does not work in place
   assert(Iold != Inew);
 
-  // Traverse both sets of bin edges; if there is an overlap, add the portion 
+  // Traverse both sets of bin edges; if there is an overlap, add the portion
   // of the overlapping old bin to the new bin.
-  int iold(0), inew(0);
-  while (inew < Nnew && iold < Nold) {
-    const Real xold_lo = xold[iold];
-    const Real xold_hi = xold[iold+1];
-    const Real xnew_lo = xnew[inew];
-    const Real xnew_hi = xnew[inew+1];
-    if ( xnew_hi <= xold_lo ) inew++;      // new must catch up to old
-    else if ( xold_hi <= xnew_lo ) iold++; // old must catch up to new
+  BinIter<Real> from(Nold, xold);
+  BinIter<Real> to(Nnew, xnew);
+  while (!from.atend && !to.atend) {
+    if (to.hi <= from.lo) ++to; // new must catch up to old
+    else if (from.hi <= to.lo) ++from; // old must catch up to new
     else {
-      // delta is the overlap of the bins on the x axis
-      const Real delta = std::min(xold_hi, xnew_hi)
-	- std::max(xold_lo, xnew_lo);
-      const Real width = xold_hi - xold_lo;
-      const Real portion = delta/width;
-
-      Inew[inew] += Iold[iold]*portion*ND_portion;
-      if ( xnew_hi > xold_hi ) iold++;
-      else inew++;
+      const Real overlap = std::min(from.hi,to.hi) - std::max(from.lo,to.lo);
+      const Real portion = overlap/(from.hi-from.lo);
+      Inew[to.bin] += Iold[from.bin]*portion*ND_portion;
+      if (to.hi > from.hi) ++from;
+      else ++to;
     }
   }
+
 
 #if 0
   std::cout << "rebinning with portion " << ND_portion << std::endl;
@@ -85,53 +80,44 @@ rebin_counts_portion(const int Nold, const Real xold[], const Real Iold[],
 
 }
 
-// rebin_counts(Nxold, xold, Nyold, yold, Iold, 
+// rebin_counts(Nxold, xold, Nyold, yold, Iold,
 //              Nxnew, xnew, Nynew, ynew, Inew)
 // Rebin from old to new where:
 //    Nxold,Nyold number of original bin edges
-//    xold[Nxold], yold[Nyold] bin edges in x,y
-//    Iold[(Nxold-1)*(Nyold-1)] input array
+//    xold[Nxold+1], yold[Nyold+1] bin edges in x,y
+//    Iold[Nxold*Nyold] input array
 //    Nxnew,Nynew number of desired bin edges
-//    xnew[Nxnew], ynew[Nynew] desired bin edges
-//    Inew[(Nxnew-1)*(Nynew-1)] result array
-// TODO: N is bin edges in rebin2D but bins in rebin.
+//    xnew[Nxnew+1], ynew[Nynew+1] desired bin edges
+//    Inew[Nxnew*Nynew] result array
 template <class Real> void
-rebin_counts_2D(const int Nxold, const Real xold[], 
+rebin_counts_2D(const int Nxold, const Real xold[],
 	const int Nyold, const Real yold[], const Real Iold[],
 	const int Nxnew, const Real xnew[],
 	const int Nynew, const Real ynew[], Real Inew[])
 {
 
   // Clear the new bins
-  for (int i=0; i < (Nxnew-1)*(Nynew-1); i++) Inew[i] = 0.;
+  for (int i=0; i < Nxnew*Nynew; i++) Inew[i] = 0.;
 
   // Traverse both sets of bin edges; if there is an overlap, add the portion
   // of the overlapping old bin to the new bin.  Scale this by the portion
   // of the overlap in y.
-  int jold(0), jnew(0);
-  while (jnew < Nynew && jold < Nyold) {
-    //    print_bins("test",Nxnew-1,Nynew-1,&Inew[0]);
-    const Real yold_lo = yold[jold];
-    const Real yold_hi = yold[jold+1];
-    const Real ynew_lo = ynew[jnew];
-    const Real ynew_hi = ynew[jnew+1];
-    if ( ynew_hi <= ynew_lo ) jnew++;      // new must catch up to old
-    else if ( yold_hi <= ynew_lo ) jold++; // old must catch up to new
+  BinIter<Real> from(Nyold, yold);
+  BinIter<Real> to(Nynew, ynew);
+  while (!from.atend && !to.atend) {
+    if (to.hi <= from.lo) ++to; // new must catch up to old
+    else if (from.hi <= to.lo) ++from; // old must catch up to new
     else {
-      // delta is the overlap of the bins on the y axis
-      const Real delta = std::min(yold_hi, ynew_hi)
-	- std::max(yold_lo, ynew_lo);
-      const Real width = yold_hi - yold_lo;
-      const Real portion = delta/width;
-
-      rebin_counts_portion(Nxold, xold, Iold+jold*(Nxold-1),
-			   Nxnew, xnew, Inew+jnew*(Nxnew-1),
-			   portion);
-
-      if ( ynew_hi > yold_hi ) jold++;
-      else jnew++;
+      const Real overlap = std::min(from.hi,to.hi) - std::max(from.lo,to.lo);
+      const Real portion = overlap/(from.hi-from.lo);
+      rebin_counts_portion(Nxold, xold, Iold+from.bin*Nxold,
+                           Nxnew, xnew, Inew+to.bin*Nxnew,
+                           portion);
+      if (to.hi > from.hi) ++from;
+      else ++to;
     }
   }
+
 }
 
 template <class Real> inline void
@@ -144,8 +130,8 @@ rebin_counts_2D(const std::vector<Real> &xold,
 {
   assert( (xold.size()-1)*(yold.size()-1) == Iold.size());
   Inew.resize( (xnew.size()-1)*(ynew.size()-1) );
-  rebin2D(xold.size(), &xold[0], yold.size(), &yold[0], &Iold[0],
-	  xnew.size(), &xnew[0], ynew.size(), &ynew[0], &Inew[0]);
+  rebin_counts_2D(xold.size()-1, &xold[0], yold.size()-1, &yold[0], &Iold[0],
+                  xnew.size()-1, &xnew[0], ynew.size()-1, &ynew[0], &Inew[0]);
 }
 
 #endif

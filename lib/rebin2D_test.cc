@@ -6,7 +6,7 @@
 
 const double tolerance = 1e-15;
 
-int check_bins(const char msg[], int nx, int ny, 
+int check_bins(const char msg[], int nx, int ny,
 	       const double result[], const double expected[])
 {
   // Check that result is a uniform field
@@ -38,7 +38,7 @@ int nonuniform_test(const char msg[],
   assert((nx-1)*(ny-1) == nz);
   assert((nox-1)*(noy-1) == noz);
   std::vector<double> result(noz);
-  rebin2D(nx, x, ny, y, z, nox, ox, noy, oy, &result[0]);
+  rebin_counts_2D(nx-1, x, ny-1, y, z, nox-1, ox, noy-1, oy, &result[0]);
 #ifdef DEBUG
   print_bins("Initial matrix",nx-1,ny-1,&z[0]);
   print_bins("rebinned matrix",nox-1,noy-1,&result[0]);
@@ -77,7 +77,7 @@ int uniform_test(const char msg[],
   std::vector<double> expected(out_nx*out_ny,1.);
 
   // rebin
-  rebin2D(edges_x, edges_y, bins, out_x, out_y, out);
+  rebin_counts_2D(edges_x, edges_y, bins, out_x, out_y, out);
 
 #ifdef DEBUG
   print_bins("Initial matrix",nx,ny,&bins[0]);
@@ -116,7 +116,7 @@ int main(int argc, char *argv[])
     std::vector<double> val(250*300);
     std::vector<double> result(250*300);
 
-    // shifted binning 
+    // shifted binning
     for (size_t i=1; i < xbin.size()-1; i++) xbin[i]=i+.2;
     for (size_t i=1; i < ybin.size()-1; i++) ybin[i]=i+.2;
     xbin[0]=ybin[0]=0.;
@@ -132,7 +132,7 @@ int main(int argc, char *argv[])
     //return retval;
 
     for (size_t i = 0; i < 10000; i++) {
-      rebin2D(xbin, ybin, val, xrebin, yrebin, result);
+      rebin_counts_2D(xbin, ybin, val, xrebin, yrebin, result);
     }
   }
 
@@ -160,7 +160,7 @@ int main(int argc, char *argv[])
   {  double //
       x[] = {-1,2,4},
       y[] = {0,1,3},
-      z[] = {3,2,6,4}, 
+      z[] = {3,2,6,4},
       ox[] = {1,2},
       oy[] = {1,2},
       oz[] = {1};

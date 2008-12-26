@@ -5,14 +5,14 @@
 
 void parray(const char name[], int n, const double v[])
 {
-  std::cout << name << ": ";			   
-  for (int k=0; k < n; k++) {   
-    std::cout << v[k] << " ";			   
-  }						   
-  std::cout << std::endl;			   
+  std::cout << name << ": ";
+  for (int k=0; k < n; k++) {
+    std::cout << v[k] << " ";
+  }
+  std::cout << std::endl;
 }
 
-bool check(int n, const double results[], 
+bool check(int n, const double results[],
 	   const double target[], double tol)
 {
   for (int k=0; k < n; k++) {
@@ -26,22 +26,51 @@ bool check(int n, const double results[],
 }
 
 const double tolerance = 1e-14;
-#define SHOW(X) parray(#X,sizeof(X)/sizeof(*X),X)
+bool test(int n, double bin[], double val[],
+          int k, double rebin[], double target[])
+{
+  std::vector<double> result(k);
+  rebin_counts(n,bin,val,k,rebin,&result[0]);
+  if ( !check(k,&result[0],target,tolerance) ) {
+    parray("bin", n+1, bin);
+    parray("val", n, val);
+    parray("rebin", k+1, rebin);
+    return false;
+  }
+  return true;
+}
+void reverse(int n, double v[])
+{
+  for (int k=0; k < n/2; k++) {
+    double temp = v[k];
+    v[k] = v[n-k-1];
+    v[n-k-1] = temp;
+  }
+}
+bool testall(int n, double bin[], double val[],
+              int k, double rebin[], double target[])
+{
+  bool pass = false;
+  pass |= test(n,bin,val,k,rebin,target);
+  reverse(k+1,rebin); reverse(k,target);
+  pass |= test(n,bin,val,k,rebin,target);
+  reverse(n+1,bin); reverse(n,val);
+  pass |= test(n,bin,val,k,rebin,target);
+  reverse(k+1,rebin); reverse(k,target);
+  pass |= test(n,bin,val,k,rebin,target);
+  return pass;
+}
+
 #define TEST(BIN,VAL,REBIN,TARGET) do {		\
-    int n = sizeof(BIN)/sizeof(*BIN);		\
+    int n = sizeof(VAL)/sizeof(*VAL);		\
     int k = sizeof(TARGET)/sizeof(*TARGET);	\
-    std::vector<double> result(k);		\
-    rebin_counts(n,BIN,VAL,k,REBIN,&result[0]);	\
-    if ( !check(k,&result[0],TARGET,tolerance) ) { \
-      retval = 1;				\
-      SHOW(BIN); SHOW(VAL); SHOW(REBIN);	\
-    }						\
+    pass |= testall(n,BIN,VAL,k,REBIN,TARGET);  \
  } while (0)
 
 
 int main(int argc, char *argv[])
 {
-  int retval = 0;
+  bool pass;
   { double // Split a value
       bin[]={1,2,3,4},
       val[]={10,20,30},
@@ -56,7 +85,14 @@ int main(int argc, char *argv[])
       target[]={20,10};
       TEST(bin,val,rebin,target);
   }
-  { double // bin is a subset of rebin
+  { double  // bin is a subset of rebin
+      bin[]={0,1,2,3,4},
+      val[]={5,10,20,30},
+      rebin[]={-2, -1, 1, 2.5, 5, 6},
+      target[]={0, 5, 20, 40, 0};
+      TEST(bin,val,rebin,target);
+  }
+  { double // one output bin
       bin[]={1,   2,   3,   4,   5,  6},
       val[]={  10,  20,  30,  40,  50},
       rebin[]={     2.5, 3.5},
@@ -105,5 +141,5 @@ int main(int argc, char *argv[])
   }
 #endif // SPEED_CHECK
 
-  return retval;
+  return pass ? 0 : 1;
 }

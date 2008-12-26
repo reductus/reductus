@@ -66,9 +66,11 @@ def _output(v, shape, dtype=numpy.float64):
 # TODO: move test code to its own file
 def _check1d(from_bins,val,to_bins,target):
     target = _input(target)
-    T = rebin(from_bins,val,to_bins)
-    assert numpy.linalg.norm(target-T) < 1e-14, \
-        "rebin failed for %s->%s"%(from_bins,to_bins)
+    for (f,F) in [(from_bins,val), (from_bins[::-1],val[::-1])]:
+        for (t,T) in [(to_bins,target), (to_bins[::-1],target[::-1])]:
+            result = rebin(f,F,t)
+            assert numpy.linalg.norm(T-result) < 1e-14, \
+                "rebin failed for %s->%s %s"%(f,t,result)
 
 def _test1d():
     # Split a value
@@ -95,9 +97,13 @@ def _test1d():
              [60])
 
 def _check2d(x,y,z,xo,yo,zo):
-    T = rebin2d(x,y,z,xo,yo)
-    assert numpy.linalg.norm(zo-T) < 1e-14, \
-        "rebin2d failed for %s,%s->%s,%s"%(x,y,xo,yo)
+    for (X,ZA) in [(x,z),(x[::-1],z[:,::-1])]:
+        for (Y,Z) in [(y,ZA),(y[::-1],ZA[::-1,:])]:
+            for (Xo,ZoA) in [(xo,zo),(xo[::-1],zo[:,::-1])]:
+                for (Yo,Zo) in [(yo,ZoA),(yo[::-1],ZoA[::-1,:])]:
+                    T = rebin2d(X,Y,Z,Xo,Yo)
+                    assert numpy.linalg.norm(Zo-T) < 1e-14, \
+                    "rebin2d failed for %s,%s->%s,%s\n%s\n%s\n%s"%(X,Y,Xo,Yo,Z,T,Zo)
 
 def _uniform_test(x,y):
     z = numpy.array([x],'d') * numpy.array([y],'d').T
@@ -117,18 +123,18 @@ def _nonuniform_test(x,y,z,ox,oy,oz):
     _check2d(x,y,z,ox,oy,oz)
 
 def _test2d():
-    _nonuniform_test([0,3,5],
-                     [0,1,3],
-                     [3,2,6,4],
-                     [0,1,2,3,4,5],
-                     [0,1,2,3],
-                     [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1])
-    _nonuniform_test([-1,2,4],
-                     [0,1,3],
-                     [3,2,6,4],
-                     [1,2],
-                     [1,2],
-                     [1])
+    _nonuniform_test([0,3,5], [0,1,3], [3,2,6,4],
+                     [0,1,2,3,4,5], [0,1,2,3], [1]*15)
+    # Test smallest possible result
+    _nonuniform_test([-1,2,4], [0,1,3], [3,2,6,4],
+                     [1,2], [1,2], [1])
+    # subset/superset
+    _nonuniform_test([0,1,2,3], [0,1,2,3], [1]*9,
+                     [0.5,1.5,2.5], [0.5,1.5,2.5], [1]*4)
+    _nonuniform_test([0,1,2,3,4], [0,1,2,3,4], [1]*16,
+                     [-2,-1,2,5,6], [-2,-1,2,5,6],
+                     [0,0,0,0,0,4,4,0,0,4,4,0,0,0,0,0])
+    # non-square test
     _uniform_test([1,2.5,4,0.5],[3,1,2.5,1,3.5])
     _uniform_test([3,2],[1,2])
 

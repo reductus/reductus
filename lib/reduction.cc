@@ -13,7 +13,7 @@
         if (err < 0) return NULL; \
         len /= sizeof(*buf); \
     } while (0)
-    
+
 #define OUTVECTOR(obj,buf,len) \
     do { \
         int err = PyObject_AsWriteBuffer(obj, (void **)(&buf), &len); \
@@ -21,7 +21,7 @@
         len /= sizeof(*buf); \
     } while (0)
 
-extern "C" int 
+extern "C" int
 str2imat(const char str[], int size, int imat[], int *rows, int *columns);
 
 
@@ -32,7 +32,7 @@ PyObject* Pstr2imat(PyObject *obj, PyObject *args)
   Py_ssize_t ndata;
   int rows, cols;
   int *data;
-  
+
   if (!PyArg_ParseTuple(args, "sO:str2imat", &str,&data_obj)) return NULL;
   OUTVECTOR(data_obj,data,ndata);
   str2imat(str, int(ndata), data, &rows, &cols);
@@ -45,31 +45,31 @@ PyObject* Prebin(PyObject *obj, PyObject *args)
   PyObject *in_obj,*Iin_obj,*out_obj,*Iout_obj;
   Py_ssize_t nin,nIin, nout, nIout;
   double *in,*Iin,*out,*Iout;
-  
+
   if (!PyArg_ParseTuple(args, "OOOO:rebin",
   			&in_obj,&Iin_obj,&out_obj,&Iout_obj)) return NULL;
   INVECTOR(in_obj,in,nin);
   INVECTOR(Iin_obj,Iin,nIin);
   INVECTOR(out_obj,out,nout);
   OUTVECTOR(Iout_obj,Iout,nIout);
-  if (nin != nIin+1 || nout != nIout+1) {
-    PyErr_SetString(PyExc_ValueError, 
+  if (nin-1 != nIin || nout-1 != nIout) {
+    PyErr_SetString(PyExc_ValueError,
     	"_reduction.rebin: must have one more bin edges than bins");
     return NULL;
   }
-  rebin_counts<double>(nIin,in,Iin,nIout,out,Iout);
+  rebin_counts<double>(nin-1,in,Iin,nout-1,out,Iout);
   return Py_BuildValue("");
 }
 
 PyObject* Prebin2d(PyObject *obj, PyObject *args)
 {
-  PyObject *xin_obj, *yin_obj, *Iin_obj;  
-  PyObject *xout_obj, *yout_obj, *Iout_obj;  
+  PyObject *xin_obj, *yin_obj, *Iin_obj;
+  PyObject *xout_obj, *yout_obj, *Iout_obj;
   Py_ssize_t nxin, nyin, nIin;
   Py_ssize_t nxout, nyout, nIout;
   Py_ssize_t *shape_in, *shape_out;
   double *xin,*yin,*Iin,*xout,*yout,*Iout;
-  
+
   if (!PyArg_ParseTuple(args, "OOOOOO:rebin",
 	  		&xin_obj, &yin_obj, &Iin_obj,
   			&xout_obj, &yout_obj, &Iout_obj))
@@ -82,14 +82,15 @@ PyObject* Prebin2d(PyObject *obj, PyObject *args)
   INVECTOR(yout_obj,yout,nyout);
   OUTVECTOR(Iout_obj,Iout,nIout);
   if ((nxin-1)*(nyin-1) != nIin || (nxout-1)*(nyout-1) != nIout) {
-    PyErr_SetString(PyExc_ValueError, 
+    PyErr_SetString(PyExc_ValueError,
     	"_reduction.rebin2d: must have one more bin edges than bins");
     return NULL;
   }
-  rebin_counts_2D<double>(nxin,xin,nyin,yin,Iin,nxout,xout,nyout,yout,Iout);
+  rebin_counts_2D<double>(nxin-1,xin,nyin-1,yin,Iin,
+      nxout-1,xout,nyout-1,yout,Iout);
   return Py_BuildValue("");
 }
-	
+
 static PyMethodDef methods[] = {
    {"str2imat",
      Pstr2imat,
@@ -105,7 +106,7 @@ static PyMethodDef methods[] = {
      Prebin2d,
      METH_VARARGS,
      "rebin2d(xi,yi,Ii,xo,yo,Io): 2-D rebin from (xi,yi) to (xo,yo)"
-    },    
+    },
     {0}
 } ;
 
@@ -114,7 +115,7 @@ static PyMethodDef methods[] = {
 __declspec(dllexport)
 #endif
 
-	
+
 extern "C" void init_reduction(void) {
   Py_InitModule4("_reduction",
   		methods,
