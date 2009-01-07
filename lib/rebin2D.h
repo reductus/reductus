@@ -37,8 +37,8 @@ print_bins(const std::string &message,
 // Also, it requires the initialized accumulation vector.
 // TODO: make this code the basis of rebin_counts.
 template <class Real> void
-rebin_counts_portion(const int Nold, const Real xold[], const Real Iold[],
-		     const int Nnew, const Real xnew[], Real Inew[],
+rebin_counts_portion(const int Nold, const Real vold[], const Real Iold[],
+		     const int Nnew, const Real vnew[], Real Inew[],
 		     Real ND_portion)
 {
   // Note: inspired by rebin from OpenGenie, but using counts per bin
@@ -49,8 +49,8 @@ rebin_counts_portion(const int Nold, const Real xold[], const Real Iold[],
 
   // Traverse both sets of bin edges; if there is an overlap, add the portion
   // of the overlapping old bin to the new bin.
-  BinIter<Real> from(Nold, xold);
-  BinIter<Real> to(Nnew, xnew);
+  BinIter<Real> from(Nold, vold);
+  BinIter<Real> to(Nnew, vnew);
   while (!from.atend && !to.atend) {
     if (to.hi <= from.lo) ++to; // new must catch up to old
     else if (from.hi <= to.lo) ++from; // old must catch up to new
@@ -102,16 +102,16 @@ rebin_counts_2D(const int Nxold, const Real xold[],
   // Traverse both sets of bin edges; if there is an overlap, add the portion
   // of the overlapping old bin to the new bin.  Scale this by the portion
   // of the overlap in y.
-  BinIter<Real> from(Nyold, yold);
-  BinIter<Real> to(Nynew, ynew);
+  BinIter<Real> from(Nxold, xold);
+  BinIter<Real> to(Nxnew, xnew);
   while (!from.atend && !to.atend) {
     if (to.hi <= from.lo) ++to; // new must catch up to old
     else if (from.hi <= to.lo) ++from; // old must catch up to new
     else {
       const Real overlap = std::min(from.hi,to.hi) - std::max(from.lo,to.lo);
       const Real portion = overlap/(from.hi-from.lo);
-      rebin_counts_portion(Nxold, xold, Iold+from.bin*Nxold,
-                           Nxnew, xnew, Inew+to.bin*Nxnew,
+      rebin_counts_portion(Nyold, yold, Iold+from.bin*Nyold,
+                           Nynew, ynew, Inew+to.bin*Nynew,
                            portion);
       if (to.hi > from.hi) ++from;
       else ++to;
