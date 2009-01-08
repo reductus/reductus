@@ -59,21 +59,21 @@ def rebin2d(x,y,I,xo,yo,Io=None,dtype=None):
     xo,yo are the new bin edges
     I is the existing counts (one fewer than edges in each direction)
 
-    For example in the following, the rebinned output should be a matrix
-    of ones::
+    For example, with x representing the column edges in each row and
+    y representing the row edges in each column, the following
+    represents a uniform field::
 
-       x = [0,1,3]
-       y = [0,2,4,5]
-       z = [[2,2,1],[4,4,2]]
-       xo = range(4)
-       yo = range(6)
-       zo = rebin2d(x,y,z,xo,yo)
+        >>> from reflectometry.reduction.rebin import rebin2d
+        >>> x,y = [0,2,4,5], [0,1,3]
+        >>> z = [[2,2,1],[4,4,2]]
 
+    We can check this by rebinning with uniform size bins::
 
-    Io will be used if present; this allows you to pass in a slice
-    of an 3-D matrix, though it must be a contiguous slice for this
-    to work.  Otherwise you can simply assign the return value of
-    the rebinning to the slice and it will perform a copy.
+        >>> xo,yo = range(6), range(4)
+        >>> rebin2d(y,x,z,yo,xo)
+        array([[ 1.,  1.,  1.,  1.,  1.],
+               [ 1.,  1.,  1.,  1.,  1.],
+               [ 1.,  1.,  1.,  1.,  1.]])
 
     dtype is the type to use for the intensity vectors.  This can be
     integer (uint8, uint16, uint32) or real (float32 or f, float64 or d).
@@ -82,6 +82,11 @@ def rebin2d(x,y,I,xo,yo,Io=None,dtype=None):
     Note that total intensity is not preserved for integer rebinning.
     The algorithm uses truncation so total intensity will be down on
     average by half the total number of bins.
+
+    Io will be used if present, if it is contiguous and if it has the
+    correct shape and type for the input.  Otherwise it will raise a
+    TypeError.  This will allow you to rebin the slices of an appropriately
+    ordered matrix without making copies.
     """
     # Coerce axes to float arrays
     x,y,xo,yo = [_input(v, dtype='d') for v in (x,y,xo,yo)]

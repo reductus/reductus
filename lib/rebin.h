@@ -51,7 +51,8 @@ public:
 // TODO: with integer counts, the total counts after rebinning is not
 // TODO: preserved.  Rounding would improve the situation somewhat,
 // TODO: but a better algorithm would keep track of accumulated error
-// TODO: and adjust the pure rounding by that value.
+// TODO: and keep it between [-0.5,0.5].  This is more complicated
+// TODO: with multidimensional rebinning.
 
 // Do the rebinning.  The ND_portion parameter scales each bin by the
 // given amount, which is useful when doing multidimensional rebinning.
