@@ -25,7 +25,7 @@ def rebin(x,I,xo,Io=None,dtype=numpy.float64):
     average by half the total number of bins.
     """
     # Coerce axes to float arrays
-    x,xo = _input(x),_input(xo)
+    x,xo = _input(x,dtype='d'),_input(xo,dtype='d')
     shape_in = numpy.array([x.shape[0]-1])
     shape_out = numpy.array([xo.shape[0]-1])
 
@@ -59,6 +59,17 @@ def rebin2d(x,y,I,xo,yo,Io=None,dtype=None):
     xo,yo are the new bin edges
     I is the existing counts (one fewer than edges in each direction)
 
+    For example in the following, the rebinned output should be a matrix
+    of ones::
+
+       x = [0,1,3]
+       y = [0,2,4,5]
+       z = [[2,2,1],[4,4,2]]
+       xo = range(4)
+       yo = range(6)
+       zo = rebin2d(x,y,z,xo,yo)
+
+
     Io will be used if present; this allows you to pass in a slice
     of an 3-D matrix, though it must be a contiguous slice for this
     to work.  Otherwise you can simply assign the return value of
@@ -73,7 +84,7 @@ def rebin2d(x,y,I,xo,yo,Io=None,dtype=None):
     average by half the total number of bins.
     """
     # Coerce axes to float arrays
-    x,y,xo,yo = [_input(v) for v in (x,y,xo,yo)]
+    x,y,xo,yo = [_input(v, dtype='d') for v in (x,y,xo,yo)]
     shape_in = numpy.array([x.shape[0]-1,y.shape[0]-1])
     shape_out = numpy.array([xo.shape[0]-1,yo.shape[0]-1])
 
@@ -83,7 +94,7 @@ def rebin2d(x,y,I,xo,yo,Io=None,dtype=None):
         except AttributeError: dtype = numpy.float64
     I = _input(I, dtype=dtype)
     if (shape_in != I.shape).any():
-        raise TypeError("input array incorrect shape %s"%I.shape)
+        raise TypeError("input array incorrect shape %s"%str(I.shape))
 
     # Create output vector
     Io = _output(Io,shape_out,dtype=dtype)
@@ -155,17 +166,13 @@ def _test1d():
              [60])
 
 def _check2d(x,y,z,xo,yo,zo):
-    for (X,ZA) in [(x,z),(x[::-1],z[:,::-1])]:
-        for (Y,Z) in [(y,ZA),(y[::-1],ZA[::-1,:])]:
-            for (Xo,ZoA) in [(xo,zo),(xo[::-1],zo[:,::-1])]:
-                for (Yo,Zo) in [(yo,ZoA),(yo[::-1],ZoA[::-1,:])]:
-                    T = rebin2d(X,Y,Z,Xo,Yo)
-                    #print T.shape, Zo.shape
-                    assert numpy.linalg.norm(Zo-T) < 1e-14, \
-                    "rebin2d failed for %s,%s->%s,%s\n%s\n%s\n%s"%(X,Y,Xo,Yo,Z,T,Zo)
+    result = rebin2d(x,y,z,xo,yo)
+    target = numpy.array(zo,dtype=result.dtype)
+    assert numpy.linalg.norm(target-result) < 1e-14, \
+        "rebin2d failed for %s,%s->%s,%s\n%s\n%s\n%s"%(x,y,z,xo,yo,zo)
 
 def _uniform_test(x,y):
-    z = numpy.array([x],'d') * numpy.array([y],'d').T
+    z = numpy.array([y],'d') * numpy.array([x],'d').T
     xedges = numpy.concatenate([(0,),numpy.cumsum(x)])
     yedges = numpy.concatenate([(0,),numpy.cumsum(y)])
     nx = numpy.round(xedges[-1])
@@ -175,29 +182,32 @@ def _uniform_test(x,y):
     target = numpy.ones([nx,ny],'d')
     _check2d(xedges,yedges,z,ox,oy,target)
 
-def _nonuniform_test(x,y,z,ox,oy,oz):
-    z,oz = _input(z),_input(oz)
-    #print "xi",[z[i,:] for i in range(len(x)-1)]
-    #print "yj",[z[:,j] for j in range(len(y)-1)]
-    #print "z",z
-    #print "oz",oz
-    #print "strides",z.strides
-    _check2d(x,y,z,ox,oy,oz)
-
 def _test2d():
-    _nonuniform_test([0,3,5], [0,1,3], [[3,6],[2,4]],
-                     [0,1,2,3,4,5], [0,1,2,3], [[1]*3]*5)
-    _nonuniform_test([0,3,5,7], [0,1,3], [[3,4],[6,2],[4,4]],
-                     [0,1,2,3,4,5,6,7], [0,1,2,3], [[1]*3]*7)
+    x,y,I = [0,3,5,7], [0,1,3], [[3,6],[2,4],[2,4]]
+    xo,yo,Io = range(8), range(4), [[1]*3]*7
+    x,y,I,xo,yo,Io = [numpy.array(A,'d') for A in [x,y,I,xo,yo,Io]]
+
+    # Try various types and orders on a non-square matrix
+    _check2d(x,y,I,xo,yo,Io)
+    _check2d(x[::-1],y,I[::-1,:],xo,yo,Io)
+    _check2d(x,y[::-1],I[:,::-1],xo,yo,Io)
+    _check2d(x,y,I,[7,3,0],yo,[[4]*3,[3]*3])
+    _check2d(x,y,I,xo,[3,2,0],[[1,2]]*7)
+    _check2d(y,x,I.T,yo,xo,Io.T)  # C vs. Fortran ordering
+
     # Test smallest possible result
-    _nonuniform_test([-1,2,4], [0,1,3], [[3,2],[6,4]],
-                     [1,2], [1,2], [1])
+    _check2d([-1,2,4], [0,1,3], [[3,6],[2,4]],
+             [1,2], [1,2], [1])
     # subset/superset
-    _nonuniform_test([0,1,2,3], [0,1,2,3], [[1]*3]*3,
-                     [0.5,1.5,2.5], [0.5,1.5,2.5], [[1]*2]*2)
-    _nonuniform_test([0,1,2,3,4], [0,1,2,3,4], [[1]*4]*4,
-                     [-2,-1,2,5,6], [-2,-1,2,5,6],
-                     [[0,0,0,0],[0,4,4,0],[0,4,4,0],[0,0,0,0]])
+    _check2d([0,1,2,3], [0,1,2,3], [[1]*3]*3,
+             [0.5,1.5,2.5], [0.5,1.5,2.5], [[1]*2]*2)
+    for dtype in ['uint8','uint16','uint32','float32','float64']:
+        _check2d([0,1,2,3,4], [0,1,2,3,4],
+                 numpy.array([[1]*4]*4, dtype=dtype),
+                 [-2,-1,2,5,6], [-2,-1,2,5,6],
+                 numpy.array([[0,0,0,0],[0,4,4,0],[0,4,4,0],[0,0,0,0]],
+                             dtype=dtype)
+                 )
     # non-square test
     _uniform_test([1,2.5,4,0.5],[3,1,2.5,1,3.5])
     _uniform_test([3,2],[1,2])
