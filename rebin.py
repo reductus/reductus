@@ -5,7 +5,7 @@ import numpy
 
 from reflectometry.reduction import _reduction
 
-def rebin(x,I,xo,Io=None):
+def rebin(x,I,xo,Io=None,dtype=numpy.float64):
     """
     Rebin a vector.
 
@@ -15,13 +15,43 @@ def rebin(x,I,xo,Io=None):
 
     Io will be used if present, but be sure that it is a contiguous
     array of the correct shape and size.
+
+    dtype is the type to use for the intensity vectors.  This can be
+    integer (uint8, uint16, uint32) or real (float32 or f, float64 or d).
+    The edge vectors are all coerced to doubles.
+
+    Note that total intensity is not preserved for integer rebinning.
+    The algorithm uses truncation so total intensity will be down on
+    average by half the total number of bins.
     """
-    x,I,xo = [_input(v) for v in (x,I,xo)]
-    Io = _output(Io,[len(xo)-1])
-    _reduction.rebin(x,I,xo,Io)
+    # Coerce axes to float arrays
+    x,xo = _input(x),_input(xo)
+    shape_in = numpy.array([x.shape[0]-1])
+    shape_out = numpy.array([xo.shape[0]-1])
+
+    # Coerce counts to correct type and check shape
+    if dtype is None:
+        try:
+            dtype = I.dtype
+        except AttributeError:
+            dtype = numpy.float64
+    I = _input(I, dtype=dtype)
+    if shape_in != I.shape:
+        raise TypeError("input array incorrect shape %s"%I.shape)
+
+    # Create output vector
+    Io = _output(Io,shape_out,dtype=dtype)
+
+    # Call rebin on type if it is available
+    try:
+        rebincore = getattr(_reduction,'rebin_'+I.dtype.name)
+    except AttributeError:
+        raise TypeError("rebin supports uint8 uint16 uint32 float32 float64, not "
+                        + I.dtype.name)
+    rebincore(x,I,xo,Io)
     return Io
 
-def rebin2d(x,y,I,xo,yo,Io=None):
+def rebin2d(x,y,I,xo,yo,Io=None,dtype=None):
     """
     Rebin a matrix.
 
@@ -33,10 +63,38 @@ def rebin2d(x,y,I,xo,yo,Io=None):
     of an 3-D matrix, though it must be a contiguous slice for this
     to work.  Otherwise you can simply assign the return value of
     the rebinning to the slice and it will perform a copy.
+
+    dtype is the type to use for the intensity vectors.  This can be
+    integer (uint8, uint16, uint32) or real (float32 or f, float64 or d).
+    The edge vectors are all coerced to doubles.
+
+    Note that total intensity is not preserved for integer rebinning.
+    The algorithm uses truncation so total intensity will be down on
+    average by half the total number of bins.
     """
-    x,y,I,xo,yo = [_input(v) for v in (x,y,I,xo,yo)]
-    Io = _output(Io,[xo.shape[0]-1,yo.shape[0]-1])
-    _reduction.rebin2d(x,y,I,xo,yo,Io)
+    # Coerce axes to float arrays
+    x,y,xo,yo = [_input(v) for v in (x,y,xo,yo)]
+    shape_in = numpy.array([x.shape[0]-1,y.shape[0]-1])
+    shape_out = numpy.array([xo.shape[0]-1,yo.shape[0]-1])
+
+    # Coerce counts to correct type and check shape
+    if dtype is None:
+        try: dtype = I.dtype
+        except AttributeError: dtype = numpy.float64
+    I = _input(I, dtype=dtype)
+    if (shape_in != I.shape).any():
+        raise TypeError("input array incorrect shape %s"%I.shape)
+
+    # Create output vector
+    Io = _output(Io,shape_out,dtype=dtype)
+
+    # Call rebin on type if it is available
+    try:
+        rebincore = getattr(_reduction,'rebin2d_'+I.dtype.name)
+    except AttributeError:
+        raise TypeError("rebin2d supports uint8 uint16 uint32 float32 float64, not "
+                        + I.dtype.name)
+    rebincore(x,y,I,xo,yo,Io)
     return Io
 
 def _input(v, dtype='d'):
@@ -44,10 +102,7 @@ def _input(v, dtype='d'):
     Force v to be a contiguous array of the correct type, avoiding copies
     if possible.
     """
-    v = numpy.asarray(v,dtype=dtype)
-    if not v.flags.contiguous:
-        v = numpy.array(v,dtype=dtype)
-    return v
+    return numpy.ascontiguousarray(v,dtype=dtype)
 
 def _output(v, shape, dtype=numpy.float64):
     """
@@ -56,9 +111,12 @@ def _output(v, shape, dtype=numpy.float64):
     """
     if v is None:
         return numpy.empty(shape,dtype=dtype)
-    assert isinstance(v,numpy.ndarray) and v.dtype == dtype \
-        and (v.shape == shape).all() and v.flags.contiguous,\
-        "output vector must be contiguous %s of size %s"%(dtype,shape)
+    if not (isinstance(v,numpy.ndarray)
+            and v.dtype == numpy.dtype(dtype)
+            and (v.shape == shape).all()
+            and v.flags.contiguous):
+        raise TypeError("output vector must be contiguous %s of size %s"
+                        %(dtype,shape))
     return v
 
 
@@ -102,6 +160,7 @@ def _check2d(x,y,z,xo,yo,zo):
             for (Xo,ZoA) in [(xo,zo),(xo[::-1],zo[:,::-1])]:
                 for (Yo,Zo) in [(yo,ZoA),(yo[::-1],ZoA[::-1,:])]:
                     T = rebin2d(X,Y,Z,Xo,Yo)
+                    #print T.shape, Zo.shape
                     assert numpy.linalg.norm(Zo-T) < 1e-14, \
                     "rebin2d failed for %s,%s->%s,%s\n%s\n%s\n%s"%(X,Y,Xo,Yo,Z,T,Zo)
 
@@ -118,28 +177,33 @@ def _uniform_test(x,y):
 
 def _nonuniform_test(x,y,z,ox,oy,oz):
     z,oz = _input(z),_input(oz)
-    z = numpy.reshape(z,(len(x)-1,len(y)-1))
-    oz = numpy.reshape(oz,(len(ox)-1,len(oy)-1))
+    #print "xi",[z[i,:] for i in range(len(x)-1)]
+    #print "yj",[z[:,j] for j in range(len(y)-1)]
+    #print "z",z
+    #print "oz",oz
+    #print "strides",z.strides
     _check2d(x,y,z,ox,oy,oz)
 
 def _test2d():
-    _nonuniform_test([0,3,5], [0,1,3], [3,2,6,4],
-                     [0,1,2,3,4,5], [0,1,2,3], [1]*15)
+    _nonuniform_test([0,3,5], [0,1,3], [[3,6],[2,4]],
+                     [0,1,2,3,4,5], [0,1,2,3], [[1]*3]*5)
+    _nonuniform_test([0,3,5,7], [0,1,3], [[3,4],[6,2],[4,4]],
+                     [0,1,2,3,4,5,6,7], [0,1,2,3], [[1]*3]*7)
     # Test smallest possible result
-    _nonuniform_test([-1,2,4], [0,1,3], [3,2,6,4],
+    _nonuniform_test([-1,2,4], [0,1,3], [[3,2],[6,4]],
                      [1,2], [1,2], [1])
     # subset/superset
-    _nonuniform_test([0,1,2,3], [0,1,2,3], [1]*9,
-                     [0.5,1.5,2.5], [0.5,1.5,2.5], [1]*4)
-    _nonuniform_test([0,1,2,3,4], [0,1,2,3,4], [1]*16,
+    _nonuniform_test([0,1,2,3], [0,1,2,3], [[1]*3]*3,
+                     [0.5,1.5,2.5], [0.5,1.5,2.5], [[1]*2]*2)
+    _nonuniform_test([0,1,2,3,4], [0,1,2,3,4], [[1]*4]*4,
                      [-2,-1,2,5,6], [-2,-1,2,5,6],
-                     [0,0,0,0,0,4,4,0,0,4,4,0,0,0,0,0])
+                     [[0,0,0,0],[0,4,4,0],[0,4,4,0],[0,0,0,0]])
     # non-square test
     _uniform_test([1,2.5,4,0.5],[3,1,2.5,1,3.5])
     _uniform_test([3,2],[1,2])
 
 def test():
-    _test2d()
     _test1d()
+    _test2d()
 
 if __name__ == "__main__": test()

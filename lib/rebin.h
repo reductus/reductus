@@ -6,16 +6,16 @@
 #include <stdexcept>
 
 // Define a bin iterator to adapt to either foward or reversed inputs.
-template <class Real>
+template <typename T>
 class BinIter {
   bool forward;
   int n;
-  const Real *edges;
+  const T *edges;
 public:
   int bin;     // Index of the corresponding bin
-  Real lo, hi; // Low and high values for the bin edges.
+  double lo, hi; // Low and high values for the bin edges.
   bool atend;  // True when we increment beyond the final bin.
-  BinIter(int _n, const Real *_edges) {
+  BinIter(int _n, const T *_edges) {
     // n is number of bins, which is #edges-1
     // edges are the values of the bin edges.
     n = _n; edges = _edges;
@@ -48,6 +48,43 @@ public:
   }
 };
 
+// TODO: with integer counts, the total counts after rebinning is not
+// TODO: preserved.  Rounding would improve the situation somewhat,
+// TODO: but a better algorithm would keep track of accumulated error
+// TODO: and adjust the pure rounding by that value.
+
+// Do the rebinning.  The ND_portion parameter scales each bin by the
+// given amount, which is useful when doing multidimensional rebinning.
+template <typename T> void
+rebin_counts_portion(const int Nold, const double vold[], const T Iold[],
+                     const int Nnew, const double vnew[], T Inew[],
+                     const double ND_portion)
+{
+  // Note: inspired by rebin from OpenGenie, but using counts per bin
+  // rather than rates.
+
+  // Does not work in place
+  assert(Iold != Inew);
+
+  // Traverse both sets of bin edges; if there is an overlap, add the portion
+  // of the overlapping old bin to the new bin.
+  BinIter<double> from(Nold, vold);
+  BinIter<double> to(Nnew, vnew);
+  while (!from.atend && !to.atend) {
+    //std::cout << "from " << from.bin << ": [" << from.lo << ", " << from.hi << "]\n";
+    //std::cout << "to " << to.bin << ": [" << to.lo << ", " << to.hi << "]\n";
+    if (to.hi <= from.lo) ++to; // new must catch up to old
+    else if (from.hi <= to.lo) ++from; // old must catch up to new
+    else {
+      const double overlap = std::min(from.hi,to.hi) - std::max(from.lo,to.lo);
+      const double portion = overlap/(from.hi-from.lo);
+      Inew[to.bin] += Iold[from.bin]*portion*ND_portion;
+      if (to.hi > from.hi) ++from;
+      else ++to;
+    }
+  }
+}
+
 // rebin_counts(Nx, x, Ix, Ny, y, Iy)
 // Rebin from x to y where:
 //    Nx is the number of bins in the data
@@ -56,9 +93,9 @@ public:
 //    Ny is the number of bins desired
 //    y[Ny+1] is a vector of bin edges
 //    I[Ny] is a vector of counts
-template <class Real> void
-rebin_counts(const int Nold, const Real xold[], const Real Iold[],
-             const int Nnew, const Real xnew[], Real Inew[])
+template <typename T> void
+rebin_counts(const int Nold, const double xold[], const T Iold[],
+             const int Nnew, const double xnew[], T Inew[])
 {
   // Note: inspired by rebin from OpenGenie, but using counts per bin
   // rather than rates.
@@ -66,29 +103,12 @@ rebin_counts(const int Nold, const Real xold[], const Real Iold[],
   // Clear the new bins
   for (int i=0; i < Nnew; i++) Inew[i] = 0.;
 
-  // Traverse both sets of bin edges; if there is an overlap, add the portion
-  // of the overlapping old bin to the new bin.
-  BinIter<Real> from(Nold, xold);
-  BinIter<Real> to(Nnew, xnew);
-  while (!from.atend && !to.atend) {
-    //std::cout << "from " << from.bin << ": [" << from.lo << ", " << from.hi << "]\n";
-    //std::cout << "to " << to.bin << ": [" << to.lo << ", " << to.hi << "]\n";
-    if (to.hi <= from.lo) ++to; // new must catch up to old
-    else if (from.hi <= to.lo) ++from; // old must catch up to new
-    else {
-      const Real overlap = std::min(from.hi,to.hi) - std::max(from.lo,to.lo);
-      const Real portion = overlap/(from.hi-from.lo);
-
-      Inew[to.bin] += Iold[from.bin]*portion;
-      if (to.hi > from.hi) ++from;
-      else ++to;
-    }
-  }
+  rebin_counts_portion(Nold, xold, Iold, Nnew, xnew, Inew, 1.);
 }
 
-template <class Real> inline void
-rebin_counts(const std::vector<Real> &xold, const std::vector<Real> &Iold,
-             const std::vector<Real> &xnew, std::vector<Real> &Inew)
+template <typename T> inline void
+rebin_counts(const std::vector<double> &xold, const std::vector<T> &Iold,
+             const std::vector<double> &xnew, std::vector<T> &Inew)
 {
   assert(xold.size()-1 == Iold.size());
   Inew.resize(xnew.size()-1);
@@ -99,11 +119,11 @@ rebin_counts(const std::vector<Real> &xold, const std::vector<Real> &Iold,
 // rebin_intensity(Nx, x, Ix, dIx, Ny, y, Iy, dIy)
 // Like rebin_counts, but includes uncertainty.  This could of course be
 // done separately, but it will be faster to rebin both at the same time.
-template <class Real> void
-rebin_intensity(const int Nold, const Real xold[],
-		const Real Iold[], const Real dIold[],
-		const int Nnew, const Real xnew[],
-		Real Inew[], Real dInew[])
+template <typename T> void
+rebin_intensity(const int Nold, const double xold[],
+		const T Iold[], const T dIold[],
+		const int Nnew, const double xnew[],
+		T Inew[], T dInew[])
 {
   // Note: inspired by rebin from OpenGenie, but using counts per bin rather than rates.
 
@@ -112,16 +132,16 @@ rebin_intensity(const int Nold, const Real xold[],
 
   // Traverse both sets of bin edges; if there is an overlap, add the portion
   // of the overlapping old bin to the new bin.
-  BinIter<Real> from(Nold, xold);
-  BinIter<Real> to(Nnew, xnew);
+  BinIter<double> from(Nold, xold);
+  BinIter<double> to(Nnew, xnew);
   while (!from.atend && !to.atend) {
     //std::cout << "from " << from.bin << ": [" << from.lo << ", " << from.hi << "]\n";
     //std::cout << "to " << to.bin << ": [" << to.lo << ", " << to.hi << "]\n";
     if (to.hi <= from.lo) ++to; // new must catch up to old
     else if (from.hi <= to.lo) ++from; // old must catch up to new
     else {
-      const Real overlap = std::min(from.hi,to.hi) - std::max(from.lo,to.lo);
-      const Real portion = overlap/(from.hi-from.lo);
+      const double overlap = std::min(from.hi,to.hi) - std::max(from.lo,to.lo);
+      const double portion = overlap/(from.hi-from.lo);
 
       Inew[to.bin] += Iold[from.bin]*portion;
       dInew[to.bin] += square(dIold[from.bin]*portion);  // add in quadrature
@@ -134,11 +154,11 @@ rebin_intensity(const int Nold, const Real xold[],
   for (int i=0; i < Nnew; i++) dInew[i] = sqrt(dInew[i]);
 }
 
-template <class Real> inline void
-rebin_intensity(const std::vector<Real> &xold,
-		const std::vector<Real> &Iold, const std::vector<Real> &dIold,
-		const std::vector<Real> &xnew,
-		std::vector<Real> &Inew, std::vector<Real> &dInew)
+template <typename T> inline void
+rebin_intensity(const std::vector<double> &xold,
+		const std::vector<T> &Iold, const std::vector<T> &dIold,
+		const std::vector<double> &xnew,
+		std::vector<T> &Inew, std::vector<T> &dInew)
 {
   assert(xold.size()-1 == Iold.size());
   assert(xold.size()-1 == dIold.size());
@@ -148,13 +168,13 @@ rebin_intensity(const std::vector<Real> &xold,
 		  Inew.size(), &xnew[0], &Inew[0], &dInew[0]);
 }
 
-template <class Real> inline void
-compute_uncertainty(const std::vector<Real> &counts,
-		    std::vector<Real> &uncertainty)
+template <typename T> inline void
+compute_uncertainty(const std::vector<T> &counts,
+		    std::vector<T> &uncertainty)
 {
   uncertainty.resize(counts.size());
   for (size_t i=0; i < counts.size(); i++)
-    uncertainty[i] = counts[i] != 0 ? sqrt(counts[i]) : 1.;
+    uncertainty[i] = T(counts[i] != 0 ? sqrt(counts[i]) : 1);
 }
 
 

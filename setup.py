@@ -18,9 +18,12 @@ def configuration(parent_package='',
     srcpath = os.path.join(config.package_path,'lib')
     sources = [os.path.join(srcpath,s)
                for s in ('reduction.cc','str2imat.c')]
+    depends = [os.path.join(srcpath,s)
+               for s in ('rebin.h', 'rebin2D.h')]
 
     config.add_extension('_reduction',
                          include_dirs=[srcpath],
+                         depends=depends,
                          sources=sources,
                          )
 
