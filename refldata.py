@@ -65,6 +65,8 @@ import weakref
 import numpy
 from numpy import inf, pi, sin, cos, arcsin, arctan2, sqrt
 
+from qxqz import ABL_to_QxQz
+
 # TODO: attribute documentation and units should be integrated with the
 # TODO: definition of the attributes.  Value attributes should support
 # TODO: unit conversion
@@ -712,7 +714,7 @@ class ReflData(object):
     def log(self,msg):
         """Record corrections that have been applied to the data"""
         self.messages.append(msg)
-    
+
     def apply(self,correction):
         """Allow alternative syntax: data.apply(correction)"""
         self.log(str(correction))
@@ -750,47 +752,6 @@ def _set(object,kw):
             setattr(object,k,v)
         else:
             raise AttributeError, "Unknown attribute %s"%(k)
-
-def ABL_to_QxQz(sample_angle, detector_angle, wavelength):
-    """
-    Compute Qx,Qz given incident and reflected angles and wavelength
-    """
-    A,B = sample_angle, detector_angle
-    Qz = 2*pi/wavelength * ( sin(pi/180*(B - A)) + sin(pi/180*A))
-    Qx = 2*pi/wavelength * ( cos(pi/180*(B - A)) - cos(pi/180*A))
-    return Qx,Qz
-
-def QxQzL_to_AB(Qx, Qz, wavelength):
-    """
-    Guess incident and reflected angles given Qx, Qz and wavelength
-    """
-    # Algorithm for converting Qx-Qz-lambda to alpha-beta:
-    #   beta = 2 asin(L/(2 pi) sqrt(Qx^2+Qz^2)/2) * 180/pi
-    #        = asin(L/(4 pi) sqrt(Qx^2+Qz^2)) * 360/pi
-    #   if Qz < 0, negate beta
-    #   theta = atan2(Qx,Qz) * 180/pi
-    #   if theta > 90, theta -= 360
-    #   alpha = theta + beta/2
-    #   if Qz < 0, alpha += 180
-    beta = arcsin(wavelength/(4*pi) * sqrt(Qx**2+Qz**2)) * 360/pi
-    beta[Qz<0] *= -1
-    theta = arctan2(Qx,Qz) * 180/pi
-    theta[theta>90] -= 360
-    alpha = theta + beta/2
-    alpha[Qz<0] += 180
-    return alpha,beta
-
-def QxQzA_to_BL(Qx,Qz,alpha):
-    """
-    Guess reflected angle and wavelength given Qx, Qz and incident angle.
-    """
-    theta = arctan2(Qx,Qz) * 180/pi
-    theta[theta>90] -= 360
-    beta = 2*(alpha-theta)
-    beta[beta>180] -= 360
-    wavelength = 4*pi*sin(beta*pi/360) / sqrt(Qx**2 +Qz**2)
-    return beta,wavelength
-
 
 # Ignore the remainder of this file --- I don't yet have the computational
 # interface set up.
