@@ -25,14 +25,14 @@ def QxQzL_to_AB(Qx, Qz, wavelength):
     Guess incident and reflected angles given Qx, Qz and wavelength.
 
     This transform is not invertible: for any Qx, Qz there are two
-    separate choices for sample angle and detector angle which 
+    separate choices for sample angle and detector angle which
     give the same Q.  We choose the one for which detector angle
-    matches the sign of Qz.  
+    matches the sign of Qz.
 
     Returns sample angle, detector angle
 
-    Sample angle is also called the incident angle, theta_i.  
-    Dectector angle is incident angle plus reflected angle, 
+    Sample angle is also called the incident angle, theta_i.
+    Dectector angle is incident angle plus reflected angle,
     or theta_i + theta_f.
 
     If all inputs are scalars the result will be a scalar.
@@ -63,8 +63,8 @@ def QxQzA_to_BL(Qx,Qz,alpha):
 
     Returns detector angle, wavelength
 
-    Sample angle is also called the incident angle, theta_i.  
-    Dectector angle is incident angle plus reflected angle, 
+    Sample angle is also called the incident angle, theta_i.
+    Dectector angle is incident angle plus reflected angle,
     or theta_i + theta_f.
 
     If all inputs are scalars the result will be a scalar.
