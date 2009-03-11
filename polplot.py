@@ -485,6 +485,9 @@ class Plotter4(wx.Panel):
             self.colorbar.set_cmap(m.get_cmap())
             self.colorbar.set_clim(m.get_clim())
             self.colorbar.update_bruteforce(m)
+            im.set_cmap(m.get_cmap())
+            im.set_clim(m.get_clim())
+            self.canvas.draw_idle()
         self.colormapper.callbacksSM.connect('changed',on_changed)
 
         self.vmin = min(self.vmin, numpy.min(v))
