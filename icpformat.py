@@ -12,7 +12,46 @@ read(filename) - reads header information and data
 
 import numpy as N
 import datetime,sys
-from reflectometry.reduction import _reduction
+
+# Try using precompiled matrix loader
+try:
+    from reflectometry.reduction import _reduction
+    def parsematrix(s, shape=None, linenum=0):
+        """
+        Parse a string into a matrix.  Provide a shape parameter if you
+        know the expected matrix size.
+        """
+        if shape != None:
+            # Have an existing block, so we know what size to allocate
+            z = N.empty(shape,'i')
+            i,j = _reduction.str2imat(s,z)
+            if i*j != z.size:
+                raise IOError,"Inconsistent dims at line %d"%linenum
+        else:
+            # No existing block.  Worst case is 2 bytes per int.
+            n = int(len(s)/2+1)
+            z = N.empty(n,'i')
+            i,j = _reduction.str2imat(s,z)
+            # Keep the actual size
+            if i==1 or j==1:
+                z = z[:i*j].reshape(i*j)
+            else:
+                z = z[:i*j].reshape(i,j)
+        return z
+except:
+    def parsematrix(s,shape=None,linenum=0):
+        """
+        Parse a string into a matrix.  Provide a shape parameter if you
+        know the expected matrix size.
+        """
+        z = N.matrix(s,'i').A
+        i,j = z.shape
+        if i==1 or j==1:
+            z = z.reshape(i*j)
+        if shape != None and N.any(z.shape != shape):
+            raise IOError,"Inconsistent dims at line %d"%linenum
+        return z
+           
 
 def readdata(fh):
     """
@@ -54,25 +93,10 @@ def readdata(fh):
         if b != []:
             # Have a detector block so add it
             s = "".join(b)
-            # You can use numpy's string to matrix converter if for some
-            # reason _reduction doesn't compile, but it is horribly slow.
-            #z = N.matrix(s,'i').A
             if blocks != []:
-                # Have an existing block, so we know what size to allocate
-                z = N.empty(blocks[0].shape,'i')
-                i,j = _reduction.str2imat(s,z)
-                if i*j != z.size:
-                    raise IOError,"Inconsistent dims at line %d"%linenum
+                z = parsematrix(s, shape=blocks[0].shape, linenum=linenum)
             else:
-                # No existing block.  Worst case is 2 bytes per int.
-                n = int(len(s)/2+1)
-                z = N.empty(n,'i')
-                i,j = _reduction.str2imat(s,z)
-                # Keep the actual size
-                if i==1 or j==1:
-                    z = z[:i*j].reshape(i*j)
-                else:
-                    z = z[:i*j].reshape(i,j)
+                z = parsematrix(s, shape=None, linenum=linenum)
             blocks.append(z)
 
         elif blocks != []:
@@ -491,8 +515,12 @@ def plot(filename):
 
     canvas = pylab.gcf().canvas
     d = data(filename)
-    if len(d.v.shape) > 1:
-        pylab.gca().pcolorfast(d.xedges,d.yedges,d.v)
+    if len(d.v.shape) > 2:
+        pylab.gca().pcolorfast(d.v[0,:,:])
+        pylab.xlabel(d.xlabel)
+        pylab.ylabel(d.ylabel)
+    elif len(d.v.shape) > 1:
+        pylab.gca().pcolorfast(d.v)
         pylab.xlabel(d.xlabel)
         pylab.ylabel(d.ylabel)
     else:
