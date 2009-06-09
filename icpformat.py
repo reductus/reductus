@@ -187,8 +187,8 @@ class ICP(object):
         file = self.file
         tokens = get_quoted_tokens(file)
         self.filename=tokens[0]
-        self.timestamp = datetime.datetime(2000,1,1)
-        self.date=self.timestamp.strptime(tokens[1],'%b %d %Y %H:%M')
+        stamp = datetime.datetime(2000,1,1) # need this to call strptime
+        self.date=stamp.strptime(tokens[1],'%b %d %Y %H:%M')
         self.scantype = tokens[2]
         self.prefactor = float(tokens[3])
         self.monitor=float(tokens[4])
