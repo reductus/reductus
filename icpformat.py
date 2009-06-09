@@ -160,10 +160,20 @@ def get_quoted_tokens(file):
 
 class Lattice(object): pass
 class Motor(object): pass
-class MotorSet(object): pass
+class MotorSet(object):
+    def __str__(self):
+        motornames = self.__dict__.keys()
+        motornames.sort()
+        details = [(m,self.__dict__[m].start,self.__dict__[m].stop)
+                   for m in motornames]
+        return ", ".join(["%s[%g:%g]"%m for m in details])
 class ColumnSet(object):
     def __getitem__(self, k):
         return getattr(self,k)
+    def __str__(self):
+        columnnames = self.__dict__.keys()
+        columnnames.sort()
+        return ", ".join(columnnames)
 
 class ICP(object):
     def __init__(self, path):
@@ -537,5 +547,5 @@ def plot_demo():
         plot(sys.argv[1])
 
 if __name__=='__main__':
-    plot_demo()
-    #demo()
+    #plot_demo()
+    demo()
