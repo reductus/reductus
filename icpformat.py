@@ -51,7 +51,7 @@ except:
         if shape != None and N.any(z.shape != shape):
             raise IOError,"Inconsistent dims at line %d"%linenum
         return z
-           
+
 
 def readdata(fh):
     """
@@ -459,6 +459,79 @@ class ICP(object):
         else:
             return self.column.counts
 
+def write_icp_header(file, icpfile):
+    raise NotImplemented
+
+def _write_icp_frame(file, frame):
+    # Round data to the nearest integer
+    frame = N.asarray(frame+0.5,'uint32')
+    if frame.ndim == 2:
+        rows  = [ ",".join(str(v) for v in row) for row in frame ]
+        text = ";".join(rows)
+    else:
+        text = ",".join(str(v) for v in frame)
+    file.write(' ')
+    offset = 0
+    while len(text)-offset > 78:
+        next = offset+78
+        while text[next] not in ",;":
+            next -= 1
+        file.write(text[offset:next+1])
+        file.write(' '*(78-(next-offset)))
+        file.write('\n ')
+        offset = next+1
+    file.write(text[offset:])
+    file.write('\n')
+def write_icp_data(file, formats, columns, detector=None):
+    """
+    Write the data portion of the icp file.
+    """
+    for i in range(len(columns[0])):
+        fields = [f%columns[k][i] for k,f in enumerate(formats)]
+        file.write(' '.join(fields))
+        file.write('\n')
+        if detector != None and detector.size > 0:
+            _write_icp_frame(file,detector[i])
+def replace_data(infilename, outfilename, columns, detector=None):
+    infile = open(infilename,'r')
+    outfile = open(outfilename, 'w')
+
+    # Copy everything to the motor column
+    while True:
+        line = infile.readline()
+        outfile.write(line)
+        if line.startswith(' Mot:'): break
+
+    # Copy column headers
+    line = infile.readline()
+    outfile.write(line)
+
+    # Guess output format from the first line of the data
+    line = infile.readline()
+    formats = []
+    width = 0
+    precision = 0
+    increment_precision = False
+    in_number = False
+    for c in line[:-1]:
+        width += 1
+        if c == ' ':
+            if in_number:
+                formats.append('%'+str(width-1)+'.'+str(precision)+'f')
+                width = 0
+                precision = 0
+                increment_precision = False
+                in_number = False
+        elif c == '.':
+            increment_precision = True
+        elif c.isdigit():
+            in_number = True
+            if increment_precision:
+                precision+=1
+    formats.append('%'+str(width)+'.'+str(precision)+'f')
+
+    write_icp_data(outfile, formats, columns, detector)
+
 def read(filename):
     """Read an ICP file and return the corresponding ICP file object"""
     icp = ICP(filename)
@@ -483,7 +556,6 @@ def gzopen(filename,mode='r'):
     return file
 
 def asdata(icp):
-    import numpy
     import data
     d = data.Data()
     d.vlabel = 'Counts'
@@ -492,7 +564,7 @@ def asdata(icp):
     d.x = icp.column[icp.columnnames[0]]
     if len(d.v.shape) > 1:
         d.ylabel = 'Pixel'
-        d.y = numpy.arange(d.v.shape[0])
+        d.y = N.arange(d.v.shape[0])
     return d
 
 def data(filename):
@@ -500,9 +572,22 @@ def data(filename):
     icp.read()
     return asdata(icp)
 
+
+
 # TODO: need message/question functions
 def message(text): pass
 def question(text): return True
+
+def copy_test():
+    import sys
+    if len(sys.argv) < 2:
+        print "usage: python icpformat.py file"
+        sys.exit()
+    filename = sys.argv[1]
+    icp = ICP(filename)
+    icp.read()
+    columns = [icp.column[n] for n in icp.columnnames]
+    replace_data(filename,'copy.icp',columns,detector=icp.detector)
 
 def demo():
     """
@@ -549,3 +634,4 @@ def plot_demo():
 if __name__=='__main__':
     #plot_demo()
     demo()
+    #copy_test()
