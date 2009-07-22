@@ -8,6 +8,7 @@ import os, numpy
 from reflectometry.reduction import icpformat
 from reflectometry.reduction import refldata
 from reflectometry.reduction import properties
+from reflectometry.reduction import qxqz
 
 
 # Instrument parameters
@@ -175,7 +176,7 @@ class NG7Icp(refldata.ReflData):
         if 'qz' in data:
             Qx = data.column.qx if 'qx' in data else 0
             Qz = data.column.qz
-            A,B = refldata.QxQzL_to_AB(Qx,Qz,self.detector.wavelength)
+            A,B = qxqz.QxQzL_to_AB(Qx,Qz,self.detector.wavelength)
             self.sample.angle_x,self.detector.angle_x = A,B
 
         # Set initial Qz
