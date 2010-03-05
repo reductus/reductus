@@ -158,7 +158,10 @@ def get_quoted_tokens(file):
 
     return tokens
 
-class Lattice(object): pass
+class Lattice(object):
+    def __str__(self):
+        return ("a,b,c=%g,%g,%g  alpha,beta,gamma=%g,%g,%g"
+                % (self.a,self.b,self.c,self.alpha,self.beta,self.gamma))
 class Motor(object): pass
 class MotorSet(object):
     def __str__(self):
@@ -179,12 +182,11 @@ class ICP(object):
     def __init__(self, path):
         self.path = path
 
-    def readheader1(self):
+    def readheader1(self, file):
         """
         Read the tow line summary at the start of the ICP data files.
         """
 
-        file = self.file
         tokens = get_quoted_tokens(file)
         self.filename=tokens[0]
         stamp = datetime.datetime(2000,1,1) # need this to call strptime
@@ -212,11 +214,10 @@ class ICP(object):
             self.polarization = ""
 
 
-    def readiheader(self):
+    def readiheader(self, file):
         """
         Read I-buffer structure, excluding motors.
         """
-        file = self.file
 
         # Read in fields and field names
         tokenized=get_tokenized_line(file)
@@ -232,11 +233,10 @@ class ICP(object):
         self.Tstep=float(tokenized[9])
         self.Hfield=float(tokenized[10])
 
-    def readrheader(self):
+    def readrheader(self, file):
         """
         Read R-buffer structure, excluding motors.
         """
-        file = self.file
         # Read in fields and field names
         tokenized=get_tokenized_line(file)
         fieldnames = file.readline()
@@ -254,11 +254,10 @@ class ICP(object):
         self.numDet=float(tokenized[7])
         self.SclFac=float(tokenized[8])
 
-    def readqheader(self):
+    def readqheader(self, file):
         """
-        Read Q-buffer structure.
+        Read Q-buffer structure (also works for T-buffer).
         """
-        file = self.file
         #experiment info
         tokenized=get_tokenized_line(file)
         self.collimations=[float(s) for s in tokenized[0:4]]
@@ -327,7 +326,7 @@ class ICP(object):
         return wavelength
 
 
-    def readmotors(self):
+    def readmotors(self, file):
         """
         Read the 6 motor lines, returning a dictionary of
         motor names and start-step-stop values.
@@ -338,7 +337,7 @@ class ICP(object):
         """
         self.motor = MotorSet()
         while True:  # read until 'Mot:' line
-            words=get_tokenized_line(self.file)
+            words=get_tokenized_line(file)
             if words[0] == 'Mot:': break
             motor = Motor()
             motor.start=float(words[1])
@@ -347,7 +346,7 @@ class ICP(object):
             name = words[0] if not words[0].isdigit() else 'a'+words[0]
             setattr(self.motor,name,motor)
 
-    def readcolumnheaders(self):
+    def readcolumnheaders(self, file):
         """
         Get a list of column names. Transform the names of certain
         columns to make our lives easier elsewhere:
@@ -358,7 +357,7 @@ class ICP(object):
               Q(x) -> qx, Q(y) -> qy, Q(z) -> qz
         All column names are uppercase.
         """
-        line = self.file.readline()
+        line = file.readline()
         line = line.lower()
         for (old,new) in (('#1 counts','counts'),
                           ('#2 counts','counts2'),
@@ -371,13 +370,13 @@ class ICP(object):
         self.columnnames = line.split()
 
 
-    def readcolumns(self):
+    def readcolumns(self, file):
         '''
         Read and parse ICP data columns listed in columns.  Return a dict of
         column name: vector.  If using a position sensitive detector, return
         an array of detector values x scan points.
         '''
-        values,detector = readdata(self.file)
+        values,detector = readdata(file)
         self.column = ColumnSet()
         for (c,v) in zip(self.columnnames,values.T):
             setattr(self.column,c,v)
@@ -390,6 +389,7 @@ class ICP(object):
         Generate vectors for each of the motors if a vector is not
         already stored in the file.
         """
+        if self.scantype in ['T']: return  # Skip motor generation for now for 'T'
         for (M,R) in self.motor.__dict__.iteritems():
             if not hasattr(self.column,M):
                 if R.step != 0.:
@@ -401,54 +401,54 @@ class ICP(object):
                 setattr(self.column,M,vector)
         pass
 
-    def parseheader(self):
+    def parseheader(self, file):
         """
         Read and parse ICP header information
         """
         # Determine FileType
-        file = self.file
-        self.readheader1()
+        self.readheader1(file)
         if self.scantype=='I':
-            self.readiheader()
-            self.readmotors()
-        elif self.scantype=='Q':
-            self.readqheader()
+            self.readiheader(file)
+            self.readmotors(file)
+        elif self.scantype in ['Q','T']:
+            self.readqheader(file)
         elif self.scantype=='B':
-            self.readqheader()
-            self.readmotors()
+            self.readqheader(file)
+            self.readmotors(file)
         elif self.scantype=='R':
-            self.readrheader()
-            self.readmotors()
+            self.readrheader(file)
+            self.readmotors(file)
         else:
-            raise ValueError, "Unknown scantype %s in ICP file"%scantype
-        self.readcolumnheaders()
+            raise ValueError, "Unknown scantype %s in ICP file"%self.scantype
+        self.readcolumnheaders(file)
 
     def summary(self):
         """
-        Read header from file, returning a dict of fields.
+        Read header from file, setting the corresponding attributes the ICP object
         """
-        self.file = gzopen(self.path)
-        self.parseheader()
-        data1 = self.file.readline()
-        data2 = self.file.readline()
+        file = gzopen(self.path)
+        self.parseheader(file)
+        data1 = file.readline()
+        data2 = file.readline()
         self.PSD = (',' in data2)
-        self.file.close()
+        file.close()
+        
 
     def read(self):
         """
-        Read header and data from file, returning a dict of fields.
+        Read header and data from file, setting the corresponding attributes the ICP object
         """
-        self.file = gzopen(self.path)
-        self.parseheader()
+        file = gzopen(self.path)
+        self.parseheader(file)
 
         #read columns and detector images if available
-        self.readcolumns()
+        self.readcolumns(file)
         self.PSD = (self.detector.size>0)
 
         # fill in missing motor columns
         self.genmotorcolumns()
 
-        self.file.close()
+        file.close()
 
     def __contains__(self, column):
         return hasattr(self.column,column)
@@ -611,11 +611,15 @@ def plot(filename):
     canvas = pylab.gcf().canvas
     d = data(filename)
     if len(d.v.shape) > 2:
-        pylab.gca().pcolorfast(d.v[0,:,:])
+        pylab.gca().pcolormesh(d.v[0,:,:])
         pylab.xlabel(d.xlabel)
         pylab.ylabel(d.ylabel)
     elif len(d.v.shape) > 1:
-        pylab.gca().pcolorfast(d.v)
+        if filename.lower().endswith('bt4'):
+            offset=1
+        else:
+            offset=0
+        pylab.gca().pcolorfast(d.v[:,offset:])
         pylab.xlabel(d.xlabel)
         pylab.ylabel(d.ylabel)
     else:
@@ -632,6 +636,6 @@ def plot_demo():
         plot(sys.argv[1])
 
 if __name__=='__main__':
-    #plot_demo()
-    demo()
+    plot_demo()
+    #demo()
     #copy_test()
