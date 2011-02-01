@@ -59,6 +59,33 @@ See notes in properties.py regarding dated values.
 """
 __all__ = ['ReflData']
 
+## Proposal for introspection with units
+#def get_as(object,**kw):
+#    if len(kw) != 1: raise Error
+#    for k,v in kw.items():
+#        return convert(getattr(object,k),object.__units__[k],v)
+#def units(object, k):
+#    return object.__units__[k]
+#
+#get_as(detector, distance='m')
+#units(detector, 'distance')
+#
+#class Detector(object):
+#    __units__ = dict(distance='mm',size='mm',saturation='counts/s')
+#    ...
+#
+## Variation: use a units class to represent the units rather than a string
+## This means that we save a couple of string lookups when doing conversion
+#get_as(detector, distance=metre)
+#def get_as(object,**kw):
+#    if len(kw) != 1: raise Error
+#    for k,v in kw.items():
+#        return getattr(object,k)*object.__units__[k]/v
+#class Detector(object):
+#    __units__ = dict(distance=milli*metre,size=milli*metre,saturation=1/second)
+
+## Something similar can be used for uncertainty, preferably stored as variance
+
 import datetime
 import weakref
 
@@ -209,7 +236,12 @@ class Environment(object):
         * y is polar 90, azimuthal 0
         * z is azimuthal 90
     """
-    pass
+    properties = ['temperature','magnetic_field']
+    temperature = None
+    magnetic_field = None
+
+    def __init__(self, **kw): _set(self,kw)
+    def __str__(self): return _str(self)
 
 
 class Beamstop(object):
@@ -246,6 +278,7 @@ class Beamstop(object):
 
     def __init__(self, **kw): _set(self,kw)
     def __str__(self): return _str(self)
+
 
 class Detector(object):
     """
@@ -756,7 +789,7 @@ def _set(object,kw):
 # Ignore the remainder of this file --- I don't yet have the computational
 # interface set up.
 
-    """
+_ = """
     Computed values
     ===============
     edges_x (metric=['pixel'|'mm'|'degrees'|'radians'],frame=0)

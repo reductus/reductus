@@ -117,6 +117,7 @@ def test():
     a |= Add(1)
     assert a.x == 1
     assert (a|pipeline).x == 12  # Is a copy
+    assert a.x == 1 # Original is not modified
     a |= pipeline
     assert a.x == 12  # Has been modified
 

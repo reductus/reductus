@@ -113,6 +113,7 @@ class NG1Icp(refldata.ReflData):
         if data.wavelength != self.default.wavelength:
             self.warn("Unexpected wavelength: expected %g but got %g"\
                       %(self.default.wavelength,data.wavelength))
+
         self.detector.wavelength = data.wavelength
 
         # Callback for lazy data
@@ -185,7 +186,15 @@ class NG1Icp(refldata.ReflData):
             # will have to provide the means of setting the rate
             # and computing the time based on that rate.
             pass
-
+        
+        if 'temp' in data:
+            # record the temperature in sample environment
+            self.sample.environment.temperature = data.column.temperature
+            
+        if 'h-field' in data:
+            # record the temperature in sample environment
+            self.sample.environment.magnetic_field = data.column['h-field']
+        
         # Set initial Qz
         self.resetQ()
 
