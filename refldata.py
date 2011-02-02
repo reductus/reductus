@@ -189,7 +189,7 @@ class Sample(object):
     substrate_sld = 2.07 # inv A  (silicon substrate for neutrons)
 
     def __init__(self, **kw):
-        self.environment = {}
+        self.environment = Environment()
         _set(self,kw)
     def __str__(self): return _str(self)
 

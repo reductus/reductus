@@ -189,7 +189,7 @@ class NG1Icp(refldata.ReflData):
         
         if 'temp' in data:
             # record the temperature in sample environment
-            self.sample.environment.temperature = data.column.temperature
+            self.sample.environment.temperature = data.column['temp']
             
         if 'h-field' in data:
             # record the temperature in sample environment

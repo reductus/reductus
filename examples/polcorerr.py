@@ -13,8 +13,9 @@ doplot = False
 
 import numpy,math,pylab
 import reflectometry.reduction as reflred
+from reflectometry.reduction.data import PolarizedData
 
-eff = reflred.PolarizationEfficiency()
+eff = reflred.polarization_efficiency()
 
 # Seed polarizer/flipper efficiencies from a gaussian distribution
 eff.ff = numpy.random.normal(0.95,0.01*err,n)
@@ -23,7 +24,7 @@ eff.rf = numpy.random.normal(0.95,0.01*err,n)
 eff.rp = numpy.random.normal(0.90,0.01*err,n)
 eff.Ic = numpy.random.normal(Ic,numpy.sqrt(Ic),n)
 
-data = reflred.PolarizedData()
+data = PolarizedData()
 for V,v in [(data.pp,Ic), (data.pm,Ic/5), (data.mp,Ic/5), (data.mm,Ic)]:
     V.v = numpy.ones(n)*v
     V.variance = V.v   # Variance is poisson variance
