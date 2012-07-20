@@ -314,12 +314,12 @@ class ICP(object):
             # yuck! If stored value is 0, use the default
             wavelength = default
             message("Using default wavelength %s for %s"\
-                    %(wavelength,self.path))
+                    %(wavelength,self.filename))
         elif abs(default-wavelength)/default > 0.01:
             # yuck! Value differs significantly from the default
             if question("ICP recorded a wavelength of %s in %s. \
     Do you want to use the default wavelength %s instead?"\
-              %(wavelength,self.path,default)):
+              %(wavelength,self.filename,default)):
                 wavelength = default
         # Regardless of how the value was obtained, use that value for
         # the entire dataset
@@ -426,19 +426,20 @@ class ICP(object):
         """
         Read header from file, setting the corresponding attributes the ICP object
         """
-        file = gzopen(self.path)
+        file = self.path if hasattr(self.path, 'read') else gzopen(self.path)
         self.parseheader(file)
         data1 = file.readline()
         data2 = file.readline()
         self.PSD = (',' in data2)
-        file.close()
+        if file != self.path:
+            file.close()
         
 
     def read(self):
         """
         Read header and data from file, setting the corresponding attributes the ICP object
         """
-        file = gzopen(self.path)
+        file = self.path if hasattr(self.path, 'read') else gzopen(self.path)
         self.parseheader(file)
 
         #read columns and detector images if available
@@ -448,7 +449,8 @@ class ICP(object):
         # fill in missing motor columns
         self.genmotorcolumns()
 
-        file.close()
+        if file != self.path:
+            file.close()
 
     def __contains__(self, column):
         return hasattr(self.column,column)
