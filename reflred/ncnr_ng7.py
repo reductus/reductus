@@ -73,10 +73,18 @@ class NG7Icp(refldata.ReflData):
     _wavelength_override = {}
     def __init__(self, path, *args, **kw):
         super(NG7Icp,self).__init__(*args, **kw)
-        self.path = os.path.abspath(path)
 
+        if hasattr(path,'read'):
+            data = icpformat.read(path)
+            self._set_metadata(data)
+            self._set_data(data)
+        else:
+            data = icpformat.summary(path)
+            self._set_metadata(data)
+            self.path = path
+            self._need_data = True
 
-        data = icpformat.summary(path)
+    def _set_metadata(self, data):
         if data.scantype != 'R':
             raise TypeError, "Only R-Buffers supported for NG-7"
 
@@ -137,11 +145,17 @@ class NG7Icp(refldata.ReflData):
         self.detector.width_y = self.default.psd_height
 
     def loadcounts(self):
-        data = icpformat.read(self.path)
-        return data.counts
+        if not self._need_data:
+            self.load()
+        return self.detector.counts
 
     def load(self):
-        data = icpformat.read(self.path)
+        if self._need_data:
+            data = icpformat.read(self.path)
+            self._set_data(data)
+
+    def _set_data(self, data):
+        self._need_data = False
         self.detector.wavelength \
             = data.check_wavelength(self.default.wavelength,
                                     NG7Icp._wavelength_override)
@@ -157,7 +171,7 @@ class NG7Icp(refldata.ReflData):
             elif data.count_type == 'TIME':
                 self.monitor.count_time = automonitor
             else:
-                raise ValueError, "Expected count type 'NEUT' or 'TIME' in "+self.path
+                raise ValueError, "Expected count type 'NEUT' or 'TIME' in "+data.filename
 
         if 'monitor' in data:
             self.monitor.counts = data.column.monitor

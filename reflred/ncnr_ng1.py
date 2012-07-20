@@ -68,10 +68,19 @@ class NG1Icp(refldata.ReflData):
 
     def __init__(self, path, *args, **kw):
         super(NG1Icp,self).__init__(*args, **kw)
-        self.path = os.path.abspath(path)
 
+        if hasattr(path, 'read'):
+            data = icpformat.read(path)
+            self._set_metadata(data)
+            self._set_data(data)
+        else:
+            data = icpformat.summary(path)
+            self._set_metadata(data)
+            self._need_data = True
+            self.path = path 
+
+    def _set_metadata(self, data):
         # Load file header
-        data = icpformat.summary(self.path)
         if data.scantype != 'I':
             raise TypeError, "Only I-Buffers supported for %s"%self.format
 
@@ -125,12 +134,16 @@ class NG1Icp(refldata.ReflData):
 
     def loadcounts(self):
         # Load the counts from the data file
-        data = icpformat.read(self.path)
-        return data.counts
+        return self.detector.counts
 
     def load(self):
         # Load the icp data
-        data = icpformat.read(self.path)
+        if self._need_data:
+            data = icpformat.read(self.path)
+            self._set_data(data)
+
+    def _set_data(self, data):
+        self._need_data = False
         if data.counts.ndim == 1:
             self.detector.dims = (1,1)
         elif data.counts.ndim == 2:

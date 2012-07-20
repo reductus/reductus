@@ -253,13 +253,15 @@ def test():
     # demostrate loading of NG-7 files; just check that the file
     # is found and loaded properlty, not that it
     import os.path
-    root = os.path.dirname(__file__)
-    ng7file = os.path.join(root,'examples','ng7','jul04032.ng7')
-    ng1file = os.path.join(root,'examples','ng1','psih1001.ng1')
-    cg1file = os.path.join(root,'examples','cg1area','psdca022.cg1.gz')
+    root = os.path.join(os.path.dirname(__file__),'..','doc','examples')
+    ng7file = os.path.join(root,'ng7','jul04032.ng7')
+    ng1file = os.path.join(root,'ng1','psih1001.ng1')
+    cg1file = os.path.join(root,'cg1area','psdca022.cg1.gz')
     assert load(ng7file).detector.wavelength == 4.76
     assert load(ng1file).name == 'gsip4007.ng1'
     assert loadmeta(cg1file).name == 'psdca022.cg1'
+    assert load(open(ng7file),format=".ng7").detector.wavelength == 4.76
+    assert load(open(ng1file),format=".ng1").name == 'gsip4007.ng1'
     assert available() == ['NCNR NG-1','NCNR NG-7','NeXus'],available()
 
 if __name__ == "__main__": test()
