@@ -56,7 +56,7 @@ serves only to provide relative weighting between the points.
 #    res = [xin, x, dx]
 
 
-import numpy as N
+import numpy as np
 
 # Grab erfc from scipy if it is available; if not then we can only
 # calculate confidence intervals for sigma = 1
@@ -133,12 +133,12 @@ class LinearModel(object):
         # FIXME: don't know if we need to scale by C, but it will
         # at least make things consistent
         C = self.rnorm**2/self.DoF if self.DoF>0 else 1
-        return C * N.dot(self._SVinv,self._SVinv.T)
+        return C * np.dot(self._SVinv,self._SVinv.T)
     def _var(self):
         C = self.rnorm**2/self.DoF if self.DoF>0 else 1
-        return C * N.sum( self._SVinv**2, axis=1)
+        return C * np.sum( self._SVinv**2, axis=1)
     def _std(self):
-        return N.sqrt(self._var())
+        return np.sqrt(self._var())
     def _p(self):
         from scipy import stats
         return stats.chi2.sf(self.rnorm**2,self.DoF)
@@ -178,10 +178,10 @@ class LinearModel(object):
         #
         # Note: sqrt(F(1-a;1,df)) = T(1-a/2;df)
         #
-        y = N.dot(X,self.x).ravel()
-        s = stats.t.ppf(1-alpha/2,self.DoF)*self.rnorm/N.sqrt(self.DoF)
-        t = N.dot(X,self._SVinv)
-        dy = s*N.sqrt(pred + N.sum( t**2, axis=1))
+        y = np.dot(X,self.x).ravel()
+        s = stats.t.ppf(1-alpha/2,self.DoF)*self.rnorm/np.sqrt(self.DoF)
+        t = np.dot(X,self._SVinv)
+        dy = s*np.sqrt(pred + np.sum( t**2, axis=1))
         return y,dy
 
     def __call__(self, A):
@@ -189,7 +189,7 @@ class LinearModel(object):
         Return the prediction for a linear system at points in the
         rows of A.
         """
-        return N.dot(N.asarray(A),self.x)
+        return np.dot(np.asarray(A),self.x)
 
     def ci(self, A, sigma=1):
         """
@@ -201,8 +201,8 @@ class LinearModel(object):
         Confidence intervals are sometimes expressed as 1-alpha values,
         where alpha = erfc(sigma/sqrt(2)).
         """
-        alpha = erfc(sigma/N.sqrt(2))
-        return self._interval(N.asarray(A),alpha,0)
+        alpha = erfc(sigma/np.sqrt(2))
+        return self._interval(np.asarray(A),alpha,0)
 
     def pi(self, A, p=0.05):
         """
@@ -211,7 +211,7 @@ class LinearModel(object):
 
         p = 1-alpha = 0.05 corresponds to 95% prediction interval
         """
-        return self._interval(N.asarray(A),p,1)
+        return self._interval(np.asarray(A),p,1)
 
 def wsolve(A,y,dy=1,rcond=1e-12):
     """
@@ -222,15 +222,15 @@ def wsolve(A,y,dy=1,rcond=1e-12):
     dy is a scalar or an n x 1 array
     x is a m x k array
     """
-    # The ugliness v[:,N.newaxis] transposes a vector
-    # The ugliness N.dot(a,b) is a*b for a,b matrices
+    # The ugliness v[:,np.newaxis] transposes a vector
+    # The ugliness np.dot(a,b) is a*b for a,b matrices
     # The ugliness vh.T.conj() is the hermitian transpose
 
     # Make sure inputs are arrays
-    A,y,dy = N.asarray(A),N.asarray(y),N.asarray(dy)
+    A,y,dy = np.asarray(A),np.asarray(y),np.asarray(dy)
     result_dims = y.ndim
-    if dy.ndim == 1: dy = dy[:,N.newaxis]
-    if y.ndim == 1: y = y[:,N.newaxis]
+    if dy.ndim == 1: dy = dy[:,np.newaxis]
+    if y.ndim == 1: y = y[:,np.newaxis]
 
     # Apply weighting if dy is not a scalar
     # If dy is a scalar, it cancels out of both sides of the equation
@@ -242,7 +242,7 @@ def wsolve(A,y,dy=1,rcond=1e-12):
     # Singular value decomposition: A = U S V.H
     # Since A is an array, U, S, VH are also arrays
     # The zero indicates an economy decomposition, with u nxm rathern than nxn
-    u,s,vh = N.linalg.svd(A,0)
+    u,s,vh = np.linalg.svd(A,0)
 
     # FIXME what to do with ill-conditioned systems?
     #if s[-1]<rcond*s[0]: raise ValueError, "matrix is singular"
@@ -255,11 +255,11 @@ def wsolve(A,y,dy=1,rcond=1e-12):
     # Computing V*inv(S) is slightly faster than inv(S)*U.H since V is smaller
     # than U.H.  Similarly, U.H*y is somewhat faster than V*U.H
     SVinv = vh.T.conj()/s
-    Uy = N.dot(u.T.conj(), y)
-    x = N.dot(SVinv, Uy)
+    Uy = np.dot(u.T.conj(), y)
+    x = np.dot(SVinv, Uy)
 
     DoF = y.shape[0] - x.shape[0]
-    rnorm = N.linalg.norm(y - N.dot(A,x))
+    rnorm = np.linalg.norm(y - np.dot(A,x))
 
     return LinearModel(x=x, DoF=DoF, SVinv=SVinv, rnorm=rnorm)
 
@@ -268,10 +268,10 @@ def _poly_matrix(x,degree,origin=False):
     Generate the matrix A used to fit a polynomial using a linear solver.
     """
     if origin:
-        n = N.array(range(degree,0,-1))
+        n = np.array(range(degree,0,-1))
     else:
-        n = N.array(range(degree,-1,-1))
-    return N.asarray(x)[:,None]**n[None,:]
+        n = np.array(range(degree,-1,-1))
+    return np.asarray(x)[:,None]**n[None,:]
 
 class PolynomialModel(object):
     """
@@ -300,10 +300,11 @@ class PolynomialModel(object):
     Note that the covariance matrix will not include the ones column if
     the polynomial goes through the origin.
     """
-    def __init__(self, s, origin=False):
+    def __init__(self, x,y,dy, s, origin=False):
+        self.x,self.y,self.dy = x,y,dy
         self.origin = origin
-        self.coeff = N.ravel(s.x)
-        if origin: self.coeff = N.hstack((self.coeff,0))
+        self.coeff = np.ravel(s.x)
+        if origin: self.coeff = np.hstack((self.coeff,0))
         self.degree = len(self.coeff)-1
         self.DoF = s.DoF
         self.rnorm = s.rnorm
@@ -311,10 +312,10 @@ class PolynomialModel(object):
     def _cov(self):
         return self._conf.cov
     def _std(self):
-        return N.sqrt(self._var())
+        return np.sqrt(self._var())
     def _var(self):
-        var = N.ravel(self._conf.var)
-        if self.origin: var = N.hstack((var,0))
+        var = np.ravel(self._conf.var)
+        if self.origin: var = np.hstack((var,0))
         return var
     def _p(self):
         return self._conf.p
@@ -328,7 +329,7 @@ class PolynomialModel(object):
         """
         Evaluate the polynomial at x.
         """
-        return N.polyval(self.coeff,x)
+        return np.polyval(self.coeff,x)
 
     def ci(self, x, sigma=1):
         """
@@ -352,6 +353,32 @@ class PolynomialModel(object):
         # TODO: better polynomial pretty printing using formatnum
         return "Polynomial(%s)"%self.coeff
 
+    def plot(self,fmt='s'):
+        """
+        Plot the data, the fit and the confidence region.
+
+        Returns (plotline, barlines, caplines, fitline, fill)
+
+        plotline is the Line2D object showing the data markers
+        barlines, caplines are the error bar lines returned from errorbar
+        fitline is the Line2D object returned from fit
+        fill is the PolyCollection showing the confidence region
+        """
+        import pylab
+        H,H1,H2 = pylab.errorbar(self.x,self.y,yerr=self.dy,fmt=fmt,alpha=0.9)
+        c = H.get_color()
+        pylab.hold(True)
+        px=np.linspace(np.min(self.x),np.max(self.x),200)
+        py,pdy = self.pi(px)
+        cy,cdy = self.ci(px)
+        H3 = pylab.plot(px,py,'-',
+                   #px,py+pdy,'-.',px,py-pdy,'-.',
+                   #px,cy+cdy,'-.',px,cy-cdy,'-.',
+                   color=c, alpha=0.9,
+                   )
+        H4 = pylab.fill_between(px,cy-cdy,cy+cdy,alpha=0.6,color=c)
+        return H,H1,H2,H3,H4
+
 def wpolyfit(x,y,dy=1,degree=None,origin=False):
     """
     Return the polynomial of degree n that
@@ -363,30 +390,23 @@ def wpolyfit(x,y,dy=1,degree=None,origin=False):
 
     A = _poly_matrix(x,degree,origin)
     s = wsolve(A,y,dy)
-    return PolynomialModel(s,origin=origin)
+    return PolynomialModel(x,y,dy,s,origin=origin)
 
 
 def demo():
     import pylab
 
     # Make fake data
-    x = N.linspace(-15,5,15)
-    th = N.polyval([.2,3,1,5],x)  # polynomial
-    dy = N.sqrt(N.abs(th))        # poisson uncertainty estimate
-    y = N.random.normal(th,dy)    # but normal generator
+    x = np.linspace(-15,5,15)
+    th = np.polyval([.2,3,1,5],x)  # polynomial
+    dy = np.sqrt(np.abs(th))        # poisson uncertainty estimate
+    y = np.random.normal(th,dy)    # but normal generator
 
     # Fit to a polynomial
     poly = wpolyfit(x,y,dy=dy,degree=3)
 
     # Plot the result
-    pylab.errorbar(x,y,yerr=dy,fmt='x')
-    pylab.hold(True)
-    px=N.linspace(x[0],x[-1],200)
-    py,pdy = poly.pi(px)
-    cy,cdy = poly.ci(px)
-    pylab.plot(px,py,'g-',
-               px,py+pdy,'g-.',px,py-pdy,'g-.',
-               px,cy+cdy,'r-.',px,cy-cdy,'r-.')
+    poly.plot()
     pylab.show()
 
 def test():
@@ -394,11 +414,11 @@ def test():
     smoke test...make sure the function continues to return the same
     result for a particular system.
     """
-    x = N.array([0,1,2,3,4],'d')
-    y = N.array([  2.5,   7.9,  13.9,  21.1,  44.4],'d')
-    dy = N.array([ 1.7,  2.4,  3.6,  4.8,  6.2],'d')
+    x = np.array([0,1,2,3,4],'d')
+    y = np.array([  2.5,   7.9,  13.9,  21.1,  44.4],'d')
+    dy = np.array([ 1.7,  2.4,  3.6,  4.8,  6.2],'d')
     poly = wpolyfit(x,y,dy,1)
-    px = N.array([1.5],'d')
+    px = np.array([1.5],'d')
     py,pi = poly.pi(px)
     py,ci = poly.ci(px)
 
@@ -406,14 +426,14 @@ def test():
     #print "Tp = [%.16g, %.16g]"%(p[0],p[1])
     #print "Tdp = [%.16g, %.16g]"%(dp[0],dp[1])
     #print "Tpi,Tci = %.16g, %.16g"%(pi,ci)
-    Tp = N.array([7.787249069840737, 1.503992847461524])
-    Tdp = N.array([1.522338103010216, 2.117633626902384])
+    Tp = np.array([7.787249069840737, 1.503992847461524])
+    Tdp = np.array([1.522338103010216, 2.117633626902384])
     Tpi,Tci = 7.611128464981324, 2.342860389884832
 
-    perr = N.max(N.abs(poly.coeff-Tp))
-    dperr = N.max(N.abs(poly.std-Tdp))
-    cierr = N.abs(ci-Tci)
-    pierr = N.abs(pi-Tpi)
+    perr = np.max(np.abs(poly.coeff-Tp))
+    dperr = np.max(np.abs(poly.std-Tdp))
+    cierr = np.abs(ci-Tci)
+    pierr = np.abs(pi-Tpi)
     assert perr < 1e-15,"||p-Tp||=%g"%perr
     assert dperr < 1e-15,"||dp-Tdp||=%g"%dperr
     assert cierr < 1e-15,"||ci-Tci||=%g"%cierr
@@ -422,4 +442,4 @@ def test():
 
 if __name__ == "__main__":
     test()
-#    demo()
+    #demo()
