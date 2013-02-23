@@ -239,15 +239,23 @@ register('NCNR NG-7',icp_ng7)
 
 register('.nxs', nexus)
 register('NeXus', nexus)
-
 register('NCNR NG-1', icp_ng1)
+
+for ext in ['.nad', '.nbd', '.ncd', '.ndd', '.ngd']:
+    register(ext, icp_ng1)
+    register(ext+'.gz', icp_ng1)
+
 for ext in ['.na1', '.nb1', '.nc1', '.nd1', '.ng1']:
+    register(ext, icp_ng1)
+    register(ext+'.gz', icp_ng1)
+
+for ext in ['.cad', '.cbd', '.ccd', '.cdd', '.cgd']:
     register(ext, icp_ng1)
     register(ext+'.gz', icp_ng1)
 
 for ext in ['.ca1', '.cb1', '.cc1', '.cd1', '.cg1']:
     register(ext, icp_ng1)
-    register(ext+'.gz', icp_ng1)
+    register(ext+'.gz', icp_ng1)    
 
 def test():
     # demostrate loading of NG-7 files; just check that the file
