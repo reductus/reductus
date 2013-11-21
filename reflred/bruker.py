@@ -30,20 +30,20 @@ SCAN_TYPE = {
     130: 'PSD fast scan',
     }
 
-VARYING_BIT = {
-    'two_theta': 1,
-    'theta': 2,
-    'chi': 4,
-    'phi': 8,
-    'x': 16,
-    'y': 32,
-    'z': 64,
-    'aux1': 128,
-    'aux2': 256,
-    'aux3': 512,
-    'time': 1024,
-    'temp': 2048,
-    }
+VARYING_BIT = (
+    'two_theta',
+    'theta',
+    'chi',
+    'phi',
+    'x',
+    'y',
+    'z',
+    'aux1',
+    'aux2',
+    'aux3',
+    'time',
+    'temp',
+    )
 
 def _make_struct(fields, data, offset=0):
     names = zip(*fields)[0]
@@ -158,18 +158,181 @@ RAW_RANGE_HEADER = (
     ('reserved', '24s'),           # 280
     )
 
+EXTRA_RECORD = {
+    100: ( # OSC
+        ('osci_circle', 'i'),
+        ('res9', '4s'),
+        ('osci_amplitude', 'd'),
+        ('osci_speed', 'f'),
+        ('reserved', '12s'),
+        ),
+    110: ( # PSD
+        ('act_two_theta', 'd'),
+        ('first_unused_channel', 'i'),
+        ('reserved', '20s'),
+        ),
+    120: ( # OQM
+        ('mode', 'i'),
+        ('two_theta_actual', 'f'),
+        ('time_actual', 'f'),
+        ('counts','f'),
+        ('compound','32s'),
+        ('peak_id','i'),
+        ('reserved','60s'),
+        ),
+    150: ( # ORM
+        ('first_two_theta', 'f'),
+        ('last_two_theta', 'f'),
+        ('reserved','16s'),
+        ),
+    190: ( # OLC
+        ('two_theta_offset', 'f'),
+        ('int_offset', 'f'),
+        ('reserved','16s'),
+        ),
+    200: ( # AD
+        ('act_two_theta', 'd'),
+        ('tthbeg', 'f'),
+        ('tthend', 'f'),
+        ('chibeg', 'f'),
+        ('chiend', 'f'),
+        ('normal', 'i'),
+        ('program', '20s'),
+        ('reserved', '16s'),
+        ),
+    300: ( # HRXRD
+        ('szSubstrate', '40s'),
+        ('sz_hkl', '9s'),
+        ('sz_mno', '9s'),
+        ('sz_pqr', '9s'),
+        ('szDiffractionSetup', '1s'),
+        ('fAnalyzerOffs', 'f'),
+        ('iIncidenceFlag', 'i'),
+        ('iAlignmentSet', 'i'),
+        ('fLambdaTheory', 'd'),
+        ('fLambdaDetermined', 'd'),
+        ('iHRXRDScanType', 'i'),
+        ('iMonochrAnalysComb', 'i'),
+        ('fSim_FF', 'd'),
+        ('fCoupleFactor', 'd'),
+        ('fThetaBragg', 'd'),
+        ('fTauBragg', 'd'),
+        ('fTauMis', 'd'),
+        ('fLattice', 'd'),
+        ('fPsi', 'd'),
+        ('fScanRelStart', 'd'),
+        ('fScanRelStop', 'd'),
+        ('fOmegaMiddle', 'd'),
+        ('f2ThetaMiddle', 'd'),
+        ('fThetaMiddle', 'd'),
+        ('fPhiMiddle', 'd'),
+        ('fChiMiddle', 'd'),
+        ('fXMiddle', 'd'),
+        ('fYMiddle', 'd'),
+        ('fZMiddle', 'd'),
+        ('fQParallelMiddle', 'd'),
+        ('fQVerticalMiddle', 'd'),
+        ('fHeidenhainPeak', 'd'),
+        ('fXOriginal', 'd'),
+        ('fYOriginal', 'd'),
+        ('fZOriginal', 'd'),
+        ('fOmegaOrigianl', 'd'),
+        ('fOmege1Original', 'd'),
+        ('fOmega2Original', 'd'),
+        ('iSimLength', 'i'),
+        ),
+        # needs simdat, simusubstrate, layer block header
+    10140: ( # OCM
+        ('comment', '0s'), 
+        ),
+        # needs comment, which is total length of the record 
+    10250: ( # REFSIM
+        ('ABS_FLAG', '1s'),
+        ('SIZ_FLAG', '1s'),
+        ('BEAM_FLAG', '1s'),
+        ('SWIDTH_FLAG', '1s'),
+        ('SDIST_FLAG', '1s'),
+        ('res1', '3s'),
+        ('SamSize', 'f'),
+        ('BeamSize', 'f'),
+        ('slitwidth', 'f'),
+        ('slitdist', 'f'),
+        ('SimType', '1s'),
+        ('res2', '3s'),
+        ('abs_fac', 'f'),
+        ('layers', 'h'),
+        ('multis', 'h'),
+        ('variable_data1', 'i'),
+        ('variable_data2', 'i'),
+        ),
+        # needs rlayer, mulit
+    }
+
+
 def loads(filename):
+    # pull in the entire file
     with open(filename, 'rb') as f:
         data = f.read()
 
+    # process the main header
     offset = 0
     header,offset = _make_struct(RAW_HEADER, data, offset)
     #assert offset == 712
-    # return header
-    data1,offset = _make_struct(RAW_RANGE_HEADER, data, offset)
-    return data1
+
+
+    # for each range, read in the range
+    ranges = []
+    for _ in range(header['no_of_tot_meas_ranges']):
+        # range starts with the range header
+        rheader,offset = _make_struct(RAW_RANGE_HEADER, data, offset)
+        extra_length = rheader['total_size_of_extra_records']
+
+        # range data is starts after the extra info for the measurement
+        # type; remember what that will be
+        end_offset = offset + extra_length
+
+        if extra_length > 0:
+            # find the extra record type, and use it to parse the extra data
+            rectype,reclen =  struct.unpack_from('ii', data, offset=offset)
+            if rectype not in EXTRA_RECORD:
+                raise ValueError('unknown measurement type %d'%rectype)
+            rextra,offset = _make_struct(EXTRA_RECORD[rectype], data, offset+8)
+
+            # plug record type and length into each record
+            rextra['record_type'] = rectype
+            rextra['record_length'] = reclen
+
+            # save the extra in the range header
+            rheader['extra'] = rextra
+
+        # move to the end of the extra data; the above _make_struct to read
+        # the extra data may not have done this, particularly for the simulated
+        # data sets, which have model parameters at the end
+        offset = end_offset # skip the simulation info
+
+        # parse the data block
+        nrow = rheader['no_of_measured_data']
+        ncol = (rheader['data_record_length']-4)//8
+        types = ('f'+'d'*ncol)*nrow
+        values = struct.unpack_from(types, data, offset=offset)
+        offset += nrow * (4 + 8*ncol)
+        columns = numpy.array(values, 'd').reshape((ncol+1,nrow))
+
+        # figure out which columns are in use
+        colnames = [n for i,n in enumerate(VARYING_BIT)
+                    if (2**i)&rheader['varying_parameters']]
+        if len(colnames) != ncol:
+            raise ValueError('varying_parameters and data_record_length are inconsistent')
+        values = { 'count': columns[0] }
+        values.update((n,v) for n,v in zip(colnames,columns[1:]))
+        
+        rheader['values'] = values
+        ranges.append(rheader)
+        
+    header['data'] = ranges
+    return header
     
 if __name__ == "__main__":
-    import sys
-    print "\n".join("%s: %s"%(k,v) for k,v in sorted(loads(sys.argv[1]).items()))
+    import sys,pprint
+    pprint.pprint(loads(sys.argv[1]))
 
