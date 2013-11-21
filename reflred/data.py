@@ -191,7 +191,7 @@ class PolarizedData(object):
             pp, Vpp = interp(x,self.pp)
             mm, Vmm = interp(x,self.mm)
         v = (pp-mm)/(pp+mm)
-        V = v**2 * ( (1/(pp-mm) - 1/(pp+mm))**2 * Vpp
+        V = v**2 * ( (1/(pp-mm) + 1/(pp+mm))**2 * Vpp
                      + (1/(pp-mm) + 1/(pp+mm))**2 * Vmm )
         result = Data(x,v,variance=V,
                       xlabel=self.xlabel, xunits=self.xunits,
