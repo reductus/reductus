@@ -20,8 +20,8 @@ The tree returned from read() has an entry for each group, field and
 attribute.  You can traverse the hierarchy using the names of the
 groups.  For example, tree.Histogram1.instrument.detector.distance
 is a field containing the distance to each pixel in the detector.
-NeXus attribute names are tagged with a leading 'A', so for example,
-tree.Histogram1.instrument.detector.distance.Aunits contains the
+Attributes and fields are accessed in the same manner, so for example,
+tree.Histogram1.instrument.detector.distance.units contains the
 units attribute for the detector distances.
 
 Properties of the nodes in the tree are referenced by nx attributes.
@@ -442,7 +442,7 @@ class NXnode(object):
 
     def _setattrs(self, attrs):
         for k,v in attrs.items():
-            setattr(self, 'A'+k, v)
+            setattr(self, k, v)
     def _attrs(self):
         return dict([(k[1:],v)
                      for k,v in self.__dict__.items()
@@ -686,7 +686,7 @@ def label(field):
     """
     Construct a label for a data field suitable for use on a graph axis.
     """
-    if hasattr(field,'Along_name'):
+    if hasattr(field,'long_name'):
         return field.Along_name.nxdata
     else:
         return "%s (%s)"%(field.nxname,field.Aunits.nxdata)
@@ -797,7 +797,7 @@ class NXgroup(NXnode):
             raise RuntimeError('No plottable signal')
 
         # Find the associated axes
-        if hasattr(signal,'Aaxes'):
+        if hasattr(signal,'axes'):
             axes = [getattr(self,a) for a in signal.Aaxes.nxdata.split(':')]
         else:
             raise RuntimeError('Axes attribute missing from signal')
