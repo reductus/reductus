@@ -16,6 +16,7 @@ def configuration(parent_package='', top_path=None):
     # this name may already be used), so we define our dream substructure here.
     config.add_data_dir(os.path.join('doc', 'examples'))
     config.add_subpackage('reflred')
+    config.add_subpackage('ospecred')
 
     for line in open('reflred/__init__.py').readlines():
         if (line.startswith('__version__')):
