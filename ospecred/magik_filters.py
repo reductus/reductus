@@ -1,5 +1,5 @@
 # -*- coding: latin-1 -*-
-from numpy import cos, pi, cumsum, arange, ndarray, ones, zeros, array, newaxis, linspace, empty, resize, sin, allclose, zeros_like, linalg, dot, arctan2, float64, histogram2d, sum, sqrt, loadtxt, searchsorted, NaN, logical_not, fliplr, flipud
+from numpy import cos, pi, cumsum, arange, ndarray, ones, zeros, array, newaxis, linspace, empty, resize, sin, allclose, zeros_like, linalg, dot, arctan2, float64, histogram2d, sum, sqrt, loadtxt, searchsorted, NaN, logical_not, fliplr, flipud, indices
 import numpy
 from numpy.ma import MaskedArray
 import os, simplejson, datetime, sys, types
@@ -246,17 +246,19 @@ class CoordinateOffset(Filter2D):
     
     @autoApplyToList
     @updateCreationStory
-    def apply(self, data, offsets={}):
+    def apply(self, data, offsets=None):
         """ to apply an offset to an axis, add it to the dict of offsets.
         e.g. if data is theta, twotheta, then
         to apply 0.01 offset to twotheta only make offsets = {'twotheta': 0.01}
         """
         new_info = data.infoCopy()
-        for key in offsets:
-            try:
+        if offsets is None: offsets = {}
+        for key in offsets.keys():
+            if 1:
                 axisnum = data._getAxis(key)
                 new_info[axisnum]['values'] += offsets[key]
-            except:
+            #except:
+            else:
                 pass
         new_data = MetaArray(data.view(ndarray).copy(), info=new_info)
         return new_data
@@ -400,7 +402,24 @@ class SliceData(Filter2D):
         
         return [x_data_obj, y_data_obj]
 
-
+class FootprintCorrection(Filter2D):
+    """ correct the incident intensity (monitor) by a geometric factor that depends
+    on the distances between the slits 1 and 2, and the sample.  See thesis of Hua
+    for details. """
+    
+    @autoApplyToList
+    def apply(self, data, w1=None, w2=None, L1=None, L2=None, LSample=None):
+        new_info = data.infoCopy()
+        axis_names = [new_info[0]['name'], new_info[1]['name']]
+        if "theta" in axis_names:
+            th_axis_num = axis_names.index("theta")
+            th_axis = "theta"
+        elif "alpha_i" in axis_names:
+            th_axis_num = axis_names.index("alpha_i")
+            th_axis = "alpha_i"
+            
+        return new_data
+    
 class WiggleCorrection(Filter2D):
     """ 
     Remove the oscillatory artifact from the Brookhaven 2D detector data
@@ -571,7 +590,7 @@ class NormalizeToMonitor(Filter2D):
     @autoApplyToList
     def apply(self, data):
         cols = [col['name'] for col in data._info[-2]['cols']]
-        passthrough_cols = [col for col in cols if (not col.startswith('counts') and not col.startswith('monitor'))]
+        passthrough_cols = [col for col in cols if (not col.startswith('counts'))] # and not col.startswith('monitor'))]
         counts_cols = [col for col in cols if col.startswith('counts')]
         monitor_cols = [col for col in cols if col.startswith('monitor')]
         info = data.infoCopy()
@@ -1071,9 +1090,6 @@ class ThetaTwothetaToQxQz(Filter2D):
         theta_axis = data._getAxis('theta')
         twotheta_axis = data._getAxis('twotheta')
         
-        #theta_axis = next((i for i in xrange(len(old_info)-2) if old_info[i]['name'] == 'theta'), None)
-        #twotheta_axis = next((i for i in xrange(len(old_info)-2) if old_info[i]['name'] == 'twotheta'), None)
-        
         qLength = 2.0 * pi / wavelength
         th_array = data.axisValues('theta').copy()
         twotheta_array = data.axisValues('twotheta').copy()
@@ -1096,20 +1112,18 @@ class ThetaTwothetaToQxQz(Filter2D):
         dqx = qx_array[1] - qx_array[0]
         qz_array = output_grid.axisValues('qz')
         dqz = qz_array[1] - qz_array[0]
-        framed_array = zeros((qz_array.shape[0] + 2, qx_array.shape[0] + 2, numcols))
-        target_qx = ((qxOut - qx_array[0]) / dqx + 1).astype(int)
+        #framed_array = zeros((qz_array.shape[0] + 2, qx_array.shape[0] + 2, numcols))
+        target_qx = ((qxOut - qx_array[0]) / dqx).astype(int)
         #return target_qx, qxOut
-        target_qz = ((qzOut - qz_array[0]) / dqz + 1).astype(int)
+        target_qz = ((qzOut - qz_array[0]) / dqz).astype(int)
         
         target_mask = (target_qx >= 0) * (target_qx < qx_array.shape[0])
         target_mask *= (target_qz >= 0) * (target_qz < qz_array.shape[0])
         target_qx_list = target_qx[target_mask]
         target_qz_list = target_qz[target_mask]
-        #target_qx = target_qx.clip(0, qx_array.shape[0]+1)
-        #target_qz = target_qz.clip(0, qz_array.shape[0]+1)
         
         for i, col in enumerate(outgrid_info[2]['cols']):
-            values_to_bin = data[:,:,col['name']][target_mask]
+            values_to_bin = data[:,:,col['name']].view(ndarray)[target_mask]
             outshape = (output_grid.shape[0], output_grid.shape[1])
             hist2d, xedges, yedges = histogram2d(target_qx_list,target_qz_list, bins = (outshape[0],outshape[1]), range=((0,outshape[0]),(0,outshape[1])), weights=values_to_bin)
             output_grid[:,:,col['name']] += hist2d
@@ -1123,8 +1137,86 @@ class ThetaTwothetaToQxQz(Filter2D):
             monitor_col = monitor_cols[0]
             data_missing_mask = (output_grid[:,:,monitor_col] == 0)
             for dc in data_cols:
-                output_grid[:,:,dc][data_missing_mask] = NaN;
+                output_grid[:,:,dc].view(ndarray)[data_missing_mask] = NaN;
             
+        
+        #extra info changed
+        creation_story = data._info[-1]['CreationStory']
+        new_creation_story = creation_story + ".filter('{0}', {1})".format(self.__class__.__name__, output_grid._info[-1]['CreationStory'])
+        #print new_creation_story
+        output_grid._info[-1] = data._info[-1].copy()
+        output_grid._info[-1]['CreationStory'] = new_creation_story
+        return output_grid
+
+class ThetaTwothetaToAlphaIAlphaF(Filter2D):
+    """ Figures out the angle in, angle out values of each datapoint
+    and throws them in the correct bin.  If no grid is specified,
+    one is created that covers the whole range of the dataset
+    
+    If autofill_gaps is True, does reverse lookup to plug holes
+    in the output (but pixel count is still zero for these bins)
+    """
+    
+    @autoApplyToList
+    #@updateCreationStory
+    def apply(self, data):     
+        theta_axis = data._getAxis('theta')
+        twotheta_axis = data._getAxis('twotheta')
+     
+        th_array = data.axisValues('theta').copy()
+        twotheta_array = data.axisValues('twotheta').copy()
+        
+        two_theta_step = twotheta_array[1] - twotheta_array[0]
+        theta_step = th_array[1] - th_array[0]
+        
+        af_max = (twotheta_array.max() - th_array.min())
+        af_min = (twotheta_array.min() - th_array.max())
+        alpha_i = th_array.copy()
+        alpha_f = arange(af_min, af_max, two_theta_step)
+        
+        info = [{"name": "alpha_i", "units": "degrees", "values": th_array.copy() },
+                {"name": "alpha_f", "units": "degrees", "values": alpha_f.copy() },]
+        old_info = data.infoCopy()
+        info.append(old_info[2]) # column information!
+        info.append(old_info[3]) # creation story!
+        output_grid = MetaArray(zeros((th_array.shape[0], alpha_f.shape[0], data.shape[-1])), info=info)
+        
+        if theta_axis < twotheta_axis: # then theta is first: add a dimension at the end
+            alpha_i.shape = alpha_i.shape + (1,)
+            ai_out = indices((th_array.shape[0], twotheta_array.shape[0]))[0]
+            twotheta_array.shape = (1,) + twotheta_array.shape
+        else:       
+            alpha_i.shape = (1,) + alpha_i.shape
+            ai_out = indices((twotheta_array.shape[0], th_array.shape[0]))[1]
+            twotheta_array.shape = twotheta_array.shape + (1,)
+        
+        print "ai_out:", ai_out.shape
+        af_out = twotheta_array - alpha_i
+        
+        # getting values from output grid:
+        outgrid_info = output_grid.infoCopy()
+        numcols = len(outgrid_info[2]['cols'])
+        #target_ai = ((ai_out - th_array[0]) / theta_step).flatten().astype(int).tolist()
+        target_ai = ai_out.flatten().astype(int).tolist()
+        #return target_qx, qxOut
+        target_af = ((af_out - af_min) / two_theta_step).flatten().astype(int).tolist()
+        
+        for i, col in enumerate(outgrid_info[2]['cols']):
+            values_to_bin = data[:,:,col['name']].view(ndarray).flatten().tolist()
+            print len(target_ai), len(target_af), len(values_to_bin)
+            outshape = (output_grid.shape[0], output_grid.shape[1])
+            hist2d, xedges, yedges = histogram2d(target_ai, target_af, bins = (outshape[0],outshape[1]), range=((0,outshape[0]),(0,outshape[1])), weights=values_to_bin)
+            output_grid[:,:,col['name']] += hist2d
+     
+        cols = outgrid_info[2]['cols']
+        data_cols = [col['name'] for col in cols if col['name'].startswith('counts')]
+        monitor_cols = [col['name'] for col in cols if col['name'].startswith('monitor')]
+        # just take the first one...
+        if len(monitor_cols) > 0:
+            monitor_col = monitor_cols[0]
+            data_missing_mask = (output_grid[:,:,monitor_col] == 0)
+            for dc in data_cols:
+                output_grid[:,:,dc].view(ndarray)[data_missing_mask] = NaN;            
         
         #extra info changed
         creation_story = data._info[-1]['CreationStory']

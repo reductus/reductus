@@ -25,6 +25,7 @@ items_to_load = {
  'Subtract',
  'Supervisor',
  'ThetaTwothetaToQxQz',
+ 'ThetaTwothetaToAlphaIAlphaF',
  'TwothetaToQ',
  'WiggleCorrection',
  'float64',

@@ -200,9 +200,9 @@ class FilterableMetaArray(MetaArray):
             ylabel = self._info[1]['name']
             zlabel = col
             #zlabel = self._info[2]['cols'][0]['name']
-            title = 'AND/R data' # That's creative enough, right?
+            title = 'MAGIK data' # That's creative enough, right?
             plot_type = '2d'
-            transform = 'lin' # this is nice by default
+            transform = 'log' # this is nice by default
             dump.update( dict(type=plot_type, z=z, title=title, dims=dims, 
                         xlabel=xlabel, ylabel=ylabel, zlabel=zlabel, 
                         transform=transform) )
