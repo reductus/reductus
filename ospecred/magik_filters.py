@@ -410,14 +410,21 @@ class FootprintCorrection(Filter2D):
     @autoApplyToList
     def apply(self, data, w1=None, w2=None, L1=None, L2=None, LSample=None):
         new_info = data.infoCopy()
+        output_data = data.view(ndarray).copy()
+        cols = [col['name'] for col in data._info[-2]['cols']]
+        monitor_cols = [col for col in cols if col.startswith('monitor')]
+        
         axis_names = [new_info[0]['name'], new_info[1]['name']]
+        axes = set([1,0])
         if "theta" in axis_names:
             th_axis_num = axis_names.index("theta")
             th_axis = "theta"
         elif "alpha_i" in axis_names:
             th_axis_num = axis_names.index("alpha_i")
             th_axis = "alpha_i"
-            
+        axes.remove(th_axis_num)
+        other_axis = 
+        new_data = MetaArray(output_data, info=new_info) 
         return new_data
     
 class WiggleCorrection(Filter2D):
