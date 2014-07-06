@@ -344,6 +344,10 @@ class He3AnalyzerCollection():
 class wxHe3AnalyzerCollection(He3AnalyzerCollection):
     """ version with wx GUI interaction for AddNew and getActiveCell """
     
+    def __init__(self, filename='he3cells.json', path=None, cells=[]):
+        import wx, wx.calendar
+        He3AnalyzerCollection.__init__(self, filename='he3cells.json', path=None, cells=[])
+    
     def AddNew(self, params=None, autosave=True):
         params_out = He3Analyzer.default_params.copy()
         params_out.update(params)
@@ -380,6 +384,7 @@ class wxHe3AnalyzerCollection(He3AnalyzerCollection):
 
 class get_cell_params_dialog(wx.Dialog):
     def __init__(self, parent, id, title, params):
+        import wx, wx.calendar
         wx.Dialog.__init__(self, parent, wx.ID_ANY, title, size=(600, 400), style=wx.DEFAULT_DIALOG_STYLE | wx.NO_FULL_REPAINT_ON_RESIZE)
         
         #-- I think you need a panel if you're going to have more than one control in your frame.

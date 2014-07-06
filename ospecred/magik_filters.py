@@ -423,7 +423,7 @@ class FootprintCorrection(Filter2D):
             th_axis_num = axis_names.index("alpha_i")
             th_axis = "alpha_i"
         axes.remove(th_axis_num)
-        other_axis = 
+        other_axis = None
         new_data = MetaArray(output_data, info=new_info) 
         return new_data
     
@@ -1496,8 +1496,11 @@ class Subtract(Filter2D):
                 results.append(new_data)
             elif dim_m == 2 and dim_s == 2:
                 print "subtract matrix from matrix (in overlap)"
-                print m._info[0]['units'], m._info[1]['units'], s._info[0]['units'], s._info[1]['units']
-                results.append(m)
+                grid = Autogrid().apply([minuend, subtrahend])
+                grid = self.add_to_grid(dataset, minuend, counts_multiplier=1.0)
+                grid = self.add_to_grid(dataset, minuend, counts_multiplier=-1.0)
+                print grid._info[0]['units'], m._info[1]['units'], s._info[0]['units'], s._info[1]['units']
+                results.append(grid)
             elif dim_m == 1 and dim_s == 2:
                 print "can't do this."
                 print m._info[0]['units'], s._info[0]['units'], s._info[1]['units']
@@ -1508,6 +1511,49 @@ class Subtract(Filter2D):
                 results.append(m)
                 
         return results
+        
+    def add_to_grid(self, dataset, grid, count_multiplier=1.0):
+        dims = 2
+        grid_slice = [slice(None, None, 1),] * dims
+        bin_edges = []
+        for dim in range(dims):
+            av = grid.axisValues(dim).copy()
+            dspacing = (av[-1] - av[0]) / (len(av) - 1)
+            edges = resize(av, len(av) + 1)
+            edges[-1] = av[-1] + dspacing
+            if dspacing < 0:
+                edges = edges[::-1] # reverse
+                grid_slice[dim] = slice(None, None, -1)
+            bin_edges.append(edges)
+        
+        data_edges = []
+        data_slice = [slice(None, None, 1),] * dims
+        for dim in range(dims):
+            av = dataset.axisValues(dim).copy()
+            dspacing = (av[-1] - av[0]) / (len(av) - 1)
+            edges = resize(av, len(av) + 1)
+            edges[-1] = av[-1] + dspacing
+            if dspacing < 0:
+                edges = edges[::-1] # reverse
+                data_slice[dim] = slice(None, None, -1)
+            data_edges.append(edges)
+        
+        #cols_to_add = ['counts', 'pixels', 'monitor', 'count_time'] # standard data columns
+        #cols_to_add += ['NT++', 'NT+-', 'NT-+', 'NT--'] # add in all the polarization correction matrices too!
+        
+        new_info = dataset.infoCopy()        
+        for i, col in enumerate(new_info[2]['cols']):
+            #if col['name'] in cols_to_add:
+            if 'counts' in col['name']: 
+                multiplier = counts_multiplier
+            else: 
+                multiplier = 1.0  # add monitor counts and time always
+            array_to_rebin = dataset[:, :, col['name']].view(ndarray) 
+            #print data_edges, bin_edges
+            new_array = reb.rebin2d(data_edges[0], data_edges[1], array_to_rebin[data_slice], bin_edges[0], bin_edges[1])
+            grid[:, :, col['name']] += (multiplier * new_array[grid_slice])
+            
+        return grid
         # extra info changed
 #        old_creation_stories = "[" + "".join([data._info[-1]['CreationStory'] + ", " for data in list_of_datasets]) + "]"
 #        name = self.__class__.__name__
