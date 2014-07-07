@@ -744,7 +744,7 @@ class Autogrid(Filter2D):
     if extra_grid_point is True, adds one point to the end of each axis
     so each dimension is incremented by one (makes edges for rebinning) """
     
-    def apply(self, list_of_datasets, extra_grid_point=True, min_step=1e-10):
+    def apply(self, list_of_datasets, operation='union', extra_grid_point=True, min_step=1e-10):
         num_datasets = len(list_of_datasets)
         dims = 2
         dim_min = zeros((dims, num_datasets))
@@ -774,8 +774,14 @@ class Autogrid(Filter2D):
                 dim_stepsize = min_step
             final_stepsizes.append(dim_stepsize)
             
-            absolute_max.append(dim_max[dim].max())
-            absolute_min.append(dim_min[dim].min())
+            if operation == 'union':
+                absolute_max.append(dim_max[dim].max())
+                absolute_min.append(dim_min[dim].min())
+            elif operation == 'intersection':
+                absolute_max.append(dim_max[dim].min())
+                absolute_min.append(dim_min[dim].max())
+            else: 
+                raise ValueError('operation must be one of "union" or "intersection"')
             
         # now calculate number of steps:
         output_dims = []
@@ -1496,9 +1502,9 @@ class Subtract(Filter2D):
                 results.append(new_data)
             elif dim_m == 2 and dim_s == 2:
                 print "subtract matrix from matrix (in overlap)"
-                grid = Autogrid().apply([minuend, subtrahend])
-                grid = self.add_to_grid(dataset, minuend, counts_multiplier=1.0)
-                grid = self.add_to_grid(dataset, minuend, counts_multiplier=-1.0)
+                grid = Autogrid().apply([m, s], operation='intersection')
+                grid = self.add_to_grid(m, grid, counts_multiplier=1.0)
+                grid = self.add_to_grid(s, grid, counts_multiplier=-1.0)
                 print grid._info[0]['units'], m._info[1]['units'], s._info[0]['units'], s._info[1]['units']
                 results.append(grid)
             elif dim_m == 1 and dim_s == 2:
@@ -1512,7 +1518,7 @@ class Subtract(Filter2D):
                 
         return results
         
-    def add_to_grid(self, dataset, grid, count_multiplier=1.0):
+    def add_to_grid(self, dataset, grid, counts_multiplier=1.0):
         dims = 2
         grid_slice = [slice(None, None, 1),] * dims
         bin_edges = []
@@ -1563,36 +1569,7 @@ class Subtract(Filter2D):
 #        for key in ['filename', 'start_datetime', 'end_datetime']:
 #            if grid._info[-1].has_key(key): grid._info[-1].pop(key)
 #        return grid
-        
-    def add_to_grid(self, dataset, grid):
-        dims = 2
-        bin_edges = []
-        for dim in range(dims):
-            av = grid.axisValues(dim).copy()
-            dspacing = (av.max() - av.min()) / (len(av) - 1)
-            edges = resize(av, len(av) + 1)
-            edges[-1] = av[-1] + dspacing
-            bin_edges.append(edges)
-        
-        data_edges = []
-        for dim in range(dims):
-            av = dataset.axisValues(dim).copy()
-            dspacing = (av.max() - av.min()) / (len(av) - 1)
-            edges = resize(av, len(av) + 1)
-            edges[-1] = av[-1] + dspacing
-            data_edges.append(edges)
-        
-        cols_to_add = ['counts', 'pixels', 'monitor', 'count_time'] # standard data columns
-        cols_to_add += ['NT++', 'NT+-', 'NT-+', 'NT--'] # add in all the polarization correction matrices too!
-        
-        new_info = dataset.infoCopy()        
-        for i, col in enumerate(new_info[2]['cols']):
-            #if col['name'] in cols_to_add:
-            array_to_rebin = dataset[:, :, col['name']].view(ndarray) 
-            new_array = reb.rebin2d(data_edges[0], data_edges[1], array_to_rebin, bin_edges[0], bin_edges[1])
-            grid[:, :, col['name']] += new_array
-                
-        return grid
+       
 
 class Algebra(Filter2D):
     """ generic algebraic manipulations """
