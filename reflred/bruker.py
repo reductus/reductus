@@ -10,15 +10,15 @@ MEAS_FLAG = {
     10: '.SIM file K.S.',
     }
 SCAN_TYPE = {
-    0: 'locked coupled',
-    1: 'unlocked coupled',
-    2: 'detector scan',
-    3: 'rocking curve',
-    4: 'chi scan',
-    5: 'phi scan',
-    6: 'x scan',
-    7: 'y scan',
-    8: 'z scan',
+    0: 'locked coupled',    # twotheta, with theta = twotheta/2
+    1: 'unlocked coupled',  # twotheta, with theta = twotheta/2 + initial offset
+    2: 'detector scan',     # twotheta
+    3: 'rocking curve',     # theta
+    4: 'chi scan',          # sample tilt
+    5: 'phi scan',          # sample rotation
+    6: 'x scan',            # sample translation x
+    7: 'y scan',            # sample translation y
+    8: 'z scan',            # sample translation z
     9: 'aux1 scan',
     10: 'aux2 scan',
     11: 'aux3 scan',
@@ -56,7 +56,7 @@ def _make_struct(fields, data, offset=0):
 
 RAW_HEADER = (
     ('raw_id', '8s'),              # 0
-    ('meas_flag','i'),             # 8
+    ('meas_flag','i'),             # 8 0: unmeasured, 1: measured, 2: active, 3: aborted, 4: interrupted
     ('no_of_tot_meas_ranges','i'), # 12
     ('date', '10s'),               # 16 mm/dd/yy
     ('time', '10s'),               # 26 hh:mm:ss
@@ -131,7 +131,7 @@ RAW_RANGE_HEADER = (
     ('aux1_start', 'd'),           # 144 start of auxil. axis 1 (up to now 0.0 )
     ('aux2_start', 'd'),           # 152
     ('aux3_start', 'd'),           # 160
-    ('scan_mode', 'i'),            # 168 0: SS, 1: SC
+    ('scan_mode', 'i'),            # 168 0: step (SS), 1: continuous (SC)
     ('res6', '4s'),                # 172
     ('increment_1', 'd'),          # 176 increment of the scan
     ('increment_2', 'd'),          # 184 unused, so 0.0
@@ -287,28 +287,27 @@ def loads(filename):
         rheader,offset = _make_struct(RAW_RANGE_HEADER, data, offset)
         extra_length = rheader['total_size_of_extra_records']
 
-        # range data is starts after the extra info for the measurement
-        # type; remember what that will be
-        end_offset = offset + extra_length
-
-        if extra_length > 0:
+        # can have multiple extra records, so append them as they appear
+        rheader['extra'] = []
+        while extra_length > 0:
             # find the extra record type, and use it to parse the extra data
             rectype,reclen =  struct.unpack_from('ii', data, offset=offset)
             if rectype not in EXTRA_RECORD:
                 raise ValueError('unknown measurement type %d'%rectype)
-            rextra,offset = _make_struct(EXTRA_RECORD[rectype], data, offset+8)
+            rextra,_ = _make_struct(EXTRA_RECORD[rectype], data, offset+8)
+            # note: some extra records (e.g., HRXRD simulations) have variable
+            # data stored after the record.  We're skipping this for now.
 
             # plug record type and length into each record
             rextra['record_type'] = rectype
             rextra['record_length'] = reclen
 
             # save the extra in the range header
-            rheader['extra'] = rextra
+            rheader['extra'].append(rextra)
 
-        # move to the end of the extra data; the above _make_struct to read
-        # the extra data may not have done this, particularly for the simulated
-        # data sets, which have model parameters at the end
-        offset = end_offset # skip the simulation info
+            # move to the next extra header
+            offset += reclen
+            extra_length -= reclen
 
         # parse the data block
         nrow = rheader['no_of_measured_data']
