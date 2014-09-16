@@ -2,13 +2,12 @@
 Experimental replacements for log formatting and tick marks.
 """
 
-
 from __future__ import division
-import sys, os, re, time, math, warnings
-import numpy as npy
-import matplotlib as mpl
-from matplotlib import verbose, rcParams
-from matplotlib import cbook
+
+import math
+
+import numpy as np
+from matplotlib import rcParams
 from matplotlib import transforms as mtrans
 from matplotlib import ticker
 
@@ -99,7 +98,7 @@ class LogLocator(ticker.Locator):
         if subs is None:
             self._subs = None  # autosub
         else:
-            self._subs = npy.asarray(subs)+0.0
+            self._subs = np.asarray(subs)+0.0
 
     def _set_numticks(self):
         self.numticks = 15  # todo; be smart here; this is just for dev
@@ -123,7 +122,7 @@ class LogLocator(ticker.Locator):
         if self._trim:
             extra_bins = int(divmod((best_vmax - vmax), step)[0])
             nbins -= extra_bins
-        return (npy.arange(nbins+1) * step + best_vmin + offset)
+        return (np.arange(nbins+1) * step + best_vmin + offset)
 
 
     def __call__(self):
@@ -146,9 +145,9 @@ class LogLocator(ticker.Locator):
         numdec = math.floor(vmax)-math.ceil(vmin)
 
         if self._subs is None: # autosub
-            if numdec>10: subs = npy.array([1.0])
-            elif numdec>6: subs = npy.arange(2.0, b, 2.0)
-            else: subs = npy.arange(2.0, b)
+            if numdec>10: subs = np.array([1.0])
+            elif numdec>6: subs = np.arange(2.0, b, 2.0)
+            else: subs = np.arange(2.0, b)
         else:
             subs = self._subs
 
@@ -156,11 +155,11 @@ class LogLocator(ticker.Locator):
         while numdec/stride+1 > self.numticks:
             stride += 1
 
-        for decadeStart in b**npy.arange(math.floor(vmin),
+        for decadeStart in b**np.arange(math.floor(vmin),
                                          math.ceil(vmax)+stride, stride):
             ticklocs.extend( subs*decadeStart )
 
-        return npy.array(ticklocs)
+        return np.array(ticklocs)
 
     def autoscale(self):
         'Try to choose the view limits intelligently'

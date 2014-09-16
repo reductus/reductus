@@ -25,7 +25,7 @@ def get_data_path(dir=""):
             root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
         except:
             raise RuntimeError("Could not find sample data")
-        path = os.path.join(root,'examples')
+        path = os.path.join(root,'doc','examples')
 
     path = os.path.join(path, dir)
     if not os.path.isdir(path):

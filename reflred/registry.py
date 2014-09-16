@@ -6,8 +6,6 @@ This provides routines for opening files based on extension,
 and registers the built-in file extensions.
 """
 
-import os.path
-
 class ExtensionRegistry(object):
     """
     Associate a file loader with an extension.

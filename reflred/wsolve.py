@@ -434,10 +434,10 @@ def test():
     dperr = np.max(np.abs(poly.std-Tdp))
     cierr = np.abs(ci-Tci)
     pierr = np.abs(pi-Tpi)
-    assert perr < 1e-15,"||p-Tp||=%g"%perr
-    assert dperr < 1e-15,"||dp-Tdp||=%g"%dperr
-    assert cierr < 1e-15,"||ci-Tci||=%g"%cierr
-    assert pierr < 1e-15,"||pi-Tpi||=%g"%pierr
+    assert perr < 2e-15,"||p-Tp||=%g"%perr
+    assert dperr < 2e-15,"||dp-Tdp||=%g"%dperr
+    assert cierr < 2e-15,"||ci-Tci||=%g"%cierr
+    assert pierr < 2e-15,"||pi-Tpi||=%g"%pierr
     assert py == poly(px),"direct call to poly function fails"
 
 if __name__ == "__main__":

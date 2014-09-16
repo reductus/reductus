@@ -89,8 +89,8 @@ __all__ = ['ReflData']
 import datetime
 import weakref
 
-import numpy
-from numpy import inf, pi, sin, cos, arcsin, arctan2, sqrt
+import numpy as np
+from numpy import inf, arctan2, sqrt
 
 from .qxqz import ABL_to_QxQz
 
@@ -398,7 +398,7 @@ class Detector(object):
 
     def _solid_angle(self):
         """Detector solid angle [x,y] (radians)"""
-        return 2*arctan2(numpy.asarray(self.size)/2.,self.distance)
+        return 2*arctan2(np.asarray(self.size)/2.,self.distance)
     solid_angle = property(_solid_angle,doc=_solid_angle.__doc__)
 
 
@@ -703,7 +703,7 @@ class ReflData(object):
     def _setdR(self, dR): self.varR = dR**2
     dR = property(_getdR,_setdR)
 
-    # Data representation for generic plotter as (x,y,z,v)
+    # Data representation for generic plotter as (x,y,z,v) -> (qz,qx,qy,Iq)
     # TODO: subclass Data so we get pixel edges calculations
     def _getx(self): return self.Qz
     def _gety(self): return self.Qx
@@ -771,17 +771,17 @@ def _str(object):
 
 
 def _set(object,kw):
-    '''
-    Helper function: distribute the __init__ keyward paramters to
+    """
+    Helper function: distribute the __init__ keyword paramters to
     individual attributes of an object, raising AttributeError if
     the class does not define the given attribute.
 
     Example:
 
         def __init__(self, **kw): _set(self,kw)
-    '''
+    """
     for k,v in kw.iteritems():
-        if hasattr(self,k):
+        if hasattr(object,k):
             setattr(object,k,v)
         else:
             raise AttributeError, "Unknown attribute %s"%(k)
@@ -825,14 +825,14 @@ class Reader(ReflData):
         if ny == 1:
             self.zx = counts[zlo:zhi+1,:]
         else:
-            xy = numpy.zeros((nx,ny),dtype='float32')
-            zx = numpy.zeros((nq,nx),dtype='float32')
+            xy = np.zeros((nx,ny),dtype='float32')
+            zx = np.zeros((nq,nx),dtype='float32')
             self.framerange = Limits() # Keep track of total range
             for i in range(zlo,zhi):
                 v = self.frame(i)
                 self.framerange.add(v,dv=sqrt(v))
                 xy += v
-                zx[i-zlo,:] = numpy.sum(v[:,ylo:yhi],axis=1)
+                zx[i-zlo,:] = np.sum(v[:,ylo:yhi],axis=1)
             self.xy = xy
             self.zx = zx
 
@@ -862,9 +862,10 @@ def shadow(f, beamstop, frame):
 
     Currently this function returns no shadow.
     """
-    mask = numpy.ones(self.detector.shape,'int8')
+    mask = np.ones(f.detector.shape,'int8')
     if beamstop.ispresent:
         # calculate location of the beamstop centre relative to
         # the detector.
+        raise NotImplementedError("beamstop shadow is not implemented")
         pass
     return mask

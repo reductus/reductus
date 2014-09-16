@@ -101,7 +101,7 @@ Minimize the log probability by setting the derivative to zero:
         => w_i = C_i/D = L * C_i / C
 """
 
-import numpy
+import numpy as np
 
 from .rebin import rebin2d, rebin
 
@@ -130,14 +130,14 @@ def measured_area_correction(data, rebin=False):
     to multiple datasets.
     """
     # Collapse the detector measurement to one frame
-    Cxy = numpy.sum(data.detector.counts,axis=0)
+    Cxy = np.sum(data.detector.counts,axis=0)
     # Find total counts
-    C = numpy.sum(Cxy)
+    C = np.sum(Cxy)
     # Find propotional counts in x and y
-    Cx = numpy.sum(Cxy,axis=0)
-    Cy = numpy.sum(Cxy,axis=1)
+    Cx = np.sum(Cxy,axis=0)
+    Cy = np.sum(Cxy,axis=1)
     # Find new pixel width from proportional counts
-    Lx,Ly = self.detector.size
+    Lx,Ly = data.detector.size
     wx = Cx / C * Lx
     wy = Cy / C * Ly
 
@@ -164,8 +164,8 @@ class AreaCorrection(object):
         Source is a string to report in the log as the origin
         of the correction data.
         """
-        self.wx = numpy.array(wx)
-        self.wy = numpy.array(wy)
+        self.wx = np.array(wx)
+        self.wy = np.array(wy)
         self.source = source
         self.rebin = rebin
 
@@ -176,20 +176,20 @@ class AreaCorrection(object):
             "area correction size does not match detector size"
         if self.rebin:
             # Compute bin edges
-            x = numpy.concatenate([(0.,),numpy.cumsum(self.wx)])
-            y = numpy.concatenate([(0.,),numpy.cumsum(self.wy)])
-            Lx,Ly = numpy.sum(self.wx),numpy.sum(self.wy)
-            xo = numpy.linspace(0,Lx,nx+1)
-            yo = numpy.linspace(0,Ly,ny+1)
+            x = np.concatenate([(0.,),np.cumsum(self.wx)])
+            y = np.concatenate([(0.,),np.cumsum(self.wy)])
+            Lx,Ly = np.sum(self.wx),np.sum(self.wy)
+            xo = np.linspace(0,Lx,nx+1)
+            yo = np.linspace(0,Ly,ny+1)
 
             # Rebin in place
             if data.detector.counts.ndim == 3:
-                Io = numpy.empty((nx,ny),'d') # Intermediate storage
+                Io = np.empty((nx,ny),'d') # Intermediate storage
                 for i in xrange(data.detector.counts.shape[0]):
                     frame = data.detector.counts[i]
                     frame[:] = rebin2d(x,y,frame,xo,yo,Io)
             else:
-                Io = numpy.empty((nx,),'d') # Intermediate storage
+                Io = np.empty((nx,),'d') # Intermediate storage
                 for i in xrange(data.detector.counts.shape[0]):
                     frame = data.detector.counts[i]
                     frame[:] = rebin(x,frame,xo,Io)
@@ -197,8 +197,8 @@ class AreaCorrection(object):
             # Set the pixel widths to a fixed size
             # TODO: force a failure until we figure out what happens with
             # TODO: lazy loading on the detector.
-            data.detector.widths_x = numpy.zeros(nx,'d')+Lx/nx
-            data.detector.widths_y = numpy.zeros(ny,'d')+Ly/ny
+            data.detector.widths_x = np.zeros(nx,'d')+Lx/nx
+            data.detector.widths_y = np.zeros(ny,'d')+Ly/ny
         else:
             # Scale by area
             data.detector.widths_x = self.wx

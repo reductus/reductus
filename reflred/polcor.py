@@ -156,11 +156,11 @@ for the theory?
 [1] C.F. Majkrzak (1996). Physica B 221, 342-356.
 """
 
-import numpy as N
+import numpy as np
+
 from .correction import Correction
 from .data import PolarizedData
 from .wsolve import wsolve
-
 
 class PolarizationEfficiency(Correction):
     """
@@ -281,7 +281,7 @@ class PolarizationEfficiency(Correction):
         pp,pm,mp,mm = beam.pp.v,beam.pm.v,beam.mp.v,beam.mm.v
         Ic = (pp*mm-pm*mp) / (pp+mm-pm-mp)
         reject = (Ic!=Ic)  # Reject nothing initially
-        if self.clip: reject |= clip(Ic, self.min_intensity, N.inf)
+        if self.clip: reject |= clip(Ic, self.min_intensity, np.inf)
 
         # F and R are the front and rear polarizer efficiencies.  Each
         # is limited below by min_efficiency and above by 1 (since they
@@ -314,7 +314,7 @@ def clip(field,lo,hi,nanval=0.):
     which were clipped.  Note that this modifies field in place. NaN
     values are clipped to the nanval default.
     """
-    idx = N.isnan(field); field[idx] = nanval; reject = idx
+    idx = np.isnan(field); field[idx] = nanval; reject = idx
     idx = field<lo;       field[idx] = lo;     reject |= idx
     idx = field>hi;       field[idx] = hi;     reject |= idx
     return reject
@@ -333,23 +333,23 @@ def correct_efficiency(eff, data, spinflip=True):
         spinflip = False
 
     if spinflip:
-        Y = N.vstack([ data.pp.v, data.pm.v, data.mp.v, data.mm.v ]) / beta
-        dY = N.vstack([ data.pp.dv, data.pm.dv, data.mp.dv, data.mm.dv ]) / beta
+        Y = np.vstack([ data.pp.v, data.pm.v, data.mp.v, data.mm.v ]) / beta
+        dY = np.vstack([ data.pp.dv, data.pm.dv, data.mp.dv, data.mm.dv ]) / beta
 
         # Note:  John's code has an extra factor of four here,
         # which roughly corresponds to the elements of sqrt(diag(inv(Y'Y))),
         # the latter giving values in the order of 3.9 for one example
         # dataset.  Is there an analytic reason it should be four?
-        H = N.array([
+        H = np.array([
                      [(1+F)*(1+R), (1+Fx)*(1+R), (1+F)*(1+Ry), (1+Fx)*(1+Ry)],
                      [(1-F)*(1+R), (1-Fx)*(1+R), (1-F)*(1+Ry), (1-Fx)*(1+Ry)],
                      [(1+F)*(1-R), (1+Fx)*(1-R), (1+F)*(1-Ry), (1+Fx)*(1-Ry)],
                      [(1-F)*(1-R), (1-Fx)*(1-R), (1-F)*(1-Ry), (1-Fx)*(1-Ry)],
                      ])
     else:
-        Y = N.array([ data.pp.v, data.mm.v ]) / beta
-        dY = N.array([ data.pp.dv, data.mm.dv ]) / beta
-        H = N.array([
+        Y = np.array([ data.pp.v, data.mm.v ]) / beta
+        dY = np.array([ data.pp.dv, data.mm.dv ]) / beta
+        H = np.array([
                      [(1+F)*(1+R), (1+Fx)*(1+Ry)],
                      [(1-F)*(1-R), (1-Fx)*(1-Ry)],
                      ])
@@ -360,8 +360,8 @@ def correct_efficiency(eff, data, spinflip=True):
     # a preprocessing step so that the code below is simply a matrix
     # multiply.  This will only be true if the same intensity scan
     # is used for multiple slit scans.
-    X = N.zeros(Y.shape)
-    dX = N.zeros(dY.shape)
+    X = np.zeros(Y.shape)
+    dX = np.zeros(dY.shape)
     reject = eff.reject&True
     for i in xrange(H.shape[1]):
         A = H[:,:,i]
@@ -391,7 +391,7 @@ def correct_efficiency(eff, data, spinflip=True):
         data.reject = reject
 
 def demo():
-    from refl1d.examples import e3a12 as dataset
+    from .examples import e3a12 as dataset
     eff = PolarizationEfficiency(beam=dataset.slits())
     for attr in ["Ic","fp","rp","ff","rf"]:
         print attr,getattr(eff,attr)

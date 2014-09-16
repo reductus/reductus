@@ -4,7 +4,8 @@ Data file reader for NCNR NG-7 data.
 
 """
 
-import os, numpy
+import numpy as np
+
 from . import icpformat, refldata, properties, qxqz
 
 
@@ -21,7 +22,7 @@ default.wavelength = (4.76,'')  # in case ICP records the wrong value
 
 # Detector saturates at 15000 counts/s.  The efficiency curve above
 # 15000 has not been measured.
-default.saturation = (numpy.array([[1,15000,0]]),'')
+default.saturation = (np.array([[1,15000,0]]),'')
 
 
 # NG-1 detector closer than slit 4?
@@ -43,7 +44,7 @@ saturation = """
    27771     1.370 ;
    31174     1.429
 """
-C = numpy.matrix(saturation).A
+C = np.matrix(saturation).A
 C[1,:] = 1/C[1,:] # Use efficiency rather than attenuation
 default.pencil_saturation = (C, '')
 # The following widths don't really matter for point detectors, but
@@ -52,7 +53,7 @@ default.pencil_length = (25.4*6,'') # mm TODO: Is NG-7 pencil det. 6" long
 default.pencil_width = (25.4*1,'') # mm TODO: Is NG-7 pencil det. 1" wide?
 
 # TODO: NG-7 PSD saturates at 8000 counts/s?
-default.psd_saturation = (numpy.array([1,8000],'f'),'')
+default.psd_saturation = (np.array([1,8000],'f'),'')
 default.psd_minbin = (9,'')
 default.psd_maxbin = (246,'')
 default.psd_width = (100,'')
@@ -140,7 +141,7 @@ class NG7Icp(refldata.ReflData):
         width = self.default.psd_width
         minbin,maxbin = self.default.psd_minbin,self.default.psd_maxbin
         pixels = self.default.psd_pixels
-        self.detector.width_x = numpy.ones(pixels,'f')*(width/(maxbin-minbin))
+        self.detector.width_x = np.ones(pixels,'f')*(width/(maxbin-minbin))
         self.detector.center_x = 0
         self.detector.width_y = self.default.psd_height
 

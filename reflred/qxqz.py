@@ -3,7 +3,7 @@
 """
 Translate coordinates between real and reciprical space.
 """
-import numpy
+import numpy as np
 from numpy import sin, cos, pi, arcsin, sqrt, arctan2, degrees, radians
 
 
@@ -81,31 +81,31 @@ def QxQzA_to_BL(Qx,Qz,alpha):
     return beta,wavelength
 
 def _errchk(err,tol=1e-15):
-    chk = (numpy.abs(err) < tol).all()
+    chk = (np.abs(err) < tol).all()
     if not chk:
         print err
-        print "norm",numpy.linalg.norm(err)
+        print "norm",np.linalg.norm(err)
     return chk
 
 def _test1(A,B,L,X,Z):
-    msg=", ".join(["%g"%numpy.asarray(v).flatten()[0] for v in A,B,L,X,Z])
+    msg=", ".join(["%g"%np.asarray(v).flatten()[0] for v in A,B,L,X,Z])
     x,z = ABL_to_QxQz(A,B,L)
-    mx,mz=["%g"%numpy.asarray(v).flatten()[0] for v in x,z]
+    mx,mz=["%g"%np.asarray(v).flatten()[0] for v in x,z]
     assert _errchk(z-Z),"%s -> %s"%(msg,mz)
     assert _errchk(x-X),"%s -> %s"%(msg,mx)
 
     a,b2 = QxQzL_to_AB(X,Z,L)
-    ma,mb2=["%g"%numpy.asarray(v).flatten()[0] for v in a,b2]
+    ma,mb2=["%g"%np.asarray(v).flatten()[0] for v in a,b2]
 
-    if numpy.any(Z<0):
+    if np.any(Z<0):
         # Full test; make sure the forward transform from the
         # inverted transform is correct even if it doesn't
         # happen to match the choice of detector angle.
         x,z=ABL_to_QxQz(a,b2,L)
         assert _errchk(x-X,1e-12),"incorrect inverse Qx"
         assert _errchk(z-Z,1e-12),"incorrect inverse Qz"
-        assert _errchk(numpy.sign(Z)-numpy.sign(b2),1.5),"incorrect branch"
-        idx = (numpy.abs(a-A)<1e-12)|(numpy.abs(b2-B)<1e-12)
+        assert _errchk(np.sign(Z)-np.sign(b2),1.5),"incorrect branch"
+        idx = (np.abs(a-A)<1e-12)|(np.abs(b2-B)<1e-12)
         if False:
             import pylab
             #print 1*idx
@@ -121,7 +121,7 @@ def _test1(A,B,L,X,Z):
         assert _errchk(a-A,1e-12),"%s -> %s"%(msg,ma)
 
     b,l = QxQzA_to_BL(X,Z,A)
-    mb,ml=["%g"%numpy.asarray(v).flatten()[0] for v in b,l]
+    mb,ml=["%g"%np.asarray(v).flatten()[0] for v in b,l]
     if False and not _errchk(b-B, 1e-12):
         # Debug problems with BL; should be less since results are
         # not ambiguous.
@@ -142,7 +142,7 @@ def _test1(A,B,L,X,Z):
 def test():
     A,B,L = 3,6,4.5
     X,Z = 0,4*pi/L*sin(radians(A))
-    vec = numpy.ones((2,3,4))
+    vec = np.ones((2,3,4))
 
     # Check combos of scalar/vector for Qx=0
     _test1(A,B,L,X,Z)
@@ -169,9 +169,9 @@ def test():
     _test1(vec[:,0:1,0:1]*A,vec[0:1,:,0:1]*B,vec[0:1,0:1,:]*L,X,Z)
 
     # Check the whole coordinate space, avoiding Qz=0.
-    A = numpy.linspace(-170,170,5).reshape((1,1,5))
-    B = numpy.linspace(-170,170,6).reshape((1,6,1))
-    L = numpy.linspace(0.1,7.1,4).reshape((4,1,1))
+    A = np.linspace(-170,170,5).reshape((1,1,5))
+    B = np.linspace(-170,170,6).reshape((1,6,1))
+    L = np.linspace(0.1,7.1,4).reshape((4,1,1))
     #L=4
     X,Z = ABL_to_QxQz(A,B,L)
     _test1(A,B,L,X,Z)

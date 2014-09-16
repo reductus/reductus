@@ -33,8 +33,9 @@ name of the colormap.
 __all__ = ['CMapMenu']
 
 import sys
+
 import wx
-import numpy
+import numpy as np
 from matplotlib import cm
 
 def colorbar_bitmap(colormap,length,thickness=10,orientation='horizontal'):
@@ -44,12 +45,12 @@ def colorbar_bitmap(colormap,length,thickness=10,orientation='horizontal'):
     Orientation can be vertical or horizontal (only looks at the first letter).
     """
     # Make an RGBA array from the colormap, either horizontally or vertically.
-    V = colormap(numpy.linspace(0,1,length),bytes=True)
+    V = colormap(np.linspace(0,1,length),bytes=True)
     if orientation[0].lower() == 'h':
-        V = numpy.tile(V,(thickness,1))
+        V = np.tile(V,(thickness,1))
         bitmap = wx.BitmapFromBufferRGBA(length,thickness,V)
     elif orientation[0].lower() == 'v':
-        V = numpy.tile(V,(1,thickness))
+        V = np.tile(V,(1,thickness))
         bitmap = wx.BitmapFromBufferRGBA(thickness,length,V)
     else:
         raise ValueError,"expected orientation [V]ertical or [H]orizontal"
@@ -148,7 +149,7 @@ class CMapMenu(wx.Menu):
         if self.mapper:
             self.mapper.set_cmap(cm.get_cmap(name))
         if self.canvas:
-            self.canvas.draw_idle()
+            self.canvas.draw()
         if self.callback:
             self.callback(name)
 
@@ -172,9 +173,9 @@ def demo():
             self.figure = Figure(dpi=80, figsize=(2,2))
             self.canvas = Canvas(self, -1, self.figure)
             self.axes = self.figure.gca()
-            x = y = numpy.linspace(-3,3,80)
-            X,Y = numpy.meshgrid(x,y)
-            V = numpy.sin(Y**2+X**2)
+            x = y = np.linspace(-3,3,80)
+            X,Y = np.meshgrid(x,y)
+            V = np.sin(Y**2+X**2)
             self.mapper = FigureImage(self.figure)
             im = self.axes.pcolor(x,y,V,shading='flat')
             try:
@@ -202,7 +203,7 @@ def demo():
             print "Selected colormap",name
         def OnGridToggle(self, event):
             self.axes.grid()
-            self.canvas.draw_idle()
+            self.canvas.draw()
 
     app = wx.App(redirect=False)
     Frame().Show()

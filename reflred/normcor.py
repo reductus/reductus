@@ -4,9 +4,8 @@
 Monitor normalization correction.
 """
 
-from numpy import sqrt
-from .correction import Correction
 from . import err1d
+from .correction import Correction
 
 class Normalize(Correction):
     def __init__(self, base='auto'):

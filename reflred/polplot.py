@@ -2,8 +2,11 @@
 PolPlot2D is a panel for 4 cross-section 2D polarized reflectometry data.
 """
 
-import wx,numpy,os
+import os
 from math import log10, pow
+
+import numpy as np
+import wx
 
 import matplotlib as mpl
 mpl.interactive(False)
@@ -106,18 +109,18 @@ def bbox_union(bboxes):
     if len(bboxes) == 1:
         return bboxes[0]
 
-    x0 = numpy.inf
-    y0 = numpy.inf
-    x1 = -numpy.inf
-    y1 = -numpy.inf
+    x0 = np.inf
+    y0 = np.inf
+    x1 = -np.inf
+    y1 = -np.inf
 
     for bbox in bboxes:
         xs = bbox.intervalx
         ys = bbox.intervaly
-        x0 = min(x0, numpy.min(xs))
-        y0 = min(y0, numpy.min(ys))
-        x1 = max(x1, numpy.max(xs))
-        y1 = max(y1, numpy.max(ys))
+        x0 = min(x0, np.min(xs))
+        y0 = min(y0, np.min(ys))
+        x1 = max(x1, np.max(xs))
+        y1 = max(y1, np.max(ys))
 
     return Bbox([[x0, y0], [x1, y1]])
 
@@ -178,7 +181,7 @@ class Plotter4(wx.Panel):
         # Provide an empty handle to attach colormap properties
         self.coloraxes = self.figure.add_axes([0.88, 0.2, 0.04, 0.6])
         self.colormapper = mpl.image.FigureImage(self.figure)
-        self.colormapper.set_array(numpy.ones(1))
+        self.colormapper.set_array(np.ones(1))
         self.colorbar = self.figure.colorbar(self.colormapper,self.coloraxes)
 
         # Provide slots for the graph labels
@@ -400,7 +403,7 @@ class Plotter4(wx.Panel):
 
         #self.pp.get_yticklabels()[0].set_visible(False)
         #self.mp.get_xticklabels()[0].set_visible(False)
-        self.vmin, self.vmax = numpy.inf,-numpy.inf
+        self.vmin, self.vmax = np.inf,-np.inf
         self.colormapper.set_clim(vmin=1,vmax=10)
 
         # Hide tick labels for interior axes
@@ -490,8 +493,8 @@ class Plotter4(wx.Panel):
             self.canvas.draw_idle()
         self.colormapper.callbacksSM.connect('changed',on_changed)
 
-        self.vmin = min(self.vmin, numpy.min(v))
-        self.vmax = max(self.vmax, numpy.max(v))
+        self.vmin = min(self.vmin, np.min(v))
+        self.vmax = max(self.vmax, np.max(v))
         self.colormapper.set_clim(vmin=self.vmin,vmax=self.vmax)
         self.autoaxes()
         self.canvas.draw_idle()
@@ -500,7 +503,7 @@ class Plotter4(wx.Panel):
 
 
 def demo():
-    from refl1d import data
+    from reflred import data
     # Get some data
     d = data.peakspol(n=355)
     #d = data.peakspol(n=1000)

@@ -7,7 +7,6 @@ scans for the individual cross-sections, and the estimated 2*beta, the
 other showing the efficiencies of the front/back polarizers and flippers.
 """
 
-import numpy
 import wx
 import matplotlib as mpl
 mpl.interactive(False)

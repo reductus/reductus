@@ -28,10 +28,8 @@ Example::
 """
 from __future__ import with_statement
 
-from math import *
 from .correction import Correction
 from .fresnel import Fresnel
-import numpy
 
 __all__ = ['RatioIntensity', 'WaterIntensity']
 

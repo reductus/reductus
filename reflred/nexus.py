@@ -114,8 +114,9 @@ the source if you need to do this.
 """
 __all__ = ['read', 'write', 'dir']
 
-from copy import copy, deepcopy
-import numpy
+from copy import copy
+
+import numpy as np
 import nxs
 import nxsunit
 
@@ -229,7 +230,7 @@ class NeXus(nxs.NeXus):
             data = NXlink(name,nxclass='SDS',attrs=attrs)
         else:
             dims,type = self.getinfo()
-            if numpy.prod(dims) < 1000:
+            if np.prod(dims) < 1000:
                 value = self.getdata()
             else:
                 value = None
@@ -331,9 +332,9 @@ class NeXus(nxs.NeXus):
         # Finally some data, but don't read it if it is big
         # Instead record the location, type and size
         #print "creating data",child.nxname,child.nxdims,child.nxtype
-        if numpy.prod(data.nxdims) > 10000:
+        if np.prod(data.nxdims) > 10000:
             # Compress the fastest moving dimension of large datasets
-            slab_dims = numpy.ones(len(data.nxdims),'i')
+            slab_dims = np.ones(len(data.nxdims),'i')
             slab_dims[-1] = data.nxdims[-1]
             self.compmakedata(data.nxname, data.nxtype, data.nxdims,
                               'lzw', slab_dims)
@@ -720,7 +721,7 @@ class PylabPlotter(object):
                 myopts.setdefault('fmt','o')
                 myopts.setdefault('linestyle','None')
                 pylab.errorbar(axis_data[0], signal.nxdata,
-                               numpy.sqrt(signal.nxdata), **myopts)
+                               np.sqrt(signal.nxdata), **myopts)
             else:
                 pylab.scatter(axis_data[0], signal.nxdata, **opts)
             pylab.xlabel(label(axes[0]))
@@ -733,7 +734,7 @@ class PylabPlotter(object):
             gridplot = imshow_irregular
             if signal.Aunits.nxdata == 'counts':
                 gridplot(axis_data[1], axis_data[0],
-                         numpy.log10(signal.nxdata+1), **opts)
+                         np.log10(signal.nxdata+1), **opts)
             else:
                 gridplot(axis_data[1], axis_data[0],
                          signal.nxdata, **opts)

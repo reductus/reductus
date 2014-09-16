@@ -10,8 +10,8 @@ summary(filename)  - reads the header information
 read(filename) - reads header information and data
 """
 
-import numpy as N
-import datetime,sys
+import numpy as np
+import datetime
 
 # Try using precompiled matrix loader
 try:
@@ -23,14 +23,14 @@ try:
         """
         if shape != None:
             # Have an existing block, so we know what size to allocate
-            z = N.empty(shape,'i')
+            z = np.empty(shape,'i')
             i,j = _reduction.str2imat(s,z)
             if i*j != z.size:
                 raise IOError,"Inconsistent dims at line %d"%linenum
         else:
             # No existing block.  Worst case is 2 bytes per int.
             n = int(len(s)/2+1)
-            z = N.empty(n,'i')
+            z = np.empty(n,'i')
             i,j = _reduction.str2imat(s,z)
             # Keep the actual size
             if i==1 or j==1:
@@ -44,11 +44,11 @@ except:
         Parse a string into a matrix.  Provide a shape parameter if you
         know the expected matrix size.
         """
-        z = N.matrix(s,'i').A
+        z = np.matrix(s,'i').A
         i,j = z.shape
         if i==1 or j==1:
             z = z.reshape(i*j)
-        if shape != None and N.any(z.shape != shape):
+        if shape != None and np.any(z.shape != shape):
             raise IOError,"Inconsistent dims at line %d"%linenum
         return z
 
@@ -102,19 +102,19 @@ def readdata(fh):
         elif blocks != []:
             # Oops...missing a detector block.  Set it to zero counts
             # of the same size as the last block
-            blocks.append(N.zeros(blocks[-1].shape,'i'))
+            blocks.append(np.zeros(blocks[-1].shape,'i'))
         # Otherwise no detector block and don't need one
         # Note: this strategy fails to identify that the first
         # detector block is missing; those will be filled in later.
 
     # recover from missing leading detector blocks
     if blocks != [] and len(blocks) < len(rows):
-        blank = N.zeros(blocks[0].shape,'i')
+        blank = np.zeros(blocks[0].shape,'i')
         blocks = [blank]*(len(blocks)-len(rows)) + blocks
 
     # Convert data to arrays
-    X = N.array(rows, 'd')
-    Z = N.array(blocks)
+    X = np.array(rows, 'd')
+    Z = np.array(blocks)
     return X,Z
 
 
@@ -393,11 +393,11 @@ class ICP(object):
         for (M,R) in self.motor.__dict__.iteritems():
             if not hasattr(self.column,M):
                 if R.step != 0.:
-                    vector = N.arange(R.start,R.step,R.stop)
+                    vector = np.arange(R.start,R.step,R.stop)
                     # truncate to number of points measured
                     vector = vector[:self.points]+0
                 else:
-                    vector = R.start * N.ones(self.points)
+                    vector = R.start * np.ones(self.points)
                 setattr(self.column,M,vector)
         pass
 
@@ -466,7 +466,7 @@ def write_icp_header(file, icpfile):
 
 def _write_icp_frame(file, frame):
     # Round data to the nearest integer
-    frame = N.asarray(frame+0.5,'uint32')
+    frame = np.asarray(frame+0.5,'uint32')
     if frame.ndim == 2:
         rows  = [ ",".join(str(v) for v in row) for row in frame ]
         text = ";".join(rows)
@@ -566,7 +566,7 @@ def asdata(icp):
     d.x = icp.column[icp.columnnames[0]]
     if len(d.v.shape) > 1:
         d.ylabel = 'Pixel'
-        d.y = N.arange(d.v.shape[0])
+        d.y = np.arange(d.v.shape[0])
     return d
 
 def data(filename):

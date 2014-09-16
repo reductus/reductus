@@ -2,9 +2,10 @@
 """
 Data file reader for NCNR NG-1 data.
 """
+import os
 
-import numpy,os
-from numpy import inf,cos,pi,arctan2
+import numpy as np
+from numpy import cos, pi
 from . import refldata, icpformat, properties
 
 
@@ -24,8 +25,8 @@ ng1default.wavelength = (4.76,'')  # in case ICP records the wrong value
 
 # Detector saturates at 15000 counts/s.  The efficiency curve above
 # 15000 has not been measured.
-ng1default.saturation = (numpy.array([[1,15000,0]]),'')
-ng1default.psd_saturation = (numpy.array([[1,8000,0]]),'')
+ng1default.saturation = (np.array([[1,15000,0]]),'')
+ng1default.psd_saturation = (np.array([[1,8000,0]]),'')
 
 # NG-1 detector closer than slit 4?
 ng1default.detector_distance = (36*25.4, '') # mm
@@ -44,8 +45,8 @@ cg1default.wavelength = (5.0,'')  # in case ICP records the wrong value
 
 # Detector saturates at 15000 counts/s.  The efficiency curve above
 # 15000 has not been measured.
-cg1default.saturation = (numpy.array([[1,15000,0]]),'')
-cg1default.psd_saturation = (numpy.array([[1,8000,0]]),'')
+cg1default.saturation = (np.array([[1,15000,0]]),'')
+cg1default.psd_saturation = (np.array([[1,8000,0]]),'')
 
 # NG-1 detector closer than slit 4?
 cg1default.detector_distance = (1600., '') # mm
@@ -177,7 +178,7 @@ class NG1Icp(refldata.ReflData):
         elif data.count_type == 'NEUT':
             # if count by neutron, the 'monitor' field stores counts
             self.monitor.counts \
-                = data.monitor*data.prefactor*numpy.ones(data.points,'i')
+                = data.monitor*data.prefactor*np.ones(data.points,'i')
         else:
             # Need monitor rate for normalization; the application
             # will have to provide the means of setting the rate
@@ -191,7 +192,7 @@ class NG1Icp(refldata.ReflData):
             # than seconds and is not precise enough.
             # if count by time, the 'monitor' field stores seconds
             self.monitor.count_time \
-                = data.monitor*data.prefactor*numpy.ones(data.points,'f')
+                = data.monitor*data.prefactor*np.ones(data.points,'f')
         elif 'time' in data:
             self.monitor.count_time = data.column.time*60
         else:
@@ -221,6 +222,6 @@ class NG1Icp(refldata.ReflData):
         from .areacor import AreaCorrection
         nx,ny = self.detector.dims
         Ax,Ay = self.detector.solid_angle
-        wx = (1+0.15*cos(2*pi*numpy.arange(nx)/32.))/nx * Ax
-        wy = (1+0.15*cos(2*pi*numpy.arange(ny)/32.))/ny * Ay
+        wx = (1+0.15*cos(2*pi*np.arange(nx)/32.))/nx * Ax
+        wy = (1+0.15*cos(2*pi*np.arange(ny)/32.))/ny * Ay
         return AreaCorrection(wx,wy,source="15% * cos(2 pi k/32)")

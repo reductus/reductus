@@ -3,7 +3,10 @@ GUI driver for the polarization correction code polcor.
 """
 
 import sys
+
 import wx,wx.aui
+
+from .formats import registry
 from .selection import SelectionPanel, EVT_ITEM_SELECT, EVT_ITEM_VIEW
 from .polplot import Plotter, Plotter4
 
@@ -61,7 +64,7 @@ class Reduction(wx.Panel):
         try:
             data = registry.load(filename)
         except:
-            print "unable to laod %s\n  %s"%(filename, sys.exc_value)
+            print "unable to load %s\n  %s"%(filename, sys.exc_value)
             data = None
         else:
             if data.prop.polarization == "":

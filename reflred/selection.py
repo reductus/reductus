@@ -1,6 +1,9 @@
 # This program is public domain.
 
-import wx,os,re,time
+import os
+import re
+import time
+
 import wx.lib.customtreectrl as tree
 import wx.lib.newevent
 

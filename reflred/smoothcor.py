@@ -15,7 +15,7 @@ Create and apply the filter::
 """
 __all__ = ['Smooth']
 
-import numpy
+import numpy as np
 
 from .correction import Correction
 from .wsolve import wpolyfit
@@ -70,8 +70,8 @@ def smooth(x, y, dy=None, degree=2, span=5):
     If x is equally spaced, then this is equivalent to a Savitsky-Golay
     filter of the same degree and span.
     """
-    if dy == None: dy = numpy.ones(y.shape)
-    yp,dyp = numpy.empty(y.shape),numpy.empty(y.shape)
+    if dy == None: dy = np.ones(y.shape)
+    yp,dyp = np.empty(y.shape),np.empty(y.shape)
 
     n = len(x)
     k = (span-1)/2
@@ -91,7 +91,7 @@ def smooth(x, y, dy=None, degree=2, span=5):
 
 def demo():
     import pylab
-    from refl1d.examples import e3a12 as dataset
+    from .examples import e3a12 as dataset
     data = dataset.slits()
     pylab.errorbar(data.pp.x,data.pp.v,data.pp.dv,fmt='xg')
     data.apply(Smooth(degree=2,span=7))
