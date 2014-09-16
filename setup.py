@@ -1,13 +1,27 @@
 #!/usr/bin/env python
 
-import os
-import sys
+import os.path
 
-from numpy.distutils.core import setup
 from numpy.distutils.misc_util import Configuration
+from numpy.distutils.core      import setup
 
-def configuration(parent_package='', top_path=None):
-    config = Configuration('reflred', parent_package, top_path)
+
+def configuration():
+    config = Configuration(package_name='reflred', package_path='reflred')
+
+    # Extension reflmodule
+    srcpath = os.path.join(config.package_path,'lib')
+    sources = [os.path.join(srcpath,s)
+               for s in ('reduction.cc','str2imat.c')]
+    depends = [os.path.join(srcpath,s)
+               for s in ('rebin.h', 'rebin2D.h')]
+
+    config.add_extension('_reduction',
+                         include_dirs=[srcpath],
+                         depends=depends,
+                         sources=sources,
+                         )
+
     config.set_options(quiet=True) # silence debug/informational messages
 
     # Add subpackages (top level name spaces) and data directories.
@@ -26,7 +40,5 @@ def configuration(parent_package='', top_path=None):
 
     return config
 
-
 if __name__ == '__main__':
-    if len(sys.argv) == 1: sys.argv.append('install')
-    setup(**configuration(top_path='').todict())
+    setup(**configuration().todict())
