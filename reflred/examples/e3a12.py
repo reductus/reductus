@@ -6,7 +6,7 @@ Polarized neutron data from NCNR/NG-1::
 
 import numpy, os
 from . import get_data_path
-from ..data import Data,PolarizedData
+from ..data import PolarizedData
 
 PATH=get_data_path('e3a12')
 

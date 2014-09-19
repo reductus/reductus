@@ -28,8 +28,8 @@ Example::
 """
 from __future__ import with_statement
 
-from .correction import Correction
-from .fresnel import Fresnel
+from ..pipeline import Correction
+from ..fresnel import Fresnel
 
 __all__ = ['RatioIntensity', 'WaterIntensity']
 
@@ -51,59 +51,48 @@ class RatioIntensity(Correction):
         intensity_ratio(data=data,model=self.model)
 
     def __str__(self):
-        return "RatioIntensity(%s)"%str(model)
+        return "RatioIntensity(%s)"%str(self.model)
 
 class WaterIntensity(Correction):
     """
     Compute the incident intensity assuming that data measures a
-    reflection off water.
+    reflection off water substrate.
 
-    D2O = percentage is the portion that is deuterated, from 0 to 100.
-    probe = 'neutron' or 'xray'
+    D2O_percent = percentage is the portion that is deuterated, from 0 to 100.
 
     Returns a correction object that can be applied to data.
     """
-    def _set_fresnel_coefficients(self):
+    # TODO: allow background, intensity
+    # TODO: allow different substrate
+    def _water_rho(self, probe):
         # SLDs calculated with NBCU.XLS from the NCNR website.
-        if self.probe == 'neutron':
-            rho_H2O,mu_H2O = -0.560, 0.001
-            rho_D2O,mu_D2O = 5.756, 0.00
-        elif self.probe == 'xray':
-            rho_H2O,mu_H2O = 9.466, 0.098
-            rho_D2O,mu_D2O = 8.516, 0.089
+        if probe == 'neutron':
+            rho_H2O,irho_H2O = -0.560, 0.001
+            rho_D2O,irho_D2O = 5.756, 0.00
+        elif probe == 'xray': # 1.54 A
+            rho_H2O,irho_H2O = 9.466, 0.098
+            rho_D2O,irho_D2O = 8.516, 0.089
         else:
             raise ValueError, "water_ratio needs probe 'neutron' or 'xray'"
-        D2O = self._D2O
-        self.model.rho = 1e-6*((100-D2O)*(rho_H2O) + D2O*rho_H2O)/100.
-        self.model.mu = 1e-6*((100-D2O)*(mu_H2O) + D2O*mu_H2O)/100.
+        p = 0.01*self.D2O_percent
+        rho = 1e-6*((1-p)*rho_H2O + p*rho_D2O)
+        irho = 1e-6*((1-p)*irho_H2O + p*irho_D2O)
+        return rho, irho
 
-    def _setD2O(self, D2O):
-        self._D2O = D2O
-        self._set_fresnel_coefficients
-    def _getD2O(self):
-        return self._D2O
-    def _setprobe(self,probe):
-        self._probe = probe
-        self._set_fresnel_coefficients
-    def _getprobe(self):
-        return self._probe
-    D2O = property(_getD2O,_setD2O)
-    probe = property(_getprobe,_setprobe)
-
-    def __init__(self,D2O=0,probe=None,background=0):
-        self.model = Fresnel(sigma=3)
-        self._probe = probe
-        self._D2O = D2O
-        self._set_fresnel_coefficients()
+    def __init__(self,D2O_percent=0,interface=3):
+        self.D2O_percent = D2O_percent
+        self.interface = interface
 
     def apply(self,data):
-        intensity_ratio(data=data,model=self.model)
+        rho,irho = self._water_rho(data.probe)
+        model = Fresnel(rho=rho, irho=irho, sigma=self.interface)
+        intensity_ratio(data=data,model=model)
 
     def __str__(self):
-        if self._D2O == 0:
-            return "WaterIntensity(probe='%s')"%self._probe
+        if self.D2O_percent == 0:
+            return "WaterIntensity()"
         else:
-            return "WaterIntensity(D2O=%d,probe='%s')"%(self._D2O,self._probe)
+            return "WaterIntensity(D2O=%d%%)"%(self.D2O_percent)
 
 def intensity_ratio(data=None,model=None):
     """
@@ -114,31 +103,26 @@ def intensity_ratio(data=None,model=None):
     to a data file for use in reflpak or other reduction software.
     """
 
-    # TODO for now we are not using resolution information when
     # computing the data/theory ratio
-    Q,L = data.Qz,data.detector.wavelength
-    R = model.reflectivity(Q,L)
+    # TODO: use resolution info in water ratio
+    if True:
+        R = model.reflectivity(data.Qz, data.detector.wavelength)
+    else:
+        from refl1d.reflectivity import convolve
+        Qi = model.fitQ(data.Qz, data.dQ)
+        Ri = model.reflectivity(Qi, data.detector.wavelength)
+        R = convolve(Qi, Ri, data.Qz, data.dQ)
+
     data.R, data.dR = data.R/R, data.dR/R
     data.intent = 'intensity'
     return
 
-    from refl1d.reflectivity import convolve
-    # Compute the convolved reflectivity.
-    # Find the theory points necessary to compute an accurate estimate of
-    # the convolved model without over- or under-sampling.
-    Q,dQ,L = data.Qz,data.dQ,data.wavelength
-    Qi = model.fitQ(Q,dQ)
-    Ri = model.reflectivity(Qi,L)
-    R = convolve(Qi,Ri,Q,dQ)
-    data.R, data.dR = data.R/R, data.dR/R
-
 def demo():
     import pylab
-    from reflred import normalize
-    from reflred.examples import ng7 as dataset
-    spec = dataset.spec()[0]
-    water = WaterIntensity(D2O=20,probe=spec.probe)
-    spec.apply(normalize())
+    from . import normalize
+    from ..examples import ng7 as dataset
+    spec = dataset.spec()[0] | normalize()
+    water = WaterIntensity(D2O_percent=20)
     theory = water.model(spec.Qz,spec.detector.wavelength)
 
     pylab.subplot(211)
@@ -149,7 +133,7 @@ def demo():
     scale = theory[0]/spec.R[0]
     pylab.errorbar(spec.Qz,scale*spec.R,scale*spec.dR,fmt='.',label='measured')
 
-    spec.apply(water)
+    spec |= water
     pylab.subplot(212)
     #pylab.title('Intensity correction factor')
     pylab.xlabel('Slit 1 opening (mm)')

@@ -51,7 +51,9 @@ class Uncertainty(object):
     def __delitem__(self, key):
         del self.x[key]
         del self.variance[key]
-    #def __iter__(self): pass # Not sure we need iter
+    def __iter__(self):
+        for x,variance in zip(self.x, self.variance):
+            yield Uncertainty(x, variance)
 
     # Normal operations: may be of mixed type
     def __add__(self, other):
@@ -76,12 +78,11 @@ class Uncertainty(object):
             return Uncertainty(self.x/other, self.variance/other**2)
     def __pow__(self, other):
         if isinstance(other,Uncertainty):
-            # Haven't calcuated variance in (a+/-da) ** (b+/-db)
-            return NotImplemented
+            return Uncertainty(*err1d.pow2(self.x,self.variance,other.x,other.variance))
         else:
             return Uncertainty(*err1d.pow(self.x,self.variance,other))
 
-    # Reverse operations
+    # Reverse operations are definitely of mixed type
     def __radd__(self, other):
         return Uncertainty(self.x+other, self.variance+0) # Force copy
     def __rsub__(self, other):
@@ -89,9 +90,9 @@ class Uncertainty(object):
     def __rmul__(self, other):
         return Uncertainty(self.x*other, self.variance*other**2)
     def __rtruediv__(self, other):
-        x,variance = err1d.pow(self.x,self.variance,-1)
-        return Uncertainty(x*other,variance*other**2)
-    def __rpow__(self, other): return NotImplemented
+        return Uncertainty(other/self.x,self.variance*other**2/self.x**4)
+    def __rpow__(self, other):
+        return self.exp(np.log(other)*self)
 
     # In-place operations: may be of mixed type
     def __iadd__(self, other):
@@ -126,8 +127,8 @@ class Uncertainty(object):
         return self
     def __ipow__(self, other):
         if isinstance(other,Uncertainty):
-            # Haven't calcuated variance in (a+/-da) ** (b+/-db)
-            return NotImplemented
+            self.x,self.variance \
+                = err1d.pow2_inplace(self.x, self.variance, other.x,other.variance)
         else:
             self.x,self.variance = err1d.pow_inplace(self.x, self.variance, other)
         return self
@@ -151,8 +152,9 @@ class Uncertainty(object):
         if np.isscalar(self.x):
             return format_uncertainty(self.x,np.sqrt(self.variance))
         else:
-            return [format_uncertainty(v,dv)
-                    for v,dv in zip(self.x,np.sqrt(self.variance))]
+            content = ", ".join(format_uncertainty(v,dv)
+                    for v,dv in zip(self.x,np.sqrt(self.variance)))
+            return "".join(("[",content,"]"))
     def __repr__(self):
         return "Uncertainty(%s,%s)"%(str(self.x),str(self.variance))
 
@@ -187,24 +189,64 @@ class Uncertainty(object):
     def __ixor__(self, other): return NotImplemented
     def __ior__(self, other): return NotImplemented
 
-    def __invert__(self): return NotImplmented  # For ~x
-    def __complex__(self): return NotImplmented
-    def __int__(self): return NotImplmented
-    def __long__(self): return NotImplmented
-    def __float__(self): return NotImplmented
-    def __oct__(self): return NotImplmented
-    def __hex__(self): return NotImplmented
-    def __index__(self): return NotImplmented
-    def __coerce__(self): return NotImplmented
+    def __invert__(self): return NotImplemented  # For ~x
+    def __complex__(self): return NotImplemented
+    def __int__(self): return NotImplemented
+    def __long__(self): return NotImplemented
+    def __float__(self): return self.x
+    def __oct__(self): return NotImplemented
+    def __hex__(self): return NotImplemented
+    def __index__(self): return NotImplemented
+    def __coerce__(self): return NotImplemented
 
-    def log(self):
-        return Uncertainty(*err1d.log(self.x,self.variance))
+    # TODO: comparisons returning p-value?
 
-    def exp(self):
-        return Uncertainty(*err1d.exp(self.x,self.variance))
+def log(x):
+    return Uncertainty(*err1d.log(x.x,x.variance))
+def exp(x):
+    return Uncertainty(*err1d.exp(x.x,x.variance))
+def sin(x):
+    return Uncertainty(*err1d.sin(x.x,x.variance))
+def cos(x):
+    return Uncertainty(*err1d.cos(x.x,x.variance))
+def tan(x):
+    return Uncertainty(*err1d.tan(x.x,x.variance))
+def arcsin(x):
+    return Uncertainty(*err1d.arcsin(x.x,x.variance))
+def arccos(x):
+    return Uncertainty(*err1d.arccos(x.x,x.variance))
+def arctan(x):
+    return Uncertainty(*err1d.arctan(x.x,x.variance))
+def arctan2(x,y):
+    Uncertainty(*err1d.arctan2(x.x,x.variance,y.x,y.variance))
 
-def log(val): return self.log()
-def exp(val): return self.exp()
+def interp(x,xp,fp,left=None,right=None):
+    """
+    Linear interpolation of x into points (xk,yk +/- dyk).
+
+    xp is assumed to be in ascending order.
+
+    left is the uncertainty value to return for points before the range of xp,
+    or None for the initial value, fp[0].
+
+    right is the uncertainty value to return for points after the range of xp,
+    or None for the final value, fp[-1].
+    """
+    if left is None: left = fp[0]
+    if right is None: right = fp[-1]
+    left = (left.x, left.variance)
+    right = (right.x, right.variance)
+
+    if isinstance(x, (float, int, np.number)):
+        F, varF = err1d.interp([x], xp, fp.x, fp.variance, left, right)
+        F, varF = F.item(), varF.item()
+    elif isinstance(x, np.ndarray) and x.ndim == 0:
+        F, varF = err1d.interp([x], xp, fp.x, fp.variance, left, right)
+        F, varF = F.item(), varF.item()
+    else:
+        F, varF = err1d.interp(x, xp, fp.x, fp.variance, left, right)
+    return Uncertainty(F, varF)
+
 
 def test():
     a = Uncertainty(5,3)
@@ -313,5 +355,20 @@ def test():
     assert str(Uncertainty(5,3)) == "5.0(17)"
     assert str(Uncertainty(15,3)) == "15.0(17)"
     assert str(Uncertainty(151.23356,0.324185**2)) == "151.23(32)"
+
+    xp = np.array([2.,3.])
+    fp = Uncertainty(np.array([3.,1.]),np.array([0.04,0.16]))
+    z = interp(2.4, xp, fp)
+    assert abs(z.x-2.2) < 2e-15
+    assert abs(z.variance-0.04) < 2e-15
+    z = interp([0.,2.,2.4,3.,4.], xp, fp)
+    assert np.linalg.norm(z.x - [3,3,2.2,1,1]) < 2e-15
+    assert np.linalg.norm(z.variance - [0.04,0.04,0.04,0.16,0.16]) < 2e-15
+    xp = np.array([2.,3.,3.,4.])
+    fp = Uncertainty(np.array([3.,1.,3.,1.]),np.array([0.04,0.16,0.04,0.16]))
+    z = interp([2.5,3.,3.5], xp, fp)
+    print z
+    assert np.linalg.norm(z.x - [2,3,2]) < 2e-15
+    assert np.linalg.norm(z.variance - [0.05,0.04,0.05]) < 2e-15
 
 if __name__ == "__main__": test()

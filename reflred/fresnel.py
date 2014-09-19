@@ -6,7 +6,7 @@ Pure python Fresnel reflectivity calculator.
 
 from numpy import sqrt, exp, real, conj, pi, abs, choose
 
-class Fresnel:
+class Fresnel(object):
     """
     Function for computing the Fresnel reflectivity for a single interface.
 

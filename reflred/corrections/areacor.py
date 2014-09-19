@@ -103,7 +103,8 @@ Minimize the log probability by setting the derivative to zero:
 
 import numpy as np
 
-from .rebin import rebin2d, rebin
+from refl1d.rebin import rebin2d, rebin
+from ..pipeline import Correction
 
 def measured_area_correction(data, rebin=False):
     """
@@ -143,7 +144,7 @@ def measured_area_correction(data, rebin=False):
 
     return AreaCorrection(wx,wy,rebin=rebin,source=data.name)
 
-class AreaCorrection(object):
+class AreaCorrection(Correction):
     """
     Convert detector counts from counts per pixel to counts per unit area.
     """
@@ -153,15 +154,15 @@ class AreaCorrection(object):
         """
         Create a pixel area correction function.
 
-        wx,wy is the solid angle of the pixels as measured on
+        *wx*, *wy* is the solid angle of the pixels as measured on
         the detector.  This function will normalize the counts
         on the detector by pixel area.  This will change the
         pixel widths in the data file.
 
-        If rebin is True then adjust pixel boundaries so the
+        If *rebin* is True then adjust pixel boundaries so the
         pixels have equal area.
 
-        Source is a string to report in the log as the origin
+        *source* is a string to report in the log as the origin
         of the correction data.
         """
         self.wx = np.array(wx)
@@ -209,4 +210,5 @@ class AreaCorrection(object):
             data.detector.counts /= self.wy
 
     def __str__(self):
-        return "AreaCorrection('%s')"%self.source
+        rebinstr = ",rebin" if self.rebin else ""
+        return "AreaCorrection(%r%s)"%(self.source,rebinstr)

@@ -10,7 +10,7 @@ ReverseCorrection
 FrontCorrection
 """
 
-from .correction import Correction
+from ..pipeline import Correction
 
 class ReverseCorrection(Correction):
     """

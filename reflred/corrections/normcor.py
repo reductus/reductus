@@ -4,8 +4,8 @@
 Monitor normalization correction.
 """
 
-from . import err1d
-from .correction import Correction
+from .. import err1d
+from ..pipeline import Correction
 
 class Normalize(Correction):
     def __init__(self, base='auto'):

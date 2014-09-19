@@ -1,8 +1,10 @@
 # This program is public domain
 from numpy import inf
 
+from ..pipeline import Correction
+
 # Rebinning operations
-class LinearBinning(object):
+class LinearBinning(Correction):
     """
     Desired time binning for the dataset.
 
@@ -23,7 +25,7 @@ class LinearBinning(object):
         return "LinearBinning(start=%g,stop=%g,step=%g)"\
             %(self.start,self.stop,self.step)
 
-class LogBinning(object):
+class LogBinning(Correction):
     """
     Desired time binning for the dataset.
 

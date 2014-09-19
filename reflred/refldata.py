@@ -26,20 +26,11 @@ detector pixels. Other than gravitational corrections to
 resolution and detector pixels, the analysis for the two
 instrument types should be identical.
 
-Monochromatic reflectometers have a single wavelength per
-measurement but scan the measurements.  Time-of-flight and
-polychromatic reflectometers have multiple wavelengths per
-measurement but perform one measurement.  In either case
-a dataset consists of detector frames versus Q.  We will
-ignore scans on multichannel instruments since these can
-be treated as combined independent scans with non-overlapping
-data, and handled outside this data structure.
-
-Data points are gathered together into measurements.  Some
-files may have multiple measurements, and other measurements
-may be spread over multiple files.  Files may be local or
-remote, ascii or binary.  It is up to the individual format
-reader to assign map measurements to files.
+Monochromatic reflectometry files have a single wavelength per
+angle and a series of angles.  Time-of-flight and polychromatic
+reflectometers have multiple wavelengths per angle but usually
+one angle per file.  In either case a file is a set of
+detector frames each with its own wavelength and angles.
 
 Different polarization states will be treated as belonging
 to different measurements.  These will need to be aligned
@@ -287,7 +278,7 @@ class Detector(object):
     incident upon it, and be split into two virtual detectors when
     the file is loaded.
 
-    Direction x refers to the primary direction,  and direction y to
+    Direction x refers to the primary direction and y refers to
     the secondary direction.  For vertical geometry, the primary
     direction is in the horizontal plane and the secondary direction
     is in the vertical plane.  For horizontal geometry these are
@@ -396,10 +387,10 @@ class Detector(object):
     wavelength = 1 # angstrom
     time_of_flight = None  # ms
 
-    def _solid_angle(self):
+    @property
+    def solid_angle(self):
         """Detector solid angle [x,y] (radians)"""
         return 2*arctan2(np.asarray(self.size)/2.,self.distance)
-    solid_angle = property(_solid_angle,doc=_solid_angle.__doc__)
 
 
     # Raw counts are cached in memory and loaded on demand.
@@ -408,8 +399,8 @@ class Detector(object):
     #_pcounts = lambda:None
     def loadcounts(self):
         """Load the data"""
-        raise NotImplementedError,\
-           "Data format must set detector.counts or detector.loadcounts"
+        raise NotImplementedError(
+           "Data format must set detector.counts or detector.loadcounts")
     def _pcounts(self):
         """Simulated empty weak reference"""
         return None
@@ -740,6 +731,12 @@ class ReflData(object):
                                    self.roi]]
         return "\n".join(base+others)
 
+    def __or__(self, pipeline):
+        return pipeline(self)
+
+    def __ior__(self, pipeline):
+        return pipeline.apply_and_log(self)
+
     def warn(self,msg):
         """Record a warning that should be displayed to the user"""
         self.warnings.append(msg)
@@ -747,11 +744,6 @@ class ReflData(object):
     def log(self,msg):
         """Record corrections that have been applied to the data"""
         self.messages.append(msg)
-
-    def apply(self,correction):
-        """Allow alternative syntax: data.apply(correction)"""
-        self.log(str(correction))
-        correction.apply(self)
 
     def resetQ(self):
         """Recompute Qx,Qz from geometry and wavelength"""

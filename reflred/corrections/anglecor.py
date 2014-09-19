@@ -17,9 +17,9 @@ significant depends on the details of the experiment geometry.
 Usage
 =====
 
-    data.appy(AdjustAlignment(offset=0.01)
+    data | AdjustAlignment(offset=0.01)
 """
-from .correction import Correction
+from ..pipeline import Correction
 
 class AdjustAlignment(Correction):
     """
@@ -44,4 +44,4 @@ class AdjustAlignment(Correction):
         data.resetQ()
 
     def __str__(self):
-        return "AdjustAlignment(offset=%g)"%offset
+        return "AdjustAlignment(offset=%g)"%self.offset

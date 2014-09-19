@@ -214,14 +214,3 @@ class NG1Icp(refldata.ReflData):
 
         # TODO: if counts are huge we may want to make this lazy
         self.detector.counts = data.counts
-
-    def area_correction(self):
-        """
-        Returns the default area correction that can be applied to the data.
-        """
-        from .areacor import AreaCorrection
-        nx,ny = self.detector.dims
-        Ax,Ay = self.detector.solid_angle
-        wx = (1+0.15*cos(2*pi*np.arange(nx)/32.))/nx * Ax
-        wy = (1+0.15*cos(2*pi*np.arange(ny)/32.))/ny * Ay
-        return AreaCorrection(wx,wy,source="15% * cos(2 pi k/32)")

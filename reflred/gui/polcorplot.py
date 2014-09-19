@@ -86,9 +86,9 @@ class Plotter(wx.Panel):
         self.update_intensity()
 
 def demo():
-    from refl1d.examples import e3a12 as data
-    from refl1d.polcor import PolarizationEfficiency
-    from refl1d.smooth import Smooth
+    from reflred.examples import e3a12 as data
+    from reflred.polcor import PolarizationEfficiency
+    from reflred.smooth import Smooth
 
     # Get a slit scan and compute the raw efficiency
     beam = data.slits()

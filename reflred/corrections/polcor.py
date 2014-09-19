@@ -158,9 +158,9 @@ for the theory?
 
 import numpy as np
 
-from .correction import Correction
-from .data import PolarizedData
-from .wsolve import wsolve
+from ..pipeline import Correction
+from ..data import PolarizedData
+from ..wsolve import wsolve
 
 class PolarizationEfficiency(Correction):
     """
@@ -168,8 +168,10 @@ class PolarizationEfficiency(Correction):
     from a polarized direct beam measurement and apply it to measured data.
 
     E.g.,
+
+    ::
         eff = PolarizationEfficiency(beam)
-        data.apply(eff)
+        corrected = eff(data)
 
     """
 
@@ -245,7 +247,6 @@ class PolarizationEfficiency(Correction):
         """Apply the correction to the data"""
         assert data.ispolarized(), "need polarized data"
         assert data.isaligned(), "need aligned data"
-
         correct_efficiency(self, data)
 
     def __str__(self):
@@ -278,7 +279,7 @@ class PolarizationEfficiency(Correction):
         # Beam intensity normalization.
         beam = self._beam
         assert beam.isaligned(), "need aligned data"
-        pp,pm,mp,mm = beam.pp.v,beam.pm.v,beam.mp.v,beam.mm.v
+        pp,pm,mp,mm =  beam.pp.v,beam.pm.v,beam.mp.v,beam.mm.v
         Ic = (pp*mm-pm*mp) / (pp+mm-pm-mp)
         reject = (Ic!=Ic)  # Reject nothing initially
         if self.clip: reject |= clip(Ic, self.min_intensity, np.inf)
@@ -309,14 +310,15 @@ class PolarizationEfficiency(Correction):
         self.Ic, self.fp, self.ff, self.rp, self.rf = Ic,fp,ff,rp,rf
         self.reject = reject
 
-def clip(field,lo,hi,nanval=0.):
-    """clip the values to the range, returning the indices of the values
+def clip(field,low,high,nanval=0.):
+    """
+    Clip the values to the range, returning the indices of the values
     which were clipped.  Note that this modifies field in place. NaN
     values are clipped to the nanval default.
     """
     idx = np.isnan(field); field[idx] = nanval; reject = idx
-    idx = field<lo;       field[idx] = lo;     reject |= idx
-    idx = field>hi;       field[idx] = hi;     reject |= idx
+    idx = field<low;       field[idx] = low;    reject |= idx
+    idx = field>high;      field[idx] = high;   reject |= idx
     return reject
 
 def correct_efficiency(eff, data, spinflip=True):
@@ -390,12 +392,12 @@ def correct_efficiency(eff, data, spinflip=True):
     else:
         data.reject = reject
 
+
 def demo():
-    from .examples import e3a12 as dataset
+    from ..examples import e3a12 as dataset
     eff = PolarizationEfficiency(beam=dataset.slits())
     for attr in ["Ic","fp","rp","ff","rf"]:
         print attr,getattr(eff,attr)
-    data = dataset.spec()
-    data.apply(eff)
+    data = dataset.spec() | eff
 
 if __name__ == "__main__": demo()

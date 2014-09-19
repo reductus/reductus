@@ -6,7 +6,8 @@ Data file reader for NCNR NG-7 data.
 
 import numpy as np
 
-from . import icpformat, refldata, properties, qxqz
+from . import icpformat
+from .. import refldata, properties, qxqz
 
 
 # Instrument parameters

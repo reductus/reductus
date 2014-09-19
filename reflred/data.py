@@ -71,9 +71,9 @@ class Data(object):
 
     Note: for reflectivity the natural dimensions are x='Qz',y='Qx',z='Qy'
     """
-    _x,_xedges,dx = None,None,None
-    _y,_yedges,dy = None,None,None
-    _z,_zedges,dz = None,None,None
+    x,dx = None,None
+    y,dy = None,None
+    z,dz = None,None
     v,variance = None,None
     xlabel,xunits='x',None
     ylabel,yunits='y',None
@@ -85,39 +85,21 @@ class Data(object):
     def _setdv(self,dv): self.variance = dv**2
     dv = property(_getdv,_setdv,'1-sigma uncertainty')
 
-    # Store centers and retrieve edges
-    def _getx(self): return self._x
-    def _setx(self,t):
-        self._x = t
-        self._xedges = edges_from_centers(t)
-    x = property(_getx,_setx,'x centers')
-    def _gety(self): return self._y
-    def _sety(self,t):
-        self._y = t
-        self._yedges = edges_from_centers(t)
-    y = property(_gety,_sety,'y centers')
-    def _getz(self): return self._x
-    def _setz(self,t):
-        self._z = t
-        self._zedges = edges_from_centers(t)
-    z = property(_getz,_setz,'z centers')
-
-
     # Store edges and retrieve centers
-    def _getxedges(self): return self._xedges
+    def _getxedges(self):
+        return edges_from_centers(self.x)
     def _setxedges(self,t):
-        self._x = centers_from_edges(t)
-        self._xedges = t
+        self.x = centers_from_edges(t)
     xedges = property(_getxedges,_setxedges,'x edges')
-    def _getyedges(self): return self._yedges
+    def _getyedges(self):
+        return edges_from_centers(self.y)
     def _setyedges(self,t):
-        self._y = centers_from_edges(t)
-        self._yedges = t
+        self.y = centers_from_edges(t)
     yedges = property(_getyedges,_setyedges,'y edges')
-    def _getzedges(self): return self._zedges
+    def _getzedges(self):
+        return edges_from_centers(self.z)
     def _setzedges(self,t):
-        self._z = centers_from_edges(t)
-        self._zedges = t
+        self.z = centers_from_edges(t)
     zedges = property(_getzedges,_setzedges,'z edges')
 
     # Set attributes on initialization
@@ -125,16 +107,17 @@ class Data(object):
         self.messages = []
         for k,v in kw.iteritems(): setattr(self,k,v)
 
-    def summary(self):
-        """Return a text description of the contents of data"""
-        return dict2text(self.prop.__dict__)
-
     def log(self,msg):
         """Record corrections that have been applied to the data"""
         self.messages.append(msg)
 
     def __str__(self):
         return "Data(%s)"%(dims(self.v))
+
+    def interp(self, x):
+        v = np.interp(self.x, self.v, x)
+        dv = np.sqrt(np.interp(self.x, self.dv**2, x))
+        return v,dv
 
 class PolarizedData(object):
     """
@@ -156,7 +139,10 @@ class PolarizedData(object):
     def set(self,**kw):
         """Set a number of attributes simultaneously"""
         for k,v in kw.iteritems():
-            if hasattr(self,k): setattr(self,k,v)
+            if hasattr(self,k):
+                setattr(self,k,v)
+            else:
+                raise AttributeError("could not set %r in PolarizedData"%k)
 
     def __str__(self):
         return "\n".join(["++"+str(self.pp),"--"+str(self.mm),
@@ -177,27 +163,31 @@ class PolarizedData(object):
 
     def spin_asymmetry(self):
         """
-        Return the spin asymmetry for the pp and mm crosssections.
+        Return the spin asymmetry for the pp and mm cross sections.
         This is a Data object with one data line.
 
         TODO: support multidimensional data
         """
-        if self.isaligned():
+        if (len(self.pp.x) == len(self.mm.x)
+            and np.linalg.norm((self.pp.x - self.mm.x)/self.pp.dx) < tol):
+            x = self.pp.x
+            dx = self.pp.dx
             pp, Vpp = self.pp.v, self.pp.variance
             mm, Vmm = self.mm.v, self.mm.variance
         else:
             # TODO: implement matching and interpolation
             x = match_ordinal(self.pp,self.mm)
-            pp, Vpp = np.interp(x,self.pp)
-            mm, Vmm = np.interp(x,self.mm)
+            pp, dpp = self.pp.interp(x)
+            mm, dmm = self.mm.interp(x)
         v = (pp-mm)/(pp+mm)
-        V = v**2 * ( (1/(pp-mm) + 1/(pp+mm))**2 * Vpp
-                     + (1/(pp-mm) + 1/(pp+mm))**2 * Vmm )
-        result = Data(x,v,variance=V,
+        V = v**2 * ( (1/(pp-mm) + 1/(pp+mm))**2 * dpp**2
+                     + (1/(pp-mm) + 1/(pp+mm))**2 * dmm**2 )
+        result = Data(x=x,v=v,variance=V,
                       xlabel=self.xlabel, xunits=self.xunits,
                       vlabel="Spin asymmetry", vunits=None)
         return result
 
+# ======================== Sample data ============================
 def refl(n=100,noise=0.02):
     """
     Example 1D data: fresnel reflectivity for neutrons off silicon

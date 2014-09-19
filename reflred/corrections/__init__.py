@@ -47,3 +47,7 @@ def area_correction(*args, **kw):
     """Detector area correction from file"""
     from .areacor import AreaCorrection
     return AreaCorrection(*args,**kw)
+
+def BH_area_correction(*args, **kw):
+    from .bh_areacor import BH_area_correction
+    return BH_area_correction(*args, **kw)

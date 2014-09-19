@@ -11,6 +11,33 @@ from __future__ import division  # Get true division
 
 import numpy as np
 
+def interp(X,Xp,Fp,varFp,left=None,right=None):
+    """
+    Linear interpolation of x points into points (xk,fk +/- dfk).
+
+    xp is assumed to be monotonically increasing.  The interpolated
+    value is undefined at duplicate points.
+
+    left is (value,variance) to use for points before the range of xp, or
+    None for the initial value.
+
+    right is (value,variance) to use for points after the range of xp, or
+    None for the final value.
+    """
+    idx = np.searchsorted(Xp[1:-1], X, side="right")
+    # Support repeated values in Xp, which will lead to 0/0 errors if the
+    # interpolated point is one of the repeated values.
+    p = (Xp[idx+1]-X)/(Xp[idx+1]-Xp[idx])
+    F = p*Fp[idx] + (1-p)*Fp[idx+1]
+    varF = p**2*varFp[idx] + (1-p)**2*varFp[idx+1]
+    #print p,F,varF,idx
+    if left is None: left = Fp[0],varFp[0]
+    if right is None: right = Fp[-1],varFp[-1]
+    F[X<Xp[0]], varF[X<Xp[0]] = left
+    F[X>Xp[-1]], varF[X>Xp[-1]] = right
+
+    return F, varF
+
 def div(X,varX, Y,varY):
     """Division with error propagation"""
     # Direct algorithm:
@@ -65,6 +92,24 @@ def log(X,varX):
     varZ = varX / X**2
     return Z,varZ
 
+def sin(X,varX):
+    return np.sin(X), varX*np.cos(X)**2
+def cos(X,varX):
+    return np.cos(X), varX*np.sin(X)**2
+def tan(X,varX):
+    return np.tan(X), varX*np.sec(X)**2
+def arcsin(X,varX):
+    return np.arcsin(x), varX/(1-X**2)
+def arccos(X,varX):
+    return np.arccos(x), varX/(1-X**2)
+def arctan(X,varX):
+    return np.arctan(X), varX/(1+X**2)**2
+
+def arctan2(X,varX, Y,varY):
+    Z = np.arctan2(X,Y)
+    varZ = div(X,varX, Y,varY)/(1+(X/Y)**2)**2
+    return Z,varZ
+
 # Confirm this formula before using it
 # def pow(X,varX, Y,varY):
 #    Z = X**Y
@@ -84,6 +129,24 @@ def pow(X,varX,n):
     varZ *= Z
     varZ *= Z
     varZ *= n**2
+    return Z, varZ
+
+def pow2(X,varX, Y,varY):
+    """X**Y with error propagation"""
+    # Direct algorithm
+    #   Z = X**Y
+    #   varZ = Z**2 * ((Y*varX/X)**2 + (log(X)*varY)**2)
+    Z = X**Y
+    varZ = varX/X
+    varZ *= Y
+    varZ *= varZ
+    T = np.log(X)
+    T *= varY
+    T *= T
+    varZ += T
+    del T
+    varZ *= Z
+    varZ *= Z
     return Z, varZ
 
 def div_inplace(X,varX, Y,varY):
@@ -143,3 +206,21 @@ def pow_inplace(X,varX,n):
     varX *= X     # varX now has varX/X**2 * Z**2
     varX *= n**2  # varX now has varZ
     return X,varX
+
+def pow2_inplace(X,varX, Y,varY):
+    """X**Y with error propagation"""
+    # Direct algorithm
+    #   Z = X**Y
+    #   varZ = Z**2 * ((Y*varX/X)**2 + (log(X)*varY)**2)
+    varX /= X
+    varX *= Y
+    varX *= varX # varX now has (Y*varX/X)**2
+    T = np.log(X)
+    T *= varY
+    T *= T
+    varX += T # varX now has (Y*varX/X)**2 + (log(X)*varY)**2
+    del T
+    X **= Y   # X now has Z = X**Y
+    varX *= X
+    varX *= X # varX now has varZ
+    return X, varX

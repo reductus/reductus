@@ -10,15 +10,15 @@ Create and apply the filter::
 
     from reflred.corrections import smooth
     ...
-    data.apply(smooth(degree=2,span=12))
+    data | smooth(degree=2,span=12)
 
 """
 __all__ = ['Smooth']
 
 import numpy as np
 
-from .correction import Correction
-from .wsolve import wpolyfit
+from ..pipeline import Correction
+from ..wsolve import wpolyfit
 
 
 class Smooth(Correction):
@@ -30,19 +30,19 @@ class Smooth(Correction):
     smooth the data.  The window size must be odd.
     """
 
+    name = "smooth"
+
     properties = ['degree','span']
     degree = 2
     """Polynomial order for smoothing"""
     span = 11
     """Number of points used to fit smoothing polynomial"""
 
-    def __init__(self, **kw):
+    def __init__(self, degree=2, span=11):
         """
         Define the smoothing polynomial.
         """
-        for k,v in kw.iteritems():
-            assert hasattr(self,k), "No %s in %s"%(k,self.__class__.__name__)
-            setattr(self,k,v)
+        self.degree, self.span = degree, span
         assert self.span%2==1, "Span must be odd"
 
     def apply(self, data):
@@ -91,10 +91,10 @@ def smooth(x, y, dy=None, degree=2, span=5):
 
 def demo():
     import pylab
-    from .examples import e3a12 as dataset
+    from ..examples import e3a12 as dataset
     data = dataset.slits()
     pylab.errorbar(data.pp.x,data.pp.v,data.pp.dv,fmt='xg')
-    data.apply(Smooth(degree=2,span=7))
+    data |= Smooth(degree=2,span=7)
     pylab.semilogy(data.pp.x, data.pp.v, '-g',
                    data.pp.x, data.pp.v-data.pp.dv, '-.g',
                    data.pp.x, data.pp.v+data.pp.dv, '-.g')
