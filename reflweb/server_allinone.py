@@ -95,6 +95,10 @@ class JSONRPCRequestHandler(SimpleJSONRPCRequestHandler):
             self.send_header("Content-type", "text/css")
         elif docname.endswith('.json'):
             self.send_header("Content-type", "application/json")
+        elif docname.endswith('.gif'):
+            self.send_header("Content-type", "image/gif")
+        elif docname.endswith('.png'):
+            self.send_header("Content-type", "image/png")
         else:
             self.send_header("Content-type", "text/html")
         self.send_header("Content-length", str(len(response)))
