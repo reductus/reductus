@@ -2,9 +2,12 @@ import sys
 import BaseHTTPServer
 from SimpleHTTPServer import SimpleHTTPRequestHandler
 from jsonrpclib.SimpleJSONRPCServer import SimpleJSONRPCServer, SimpleJSONRPCRequestHandler
+import jsonrpclib.config
+
 import multiprocessing
 import webbrowser
 
+jsonrpclib.config.use_jsonclass = False
 HandlerClass = SimpleHTTPRequestHandler
 ServerClass  = BaseHTTPServer.HTTPServer
 Protocol     = "HTTP/1.0"
@@ -64,7 +67,6 @@ import h5py, os, simplejson
 
 def categorize_files(path='./'):
     fns = os.listdir(path)
-    print fns
     fns.sort()
     categories = {\
         'Specular': 'SPEC',
@@ -85,14 +87,93 @@ def categorize_files(path='./'):
                 else:
                     _scanType = 'uncategorized'
                 output[_name].setdefault(_scanType, {})
-                output[_name][_scanType]['%d:%s' % (_num, entry)] = {'filename': fn}
+                output[_name][_scanType]['%d:%s' % (_num, entry)] = {'filename': fn, 'entry': entry}
         except:
             pass
             
     #return simplejson.dumps(output)
     return output
-
+    
+def get_jstree(path='./'):
+    files = categorize_files(path)
+    categories = ['SPEC','BG','ROCK','SLIT','uncategorized']
+    output = {'core': {'data': []}}
+    sample_names = files.keys()
+    for sample in sample_names:
+        samp_out = {"text": sample}
+        samp_out['children'] = []
+        for cat in categories:
+            if not cat in files[sample]: break
+            cat_out = {"text": cat, "children": []}
+            item_keys = files[sample][cat].keys()
+            item_keys.sort()
+            for child in item_keys:
+                cat_out['children'].append({"text": child, "extra_data": {
+                    "filename": files[sample][cat][child]['filename'],
+                    "entry": files[sample][cat][child]['entry'],
+                    "path": path}});
+            samp_out['children'].append(cat_out)
+        output['core']['data'].append(samp_out)
+    return output 
+        
+def get_plottable(file_and_entry):
+    """ file_and_entry should be list of dicts:
+    [{ "filename": fn1, "entry": entryname1 }, { "filename": fn2, ...} ...]
+    """
+    print file_and_entry
+    fig = {
+        "title": "plot",
+        "type": "1d",
+        "data": [],
+        "options": {
+            "axes": {"xaxis": {}, "yaxis": {}},
+            "series": [],
+            },
+        }
+    for item in file_and_entry:
+        f = h5py.File(item['filename'])
+        DAS = f[item['entry']]['DAS_logs']
+        print DAS
+        xAxis = DAS.get('trajectoryData/xAxis')
+        if xAxis is not None:
+            xAxis = xAxis.value[0].replace('.', '/')
+        if xAxis in DAS.keys(): 
+            # then it's a device name: convert to primary node
+            xAxis = xAxis + "/" + DAS[xAxis].attrs['primary']
+        if not xAxis in DAS.keys():
+            xAxis = DAS.get('trajectory/defaultXAxisPlotNode', "").value[0].replace('.', '/')
+        if xAxis == "":
+            xAxis = DAS['trajectory/scannedVariables'].value[0].split()[0].replace('.', '/')
+        
+        yAxis=DAS.get('trajectory/defaultYAxisPlotNode', "").value[0].replace('.', '/')
+        if yAxis == "":
+            yAxis = "counter/liveROI"
+        yAxisChannel = DAS.get('trajectory/defaultYAxisPlotChannel', -1)
+        fig_x = fig['options']['axes']['xaxis']
+        fig_y = fig['options']['axes']['yaxis']
+        if "label" in fig_x:
+            if not fig_x['label'] == xAxis:
+                raise Exception("axes do not match")
+        else:
+            fig_x['label'] = xAxis
+        if "label" in fig_y:
+            if not fig_y['label'] == yAxis:
+                raise Exception("axes do not match")
+        else: 
+            fig_y['label'] = yAxis
+        fig['options']['series'].append({"label": item['filename'] + ':' + item['entry']})
+        x = DAS[xAxis].value.astype('float')
+        y = DAS[yAxis].value.astype('float')
+        xy = [[xx,yy] for xx, yy in zip(x,y)]
+        fig['data'].append(xy)
+        
+    fig['options']['axes']['xaxis']['label'] = fig['options']['axes']['xaxis']['label'].replace('/', '.')
+    fig['options']['axes']['yaxis']['label'] = fig['options']['axes']['yaxis']['label'].replace('/', '.')
+    return fig
+    
 server.register_function(categorize_files)
+server.register_function(get_plottable)
+server.register_function(get_jstree)
 server.serve_forever()
 print "done serving rpc forever"
 httpd_process.terminate()

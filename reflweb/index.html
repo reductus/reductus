@@ -4,10 +4,36 @@
         <script type="text/javascript" src="js/jquery-latest.js"></script>
         <script type="text/javascript" src="js/jquery-ui-latest/jquery-ui.min.js"></script>
         <script type="text/javascript" src="js/jquery.jsonrpc.js"></script>
+        <script type="text/javascript" src="js/jstree/dist/jstree.min.js"></script>
+        <script type="text/javascript" src="js/jquery.layout-latest.js"></script>
+        
+        <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot/jquery.jqplot.min.js"></script>
+        <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot/plugins/jqplot.canvasTextRenderer.min.js"></script>
+        <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot/plugins/jqplot.canvasAxisLabelRenderer.min.js"></script>
+        <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot/plugins/jqplot.canvasAxisTickRenderer.min.js"></script>
+        <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot/plugins/jqplot.cursor.min.js"></script>
+        
+        <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.errorbarRenderer.js"></script>
+        <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.InteractiveLegend.js"></script>
+        <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.FixedAspect.js"></script>
+        <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.GracefulAxisRenderer.js"></script>
+        <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.heatmapRenderer.js"></script>
+        <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.colorbarRenderer.js"></script>
+        <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.set_transform.js"></script>
+        
+        <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/interactors/interactors.js"></script>
+        <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/interactors/interactors_plugin_base.js"></script>
+        <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/interactors/rectangle_interactor_plugin.js"></script>
+        
+        <link rel="stylesheet" href="css/layout-default-latest.css" />
+        <link rel="stylesheet" href="js/jstree/docs/assets/bootstrap/css/bootstrap.min.css">
+        <link rel="stylesheet" href="js/jstree/dist/themes/default/style.min.css"/>
         <link rel="stylesheet" href="js/jquery-ui-latest/jquery-ui.min.css" />
         <link rel="stylesheet" href="js/jquery-ui-latest/jquery-ui.theme.min.css" />
         <link rel="stylesheet" href="js/jquery-ui-latest/jquery-ui.structure.min.css" />
         <script type="text/javascript">
+            SORT_KEYS = true;
+            
             function qs() {
                 var qsParm = {};
                 var query = window.location.search.substring(1);
@@ -23,10 +49,111 @@
                 return qsParm;
             }
             
+            function type (object) {
+                if (object === null) {
+                    return 'null';
+                }
+                if (object === undefined) {
+                    return 'undefined';
+                }
+                if ((object instanceof Number) || (typeof object === 'number')) {
+                    return 'number';
+                }
+                if ((object instanceof String) || (typeof object === 'string')) {
+                    return 'string';
+                }
+                if ((object instanceof Boolean) || (typeof object === 'boolean')) {
+                    return 'boolean';
+                }
+                if ((object instanceof RegExp) || (typeof object === 'regexp')) {
+                    return 'regexp';
+                }
+                if (Array.isArray(object)) {
+                    return 'array';
+                }
+
+                return 'object';
+            };
+            
+            function json_to_jstree(obj, root) {
+                var simplenodes = {'string': true, 'boolean': true, 'number': true, 'null': true}
+                if (root == true) {
+                    return {'core': {'data': json_to_jstree(obj, false)}}
+                }
+                
+                var out;
+                if (type(obj) === 'object') {
+                    var keys = Object.keys(obj);
+                    var val, text;
+                    if (SORT_KEYS) { keys.sort(function(a, b){return parseFloat(a)-parseFloat(b)}) }
+                    out = [];
+                    for (var i=0; i<keys.length; i++) {
+                        val = obj[keys[i]];
+                        if (type(val) in simplenodes) {
+                            out.push({'text': '<b>'+ keys[i] + ':</b> ' + String(val), 'icon': "glyphicon glyphicon-chevron-right"});
+                        } else {
+                            out.push({'text': keys[i], 'children': json_to_jstree(obj[keys[i]]) });
+                        }
+                    }        
+                }
+                else if( type(obj) === 'array' ) {
+                    out = [];
+                    for (var i=0; i<obj.length; i++) {
+                        out.push(json_to_jstree(obj[i]));
+                    }
+                }
+                else if( type(obj) === 'string') {
+                    out = {'text': obj, 'icon': "glyphicon glyphicon-chevron-right"};
+                }
+                else if( type(obj) === 'number') {
+                    out = {'text': obj.toString(), 'icon': "glyphicon glyphicon-chevron-right" };
+                }
+                else { 
+                    out = {'text': 'unknown'};
+                    //alert( 'not a known type: ', String(obj) );
+                }
+                return out;
+            }
+            
+            standard_plot = {
+                options: {
+                    seriesDefaults: {
+                        // update options with values from checkboxes:
+                        showLine: true,
+                        showMarker: true,
+                        // 
+                        shadow: false, 
+                        markerOptions: {shadow: false, size: 8},
+                        breakOnNull: true, 
+                        label: "series"
+                    },
+                    cursor: { show: true,  zoom: true, clickReset: true, useAxesFormatters: false},
+                    legend: {
+                        show: true,
+                        parent: this,
+                        placement: 'ne',
+                        renderer: $.jqplot.InteractiveLegendRenderer
+                    },
+                    grid: {shadow: false},
+                    sortData: false
+                }
+            }
+            
             scan_directory = function(event, path) {
                 var path = path || $('#data_path').val();
                 console.log(path);
-                $.jsonRPC.request('categorize_files', { params: [path], success: function(result) {console.log('success!: ', result)}, error: function(result) {console.log('error: ', result)}});
+                //$.jsonRPC.request('categorize_files', { 
+                $.jsonRPC.request('get_jstree', {
+                    params: [path], 
+                    success: function(result) {
+                        file_list = result.result;
+                        //tree_version = json_to_jstree(file_list, true);
+                        tree_version = file_list;
+                        console.log(tree_version)
+                        $('#file_tree').jstree(tree_version);
+                    }, 
+                    error: function(result) {console.log('error: ', result)}
+                });
             }
             window.onload = function() {
                 var qsParm = qs();
@@ -36,19 +163,47 @@
                   namespace: ''
                 });
                 $('#scan_directory').click( scan_directory );
+                
+                var layout = $('body').layout({
+			        west__size:			300
+		        ,	east__size:			0
+		        ,   south__size:        "auto"
+			        // RESIZE Accordion widget when panes resize
+		        ,	west__onresize:		$.layout.callbacks.resizePaneAccordions
+		        ,	east__onresize:		$.layout.callbacks.resizePaneAccordions
+		        ,	south__onresize:	$.layout.callbacks.resizePaneAccordions
+		        });
+                $('#file_tree')
+                  // listen for event
+                  .on('select_node.jstree', function (e, data) {
+                    var i, j, r = [], params = [];
+                    for(i = 0, j = data.selected.length; i < j; i++) {
+                        r.push(data.instance.get_node(data.selected[i]).text);
+                        console.log(data.instance.get_node(data.selected[i]));
+                    
+                        //$('#plot_div').html('Selected: ' + r.join(', '));
+                        var node = data.instance.get_node(data.selected[i]);
+                        var path = node.original.extra_data.path;
+                        var filename = node.original.extra_data.filename;
+                        var entry = node.original.extra_data.entry;
+                        params.push({filename:path + "/" + filename, entry:entry});
+                    }
+                    $.jsonRPC.request('get_plottable', { 
+                        params: [params],
+                        success: function(result) { var toPlot = $.extend(true, result.result, standard_plot); $('#plot_div').empty(); $.jqplot('plot_div', result.result.data, result.result.options) },
+                        error: function(result) { console.log(result); }
+                    });  
+                  });
             }
         </script>
     </head>
     <body>
-        <div id="main">
-            Hello
+        <div id="top_panel" class="ui-layout-north">
+            <button id="scan_directory">Scan Directory</button>
+            <input id="data_path" type="text" width="20" value="testdata"></input>
         </div>
-        <ul>
-            <li>This is a list item</li>
-            <li>So is this</li>
-        </ul>
-        <button id="scan_directory">Scan Directory</button>
-        <input id="data_path" type="text" width="20" value="./"></input>
+        <div id="file_tree" class="ui-layout-west">files</div>
+        <div id="plot_div" class="ui-layout-center"></div>
     </body>
 </html>
 
