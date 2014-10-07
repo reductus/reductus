@@ -1,7 +1,9 @@
-import sys
+import sys, os
 import BaseHTTPServer
 from SimpleHTTPServer import SimpleHTTPRequestHandler
 from jsonrpclib.SimpleJSONRPCServer import SimpleJSONRPCServer, SimpleJSONRPCRequestHandler
+import urlparse
+
 import jsonrpclib.config
 
 import multiprocessing
@@ -16,7 +18,7 @@ if sys.argv[1:]:
     port = int(sys.argv[1])
 else:
     port = 8000
-server_address = ('localhost', 0 ) # get next open socket
+server_address = ('localhost', 8001) # get next open socket
 
 HandlerClass.protocol_version = Protocol
 httpd = ServerClass(server_address, HandlerClass)
@@ -26,8 +28,10 @@ print "http port: ", http_port
 sa = httpd.socket.getsockname()
 print "Serving HTTP on", sa[0], "port", sa[1], "..."
 # httpd.serve_forever()
-http_process = multiprocessing.Process(target=httpd.serve_forever)
-http_process.start()
+#http_process = multiprocessing.Process(target=httpd.serve_forever)
+#http_process.start()
+
+currdir = os.path.dirname( __file__ )
 
 class JSONRPCRequestHandler(SimpleJSONRPCRequestHandler):
     """JSON-RPC and documentation request handler class.
@@ -55,13 +59,52 @@ class JSONRPCRequestHandler(SimpleJSONRPCRequestHandler):
     def end_headers(self):
         self.send_header("Access-Control-Allow-Headers", 
                          "Origin, X-Requested-With, Content-Type, Accept")
-        self.send_header("Access-Control-Allow-Origin", "http://localhost:%d" % (http_port,))
+        self.send_header("Access-Control-Allow-Origin", "http://localhost:%d" % (server_address[1],))
         SimpleJSONRPCRequestHandler.end_headers(self)
-       
+        
+    def do_GET(self):
+        """Handles the HTTP GET request.
+
+        Interpret all HTTP GET requests as requests for static content.
+        """
+        # Check that the path is legal
+        #if not self.is_rpc_path_valid():
+        #    self.report_404()
+        #    return
+
+        # Parse query data & params to find out what was passed
+        parsedParams = urlparse.urlparse(self.path)
+        ## don't need the parsed GET query, at least not yet.
+        #queryParsed = urlparse.parse_qs(parsedParams.query)
+        #docname = os.path.basename(parsedParams.path)
+        docname = parsedParams.path.lstrip('/')
+        print docname
+        docpath = os.path.join(currdir, docname)
+        if (docname == "" or docname == "/"):
+            response = dirlisting(os.path.join(currdir, 'static'))
+        elif (os.path.exists(docpath)):
+            response = open(docpath, 'r').read()
+        else:
+            self.report_404()
+            return
+        self.send_response(200)
+        self.send_header('Access-Control-Allow-Origin', '*')
+        if docname.endswith('.js'):
+            self.send_header("Content-type", "text/javascript")
+        elif docname.endswith('.css'):
+            self.send_header("Content-type", "text/css")
+        elif docname.endswith('.json'):
+            self.send_header("Content-type", "application/json")
+        else:
+            self.send_header("Content-type", "text/html")
+        self.send_header("Content-length", str(len(response)))
+        self.end_headers()
+        self.wfile.write(response)
+    
 
 server = SimpleJSONRPCServer(('localhost', 0), encoding='utf8', requestHandler=JSONRPCRequestHandler)
 rpc_port = server.socket.getsockname()[1]
-webbrowser.open_new_tab('http://localhost:%d/index.html?rpc_port=%d' % (http_port, rpc_port))
+webbrowser.open_new_tab('http://localhost:%d/index_allinone.html' % (rpc_port,))
 server.register_function(pow)
 server.register_function(lambda x,y: x+y, 'add')
 server.register_function(lambda x: x, 'ping')
