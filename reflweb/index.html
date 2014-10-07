@@ -1,5 +1,6 @@
 <html>
     <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
         <title>Reflectometry reduction</title>
         <script type="text/javascript" src="js/jquery-latest.js"></script>
         <script type="text/javascript" src="js/jquery-ui-latest/jquery-ui.min.js"></script>
@@ -116,7 +117,16 @@
             }
             
             standard_plot = {
-                options: {
+                options: { 
+                    axesDefaults: {
+                        renderer: $.jqplot.GracefulAxisRenderer,
+                        labelRenderer: $.jqplot.CanvasAxisLabelRenderer,
+                        tickRenderer: $.jqplot.CanvasAxisTickRenderer,
+                        tickOptions: {
+                            formatString: "%.2g",
+                            _styles: {right:2}
+                        }                    
+                    },
                     seriesDefaults: {
                         // update options with values from checkboxes:
                         showLine: true,
@@ -135,32 +145,97 @@
                         renderer: $.jqplot.InteractiveLegendRenderer
                     },
                     grid: {shadow: false},
-                    sortData: false
+                    sortData: false,
+                    transform: {'yaxis': 'log'}
                 }
             }
             
             scan_directory = function(event, path) {
                 var path = path || $('#data_path').val();
-                console.log(path);
                 //$.jsonRPC.request('categorize_files', { 
-                $.jsonRPC.request('get_jstree', {
+                //$.jsonRPC.request('get_jstree', {
+                $.jsonRPC.request('get_file_metadata', {
                     params: [path], 
                     success: function(result) {
-                        file_list = result.result;
+                        //file_list = result.result;
                         //tree_version = json_to_jstree(file_list, true);
-                        tree_version = file_list;
-                        console.log(tree_version)
+                        var metadata = result.result;
+                        var categorized_files = categorize_files(metadata);
+                        var tree_version = make_jstree(categorized_files, true);
                         $('#file_tree').jstree(tree_version);
                     }, 
                     error: function(result) {console.log('error: ', result)}
                 });
             }
+            
+            categorize_files = function(metadata) {
+                // metadata is list of file information, 
+                // [{'filename': ...}, {'filename': ...} ...]
+                
+                var output = {}, item, name, num, scanType, entry, newid, d;
+                for (var i=0; i<metadata.length; i++) {
+                    item = metadata[i];
+                    d = {};
+                    if (!(item.sample_name in output)) {
+                        output[item.sample_name] = {};
+                    }
+                    if (!(item.scanType in output[item.sample_name])) {
+                        output[item.sample_name][item.scanType] = {};
+                    }
+                    newid = item.fileNum + ":" + item.entry
+                    output[item.sample_name][item.scanType][newid] = {path: item.path, filename: item.filename, entry: item.entry};
+                }
+                return output
+            }
+            
+            make_jstree = function(categorized, sort_keys) {
+                // categorized is a JS object with structure sample name -> scanType -> [filenum + entryname]  
+                // [{'filename': ...}, {'filename': ...} ...]
+                var output = {'core': {'data': []}};
+                var names = Object.keys(categorized);
+                if (sort_keys) { names.sort(); }
+                var ndata, name;
+                var scanTypes, scanType, sdata;
+                var entries, entry, edata;
+                for (var i=0; i<names.length; i++) {
+                    name = names[i];
+                    namedata = categorized[name];
+                    var n_out = {"text": name, "children": []};
+                    scanTypes = Object.keys(namedata);
+                    if (sort_keys) { scanTypes.sort(); }
+                    for (var j=0; j<scanTypes.length; j++) {
+                        scanType = scanTypes[j];
+                        sdata = namedata[scanType];
+                        var s_out = {"text": scanType, "children": []};
+                        entries = Object.keys(sdata);                        
+                        for (var k=0; k<entries.length; k++) {
+                            entry = entries[k];
+                            edata = sdata[entry];
+                            var e_out = {
+                                "text": entry, 
+                                "icon": "glyphicon glyphicon-chevron-right", 
+                                "a_attr": {
+                                    "filename": edata.filename,
+                                    "path": edata.path,
+                                    "entry": edata.entry
+                                }        
+                            }
+                            s_out.children.push(e_out);
+                        }
+                        n_out.children.push(s_out);
+                    }
+                    output.core.data.push(n_out);
+                }
+                return output;
+            }
+            
             window.onload = function() {
                 var qsParm = qs();
                 var rpc_port = qsParm.rpc_port || 8080;
                 $.jsonRPC.setup({
                   endPoint: 'http://localhost:' + rpc_port + '/RPC2',
-                  namespace: ''
+                  namespace: '',
+                  cache: false
                 });
                 $('#scan_directory').click( scan_directory );
                 
@@ -179,21 +254,28 @@
                     var i, j, r = [], params = [];
                     for(i = 0, j = data.selected.length; i < j; i++) {
                         r.push(data.instance.get_node(data.selected[i]).text);
-                        console.log(data.instance.get_node(data.selected[i]));
                     
                         //$('#plot_div').html('Selected: ' + r.join(', '));
                         var node = data.instance.get_node(data.selected[i]);
-                        var path = node.original.extra_data.path;
-                        var filename = node.original.extra_data.filename;
-                        var entry = node.original.extra_data.entry;
-                        params.push({filename:path + "/" + filename, entry:entry});
+                        if ('a_attr' in node && 'filename' in node.a_attr) {
+                            var path = node.a_attr.path;
+                            var filename = node.a_attr.filename;
+                            var entry = node.a_attr.entry;
+                            params.push({filename:path + "/" + filename, entry:entry});
+                        }
                     }
-                    $.jsonRPC.request('get_plottable', { 
-                        params: [params],
-                        success: function(result) { var toPlot = $.extend(true, result.result, standard_plot); $('#plot_div').empty(); $.jqplot('plot_div', result.result.data, result.result.options) },
-                        error: function(result) { console.log(result); }
-                    });  
-                  });
+                    if (params.length > 0) {
+                        $.jsonRPC.request('get_plottable', { 
+                            params: [params],
+                            success: function(result) { 
+                                var toPlot = $.extend(true, result.result, standard_plot); 
+                                $('#plot_div').empty(); 
+                                $.jqplot('plot_div', result.result.data, result.result.options) 
+                            },
+                            error: function(result) { console.log(result); }
+                        });
+                    }  
+                });
             }
         </script>
     </head>

@@ -40,14 +40,16 @@ class JSONRPCRequestHandler(SimpleJSONRPCRequestHandler):
     
     Put all static files to be served in 'static' subdirectory.
     """
-    rpc_paths = ['/', '/RPC2']
+    #rpc_paths = ('/', '/RPC2')
+    rpc_paths = () # accept all
     
-    def do_OPTIONS(self):           
+    def do_OPTIONS(self):
         self.send_response(200, "ok")       
-        # self.send_header('Access-Control-Allow-Origin', 'http://localhost:8000')
-        self.send_header('Access-Control-Allow-Origin', "http://localhost:%d" % (http_port,))           
+        #self.send_header('Access-Control-Allow-Origin', 'http://localhost:8000')
+        #self.send_header('Access-Control-Allow-Origin', "http://localhost:%d" % (http_port,))           
         self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-        self.send_header("Access-Control-Allow-Headers", "X-Requested-With, Content-type")
+        self.end_headers()
+        self.connection.shutdown(0)
         
     # Add these headers to all responses
     def end_headers(self):
@@ -55,8 +57,9 @@ class JSONRPCRequestHandler(SimpleJSONRPCRequestHandler):
                          "Origin, X-Requested-With, Content-Type, Accept")
         self.send_header("Access-Control-Allow-Origin", "http://localhost:%d" % (http_port,))
         SimpleJSONRPCRequestHandler.end_headers(self)
+    
 
-server = SimpleJSONRPCServer(('localhost', 0), requestHandler=JSONRPCRequestHandler)
+server = SimpleJSONRPCServer(('localhost', 0), encoding='utf8', requestHandler=JSONRPCRequestHandler)
 rpc_port = server.socket.getsockname()[1]
 webbrowser.open_new_tab('http://localhost:%d/index.html?rpc_port=%d' % (http_port, rpc_port))
 server.register_function(pow)
@@ -93,7 +96,34 @@ def categorize_files(path='./'):
             
     #return simplejson.dumps(output)
     return output
-    
+
+def get_file_metadata(path='./'):
+    fns = os.listdir(path)
+    fns.sort()
+    metadata = []
+    for fn in fns:
+        try:
+            f = h5py.File(os.path.join(path, fn))
+            for entry in f.keys():
+                output = {}
+                _name = f[entry].get('DAS_logs/sample/name').value.flatten()[0]
+                output['sample_name'] = str(_name)
+                _num = f[entry].get('DAS_logs/trajectoryData/fileNum').value.flatten()[0]
+                output['fileNum'] = "%d" % (_num,)
+                _scanType = f[entry].get('DAS_logs/trajectoryData/_scanType')
+                if _scanType is not None:
+                    _scanType = _scanType.value.flatten()[0]
+                else:
+                    _scanType = 'uncategorized'
+                output['scanType'] = _scanType
+                output['filename'] = fn
+                output['path'] = path
+                output['entry'] = entry
+                metadata.append(output)
+        except:
+            pass
+    return metadata
+
 def get_jstree(path='./'):
     files = categorize_files(path)
     categories = ['SPEC','BG','ROCK','SLIT','uncategorized']
@@ -171,9 +201,10 @@ def get_plottable(file_and_entry):
     fig['options']['axes']['yaxis']['label'] = fig['options']['axes']['yaxis']['label'].replace('/', '.')
     return fig
     
-server.register_function(categorize_files)
+server.register_function(categorize_files) # deprecated
 server.register_function(get_plottable)
-server.register_function(get_jstree)
+server.register_function(get_jstree) # deprecated
+server.register_function(get_file_metadata)
 server.serve_forever()
 print "done serving rpc forever"
 httpd_process.terminate()
