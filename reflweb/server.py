@@ -167,10 +167,10 @@ def get_plottable(file_and_entry):
         xAxis = DAS.get('trajectoryData/xAxis')
         if xAxis is not None:
             xAxis = xAxis.value[0].replace('.', '/')
-        if xAxis in DAS.keys(): 
+        if xAxis in DAS.keys() and 'primary' in DAS[xAxis].attrs: 
             # then it's a device name: convert to primary node
             xAxis = xAxis + "/" + DAS[xAxis].attrs['primary']
-        if not xAxis in DAS.keys():
+        if not xAxis in DAS:
             xAxis = DAS.get('trajectory/defaultXAxisPlotNode', "").value[0].replace('.', '/')
         if xAxis == "":
             xAxis = DAS['trajectory/scannedVariables'].value[0].split()[0].replace('.', '/')

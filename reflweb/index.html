@@ -229,6 +229,14 @@
                 return output;
             }
             
+            dirHelper = "http://ncnr.nist.gov/instruments/magik/listftpfiles.php";
+            
+            getftp = function(path) {
+                $.post(dirHelper, {'pathlist': path}, function(r) { ftplist = r; console.log(r); });
+            }
+            
+            //$.post(dirHelper, {'pathlist': data_path}, updateFileBrowserPane("navigation", data_path));
+            
             window.onload = function() {
                 var qsParm = qs();
                 var rpc_port = qsParm.rpc_port || 8080;
