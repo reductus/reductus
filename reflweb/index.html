@@ -34,6 +34,8 @@
         <link rel="stylesheet" href="js/jquery-ui-latest/jquery-ui.structure.min.css" />
         <script type="text/javascript">
             SORT_KEYS = true;
+            ERRORBARS = false;
+            plots = {};
             
             function qs() {
                 var qsParm = {};
@@ -150,6 +152,33 @@
                 }
             }
             
+            function createTable(target, cols, numCells) {
+                // create a table with numCells in the target
+                var table = $('<table />', {'id': 'plot_table'});
+                $('#'+target).append(table);
+                var cells = 0;
+                for (var r=0; cells < numCells; r++) {
+                    var row = $('<tr />');
+                    table.append(row);
+                    for (var c=0; c<cols && cells < numCells; c++) {
+                        var cell = $('<td />', {'class': 'plotcell', 'id': 'cell' + (cells+1).toFixed()});
+                        cell.append($('<div />', {'id': 'plot'+(cells+1).toFixed(), 'class': 'plotdiv', 'plotnum': (cells+1).toFixed()}));
+                        var xtransform = $('<label />', {'class': 'transform', 'axis': 'xaxis'}).text('logX').append($('<input />', {'type': 'checkbox'}));
+                        cell.append(xtransform);
+                        var ytransform = $('<label />', {'class': 'transform', 'axis': 'yaxis'}).text('logY').append($('<input />', {'type': 'checkbox'}));
+                        cell.append(ytransform);
+                        var ztransform = $('<label />', {'class': 'transform', 'axis': 'zaxis'}).text('logZ').append($('<input />', {'type': 'checkbox'}));
+                        cell.append(ztransform);
+                        var showline = $('<label />',  {'class': 'showline'}).text('show line').append($('<input />', {'type': 'checkbox'}));
+                        cell.append(showline);
+                        var showmarker = $('<label />', {'class': 'showmarker'}).text('show points').append($('<input />', {'type': 'checkbox'}));
+                        cell.append(showmarker);
+                        row.append(cell);
+                        cells++;
+                    }
+                }
+            }
+            
             scan_directory = function(event, path) {
                 var path = path || $('#data_path').val();
                 //$.jsonRPC.request('categorize_files', { 
@@ -228,14 +257,143 @@
                 }
                 return output;
             }
-            
-            dirHelper = "http://ncnr.nist.gov/instruments/magik/listftpfiles.php";
-            
-            getftp = function(path) {
-                $.post(dirHelper, {'pathlist': path}, function(r) { ftplist = r; console.log(r); });
+                        
+            function updateTransform(ev) {
+                var logselected = ev.target.checked;
+                var axis = ev.target.parentElement.getAttribute('axis');
+                var transform = logselected? 'log' : 'lin';
+                var target = $(this).parent().parent().find('.jqplot-target')[0].id;
+                
+                var transformOpts = {transform: {}, seriesDefaults: {rendererOptions: {transform: null}}};
+                transformOpts.transform[axis] = transform;
+                transformOpts.seriesDefaults.rendererOptions.transform = transform;
+                $.extend(true, plots[target].options, transformOpts);
+                plots[target].replot(plots[target].options);
+                if (colorbars[target]) { 
+                    colorbars[target].series[0].parent_plot = plots[target].series[0];
+                    colorbars[target].series[0].set_transform(transform);
+                    colorbars[target].plugins._interactor.zoomMax() };
             }
             
-            //$.post(dirHelper, {'pathlist': data_path}, updateFileBrowserPane("navigation", data_path));
+            function updateShowLine(ev) {
+                var showline = ev.target.checked;
+                var target = $(this).parent().parent().find('.jqplot-target')[0].id;
+                var showLineOpts = {seriesDefaults: {showLine: showline}};
+                $.extend(true, plots[target].options, showLineOpts);
+                plots[target].replot(plots[target].options);
+            }
+            
+            function updateShowMarker(ev) {
+                var showmarker = ev.target.checked;
+                var target = $(this).parent().parent().find('.jqplot-target')[0].id;
+                var showMarkerOpts = {seriesDefaults: {showMarker: showmarker}};
+                $.extend(true, plots[target].options, showMarkerOpts);
+                plots[target].replot(plots[target].options);
+            }
+            
+            function showData(data, plotnum) {
+                $.extend(true, data.options, {
+                    axesDefaults: {
+                        renderer: $.jqplot.GracefulAxisRenderer,
+                        labelRenderer: $.jqplot.CanvasAxisLabelRenderer,
+                        tickRenderer: $.jqplot.CanvasAxisTickRenderer,
+                        tickOptions: {
+                            formatString: "%.2g",
+                            _styles: {right:2}
+                        }                    
+                    }
+                });
+                //var instr = data.metadata.instrument;
+                var i = parseInt(plotnum);
+                if (i>=0) {
+                    var cell_target = 'cell' + (plotnum).toFixed();
+                    var plot_target = 'plot' + (plotnum).toFixed();
+                    var xlogselected = $('#' + cell_target).find('.transform[axis=xaxis] input')[0].checked;
+                    var ylogselected = $('#' + cell_target).find('.transform[axis=yaxis] input')[0].checked;
+                    var zlogselected = $('#' + cell_target).find('.transform[axis=zaxis] input')[0].checked;
+                    var showLine = $('#' + cell_target).find('.showline input')[0].checked;
+                    var showMarker = $('#' + cell_target).find('.showmarker input')[0].checked;
+                    var xtransform = xlogselected? 'log' : 'lin';
+                    var ytransform = ylogselected? 'log' : 'lin';
+                    var ztransform = zlogselected? 'log' : 'lin';
+                    
+                    if (plot_target in plots && plots[plot_target].destroy) {
+                        plots[plot_target].destroy();
+                    }
+                    plots[plot_target] = null;
+                    if (data.type == '1d') {
+                        $('.showline').show();
+                        $('.showmarker').show();
+                        $('.transform[axis=xaxis]').show();
+                        $('.transform[axis=yaxis]').show();
+                        $('.transform[axis=zaxis]').hide();
+                        var plot_options = {
+                            title: data.title,
+                            transform: {
+                                xaxis: xtransform,
+                                yaxis: ytransform
+                            },
+                            seriesDefaults: {
+                                // update options with values from checkboxes:
+                                showLine: showLine,
+                                showMarker: showMarker,
+                                // 
+                                shadow: false, 
+                                markerOptions: {shadow: false, size: 8},
+                                breakOnNull: true, 
+                                label: "series"
+                            },
+                            cursor: { show: true,  zoom: true, clickReset: true, useAxesFormatters: false},
+                            legend: {
+                                show: true,
+                                parent: this,
+                                //placement: 'ne',
+                                renderer: $.jqplot.InteractiveLegendRenderer
+                            },
+                            grid: {shadow: false},
+                            sortData: false
+                        };
+                        
+                        if (ERRORBARS) {
+                            plot_options.seriesDefaults.renderer = $.jqplot.errorbarRenderer;
+                            plot_options.seriesDefaults.rendererOptions = {errorBar: true};
+                        }
+                        $.extend(true, data.options, plot_options);
+                        plots[plot_target] = $.jqplot(plot_target, data.data, data.options);
+                        
+                        plots[plot_target].legend.handleClick = function(e) {
+                            var series_num = e.data.series_num || 0;
+                            plots[plot_target].series[series_num].show = (!(plots[plot_target].series[series_num].show));
+                            plots[plot_target].redraw();
+                        }
+                    } else if (data.type == '2d') {
+                        $('.showline').hide();
+                        $('.showmarker').hide();
+                        $('.transform[axis=xaxis]').hide();
+                        $('.transform[axis=yaxis]').hide();
+                        $('.transform[axis=zaxis]').show();
+                        data.options = data.options? data.options : {};
+                        data.options.seriesDefaults =  {rendererOptions: {transform: ztransform}}
+                        $('#' + plot_target).empty();
+                        var plotbox = $('<div />', {class:'ui-widget-content', style:"display: block; width: 100%; height: 100%;", id:"plotbox"});
+                        $('#' + plot_target).append(plotbox)
+                        plotbox.append($('<div />', {
+                            style:"display: inline-block; left: 0; top: 0; width:"+(plotbox.width()-150).toFixed()+"px; height: 100%;", 
+                            id: plot_target + "_plot"}));
+                        plotbox.append($('<div />', {style:"display: inline-block; width: 100px; height: 100%;", id:plot_target + "_colorbar"}));
+                        var plot = renderImageData2(data, ztransform, plot_target + "_plot");
+                        var cbar_options = {
+                            axes: {y2axis: {renderer: $.jqplot.GracefulAxisRenderer, tickOptions: {fontSize: 18}, labelOptions: {fontSize: 18}}}
+                        }
+                        var colorbar = renderImageColorbar2(plot.series[0], plot_target + '_colorbar');
+                        plots[plot_target] = plot;
+                        colorbars[plot_target] = colorbar;
+                        plot.replot(); // for aspect ratio plugin!
+                        colorbar.plugins._interactor.zoomMax(); // for scale!
+                        //plots[plot_target] = plottingAPI(datalist, plot_target);
+                    }
+                }
+            }
             
             window.onload = function() {
                 var qsParm = qs();
@@ -256,6 +414,20 @@
 		        ,	east__onresize:		$.layout.callbacks.resizePaneAccordions
 		        ,	south__onresize:	$.layout.callbacks.resizePaneAccordions
 		        });
+		        
+		        createTable('content_table', 1, 1);
+                var transform = 'lin';
+                var xislog = false;
+                var yislog = false;
+                var zislog = false;
+                var showline = true;
+                var showmarker = true;
+                $('.transform[axis=xaxis] input').prop('checked', xislog).change(updateTransform);
+                $('.transform[axis=yaxis] input').prop('checked', yislog).change(updateTransform);
+                $('.transform[axis=zaxis] input').prop('checked', zislog).change(updateTransform);
+                $('.showline input').prop('checked', showline).change(updateShowLine);
+                $('.showmarker input').prop('checked', showmarker).change(updateShowMarker); 
+		        
                 $('#file_tree')
                   // listen for event
                   .on('select_node.jstree', function (e, data) {
@@ -277,8 +449,10 @@
                             params: [params],
                             success: function(result) { 
                                 var toPlot = $.extend(true, result.result, standard_plot); 
-                                $('#plot_div').empty(); 
-                                $.jqplot('plot_div', result.result.data, result.result.options) 
+                                $('#plot_div').empty();
+                                //$.jqplot('plot_div', result.result.data, result.result.options);
+                                showData(result.result, 1);
+                                
                             },
                             error: function(result) { console.log(result); }
                         });
@@ -286,14 +460,25 @@
                 });
             }
         </script>
+        <style type="text/css">
+            .plotdiv {
+                width: 100%;
+                height: 100%;
+            }
+            #plot_table { width: 100%; height: 100% }
+            td.plotcell {
+                padding: 15px;
+            }
+        </style>
     </head>
     <body>
-        <div id="top_panel" class="ui-layout-north">
+        <div id="top_panel" class="ui-layout-north"></div>
+        <div id="file_panel" class="ui-layout-west">
             <button id="scan_directory">Scan Directory</button>
-            <input id="data_path" type="text" width="20" value="testdata"></input>
+            <input id="data_path" type="text" width="12" value="testdata"></input>
+            <div id="file_tree"></div>
         </div>
-        <div id="file_tree" class="ui-layout-west">files</div>
-        <div id="plot_div" class="ui-layout-center"></div>
+        <div id="content_table" class="ui-layout-center"></div>
     </body>
 </html>
 
