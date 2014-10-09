@@ -8,7 +8,9 @@ limits(x,dv=0) returns floor,ceiling for a single dataset.
 """
 
 from copy import copy
+
 from numpy import inf
+import numpy as np
 
 def limits(v, dv=0):
     """
@@ -63,18 +65,14 @@ class Limits(object):
     _ceiling = -inf
     _min = inf
     _max = -inf
-    def _getfloor(self):
-        return self._floor/2 if self._floor<inf else self.ceiling/2
-    def _getceiling(self):
-        return self._ceiling if self._ceiling>0 else 1
-    def _getmin(self):
-        return self._min if self._min < inf else self.max/2
-    def _getmax(self):
-        return self._max if self._max > -inf else 1
-    floor = property(_getfloor)
-    ceiling = property(_getceiling)
-    min = property(_getmin)
-    max = property(_getmax)
+    @property
+    def floor(self): return self._floor/2 if self._floor<inf else self.ceiling/2
+    @property
+    def ceiling(self): return self._ceiling if self._ceiling>0 else 1
+    @property
+    def min(self): return self._min if self._min < inf else self.max/2
+    @property
+    def max(self): return self._max if self._max > -inf else 1
 
     def __init__(self, *args, **kw):
         if len(args) == 1:
@@ -83,7 +81,7 @@ class Limits(object):
             raise TypeError, "Limits() tokes 0 or 1 argument"
 
     def add(self, v, dv=0):
-        v = numpy.array(v)
+        v = np.asarray(v)
         ceiling = abs(v).max()
         if ceiling > self._ceiling: self._ceiling = ceiling
 

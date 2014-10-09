@@ -5,9 +5,8 @@ Data file reader for NCNR NG-1 data.
 import os
 
 import numpy as np
-from numpy import cos, pi
-from . import refldata, icpformat, properties
-
+from .. import refldata, properties
+from . import icpformat
 
 # Instrument parameters
 # As instrument parameters change add additional lines to this file
@@ -22,6 +21,7 @@ from . import refldata, icpformat, properties
 # NG-1 defaults
 ng1default = properties.DatedValues()
 ng1default.wavelength = (4.76,'')  # in case ICP records the wrong value
+ng1default.dLoL = (0.015,'')
 
 # Detector saturates at 15000 counts/s.  The efficiency curve above
 # 15000 has not been measured.
@@ -42,6 +42,7 @@ ng1default.monitor_timestep = (60./100,'') # s ; ICP records 1/100ths of min
 # CG-1 defaults
 cg1default = properties.DatedValues()
 cg1default.wavelength = (5.0,'')  # in case ICP records the wrong value
+cg1default.dLoL = (0.009,'')
 
 # Detector saturates at 15000 counts/s.  The efficiency curve above
 # 15000 has not been measured.
@@ -71,14 +72,15 @@ class NG1Icp(refldata.ReflData):
         super(NG1Icp,self).__init__(*args, **kw)
 
         if hasattr(path, 'read'):
+            # Reading from a file stream, so read the whole thing
             data = icpformat.read(path)
             self._set_metadata(data)
             self._set_data(data)
         else:
+            # Reading from disk, so get metadata only
             data = icpformat.summary(path)
             self._set_metadata(data)
-            self._need_data = True
-            self.path = path 
+            self.path = path
 
     def _set_metadata(self, data):
         # Load file header
@@ -93,10 +95,20 @@ class NG1Icp(refldata.ReflData):
         # Lookup defaults as of the current date
         ext = os.path.splitext(data.filename)[1].lower()
         if ext.startswith('c'):
-            self.instrument = "NCNR AND/R"
+            if ext.endswith('d'):
+              self.instrument = "Magik"
+            elif ext.endswith('1'):
+                self.instrument = "NCNR AND/R"
+            else:
+                self.instrument = "unknown"
             self.default = cg1default(str(data.date))
         else:
-            self.instrument = "NCNR NG-1"
+            if ext.endswith('d'):
+                self.instrument = "PBR"
+            elif ext.endswith('1'):
+                self.instrument = "NCNR NG-1"
+            else:
+                self.instrument = "unknown"
             self.default = ng1default(str(data.date))
 
         # Plug in instrument defaults
@@ -125,26 +137,23 @@ class NG1Icp(refldata.ReflData):
                       %(self.default.wavelength,data.wavelength))
 
         self.detector.wavelength = data.wavelength
+        self.detector.wavelength_resolution = data.wavelength*self.default.dLoL
 
         # Callback for lazy data
         self.detector.loadcounts = self.loadcounts
 
-        # Set initial Qz
-        self.resetQ()
-
 
     def loadcounts(self):
         # Load the counts from the data file
-        return self.detector.counts
+        return self.load()
 
     def load(self):
         # Load the icp data
-        if self._need_data:
-            data = icpformat.read(self.path)
-            self._set_data(data)
+        data = icpformat.read(self.path)
+        self._set_data(data)
+        return data.counts
 
     def _set_data(self, data):
-        self._need_data = False
         if data.counts.ndim == 1:
             self.detector.dims = (1,1)
         elif data.counts.ndim == 2:
@@ -208,9 +217,22 @@ class NG1Icp(refldata.ReflData):
         if 'h-field' in data:
             # record the temperature in sample environment
             self.sample.environment.magnetic_field = data.column['h-field']
-        
-        # Set initial Qz
-        self.resetQ()
 
-        # TODO: if counts are huge we may want to make this lazy
-        self.detector.counts = data.counts
+class NG1pIcp(refldata.PolData):
+    def __init__(self, path):
+        xs = {}
+        for k,c in zip(('mm','pm','mp','pp'),('a','b','c','d')):
+            parts = path.split('.')
+            parts[-1] = parts[-1].replace('a',c)
+            target = ".".join(parts)
+            if os.path.exists(target):
+                xs[k] = NG1Icp(target)
+            else:
+                xs[k] = None
+        super(NG1pIcp,self).__init__(**xs)
+
+    def load(self):
+        for p in (self.pp, self.pm, self.mp, self.mm):
+            if p is not None:
+                p.load()
+

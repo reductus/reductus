@@ -12,16 +12,17 @@ need now.  It does not support the complete dimensional analysis provided
 by the package udunits on which NeXus is based, or even the units used
 in the NeXus definition files.
 
-Unlike other units packages, such as that in DANSE, this package does
-not carry the units along with the value, but merely provides a conversion
-function for transforming values.
+Unlike other units modules, this module does not carry the units along
+with the value, but merely provides a conversion function for
+transforming values.
 
-Usage example:
+Usage example::
 
-    u = nxsunit.Converter('mili*metre')  # Units stored in mm
+    import nxs.unit
+    u = nxs.unit.Converter('mili*metre')  # Units stored in mm
     v = u(3000,'m')  # Convert the value 3000 mm into meters
 
-NeXus example:
+NeXus example::
 
     # Load sample orientation in radians regardless of how it is stored.
     # 1. Open the path
@@ -29,7 +30,7 @@ NeXus example:
     # 2. scan the attributes, retrieving 'units'
     units = [for attr,value in file.attrs() if attr == 'units']
     # 3. set up the converter (assumes that units actually exists)
-    u = nxsunit.Converter(units[0])
+    u = nxs.unit.Converter(units[0])
     # 4. read the data and convert to the correct units
     v = u(file.read(),'radians')
 
@@ -51,6 +52,9 @@ getting the dimension from the units as we are currently doing.
 # TODO: Allow application to impose the map on the units
 
 from __future__ import division
+
+__all__ = ['Converter']
+
 import math
 
 
@@ -106,6 +110,7 @@ def _build_all_units():
     # Note: minutes are used for angle rather than time
     time = _build_metric_units('second','s')
     time.update(_build_plural_units(hour=3600,day=24*3600,week=7*24*3600))
+    time.update({'1e-7 s':1e-7, '1e-7 second':1e-7, '1e-7 seconds':1e-7})
 
     # Various angle measures.
     # Note: seconds are used for time rather than angle
@@ -118,7 +123,7 @@ def _build_all_units():
     frequency.update(_build_plural_units(rpm=1/60.))
 
     # Note: degrees are used for angle
-    # Note: temperature needs an offset as well as a scale
+    # TODO: temperature needs an offset as well as a scale
     temperature = _build_metric_units('kelvin','K')
     temperature.update(_build_metric_units('Kelvin','K'))
 
@@ -129,13 +134,15 @@ def _build_all_units():
     Q = { 'invAng': 1, 'invAngstroms': 1,
           '10^-3 Angstrom^-1': 1e-3, 'nm^-1': 10 }
 
+    energy = _build_metric_units('electronvolt','eV')
+
     # APS files may be using 'a.u.' for 'arbitrary units'.  Other
     # facilities are leaving the units blank, using ??? or not even
     # writing the units attributes.
     unknown = {None:1, '???':1, '': 1, 'a.u.':1}
 
     dims = [unknown, distance, time, angle, frequency,
-            temperature, charge, sld, Q]
+            temperature, charge, sld, Q, energy]
     return dims
 
 class Converter(object):
@@ -148,7 +155,7 @@ class Converter(object):
     scalebase = 1
     dims = _build_all_units()
 
-    def __init__(self,name):
+    def __init__(self, name):
         self.base = name
         for map in self.dims:
             if name in map:
@@ -174,7 +181,7 @@ class Converter(object):
         try:
             return value * (self.scalebase/self.scalemap[units])
         except KeyError:
-            raise KeyError("%s not in %s"%(units," ".join(self.scalemap.keys())))
+            raise KeyError("%s not in %s"%(units," ".join(sorted(self.scalemap.keys()))))
 
 def _check(expect,get):
     if expect != get: raise ValueError, "Expected %s but got %s"%(expect,get)

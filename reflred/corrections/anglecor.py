@@ -41,7 +41,6 @@ class AdjustAlignment(Correction):
 
         data.sample.angle_x += self.offset
         data.detector.angle_x -= self.offset
-        data.resetQ()
 
     def __str__(self):
         return "AdjustAlignment(offset=%g)"%self.offset

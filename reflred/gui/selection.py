@@ -7,7 +7,31 @@ import time
 import wx.lib.customtreectrl as tree
 import wx.lib.newevent
 
-class Datasets:
+class Dataset(object):
+    count = 0
+    files = None
+    min = 1000
+    max = -1
+    minfile = ''
+    maxfile = ''
+    time = None # Time of the highest sequence number
+    def __init__(self): self.files = []
+    def add(self, seq, filename):
+        if seq < self.min:
+            self.min = seq
+            self.minfile = filename
+        if seq > self.max:
+            self.max = seq
+            self.maxfile = filename
+            self.time = None
+        self.count += 1
+        self.files.append(filename)
+    def latest(self):
+        if self.time is not None:
+            self.time = os.path.getmtime(self.maxfile)
+        return time.strformat('%Y-%m-%d',time.localtime(self.time))
+
+class Datasets(object):
     # TODO: Datasets is not yet used.  Want a selection widget that
     # displays available datasets and metadata.  Furthermore, said
     # selection widget should have transparent access to the various
@@ -45,30 +69,6 @@ class Datasets:
     pattern = re.compile('^(?P<name>[^.]*?)(?P<seq>[0-9]{1,3})?(?P<junk>[^.0-9]*?)(?P<ext>[.].*)?$')
     #match = pattern.match('Field5T4345bkg.uxd')
     #dict((a,match.group(a)+"") for a in ['name','seq','junk','ext'])
-
-    class Dataset:
-        count = 0
-        files = None
-        min = 1000
-        max = -1
-        minfile = ''
-        maxfile = ''
-        time = None # Time of the highest sequence number
-        def __init__(self): self.files = []
-        def add(self, seq, filename):
-            if seq < self.min:
-                self.min = seq
-                self.minfile = filename
-            if seq > self.max:
-                self.max = seq
-                self.maxfile = filename
-                self.time = None
-            self.count += 1
-            self.files.append(filename)
-        def latest(self):
-            if self.time is not None:
-                self.time = os.path.getmtime(self.maxfile)
-            return time.strformat('%Y-%m-%d',time.localtime(self.time))
 
     def __init__(self, extensions=None):
         self.seen = set()
@@ -201,7 +201,7 @@ class PathSelector(wx.Panel):
         super(PathSelector,self).__init__(parent, *args, **kw)
         self.label = wx.StaticText(self, -1, label)
         self.path = wx.TextCtrl(self, -1, path, style=wx.TE_PROCESS_ENTER)
-        self.button = wx.Button(self, -1, "...")
+        self.button = wx.Button(self, -1, "...", size=(40,-1))
         self.Bind(wx.EVT_BUTTON, self.onBrowse, self.button)
         self.path.Bind(wx.EVT_TEXT, self.onText)
         self.path.Bind(wx.EVT_TEXT_ENTER, self.onEnter)
@@ -258,6 +258,7 @@ class SelectionPanel(wx.Panel):
 
         super(SelectionPanel,self).__init__(*args, **kw)
         self._path = PathSelector(self,path=root)
+        self.GetTopLevelParent().SetTitle(os.path.abspath(root))
         self._tree = DirTree(self)
         self._tree.root(root)
         self._path.Bind(EVT_PATH_SELECTED, self.onRefresh)
@@ -270,35 +271,36 @@ class SelectionPanel(wx.Panel):
         self.SetSizer(sizer)
 
     def onRefresh(self, event):
-        self._tree.root(self._path.GetValue())
+        root = self._path.GetValue()
+        self.GetTopLevelParent().SetTitle(root)
+        self._tree.root(root)
 
     def onChecked(self, event):
         item = event.GetItem()
         self._tree.SelectItem(item)
         wx.PostEvent(self,SelectItemEvent(data=self._tree.GetPyData(item),
                                           enabled=self._tree.IsItemChecked(item)))
-        #print "checked",self._tree.GetItemText(item)
+        #print "inner checked",self._tree.GetItemText(item)
 
     def onSelected(self, event):
         item = event.GetItem()
         if self._tree.IsSelected(item):
             wx.PostEvent(self,ViewItemEvent(data=self._tree.GetPyData(item)))
-        #print "selected",self._tree.GetItemText(item)
+        #print "inner selected",self._tree.GetItemText(item)
 
 
 def demo():
     class DemoFrame(wx.Frame):
         def __init__(self, *args, **kwargs):
             super(DemoFrame, self).__init__(*args, **kwargs)
-            self.selection = SelectionPanel(self,root='..')
-            #self.Bind(tree.EVT_TREE_SEL_CHANGED, self.onSelected)
-            self.selection.Bind(EVT_ITEM_SELECT, self.onChecked)
+            self.selection = SelectionPanel(self,root='.')
+            self.selection.Bind(EVT_ITEM_VIEW, self.onView)
+            self.selection.Bind(EVT_ITEM_SELECT, self.onSelect)
 
-        def onSelected(self, event):
-            item = event.GetItem()
-            print "selected",item
+        def onView(self, event):
+            print "selected",event.data
 
-        def onChecked(self, event):
+        def onSelect(self, event):
             print "checked",event.data,event.enabled
 
     frame = DemoFrame(None)

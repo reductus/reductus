@@ -5,21 +5,40 @@ Load a NeXus file into a reflectometry data structure.
 """
 import os
 
-from . import refldata, nexus
+import h5py as h5
+from .. import refldata
+from . import unit
+from . import iso8601
+
+def data_as(field, units):
+    """
+    Return value of field in the desired units.
+    """
+    converter = unit.Converter(field.attrs.get('units', ''))
+    return converter(field.value, units)
+
+def nxfind(group, nxclass):
+    """
+    Iterate over the entries of type *nxclass* in the hdf5 *group*.
+    """
+    for entry in group.values():
+        if nxclass == entry.attrs.get('NX_class', None):
+            yield entry
 
 def load_entries(filename):
     """
     Load the summary info for all entries in a NeXus file.
     """
-    tree = nexus.read(filename)
+    file = h5.File(filename)
     measurements = []
-    for name,entry in tree.nodes():
-        if entry.nxclass == 'NXentry':
-            measurements.append(NeXusRefl(entry,filename))
+    for name,entry in file.items():
+        nxclass = entry.attrs.get('NX_class', None)
+        if nxclass == 'NXentry':
+            measurements.append(NCNRNeXusRefl(entry,filename))
     return measurements
 
 
-class NeXusRefl(refldata.ReflData):
+class NCNRNeXusRefl(refldata.ReflData):
     """
     NeXus reflectometry entry.
 
@@ -28,19 +47,21 @@ class NeXusRefl(refldata.ReflData):
     format = "NeXus"
 
     def __init__(self, entry, filename):
-        super(NeXusRefl,self).__init__()
+        super(NCNRNeXusRefl,self).__init__()
         self.filename = os.path.abspath(filename)
-
-        if entry.definition.value == "TOFRAW":
-            self.entry = entry
-        else:
-            raise ValueError, "NeXusRefl only supports TOFRAW format"
+        self.name = os.path.basename(filename).split('.')[0]
+        self._set_metadata(entry)
 
         # Callback for lazy data
         self.detector.loadcounts = self.loadcounts
 
-        # Set initial Qz
-        self.resetQ()
+    def _set_metadata(self, entry):
+        self.entry = entry
+        self.date = iso8601.parse_date(entry['start_time'][0])
+        self.description = entry['experiment_description'][0]
+        self.sample.description = entry['sample/description'][0,0]
+        self.instrument = entry['instrument/name'][0,0]
+        self.detector.distance = 
 
 
     def loadcounts(self):
@@ -54,7 +75,7 @@ class NeXusRefl(refldata.ReflData):
         NXaperature components by distance and assign them according
         to serial order, negative aperatures first and positive second.
         """
-        slits = instrument.find('NXaperature')
+        slits = list(nxfind(instrument, 'NXaperature'))
         # Note: only supports to aperatures before and after.
         # Assumes x and y aperatures are coupled in the same
         # component.  This will likely be wrong for some instruments,

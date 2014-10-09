@@ -1,6 +1,6 @@
 from .areacor import AreaCorrection
 
-def BH_area_correction(self):
+def brookhaven_area_correction(self):
     """
     Returns the default area correction that can be applied to the data
     for the Brookhaven detector on NG1.

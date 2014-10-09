@@ -218,7 +218,7 @@ class PolarizationEfficiency(Correction):
     @property
     def beta(self): return 0.5*self.Ic
 
-    def __init__(self, **kw):
+    def __init__(self, beam, **kw):
         """
         Define the polarization efficiency correction for the beam
 
@@ -229,7 +229,8 @@ class PolarizationEfficiency(Correction):
             spinflip: [True|False] compute spinflip correction
         """
         self.__dirty = False
-        self.set(**kw)
+        self.beam = beam
+        self.set(beam=beam, **kw)
 
     def set(self, **kw):
         """
@@ -237,7 +238,7 @@ class PolarizationEfficiency(Correction):
         """
         self.__initializing = True
         for k,v in kw.iteritems():
-            assert hasattr(self,k), "No %s in %s"%(k,self.__class__.__name__)
+            assert k in self.properties, "No %s in %s"%(k,", ".join(self.properties))
             setattr(self,k,v)
         self.__initializing = False
         if self.__dirty: self.__update()
@@ -282,14 +283,16 @@ class PolarizationEfficiency(Correction):
         pp,pm,mp,mm =  beam.pp.v,beam.pm.v,beam.mp.v,beam.mm.v
         Ic = (pp*mm-pm*mp) / (pp+mm-pm-mp)
         reject = (Ic!=Ic)  # Reject nothing initially
-        if self.clip: reject |= clip(Ic, self.min_intensity, np.inf)
+        if self.clip:
+            reject |= clip(Ic, self.min_intensity, np.inf)
 
         # F and R are the front and rear polarizer efficiencies.  Each
         # is limited below by min_efficiency and above by 1 (since they
         # are not neutron sources).  Keep a list of points that are
         # rejected because they are outside this range.
         FR = pp/Ic - 1
-        if self.clip: reject |= clip(FR, self.min_efficiency**2, 1)
+        if self.clip:
+            reject |= clip(FR, self.min_efficiency**2, 1)
         fp = FR ** self.FRbalance
         rp = FR / fp
 
@@ -304,8 +307,10 @@ class PolarizationEfficiency(Correction):
         ff = (1-x)/2
         rf = (1-y)/2
 
-        if self.clip: reject |= clip(ff, self.min_efficiency, 1)
-        if self.clip: reject |= clip(rf, self.min_efficiency, 1)
+        if self.clip:
+            reject |= clip(ff, self.min_efficiency, 1)
+        if self.clip:
+            reject |= clip(rf, self.min_efficiency, 1)
 
         self.Ic, self.fp, self.ff, self.rp, self.rf = Ic,fp,ff,rp,rf
         self.reject = reject
@@ -394,7 +399,7 @@ def correct_efficiency(eff, data, spinflip=True):
 
 
 def demo():
-    from ..examples import e3a12 as dataset
+    from ..examples import ng1p as dataset
     eff = PolarizationEfficiency(beam=dataset.slits())
     for attr in ["Ic","fp","rp","ff","rf"]:
         print attr,getattr(eff,attr)

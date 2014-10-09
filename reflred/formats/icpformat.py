@@ -178,6 +178,16 @@ class ColumnSet(object):
         columnnames.sort()
         return ", ".join(columnnames)
 
+def parse_date(datestr):
+    stamp = datetime.datetime(2000,1,1) # need this to call strptime
+    try: return stamp.strptime(datestr,'%b %d %Y %H:%M')
+    except ValueError: pass
+    try: return stamp.strptime(datestr,'%d-%b-%Y %H:%M')
+    except ValueError: pass
+    try: return stamp.strptime(datestr,'%Y-%m-%d %H:%M')
+    except ValueError: pass
+    raise ValueError("Unable to parse date %r"%datestr)
+
 class ICP(object):
     def __init__(self, path):
         self.path = path
@@ -189,8 +199,7 @@ class ICP(object):
 
         tokens = get_quoted_tokens(file)
         self.filename=tokens[0]
-        stamp = datetime.datetime(2000,1,1) # need this to call strptime
-        self.date=stamp.strptime(tokens[1],'%b %d %Y %H:%M')
+        self.date = parse_date(tokens[1])
         self.scantype = tokens[2]
         self.prefactor = float(tokens[3])
         self.monitor=float(tokens[4])

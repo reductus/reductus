@@ -5,13 +5,15 @@ Data corrections for reflectometry.
 
 """
 
-# TODO Autogenerate these entries from the corrections themselves.
-# TODO This serves to improve maintainability by only listing the
-# TODO objects in one place, and improve documentation by copying
-# TODO the complete description of constructor arguments and function
-# TODO description.
+def intent(*args, **kw):
+    """Mark the intent of the measurement"""
+    from .intentcor import Intent
+    return Intent(*args, **kw)
 
-# TODO find a better way to delay loading of symbols
+def divergence(*args, **kw):
+    """Compute angular divergence"""
+    from .divergencecor import AngularResolution
+    return AngularResolution(*args, **kw)
 
 def normalize(*args, **kw):
     """Normalization correction; should be applied first"""
@@ -23,10 +25,10 @@ def polarization_efficiency(*args, **kw):
     from .polcor import PolarizationEfficiency
     return PolarizationEfficiency(*args, **kw)
 
-def smooth(*args, **kw):
+def align_slits(*args, **kw):
     """Data smoothing using 1-D moving window least squares filter"""
-    from .smoothcor import Smooth
-    return Smooth(*args, **kw)
+    from .alignslits import AlignSlits
+    return AlignSlits(*args, **kw)
 
 def water_intensity(*args, **kw):
     """Intensity estimate from water scatter"""
@@ -48,6 +50,6 @@ def area_correction(*args, **kw):
     from .areacor import AreaCorrection
     return AreaCorrection(*args,**kw)
 
-def BH_area_correction(*args, **kw):
-    from .bh_areacor import BH_area_correction
-    return BH_area_correction(*args, **kw)
+def brookhaven_area_correction(*args, **kw):
+    from .bh_areacor import brookhaven_area_correction
+    return brookhaven_area_correction(*args, **kw)

@@ -13,17 +13,14 @@ mpl.interactive(False)
 #Use the WxAgg back end. The Wx one takes too long to render
 mpl.use('WXAgg')
 
-from copy import deepcopy
-import matplotlib.cm
-import matplotlib.colors
 #from canvas import FigureCanvas as Canvas
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as Canvas
 from matplotlib.backend_bases import LocationEvent
 from matplotlib.font_manager import FontProperties
 from matplotlib.colors import Normalize,LogNorm
 
+#from .. import ticker
 from .cmapmenu import CMapMenu
-from . import ticker
 
 
 def _rescale(lo,hi,step,pt=None,bal=None,scale='linear'):
@@ -160,7 +157,7 @@ class Plotter4(wx.Panel):
         sizer.Add(self.canvas,1,wx.EXPAND)
         self.SetSizer(sizer)
         # Construct an idle timer.  This won't be needed when matplotlib
-        # supports draw_idle for wx.
+        # supports draw for wx.
         #self.idle_timer = wx.CallLater(1,self.onDrawIdle)
         #self.Fit()
 
@@ -233,10 +230,10 @@ class Plotter4(wx.Panel):
         # events on an artist by artist basis.
         if event.inaxes == self.coloraxes:
             self.colormapper.set_clim(vmin=self.vmin,vmax=self.vmax)
-            self.canvas.draw_idle()
+            self.canvas.draw()
         elif event.inaxes != None:
             self.autoaxes()
-            self.canvas.draw_idle()
+            self.canvas.draw()
 
     def onWheel(self, event):
         """
@@ -283,7 +280,7 @@ class Plotter4(wx.Panel):
                 lo,hi = _rescale(lo,hi,step,bal=ydata)
                 ax.set_ylim((lo,hi))
 
-        self.canvas.draw_idle()
+        self.canvas.draw()
 
 
     # These are properties which the user should control but for which
@@ -333,7 +330,9 @@ class Plotter4(wx.Panel):
     def onGridToggle(self, event):
         self.grid = not self.grid
         for ax in self.axes: ax.grid(alpha=0.4,visible=self.grid)
-        self.draw()
+        print("updating canvas")
+        self.canvas.draw()
+        print "done"
 
     def onContextMenu(self, event):
         """
@@ -490,14 +489,14 @@ class Plotter4(wx.Panel):
             self.colorbar.update_bruteforce(m)
             im.set_cmap(m.get_cmap())
             im.set_clim(m.get_clim())
-            self.canvas.draw_idle()
+            self.canvas.draw()
         self.colormapper.callbacksSM.connect('changed',on_changed)
 
         self.vmin = min(self.vmin, np.min(v))
         self.vmax = max(self.vmax, np.max(v))
         self.colormapper.set_clim(vmin=self.vmin,vmax=self.vmax)
         self.autoaxes()
-        self.canvas.draw_idle()
+        self.canvas.draw()
 
         return im
 

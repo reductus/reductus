@@ -79,11 +79,11 @@ __all__ = ['ReflData']
 
 import datetime
 import weakref
+import warnings
 
 import numpy as np
-from numpy import inf, arctan2, sqrt
-
-from .qxqz import ABL_to_QxQz
+from numpy import inf, arctan2, sqrt, sin, cos, pi, radians
+from . import resolution
 
 # TODO: attribute documentation and units should be integrated with the
 # TODO: definition of the attributes.  Value attributes should support
@@ -168,7 +168,8 @@ class Sample(object):
         common environment data.
     """
     properties = ['description','width','length','thickness','shape',
-                  'angle_x','angle_y','rotation','substrate_sld']
+                  'angle_x','angle_y','rotation',
+                  'broadening', 'incident_sld', 'substrate_sld']
     description = ''
     width = inf  # mm
     length = inf  # mm
@@ -178,6 +179,8 @@ class Sample(object):
     angle_y = 0 # degree
     rotation = 0 # degree
     substrate_sld = 2.07 # inv A  (silicon substrate for neutrons)
+    incident_sld = 0 # inv A (air)
+    broadening = 0
 
     def __init__(self, **kw):
         self.environment = Environment()
@@ -408,13 +411,15 @@ class Detector(object):
         counts = self._pcounts()
         if counts is None:
             counts = self.loadcounts()
+            if counts is None:
+                raise RuntimeError("Detector counts not loadable")
             self._pcounts = weakref.ref(counts)
         return counts
     def _setcounts(self, value):
         # File formats which are small do not need to use weak references,
         # however, for convenience the should use the same interface, which
         # is value() rather than value.
-        if isinstance(value,weakref.ref):
+        if isinstance(value, weakref.ref):
             self._pcounts = value
         else:
             def static(): return value
@@ -671,11 +676,13 @@ class ReflData(object):
     """
     properties = ['instrument','geometry','probe','points','channels',
                   'name','description','date','duration','attenuator',
-                  'polarization','reversed','warnings','path','entry']
+                  'polarization','reversed','warnings','path','entry',
+                  'intent']
     geometry = "vertical"
     probe = "unknown"
     format = "unknown"
     path = "unknown"
+    intent = "unknown"
     entry = ""
     points = 1
     channels = 1
@@ -685,27 +692,50 @@ class ReflData(object):
     duration = 0
     file = None
     attenuator = 1.
-    polarization = ''
+    polarization = ""
     reversed = False
     warnings = None
     messages = None
-
-    def _getdR(self): return sqrt(self.varR)
-    def _setdR(self, dR): self.varR = dR**2
-    dR = property(_getdR,_setdR)
+    vlabel = 'Intensity'
+    vunits = 'counts'
+    _v = None
+    _dv = None
 
     # Data representation for generic plotter as (x,y,z,v) -> (qz,qx,qy,Iq)
     # TODO: subclass Data so we get pixel edges calculations
     def _getx(self): return self.Qz
     def _gety(self): return self.Qx
     def _getz(self): return self.Qy
-    def _getv(self): return self.R
-    def _getdv(self): return sqrt(self.varR)
     x,xlabel,xunits = property(_getx),"Qx","inv A"
     y,ylabel,yunits = property(_gety),"Qy","inv A"
     z,zlabel,zunits = property(_getz),"Qz","inv A"
-    v,dv = property(_getv),property(_getdv)
+    def _getv(self):
+        return self.detector.counts if self._v is None else self._v
+    def _setv(self, v):
+        self._v = v
+    def _getdv(self):
+        return sqrt(self.detector.counts) if self._dv is None else self._dv
+    def _setdv(self, dv):
+        self._dv = dv
+    v,dv = property(_getv, _setv),property(_getdv, _setdv)
     # vlabel and vunits depend on monitor normalization
+
+    @property
+    def Qz(self):
+        A,B,L = self.sample.angle_x, self.detector.angle_x,self.detector.wavelength
+        return 2*pi/L * (sin(radians(B - A)) + sin(radians(A)))
+
+    @property
+    def Qx(self):
+        A,B,L = self.sample.angle_x, self.detector.angle_x,self.detector.wavelength
+        return 2*pi/L * ( cos(radians(B - A)) - cos(radians(A)))
+
+    @property
+    def dQ(self):
+        T,dT = self.sample.angle_x, self.angular_resolution+self.sample.broadening
+        L,dL = self.detector.wavelength, self.detector.wavelength_resolution
+        return resolution.dTdL2dQ(T,dT,L,dL)
+
 
     def __init__(self, **kw):
         # Note: because _set is ahead of the following, the caller will not
@@ -729,7 +759,7 @@ class ReflData(object):
         others = [str(s) for s in [self.slit1,self.slit2,self.slit3,self.slit4,
                                    self.sample,self.detector,self.monitor,
                                    self.roi]]
-        return "\n".join(base+others)
+        return "\n".join(base+others+self.messages)
 
     def __or__(self, pipeline):
         return pipeline(self)
@@ -739,6 +769,7 @@ class ReflData(object):
 
     def warn(self,msg):
         """Record a warning that should be displayed to the user"""
+        warnings.warn(msg)
         self.warnings.append(msg)
 
     def log(self,msg):
@@ -747,10 +778,56 @@ class ReflData(object):
 
     def resetQ(self):
         """Recompute Qx,Qz from geometry and wavelength"""
+        raise RuntimeError("No longer need resetQ")
         A,B = self.sample.angle_x,self.detector.angle_x
         L = self.detector.wavelength
         Qx,Qz = ABL_to_QxQz(A,B,L)
         self.Qx,self.Qz = Qx,Qz
+
+    def plot(self):
+        from matplotlib import pyplot as plt
+        from . import corrections as cor
+        intent = self.intent
+        if intent == "unknown":
+            # Guess intent; needs angular resolution to determine if data
+            # is specular or
+            data = self
+            if getattr(self, 'angular_resolution', None) is None:
+                data = data | cor.divergence()
+            data = data | cor.intent('auto')
+            intent = data.intent
+        if intent.startswith('back') or intent == 'specular':
+            x,xlab = self.Qz, "Q (1/Ang)"
+        elif intent.startswith('rock'):
+            x,xlab = self.Qx, "Qx (1/Ang)"
+
+        elif intent.startswith('slit'):
+            x,xlab = self.slit1.x, "slit 1 opening (mm)"
+        else:
+            x,xlab = np.arange(1,len(self.v)+1),"point"
+        plt.errorbar(x, self.v, self.dv, label=self.name+self.polarization, fmt='.')
+        plt.xlabel(xlab)
+        plt.ylabel("%s (%s)"%(self.vlabel, self.vunits))
+        plt.yscale('log')
+
+class PolData(object):
+    ispolarized = True
+    def __init__(self, pp, pm, mp, mm):
+        self.pp = pp
+        self.mm = mm
+        self.mp = mp
+        self.pm = pm
+        self.warnings = []
+        self.messages = []
+
+    def warn(self,msg):
+        """Record a warning that should be displayed to the user"""
+        self.warnings.append(msg)
+
+    def log(self,msg):
+        """Record corrections that have been applied to the data"""
+        self.messages.append(msg)
+
 
 def _str(object):
     """
@@ -797,6 +874,14 @@ _ = """
 
 # === Interaction with individual frames ===
 class Reader(ReflData):
+    """
+    After loadframes(), *zx* is contains an image in which each frame has
+    been summed over the y channels of *roi*, and *xy* contains the sum
+    the individual detector frames across all z.
+    """
+    def __init__(self):
+        raise NotImplementedError("Not yet complete")
+
     def numframes(self):
         """
         Return the number of detector frames available.
@@ -807,24 +892,26 @@ class Reader(ReflData):
         """
         Convert raw frames into a form suitable for display.
         """
+        from limits import Limits
         # Hold a reference to the counts so that they are not purged
         # from memory during the load operation.
+        zlo,zhi = 0,self.detector.shape[0]-1
         xlo,xhi,ylo,yhi = self.roi
         counts = self.detector.counts
         nq = zhi-zlo+1
-        nx = self.detector.shape[0]
-        ny = self.detector.shape[1]
+        nx = xhi-xlo+1
+        ny = yhi-ylo+1
         if ny == 1:
-            self.zx = counts[zlo:zhi+1,:]
+            self.zx = counts[zlo:zhi+1,xlo:xhi+1]
         else:
             xy = np.zeros((nx,ny),dtype='float32')
             zx = np.zeros((nq,nx),dtype='float32')
-            self.framerange = Limits() # Keep track of total range
+            self.frame_range = Limits() # Keep track of total range
             for i in range(zlo,zhi):
                 v = self.frame(i)
-                self.framerange.add(v,dv=sqrt(v))
+                self.frame_range.add(v,dv=sqrt(v))
                 xy += v
-                zx[i-zlo,:] = np.sum(v[:,ylo:yhi],axis=1)
+                zx[i-zlo,:] = np.sum(v[xlo:xhi,ylo:yhi],axis=1)
             self.xy = xy
             self.zx = zx
 

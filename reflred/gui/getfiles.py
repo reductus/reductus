@@ -6,45 +6,39 @@ import sys
 
 import wx,wx.aui
 
-from ..formats import _registry
+from .. import corrections
+from .. import formats
 from .selection import SelectionPanel, EVT_ITEM_SELECT, EVT_ITEM_VIEW
-from .polplot import Plotter, Plotter4
+from .wxpylab import PlotPanel
 
-class Reduction(wx.Panel):
+class DataSelection(wx.Panel):
     def __init__(self, *args, **kw):
         wx.Panel.__init__(self, *args, **kw)
 
         self.datasets = {}
-        self.plotlist = []
+        self.selected = {}
         if True:
             # Use simple sashes
             splitter = wx.SplitterWindow(self)
-            splitter.SetSashGravity(0.3)
-            left = wx.SplitterWindow(splitter)
-            left.SetSashGravity(0.3)
+            self.selector = SelectionPanel(splitter)
             right = wx.SplitterWindow(splitter)
-            right.SetSashGravity(0.0)
+            self.metadata = wx.TextCtrl(right,style=wx.TE_MULTILINE|wx.TE_AUTO_SCROLL)
+            self.plotter = PlotPanel(right)
 
-            self.selector = SelectionPanel(left)
-            self.metadata = wx.TextCtrl(left,style=wx.TE_MULTILINE|wx.TE_AUTO_SCROLL)
-            self.plotter = Plotter4(right)
-            self.slice = Plotter(right)
-
-            splitter.SplitVertically(left,right,170)
-            left.SplitHorizontally(self.selector,self.metadata,-100)
-            right.SplitHorizontally(self.plotter,self.slice,-1)
+            splitter.SetSashGravity(0.3)
+            splitter.SplitVertically(self.selector, right, 200)
+            right.SetSashGravity(0.3)
+            right.SplitHorizontally(self.metadata, self.plotter, 120)
             container = splitter
         else:
             # Use AUI notebook
             self.notebook = wx.aui.AuiNotebook(self)
             self.selector = SelectionPanel(self.notebook)
-            self.plotter = Plotter4(self.notebook)
             self.metadata = wx.TextCtrl(self,style=wx.TE_MULTILINE|wx.TE_RICH2)
-            self.slice = Plotter(self)
+            self.plotter = PlotPanel(self.notebook)
             self.notebook.AddPage(self.selector, "Selection")
-            self.notebook.AddPage(self.plotter, "Reduction")
             self.notebook.AddPage(self.metadata, "Metadata")
-            self.notebook.AddPage(self.slice, "Slice")
+            self.notebook.AddPage(self.plotter, "Plot")
             #self.notebook.Bind(wx.aui.EVT_AUI_RENDER,self.onRender)
             container = self.notebook
 
@@ -62,7 +56,7 @@ class Reduction(wx.Panel):
 
         # Try loading data, guessing format from file extension
         try:
-            data = _registry.load(filename)
+            data = formats.load(filename)
         except:
             print "unable to load %s\n  %s"%(filename, sys.exc_value)
             data = [None]
@@ -77,6 +71,9 @@ class Reduction(wx.Panel):
     def onView(self, event):
         filename = event.data
         data = self.load(filename)
+        if data is None: return
+        prep = corrections.divergence() | corrections.intent() | corrections.normalize()
+        data |= prep
         if data is not None:
             # TODO this isn't shifting the text control on aqua
             # Tried setting focus first without success:
@@ -96,23 +93,25 @@ class Reduction(wx.Panel):
             #self.metadata.EmulateKeyPress(kevent)
             #print "Setting point to",pt
             self.metadata.ShowPosition(pt)
+            with self.plotter.pylab_figure as pylab:
+                pylab.clf()
+                pylab.hold(True)
+                for filename,filedata in sorted(self.selected.items()):
+                    (filedata|prep).plot()
+                data.plot()
+                pylab.legend()
 
 
     def onSelect(self, event):
         filename = event.data
+        print "selected",filename
         if event.enabled == True:
-            # Adding a plot
             data = self.load(filename)
-            if data:
-                im = self.plotter.surface(data.prop.polarization,data)
-                self.plotlist.append(filename)
+            if data is not None:
+                self.selected[filename] = data
         else:
             if filename in self.plotlist:
-                self.plotlist.remove(filename)
-                self.plotter.clear()
-                for f in self.plotlist:
-                    data = self.load(f)
-                    im = self.plotter.surface(data.prop.polarization,data)
+                del self.selected[filename]
 
     def onRender(self, event):
         # AUI only - ignored
@@ -122,8 +121,9 @@ class Reduction(wx.Panel):
 
 
 def demo():
-    frame = wx.Frame(None, -1, 'Polarization Correction')
-    reduction = Reduction(frame)
+    import os
+    frame = wx.Frame(None, -1, "Selector")
+    reduction = DataSelection(frame)
     frame.SetSize((600,400))
     frame.Show()
 

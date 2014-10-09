@@ -87,15 +87,18 @@ class Plotter(wx.Panel):
 
 def demo():
     from reflred.examples import e3a12 as data
-    from reflred.polcor import PolarizationEfficiency
-    from reflred.smooth import Smooth
+    from reflred import polarization_efficiency, align_slits
 
-    # Get a slit scan and compute the raw efficiency
+    # read the slit scan
     beam = data.slits()
-    eff = PolarizationEfficiency(beam=beam, FRbalance=0.6, clip=False)
-    # Smooth it and comput the smoothed efficiency
-    beam.apply(Smooth(degree=2,span=13))
-    effsmooth = PolarizationEfficiency(beam=beam, FRbalance=0.6, clip=True)
+
+    # Align slits using linear interpolation
+    raw_beam = beam|align_slits(degree=1,span=2)
+    eff_raw = polarization_efficiency(beam=raw_beam, FRbalance=0.6, clip=False)
+    # Align slits using a quadratic smoothing filter
+    smooth_beam = beam|align_slits(degree=2,span=13)
+    eff_smooth = polarization_efficiency(beam=smooth_beam,
+                                        FRbalance=0.6, clip=True)
 
     # Make a frame to show it
     app = wx.PySimpleApp()
@@ -104,7 +107,7 @@ def demo():
     frame.Show()
 
     # render the graph to the pylab plotter
-    plotter.plot(eff, effsmooth)
+    plotter.plot(eff_raw, eff_smooth)
 
     app.MainLoop()
     pass

@@ -47,6 +47,7 @@ memory usage on one hand, and convenience and intuitive feel on the other.
 __all__ = ['Correction']
 
 from copy import copy
+from anno_exc import annotate_exception
 
 class Correction(object):
     properties = []  # Property sheet for interacting with correction
@@ -65,9 +66,14 @@ class Correction(object):
         #print "applying",self
         # If apply returns a new data object, forward that along, otherwise
         # assume it was an inplace update.
-        newdata = self.apply(data)
-        if newdata is not None: data = newdata
-        data.log(str(self))
+        try:
+            newdata = self.apply(data)
+            if newdata is not None: data = newdata
+            data.log(str(self))
+        except:
+            label = getattr(data, 'name', 'data')
+            annotate_exception("while processing %s"%label)
+            raise
         return data
 
     def __call__(self, data):
@@ -169,6 +175,9 @@ def test():
     a |= pipeline
     #print id(a)
     assert a.x == 12  # Has been modified
+
+    a = Data() | Add(3)
+    assert a.x == 3
 
 if __name__ == "__main__":
     test()

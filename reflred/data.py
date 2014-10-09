@@ -58,7 +58,7 @@ def dict2text(d,indent=0):
     return "\n".join(lines)
 
 
-class Data(object):
+class _Data(object):
     """
     Data object.
 
@@ -119,7 +119,7 @@ class Data(object):
         dv = np.sqrt(np.interp(self.x, self.dv**2, x))
         return v,dv
 
-class PolarizedData(object):
+class _PolarizedData(object):
     """
     Polarized data object.  This holds all four cross sections of a
     polarized measurement, and provides operations for aligning and
@@ -132,7 +132,7 @@ class PolarizedData(object):
     vlabel,vunits='Reflectivity',None
 
     def __init__(self, **kw):
-        self.pp,self.pm,self.mp,self.mm = Data(),Data(),Data(),Data()
+        self.pp,self.pm,self.mp,self.mm = _Data(),_Data(),_Data(),_Data()
         self.set(**kw)
         self.messages = []
 
@@ -200,7 +200,7 @@ def refl(n=100,noise=0.02):
     R = np.abs( (Q-f)/(Q+f) )**2
     dR = noise*R
     R = R + dR*np.random.randn(n)
-    data = Data(x=Q,dx=dQ,v=R,dv=dR,xlabel='Q',xunits='inv A',vlabel='R')
+    data = _Data(x=Q,dx=dQ,v=R,dv=dR,xlabel='Q',xunits='inv A',vlabel='R')
     return data
 
 def peaks(n=40,noise=0.02):
@@ -213,7 +213,7 @@ def peaks(n=40,noise=0.02):
           - 10*(X/5 - X**3 - Y**5)*np.exp(-X**2-Y**2) \
           - 1/3*np.exp(-(X+1)**2 - Y**2)
     v = v + noise*np.random.randn(nc,nr)
-    data = Data(x=x,y=y,v=v)
+    data = _Data(x=x,y=y,v=v)
     return data
 
 def noise2d(n=40,noise=0.02,bkg=1e-10):
@@ -222,7 +222,7 @@ def noise2d(n=40,noise=0.02,bkg=1e-10):
     x = np.linspace(0,1,nr)
     y = np.linspace(0,1,nc)
     v = np.abs(noise*np.random.randn(nc,nr))+bkg
-    data = Data(x=x,y=y,v=v)
+    data = _Data(x=x,y=y,v=v)
     return data
 
 def noisepol2d(n=40):
@@ -231,7 +231,7 @@ def noisepol2d(n=40):
     pm = noise2d(n,noise=0.3); pm.v *= 0.2;
     mp = noise2d(n,noise=0.3); mp.v *= 0.2;
     mm = noise2d(n,noise=0.05)
-    data = PolarizedData()
+    data = _PolarizedData()
     data.pp,data.mm = pp,mm
     data.pm,data.mp = pm,mp
     return data
@@ -242,7 +242,7 @@ def peakspol(n=40):
     pm = peaks(n,noise=0.3); pm.v *= 0.4;
     mp = peaks(n,noise=0.3); mp.v *= 0.4;
     mm = peaks(n,noise=0.05)
-    data = PolarizedData()
+    data = _PolarizedData()
     data.pp,data.mm = pp,mm
     data.pm,data.mp = pm,mp
     return data
