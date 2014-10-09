@@ -172,9 +172,15 @@ def LoadMAGIKPSD(filename, path="", friendly_name="", collapse_y=True, auto_PolS
             else: # make separate frames           
                 infos = []
                 data = []
+                samp_angle =  entry['DAS_logs']['sampleAngle']['softPosition'].value
+                if samp_angle.shape[0] == 1:
+                    samp_angle = numpy.ones((frames,)) * samp_angle
+                det_angle = entry['DAS_logs']['detectorAngle']['softPosition'].value
+                if det_angle.shape[0] == 1:
+                    det_angle = numpy.ones((frames,)) * det_angle
                 for i in range(frames):
-                    samp_angle = file_obj.sample.angle_x[i]
-                    det_angle = file_obj.detector.angle_x[i]
+                    samp_angle =  entry['DAS_logs']['sampleAngle']['softPosition'].value[i]
+                    det_angle = entry['DAS_logs']['detectorAngle']['softPosition'].value[i]
                     info = []
                     info.append({"name": "xpixel", "units": "pixels", "values": range(xpixels) })
                     info.append({"name": "ypixel", "units": "pixels", "values": range(ypixels) })
@@ -184,13 +190,13 @@ def LoadMAGIKPSD(filename, path="", friendly_name="", collapse_y=True, auto_PolS
                                 {"name": "pixels"},
                                 {"name": "monitor"},
                                 {"name": "count_time"}]},
-                        {"PolState": PolState, "filename": filename, "start_datetime": file_obj.date, "friendly_name": friendly_name,
+                        {"PolState": PolState, "filename": filename, "start_datetime": entry['start_time'].value, "friendly_name": friendly_name,
                          "CreationStory":creation_story, "path":path, "samp_angle": samp_angle, "det_angle": det_angle}]
                     )
                     data_array = zeros((xpixels, ypixels, 4))
-                    mon = file_obj.monitor.counts[i]
-                    count_time = file_obj.monitor.count_time[i]
-                    counts = file_obj.detector.counts[i]
+                    mon =  entry['DAS_logs']['counter']['liveMonitor'].value[i]
+                    count_time = entry['DAS_logs']['counter']['liveTime'].value[i]
+                    counts = counts_value[i]
                     if flip == True: counts = flipud(counts) 
                     data_array[..., 0] = counts
                     data_array[..., 1] = 1
