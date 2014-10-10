@@ -5,17 +5,29 @@ Load a NeXus file into a reflectometry data structure.
 """
 import os
 
+import numpy as np
 import h5py as h5
 from .. import refldata
+from .. import corrections as cor
 from . import unit
 from . import iso8601
 
-def data_as(field, units):
+def data_as(field, units, rep=1):
     """
     Return value of field in the desired units.
     """
     converter = unit.Converter(field.attrs.get('units', ''))
-    return converter(field.value, units)
+    value = converter(field.value, units)
+    if rep != 1:
+        if value.shape[0] == 1:
+            return np.repeat(value, rep, axis=0)
+        elif value.shape[0] != rep:
+            raise ValueError("field %r does not match counts in %r"
+                             %(field.name,field.file.filename))
+        else:
+            return value
+    else:
+        return value
 
 def nxfind(group, nxclass):
     """
@@ -32,11 +44,9 @@ def load_entries(filename):
     file = h5.File(filename)
     measurements = []
     for name,entry in file.items():
-        nxclass = entry.attrs.get('NX_class', None)
-        if nxclass == 'NXentry':
-            measurements.append(NCNRNeXusRefl(entry,filename))
+        if entry.attrs.get('NX_class', None) == 'NXentry':
+            measurements.append(NCNRNeXusRefl(entry, name, filename))
     return measurements
-
 
 class NCNRNeXusRefl(refldata.ReflData):
     """
@@ -46,28 +56,62 @@ class NCNRNeXusRefl(refldata.ReflData):
     """
     format = "NeXus"
 
-    def __init__(self, entry, filename):
+    def __init__(self, entry, entryname, filename):
         super(NCNRNeXusRefl,self).__init__()
+        self.entry = entryname
         self.filename = os.path.abspath(filename)
         self.name = os.path.basename(filename).split('.')[0]
         self._set_metadata(entry)
 
-        # Callback for lazy data
-        self.detector.loadcounts = self.loadcounts
-
     def _set_metadata(self, entry):
-        self.entry = entry
+        # TODO: ought to close file when we are done loading, which means
+        # we shouldn't hold on to entry
+        self._entry = entry
+        das = self._entry['DAS_logs']
+        self.probe = 'neutron'
         self.date = iso8601.parse_date(entry['start_time'][0])
         self.description = entry['experiment_description'][0]
-        self.sample.description = entry['sample/description'][0,0]
         self.instrument = entry['instrument/name'][0,0]
-        self.detector.distance = 
+        self.slit1.distance = data_as(entry['instrument/presample_slit1/distance'],'mm')
+        self.slit2.distance = data_as(entry['instrument/presample_slit2/distance'],'mm')
+        #self.slit3.distance = data_as(entry['instrument/predetector_slit1/distance'],'mm')
+        #self.slit4.distance = data_as(entry['instrument/predetector_slit2/distance'],'mm')
+        #self.detector.distance = data_as(entry['instrument/detector/distance'],'mm')
+        #self.detector.rotation = data_as(entry['instrument/detector/rotation'],'degree')
+        self.detector.wavelength = data_as(entry['instrument/monochromator/wavelength'],'Ang')
+        self.detector.wavelength_resolution = data_as(entry['instrument/monochromator/wavelength_error'],'Ang')
+        self.sample.description = entry['sample/description'][0,0]
+        self.monitor.base = das['counter/countAgainst'][0,0]
+        self.monitor.time_step = 0.001  # assume 1 ms accuracy on reported clock
+        if 'frontPolarization' in das:
+            frontpol = '+' if das['frontPolarization/direction'][0,0] == 'UP' else '-'
+        else:
+            frontpol = ''
+        if 'backPolarization' in das:
+            backpol = '+' if das['backPolarization/direction'][0,0] == 'UP' else '-'
+        else:
+            backpol = ''
+        self.polarization = frontpol+backpol
 
+    def load(self):
+        das = self._entry['DAS_logs']
+        self.detector.counts = das['pointDetector/counts'][:,0]
+        self.detector.dims = self.detector.counts.shape
+        n = self.detector.dims[0]
+        self.monitor.counts = data_as(das['counter/liveMonitor'],'',rep=n)
+        self.monitor.count_time = data_as(das['counter/liveTime'],'s',rep=n)
+        self.slit1.x = data_as(das['slitAperture1/softPosition'],'mm',rep=n)
+        self.slit2.x = data_as(das['slitAperture2/softPosition'],'mm',rep=n)
+        self.slit3.x = data_as(das['slitAperture3/softPosition'],'mm',rep=n)
+        self.slit4.x = data_as(das['slitAperture4/softPosition'],'mm',rep=n)
+        self.sample.angle_x = data_as(das['sampleAngle/softPosition'],'degree',rep=n)
+        self.detector.angle_x = data_as(das['detectorAngle/softPosition'],'degree',rep=n)
+        #TODO: temperature, field
+        if '_theta_offset' in das['trajectoryData']:
+            self.background_offset = 'theta'
 
-    def loadcounts(self):
-        # Load the counts from the data file
-        counts = self.entry.NXinstrument.NXdetector.data.read()
-        return counts
+        cor.apply_standard_corrections(self)
+
 
     def _load_slits(self, instrument):
         """
@@ -75,6 +119,7 @@ class NCNRNeXusRefl(refldata.ReflData):
         NXaperature components by distance and assign them according
         to serial order, negative aperatures first and positive second.
         """
+        raise NotImplementedError("hardcode slit names for now")
         slits = list(nxfind(instrument, 'NXaperature'))
         # Note: only supports to aperatures before and after.
         # Assumes x and y aperatures are coupled in the same
@@ -106,37 +151,21 @@ class NCNRNeXusRefl(refldata.ReflData):
                     self.slit4.distance = d
                     index += 1
 
-    def load(self):
-        entry = self.entry
-        self.instrument = entry.NXinstrument.name.value
-        self.probe = 'neutron'
-        # Use proton charge as a proxy for monitor; we will use the
-        # real monitor when it comes available.
-        self.monitor.source_power_units = 'coulombs'
-        self.monitor.source_power \
-            = entry.proton_charge.read(self.monitor.source_power_units)
-        self.monitor.count_time = entry.duration.read('seconds')
-        self.monitor.base = 'power'
 
-        # TODO: we are not yet reading the monitor values for the
-        # reflectometers since they are not yet in place.  When they
-        # are in place, it will be problematic since it will not
-        # be clear to the reduction software whether it should be
-        # using monitor 1 or monitor 2, and how it should normalize
-        # if it is using one or the other without hardcoding details
-        # of SNS Liquids into the reduction process.
+def demo():
+    import sys
+    import pylab
+    if len(sys.argv) == 1:
+        print("usage: python -m reflred.formats.nexusref file...")
+        sys.exit(1)
+    for f in sys.argv[1:]:
+        entries = load_entries(f)
+        for f in entries:
+            f.load()
+            print f
+            f.plot()
+    pylab.legend()
+    pylab.show()
 
-        sample = entry.NXsample
-        self.sample.description = sample.name.value
-
-        # TODO: entry has sample changer position, which is a
-        # way of saying we have no idea what sample is in the
-        # beam.  I hope the control software handles this
-        # properly!
-
-        instrument = entry.NXinstrument
-        self._load_slits(instrument)
-        moderator = instrument.NXmoderator
-        self.moderator.distance = moderator.distance.read('meters')
-        self.moderator.type = moderator.type.value
-        self.moderator.temperature = moderator.temperature.read('kelvin')
+if __name__ == "__main__":
+    demo()

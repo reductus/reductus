@@ -7,7 +7,7 @@ Data file reader for NCNR NG-7 data.
 import numpy as np
 
 from . import icpformat
-from .. import refldata, properties, qxqz
+from .. import refldata, properties, qxqz, corrections as cor
 
 
 # Instrument parameters
@@ -191,3 +191,5 @@ class NG7Icp(refldata.ReflData):
 
         # TODO: if the dataset is large, set up a weak reference instead
         self.detector.counts = data.counts
+
+        cor.apply_standard_corrections(self)

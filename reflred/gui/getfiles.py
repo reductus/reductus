@@ -59,22 +59,19 @@ class DataSelection(wx.Panel):
             data = formats.load(filename)
         except:
             print "unable to load %s\n  %s"%(filename, sys.exc_value)
-            data = [None]
+            data = []
         else:
             pass
             #if data.prop.polarization == "":
             #    # TODO Temporary hack: unpolarized data dumped into ++
             #    data.prop.polarization = "++"
-        self.datasets[filename] = data[0]
-        return data[0]
+        self.datasets[filename] = data
+        return data
 
     def onView(self, event):
         filename = event.data
         data = self.load(filename)
-        if data is None: return
-        prep = corrections.divergence() | corrections.intent() | corrections.normalize()
-        data |= prep
-        if data is not None:
+        if data:
             # TODO this isn't shifting the text control on aqua
             # Tried setting focus first without success:
             #   focuswin = wx.Window.FindFocus()
@@ -83,7 +80,7 @@ class DataSelection(wx.Panel):
             #   if focuswin: focuswin.SetFocus()
             #self.metadata.SetFocus()
             pt = self.metadata.GetInsertionPoint()
-            self.metadata.Replace(0,self.metadata.GetLastPosition(),str(data))
+            self.metadata.Replace(0,self.metadata.GetLastPosition(),str(data[0]))
             self.metadata.SetInsertionPoint(pt)
             # See if simulating a right-left sequence moves the view
             #kevent = wx.KeyEvent(wx.EVT_CHAR)
@@ -97,8 +94,10 @@ class DataSelection(wx.Panel):
                 pylab.clf()
                 pylab.hold(True)
                 for filename,filedata in sorted(self.selected.items()):
-                    (filedata|prep).plot()
-                data.plot()
+                    for part in filedata:
+                        part.plot()
+                for part in data:
+                    part.plot()
                 pylab.legend()
 
 
@@ -107,10 +106,10 @@ class DataSelection(wx.Panel):
         print "selected",filename
         if event.enabled == True:
             data = self.load(filename)
-            if data is not None:
+            if data:
                 self.selected[filename] = data
         else:
-            if filename in self.plotlist:
+            if filename in self.selected:
                 del self.selected[filename]
 
     def onRender(self, event):

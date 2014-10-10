@@ -5,7 +5,7 @@ Data file reader for NCNR NG-1 data.
 import os
 
 import numpy as np
-from .. import refldata, properties
+from .. import refldata, properties, corrections as cor
 from . import icpformat
 
 # Instrument parameters
@@ -154,6 +154,7 @@ class NG1Icp(refldata.ReflData):
         return data.counts
 
     def _set_data(self, data):
+        self.detector.counts = data.counts
         if data.counts.ndim == 1:
             self.detector.dims = (1,1)
         elif data.counts.ndim == 2:
@@ -217,6 +218,8 @@ class NG1Icp(refldata.ReflData):
         if 'h-field' in data:
             # record the temperature in sample environment
             self.sample.environment.magnetic_field = data.column['h-field']
+
+        cor.apply_standard_corrections(self)
 
 class NG1pIcp(refldata.PolData):
     def __init__(self, path):
