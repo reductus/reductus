@@ -27,7 +27,7 @@ def divergence(T=None, slits=None, distance=None, sample_width=1e10):
     :Parameters:
         *T*         : float OR [float] | degrees
             incident angles
-        *slits*     : float OR (float,float) | mm
+        *slits*     : (float,float) | mm
             s1,s2 slit openings for slit 1 and slit 2
         *distance*  : (float,float) | mm
             d1,d2 distance from sample to slit 1 and slit 2
@@ -84,10 +84,7 @@ def divergence(T=None, slits=None, distance=None, sample_width=1e10):
     # TODO: check that the formula is correct for T=0 => dT = s1 / d1
     # TODO: add sample_offset and compute full footprint
     d1,d2 = distance
-    try:
-        s1,s2 = slits
-    except TypeError:
-        s1=s2 = slits
+    s1, s2 = slits
 
     # Compute FWHM angular divergence dT from the slits in degrees
     dT = np.degrees(0.5*(s1+s2)/(d1-d2))
@@ -95,13 +92,14 @@ def divergence(T=None, slits=None, distance=None, sample_width=1e10):
     # For small samples, use the sample projection instead.
     if np.isfinite(sample_width):
         sample_s = sample_width * np.sin(np.radians(T))
-        idx = sample_s < s2
         if np.isscalar(sample_s):
-            dT[idx] = np.degrees(0.5*(s1[idx]+sample_s)/d1)
+            if sample_s < s2:
+                dT = np.degrees(0.5*(s1+sample_s)/d1)
         else:
             #print s1,s2,d1,d2,T,dT,sample_s
             s1 = np.ones_like(sample_s)*s1
             dT = np.ones_like(sample_s)*dT
+            idx = sample_s < s2
             dT[idx] = np.degrees(0.5*(s1[idx] + sample_s[idx])/d1)
 
     return dT

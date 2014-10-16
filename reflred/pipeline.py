@@ -49,6 +49,20 @@ __all__ = ['Correction']
 from copy import copy
 from anno_exc import annotate_exception
 
+def _apply_and_return_data(correction, data):
+    """
+    Apply correction to data, returning newdata, or if recorrection is
+    in place, returning data.
+    """
+    try:
+        newdata = correction.apply(data)
+    except:
+        label = getattr(data, 'name', 'data')
+        annotate_exception("while processing %s"%label)
+        raise
+    if newdata is None: newdata = data
+    return newdata
+
 class Correction(object):
     properties = []  # Property sheet for interacting with correction
     def apply(self, data):
@@ -61,19 +75,31 @@ class Correction(object):
         """
         raise NotImplementedError
 
+    def apply_list(self, datasets):
+        """
+        If the correction is called with a list of datasets, then apply the
+        correction to each dataset in the list.
+
+        Corrections such as "join" can override this, and work on the
+        entire list together.
+        """
+        return [_apply_and_return_data(self, data) for data in datasets]
+
     # ==== Inherited behaviours ====
     def apply_and_log(self, data):
         #print "applying",self
         # If apply returns a new data object, forward that along, otherwise
         # assume it was an inplace update.
-        try:
-            newdata = self.apply(data)
-            if newdata is not None: data = newdata
-            data.log(str(self))
-        except:
-            label = getattr(data, 'name', 'data')
-            annotate_exception("while processing %s"%label)
-            raise
+        if isinstance(data, list):
+            data = self.apply_list(data)
+        else:
+            data = _apply_and_return_data(self, data)
+
+        msg = str(self)
+        if isinstance(data, list):
+            for d in data: d.log(msg)
+        else:
+            data.log(msg)
         return data
 
     def __call__(self, data):

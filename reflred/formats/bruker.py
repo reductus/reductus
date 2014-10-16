@@ -269,10 +269,18 @@ EXTRA_RECORD = {
     }
 
 
-def loads(filename):
+def load(filename):
     # pull in the entire file
     with open(filename, 'rb') as f:
         data = f.read()
+    if data[:7] != "RAW1.01":
+        raise ValueError("Could not load %r: not a Bruker XRD RAW file"%
+                         filename)
+    return loads(data)
+
+def loads(data):
+    if data[:7] != "RAW1.01":
+        raise ValueError("not a Bruker XRD RAW file")
 
     # process the main header
     offset = 0
@@ -333,5 +341,5 @@ def loads(filename):
     
 if __name__ == "__main__":
     import sys,pprint
-    pprint.pprint(loads(sys.argv[1]))
+    pprint.pprint(load(sys.argv[1]))
 

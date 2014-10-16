@@ -1,3 +1,4 @@
+# -*- coding: latin-1 -*-
 # This program is public domain
 # Author: Paul Kienzle
 """
@@ -9,7 +10,7 @@ and incorrect capitalization to worry about, as well as forms such as
 
 This is a minimal implementation of units including only what I happen to
 need now.  It does not support the complete dimensional analysis provided
-by the package udunits on which NeXus is based, or even the units used
+by the package UDunits on which NeXus is based, or even the units used
 in the NeXus definition files.
 
 Unlike other units modules, this module does not carry the units along
@@ -18,14 +19,16 @@ transforming values.
 
 Usage example::
 
-    import nxs.unit
-    u = nxs.unit.Converter('mili*metre')  # Units stored in mm
+    from nxs import unit
+    u = unit.Converter('mili*metre')  # Units stored in mm
     v = u(3000,'m')  # Convert the value 3000 mm into meters
 
-NeXus example::
+NeXus example using nxs api::
 
     # Load sample orientation in radians regardless of how it is stored.
     # 1. Open the path
+    import nxs
+    file = nxs.open(filename)
     file.openpath('/entry1/sample/sample_orientation')
     # 2. scan the attributes, retrieving 'units'
     units = [for attr,value in file.attrs() if attr == 'units']
@@ -34,22 +37,25 @@ NeXus example::
     # 4. read the data and convert to the correct units
     v = u(file.read(),'radians')
 
-This is a standalone module, not relying on either DANSE or NeXus, and
-can be used for other unit conversion tasks.
+NeXus example using h5py, and a private version of unit::
+
+    import h5py
+    from . import unit
+    file = h5py.File(filename)
+    field = file['/entry1/sample/sample_orientation']
+    u = unit.Converter(field.attrs.get('units',''))
+    v = u(field.value,'radians')
 
 Note: minutes are used for angle and seconds are used for time.  We
-cannot tell what the correct interpretation is without knowing something
+cannot determine the correct interpretation without knowing something
 about the fields themselves.  If this becomes an issue, we will need to
 allow the application to set the dimension for the units rather than
 getting the dimension from the units as we are currently doing.
 """
 
-# TODO: Add udunits to NAPI rather than reimplementing it in python
-# TODO: Alternatively, parse the udunits database directly
+# TODO: Parse the udunits database directly
 # UDUnits:
 #  http://www.unidata.ucar.edu/software/udunits/udunits-1/udunits.txt
-
-# TODO: Allow application to impose the map on the units
 
 from __future__ import division
 
@@ -81,6 +87,7 @@ def _build_metric_units(unit,abbr):
     short_prefix = dict(P=1e15,T=1e12,G=1e9,M=1e6,k=1e3,
                         d=1e-1,c=1e-2,m=1e-3,u=1e-6,
                         n=1e-9,p=1e-12,f=1e-15)
+    short_prefix['µ'] = 1e-6
     map = {abbr:1}
     map.update([(P+abbr,scale) for (P,scale) in short_prefix.iteritems()])
     for name in [unit,unit.capitalize()]:
@@ -103,8 +110,12 @@ def _build_all_units():
     # Various distance measures
     distance = _build_metric_units('meter','m')
     distance.update(_build_metric_units('metre','m'))
-    distance.update(_build_plural_units(micron=1e-6, Angstrom=1e-10))
-    distance.update({'A':1e-10, 'Ang':1e-10})
+    distance.update(_build_plural_units(micron=1e-6,
+                                        Angstrom=1e-10,
+                                        angstrom=1e-10,
+                                        ))
+    distance.update({'A':1e-10, 'Ang':1e-10,
+                     'Å':1e-10, 'ångström':1e-10,})
 
     # Various time measures.
     # Note: minutes are used for angle rather than time
@@ -148,7 +159,6 @@ def _build_all_units():
 class Converter(object):
     """
     Unit converter for NeXus style units.
-
     """
     # Define the units, using both American and European spelling.
     scalemap = None
@@ -171,17 +181,21 @@ class Converter(object):
         if units == "" or self.scalemap is None: return 1
         return self.scalebase/self.scalemap[units]
 
-    def __call__(self, value, units=""):
-        # Note: calculating a*1 rather than simply returning a would produce
-        # an unnecessary copy of the array, which in the case of the raw
-        # counts array would be bad.  Sometimes copying and other times
-        # not copying is also bad, but copy on modify semantics isn't
-        # supported.
-        if units == "" or self.scalemap is None: return value
+    def conversion(self, value, units=""):
+        if units == "" or self.scalemap is None: return 1.0
         try:
-            return value * (self.scalebase/self.scalemap[units])
+            return self.scalebase/self.scalemap[units]
         except KeyError:
             raise KeyError("%s not in %s"%(units," ".join(sorted(self.scalemap.keys()))))
+
+    def __call__(self, value, units=""):
+        # Note: calculating value*1.0 rather than simply returning value
+        # would produce an unnecessary copy of the array, which in the
+        # case of the raw counts array would be bad.  Sometimes copying
+        # and other times not copying is also bad, but copy on modify
+        # semantics isn't supported.
+        a = self.conversion(units)
+        return value if a == 1.0 else value*a
 
 def _check(expect,get):
     if expect != get: raise ValueError, "Expected %s but got %s"%(expect,get)

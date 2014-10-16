@@ -183,7 +183,7 @@ class Sample(object):
     broadening = 0
 
     def __init__(self, **kw):
-        self.environment = Environment()
+        self.environment = {}
         _set(self,kw)
     def __str__(self): return _str(self)
 
@@ -230,9 +230,8 @@ class Environment(object):
         * y is polar 90, azimuthal 0
         * z is azimuthal 90
     """
-    properties = ['temperature','magnetic_field']
-    temperature = None
-    magnetic_field = None
+    properties = ['name', 'units', 'value', 'start', 'time',
+                  'average','minimum', 'maximum']
 
     def __init__(self, **kw): _set(self,kw)
     def __str__(self): return _str(self)
@@ -324,27 +323,23 @@ class Detector(object):
         shape as the detector, giving the relative efficiency of each pixel,
         or 1 if the efficiency is unknown.
         TODO: do we need variance?
-    saturation (k [%, counts/second, uncertainty])
+    saturation (k [rate (counts/second), efficiency (%), uncertainty])
         Given a measurement of a given number of counts versus expected
         number of counts on the detector (e.g., as estimated by scanning
         a narrow slit across the detector to measure the beam profile,
         then measuring increasingly large portions of the beam profile),
         this can be converted to an efficiency correction per count rate
         which can be applied to all data read with this detector.  The
-        value for deadtime should be a tuple of three vectors: efficiency,
-        uncertainty and count rate.  Below the lowest count rate the
-        detector is considered to be 100% efficient (any baseline
-        inefficiency will be normalized when comparing the measured
-        reflection to the measured beam).  Beyond the highest count
-        rate, the detector is considered saturated.  The uncertainty
-        is just the sqrt(counts)/time.
+        value for deadtime should be a tuple of vectors: count rate,
+        efficiency and uncertainty.  Below the lowest count rate the detector
+        is considered to be 100% efficient (any baseline inefficiency will
+        be normalized when comparing the measured reflection to the
+        measured beam).  Beyond the highest count rate, the detector
+        is considered saturated.  The normalize counts vector (v,dv) will
+        be scaled by 1/(saturation +/- uncertainty).
 
-
-        Note: Given the nature of the detectors (detecting ionization
-        caused by neutron capture) there is undoubtably a local
-        saturation level, but this is likely masked by the usual
-        detector electronics which can only detect one event at a
-        time regardless of where it occurs on the detector.
+        Note: There may be separate per pixel and per detector
+        saturation levels.
 
     Measurement
     ===========
@@ -375,7 +370,7 @@ class Detector(object):
     """
     properties=["dims",'distance','size','center','widths_x','widths_y',
                 'angle_x','angle_y','rotation','efficiency','saturation',
-                'wavelength','time_of_flight','counts']
+                'wavelength','wavelength_resolution','time_of_flight','counts']
     dims = [1,1] # i,j
     distance = None # mm
     size = [1,1]  # mm
@@ -388,6 +383,7 @@ class Detector(object):
     efficiency = 1 # proportion
     saturation = inf # counts/sec
     wavelength = 1 # angstrom
+    wavelength_resolution = 0 # angstrom
     time_of_flight = None  # ms
 
     @property
@@ -428,7 +424,6 @@ class Detector(object):
     def _delcounts(self):
         _pcounts = lambda:None
     counts = property(_getcounts,_setcounts,_delcounts)
-
 
     def __init__(self, **kw): _set(self,kw)
     def __str__(self): return _str(self)
@@ -494,7 +489,7 @@ class Monitor(object):
         should give us a reasonable estimate of the reflectivity.  If
         the information is available, this will be a better proxy for
         monitor than measurement duration.
-    base ('time' | 'counts' | 'power')
+    base ('time' | 'monitor' | 'power')
         The measurement rate basis which should be used to normalize
         the data.  This is initialized by the file loader, but may
         be overridden during reduction.
@@ -542,7 +537,7 @@ class Monitor(object):
     count_time = None
     time_step = 1 # Default to nearest second
     time_of_flight = None
-    base = 'counts'
+    base = 'monitor'
     source_power = 1 # Default to 1 MW power
     source_power_units = "MW"
     source_power_variance = 0
@@ -603,6 +598,96 @@ class WarningWavelength(Warning):
     """
     pass
 
+class Intent:
+    """
+    Intent is one of the following:
+
+        intensity: Normalization scan for computing absolute reflection
+        specular: Specular intensity measurement
+        backgound qx: Background measurement, offset from Qx=0 in Q
+        background sample: Background measurement, sample rotated
+        background detector: Background measurement, detector moved
+        rock qx: Rocking curve with fixed Qz
+        rock sample: Rocking curve with fixed detector angle
+        rock detector: Rocking curve with fixed sample angle
+        slice: Slice through Qx-Qz
+        area: Measurement of a region of Qx-Qz plane
+        alignment: Sample alignment measurement
+        other: Some other kind of measurement
+    """
+    none = 'unknown'
+    time = 'time'
+    slit = 'intensity'
+    spec = 'specular'
+    rockQ = 'rock qx'
+    rock3 = 'rock sample'
+    rock4 = 'rock detector'
+    backp = 'background+'
+    backm = 'background-'
+    other = 'other'
+
+    @staticmethod
+    def isback(intent):
+        return intent.startswith('background')
+
+    @staticmethod
+    def isspec(intent):
+        return intent == Intent.spec
+
+    @staticmethod
+    def isrock(intent):
+        return intent.startswith('rock')
+
+    @staticmethod
+    def isslit(intent):
+        return intent == Intent.slit
+
+    @staticmethod
+    def isnone(intent):
+        return intent == Intent.none
+
+def infer_intent(data):
+    """
+    Infer intent from data.
+
+    Returns one of the Intent strings.
+    """
+    # TODO: doesn't handle alignment scans
+    Ti = data.sample.angle_x
+    Tf = 0.5*data.detector.angle_x
+    dT = 0.1*data.angular_resolution
+    n = len(Ti)
+
+    scan_i = (max(Ti) - min(Ti) > dT).any()
+    scan_f = (max(Tf) - min(Tf) > dT).any()
+    if (abs(Ti) < dT).all() and (abs(Tf) < dT).all():
+        # incident and reflected angles are both 0
+        intent = Intent.slit
+    elif (scan_i and scan_f) or (not scan_i and not scan_f):
+        # both Ti and Tf are moving, or neither is moving
+        if (abs(Tf - Ti) < dT).all():
+            intent = Intent.spec
+        elif abs(data.Qx.max() - data.Qx.min()) > data.dQ.max():
+            intent = Intent.rockQ
+        elif np.sum(Tf - Ti > dT) > 0.9*n:
+            intent = Intent.backp
+        elif np.sum(Ti - Tf > dT) > 0.9*n:
+            intent = Intent.backm
+        else:
+            intent = Intent.none
+    elif scan_i:
+        # only Ti is moving
+        intent = Intent.rock3
+    elif scan_f:
+        # only Tf is moving
+        intent = Intent.rock4
+    else:
+        # never gets here
+        intent = Intent.none
+
+    return intent
+
+
 class ReflData(object):
     """
     slit1,slit2 (Slit)
@@ -626,19 +711,25 @@ class ReflData(object):
     channels
         For time of flight, the number of time channels.  For white
         beam instruments, the number of analysers.
-    reversed (False)
-        True if the measurement is reversed, in which case sample
-        and detector angles need to be negated and pixel directions
-        reversed when computing pixel coordinates.
     roi
         Region of interest on the detector.
-    display_monitor (counts)
-        Default monitor to use when displaying data from this dataset
+    intent (one of the Intent strings)
+        Purpose of the measurement.
+    background_offset ('theta', '2theta' or 'qz')
+        For background scans, align the background points with the specular
+        points according to theta (sample angle), 2theta (detector angle)
+        or qz (Qz value of background computed from sample and detector angle)
+    mask
+        points excluded from reduction
 
     File details
     ============
     instrument (string)
         Name of a particular instrument
+    geometry ('vertical' or 'horizontal')
+        Whether the scattering plane is horizontal or vertical.  The x-y
+        values of the slits, detector, etc. should be relative to the
+        scattering plane, not the lab frame.
     probe ('neutron' or 'xray')
         Type of radiation used to probe the sample.
     path (string)
@@ -656,17 +747,6 @@ class ReflData(object):
         Duration of the measurement.
     warnings
         List of warnings generated when the file was loaded
-    intent (string)
-        Purpose of the measurement.
-        intensity: Normalization scan for computing absolute reflection
-        specular: Specular intensity measurement
-        q_offset: Background measurement, offset from Qx=0 in Q
-        sample_offset: Background measurement, sample rotated
-        detector_offset: Background measurement, detector moved
-        slice: Slice through Qx-Qz
-        area: Measurement of a region of Qx-Qz plane
-        alignment: Sample alignment measurement
-        other: Some other kind of measurement
 
     Format specific fields (ignored by reduction software)
     ======================
@@ -674,15 +754,14 @@ class ReflData(object):
         Format specific file handle, for actions like showing the summary,
         updating the data and reading the frames.
     """
-    properties = ['instrument','geometry','probe','points','channels',
+    properties = ['instrument', 'geometry', 'probe', 'points','channels',
                   'name','description','date','duration','attenuator',
-                  'polarization','reversed','warnings','path','entry',
-                  'intent']
+                  'polarization','warnings','path','entry',
+                  'intent', 'background_offset']
+    instrument = "unknown"
     geometry = "vertical"
     probe = "unknown"
-    format = "unknown"
     path = "unknown"
-    intent = "unknown"
     entry = ""
     points = 1
     channels = 1
@@ -698,26 +777,66 @@ class ReflData(object):
     messages = None
     vlabel = 'Intensity'
     vunits = 'counts'
+    xlabel = 'unknown intent'
+    xunits = ''
+    background_offset = None
+    mask = None
+    _intent = Intent.none
     _v = None
     _dv = None
 
-    # Data representation for generic plotter as (x,y,z,v) -> (qz,qx,qy,Iq)
-    # TODO: subclass Data so we get pixel edges calculations
-    def _getx(self): return self.Qz
-    def _gety(self): return self.Qx
-    def _getz(self): return self.Qy
-    x,xlabel,xunits = property(_getx),"Qx","inv A"
-    y,ylabel,yunits = property(_gety),"Qy","inv A"
-    z,zlabel,zunits = property(_getz),"Qz","inv A"
-    def _getv(self):
+    ## Data representation for generic plotter as (x,y,z,v) -> (qz,qx,qy,Iq)
+    ## TODO: subclass Data so we get pixel edges calculations
+    #def _getx(self): return self.Qz
+    #def _gety(self): return self.Qx
+    #def _getz(self): return self.Qy
+    #x,xlabel,xunits = property(_getx),"Qx","inv A"
+    #y,ylabel,yunits = property(_gety),"Qy","inv A"
+    #z,zlabel,zunits = property(_getz),"Qz","inv A"
+    @property
+    def intent(self):
+        return self._intent
+
+    @intent.setter
+    def intent(self, v):
+        # Note: not setting x value with the label since the returned x should
+        # correspond to the underlying value even if it has been updated since
+        # the measurement intent was set.
+        self._intent = v
+        if Intent.isspec(v) or Intent.isback(v):
+            self.xlabel, self.xunits = "Qz", "1/Ang"
+        elif Intent.isrock(v):
+            self.xlabel, self.xunits = "Qx", "1/Ang"
+        elif Intent.isslit(v):
+            self.xlabel, self.xunits = "slit 1 opening", "mm"
+        else:
+            self.xlabel, self.xunits = "point", ""
+
+    @property
+    def x(self):
+        # Return different x depending on intent
+        intent = self.intent
+        if Intent.isback(intent) or Intent.isspec(intent):
+            return self.Qz
+        elif Intent.isrock(intent):
+            return self.Qx
+        elif Intent.isslit(intent):
+            return self.slit1.x
+        else:
+            return np.arange(1, len(self.v)+1)
+
+    @property
+    def v(self):
         return self.detector.counts if self._v is None else self._v
-    def _setv(self, v):
+    @v.setter
+    def v(self, v):
         self._v = v
-    def _getdv(self):
+    @property
+    def dv(self):
         return sqrt(self.detector.counts) if self._dv is None else self._dv
-    def _setdv(self, dv):
+    @dv.setter
+    def dv(self, dv):
         self._dv = dv
-    v,dv = property(_getv, _setv),property(_getdv, _setdv)
     # vlabel and vunits depend on monitor normalization
 
     @property
@@ -750,15 +869,16 @@ class ReflData(object):
         self.detector = Detector()
         self.monitor = Monitor()
         self.moderator = Moderator()
-        self.warnings = []
         self.roi = ROI()
+        self.warnings = []
         self.messages = []
 
     def __str__(self):
-        base = [_str(self)]
-        others = [str(s) for s in [self.slit1,self.slit2,self.slit3,self.slit4,
-                                   self.sample,self.detector,self.monitor,
-                                   self.roi]]
+        base = [_str(self,indent=2)]
+        others = ["  "+s+"\n"+str(getattr(self,s))
+                  for s in ("slit1","slit2","slit3","slit4",
+                            "sample","detector","monitor","roi")
+                  ]
         return "\n".join(base+others+self.messages)
 
     def __or__(self, pipeline):
@@ -786,27 +906,8 @@ class ReflData(object):
 
     def plot(self):
         from matplotlib import pyplot as plt
-        from . import corrections as cor
-        intent = self.intent
-        if intent == "unknown":
-            # Guess intent; needs angular resolution to determine if data
-            # is specular or
-            data = self
-            if getattr(self, 'angular_resolution', None) is None:
-                data = data | cor.divergence()
-            data = data | cor.intent('auto')
-            intent = data.intent
-        if intent.startswith('back') or intent == 'specular':
-            x,xlab = self.Qz, "Q (1/Ang)"
-        elif intent.startswith('rock'):
-            x,xlab = self.Qx, "Qx (1/Ang)"
-
-        elif intent.startswith('slit'):
-            x,xlab = self.slit1.x, "slit 1 opening (mm)"
-        else:
-            x,xlab = np.arange(1,len(self.v)+1),"point"
-        plt.errorbar(x, self.v, self.dv, label=self.name+self.polarization, fmt='.')
-        plt.xlabel(xlab)
+        plt.errorbar(self.x, self.v, self.dv, label=self.name+self.polarization, fmt='.')
+        plt.xlabel("%s (%s)"%(self.xlabel, self.xunits) if self.xunits else self.xlabel)
         plt.ylabel("%s (%s)"%(self.vlabel, self.vunits))
         plt.yscale('log')
 
@@ -829,14 +930,14 @@ class PolData(object):
         self.messages.append(msg)
 
 
-def _str(object):
+def _str(object, indent=4):
     """
     Helper function: document data object by convert attributes listed in
     properties into a string.
     """
-    cls = object.__class__.__name__
     props = [a+"="+str(getattr(object,a)) for a in object.properties]
-    return "%s %s"%(cls,"\n  ".join(props))
+    prefix = " "*indent
+    return prefix+("\n"+prefix).join(props)
 
 
 def _set(object,kw):
