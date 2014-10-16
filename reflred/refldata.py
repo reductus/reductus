@@ -183,7 +183,7 @@ class Sample(object):
     broadening = 0
 
     def __init__(self, **kw):
-        self.environment = Environment()
+        self.environment = {}
         _set(self,kw)
     def __str__(self): return _str(self)
 
@@ -230,9 +230,8 @@ class Environment(object):
         * y is polar 90, azimuthal 0
         * z is azimuthal 90
     """
-    properties = ['temperature','magnetic_field']
-    temperature = None
-    magnetic_field = None
+    properties = ['name', 'units', 'value', 'start', 'time',
+                  'average','minimum', 'maximum']
 
     def __init__(self, **kw): _set(self,kw)
     def __str__(self): return _str(self)
@@ -324,27 +323,23 @@ class Detector(object):
         shape as the detector, giving the relative efficiency of each pixel,
         or 1 if the efficiency is unknown.
         TODO: do we need variance?
-    saturation (k [%, counts/second, uncertainty])
+    saturation (k [rate (counts/second), efficiency (%), uncertainty])
         Given a measurement of a given number of counts versus expected
         number of counts on the detector (e.g., as estimated by scanning
         a narrow slit across the detector to measure the beam profile,
         then measuring increasingly large portions of the beam profile),
         this can be converted to an efficiency correction per count rate
         which can be applied to all data read with this detector.  The
-        value for deadtime should be a tuple of three vectors: efficiency,
-        uncertainty and count rate.  Below the lowest count rate the
-        detector is considered to be 100% efficient (any baseline
-        inefficiency will be normalized when comparing the measured
-        reflection to the measured beam).  Beyond the highest count
-        rate, the detector is considered saturated.  The uncertainty
-        is just the sqrt(counts)/time.
+        value for deadtime should be a tuple of vectors: count rate,
+        efficiency and uncertainty.  Below the lowest count rate the detector
+        is considered to be 100% efficient (any baseline inefficiency will
+        be normalized when comparing the measured reflection to the
+        measured beam).  Beyond the highest count rate, the detector
+        is considered saturated.  The normalize counts vector (v,dv) will
+        be scaled by 1/(saturation +/- uncertainty).
 
-
-        Note: Given the nature of the detectors (detecting ionization
-        caused by neutron capture) there is undoubtably a local
-        saturation level, but this is likely masked by the usual
-        detector electronics which can only detect one event at a
-        time regardless of where it occurs on the detector.
+        Note: There may be separate per pixel and per detector
+        saturation levels.
 
     Measurement
     ===========
@@ -375,7 +370,7 @@ class Detector(object):
     """
     properties=["dims",'distance','size','center','widths_x','widths_y',
                 'angle_x','angle_y','rotation','efficiency','saturation',
-                'wavelength','time_of_flight','counts']
+                'wavelength','wavelength_resolution','time_of_flight','counts']
     dims = [1,1] # i,j
     distance = None # mm
     size = [1,1]  # mm
@@ -388,6 +383,7 @@ class Detector(object):
     efficiency = 1 # proportion
     saturation = inf # counts/sec
     wavelength = 1 # angstrom
+    wavelength_resolution = 0 # angstrom
     time_of_flight = None  # ms
 
     @property
@@ -428,7 +424,6 @@ class Detector(object):
     def _delcounts(self):
         _pcounts = lambda:None
     counts = property(_getcounts,_setcounts,_delcounts)
-
 
     def __init__(self, **kw): _set(self,kw)
     def __str__(self): return _str(self)
@@ -494,7 +489,7 @@ class Monitor(object):
         should give us a reasonable estimate of the reflectivity.  If
         the information is available, this will be a better proxy for
         monitor than measurement duration.
-    base ('time' | 'counts' | 'power')
+    base ('time' | 'monitor' | 'power')
         The measurement rate basis which should be used to normalize
         the data.  This is initialized by the file loader, but may
         be overridden during reduction.
@@ -542,7 +537,7 @@ class Monitor(object):
     count_time = None
     time_step = 1 # Default to nearest second
     time_of_flight = None
-    base = 'counts'
+    base = 'monitor'
     source_power = 1 # Default to 1 MW power
     source_power_units = "MW"
     source_power_variance = 0
@@ -724,6 +719,8 @@ class ReflData(object):
         For background scans, align the background points with the specular
         points according to theta (sample angle), 2theta (detector angle)
         or qz (Qz value of background computed from sample and detector angle)
+    mask
+        points excluded from reduction
 
     File details
     ============
@@ -783,6 +780,7 @@ class ReflData(object):
     xlabel = 'unknown intent'
     xunits = ''
     background_offset = None
+    mask = None
     _intent = Intent.none
     _v = None
     _dv = None
@@ -871,8 +869,8 @@ class ReflData(object):
         self.detector = Detector()
         self.monitor = Monitor()
         self.moderator = Moderator()
-        self.warnings = []
         self.roi = ROI()
+        self.warnings = []
         self.messages = []
 
     def __str__(self):

@@ -9,7 +9,7 @@ import numpy as np
 import h5py as h5
 from .. import refldata
 from .. import corrections as cor
-from . import unit
+from .. import unit
 from . import iso8601
 
 def data_as(field, units, rep=1):

@@ -159,7 +159,6 @@ def _build_all_units():
 class Converter(object):
     """
     Unit converter for NeXus style units.
-
     """
     # Define the units, using both American and European spelling.
     scalemap = None
@@ -182,17 +181,21 @@ class Converter(object):
         if units == "" or self.scalemap is None: return 1
         return self.scalebase/self.scalemap[units]
 
-    def __call__(self, value, units=""):
-        # Note: calculating a*1 rather than simply returning a would produce
-        # an unnecessary copy of the array, which in the case of the raw
-        # counts array would be bad.  Sometimes copying and other times
-        # not copying is also bad, but copy on modify semantics isn't
-        # supported.
-        if units == "" or self.scalemap is None: return value
+    def conversion(self, value, units=""):
+        if units == "" or self.scalemap is None: return 1.0
         try:
-            return value * (self.scalebase/self.scalemap[units])
+            return self.scalebase/self.scalemap[units]
         except KeyError:
             raise KeyError("%s not in %s"%(units," ".join(sorted(self.scalemap.keys()))))
+
+    def __call__(self, value, units=""):
+        # Note: calculating value*1.0 rather than simply returning value
+        # would produce an unnecessary copy of the array, which in the
+        # case of the raw counts array would be bad.  Sometimes copying
+        # and other times not copying is also bad, but copy on modify
+        # semantics isn't supported.
+        a = self.conversion(units)
+        return value if a == 1.0 else value*a
 
 def _check(expect,get):
     if expect != get: raise ValueError, "Expected %s but got %s"%(expect,get)

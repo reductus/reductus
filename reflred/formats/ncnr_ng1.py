@@ -210,7 +210,9 @@ class NG1Icp(refldata.ReflData):
             # will have to provide the means of setting the rate
             # and computing the time based on that rate.
             pass
-        
+
+        self.monitor.base = 'monitor' if data.count_type == 'NEUT' else 'time'
+
         if 'temp' in data:
             # record the temperature in sample environment
             self.sample.environment.temperature = data.column['temp']

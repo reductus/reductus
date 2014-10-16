@@ -29,6 +29,8 @@ def interp(X,Xp,Fp,varFp,left=None,right=None):
     # interpolated point is one of the repeated values.
     p = (Xp[idx+1]-X)/(Xp[idx+1]-Xp[idx])
     F = p*Fp[idx] + (1-p)*Fp[idx+1]
+    # simple propagation of error formula for calculation of F, confirmed
+    # by monte carlo simulation.
     varF = p**2*varFp[idx] + (1-p)**2*varFp[idx+1]
     #print p,F,varF,idx
     if left is None: left = Fp[0],varFp[0]

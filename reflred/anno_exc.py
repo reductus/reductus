@@ -13,5 +13,5 @@ def annotate_exception(msg, exc=None):
     if not args:
         arg0 = msg
     else:
-        arg0 = " ".join((args[0],msg))
+        arg0 = " ".join((str(args[0]),msg))
     exc.args = tuple([arg0] + list(args[1:]))

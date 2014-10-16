@@ -51,6 +51,10 @@ def normalize(*args, **kw):
     from .normcor import Normalize
     return Normalize(*args, **kw)
 
+def join(*args, **kw):
+    """Join related files together into a single file"""
+    from .joincor import Join
+    return Join(*args, **kw)
 
 def polarization_efficiency(*args, **kw):
     """Polarization efficiency correction"""
