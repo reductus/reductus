@@ -1,0 +1,3 @@
+[submodule "reflweb/js/jstree"]
+	path = reflweb/js/jstree
+	url = https://github.com/vakata/jstree.git
