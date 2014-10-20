@@ -906,7 +906,8 @@ class ReflData(object):
 
     def plot(self):
         from matplotlib import pyplot as plt
-        plt.errorbar(self.x, self.v, self.dv, label=self.name+self.polarization, fmt='.')
+        plt.errorbar(self.x, self.v, self.dv,
+                     label=self.name+self.polarization, fmt='.')
         plt.xlabel("%s (%s)"%(self.xlabel, self.xunits) if self.xunits else self.xlabel)
         plt.ylabel("%s (%s)"%(self.vlabel, self.vunits))
         plt.yscale('log')
@@ -914,6 +915,7 @@ class ReflData(object):
 class PolData(object):
     ispolarized = True
     def __init__(self, pp, pm, mp, mm):
+        raise NotImplementedError("not yet using a poldata object")
         self.pp = pp
         self.mm = mm
         self.mp = mp

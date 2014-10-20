@@ -56,6 +56,11 @@ def join(*args, **kw):
     from .joincor import Join
     return Join(*args, **kw)
 
+def background(*args, **kw):
+    """Background subtraction"""
+    from .backcor import Background
+    return Background(*args, **kw)
+
 def polarization_efficiency(*args, **kw):
     """Polarization efficiency correction"""
     from .polcor import PolarizationEfficiency

@@ -220,6 +220,16 @@ def arctan(x):
 def arctan2(x,y):
     Uncertainty(*err1d.arctan2(x.x,x.variance,y.x,y.variance))
 
+def mean(x, biased=True):
+    r"""
+    Return the mean and variance of a dataset.
+
+    If varX is estimated from the data, then *biased* is True, and the
+    estimated variance is scaled by the normalized $\chi^2$.
+    """
+    M, varM = err1d.mean(x, x.variance, biased=biased)
+    return Uncertainty(M, varM)
+
 def interp(x,xp,fp,left=None,right=None):
     """
     Linear interpolation of x into points (xk,yk +/- dyk).

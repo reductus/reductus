@@ -29,7 +29,11 @@ class Join(Correction):
     statistics than the prior points.
 
     *order* is the sort order of the files that are joined.  The first
-    file determines
+    file in the sorted list determines the metadata such as the base
+    file name for the joined file.
+
+    The joined datasets will be sorted as appropriate for the the
+    measurement intent.  Masked points will be removed.
     """
     def __init__(self, tolerance=0.1, order='file'):
         self.tolerance = tolerance
@@ -147,7 +151,7 @@ def build_dataset(group, columns):
     data.slit2 = copy(head.slit2)
     data.slit2.x = columns['s2']
     # not copying detector or monitor
-    data.detector.counts = None
+    data.detector.counts = []
     data.detector.wavelength = columns['L']
     data.detector.wavelength_resolution = columns['dL']
     data.detector.angle_x = columns['a4']
@@ -157,12 +161,18 @@ def build_dataset(group, columns):
     # record per-file history
     data.warnings = []
     data.messages = []
-    for d in group:
-        entry = ':'.join((d.name,d.entry))
-        data.warnings.append(entry)
-        data.warnings.extend(indent(msg,"| ") for msg in d.warnings)
-        data.messages.append('File(%s)'%entry)
-        data.messages.extend(indent(msg,"|") for msg in d.messages)
+    if len(group) > 1:
+        for d in group:
+            entry = ':'.join((d.name,d.entry))
+            if d.warnings:
+                data.warnings.append(entry)
+                data.warnings.extend(indent(msg,"| ") for msg in d.warnings)
+            if d.messages:
+                data.messages.append('Dataset(%s)'%entry)
+                data.messages.extend(indent(msg,"|") for msg in d.messages)
+    else:
+        data.warnings = group[0].warnings
+        data.messages = group[0].messages
 
     # Add in any sample environment fields
     for k,v in head.sample.environment.items():
@@ -270,7 +280,11 @@ def indent(text, prefix="  "):
 
 def sort_columns(columns, names):
     """
-    Order a set of columns by a list of keys.
+    Returns the set of columns by a ordered by a list of keys.
+
+    *columns* is a dictionary of vectors of the same length.
+
+    *names* is the list of keys that the columns should be sorted by.
     """
     index = np.arange(len(columns[names[0]]), dtype='i')
     for k in reversed(names):

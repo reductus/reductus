@@ -11,6 +11,25 @@ from __future__ import division  # Get true division
 
 import numpy as np
 
+def mean(X, varX, biased=True):
+    r"""
+    Return the mean and variance of a dataset.
+
+    If varX is estimated from the data, then *biased* is True, and the
+    estimated variance is scaled by the normalized $\chi^2$.
+    """
+    # From wikipedia weighted arithmetic mean
+    # correcting for over- or under-dispersion when variance is computed from
+    # the data rather than known in advance
+    total_weight = np.sum(1./varX)
+    M = np.sum(X/varX)/total_weight
+    varM = 1./total_weight
+    if biased:
+        # Scale by chisq if variance calculation is biased
+        varM *= np.sum((X-M)**2/varX)/(len(X)-1)
+    return M, varM
+
+
 def interp(X,Xp,Fp,varFp,left=None,right=None):
     """
     Linear interpolation of x points into points (xk,fk +/- dfk).
