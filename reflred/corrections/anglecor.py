@@ -1,46 +1,31 @@
 # This program is public domain
 """
 Alignment correction.
-
-Sometimes the sample alignment is not perfect, and the sample may
-be slightly rotated.  The net effect of this is that the Q values
-stored in the data file are not correct.  The angle correction
-allows you to adjust Q as if the data were taken at a slightly
-different angle.
-
-Note that this adjustment will fail to properly account for the change
-in intensity due to the neutrons at the unexpected reflection angle
-being filtered by the back slits, or due to the unexpected sample
-footprint poorly estimating the beam spill.  Whether these effects are
-significant depends on the details of the experiment geometry.
-
-Usage
-=====
-
-    data | AdjustAlignment(offset=0.01)
 """
 from ..pipeline import Correction
 
 class AdjustAlignment(Correction):
     """
-    Adjust Q if there is reason to believe either the detector
-    or the sample is rotated.
+    Adjust angles for misaligned sample.
+
+    Sometimes the sample alignment is not perfect, and the sample may
+    be slightly rotated.  The net effect of this is that the Q values
+    stored in the data file are not correct.  The angle correction
+    allows you to adjust Q as if the data were taken at a slightly
+    different angle.
+
+    Note that this adjustment will fail to properly account for the change
+    in intensity due to the neutrons at the unexpected reflection angle
+    being filtered by the back slits, or due to the unexpected sample
+    footprint poorly estimating the beam spill.  Whether these effects are
+    significant depends on the details of the experiment geometry.
     """
-    properties = ["offset"]
-    offset = 0. # degrees
-
-    def __init__(self, offset=0.):
-        """Define the angle offset correction for the data.
-        angle: rotation in degrees away from the beam
-        """
-        self.offset = offset
-
+    parameters = [
+        ['offset', 0., 'degrees',
+         'sample rotation relative to the nominal incident angle'],
+    ]
     def apply(self, data):
-        """Apply the angle correction to the data"""
-        assert not data.ispolarized(), "need unpolarized data"
-
-        data.sample.angle_x += self.offset
-        data.detector.angle_x -= self.offset
-
-    def __str__(self):
-        return "AdjustAlignment(offset=%g)"%self.offset
+        if self.offset != 0.0:
+            data.sample.angle_x += self.offset
+            data.detector.angle_x -= self.offset
+            data.formula = data.formula+"[dT=%g]"%self.offset

@@ -17,12 +17,10 @@ class InferIntent(Correction):
     greater than detector angle, and *background-* if incident angle is less
     than detector angle.
     """
-    def __init__(self, intent='infer'):
-        self.intent = intent
-
-    def __str__(self):
-        return "Intent(%r)"%self.intent
-
+    parameters = [
+        [ "intent", "infer", "",
+          "determine whether the scan is specular, background, slit, or rock"],
+    ]
     def apply(self, data):
         stored_intent = getattr(data, 'intent', Intent.none)
         inferred_intent = infer_intent(data)
@@ -42,19 +40,14 @@ class InferIntent(Correction):
 def demo():
     import sys
     from .. import formats
-    from ..corrections import divergence, intent
-    from os.path import join as joinpath
-    from ..examples import get_data_path
 
     if len(sys.argv) == 1:
-        path = get_data_path('ng1p')
-        base = "jd916_2"
-        files = [joinpath(path, "%s%03d.nad"%(base,753))]
+        from ..examples import ng1p as group
+        files = group.spec() + group.rock() + group.back() + group.slit()
     else:
-        files = sys.argv[1:]
+        files = [d for f in sys.argv[1:] for d in formats.load(f)]
     for f in files:
-        data = formats.load(f)[0] | divergence() | intent()
-        print "intent",f,data.intent
+        print "intent",f.formula,f.intent
 
 
 if __name__ == "__main__":

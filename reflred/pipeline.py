@@ -10,8 +10,6 @@ cross sections.
 
 A correction has a string name that can be stored in a log file.
 
-See properties.py for a discussion of correction parameters.
-
 We may want to support an undo/redo stack, either by providing
 an undo method for reversing the effect of the correction, or
 by taking a snapshot of the data before the operation if the
@@ -64,15 +62,7 @@ def _apply_and_return_data(correction, data):
     return newdata
 
 class Correction(object):
-    properties = []  # Property sheet for interacting with correction
     def apply(self, data):
-        raise NotImplementedError
-
-    def __str__(self):
-        """
-        Name of the correction, and enough detail to record in the
-        reduced data log.
-        """
         raise NotImplementedError
 
     def apply_list(self, datasets):
@@ -127,6 +117,31 @@ class Correction(object):
             return self.__call__(other)
         # pipeline | stage: handled by pipeline
         raise NotImplementedError
+
+    def __init__(self, **kw):
+        for name,default,_,_ in self.parameters:
+            setattr(self, name, kw.pop(name, default))
+        if kw:
+            raise TypeError("Unexpected arguments to %s: %s"
+                            %(self.__class__.__name__, ", ".join(kw.keys())))
+
+    def __str__(self):
+        """
+        Name of the correction, and enough detail to record in the
+        reduced data log.
+        """
+        name = self.__class__.__name__
+        pars = ",".join("%s=%s"%(p[0],_format_par(getattr(self,p[0])))
+                        for p in self.parameters)
+        return "%s(%s)"%(name, pars)
+
+
+def _format_par(p):
+    """
+    Format a value using quotes if it is a string, no quotes otherwise.
+    """
+    try: return "".join(('"',p,'"'))
+    except TypeError: return str(p)
 
 class Pipeline(Correction):
     def __init__(self, stages):

@@ -42,16 +42,12 @@ class RatioIntensity(Correction):
 
     Returns a correction object that can be applied to data.
     """
-    model = None
-
-    def __init__(self, model):
-        self.model = model
+    parameters = [
+        ['model', None, '', 'Refl1D model to normalize by'],
+    ]
 
     def apply(self, data):
         intensity_ratio(data=data,model=self.model)
-
-    def __str__(self):
-        return "RatioIntensity(%s)"%str(self.model)
 
 class WaterIntensity(Correction):
     """
@@ -62,6 +58,12 @@ class WaterIntensity(Correction):
 
     Returns a correction object that can be applied to data.
     """
+
+    parameters = [
+        ['D2O_percent', 0, '%', 'D2O/H2O ratio in solvent, from 0 to 100'],
+        ['interface', 3, 'Ang', 'Interfacial rougnhess on the water surface'],
+    ]
+
     # TODO: allow background, intensity
     # TODO: allow different substrate
     def _water_rho(self, probe):
@@ -79,20 +81,10 @@ class WaterIntensity(Correction):
         irho = 1e-6*((1-p)*irho_H2O + p*irho_D2O)
         return rho, irho
 
-    def __init__(self,D2O_percent=0,interface=3):
-        self.D2O_percent = D2O_percent
-        self.interface = interface
-
     def apply(self,data):
         rho,irho = self._water_rho(data.probe)
         model = Fresnel(rho=rho, irho=irho, sigma=self.interface)
         intensity_ratio(data=data,model=model)
-
-    def __str__(self):
-        if self.D2O_percent == 0:
-            return "WaterIntensity()"
-        else:
-            return "WaterIntensity(D2O=%d%%)"%(self.D2O_percent)
 
 def intensity_ratio(data=None,model=None):
     """
@@ -143,4 +135,5 @@ def demo():
 
     pylab.show()
 
-if __name__ == "__main__": demo()
+if __name__ == "__main__":
+    demo()

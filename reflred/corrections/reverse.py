@@ -10,6 +10,8 @@ ReverseCorrection
 FrontCorrection
 """
 
+import numpy as np
+
 from ..pipeline import Correction
 
 class ReverseCorrection(Correction):
@@ -20,7 +22,7 @@ class ReverseCorrection(Correction):
     def apply(self,data):
         data.sample.angle_x = -data.sample.angle_x
         data.detector.angle_x = -data.detector.angle_x
-    def __str__(self): return "ReverseCorrection()"
+        data.formula = data.formula + "[rev]"
 
 class FrontCorrection(Correction):
     """
@@ -28,6 +30,8 @@ class FrontCorrection(Correction):
     of negative angles.
     """
     def apply(self,data):
-        data.sample.angle_x = abs(data.sample.angle_x)
-        data.detector.angle_x = abs(data.detector.angle_x)
-    def __str__(self): return "FrontCorrection()"
+        idx = data.sample.angle_x < 0
+        if np.any(idx):
+            data.sample.angle_x[idx] *= -1.0
+            data.detector.angle_x[idx] *= -1.0
+            data.formula = data.formula + "[front]"

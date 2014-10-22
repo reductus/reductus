@@ -88,9 +88,13 @@ class NG1Icp(refldata.ReflData):
             raise TypeError, "Only I-Buffers supported for %s"%self.format
 
         self.date = data.date
-        self.name = data.filename
+        self.name = os.path.basename(data.path).split('.',1)[0]
+        self.formula = self.name
         self.description = data.comment
-        self.dataset = self.name[:5]
+        if '_' in self.name:
+            self.dataset,self.sequence = self.name.rsplit('_',1)
+        else:
+            self.dataset,self.sequence = self.name[:5],self.name[5:]
 
         # Lookup defaults as of the current date
         ext = os.path.splitext(data.filename)[1].lower()

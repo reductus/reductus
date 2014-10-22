@@ -2,6 +2,8 @@
 """
 Rescale dataset.
 """
+from __future__ import division
+
 import numpy as np
 
 from ..pipeline import Correction
@@ -14,14 +16,43 @@ DETECTOR_OFFSET = 'detector angle'
 
 class Background(Correction):
     """
-    Adjust Q if there is reason to believe either the detector
-    or the sample is rotated.
-    """
-    properties = ["align_with"]
-    """One of %r, %r or %r"""%(SAMPLE_OFFSET, DETECTOR_OFFSET, AUTO_OFFSET)
+    Subtract the background datasets from the specular dataset.
 
-    def __init__(self, align_with=AUTO_OFFSET):
-        self.align_with = align_with
+    The background+ and background- signals are removed from the list of
+    data sets, averaged, interpolated, and subtracted from the specular.
+    If there is no specular, then the backgrounds are simply removed and
+    there is no further action.  If there are no backgrounds, then the
+    specular is sent through unchanged.  Slit scans and rocking curves
+    are not affected.
+
+    This correction only operates on a list of datasets.  A single dataset
+    which contains both specular and background, such as a PSD measurement,
+    must first be filtered through a correction to separate the specular
+    and background into a pair of datasets.
+
+    Background subtraction is applied independently to the different
+    polarization cross sections.
+
+    The *align_with* flag determines which background points are matched
+    to the sample points.  It can be 'sample angle' if background is
+    measured using an offset from the sample angle, or 'detector angle'
+    if it is offset from detector angle.   If *align_with* is 'auto', then
+    we guess whether it is a offset from sample or detector.
+
+    For 'auto' alignment, we can only distinguish relative and constant offsets,
+    not  whether it is offset from sample or detector, so we must rely on
+    convention. If the offset is constant for each angle, then it is assumed
+    to be a sample offset.  If the offset is proportional to the angle (and
+    therefore offset/angle is constant), then it is assumed to be a detector
+    offset. If neither condition is met, it is  assumed to be a sample offset.
+
+    The 'auto' test is robust: 90% of the points should be within 5% of the
+    median value of the vector for the offset to be considered a constant.
+    """
+    parameters = [
+        ["align_with", AUTO_OFFSET, "",
+         "One of %r, %r or %r"%(SAMPLE_OFFSET, DETECTOR_OFFSET, AUTO_OFFSET)],
+    ]
 
     def apply_list(self, datasets):
         cross_sections = group_by_xs(datasets)
@@ -32,9 +63,6 @@ class Background(Correction):
                 for xs in cross_sections.values()
                 for _,data in sorted((d.intent,d) for d in xs.values())
                ]
-
-    def __str__(self):
-        return "Background(%s)"%(self.align_with)
 
 
 def group_by_xs(datasets):
@@ -96,10 +124,13 @@ def subtract_background(measurements, align_with):
     #print "-",backm
     if backp and backm:
         spec_v -= (backp_v + backm_v)/2
+        spec.formula = "(%s - <%s,%s>)"%(spec.formula, backp.formula, backm.formula)
     elif backp:
         spec_v -= backp_v
+        spec.formula = "(%s - %s)"%(spec.formula, backp.formula,)
     else:
         spec_v -= backm_v
+        spec.formula = "(%s - %s)"%(spec.formula, backm.formula,)
 
     spec.v = spec_v.x
     spec.dv = spec_v.dx
@@ -107,54 +138,85 @@ def subtract_background(measurements, align_with):
 
 
 def guess_alignment(back):
+    """
+    Guess whether background is offset from sample angle or from detector angle.
+    """
+    if back.background_offset:
+        return back.background_offset
     a3 = back.sample.angle_x
     a4 = back.detector.angle_x
     a3_from_a4 = a4/2
-    a4_from_a3 = 2*a3
-    dT = 0.1*back.angular_resolution
-    if _check_mostly_constant(a3 - a3_from_a4, dT):
+    a4_from_a3 = a3*2
+    #print "a3",a3
+    #print "a3 - a3 from a4",a3 - a3_from_a4
+    #print "a4 - a4 from a3",a4 - a4_from_a3
+    #print "a4",a4
+    #print "(a4 - a4_from_a3)/a4_from_a3",(a4 - a4_from_a3)/a4_from_a3
+    if _check_mostly_constant(a3 - a3_from_a4):
         # A3 absolute offset
         return SAMPLE_OFFSET
-    elif _check_mostly_constant(a3 - a3_from_a4, dT*a3_from_a4):
-        # A3 relative offset
-        return SAMPLE_OFFSET
-    elif _check_mostly_constant(a4 - a4_from_a3, dT):
-        # A4 absolute offset
-        return DETECTOR_OFFSET
-    elif _check_mostly_constant(a4 - a4_from_a3, dT*a4_from_a3):
+    #elif _check_mostly_constant((a3 - a3_from_a4)/a3_from_a4):
+    #    # A3 relative offset
+    #    return SAMPLE_OFFSET
+    #elif _check_mostly_constant(a4 - a4_from_a3):
+    #    # A4 absolute offset
+    #    return DETECTOR_OFFSET
+    elif _check_mostly_constant((a4 - a4_from_a3)/a4_from_a3):
         # A4 relative offset
         return DETECTOR_OFFSET
     else:
         return SAMPLE_OFFSET
 
 
-def _check_mostly_constant(v, dv):
+def _check_mostly_constant(v):
     # normalize
-    v = v/dv
     # find median; don't want mean since it is not robust
     med = np.median(v)
+    delta = abs(med)*0.05
     # exclude points too far away from central value
-    outliers = np.sum((v<med-1)|(v>med+1))
+    #print med,delta,v
+    outliers = np.sum((v<med-delta)|(v>med+delta))
+    #print "outliers",outliers
     # if too many points excluded, then reject the "mostly constant" assumption
     return outliers <= len(v)//10
 
 
+def test_alignment_guess():
+    from ..refldata import ReflData
+    back = ReflData()
+    #a3 = np.arange(0.005,3,0.005)
+    a3 = np.arange(0.5,3,0.5)
+    a4 = 2*a3
+    a3err = np.random.uniform(-0.0001,0.0001, size=a3.size)
+    a4err = np.random.uniform(-0.0001,0.0001, size=a3.size)
+
+    # detector offset
+    back.sample.angle_x = a3 + a3err
+    back.detector.angle_x = a4 + 0.3 + a4err
+    assert guess_alignment(back) == SAMPLE_OFFSET, "detector absolute +"
+    back.detector.angle_x = a4 - 0.3 + a4err
+    assert guess_alignment(back) == SAMPLE_OFFSET, "detector absolute -"
+    back.detector.angle_x = a4*(1+0.4) + a4err
+    assert guess_alignment(back) == DETECTOR_OFFSET, "detector relative +"
+    back.detector.angle_x = a4*(1-0.4) + a4err
+    assert guess_alignment(back) == DETECTOR_OFFSET, "detector relative -"
+
+    # sample offset
+    back.detector.angle_x = a4 + a4err
+    back.sample.angle_x = a3 + 0.3 + a3err
+    assert guess_alignment(back) == SAMPLE_OFFSET, "sample absolute +"
+    back.sample.angle_x = a3 - 0.3 + a3err
+    assert guess_alignment(back) == SAMPLE_OFFSET, "sample absolute -"
+    back.sample.angle_x = a3*(1+0.4) + a3err
+    assert guess_alignment(back) == DETECTOR_OFFSET, "sample relative +"
+    back.sample.angle_x = a3*(1-0.4) + a3err
+    assert guess_alignment(back) == DETECTOR_OFFSET, "sample relative -"
 
 def demo():
     import pylab
-    from os.path import join as joinpath
-    from ..examples import get_data_path
-    from .. import formats
+    from ..examples import ng1p as group
     from .. import corrections as cor
-    path = get_data_path('ng1p')
-    base = "jd901_2"
-    files = [joinpath(path, "%s%03d.n%sd"%(base,seq,xs))
-             for seq in (706,707,708,709,710,711)
-             for xs in 'abcd']#'abcd']
-    datasets = [formats.load(name)[0] for name in files]
-    #for d in datasets: print d.name,d.entry,d.intent
-    #print datasets[0]; return
-    #print datasets[0].detector.counts
+    datasets = group.spec()+group.back()
     datasets = datasets | cor.join()
     subtracted = datasets | cor.background()
 
@@ -167,6 +229,7 @@ def demo():
     #for data in subtracted: print data.intent
     pylab.subplot(212)
     for data in subtracted: data.plot()
+    for data in subtracted: print data.formula+data.polarization
     pylab.legend()
     pylab.show()
 

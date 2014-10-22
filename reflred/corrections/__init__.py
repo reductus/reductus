@@ -33,70 +33,70 @@ def apply_standard_corrections(data):
     the user to override if they want a different kind of normalization.
     """
     divergence().apply(data)
-    intent('auto').apply(data) # use stored intent if present
+    intent(intent='auto').apply(data) # use stored intent if present
     normalize().apply(data)
 
-def intent(*args, **kw):
+def intent(**kw):
     """Mark the intent of the measurement"""
     from .intentcor import InferIntent
-    return InferIntent(*args, **kw)
+    return InferIntent(**kw)
 
-def divergence(*args, **kw):
+def divergence(**kw):
     """Compute angular divergence"""
     from .divergencecor import AngularResolution
-    return AngularResolution(*args, **kw)
+    return AngularResolution(**kw)
 
-def normalize(*args, **kw):
+def normalize(**kw):
     """Normalization correction; should be applied first"""
     from .normcor import Normalize
-    return Normalize(*args, **kw)
+    return Normalize(**kw)
 
-def join(*args, **kw):
+def join(**kw):
     """Join related files together into a single file"""
     from .joincor import Join
-    return Join(*args, **kw)
+    return Join(**kw)
 
-def background(*args, **kw):
+def background(**kw):
     """Background subtraction"""
     from .backcor import Background
-    return Background(*args, **kw)
+    return Background(**kw)
 
-def polarization_efficiency(*args, **kw):
+def polarization_efficiency(**kw):
     """Polarization efficiency correction"""
     from .polcor import PolarizationEfficiency
-    return PolarizationEfficiency(*args, **kw)
+    return PolarizationEfficiency(**kw)
 
-def align_slits(*args, **kw):
+def align_slits(**kw):
     """Data smoothing using 1-D moving window least squares filter"""
     from .alignslits import AlignSlits
-    return AlignSlits(*args, **kw)
+    return AlignSlits(**kw)
 
-def water_intensity(*args, **kw):
+def water_intensity(**kw):
     """Intensity estimate from water scatter"""
     from .ratiocor import WaterIntensity
-    return WaterIntensity(*args, **kw)
+    return WaterIntensity(**kw)
 
-def ratio_intensity(*args, **kw):
+def ratio_intensity(**kw):
     """Intensity estimate from reflection off a standard sample"""
     from .ratiocor import RatioIntensity
-    return RatioIntensity(*args, **kw)
+    return RatioIntensity(**kw)
 
-def measured_area_correction(*args, **kw):
+def measured_area_correction(**kw):
     """Detector area correction from file"""
-    from .areacor import measured_area_correction
-    return measured_area_correction(*args,**kw)
+    from .areacor import MeasuredAreaCorrection
+    return MeasuredAreaCorrection(**kw)
 
-def area_correction(*args, **kw):
+def area_correction(**kw):
     """Detector area correction from file"""
     from .areacor import AreaCorrection
-    return AreaCorrection(*args,**kw)
+    return AreaCorrection(**kw)
 
-def brookhaven_area_correction(*args, **kw):
+def brookhaven_area_correction(**kw):
     """Correct for the standard brookhaven detector pixel width"""
-    from .bh_areacor import brookhaven_area_correction
-    return brookhaven_area_correction(*args, **kw)
+    from .bh_areacor import BrookhavenAreaCorrection
+    return BrookhavenAreaCorrection(**kw)
 
-def rescale(*args, **kw):
+def rescale(**kw):
     """Scale the dataset"""
     from .rescalecor import Rescale
-    return Rescale(*args, **kw)
+    return Rescale(**kw)

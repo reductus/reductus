@@ -35,10 +35,12 @@ class Join(Correction):
     The joined datasets will be sorted as appropriate for the the
     measurement intent.  Masked points will be removed.
     """
-    def __init__(self, tolerance=0.1, order='file'):
-        self.tolerance = tolerance
-        self.order = order
-
+    parameters = [
+        ["tolerance", 0.1, "",
+         "scale on dT used to determine whether angles are equivalent"],
+        ["order", "file", "file|time|theta|slit|none",
+         "sort order for joined files, which determines the name of the result"],
+    ]
     def apply(self, data):
         return self.apply_list([data])[0]
 
@@ -46,9 +48,6 @@ class Join(Correction):
         groups = group_data(sort_files(datasets, self.order))
         return [join_datasets(data, self.tolerance)
                 for _,data in sorted(groups.items())]
-
-    def __str__(self):
-        return "Join(tolerance=%g)"%self.tolerance
 
 
 def sort_files(datasets, key):
@@ -140,6 +139,7 @@ def build_dataset(group, columns):
     data = refldata.ReflData()
     for p in data.properties:
         setattr(data, p, getattr(head, p))
+    data.formula = build_join_formula(group)
     data.v = columns['v']
     data.dv = columns['dv']
     data.angular_resolution = columns['dT']
@@ -163,12 +163,11 @@ def build_dataset(group, columns):
     data.messages = []
     if len(group) > 1:
         for d in group:
-            entry = ':'.join((d.name,d.entry))
             if d.warnings:
-                data.warnings.append(entry)
+                data.warnings.append(d.name)
                 data.warnings.extend(indent(msg,"| ") for msg in d.warnings)
             if d.messages:
-                data.messages.append('Dataset(%s)'%entry)
+                data.messages.append('Dataset(%s)'%d.name)
                 data.messages.extend(indent(msg,"|") for msg in d.messages)
     else:
         data.warnings = group[0].warnings
@@ -183,6 +182,19 @@ def build_dataset(group, columns):
             data.sample.enviroment[k] = env
 
     return data
+
+def build_join_formula(group):
+    head = group[0].formula
+    prefix = 0
+    if len(group) > 1:
+        try:
+            while all(d.formula[prefix]==head[prefix] for d in group[1:]):
+                prefix = prefix + 1
+        except IndexError:
+            pass
+    if prefix <= 2:
+        prefix = 0
+    return head[:prefix]+"<"+",".join(d.formula[prefix:] for d in group)+">"
 
 def get_columns(group):
     """
@@ -256,8 +268,8 @@ def _vectorize(v, data, field):
     elif len(v) == n:
         return v
     else:
-        raise ValueError("%s length does not match data length in %s:%s"
-                         % (field, data.name, data.entry))
+        raise ValueError("%s length does not match data length in %s%s"
+                         % (field, data.name, data.polarization))
 
 def apply_mask(group, columns):
     """
@@ -402,21 +414,14 @@ def poisson_average(y, dy):
 
 def demo():
     import pylab
-    from os.path import join as joinpath
-    from ..examples import get_data_path
-    from .. import formats
+    from ..examples import ng1p as group
     from .. import corrections as cor
-    path = get_data_path('ng1p')
-    base = "jd901_2"
-    files = [joinpath(path, "%s%03d.n%sd"%(base,seq,xs))
-             for seq in (706,707,708,709,710,711)
-             for xs in 'abcd']#'abcd']
-    datasets = [formats.load(name)[0] for name in files]
-    #for d in datasets: print d.name,d.entry,d.intent
+    datasets = group.spec()+group.back()
+    #for d in datasets: print d.name,d.polarization,d.intent
     #print datasets[0]; return
     #print datasets[0].detector.counts
     datasets = datasets | cor.join()
-    #for data in datasets: print data.intent
+    for data in datasets: print data.intent, data.formula+data.polarization
     for data in datasets:
         data.plot()
     pylab.legend()

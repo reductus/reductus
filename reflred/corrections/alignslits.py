@@ -26,33 +26,29 @@ class AlignSlits(Correction):
     """
     Align slits with a moving window 1-D polynomial least squares filter.
 
-    dx* is the size within which slit openings are considered equivalent.
+    *dx* is the size within which slit openings are considered equivalent.
     The default is 0.01 mm.
 
-    The intensity scan can be smoothed while being aligned. *degree* is
-    the polynomial degree, and *span* is the number of consecutive
+    *degree* is the polynomial degree, and *span* is the number of consecutive
     points used to fit the polynomial. *span* must larger  than *degree*.
     Odd sized *span* is preferred.  *degree=1* and  *span=2* is
     equivalent to linear interpolation.
     """
-
-    name = "align_slits"
-
-    properties = ['degree','span','dx']
-    degree = 2
-    """Polynomial order for smoothing"""
-    span = 11
-    """Number of points used to fit smoothing polynomial"""
-
-    def __init__(self, degree=2, span=11, dx=0.01):
-        """
-        Define the smoothing polynomial.
-        """
-        self.degree, self.span, self.dx = degree, span, dx
-        assert span>degree, "Span must be greater than degree"
+    parameters = [
+        ['degree', 2, '', 'polynomial degree'],
+        ['span', 11, '', 'number of consecutive points in the fit'],
+        ['dx', 0.01, 'mm', 'size within which slits are considered equivalent'],
+        ]
 
     def apply(self, data):
         """Apply the correction to the data"""
+        # TODO: how to check parameter consistency
+        # Maybe on __init__, but does not allow UI to update property directly
+        # Maybe on assignment, but doesn't allow update to one parameter without
+        # the other.
+        # Maybe provide check method which returns a list of invalid parameters
+        # and the reason, or nothing if all parameter values are valid.
+        assert self.span>self.degree, "Span must be greater than degree"
         if data.ispolarized:
             lines = [data.pp, data.pm, data.mp, data.mm]
         else:
@@ -62,9 +58,6 @@ class AlignSlits(Correction):
             v,dv = smooth(xp, L.slit1.x, L.v, L.dv,
                           degree=self.degree, span=self.span)
             L.v,L.dv = v,dv
-
-    def __str__(self):
-        return "Smooth(degree=%d,span=%d)"%(self.degree,self.span)
 
 def find_common(datasets, dx):
     x = np.sort(np.hstack(datasets))

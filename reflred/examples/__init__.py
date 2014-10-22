@@ -11,23 +11,24 @@ def get_data_path(dir=""):
     """
     Locate the examples directory.
     """
+    from os.path import dirname, abspath, join as joinpath, isdir
 
     key = 'REFLRED_DATA'
     if os.environ.has_key(key):
         # Check for data path in the environment
-        path = os.path.join(os.environ[key],data)
-        if not os.path.isdir(path):
+        path = os.environ[key]
+        if not isdir(path):
             raise RuntimeError('Path in environment %s not a directory'%key)
 
     else:
         # Check for data next to the package.
         try:
-            root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            root = dirname(dirname(dirname(abspath(__file__))))
         except:
             raise RuntimeError("Could not find sample data")
-        path = os.path.join(root,'doc','examples')
+        path = joinpath(root,'doc','examples')
 
-    path = os.path.join(path, dir)
-    if not os.path.isdir(path):
+    path = joinpath(path, dir)
+    if not isdir(path):
         raise RuntimeError('Could not find sample data in '+path)
     return path

@@ -104,9 +104,11 @@ Minimize the log probability by setting the derivative to zero:
 import numpy as np
 
 from refl1d.rebin import rebin2d, rebin
+
+from ..refldata import Intent
 from ..pipeline import Correction
 
-def measured_area_correction(data, rebin=False):
+class MeasuredAreaCorrection(Correction):
     """
     Given a detector measurement (either a flood fill or a main
     beam scan) return an area correction based on the pixel widths
@@ -130,11 +132,55 @@ def measured_area_correction(data, rebin=False):
     for each beam scan, resulting in a small file that can be applied
     to multiple datasets.
     """
+    parameters = [
+        ["rebin", False, "",
+         "if rebin, then shift counts so pixels are uniform.  If not rebin, "
+         "then normalize counts by the area of each pixel."],
+    ]
+
+    def apply_list(self, datasets):
+        norm = [d for d in datasets if d.intent == Intent.deff]
+        if len(norm) != 1:
+            ValueError("Need one and only one detector efficiency measurement")
+        # TODO: maybe precalculate norm
+        wx, wy = find_pixel_area(norm)
+        for d in datasets:
+            if d is not norm:
+                area_norm(d, self.wx, self.wy, self.rebin)
+
+class AreaCorrection(Correction):
+    """
+    Convert detector counts from counts per pixel to counts per unit area.
+    """
+    parameters = [
+        ["wx", [], "mm",
+         "effective pixel width in the x direction"],
+        ["wy", [], "mm",
+         "effective pixel width in the y direction"],
+        ["source", "unknown", "",
+         "source of the pixel width data"],
+        ["rebin", False, "",
+         "if rebin, then shift counts so pixels are uniform.  If not rebin, "
+         "then normalize counts by the area of each pixel."],
+    ]
+
+    def __init__(self, **kw):
+        Correction.__init__(self, **kw)
+        self.wx = np.asarray(self.wx)
+        self.wy = np.asarray(self.wy)
+
+    def apply(self, data):
+        area_norm(data, self.wx, self.wy, self.rebin)
+
+def find_pixel_area(data):
+    """
+    Estimate pixel width and height from a flood fill of the detector.
+    """
     # Collapse the detector measurement to one frame
     Cxy = np.sum(data.detector.counts,axis=0)
     # Find total counts
     C = np.sum(Cxy)
-    # Find propotional counts in x and y
+    # Find proportional counts in x and y
     Cx = np.sum(Cxy,axis=0)
     Cy = np.sum(Cxy,axis=1)
     # Find new pixel width from proportional counts
@@ -142,73 +188,48 @@ def measured_area_correction(data, rebin=False):
     wx = Cx / C * Lx
     wy = Cy / C * Ly
 
-    return AreaCorrection(wx,wy,rebin=rebin,source=data.name)
+    return wx, wy
 
-class AreaCorrection(Correction):
-    """
-    Convert detector counts from counts per pixel to counts per unit area.
-    """
-    properties = ["wx","wy","source","rebin"]
 
-    def __init__(self, wx, wy, rebin=False, source="unknown"):
-        """
-        Create a pixel area correction function.
+def area_norm(data, wx, wy, rebin):
+    """Apply the area correction to the data"""
+    # TODO: apply correction to v,dv rather than detector
+    # TODO: no error propagation
+    # TODO: maybe note detector efficiency correction in formula
+    nx,ny = wx.shape[0],wy.shape[0]
+    assert data.detector.dims == (nx,ny), \
+        "area correction size does not match detector size"
+    if rebin:
+        # Compute bin edges
+        x = np.concatenate([(0.,),np.cumsum(wx)])
+        y = np.concatenate([(0.,),np.cumsum(wy)])
+        Lx,Ly = np.sum(wx),np.sum(wy)
+        xo = np.linspace(0,Lx,nx+1)
+        yo = np.linspace(0,Ly,ny+1)
 
-        *wx*, *wy* is the solid angle of the pixels as measured on
-        the detector.  This function will normalize the counts
-        on the detector by pixel area.  This will change the
-        pixel widths in the data file.
-
-        If *rebin* is True then adjust pixel boundaries so the
-        pixels have equal area.
-
-        *source* is a string to report in the log as the origin
-        of the correction data.
-        """
-        self.wx = np.array(wx)
-        self.wy = np.array(wy)
-        self.source = source
-        self.rebin = rebin
-
-    def apply(self, data):
-        """Apply the area correction to the data"""
-        nx,ny = self.wx.shape[0],self.wy.shape[0]
-        assert data.detector.dims == (nx,ny), \
-            "area correction size does not match detector size"
-        if self.rebin:
-            # Compute bin edges
-            x = np.concatenate([(0.,),np.cumsum(self.wx)])
-            y = np.concatenate([(0.,),np.cumsum(self.wy)])
-            Lx,Ly = np.sum(self.wx),np.sum(self.wy)
-            xo = np.linspace(0,Lx,nx+1)
-            yo = np.linspace(0,Ly,ny+1)
-
-            # Rebin in place
-            if data.detector.counts.ndim == 3:
-                Io = np.empty((nx,ny),'d') # Intermediate storage
-                for i in xrange(data.detector.counts.shape[0]):
-                    frame = data.detector.counts[i]
-                    frame[:] = rebin2d(x,y,frame,xo,yo,Io)
-            else:
-                Io = np.empty((nx,),'d') # Intermediate storage
-                for i in xrange(data.detector.counts.shape[0]):
-                    frame = data.detector.counts[i]
-                    frame[:] = rebin(x,frame,xo,Io)
-
-            # Set the pixel widths to a fixed size
-            # TODO: force a failure until we figure out what happens with
-            # TODO: lazy loading on the detector.
-            data.detector.widths_x = np.zeros(nx,'d')+Lx/nx
-            data.detector.widths_y = np.zeros(ny,'d')+Ly/ny
+        # Rebin in place
+        if data.detector.counts.ndim == 3:
+            Io = np.empty((nx,ny),'d') # Intermediate storage
+            for i in xrange(data.detector.counts.shape[0]):
+                frame = data.detector.counts[i]
+                frame[:] = rebin2d(x,y,frame,xo,yo,Io)
         else:
-            # Scale by area
-            data.detector.widths_x = self.wx
-            data.detector.widths_y = self.wy
+            Io = np.empty((nx,),'d') # Intermediate storage
+            for i in xrange(data.detector.counts.shape[0]):
+                frame = data.detector.counts[i]
+                frame[:] = rebin(x,frame,xo,Io)
 
-            # Normalize pixels by area
-            data.detector.counts /= self.wx
-            data.detector.counts /= self.wy
+        # Set the pixel widths to a fixed size
+        # TODO: force a failure until we figure out what happens with
+        # TODO: lazy loading on the detector.
+        data.detector.widths_x = np.zeros(nx,'d')+Lx/nx
+        data.detector.widths_y = np.zeros(ny,'d')+Ly/ny
+    else:
+        # Scale by area
+        data.detector.widths_x = wx
+        data.detector.widths_y = wy
 
-    def __str__(self):
-        rebinstr = ",rebin" if self.rebin else ""
-        return "AreaCorrection(%r%s)"%(self.source,rebinstr)
+        # Normalize pixels by area
+        data.detector.counts /= wx
+        data.detector.counts /= wy
+

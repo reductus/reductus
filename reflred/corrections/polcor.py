@@ -159,7 +159,6 @@ for the theory?
 import numpy as np
 
 from ..pipeline import Correction
-from ..data import PolarizedData
 from ..wsolve import wsolve
 
 class PolarizationEfficiency(Correction):
@@ -185,7 +184,6 @@ class PolarizationEfficiency(Correction):
     """Perform clipping to keep efficiencies physical"""
     spinflip = True
     """Correct both spinflip and non-spinflip data if available"""
-    _beam = PolarizedData()
     _FRbalance = 0.5
 
     # Define the correction parameters

@@ -10,24 +10,24 @@ from ..pipeline import Correction
 # TODO: Separate display normalization from internal values
 # TODO: Add filter to convert time to monitor
 class Normalize(Correction):
-    def __init__(self, base='auto', scale='auto'):
-        """
-        Define the kind of monitor normalization.
+    """
+    Define the kind of monitor normalization.
 
-        *base* is 'time', 'monitor', 'power', 'auto' or 'none'.
-        *scale* is a value, 'auto' or none.
+    For example, if base='monitor' and scale=1000, then the normalization
+    will be counts per 1000 monitor counts.
 
-        For example, if base='monitor' and scale=1000, then the normalization
-        will be counts per 1000 monitor counts.
+    Note that operations that combine datasets require the same
+    normalization on the points.  :class:`joincor.Join` in particular
+    requires normalization by monitor, with scale of 1 to get the
+    correct value.
+    """
 
-        Note that operations that combine datasets require the same
-        normalization on the points.  :class:`joincor.Join` in particular
-        requires normalization by monitor, with scale of 1 to get the
-        correct value.
-        """
-        self.base = base
-        self.scale = scale
-
+    parameters = [
+        ['base', 'auto', 'time|monitor|power|auto|none',
+         'normalization measurement to use for the intensity'],
+        ['scale', 1, '',
+         'scale factor for normalization'],
+    ]
     def apply(self, data):
         v, dv, base, units = norm(data, self.base, self.scale)
         data.v, data.dv = v, dv
@@ -35,14 +35,9 @@ class Normalize(Correction):
         data.vlabel = 'Intensity'
         data.normbase = base
 
-    def __str__(self):
-        return "Normalize('%s','%s')"%(self.base,self.scale)
-
 def norm(data, base='auto', scale=1):
     if base == 'auto':
         base = 'monitor'
-    if scale=='auto':
-        scale = 1
     C = data.detector.counts
     varC = C # Poisson stats
     if base == 'monitor':
@@ -73,14 +68,9 @@ def norm(data, base='auto', scale=1):
 
 def demo():
     import pylab
-    from os.path import join as joinpath
-    from ..examples import get_data_path
-    from .. import formats
+    from ..examples import ng1p as group
     from .. import corrections as cor
-    path = get_data_path('ng1p')
-    base = "jd916_2"
-    file = joinpath(path, "%s%03d.nad"%(base,753))
-    data = formats.load(file)[0]
+    data = group.spec()
     # Normalize by time instead of the default monitor counts
     (data | cor.normalize('time')).plot()
     #data.plot()

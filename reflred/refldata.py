@@ -625,6 +625,7 @@ class Intent:
     backp = 'background+'
     backm = 'background-'
     other = 'other'
+    deff = 'detector efficiency'
 
     @staticmethod
     def isback(intent):
@@ -756,13 +757,12 @@ class ReflData(object):
     """
     properties = ['instrument', 'geometry', 'probe', 'points','channels',
                   'name','description','date','duration','attenuator',
-                  'polarization','warnings','path','entry',
+                  'polarization','warnings','path','formula',
                   'intent', 'background_offset']
     instrument = "unknown"
     geometry = "vertical"
     probe = "unknown"
     path = "unknown"
-    entry = ""
     points = 1
     channels = 1
     name = ""
@@ -772,6 +772,7 @@ class ReflData(object):
     file = None
     attenuator = 1.
     polarization = ""
+    formula = ""
     reversed = False
     warnings = None
     messages = None
