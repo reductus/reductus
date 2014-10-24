@@ -6,9 +6,11 @@ from copy import copy
 
 import numpy as np
 
-from .. import refldata
 from .. import unit
 from ..pipeline import Correction
+from ..refldata import Intent, ReflData, Environment
+from .util import indent, group_data
+
 
 class Join(Correction):
     """
@@ -36,7 +38,7 @@ class Join(Correction):
     measurement intent.  Masked points will be removed.
     """
     parameters = [
-        ["tolerance", 0.1, "",
+        ["tolerance", 0.05, "",
          "scale on dT used to determine whether angles are equivalent"],
         ["order", "file", "file|time|theta|slit|none",
          "sort order for joined files, which determines the name of the result"],
@@ -74,19 +76,6 @@ def sort_files(datasets, key):
     return datasets
 
 
-def group_data(datasets):
-    """
-    Groups data files by intent and polarization.
-
-    Returns a dictionary with the groups, keyed by (intent,polarization).
-    """
-    # TODO: also need to group by temperature/field
-    groups = {}
-    for d in datasets:
-        groups.setdefault((d.intent,d.polarization),[]).append(d)
-    return groups
-
-
 def join_datasets(group, tolerance):
     """
     Create a new dataset which joins the results of all datasets in the group.
@@ -105,10 +94,12 @@ def join_datasets(group, tolerance):
     columns = apply_mask(group, columns)
 
     # Sort the columns so that nearly identical points are together
-    if group[0].intent == refldata.Intent.rock4:
+    if group[0].intent == Intent.rock4:
         # Sort detector rocking curves so that small deviations in sample
         # angle don't throw off the order in detector angle.
         keys = ('a4', 'a3', 'dT', 'L')
+    elif Intent.isslit(group[0].intent):
+        keys = ('dT','L','a3','a4')
     else:
         keys = ('a3', 'a4', 'dT', 'L')
     columns = sort_columns(columns, keys)
@@ -136,7 +127,7 @@ def build_dataset(group, columns):
 
     # Copy details of first file as metadata for the returned dataset, and
     # populate it with the result vectors.
-    data = refldata.ReflData()
+    data = ReflData()
     for p in data.properties:
         setattr(data, p, getattr(head, p))
     data.formula = build_join_formula(group)
@@ -176,7 +167,7 @@ def build_dataset(group, columns):
     # Add in any sample environment fields
     for k,v in head.sample.environment.items():
         if k in columns:
-            env = refldata.Environment()
+            env = Environment()
             env.units = v.units
             env.average = columns[k]
             data.sample.enviroment[k] = env
@@ -283,11 +274,7 @@ def apply_mask(group, columns):
         columns = dict((k,v[idx]) for k,v in columns.items())
     return columns
 
-def indent(text, prefix="  "):
-    """
-    Add a prefix to every line in a string.
-    """
-    return "\n".join(prefix+line for line in text.splitlines())
+
 
 
 def sort_columns(columns, names):
@@ -298,12 +285,15 @@ def sort_columns(columns, names):
 
     *names* is the list of keys that the columns should be sorted by.
     """
+    #print "order",names
+    #print "before sort",columns['dT']
     index = np.arange(len(columns[names[0]]), dtype='i')
     for k in reversed(names):
         # TODO: L,dL wrong length
         if k == 'L': continue
-        order = np.argsort(columns[k], kind='heapsort')
+        order = np.argsort(columns[k][index], kind='heapsort')
         index = index[order]
+    #print "after sort",columns['dT'][index]
     return dict((k,v[index]) for k,v in columns.items())
 
 
@@ -319,15 +309,17 @@ def join_columns(columns, tolerance):
     # list, joining those within epsilon*delta of each other. The loop goes
     # one beyond the end so that the last group gets accumulated.
     current,maximum = 0,len(columns['a3'])
-    for i in range(maximum+1):
+    for i in range(1,maximum+1):
         T_width = tolerance*columns['dT'][current]
         L_width = tolerance*columns['dL'][current]
+        # use <= in condition so that identical points are combined when
+        # tolerance is zero
         if (i < maximum
-            and abs(columns['dT'][i] - columns['dT'][current]) < T_width
-            and abs(columns['a3'][i] - columns['a3'][current]) < T_width
-            and abs(columns['a4'][i] - columns['a4'][current]) < T_width
-            and abs(columns['dL'][i] - columns['dL'][current]) < L_width
-            and abs(columns['L'][i] - columns['L'][current]) < L_width):
+            and abs(columns['dT'][i] - columns['dT'][current]) <= T_width
+            and abs(columns['a3'][i] - columns['a3'][current]) <= T_width
+            and abs(columns['a4'][i] - columns['a4'][current]) <= T_width
+            and abs(columns['dL'][i] - columns['dL'][current]) <= L_width
+            and abs(columns['L'][i] - columns['L'][current]) <= L_width):
             continue
         if i == current+1:
             for k,v in columns.items():
@@ -339,6 +331,7 @@ def join_columns(columns, tolerance):
             results['time'].append(np.sum(columns['time'][current:i]))
             results['monitor'].append(np.sum(columns['monitor'][current:i]))
             w = weight[current:i]
+            #print "join",current,i,w,tolerance
             for k,v in columns.items():
                 if k not in set(('v','dv','time','monitor')):
                     #print "averaging",k,current,i

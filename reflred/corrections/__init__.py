@@ -61,10 +61,10 @@ def background(**kw):
     from .backcor import Background
     return Background(**kw)
 
-def polarization_efficiency(**kw):
+def polarization(**kw):
     """Polarization efficiency correction"""
-    from .polcor import PolarizationEfficiency
-    return PolarizationEfficiency(**kw)
+    from .polcor import PolarizationCorrection
+    return PolarizationCorrection(**kw)
 
 def align_slits(**kw):
     """Data smoothing using 1-D moving window least squares filter"""

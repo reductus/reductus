@@ -9,6 +9,7 @@ import numpy as np
 from ..pipeline import Correction
 from ..refldata import Intent
 from ..uncertainty import Uncertainty as U, interp
+from .util import group_by_xs
 
 AUTO_OFFSET = 'auto'
 SAMPLE_OFFSET = 'sample angle'
@@ -63,23 +64,6 @@ class Background(Correction):
                 for xs in cross_sections.values()
                 for _,data in sorted((d.intent,d) for d in xs.values())
                ]
-
-
-def group_by_xs(datasets):
-    """
-    Return datasets grouped by polarization cross section, and by intent within
-    each polarization cross section.
-    """
-    cross_sections = {}
-    for data in datasets:
-        xs = cross_sections.setdefault(data.polarization,{})
-        if data.intent in xs:
-            raise ValueError("More than one %r in reduction"%data.intent)
-        xs[data.intent] = data
-
-    #print "datasets",[":".join((d.name,d.entry,d.polarization,d.intent)) for d in datasets]
-    #print "xs",cross_sections
-    return cross_sections
 
 
 def subtract_background(measurements, align_with):

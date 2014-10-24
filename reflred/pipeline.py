@@ -40,6 +40,9 @@ or dividing datasets, a new data object can be returned.
 
 Hopefully, these semantics will be the right balance performance and
 memory usage on one hand, and convenience and intuitive feel on the other.
+
+This implementation does not record version numbers on the corrections,
+so reduction streams may not be reproducible.
 """
 
 __all__ = ['Correction']
@@ -128,11 +131,14 @@ class Correction(object):
     def __str__(self):
         """
         Name of the correction, and enough detail to record in the
-        reduced data log.
+        reduced data log.  Only non-default parameter values are
+        recorded.
         """
         name = self.__class__.__name__
-        pars = ",".join("%s=%s"%(p[0],_format_par(getattr(self,p[0])))
-                        for p in self.parameters)
+        pars = ",".join("%s=%s"%(p[0],_format_par(v))
+                        for p in self.parameters
+                        for v in [getattr(self, p[0])] # let value = self.par
+                        if v != p[1]) # value is default
         return "%s(%s)"%(name, pars)
 
 

@@ -26,6 +26,7 @@ from .formatnum import format_uncertainty
 # TODO: rename to Measurement and add support for units?
 # TODO: C implementation of *,/,**?
 class Uncertainty(object):
+    __slots__ = ('x','variance')
     # Make standard deviation available
     def _getdx(self): return np.sqrt(self.variance)
     def _setdx(self,dx):
@@ -35,6 +36,9 @@ class Uncertainty(object):
         self.variance[:] = dx
         self.variance **= 2
     dx = property(_getdx,_setdx,doc="standard deviation")
+
+    def rand(self, size=None):
+        return np.random.randn(size=size)*self.dx + self.x
 
     # Constructor
     def __init__(self, x, variance=None):

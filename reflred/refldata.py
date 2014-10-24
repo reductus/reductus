@@ -758,7 +758,9 @@ class ReflData(object):
     properties = ['instrument', 'geometry', 'probe', 'points','channels',
                   'name','description','date','duration','attenuator',
                   'polarization','warnings','path','formula',
-                  'intent', 'background_offset']
+                  'intent', 'background_offset',
+                  'vlabel', 'vunits', 'xlabel', 'xunits',
+                  ]
     instrument = "unknown"
     geometry = "vertical"
     probe = "unknown"
@@ -809,6 +811,7 @@ class ReflData(object):
         elif Intent.isrock(v):
             self.xlabel, self.xunits = "Qx", "1/Ang"
         elif Intent.isslit(v):
+            #self.xlabel, self.xunits = "angular resolution", "degress FWHM"
             self.xlabel, self.xunits = "slit 1 opening", "mm"
         else:
             self.xlabel, self.xunits = "point", ""
@@ -823,6 +826,7 @@ class ReflData(object):
             return self.Qx
         elif Intent.isslit(intent):
             return self.slit1.x
+            #return self.angular_resolution
         else:
             return np.arange(1, len(self.v)+1)
 
@@ -911,7 +915,8 @@ class ReflData(object):
                      label=self.name+self.polarization, fmt='.')
         plt.xlabel("%s (%s)"%(self.xlabel, self.xunits) if self.xunits else self.xlabel)
         plt.ylabel("%s (%s)"%(self.vlabel, self.vunits))
-        plt.yscale('log')
+        if not Intent.isslit(self.intent):
+            plt.yscale('log')
 
 class PolData(object):
     ispolarized = True
@@ -945,7 +950,7 @@ def _str(object, indent=4):
 
 def _set(object,kw):
     """
-    Helper function: distribute the __init__ keyword paramters to
+    Helper function: distribute the __init__ keyword parameters to
     individual attributes of an object, raising AttributeError if
     the class does not define the given attribute.
 
