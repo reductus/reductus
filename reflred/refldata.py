@@ -918,26 +918,6 @@ class ReflData(object):
         if not Intent.isslit(self.intent):
             plt.yscale('log')
 
-class PolData(object):
-    ispolarized = True
-    def __init__(self, pp, pm, mp, mm):
-        raise NotImplementedError("not yet using a poldata object")
-        self.pp = pp
-        self.mm = mm
-        self.mp = mp
-        self.pm = pm
-        self.warnings = []
-        self.messages = []
-
-    def warn(self,msg):
-        """Record a warning that should be displayed to the user"""
-        self.warnings.append(msg)
-
-    def log(self,msg):
-        """Record corrections that have been applied to the data"""
-        self.messages.append(msg)
-
-
 def _str(object, indent=4):
     """
     Helper function: document data object by convert attributes listed in

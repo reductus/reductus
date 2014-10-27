@@ -167,7 +167,7 @@ import numpy as np
 #def U(x,dx): return Uncertainty(x,dx**2)
 #def nominal_values(u): return u.x
 #def std_devs(u): return u.dx
-from uncertainties.unumpy import uarray as U, umatrix as UM, nominal_values, std_devs
+from uncertainties.unumpy import uarray as U, matrix as UM, nominal_values, std_devs
 
 from ..pipeline import Correction
 from ..wsolve import wsolve
@@ -201,7 +201,9 @@ class PolarizationCorrection(Correction):
         ["min_intensity", 0, "",
          "Minimum intensity cutoff"],
         ["spinflip", True, "",
-         "Correct both spinflip and non-spinflip data if available"],
+         "Correct spinflip data if available"],
+        ["clip", False, "",
+         "Clip efficiency between minimum and one"],
     ]
     def apply_list(self, datasets):
         """Apply the correction to the data"""
@@ -210,26 +212,30 @@ class PolarizationCorrection(Correction):
         if beam is None:
             # return datasets
             raise ValueError("Need beam intensity measurements to perform polarization correction")
-        eff = PolarizationEfficiency(beam, FRbalance=self.FRbalance,
-                                     min_efficiency=self.min_efficiency,
-                                     min_intensity=self.min_intensity)
-
-        # Don't compute spinflip correction if spinflip data is absent
-        if spinflip and data.pm and data.mp:
-            spinflip = False
 
         datasets = []
-        for intent,xs in groups.items():
+        for intent,data in groups.items():
             if any(test(intent) for test in (Intent.isspec,Intent.isrock,Intent.isback)):
-                xs = polarization_correction(dT, Hinv, xs, self.spinflip)
-            datasets.extend(xs.values())
+                correct(beam, data, Emin=self.min_efficiency,
+                        Imin = self.min_intensity, FRbal=self.FRbalance,
+                        spinflip=self.spinflip, clip=self.clip)
+            datasets.extend(v for _,v in sorted(data.items()))
 
         return datasets
 
 ALL_XS = '++','+-','-+','--'
 NSF_XS = '++','--'
 
-def polarization_correction(dT, Hinv, data, spinflip=True):
+def correct(beam, data, Emin=0, Imin=0, FRbal=0.5, spinflip=True, clip=False):
+    spinflip = spinflip and '+-' in data and '-+' in data
+    dT = data['++'].angular_resolution
+    beta,fp,rp,x,y,mask =  _calc_efficiency(beam=beam, dT=dT, FRbal=FRbal,
+                                      Imin=Imin, Emin=Emin, clip=clip)
+
+    Hinv = _correction_matrix(beta, fp, rp, x, y, spinflip)
+    _apply_correction(dT, Hinv, data, spinflip)
+
+def _apply_correction(dT, Hinv, data, spinflip=True):
     """Apply the efficiency correction in eff to the data."""
 
     # Get the intensities from the datasets
@@ -244,42 +250,36 @@ def polarization_correction(dT, Hinv, data, spinflip=True):
     # Apply the correction at each point
     X, dX = np.zeros(Y.shape), np.zeros(Y.shape)
     for i,idx in enumerate(index):
-        x = Hinv[idx] * UM(Y[:,i])
-        X[:,i], dX[:,i] = x.n, x.s
+        x = Hinv[idx] * UM(Y[:,i]).T
+        X[:,i], dX[:,i] = nominal_values(x).flat, std_devs(x).flat
 
     # Put the corrected intensities back into the datasets
     for i, xs in enumerate(parts):
         data[xs].v, data[xs].dv = X[i,:], dX[i,:]
 
 
-def polcor_matrix(beam, dT, Imin=0, Emin=0, FRbal=0.5, clip=False, spinflip=True):
+def _correction_matrix(beta, fp, rp, x, y, spinflip):
     """
     Generate polarization correction matrices for each slit configuration *dT*.
     """
-    beta,fp,rp,x,y,mask = \
-        _calc_efficiency(beam=beam, dT=dT, FRbal=FRbal, Imin=Imin, Emin=Emin, clipped=clip)
-
     Fp,Fm = 1+fp, 1-fp
     Rp,Rm = 1+rp, 1-rp
-    Fxp,Fxm = 1+fp*x, 1-fp*x
-    Ryp,Rym = 1+rp*y, 1-rp*y
+    Fp_x,Fm_x = 1+fp*x, 1-fp*x
+    Rp_y,Rm_y = 1+rp*y, 1-rp*y
 
     if spinflip:
         H = np.array([
-            [Fp * Rp, Fxp * Rp, Fp * Ryp, Fxp * Ryp],
-            [Fm * Rp, Fxm * Rp, Fm * Ryp, Fxm * Ryp],
-            [Fp * Rm, Fxp * Rm, Fp * Rym, Fxp * Rym],
-            [Fm * Rm, Fxm * Rm, Fm * Rym, Fxm * Rym],
+            [Fp * Rp, Fp_x * Rp, Fp * Rp_y, Fp_x * Rp_y],
+            [Fm * Rp, Fm_x * Rp, Fm * Rp_y, Fm_x * Rp_y],
+            [Fp * Rm, Fp_x * Rm, Fp * Rm_y, Fp_x * Rm_y],
+            [Fm * Rm, Fm_x * Rm, Fm * Rm_y, Fm_x * Rm_y],
             ])
     else:
         H = np.array([
-            [Fp * Rp, Fxp*Ryp],
-            [Fm * Rm, Fxm*Rym],
+            [Fp * Rp, Fp_x*Rp_y],
+            [Fm * Rm, Fm_x*Rm_y],
             ])
-    if np.isscalar(dT):
-        return UM(H).I/beta
-    else:
-        return [UM(H[:,:,i]).I/Bi for i,Bi in enumerate(beta)]
+    return [UM(H[:,:,k]*Bk).I for k,Bk in enumerate(beta)]
 
 def plot_efficiency(beam, Imin=0, Emin=0, FRbal=0.5, clip=False):
     from ..corrections import normalize
@@ -324,29 +324,47 @@ def _ploteff(eff, part):
 
 def polarization_efficiency(beam, Imin=0, Emin=0, FRbal=0.5, clip=False):
     """
-    Generate polarization efficiencies for each slit configuration in the ++
-    cross section.
+    Compute polarization and flipper efficiencies from the intensity data.
 
-    Use this for plotting the polarization correction efficiencies.
+    *beam* is the measured beam intensity as a dict with entries for
+    ++, +-, -+, and --.
+
+    *FRbalance* is the  portion of efficiency assigned to front versus rear
+
+    *clip* [True|False] force efficiencies below 100%
+
+    If clip is true, constrain points between the minimum efficiency and one,
+    and intensity above minimum intensity.
+
+    The computed values are systematically related to the efficiencies:
+
+    Ic: intensity is 2*beta
+    fp: front polarizer efficiency is F
+    rp: rear polarizer efficiency is R
+    ff: front flipper efficiency is (1-x)/2
+    rf: rear flipper efficiency is (1-y)/2
+    mask: true if point was clipped.
+
+    See PolarizationEfficiency.pdf for details on the calculation.
     """
     # Assume the '++' cross section exists and completely covers the
     # resolution range
     dT = beam['++'].angular_resolution
     s1 = beam['++'].slit1.x
     beta,fp,rp,x,y,mask = \
-        _calc_efficiency(beam=beam, dT=dT, FRbal=FRbal, Imin=Imin, Emin=Emin, clipped=clip)
+        _calc_efficiency(beam=beam, dT=dT, FRbal=FRbal, Imin=Imin, Emin=Emin, clip=clip)
     ff,rf = (1-x)/2, (1-y)/2
     return dict(dT=dT,slit1=s1,beta=beta,ff=ff,rf=rf,fp=fp,rp=rp,mask=mask)
 
-def _calc_efficiency(beam, dT, FRbal, Imin, Emin, clipped):
+def _calc_efficiency(beam, dT, FRbal, Imin, Emin, clip):
     # Beam intensity.
     # NOTE: A:mm, B:pm, C:mp, D:mm
     pp,pm,mp,mm = [_interp_intensity(dT, beam[xs]) for xs in ALL_XS]
 
     Ic = ((mm*pp) - (pm*mp)) / ((mm+pp) - (pm+mp))
     reject = (Ic!=Ic)  # Reject nothing initially
-    if clipped:
-        reject |= clip(Ic, Imin, np.inf)
+    if clip:
+        reject |= _clip_data(Ic, Imin, np.inf)
     beta = Ic/2
 
 
@@ -355,8 +373,8 @@ def _calc_efficiency(beam, dT, FRbal, Imin, Emin, clipped):
     # are not neutron sources).  Keep a list of points that are
     # rejected because they are outside this range.
     FR = mm/Ic - 1
-    if clipped:
-        reject |= clip(FR, Emin**2, 1)
+    if clip:
+        reject |= _clip_data(FR, Emin**2, 1)
     fp = FR ** FRbal
     rp = FR / fp
 
@@ -370,9 +388,9 @@ def _calc_efficiency(beam, dT, FRbal, Imin, Emin, clipped):
 
     # Clip the f,r flipper efficiencies to [min. efficiency, 1] by clipping
     # x,y to [-1, 1-2*min. efficiency]
-    if clipped:
-        reject |= clip(x, -1, 1-2*Emin)
-        reject |= clip(y, -1, 1-2*Emin)
+    if clip:
+        reject |= _clip_data(x, -1, 1-2*Emin)
+        reject |= _clip_data(y, -1, 1-2*Emin)
 
     return beta, fp, rp, x, y, reject
 
@@ -406,79 +424,38 @@ def clip_pypi_uncertainties(field,low,high,nanval=0.):
 
 
 if 'Uncertainty' in globals():
-    clip = clip_reflred_err1d
+    _clip_data = clip_reflred_err1d
 else:
-    clip = clip_pypi_uncertainties
-clip.__doc__ =  """
+    _clip_data = clip_pypi_uncertainties
+_clip_data.__doc__ =  """
     Clip the values to the range, returning the indices of the values
     which were clipped.  Note that this modifies field in place. NaN
     values are clipped to the nanval default.
     """
 
-class PolarizationEfficiency(object):
-    """
-    Polarization efficiency correction object.  Create a correction object
-    from a polarized direct beam measurement and apply it to measured data.
-
-    E.g.,
-
-    ::
-        eff = PolarizationEfficiency(beam)
-        corrected = eff(data)
-
-    """
-    def __init__(self, beam, FRbalance=0.5, min_efficiency=0.7, min_intensity=1e-2):
-        """
-        Define the polarization efficiency correction for the beam
-
-        *beam* is the measured beam intensity as a dict with entries for
-        ++, +-, -+, and --.
-
-        *FRbalance* is the  portion of efficiency assigned to front versus rear
-        *clip* [True|False] force efficiencies below 100%
-            spinflip: [True|False] compute spinflip correction
-
-        Compute polarizer and flipper efficiencies from the intensity data.
-
-        If clip is true, reject points above or below particular efficiencies.
-        The minimum intensity is 1e-10.  The minimum efficiency is 0.9.
-
-        The computed values are systematically related to the efficiencies:
-          Ic: intensity is 2*beta
-          fp: front polarizer efficiency is F
-          rp: rear polarizer efficiency is R
-          ff: front flipper efficiency is (1-x)/2
-          rf: rear flipper efficiency is (1-y)/2
-        reject is the indices of points which are clipped because they
-        are below the minimum efficiency or intensity.
-
-        See PolarizationEfficiency.pdf for details on the calculation.
-        """
-        self.beam = beam
-        self.FRbalance = FRbalance
-        self.min_efficiency = min_efficiency
-        self.min_intensity = min_intensity
-
-
 def demo():
     import pylab
     from ..examples import ng1p as group
     from ..corrections import join
+    from .util import plot_sa
 
     slit,spec = group.slit(), group.spec()
     pylab.figure()
     plot_efficiency(dict((d.polarization,d) for d in slit|join(tolerance=0.01)),clip=False)
-    pylab.show(); return
+    #pylab.show(); return
     data = spec+slit | join() | PolarizationCorrection()
     pylab.figure()
     pylab.subplot(211)
-    for d in spec(): d.plot()
+    for d in (spec|join()): d.plot()
+    #plot_sa(spec|join())
     pylab.legend()
     pylab.title("Before polarization correction")
     pylab.subplot(212)
     for d in data: d.plot()
+    #plot_sa(data)
     pylab.legend()
     pylab.title("After polarization correction")
+    pylab.show()
 
 
 if __name__ == "__main__": demo()

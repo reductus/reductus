@@ -101,7 +101,7 @@ def nearest(x, xp, fp=None):
     If *fp* is missing, return the index of the nearest value.
     """
     if fp is None:
-        fp = np.arange(np.len(xp))
+        fp = np.arange(len(xp))
     is_scalar_x = np.isscalar(x)
     if len(xp) == 1:
         return fp[0]
@@ -113,5 +113,24 @@ def nearest(x, xp, fp=None):
             x = np.asarray(x)
         idx = np.searchsorted(xp[1:-1], x)
         return fp[idx + ( (x-xp[idx]) >= (xp[idx+1]-x) )]
+
+
+def plot_sa(data):
+    """
+    Plot spin asymmetry data.
+    """
+    from matplotlib import pyplot as plt
+    from uncertainties.unumpy import uarray as U, nominal_values, std_devs
+    from ..refldata import Intent
+    # TODO: interp doesn't test for matching resolution
+    data = dict((d.polarization,d) for d in data)
+    pp, mm = data['++'], data['--']
+    v_pp = U(pp.v, pp.dv)
+    v_mm = interp(pp.x, mm.x, U(mm.v, mm.dv))
+    sa = (v_pp - v_mm) / (v_pp + v_mm)
+    v,dv = nominal_values(sa), std_devs(sa)
+    plt.errorbar(pp.x, v, yerr=dv, fmt='.', label=pp.name)
+    plt.xlabel("%s (%s)"%(pp.xlabel, pp.xunits) if pp.xunits else pp.xlabel)
+    plt.ylabel(r'$(R^{++} -\, R^{--}) / (R^{++} +\, R^{--})$')
 
 

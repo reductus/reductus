@@ -226,22 +226,3 @@ class NG1Icp(refldata.ReflData):
             self.sample.environment.magnetic_field = data.column['h-field']
 
         cor.apply_standard_corrections(self)
-
-class NG1pIcp(refldata.PolData):
-    def __init__(self, path):
-        xs = {}
-        for k,c in zip(('mm','pm','mp','pp'),('a','b','c','d')):
-            parts = path.split('.')
-            parts[-1] = parts[-1].replace('a',c)
-            target = ".".join(parts)
-            if os.path.exists(target):
-                xs[k] = NG1Icp(target)
-            else:
-                xs[k] = None
-        super(NG1pIcp,self).__init__(**xs)
-
-    def load(self):
-        for p in (self.pp, self.pm, self.mp, self.mm):
-            if p is not None:
-                p.load()
-
