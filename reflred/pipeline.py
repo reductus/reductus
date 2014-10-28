@@ -88,6 +88,7 @@ class Correction(object):
         else:
             data = _apply_and_return_data(self, data)
 
+        # TODO: don't log if data is untouched. Eg, spec data in smoooth_slit
         msg = str(self)
         if isinstance(data, list):
             for d in data: d.log(msg)
@@ -106,7 +107,13 @@ class Correction(object):
         Each correction will automatically be logged in the data using
         data.log(str(Correction))
         """
-        return self.apply_and_log(copy(data))
+        # TODO: doesn't handle tuples, iterators
+        #print "copying data"
+        if isinstance(data, list):
+            data = [copy(d) for d in data]
+        else:
+            data = copy(data)
+        return self.apply_and_log(data)
 
     def __or__(self, other):
         if isinstance(other,Correction):
@@ -173,10 +180,10 @@ class Pipeline(Correction):
 
     def __ror__(self, stage_or_data):
         if isinstance(stage_or_data, Correction):
-            # stage | pipeline
+            # print "stage | pipeline"
             return Pipeline([stage_or_data] + self.stages)
         else:
-            # data | pipeline
+            print "data | pipeline"
             self.__call__(stage_or_data)
 
     def __ior__(self, pipeline_or_stage):
