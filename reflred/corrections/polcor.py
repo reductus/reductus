@@ -435,13 +435,14 @@ _clip_data.__doc__ =  """
 
 def demo():
     import pylab
-    from ..examples import ng1p as group
+    #from ..examples import ng1p as group
+    from ..examples import ng1pnxs as group
     from ..corrections import join, smooth_slits
     from .util import plot_sa
 
     raw_slit,spec,back = [d|join(tolerance=0.01)
                           for d in group.slit(), group.spec(), group.back()]
-    slit = raw_slit | smooth_slits(degree=2,span=25,dx=0.001)
+    slit = raw_slit | smooth_slits(degree=2,span=45,dx=0.001)
     corrected = spec+slit | PolarizationCorrection()
 
     #pylab.subplot(211); [d.plot() for d in raw_slit]

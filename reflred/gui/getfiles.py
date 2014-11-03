@@ -13,6 +13,7 @@ from .wxpylab import PlotPanel
 
 class DataSelection(wx.Panel):
     def __init__(self, *args, **kw):
+        path = kw.pop('root','.')
         wx.Panel.__init__(self, *args, **kw)
 
         self.datasets = {}
@@ -20,7 +21,7 @@ class DataSelection(wx.Panel):
         if True:
             # Use simple sashes
             splitter = wx.SplitterWindow(self)
-            self.selector = SelectionPanel(splitter)
+            self.selector = SelectionPanel(splitter, root=path)
             right = wx.SplitterWindow(splitter)
             self.metadata = wx.TextCtrl(right,style=wx.TE_MULTILINE|wx.TE_AUTO_SCROLL)
             self.plotter = PlotPanel(right)
@@ -33,7 +34,7 @@ class DataSelection(wx.Panel):
         else:
             # Use AUI notebook
             self.notebook = wx.aui.AuiNotebook(self)
-            self.selector = SelectionPanel(self.notebook)
+            self.selector = SelectionPanel(self.notebook, root=path)
             self.metadata = wx.TextCtrl(self,style=wx.TE_MULTILINE|wx.TE_RICH2)
             self.plotter = PlotPanel(self.notebook)
             self.notebook.AddPage(self.selector, "Selection")
@@ -119,14 +120,14 @@ class DataSelection(wx.Panel):
         print "perspective",mgr.SavePerspective()
 
 
-def demo():
-    import os
+def demo(path='.'):
     frame = wx.Frame(None, -1, "Selector")
-    reduction = DataSelection(frame)
+    reduction = DataSelection(frame, root=path)
     frame.SetSize((600,400))
     frame.Show()
 
 if __name__ == "__main__":
     app = wx.PySimpleApp(False)
-    demo()
+    path = sys.argv[1] if len(sys.argv)>1 else '.'
+    demo(path)
     app.MainLoop()

@@ -62,6 +62,9 @@ def norm(data, base='auto', scale=1):
         raise ValueError,\
             "Expected normalization of auto, counts, time, power or none"
     value,variance = err1d.div(C, varC+(varC==0), M, varM+(varM==0))
+    #print "normcor", data.filename
+    #print "C",C,varC+(varC==0)
+    #print "M",M,varM+(varM==0)
     #print "value",value
     #print "variance",variance
     return value*scale, np.sqrt(variance)*scale, base, units

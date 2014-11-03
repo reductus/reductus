@@ -12,10 +12,13 @@ from .. import corrections as cor
 from .. import unit
 from . import iso8601
 
-def data_as(field, units, rep=1):
+def data_as(group, fieldname, units, rep=1):
     """
     Return value of field in the desired units.
     """
+    if fieldname not in group:
+        return np.NaN
+    field = group[fieldname]
     converter = unit.Converter(field.attrs.get('units', ''))
     value = converter(field.value, units)
     if rep != 1:
@@ -72,14 +75,15 @@ class NCNRNeXusRefl(refldata.ReflData):
         self.date = iso8601.parse_date(entry['start_time'][0])
         self.description = entry['experiment_description'][0]
         self.instrument = entry['instrument/name'][0,0]
-        self.slit1.distance = data_as(entry['instrument/presample_slit1/distance'],'mm')
-        self.slit2.distance = data_as(entry['instrument/presample_slit2/distance'],'mm')
-        #self.slit3.distance = data_as(entry['instrument/predetector_slit1/distance'],'mm')
-        #self.slit4.distance = data_as(entry['instrument/predetector_slit2/distance'],'mm')
-        #self.detector.distance = data_as(entry['instrument/detector/distance'],'mm')
-        #self.detector.rotation = data_as(entry['instrument/detector/rotation'],'degree')
-        self.detector.wavelength = data_as(entry['instrument/monochromator/wavelength'],'Ang')
-        self.detector.wavelength_resolution = data_as(entry['instrument/monochromator/wavelength_error'],'Ang')
+        self.slit1.distance = data_as(entry,'instrument/presample_slit1/distance','mm')
+        self.slit2.distance = data_as(entry,'instrument/presample_slit2/distance','mm')
+        #self.slit3.distance = data_as(entry,'instrument/predetector_slit1/distance','mm')
+        #self.slit4.distance = data_as(entry,'instrument/predetector_slit2/distance','mm')
+        #self.detector.distance = data_as(entry,'instrument/detector/distance','mm')
+        #self.detector.rotation = data_as(entry,'instrument/detector/rotation','degree')
+        self.detector.wavelength = data_as(entry,'instrument/monochromator/wavelength','Ang')
+        self.detector.wavelength_resolution = data_as(entry,'instrument/monochromator/wavelength_error','Ang')
+
         self.sample.description = entry['sample/description'][0,0]
         self.monitor.base = das['counter/countAgainst'][0,0]
         self.monitor.time_step = 0.001  # assume 1 ms accuracy on reported clock
@@ -93,24 +97,41 @@ class NCNRNeXusRefl(refldata.ReflData):
             backpol = ''
         self.polarization = frontpol+backpol
 
+        if np.isnan(self.slit1.distance):
+            self.warn("Slit 1 distance is missing; using 2 m")
+            self.slit1.distance = -2000
+        if np.isnan(self.slit2.distance):
+            self.warn("Slit 2 distance is missing; using 1 m")
+            self.slit2.distance = -1000
+        if np.isnan(self.detector.wavelength):
+            self.warn("Wavelength is missing; using 4.75 A")
+            self.detector.wavelength = 4.75
+        if np.isnan(self.detector.wavelength_resolution):
+            self.warn("Wavelength resolution is missing; using 2% dL/L FWHM")
+            self.detector.wavelength_resolution = 0.02*self.detector.wavelength
+
     def load(self):
         das = self._entry['DAS_logs']
-        self.detector.counts = das['pointDetector/counts'][:,0]
+        self.detector.counts = np.asarray(das['pointDetector/counts'][:,0], 'd')
         self.detector.dims = self.detector.counts.shape
         n = self.detector.dims[0]
-        self.monitor.counts = data_as(das['counter/liveMonitor'],'',rep=n)
-        self.monitor.count_time = data_as(das['counter/liveTime'],'s',rep=n)
-        self.slit1.x = data_as(das['slitAperture1/softPosition'],'mm',rep=n)
-        self.slit2.x = data_as(das['slitAperture2/softPosition'],'mm',rep=n)
-        self.slit3.x = data_as(das['slitAperture3/softPosition'],'mm',rep=n)
-        self.slit4.x = data_as(das['slitAperture4/softPosition'],'mm',rep=n)
-        self.sample.angle_x = data_as(das['sampleAngle/softPosition'],'degree',rep=n)
-        self.detector.angle_x = data_as(das['detectorAngle/softPosition'],'degree',rep=n)
+        self.monitor.counts = np.asarray(data_as(das,'counter/liveMonitor','',rep=n), 'd')
+        self.monitor.count_time = data_as(das,'counter/liveTime','s',rep=n)
+        self.slit1.x = data_as(das,'slitAperture1/softPosition','mm',rep=n)
+        self.slit2.x = data_as(das,'slitAperture2/softPosition','mm',rep=n)
+        self.slit3.x = data_as(das,'slitAperture3/softPosition','mm',rep=n)
+        self.slit4.x = data_as(das,'slitAperture4/softPosition','mm',rep=n)
+        self.sample.angle_x = data_as(das,'sampleAngle/softPosition','degree',rep=n)
+        self.detector.angle_x = data_as(das,'detectorAngle/softPosition','degree',rep=n)
         #TODO: temperature, field
         if '_theta_offset' in das['trajectoryData']:
             self.background_offset = 'theta'
 
-        cor.apply_standard_corrections(self)
+        try:
+            cor.apply_standard_corrections(self)
+        except:
+            print self.filename
+            import traceback; traceback.print_exc()
 
 
     def _load_slits(self, instrument):

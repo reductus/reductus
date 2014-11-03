@@ -66,12 +66,16 @@ def div(X,varX, Y,varY):
     #   varZ = (varX/X**2 + varY/Y**2) * Z**2
     #        = (varX + varY * Z**2) / Y**2
     # Indirect algorithm to minimize intermediates
+    #np.seterr(all='raise')
     Z = X/Y      # truediv => Z is a float
     varZ = Z**2  # Z is a float => varZ is a float
     varZ *= varY
     varZ += varX
-    T = Y**2     # Doesn't matter if T is float or int
-    varZ /= T
+    # Z/Y/Y is more expensive than Z/Y**2 (poor data locality going through
+    # the Y array twice), but it avoids creating a temporary for Y**2.
+    # Also, happens to avoid integer overflow on Y**2...
+    varZ /= Y
+    varZ /= Y
     return Z, varZ
 
 def mul(X,varX, Y,varY):
@@ -120,9 +124,9 @@ def cos(X,varX):
 def tan(X,varX):
     return np.tan(X), varX*np.sec(X)**2
 def arcsin(X,varX):
-    return np.arcsin(x), varX/(1-X**2)
+    return np.arcsin(X), varX/(1-X**2)
 def arccos(X,varX):
-    return np.arccos(x), varX/(1-X**2)
+    return np.arccos(X), varX/(1-X**2)
 def arctan(X,varX):
     return np.arctan(X), varX/(1+X**2)**2
 
