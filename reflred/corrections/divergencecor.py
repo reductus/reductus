@@ -31,8 +31,6 @@ def divergence(T=None, slits=None, distance=None, sample_width=1e10):
             d1,d2 distance from sample to slit 1 and slit 2
         *sample_width*      : float | mm
             w, width of the sample
-        *sample_broadening* : float | degrees FWHM
-            additional divergence caused by sample
 
     :Returns:
         *dT*  : float OR [float] | degrees FWHM

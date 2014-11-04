@@ -87,16 +87,16 @@ class Plotter(wx.Panel):
 
 def demo():
     from reflred.examples import e3a12 as data
-    from reflred import polarization_efficiency, align_slits
+    from reflred import polarization_efficiency, smooth_slits
 
     # read the slit scan
     beam = data.slits()
 
     # Align slits using linear interpolation
-    raw_beam = beam|align_slits(degree=1,span=2)
+    raw_beam = beam|smooth_slits(degree=1,span=2)
     eff_raw = polarization_efficiency(beam=raw_beam, FRbalance=0.6, clip=False)
     # Align slits using a quadratic smoothing filter
-    smooth_beam = beam|align_slits(degree=2,span=13)
+    smooth_beam = beam|smooth_slits(degree=2,span=13)
     eff_smooth = polarization_efficiency(beam=smooth_beam,
                                         FRbalance=0.6, clip=True)
 

@@ -435,23 +435,37 @@ _clip_data.__doc__ =  """
 
 def demo():
     import pylab
-    from ..examples import ng1p as group
-    from ..corrections import join
+    #from ..examples import ng1p as group
+    from ..examples import ng1pnxs as group
+    from ..corrections import join, smooth_slits
     from .util import plot_sa
 
-    slit,spec = group.slit(), group.spec()
+    raw_slit,spec,back = [d|join(tolerance=0.01)
+                          for d in group.slit(), group.spec(), group.back()]
+    slit = raw_slit | smooth_slits(degree=2,span=45,dx=0.001)
+    corrected = spec+slit | PolarizationCorrection()
+
+    #pylab.subplot(211); [d.plot() for d in raw_slit]
+    #pylab.subplot(212); [d.plot() for d in slit]
+    #pylab.suptitle('slit intensities')
+
     pylab.figure()
-    plot_efficiency(dict((d.polarization,d) for d in slit|join(tolerance=0.01)),clip=False)
-    #pylab.show(); return
-    data = spec+slit | join() | PolarizationCorrection()
+    plot_efficiency(dict((d.polarization,d) for d in raw_slit),clip=False)
+    pylab.suptitle("raw polarization correction")
+
+
+    pylab.figure()
+    plot_efficiency(dict((d.polarization,d) for d in slit),clip=False)
+    pylab.suptitle("smoothed polarization correction")
+
     pylab.figure()
     pylab.subplot(211)
-    for d in (spec|join()): d.plot()
-    #plot_sa(spec|join())
+    for d in spec: d.plot()
+    #plot_sa(spec)
     pylab.legend()
     pylab.title("Before polarization correction")
     pylab.subplot(212)
-    for d in data: d.plot()
+    for d in corrected: d.plot()
     #plot_sa(data)
     pylab.legend()
     pylab.title("After polarization correction")

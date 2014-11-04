@@ -66,10 +66,10 @@ def polarization(**kw):
     from .polcor import PolarizationCorrection
     return PolarizationCorrection(**kw)
 
-def align_slits(**kw):
+def smooth_slits(**kw):
     """Data smoothing using 1-D moving window least squares filter"""
-    from .alignslits import AlignSlits
-    return AlignSlits(**kw)
+    from .smoothslits import SmoothSlits
+    return SmoothSlits(**kw)
 
 def water_intensity(**kw):
     """Intensity estimate from water scatter"""

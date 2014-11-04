@@ -286,8 +286,9 @@ class PolynomialModel(object):
     points in the vector *x*.
     """
 
-    def __init__(self, s, origin=False):
+    def __init__(self, s, origin=False, data=None):
         #: True if polynomial goes through the origin
+        self.data = data
         self.origin = origin
         #: polynomial coefficients
         self.coeff = np.ravel(s.x)
@@ -372,14 +373,27 @@ def wpolyfit(x, y, dy=1, degree=None, origin=False):
 
     A = _poly_matrix(x, degree, origin)
     s = wsolve(A, y, dy)
-    return PolynomialModel(s, origin=origin)
+    return PolynomialModel(s, origin=origin, data=(x,y,dy))
 
+
+def wpolyplot(poly, with_pi=False, with_ci=True):
+    import pylab
+    x,y,dy = poly.data
+    pylab.errorbar(x, y, yerr=dy, fmt='gx')
+    pylab.hold(True)
+    px = np.linspace(x.min(), x.max(), 400)
+    py, pdy = poly.pi(px)
+    cy, cdy = poly.ci(px)
+    pylab.plot(px, py, 'g-')
+    if with_pi:
+         pylab.plot(px, py + pdy, 'g-.', px, py - pdy, 'g-.', hold=True)
+    if with_ci:
+         pylab.plot(px, cy + cdy, 'r-.', px, cy - cdy, 'r-.', hold=True)
 
 def demo():
     """
     Fit a random cubic polynomial.
     """
-    import pylab
 
     # Make fake data
     x = np.linspace(-15, 5, 15)
@@ -390,16 +404,8 @@ def demo():
     # Fit to a polynomial
     poly = wpolyfit(x, y, dy=dy, degree=3)
 
-    # Plot the result
-    pylab.errorbar(x, y, yerr=dy, fmt='x')
-    pylab.hold(True)
-    px = np.linspace(x[0], x[-1], 200)
-    py, pdy = poly.pi(px)
-    cy, cdy = poly.ci(px)
-    pylab.plot(px, py, 'g-',
-               px, py + pdy, 'g-.', px, py - pdy, 'g-.',
-               px, cy + cdy, 'r-.', px, cy - cdy, 'r-.')
-    pylab.show()
+    wpolyplot(poly, with_pi=True, with_ci=True)
+    import pylab; pylab.show()
 
 def demo2():
     import pylab
@@ -408,16 +414,8 @@ def demo2():
     dy = [1, 3, 1]
     poly = wpolyfit(x,y,dy=dy, degree=1)
 
-    # Plot the result
-    pylab.errorbar(x, y, yerr=dy, fmt='x')
-    pylab.hold(True)
-    px = np.linspace(x[0], x[-1], 200)
-    py, pdy = poly.pi(px)
-    cy, cdy = poly.ci(px)
-    pylab.plot(px, py, 'g-',
-               px, py + pdy, 'g-.', px, py - pdy, 'g-.',
-               px, cy + cdy, 'r-.', px, cy - cdy, 'r-.')
-    pylab.show()
+    wpolyplot(poly)
+    import pylab; pylab.show()
 
 
 def test():
