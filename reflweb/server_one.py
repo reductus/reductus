@@ -96,7 +96,7 @@ class SecureJSONRPCServer(BaseHTTPServer.HTTPServer, SimpleJSONRPCDispatcher):
 server = SimpleJSONRPCServer(('localhost', 0), encoding='utf8', requestHandler=JSONRPCRequestHandler)
 #server = SecureJSONRPCServer(('localhost', 0), JSONRPCRequestHandler)
 rpc_port = server.socket.getsockname()[1]
-webbrowser.open_new_tab('http://localhost:%d/index_allinone.html' % (rpc_port,))
+webbrowser.open_new_tab('http://localhost:%d/index_one.html' % (rpc_port,))
 server.register_function(pow)
 server.register_function(lambda x,y: x+y, 'add')
 server.register_function(lambda x: x, 'ping')
