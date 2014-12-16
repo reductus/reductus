@@ -194,7 +194,11 @@
             make_jstree = function(categorized, sort_keys) {
                 // categorized is a JS object with structure sample name -> scanType -> [filenum + entryname]  
                 // [{'filename': ...}, {'filename': ...} ...]
-                var output = {'core': {'data': []}};
+                var output = {
+                    "core": {"data": []},
+                    "checkbox": {"keep_selected_style": true},
+                    "plugins": ["checkbox"]
+                };
                 var names = Object.keys(categorized);
                 if (sort_keys) { names.sort(); }
                 var ndata, name;

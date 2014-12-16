@@ -122,6 +122,8 @@ def categorize_files(path='./'):
                 _scanType = f[entry].get('DAS_logs/trajectoryData/_scanType')
                 if _scanType is not None:
                     _scanType = _scanType.value.flatten()[0]
+                elif f[entry].get('title', None).value.flatten()[0] == 'fp':
+                    _scanType = 'findPeak'
                 else:
                     _scanType = 'uncategorized'
                 output[_name].setdefault(_scanType, {})
@@ -148,6 +150,8 @@ def get_file_metadata(path='./'):
                 _scanType = f[entry].get('DAS_logs/trajectoryData/_scanType')
                 if _scanType is not None:
                     _scanType = _scanType.value.flatten()[0]
+                elif f[entry].get('title', None).value.flatten()[0] == 'fp':
+                    _scanType = 'findPeak'
                 else:
                     _scanType = 'uncategorized'
                 output['scanType'] = _scanType
@@ -161,7 +165,7 @@ def get_file_metadata(path='./'):
 
 def get_jstree(path='./'):
     files = categorize_files(path)
-    categories = ['SPEC','BG','ROCK','SLIT','uncategorized']
+    categories = ['SPEC','BG','ROCK','SLIT','findPeak','uncategorized']
     output = {'core': {'data': []}}
     sample_names = files.keys()
     for sample in sample_names:
