@@ -103,6 +103,7 @@ class NG7Icp(refldata.ReflData):
         self.slit4.distance = self.default.slit4_distance
         self.detector.rotation = 0 # degrees
         self.monitor.time_step = self.default.monitor_timestep
+        self.monitor.saturation = self.default.pencil_saturation
 
         #if data.count_type=='TIME':
         #    # Override the default monitor base of 'counts'

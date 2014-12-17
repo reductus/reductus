@@ -33,7 +33,7 @@ Contributing developers:
     Paul Kienzle
 """
 
-__version__ = '0.3'
+__version__ = "0.4"
 
 from .formats import *
 from .refldata import *

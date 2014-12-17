@@ -9,6 +9,7 @@ from ..pipeline import Correction
 
 # TODO: Separate display normalization from internal values
 # TODO: Add filter to convert time to monitor
+# TODO: Need detector and monitor deadtime correction
 class Normalize(Correction):
     """
     Define the kind of monitor normalization.
