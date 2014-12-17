@@ -1,0 +1,498 @@
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+        <title>Reflectometry reduction</title>
+        <script type="text/javascript" src="js/jquery-2.1.1.min.js"></script>
+        <script type="text/javascript" src="js/jquery-ui-1.11.1.custom/jquery-ui.min.js"></script>
+        <script type="text/javascript" src="js/jquery.jsonrpc.js"></script>
+        <script type="text/javascript" src="js/jstree/dist/jstree.min.js"></script>
+        <script type="text/javascript" src="js/jquery.layout-latest.js"></script>
+        
+        <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot/jquery.jqplot.min.js"></script>
+        <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot/plugins/jqplot.canvasTextRenderer.min.js"></script>
+        <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot/plugins/jqplot.canvasAxisLabelRenderer.min.js"></script>
+        <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot/plugins/jqplot.canvasAxisTickRenderer.min.js"></script>
+        <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot/plugins/jqplot.cursor.min.js"></script>
+        
+        <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.errorbarRenderer.js"></script>
+        <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.InteractiveLegend.js"></script>
+        <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.FixedAspect.js"></script>
+        <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.GracefulAxisRenderer.js"></script>
+        <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.heatmapRenderer.js"></script>
+        <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.colorbarRenderer.js"></script>
+        <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.set_transform.js"></script>
+        
+        <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/interactors/interactors.js"></script>
+        <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/interactors/interactors_plugin_base.js"></script>
+        <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/interactors/rectangle_interactor_plugin.js"></script>
+        
+        <link rel="stylesheet" href="css/layout-default-latest.css" />
+        <link rel="stylesheet" href="js/jstree/docs/assets/bootstrap/css/bootstrap.min.css">
+        <link rel="stylesheet" href="js/jstree/dist/themes/default/style.min.css"/>
+        <link rel="stylesheet" href="js/jquery-ui-1.11.1.custom/jquery-ui.min.css" />
+        <link rel="stylesheet" href="js/jquery-ui-1.11.1.custom/jquery-ui.theme.min.css" />
+        <link rel="stylesheet" href="js/jquery-ui-1.11.1.custom/jquery-ui.structure.min.css" />
+        <script type="text/javascript">
+            SORT_KEYS = true;
+            ERRORBARS = false;
+            plots = {};
+            colorbars = {};
+            
+            function qs() {
+                var qsParm = {};
+                var query = window.location.search.substring(1);
+                var parms = query.split('&');
+                for (var i=0; i<parms.length; i++) {
+                    var pos = parms[i].indexOf('=');
+                    if (pos > 0) {
+                        var key = parms[i].substring(0,pos);
+                        var val = parms[i].substring(pos+1);
+                        qsParm[key] = val;
+                    }
+                }
+                return qsParm;
+            }
+            
+            function type (object) {
+                if (object === null) {
+                    return 'null';
+                }
+                if (object === undefined) {
+                    return 'undefined';
+                }
+                if ((object instanceof Number) || (typeof object === 'number')) {
+                    return 'number';
+                }
+                if ((object instanceof String) || (typeof object === 'string')) {
+                    return 'string';
+                }
+                if ((object instanceof Boolean) || (typeof object === 'boolean')) {
+                    return 'boolean';
+                }
+                if ((object instanceof RegExp) || (typeof object === 'regexp')) {
+                    return 'regexp';
+                }
+                if (Array.isArray(object)) {
+                    return 'array';
+                }
+
+                return 'object';
+            };
+            
+            function json_to_jstree(obj, root) {
+                var simplenodes = {'string': true, 'boolean': true, 'number': true, 'null': true}
+                if (root == true) {
+                    return {'core': {'data': json_to_jstree(obj, false)}}
+                }
+                
+                var out;
+                if (type(obj) === 'object') {
+                    var keys = Object.keys(obj);
+                    var val, text;
+                    if (SORT_KEYS) { keys.sort(function(a, b){return parseFloat(a)-parseFloat(b)}) }
+                    out = [];
+                    for (var i=0; i<keys.length; i++) {
+                        val = obj[keys[i]];
+                        if (type(val) in simplenodes) {
+                            out.push({'text': '<b>'+ keys[i] + ':</b> ' + String(val), 'icon': "glyphicon glyphicon-chevron-right"});
+                        } else {
+                            out.push({'text': keys[i], 'children': json_to_jstree(obj[keys[i]]) });
+                        }
+                    }        
+                }
+                else if( type(obj) === 'array' ) {
+                    out = [];
+                    for (var i=0; i<obj.length; i++) {
+                        out.push(json_to_jstree(obj[i]));
+                    }
+                }
+                else if( type(obj) === 'string') {
+                    out = {'text': obj, 'icon': "glyphicon glyphicon-chevron-right"};
+                }
+                else if( type(obj) === 'number') {
+                    out = {'text': obj.toString(), 'icon': "glyphicon glyphicon-chevron-right" };
+                }
+                else { 
+                    out = {'text': 'unknown'};
+                    //alert( 'not a known type: ', String(obj) );
+                }
+                return out;
+            }
+            
+            standard_plot = {
+                options: { 
+                    axesDefaults: {
+                        renderer: $.jqplot.GracefulAxisRenderer,
+                        labelRenderer: $.jqplot.CanvasAxisLabelRenderer,
+                        tickRenderer: $.jqplot.CanvasAxisTickRenderer,
+                        tickOptions: {
+                            formatString: "%.2g",
+                            _styles: {right:2}
+                        }                    
+                    },
+                    seriesDefaults: {
+                        // update options with values from checkboxes:
+                        showLine: true,
+                        showMarker: true,
+                        // 
+                        shadow: false, 
+                        markerOptions: {shadow: false, size: 8},
+                        breakOnNull: true, 
+                        label: "series"
+                    },
+                    cursor: { show: true,  zoom: true, clickReset: true, useAxesFormatters: false},
+                    legend: {
+                        show: true,
+                        parent: this,
+                        placement: 'ne',
+                        renderer: $.jqplot.InteractiveLegendRenderer
+                    },
+                    grid: {shadow: false},
+                    sortData: false,
+                    transform: {'yaxis': 'log'}
+                }
+            }
+            
+            scan_directory = function(event, path) {
+                var path = path || $('#data_path').val();
+                //$.jsonRPC.request('categorize_files', { 
+                //$.jsonRPC.request('get_jstree', {
+                $.jsonRPC.request('get_file_metadata', {
+                    params: [path], 
+                    success: function(result) {
+                        //file_list = result.result;
+                        //tree_version = json_to_jstree(file_list, true);
+                        var metadata = result.result;
+                        var categorized_files = categorize_files(metadata);
+                        var tree_version = make_jstree(categorized_files, true);
+                        $('#file_tree').jstree(tree_version);
+                    }, 
+                    error: function(result) {console.log('error: ', result)}
+                });
+            }
+            
+            categorize_files = function(metadata) {
+                // metadata is list of file information, 
+                // [{'filename': ...}, {'filename': ...} ...]
+                
+                var output = {}, item, name, num, scanType, entry, newid, d;
+                for (var i=0; i<metadata.length; i++) {
+                    item = metadata[i];
+                    d = {};
+                    if (!(item.sample_name in output)) {
+                        output[item.sample_name] = {};
+                    }
+                    if (!(item.scanType in output[item.sample_name])) {
+                        output[item.sample_name][item.scanType] = {};
+                    }
+                    newid = item.fileNum + ":" + item.entry
+                    output[item.sample_name][item.scanType][newid] = {path: item.path, filename: item.filename, entry: item.entry};
+                }
+                return output
+            }
+            
+            make_jstree = function(categorized, sort_keys) {
+                // categorized is a JS object with structure sample name -> scanType -> [filenum + entryname]  
+                // [{'filename': ...}, {'filename': ...} ...]
+                var output = {
+                    "core": {"data": []},
+                    "checkbox": {"keep_selected_style": true},
+                    "plugins": ["checkbox"]
+                };
+                var names = Object.keys(categorized);
+                if (sort_keys) { names.sort(); }
+                var ndata, name;
+                var scanTypes, scanType, sdata;
+                var entries, entry, edata;
+                for (var i=0; i<names.length; i++) {
+                    name = names[i];
+                    namedata = categorized[name];
+                    var n_out = {"text": name, "children": []};
+                    scanTypes = Object.keys(namedata);
+                    if (sort_keys) { scanTypes.sort(); }
+                    for (var j=0; j<scanTypes.length; j++) {
+                        scanType = scanTypes[j];
+                        sdata = namedata[scanType];
+                        var s_out = {"text": scanType, "children": []};
+                        entries = Object.keys(sdata);                        
+                        for (var k=0; k<entries.length; k++) {
+                            entry = entries[k];
+                            edata = sdata[entry];
+                            var e_out = {
+                                "text": entry, 
+                                "icon": "glyphicon glyphicon-chevron-right", 
+                                "a_attr": {
+                                    "filename": edata.filename,
+                                    "path": edata.path,
+                                    "entry": edata.entry
+                                }        
+                            }
+                            s_out.children.push(e_out);
+                        }
+                        n_out.children.push(s_out);
+                    }
+                    output.core.data.push(n_out);
+                }
+                return output;
+            }
+            
+            dirHelper = "http://ncnr.nist.gov/instruments/magik/listftpfiles.php";
+            
+            getftp = function(path) {
+                $.post(dirHelper, {'pathlist': path}, function(r) { ftplist = r; console.log(r); });
+            }
+            
+            //$.post(dirHelper, {'pathlist': data_path}, updateFileBrowserPane("navigation", data_path));
+            
+            function createTable(target, cols, numCells) {
+                // create a table with numCells in the target
+                var table = $('<table />', {'id': 'plot_table'});
+                $('#'+target).append(table);
+                var cells = 0;
+                for (var r=0; cells < numCells; r++) {
+                    var row = $('<tr />');
+                    table.append(row);
+                    for (var c=0; c<cols && cells < numCells; c++) {
+                        var cell = $('<td />', {'class': 'plotcell', 'id': 'cell' + (cells+1).toFixed()});
+                        cell.append($('<div />', {'id': 'plot'+(cells+1).toFixed(), 'class': 'plotdiv', 'plotnum': (cells+1).toFixed()}));
+                        var xtransform = $('<label />', {'class': 'transform', 'axis': 'xaxis'}).text('logX').append($('<input />', {'type': 'checkbox'}));
+                        cell.append(xtransform);
+                        var ytransform = $('<label />', {'class': 'transform', 'axis': 'yaxis'}).text('logY').append($('<input />', {'type': 'checkbox'}));
+                        cell.append(ytransform);
+                        var ztransform = $('<label />', {'class': 'transform', 'axis': 'zaxis'}).text('logZ').append($('<input />', {'type': 'checkbox'}));
+                        cell.append(ztransform);
+                        var showline = $('<label />',  {'class': 'showline'}).text('show line').append($('<input />', {'type': 'checkbox'}));
+                        cell.append(showline);
+                        var showmarker = $('<label />', {'class': 'showmarker'}).text('show points').append($('<input />', {'type': 'checkbox'}));
+                        cell.append(showmarker);
+                        row.append(cell);
+                        cells++;
+                    }
+                }
+            }
+            
+            function updateTransform(ev) {
+                var logselected = ev.target.checked;
+                var axis = ev.target.parentElement.getAttribute('axis');
+                var transform = logselected? 'log' : 'lin';
+                var target = $(this).parent().parent().find('.jqplot-target')[0].id;
+                
+                var transformOpts = {transform: {}, seriesDefaults: {rendererOptions: {transform: null}}};
+                transformOpts.transform[axis] = transform;
+                transformOpts.seriesDefaults.rendererOptions.transform = transform;
+                $.extend(true, plots[target].options, transformOpts);
+                plots[target].replot(plots[target].options);
+                if (colorbars[target]) { 
+                    colorbars[target].series[0].parent_plot = plots[target].series[0];
+                    colorbars[target].series[0].set_transform(transform);
+                    colorbars[target].plugins._interactor.zoomMax() };
+            }
+            
+            function updateShowLine(ev) {
+                var showline = ev.target.checked;
+                var target = $(this).parent().parent().find('.jqplot-target')[0].id;
+                var showLineOpts = {seriesDefaults: {showLine: showline}};
+                $.extend(true, plots[target].options, showLineOpts);
+                plots[target].replot(plots[target].options);
+            }
+            
+            function updateShowMarker(ev) {
+                var showmarker = ev.target.checked;
+                var target = $(this).parent().parent().find('.jqplot-target')[0].id;
+                var showMarkerOpts = {seriesDefaults: {showMarker: showmarker}};
+                $.extend(true, plots[target].options, showMarkerOpts);
+                plots[target].replot(plots[target].options);
+            }
+            
+            function showData(data, plotnum) {
+                $.extend(true, data.options, {
+                    axesDefaults: {
+                        renderer: $.jqplot.GracefulAxisRenderer,
+                        labelRenderer: $.jqplot.CanvasAxisLabelRenderer,
+                        tickRenderer: $.jqplot.CanvasAxisTickRenderer,
+                        tickOptions: {
+                            formatString: "%.2g",
+                            _styles: {right:2}
+                        }                    
+                    }
+                });
+                //var instr = data.metadata.instrument;
+                var i = parseInt(plotnum);
+                if (i>=0) {
+                    var cell_target = 'cell' + (plotnum).toFixed();
+                    var plot_target = 'plot' + (plotnum).toFixed();
+                    var xlogselected = $('#' + cell_target).find('.transform[axis=xaxis] input')[0].checked;
+                    var ylogselected = $('#' + cell_target).find('.transform[axis=yaxis] input')[0].checked;
+                    var zlogselected = $('#' + cell_target).find('.transform[axis=zaxis] input')[0].checked;
+                    var showLine = $('#' + cell_target).find('.showline input')[0].checked;
+                    var showMarker = $('#' + cell_target).find('.showmarker input')[0].checked;
+                    var xtransform = xlogselected? 'log' : 'lin';
+                    var ytransform = ylogselected? 'log' : 'lin';
+                    var ztransform = zlogselected? 'log' : 'lin';
+                    
+                    if (plot_target in plots && plots[plot_target].destroy) {
+                        plots[plot_target].destroy();
+                    }
+                    plots[plot_target] = null;
+                    if (data.type == '1d') {
+                        $('.showline').show();
+                        $('.showmarker').show();
+                        $('.transform[axis=xaxis]').show();
+                        $('.transform[axis=yaxis]').show();
+                        $('.transform[axis=zaxis]').hide();
+                        var plot_options = {
+                            title: data.title,
+                            transform: {
+                                xaxis: xtransform,
+                                yaxis: ytransform
+                            },
+                            seriesDefaults: {
+                                // update options with values from checkboxes:
+                                showLine: showLine,
+                                showMarker: showMarker,
+                                // 
+                                shadow: false, 
+                                markerOptions: {shadow: false, size: 8},
+                                breakOnNull: true, 
+                                label: "series"
+                            },
+                            cursor: { show: true,  zoom: true, clickReset: true, useAxesFormatters: false},
+                            legend: {
+                                show: true,
+                                parent: this,
+                                //placement: 'ne',
+                                renderer: $.jqplot.InteractiveLegendRenderer
+                            },
+                            grid: {shadow: false},
+                            sortData: false
+                        };
+                        
+                        if (ERRORBARS) {
+                            plot_options.seriesDefaults.renderer = $.jqplot.errorbarRenderer;
+                            plot_options.seriesDefaults.rendererOptions = {errorBar: true};
+                        }
+                        $.extend(true, data.options, plot_options);
+                        plots[plot_target] = $.jqplot(plot_target, data.data, data.options);
+                        
+                        plots[plot_target].legend.handleClick = function(e) {
+                            var series_num = e.data.series_num || 0;
+                            plots[plot_target].series[series_num].show = (!(plots[plot_target].series[series_num].show));
+                            plots[plot_target].redraw();
+                        }
+                    } else if (data.type == '2d') {
+                        $('.showline').hide();
+                        $('.showmarker').hide();
+                        $('.transform[axis=xaxis]').hide();
+                        $('.transform[axis=yaxis]').hide();
+                        $('.transform[axis=zaxis]').show();
+                        data.options = data.options? data.options : {};
+                        data.options.seriesDefaults =  {rendererOptions: {transform: ztransform}}
+                        $('#' + plot_target).empty();
+                        var plotbox = $('<div />', {class:'ui-widget-content', style:"display: block; width: 100%; height: 100%;", id:"plotbox"});
+                        $('#' + plot_target).append(plotbox)
+                        plotbox.append($('<div />', {
+                            style:"display: inline-block; left: 0; top: 0; width:"+(plotbox.width()-150).toFixed()+"px; height: 100%;", 
+                            id: plot_target + "_plot"}));
+                        plotbox.append($('<div />', {style:"display: inline-block; width: 100px; height: 100%;", id:plot_target + "_colorbar"}));
+                        var plot = renderImageData2(data, ztransform, plot_target + "_plot");
+                        var cbar_options = {
+                            axes: {y2axis: {renderer: $.jqplot.GracefulAxisRenderer, tickOptions: {fontSize: 18}, labelOptions: {fontSize: 18}}}
+                        }
+                        var colorbar = renderImageColorbar2(plot.series[0], plot_target + '_colorbar');
+                        plots[plot_target] = plot;
+                        colorbars[plot_target] = colorbar;
+                        plot.replot(); // for aspect ratio plugin!
+                        colorbar.plugins._interactor.zoomMax(); // for scale!
+                        //plots[plot_target] = plottingAPI(datalist, plot_target);
+                    }
+                }
+            }
+            
+            
+            window.onload = function() {
+                var qsParm = qs();
+                var rpc_port = qsParm.rpc_port || 8080;
+                $.jsonRPC.setup({
+                  //endPoint: 'http://localhost:' + rpc_port + '/RPC2',
+                  endPoint: window.location.origin + '/RPC2',
+                  namespace: '',
+                  cache: false
+                });
+                $('#scan_directory').click( scan_directory );
+                
+                createTable('content_table', 1, 1);
+                var transform = 'lin';
+                var xislog = false;
+                var yislog = false;
+                var zislog = false;
+                var showline = true;
+                var showmarker = true;
+                $('.transform[axis=xaxis] input').prop('checked', xislog).change(updateTransform);
+                $('.transform[axis=yaxis] input').prop('checked', yislog).change(updateTransform);
+                $('.transform[axis=zaxis] input').prop('checked', zislog).change(updateTransform);
+                $('.showline input').prop('checked', showline).change(updateShowLine);
+                $('.showmarker input').prop('checked', showmarker).change(updateShowMarker); 
+                
+                var layout = $('body').layout({
+			        west__size:			300
+		        ,	east__size:			0
+		        ,   south__size:        "auto"
+			        // RESIZE Accordion widget when panes resize
+		        ,	west__onresize:		$.layout.callbacks.resizePaneAccordions
+		        ,	east__onresize:		$.layout.callbacks.resizePaneAccordions
+		        ,	south__onresize:	$.layout.callbacks.resizePaneAccordions
+		        });
+                $('#file_tree')
+                  // listen for event
+                  .on('select_node.jstree', function (e, data) {
+                    var i, j, r = [], params = [];
+                    for(i = 0, j = data.selected.length; i < j; i++) {
+                        r.push(data.instance.get_node(data.selected[i]).text);
+                    
+                        //$('#plot_div').html('Selected: ' + r.join(', '));
+                        var node = data.instance.get_node(data.selected[i]);
+                        if ('a_attr' in node && 'filename' in node.a_attr) {
+                            var path = node.a_attr.path;
+                            var filename = node.a_attr.filename;
+                            var entry = node.a_attr.entry;
+                            params.push({filename:path + "/" + filename, entry:entry});
+                        }
+                    }
+                    if (params.length > 0) {
+                        $.jsonRPC.request('get_plottable', { 
+                            params: [params],
+                            success: function(result) { 
+                                var toPlot = $.extend(true, result.result, standard_plot); 
+                                $('#plot_div').empty();
+                                //$.jqplot('plot_div', result.result.data, result.result.options);
+                                showData(result.result, 1);
+                                
+                            },
+                            error: function(result) { console.log(result); }
+                        });
+                    } 
+                });
+            }
+        </script>
+        <style type="text/css">
+            .plotdiv {
+                width: 100%;
+                height: 100%;
+            }
+            #plot_table { width: 100%; height: 100% }
+            td.plotcell {
+                padding: 15px;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="top_panel" class="ui-layout-north"></div>
+        <div id="file_panel" class="ui-layout-west">
+            <button id="scan_directory">Scan Directory</button>
+            <input id="data_path" type="text" width="12" value="testdata"></input>
+            <div id="file_tree"></div>
+        </div>
+        <div id="content_table" class="ui-layout-center"></div>
+    </body>
+</html>
+
