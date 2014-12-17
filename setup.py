@@ -1,44 +1,61 @@
 #!/usr/bin/env python
+import sys
+from os.path import join as joinpath, dirname
+import re
 
-import os.path
+if len(sys.argv) == 1:
+    sys.argv.append('install')
 
-from numpy.distutils.misc_util import Configuration
-from numpy.distutils.core      import setup
+# Use our own nose-based test harness
+if sys.argv[1] == 'test':
+    from subprocess import call
+    sys.exit(call([sys.executable, 'test.py'] + sys.argv[2:]))
 
+#sys.dont_write_bytecode = True
 
-def configuration():
-    config = Configuration(package_name='reflred', package_path='reflred')
+from setuptools import setup, Extension, find_packages
 
-    # Extension reflmodule
-    srcpath = os.path.join(config.package_path,'lib')
-    sources = [os.path.join(srcpath,s)
-               for s in ('reduction.cc','str2imat.c')]
-    depends = [os.path.join(srcpath,s)
-               for s in ('rebin.h', 'rebin2D.h')]
+version = None
+for line in open(joinpath("reflred","__init__.py")):
+    if "__version__" in line:
+        version = line.split('"')[1]
 
-    config.add_extension('_reduction',
-                         include_dirs=[srcpath],
-                         depends=depends,
-                         sources=sources,
-                         )
+packages = find_packages(exclude=['reflbin','ospecred','reflweb'])
 
-    config.set_options(quiet=True) # silence debug/informational messages
+def module_config():
+    S = ("reduction.cc","str2imat.c")
+    Sdeps = ("rebin.h","rebin2D.h")
+    sources = [joinpath('reduction','lib',f) for f in S]
+    depends = [joinpath('reduction','lib',f) for f in Sdeps]
+    module = Extension('reflred._reduction',
+                       sources=sources,
+                       depends=depends,
+                       )
+    return module
 
-    # Add subpackages (top level name spaces) and data directories.
-    # Note that subpackages may have their own setup.py to drill down further.
-    # Note that 'dream' is not a subpackage in our setup (no __init__.py as
-    # this name may already be used), so we define our dream substructure here.
-    config.add_data_dir(os.path.join('doc', 'examples'))
-    config.add_subpackage('reflred')
-    config.add_subpackage('ospecred')
+#sys.dont_write_bytecode = False
+dist = setup(
+    name='reflred',
+    version=version,
+    author='Paul Kienzle',
+    author_email='paul.kienzle@nist.gov',
+    url='http://github.com/reflectometry/reduction/reflred',
+    description='Data reduction for 1-D reflectometry',
+    long_description=open('README.rst').read(),
+    classifiers=[
+        'Development Status :: 4 - Beta',
+        'Environment :: Console',
+        'Intended Audience :: Science/Research',
+        'License :: Public Domain',
+        'Operating System :: OS Independent',
+        'Programming Language :: Python',
+        'Programming Language :: Python :: 3',
+        'Topic :: Scientific/Engineering',
+        'Topic :: Scientific/Engineering :: Chemistry',
+        'Topic :: Scientific/Engineering :: Physics',
+    ],
+    packages=packages,
+    #install_requires=['six'],
+)
 
-    for line in open('reflred/__init__.py').readlines():
-        if (line.startswith('__version__')):
-            exec(line.strip())
-            config.version = __version__
-            break
-
-    return config
-
-if __name__ == '__main__':
-    setup(**configuration().todict())
+# End of file
