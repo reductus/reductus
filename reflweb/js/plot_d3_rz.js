@@ -36,15 +36,18 @@ function plotD3(target_id, data, log_x, log_y, show_line, show_points) {
             function(p) {
                 newx = tx(p[0]);
                 newy = ty(p[1]);
-                if (isFinite(newx)) {
+                if (isFinite(newx) && isFinite(newy)) {
                     if (newx > max_x) max_x = tx(p[0]);
                     if (newx < min_x) min_x = tx(p[0]);
-                }
-                if (isFinite(newy)) {
+                //}
+                //if (isFinite(newy)) {
                     if (newy > max_y) max_y = ty(p[1]);
                     if (newy < min_y) min_y = ty(p[1]); 
+                //}
+                    return {'x': newx, 'y': newy} 
+                } else {
+                    return null;
                 }
-                return {'x': newx, 'y': newy} 
             }
         );
         transformed_data.push(newSet);
@@ -158,20 +161,26 @@ function plotD3(target_id, data, log_x, log_y, show_line, show_points) {
                 var m = d3.mouse(e);
                 m[0] = Math.max(0, Math.min(width, m[0]));
                 m[1] = Math.max(0, Math.min(height, m[1]));
-                console.log(m, origin);
                 if (m[0] !== origin[0] && m[1] !== origin[1]) {
-                  zoom.x(x.domain([origin[0], m[0]].map(x.invert).sort()))
-                      .y(y.domain([origin[1], m[1]].map(y.invert).sort()));
+                  zoom.x(x.domain([origin[0], m[0]].map(x.invert).sort(function(a,b) {return a-b})))
+                      .y(y.domain([origin[1], m[1]].map(y.invert).sort(function(a,b) {return a-b})));
                 } else {
-                    console.log('else');
                     zoom.scale(1);
                     zoom.translate([0,0]);
+                    zoom.x(x.domain([min_x, max_x]))
+                        .y(y.domain([min_y, max_y]));
                 }
                 rect.remove();
                 zoomed();
               }, true);
           d3.event.stopPropagation();
         });
+    
+//    d3.select(window).on("dblclick", 
+//        function() { 
+//            console.log('double click');
+//        }
+//    );
     
     svg.append("rect")
         .attr("width", width)
@@ -237,9 +246,14 @@ function plotD3(target_id, data, log_x, log_y, show_line, show_points) {
           .attr("y", i * 25 + 8)
           .attr("height",30)
           .attr("width",100)
-          .style("fill", colors[i])
-          .text(labels[i]);
-
+          .style("fill", colors[i%colors.length])
+          .text(labels[i])
+          .on("mouseover", function() {
+            d3.selectAll('.line')[0][i].classList.add('highlight');
+          })
+          .on("mouseout", function() {
+            d3.selectAll('.line')[0][i].classList.remove('highlight');
+          });
       });
 	
     //************************************************************
@@ -247,7 +261,7 @@ function plotD3(target_id, data, log_x, log_y, show_line, show_points) {
     //************************************************************
     if (show_line) {
         var line = d3.svg.line()
-            .defined(function(d) { return isFinite(d.y); })
+            .defined(function(d) { return (d && isFinite(d.y)); })
             .interpolate("linear")	
             .x(function(d) { return x(d.x); })
             .y(function(d) { return y(d.y); });		
@@ -274,6 +288,7 @@ function plotD3(target_id, data, log_x, log_y, show_line, show_points) {
     //************************************************************
     if (show_points) {
         var points = svg.selectAll('.dots')
+            //.defined(function(d) { return isFinite(d.y); })
 	        .data(data)
 	        .enter()
 	        .append("g")
@@ -284,7 +299,9 @@ function plotD3(target_id, data, log_x, log_y, show_line, show_points) {
 	        .data(function(d, index){ 		
 		        var a = [];
 		        d.forEach(function(point,i){
-			        a.push({'index': index, 'point': point});
+		            if (point != null) {
+			            a.push({'index': index, 'point': point});
+			        }
 		        });		
 		        return a;
 	        })

@@ -7,24 +7,7 @@
         <script type="text/javascript" src="js/jquery.jsonrpc.js"></script>
         <script type="text/javascript" src="js/jstree/dist/jstree.min.js"></script>
         <script type="text/javascript" src="js/jquery.layout-latest.js"></script>
-        
-<!--        <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot/jquery.jqplot.min.js"></script>-->
-<!--        <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot/plugins/jqplot.canvasTextRenderer.min.js"></script>-->
-<!--        <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot/plugins/jqplot.canvasAxisLabelRenderer.min.js"></script>-->
-<!--        <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot/plugins/jqplot.canvasAxisTickRenderer.min.js"></script>-->
-<!--        <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot/plugins/jqplot.cursor.min.js"></script>-->
-<!--        -->
-<!--        <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.errorbarRenderer.js"></script>-->
-<!--        <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.InteractiveLegend.js"></script>-->
-<!--        <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.FixedAspect.js"></script>-->
-<!--        <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.GracefulAxisRenderer.js"></script>-->
-<!--        <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.heatmapRenderer.js"></script>-->
-<!--        <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.colorbarRenderer.js"></script>-->
-<!--        <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.set_transform.js"></script>-->
-<!--        -->
-<!--        <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/interactors/interactors.js"></script>-->
-<!--        <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/interactors/interactors_plugin_base.js"></script>-->
-<!--        <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/interactors/rectangle_interactor_plugin.js"></script>-->
+
         <script src="http://d3js.org/d3.v3.min.js"></script>
         <script src="js/plot_d3_rz.js"></script>
         
@@ -306,13 +289,15 @@
 		        });
                 $('#file_tree')
                   // listen for event
-                  .on('select_node.jstree', function (e, data) {
-                    var i, j, r = [], params = [];
-                    for(i = 0, j = data.selected.length; i < j; i++) {
-                        r.push(data.instance.get_node(data.selected[i]).text);
+                  //.on('select_node.jstree', function (e, data) {
+                  .on('activate_node.jstree', function (e, data) {
+                    var i, j, r = [], params = [], c;
+                    c = data.instance.get_checked();
+                    for(i = 0, j = c.length; i < j; i++) {
+                        r.push(data.instance.get_node(c[i]).text);
                     
                         //$('#plot_div').html('Selected: ' + r.join(', '));
-                        var node = data.instance.get_node(data.selected[i]);
+                        var node = data.instance.get_node(c[i]);
                         if ('a_attr' in node && 'filename' in node.a_attr) {
                             var path = node.a_attr.path;
                             var filename = node.a_attr.filename;
@@ -356,6 +341,9 @@
             body {
               font: 10px sans-serif;
               margin: 50px;
+              user-select: none; 
+              -webkit-user-select: none; 
+              -moz-user-select: none;
             }
              
             .grid .tick {
@@ -364,7 +352,7 @@
 	            shape-rendering: crispEdges;
 	            user-select: none; 
 	            -webkit-user-select: none; 
-	            -moz-user-select: none;"
+	            -moz-user-select: none;
             }
              
             .grid path {
@@ -390,18 +378,22 @@
 	            font-size: 14px;
 	            user-select: none; 
 	            -webkit-user-select: none; 
-	            -moz-user-select: none;"
+	            -moz-user-select: none;
             }
             
             .legend, .tick {
                 user-select: none; 
 	            -webkit-user-select: none; 
-	            -moz-user-select: none;"
+	            -moz-user-select: none;
             }
              
             .line {
 	            fill: none;
 	            stroke-width: 1.5px;
+            }
+            
+            .highlight {
+                stroke-width: 4.5px;
             }
              
             .dot {
@@ -417,6 +409,9 @@
             
             rect {
               fill: #fff;
+              user-select: none; 
+	          -webkit-user-select: none; 
+	          -moz-user-select: none;
             }
 
             rect.zoom {
