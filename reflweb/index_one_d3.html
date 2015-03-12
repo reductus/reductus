@@ -115,7 +115,7 @@
                     success: function(result) {
                         //file_list = result.result;
                         //tree_version = json_to_jstree(file_list, true);
-                        var metadata = result.result;
+                        metadata = result.result;
                         var categorized_files = categorize_files(metadata);
                         var tree_version = make_jstree(categorized_files, true);
                         $('#file_tree').jstree(tree_version);
@@ -138,8 +138,12 @@
                     if (!(item.scanType in output[item.sample_name])) {
                         output[item.sample_name][item.scanType] = {};
                     }
-                    newid = item.fileNum + ":" + item.entry
-                    output[item.sample_name][item.scanType][newid] = {path: item.path, filename: item.filename, entry: item.entry};
+                    if (!(item.fileNum in output[item.sample_name][item.scanType])) {
+                        output[item.sample_name][item.scanType][item.fileNum] = {};
+                    }
+                    //newid = item.fileNum + ":" + item.entry
+                    
+                    output[item.sample_name][item.scanType][item.fileNum][item.entry] = {path: item.path, filename: item.filename, entry: item.entry};
                 }
                 return output
             }
@@ -156,6 +160,7 @@
                 if (sort_keys) { names.sort(); }
                 var ndata, name;
                 var scanTypes, scanType, sdata;
+                var nums, num, numdata;
                 var entries, entry, edata;
                 for (var i=0; i<names.length; i++) {
                     name = names[i];
@@ -167,20 +172,39 @@
                         scanType = scanTypes[j];
                         sdata = namedata[scanType];
                         var s_out = {"text": scanType, "children": []};
-                        entries = Object.keys(sdata);                        
-                        for (var k=0; k<entries.length; k++) {
-                            entry = entries[k];
-                            edata = sdata[entry];
-                            var e_out = {
-                                "text": entry, 
-                                "icon": "glyphicon glyphicon-chevron-right", 
-                                "a_attr": {
+                        nums = Object.keys(sdata);                        
+                        for (var k=0; k<nums.length; k++) {                           
+                            num = nums[k];
+                            numdata = sdata[num];
+                            var num_out = {"text": num }; //"children": []}
+                            entries = Object.keys(numdata);
+                            if (entries.length > 1) {
+                                num_out.children = [];
+                                for (var l=0; l<entries.length; l++) {                            
+                                    entry = entries[l];
+                                    edata = numdata[entry];
+                                    var e_out = {
+                                        "text": entry, 
+                                        //"icon": "glyphicon glyphicon-chevron-right", 
+                                        "icon": "none",
+                                        "a_attr": {
+                                            "filename": edata.filename,
+                                            "path": edata.path,
+                                            "entry": edata.entry
+                                        }        
+                                    }
+                                    num_out.children.push(e_out);
+                                }
+                            } else {
+                                edata = numdata[entries[0]];
+                                num_out.text += ": " + edata.entry;
+                                num_out.a_attr = {
                                     "filename": edata.filename,
                                     "path": edata.path,
                                     "entry": edata.entry
-                                }        
+                                }
                             }
-                            s_out.children.push(e_out);
+                            s_out.children.push(num_out);
                         }
                         n_out.children.push(s_out);
                     }

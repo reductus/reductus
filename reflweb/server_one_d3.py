@@ -150,21 +150,33 @@ def get_file_metadata(path='./'):
             f = h5py.File(os.path.join(path, fn))
             for entry in f.keys():
                 output = {}
-                _name = f[entry].get('DAS_logs/sample/name').value.flatten()[0]
+                DAS = f[entry].get('DAS_logs')
+                xAxis = DAS.get('trajectoryData/xAxis')
+                if xAxis is not None:
+                    xAxis = xAxis.value[0] #.replace('.', '/')
+                if xAxis in DAS.keys() and 'primary' in DAS[xAxis].attrs: 
+                    # then it's a device name: convert to primary node
+                    xAxis = xAxis + "/" + DAS[xAxis].attrs['primary']
+                if not xAxis in DAS:
+                    xAxis = DAS.get('trajectory/defaultXAxisPlotNode', "").value[0] #.replace('.', '/')
+                if xAxis == "":
+                    xAxis = DAS['trajectory/scannedVariables'].value[0].split()[0] #.replace('.', '/')
+                _name = DAS.get('sample/name').value.flatten()[0]
                 output['sample_name'] = str(_name)
-                _num = f[entry].get('DAS_logs/trajectoryData/fileNum').value.flatten()[0]
+                _num = DAS.get('trajectoryData/fileNum').value.flatten()[0]
                 output['fileNum'] = "%d" % (_num,)
-                _scanType = f[entry].get('DAS_logs/trajectoryData/_scanType')
+                _scanType = DAS.get('trajectoryData/_scanType')
                 if _scanType is not None:
                     _scanType = _scanType.value.flatten()[0]
                 elif f[entry].get('title', None).value.flatten()[0] == 'fp':
-                    _scanType = 'findPeak'
+                    _scanType = 'fp:%s' % (xAxis,)
                 else:
                     _scanType = 'uncategorized'
                 output['scanType'] = _scanType
                 output['filename'] = fn
                 output['path'] = path
                 output['entry'] = entry
+                output['xaxis'] = xAxis
                 metadata.append(output)
         except:
             pass
@@ -237,7 +249,9 @@ def get_plottable(file_and_entry):
                 raise Exception("axes do not match")
         else: 
             fig_y['label'] = yAxis
-        fig['options']['series'].append({"label": item['filename'] + ':' + item['entry']})
+        _num = DAS.get('trajectoryData/fileNum').value.flatten()[0]
+        fig['options']['series'].append({"label": '%d:%s' % (_num, item['entry'])})
+        #fig['options']['series'].append({"label": item['filename'] + ':' + item['entry']})
         x = DAS[xAxis].value.astype('float')
         y = DAS[yAxis].value.astype('float')
         xy = [[xx,yy] for xx, yy in zip(x,y)]
