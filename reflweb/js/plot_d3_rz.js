@@ -235,14 +235,14 @@ function plotD3(target_id, data, log_x, log_y, show_line, show_points) {
       .each(function(d, i) {
         var g = d3.select(this);
         g.append("rect")
-          .attr("x", width - 65)
+          .attr("x", width - 105)
           .attr("y", i*25)
           .attr("width", 10)
           .attr("height", 10)
           .style("fill", colors[i%colors.length]);
         
         g.append("text")
-          .attr("x", width - 50)
+          .attr("x", width - 90)
           .attr("y", i * 25 + 8)
           .attr("height",30)
           .attr("width",100)
