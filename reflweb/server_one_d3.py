@@ -101,6 +101,13 @@ server.register_function(pow)
 server.register_function(lambda x,y: x+y, 'add')
 server.register_function(lambda x: x, 'ping')
 
+import thread
+def server_kill():
+    print "closing server now"
+    thread.start_new_thread(server.shutdown, ())
+    
+server.register_function(server_kill, 'shutdown')
+
 import h5py, os, simplejson
 
 def categorize_files(path='./'):
@@ -246,4 +253,3 @@ server.register_function(get_jstree) # deprecated
 server.register_function(get_file_metadata)
 server.serve_forever()
 print "done serving rpc forever"
-httpd_process.terminate()

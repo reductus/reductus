@@ -1,0 +1,529 @@
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+		<title>Plot from Dataflow</title>
+		<!-- JQPLOT -->
+		<!-- Reference the theme's stylesheet on the Google CDN -->
+        <link href="http://ajax.googleapis.com/ajax/libs/jqueryui/1.11.1/themes/eggplant/jquery-ui.css"
+            type="text/css" rel="Stylesheet" />
+ 
+        <!-- Reference jQuery and jQuery UI from the CDN. Remember
+           that the order of these two elements is important -->
+        <script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js" type="text/javascript"></script>
+        <script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.11.1/jquery-ui.min.js" type="text/javascript"></script>
+        <script type="text/javascript" src="js/jquery.jsonrpc.js"></script>
+
+        <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot/jquery.jqplot.min.js"></script>
+        <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot/plugins/jqplot.canvasTextRenderer.min.js"></script>
+        <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot/plugins/jqplot.canvasAxisLabelRenderer.min.js"></script>
+        <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot/plugins/jqplot.canvasAxisTickRenderer.min.js"></script>
+        <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot/plugins/jqplot.cursor.min.js"></script>
+        
+        <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.errorbarRenderer.js"></script>
+        <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.InteractiveLegend.js"></script>
+        <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.FixedAspect.js"></script>
+        <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.GracefulAxisRenderer.js"></script>
+        <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.touchEvents.js"></script>
+        <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.heatmapRenderer.js"></script>
+        <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.colorbarRenderer.js"></script>
+        
+        <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/interactors/interactors.js"></script>
+        <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/interactors/interactors_plugin_base.js"></script>
+        <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/interactors/rectangle_interactor_plugin.js"></script>
+
+        <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/plugins/plotting_api2.js"></script>
+		
+		<!-- <script type="text/javascript" src="test_data2.js"></script> -->
+		<script type="text/javascript">
+		    var plot, colorbar, yslice, xslice;
+		    function qs() {
+                var qsParm = {};
+                var query = window.location.search.substring(1);
+                var parms = query.split('&');
+                for (var i=0; i<parms.length; i++) {
+                    var pos = parms[i].indexOf('=');
+                    if (pos > 0) {
+                        var key = parms[i].substring(0,pos);
+                        var val = parms[i].substring(pos+1);
+                        qsParm[key] = val;
+                    }
+                }
+                return qsParm;
+            }
+
+            fit_plots = function() {
+		        var width = document.body.offsetWidth;
+		        var height = document.body.offsetHeight;
+		        document.getElementById('plot').style.width = ((width-100) * 0.59).toString() + "px";
+		        document.getElementById('colorbar').style.width = "100px";
+		        document.getElementById('yslice').style.width = ((width-100) * 0.39).toString() + "px";
+		        document.getElementById('xslice').style.width = ((width-100) * 0.59).toString() + "px";
+		        
+		        var plotheight = ((height-50) * 0.49).toString() + "px";
+		        document.getElementById('upper').style.height = plotheight;
+		        document.getElementById('lower').style.height = plotheight;
+		        document.getElementById('plot').style.height = plotheight;
+		        document.getElementById('colorbar').style.height = plotheight;
+		        document.getElementById('yslice').style.height = plotheight;
+		        document.getElementById('xslice').style.height = plotheight;
+		    };
+		    
+		    replot_all = function() {
+  		        plot.replot(); 
+  		        colorbar.replot(); 
+  		        yslice.replot(); 
+  		        xslice.replot();
+  		    };
+  		    
+  		    parseConfig = function(cfg) {
+  		      // nothing yet 
+		    }
+            
+            getPSDData = function(params) {
+                $.jsonRPC.request('get_plottable', { 
+                    params: params,
+                    success: function(result) { 
+                        console.log("success: ", result.result, eval(result.result));
+                        update_plot(eval(result.result)[0]);
+                        kill_server();
+                    },
+                    error: function(result) { console.log(result); }
+                });
+            }
+            
+            kill_server = function() {
+                $.jsonRPC.request('shutdown', {params: []});
+            }
+            
+            setMaskWindow = function(xmin, xmax, ymin, ymax) {
+                // limits should be in pixels
+                /*
+                var msg = new xmlrpcmsg();
+                msg.method('set_mask_window');
+                var xminv = new xmlrpcval(xmin, 'double');
+                msg.addParam(xminv);
+                var xmaxv = new xmlrpcval(xmax, 'double');
+                msg.addParam(xmaxv);
+                var yminv = new xmlrpcval(ymin, 'double');
+                msg.addParam(yminv);
+                var ymaxv = new xmlrpcval(ymax, 'double');
+                msg.addParam(ymaxv);
+                msg.createPayload();
+                result = myclient.send(msg);
+                msg = null;
+                return
+                */
+            }
+            
+            getMaskWindow = function() {
+                /*
+                var msg = new xmlrpcmsg();
+                msg.method('get_mask_window');
+                msg.createPayload();
+                result = myclient.send(msg);
+                return JSON.parse(result.val.me);
+                */
+            }
+            
+            make_plottable = function(psd_data) {
+                var z = psd_data.z;
+                var plottable = {
+                  'dims': {
+                   'xdim': 512,
+                   'xmax': 512,
+                   'xmin': 0.0,
+                   'ydim': 512,
+                   'ymax': 512,
+                   'ymin': 0.0,
+                   'zmax': 2,
+                   'zmin': 1},
+                  'title': 'MAGIK PSD data',
+                  'transform': 'log',
+                  'type': '2d',
+                  'xlabel': 'xpixel',
+                  'ylabel': 'ypixel',
+                  'z': '',
+                  'zlabel': 'counts'
+                };
+                plottable.z = z;
+                plottable.dims.zmax = psd_data.max;
+                plottable.dims.zmin = (psd_data.min > 0) ? psd_data.min : 0.5;
+                return plottable;  
+            }
+		   	
+		   	function refresh_plot() {
+		   	    var new_update_time = getPSDTimestamp();
+		   	    if (new_update_time > last_update) {
+		   	        last_update = new_update_time;
+		   	        var plottable = make_plottable(getPSDData());
+		   	        update_plot(plottable);
+		   	    }
+		            
+		    }
+		    
+		   	    
+		    window.onload = function() {
+		        fit_plots();
+		        var qsParm = qs();
+                var rpc_port = qsParm.rpc_port || 8080;
+                $.jsonRPC.setup({
+                  //endPoint: 'http://localhost:' + rpc_port + '/RPC2',
+                  endPoint: window.location.origin + '/RPC2',
+                  namespace: '',
+                  cache: false
+                });
+		        getPSDData();
+		        
+		    }
+		    
+		    window.onresize = function() { fit_plots(); replot_all(); };
+		    
+		    xslice_timer = null;
+            yslice_timer = null;
+            xslice_delay = 200; // ms
+            yslice_delay = 200; // ms
+		    
+		    update_selectors = function(toPlots) {
+		        document.getElementById('plot_selectnum').innerHTML = "";
+                for (var i=0; i<toPlots.length; i++) {
+                    var zlabel = toPlots[i].zlabel || '';
+                    var opt = document.createElement('option');
+                    opt.setAttribute('value', i);
+                    opt.innerHTML = 'dataset: ' + i + " " + zlabel;
+                    document.getElementById('plot_selectnum').appendChild(opt);
+                    //jQuery(document.getElementById('plot_selectnum')).append(jQuery("<option / > ", { value: i, text: 'dataset: ' + i + " " + zlabel }));
+                };
+                function onchange(e) {
+                    console.log('changing');
+                    var selectz = document.getElementById('plot_selectz');
+                    var selectnum = document.getElementById('plot_selectnum');
+                    var transform = selectz[selectz.selectedIndex].value;
+                    var plotnum = selectnum[selectnum.selectedIndex].value;
+                    var toPlot = toPlots[plotnum];
+
+                    update_plot(toPlot, transform);
+                }
+                
+                jQuery('#plot_selectnum').change({}, onchange);
+                jQuery('#plot_selectz').change({}, onchange);
+		    }
+		    update_plot = function(toPlot, transform) {
+		        debug = false;
+		        data = toPlot;
+		        if (data.binary_fp && data.z_binary_array == undefined) {
+		            if (plot && plot.series && plot.series[0]) { 
+		                plot.series[0].show=false; 
+		                plot.replot();
+		            }
+		            getBinaryData(data, function() { update_plot(data) })
+		            return
+		        } 
+		        var cfg = data.dims;
+		        if (plot == null) {
+		            // then initialize all the plot objects
+		            plot = $.jqplot('plot', data.z, {
+		                //cursor: {show: true, zoom: false},
+		                sortData: false,
+		                interactors: [{ type:'master', scrollZoom: true, dragPan: true },
+		                              { type:'Rectangle', 
+		                                name:'rectangle',
+		                                showrect: false,
+		                                xmin: Number(cfg.xmin), 
+		                                ymin: Number(cfg.ymin),
+		                                xmax: Number(cfg.xmax), 
+		                                ymax: Number(cfg.ymax)}],
+		                renderer: $.jqplot.heatmapRender,
+		                series: [ {shadow: false, padding: 0, showMarker:false, showLine:false, breakOnNull:true} ],
+                        grid: {shadow: false},
+                        axesDefaults: {
+		                    labelRenderer: $.jqplot.CanvasAxisLabelRenderer,
+                            tickRenderer: $.jqplot.CanvasAxisTickRenderer,
+                            tickOptions: {formatString: "%.3g", _styles: {right: 0}}
+                        },
+                        axes:{ 
+                            xaxis:{ label: toPlot.xlabel },
+                            yaxis:{ label: toPlot.ylabel }
+                        },
+		                seriesDefaults:{
+		                    shadow: false,
+                            renderer:$.jqplot.heatmapRenderer,
+                            rendererOptions: {
+                                transform: toPlot.transform || 'lin',
+                                dims: data.dims,
+                                //display_dims: { xmin: data.dims.xmin-1,
+                                //                ymin: data.dims.ymin-1,
+                                //                ymax: data.dims.ymax+1,
+                                //                xmax: data.dims.xmax+1}
+                            },
+                        }
+		                
+		            });
+		        
+		        
+		            colorbar = $.jqplot('colorbar', data.z, {
+		                //cursor: {show: true, zoom: true},
+		                paddingLeft: 0,
+		                sortData: false,
+		                interactors: [{ type:'standard', name: 'standard'}],
+		                series: [ {shadow: false, padding: 0} ],
+                        grid: {shadow: false},
+		                seriesDefaults:{
+		                    yaxis: 'y2axis',
+		                    shadow: false,
+                            renderer:$.jqplot.colorbarRenderer,
+                            rendererOptions: { parent_plot: plot.series[0] }
+                        },
+                        axes:{ 
+                            xaxis:{ tickOptions: {show: false} },
+                            y2axis:{
+                                //label: 'Intensity',
+                                labelRenderer: $.jqplot.CanvasAxisLabelRenderer,
+                                tickRenderer: $.jqplot.CanvasAxisTickRenderer,
+                                tickOptions: {
+                                    formatString: "%.3g",
+                                    _styles: {left: 5},
+                                }
+                            }
+                        }, 
+                    });
+		        
+		        
+		            yslice = $.jqplot('yslice', [[[1,1],[1,2],[0.5,3],[2,4]]], {
+		                cursor: {show: true, zoom: true}, 
+		                grid: {shadow: false}, 
+		                sortData: false, 
+		                series: [ {shadow: false, color: 'red', markerOptions: {shadow: false, size: 4}} ],
+		                axesDefaults: {
+		                    labelRenderer: $.jqplot.CanvasAxisLabelRenderer,
+                            tickRenderer: $.jqplot.CanvasAxisTickRenderer,
+                            tickOptions: {formatString: "%.3g", _styles: {right: 10}}
+                        },
+                        axes: {xaxis: {label: 'sum along x'}}
+		            });
+		            xslice = $.jqplot('xslice', [[1,2,3,4]], {
+		                cursor: {show: true, zoom: true},
+		                grid: {shadow: false}, 
+		                sortData: false, 
+		                series: [ {shadow: false, color: 'blue', markerOptions: {shadow: false, size: 4}} ],
+		                axesDefaults: {
+		                    labelRenderer: $.jqplot.CanvasAxisLabelRenderer,
+                            tickRenderer: $.jqplot.CanvasAxisTickRenderer,
+                            tickOptions: {formatString: "%.3g", _styles: {right: 0}}
+                        },
+                        axes: {yaxis: {label: 'sum along y'}}
+		            });
+		            
+		            
+		            var slicebox = plot.plugins.interactors.rectangle;
+		            var ymaxctl = new pointTextControl(slicebox.p1, 'y', 'y<sub>max</sub>', 5);
+                    ymaxctl.div.setAttribute('style', 'display: block; text-align: center; width: 100%; padding: 5px 10px;');
+                    document.getElementById('slicecontrols').appendChild(ymaxctl.div);
+		            var xminctl = new pointTextControl(slicebox.p1, 'x', 'x<sub>min</sub>', 5);
+		            xminctl.div.setAttribute('style', 'display: inline; text-align: center; width: 100%; padding: 5px 10px;');
+                    document.getElementById('slicecontrols').appendChild(xminctl.div);
+                    var xmaxctl = new pointTextControl(slicebox.p3, 'x', 'x<sub>max</sub>', 5);
+                    xmaxctl.div.setAttribute('style', 'display: inline; text-align: center; width: 100%; padding: 5px 10px;');
+                    document.getElementById('slicecontrols').appendChild(xmaxctl.div);
+                    var yminctl = new pointTextControl(slicebox.p3, 'y', 'y<sub>min</sub>', 5);
+                    yminctl.div.setAttribute('style', 'display: block; text-align: center; width: 100%; padding: 5px 10px;');
+                    document.getElementById('slicecontrols').appendChild(yminctl.div);
+                    var hr = document.createElement('div'); hr.innerHTML = "<hr>";
+                    document.getElementById('slicecontrols').appendChild(hr);
+                    var maxbutton = document.createElement('input');
+                    maxbutton.setAttribute('type', 'button');
+                    maxbutton.setAttribute('value', 'Maximize to data');
+                    var maximize = function () {
+                        xminctl.update({x: plot.series[0].dims.xmin});
+                        xminctl.update_external();
+                        ymaxctl.update({y: plot.series[0].dims.ymax});
+                        ymaxctl.update_external();
+                        xmaxctl.update({x: plot.series[0].dims.xmax});
+                        xmaxctl.update_external();
+                        yminctl.update({y: plot.series[0].dims.ymin});
+                        yminctl.update_external();
+                    }
+                    maxbutton.onclick = maximize;
+                    
+                    document.getElementById('slicecontrols').appendChild(maxbutton);
+                    
+                    var submitbutton = document.createElement('input');
+                    submitbutton.setAttribute('type', 'button');
+                    submitbutton.setAttribute('value', 'Submit Changes');
+                    var submitChanges = function() {
+                        cfg.xmax.value = xmaxctl.textbox.value;
+                        cfg.xmin.value = xminctl.textbox.value;
+                        cfg.ymin.value = yminctl.textbox.value;
+                        cfg.ymax.value = ymaxctl.textbox.value;
+                        var xmin = parseFloat(xminctl.textbox.value);
+                        var xmax = parseFloat(xmaxctl.textbox.value);
+                        var ymin = parseFloat(yminctl.textbox.value);
+                        var ymax = parseFloat(ymaxctl.textbox.value);
+                        setMaskWindow(xmin, xmax, ymin, ymax);                        
+                    };
+                    submitbutton.onclick = submitChanges;
+                    
+                    document.getElementById('slicecontrols').appendChild(submitbutton);
+                    
+                    //xslice_timer = null;
+                    //yslice_timer = null;
+                    //xslice_delay = 200; // ms
+                    //yslice_delay = 200; // ms
+                    
+                    slice_listener = function(series) {
+		                slicebox.p1.listeners.push(this);
+		                slicebox.p3.listeners.push(this);
+		                var p0 = series;
+		                this.update_actual = function(pos) {
+		                    var width = p0.dims.xdim;
+                            var height = p0.dims.ydim;
+		                    //console.log(slicebox.p1.coords.x, p0.dims.xmin, p0.dims.xdim);
+		                    i_min = Math.floor((slicebox.p1.coords.x - p0.dims.xmin) / p0.dims.dx);
+		                    i_min = Math.min(Math.max(i_min, 0), p0.dims.xdim);
+		                    i_max = Math.ceil((slicebox.p3.coords.x - p0.dims.xmin) / p0.dims.dx);
+		                    i_max = Math.max(Math.min(i_max, p0.dims.xdim), 0);
+		                    j_min = Math.floor((slicebox.p3.coords.y - p0.dims.ymin) / p0.dims.dy);
+		                    j_min = Math.min(Math.max(j_min, 0), p0.dims.ydim);
+		                    j_max = Math.ceil((slicebox.p1.coords.y - p0.dims.ymin) / p0.dims.dy);
+		                    j_max = Math.max(Math.min(j_max, p0.dims.ydim), 0);
+		                    var xdata = [], ydata = [];
+		                    var xi=0, yi=0;
+		                    for (var c=i_min; c <=i_max-1; c++) {
+		                        xdata[xi++] = ([p0.dims.xmin + c*p0.dims.dx, p0.cumsum_x[c][j_max] - p0.cumsum_x[c][j_min]]);
+		                    }
+		                    for (var r=j_min; r<=j_max-1; r++) {
+		                        ydata[yi++] = ([p0.cumsum_y[i_max][r] - p0.cumsum_y[i_min][r], p0.dims.ymin + r*p0.dims.dy]);
+		                    }
+		                    xslice.series[0].data = xdata;
+		                    xslice.resetAxesScale();
+		                    xslice.grid._offsets.left = xslice.axes.yaxis._elem.width();
+		                    console.log('xslice_timer: ', xslice_timer);
+		                    /*if (xslice_timer == null) {
+		                        xslice_timer = setTimeout(function() {
+		                            xslice.resetAxesScale();
+		                            xslice.grid._offsets.left = xslice.axes.yaxis._elem.width();
+		                            xslice.replot();
+		                            //clearTimeout(xslice_timer);
+		                            xslice_timer = null;
+		                            }, xslice_delay);
+		                    }
+		                    */
+		                    xslice.replot();
+		                    yslice.series[0].data = ydata;
+		                    yslice.resetAxesScale();
+		                    yslice.grid._offsets.left = yslice.axes.yaxis._elem.width();
+		                    /*
+		                    if (yslice_timer == null) {
+		                        yslice_timer = setTimeout(function() {
+		                            yslice.resetAxesScale();
+		                            yslice.grid._offsets.left = yslice.axes.yaxis._elem.width();
+		                            yslice.replot();
+		                            //clearTimeout(yslice_timer);
+		                            yslice_timer = null;
+		                            }, yslice_delay);
+		                    }
+		                    */
+		                    yslice.replot();
+		                };
+		                this.update = function() {
+		                    var me = this;
+		                    if (xslice_timer == null) {
+		                        xslice_timer = setTimeout(function() {
+		                            me.update_actual();
+		                            clearTimeout(xslice_timer);
+		                            xslice_timer = null;
+		                            }, xslice_delay);
+		                    }
+		                }
+		                return this;  
+		            };
+		            sl = slice_listener(plot.series[0]);
+		            plot.series[0].generate_cumsums()
+		            //generate_cumsums(plot.series[0]);
+		            sl.update();
+		            //maximize();
+		        }
+		        else {
+		            // no need to recreate everything... just update the data.
+		            console.log('updating existing plot');
+		            plot.series[0].show = true;
+		            plot.series[0].set_data(toPlot.z[0], toPlot.dims);
+		            plot.series[0].set_transform(transform || toPlot.transform);
+                    plot.series[0]._xaxis.labelOptions.label = toPlot.xlabel;
+                    plot.series[0]._yaxis.labelOptions.label = toPlot.ylabel;
+                    //plot.plugins._interactor.zoomMax();
+                    colorbar.plugins._interactor.zoomMax();
+                    //sl = slice_listener(plot.series[0]);
+		            plot.series[0].generate_cumsums();
+		            //generate_cumsums(plot.series[0]);
+		            sl.update();
+		            
+		            /*
+		            plot.series[0].set_data(toPlot.z[0], toPlot.dims);
+		            plot.series[0].set_transform(transform || toPlot.transform);
+		            plot.plugins._interactor.zoomMax();
+                    colorbar.series[0].dims = toPlot.dims;
+                    colorbar.series[0].set_ztransform(transform);
+                    colorbar.plugins._interactor.zoomMax();
+                    */
+		        }
+		    }
+            pointTextControl = function(p, coord, label, precision) {
+                // coord should be 'x' or 'y'
+                var precision = precision || 3;
+                this.precision = precision;
+                this.coord = coord;
+                this.p = p;
+                var textbox = document.createElement('input');
+                textbox.setAttribute('type', 'text');
+                textbox.setAttribute('style', 'width:90px');
+                var input_label = document.createElement('label');
+                var div = document.createElement('div');
+                div.innerHTML = label;
+                // div.appendChild(document.createTextNode(label))
+                div.appendChild(textbox);
+                this.div = div;
+                this.div.setAttribute('id', 'ptTextControl_' + label);
+                this.div.setAttribute('style', 'display: inline; padding: 5px 10px;');
+                //this.div.setAttribute('style', 'position: relative; float: left; padding: 5px; text-align: top;');
+                this.textbox = textbox;
+                this.update = function(pos) {
+                    textbox.value = pos[coord].toPrecision(precision);
+                }
+                var me = this;
+                this.update_external = function() {
+                    var mypos = {}; mypos[coord] = textbox.value;
+                    
+                    var newpos = p.putCoords ? p.putCoords(mypos) : mypos;
+                    var dpos = {}; dpos[coord] = newpos[coord] - p.pos[coord];
+                    p.move(dpos);
+                    p.parent.onDrag();  // centers
+                    p.parent.redraw();
+                }
+                
+                textbox.onchange = this.update_external;
+                p.listeners.push(this);
+                this.update(p.getCoords());
+                return this;
+            }
+            
+        </script>
+	</head>
+	<body>
+	    <div id="upper" style="display: block; width: 100%; height: 352px;">
+	            <div id="plot" style="display: inline-block; width: 500px; height: 350px; padding: 0; margin:0;"></div>
+	            <div id="colorbar" style="display: inline-block; width: 99px; height: 350px; padding: 0; margin:0;"></div>
+	        <div id="yslice" style="display: inline-block; width: 399px; height: 350px; padding: 0; margin:0;"></div>
+	    </div>
+	    <div id="controls" style="display: block; width: 100%;">
+	        <select id="plot_selectz">
+	            <option value='lin'>lin</option>
+	            <option value='log'>log</option>
+	        </select>
+	        <select id="plot_selectnum"></select>
+	    </div>
+	    <div id="lower" style="display: block; width: 100%; height: 350px;">
+	        <div id="xslice"   style="display: inline-block; width: 59%;"></div>
+	        <div id="slicecontrols" style="display: inline-block; width: 39%; text-align: center;">Slice Region:<hr></div>
+	    </div>
+	</body>
+</html>
