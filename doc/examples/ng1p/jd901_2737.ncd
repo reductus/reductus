@@ -1,0 +1,14 @@
+'901_2737.ncd' 'Jun 07 2014 21:02' 'I'         15.    1  'TIME'    1  'RAW'
+  Filename         Date            Scan       Mon    Prf  Base   #pts  Type    
+0.5 mT after 20 mT wafer 901 LHHTML JED191          F1: OFF  F2: ON  
+ 460    1  500  512 608 512   0   4.7500  0.00000 0.00000   0.00000    1 
+ Collimation      Mosaic    Wavelength   T-Start   Incr.   H-field #Det    
+  1       1.22935    0.00000    1.22935
+  2       1.22935    0.00000    1.22935
+  3       2.46626    0.00000    2.46626
+  4       4.33251    0.00000    4.33251
+  5       3.68806    0.00000    3.68806
+  6       4.91741    0.00000    4.91741
+ Mot:    Start       Step      End
+     A4        A3        A1        A2        A5        A6     MIN      MONITOR      COUNTS   _q    _w  
+    4.33230     2.46630     1.23090     1.23000     3.68680     4.91820 0.25       79163           1     0.10000     1.51197 

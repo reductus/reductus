@@ -435,8 +435,8 @@ _clip_data.__doc__ =  """
 
 def demo():
     import pylab
-    #from ..examples import ng1p as group
-    from ..examples import ng1pnxs as group
+    from ..examples import ng1p as group
+    #from ..examples import ng1pnxs as group
     from ..corrections import join, smooth_slits
     from .util import plot_sa
 
