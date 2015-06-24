@@ -70,11 +70,12 @@ class NCNRNeXusRefl(refldata.ReflData):
         # TODO: ought to close file when we are done loading, which means
         # we shouldn't hold on to entry
         self._entry = entry
+        #print(entry['instrument'].values())
         das = self._entry['DAS_logs']
         self.probe = 'neutron'
         self.date = iso8601.parse_date(entry['start_time'][0])
         self.description = entry['experiment_description'][0]
-        self.instrument = entry['instrument/name'][0,0]
+        self.instrument = entry['instrument/name'][0]
         self.slit1.distance = data_as(entry,'instrument/presample_slit1/distance','mm')
         self.slit2.distance = data_as(entry,'instrument/presample_slit2/distance','mm')
         #self.slit3.distance = data_as(entry,'instrument/predetector_slit1/distance','mm')
@@ -84,18 +85,11 @@ class NCNRNeXusRefl(refldata.ReflData):
         self.detector.wavelength = data_as(entry,'instrument/monochromator/wavelength','Ang')
         self.detector.wavelength_resolution = data_as(entry,'instrument/monochromator/wavelength_error','Ang')
 
-        self.sample.description = entry['sample/description'][0,0]
-        self.monitor.base = das['counter/countAgainst'][0,0]
+        self.sample.description = entry['sample/description'][0]
+        self.monitor.base = das['counter/countAgainst'][0]
         self.monitor.time_step = 0.001  # assume 1 ms accuracy on reported clock
-        if 'frontPolarization' in das:
-            frontpol = '+' if das['frontPolarization/direction'][0,0] == 'UP' else '-'
-        else:
-            frontpol = ''
-        if 'backPolarization' in das:
-            backpol = '+' if das['backPolarization/direction'][0,0] == 'UP' else '-'
-        else:
-            backpol = ''
-        self.polarization = frontpol+backpol
+        self.polarization = _get_pol(das, 'frontPolarization') \
+                            + _get_pol(das, 'backPolarization')
 
         if np.isnan(self.slit1.distance):
             self.warn("Slit 1 distance is missing; using 2 m")
@@ -172,6 +166,20 @@ class NCNRNeXusRefl(refldata.ReflData):
                     self.slit4.distance = d
                     index += 1
 
+def _get_pol(das, pol):
+    if pol in das:
+        direction = das[pol+'/direction'][0]
+        if direction == 'UP':
+            result = '+'
+        elif direction == 'DOWN':
+            result = '-'
+        elif direction == '':
+            result = ''
+        else:
+            raise ValueError("Don't understand DAS_logs/%s/direction=%r"%(pol,direction))
+    else:
+        result = ''
+    return result
 
 def demo():
     import sys

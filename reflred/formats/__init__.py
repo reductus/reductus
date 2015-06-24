@@ -243,8 +243,8 @@ register('.ng7.gz', icp_ng7)
 register('NCNR NG-7',icp_ng7)
 
 register('.nxs', nexus)
-register('.nxs.cgd', nexus)
-register('.nxs.ngd', nexus)
+register('.nxs.magik', nexus)
+register('.nxs.pbr', nexus)
 register('NeXus', nexus)
 register('NCNR NG-1', icp_ng1)
 
