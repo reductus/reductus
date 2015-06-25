@@ -3,10 +3,10 @@ GUI driver for the polarization correction code polcor.
 """
 
 import sys
+import traceback
 
 import wx,wx.aui
 
-from .. import corrections
 from .. import formats
 from .selection import SelectionPanel, EVT_ITEM_SELECT, EVT_ITEM_VIEW
 from .wxpylab import PlotPanel
@@ -59,6 +59,7 @@ class DataSelection(wx.Panel):
         try:
             data = formats.load(filename)
         except:
+            traceback.print_exc()
             print "unable to load %s\n  %s"%(filename, sys.exc_value)
             data = []
         else:

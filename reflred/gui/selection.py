@@ -158,7 +158,7 @@ class DirTree(tree.CustomTreeCtrl):
     def expand(self, item):
         path = self.GetPyData(item)
         if not os.path.isdir(path): return
-        for file in os.listdir(path):
+        for file in sorted(os.listdir(path)):
             if file[0] == '.': continue
             childpath = os.path.join(path,file)
             check = 0 if os.path.isdir(childpath) else 1
