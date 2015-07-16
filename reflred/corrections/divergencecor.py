@@ -11,19 +11,19 @@ class AngularResolution(Correction):
     def apply(self, data):
         slits = data.slit1.x, data.slit2.x
         distance = abs(data.slit1.distance), abs(data.slit2.distance)
-        angle = data.sample.angle_x
+        theta = data.sample.angle_x
         sample_width = data.sample.width
-        dT = divergence(T=angle, slits=slits, distance=distance,
-                        sample_width=sample_width)
-        data.angular_resolution = dT
+        dtheta = divergence(theta=theta, slits=slits, distance=distance,
+                            sample_width=sample_width)
+        data.angular_resolution = dtheta
 
 
-def divergence(T=None, slits=None, distance=None, sample_width=1e10):
+def divergence(theta=None, slits=None, distance=None, sample_width=1e10):
     r"""
     Calculate divergence due to slit and sample geometry.
 
     :Parameters:
-        *T*         : float OR [float] | degrees
+        *theta*     : float OR [float] | degrees
             incident angles
         *slits*     : (float,float) | mm
             s1,s2 slit openings for slit 1 and slit 2
@@ -33,7 +33,7 @@ def divergence(T=None, slits=None, distance=None, sample_width=1e10):
             w, width of the sample
 
     :Returns:
-        *dT*  : float OR [float] | degrees FWHM
+        *dtheta*  : float OR [float] | degrees FWHM
             calculated angular divergence
 
     **Algorithm:**
@@ -77,25 +77,25 @@ def divergence(T=None, slits=None, distance=None, sample_width=1e10):
 
         \Delta\theta_s = B - \frac{180}{\pi}\Delta\theta_d
     """
-    # TODO: check that the formula is correct for T=0 => dT = s1 / d1
+    # TODO: check that the formula is correct for theta=0 => dtheta = s1 / d1
     # TODO: add sample_offset and compute full footprint
-    d1,d2 = distance
+    d1, d2 = distance
     s1, s2 = slits
 
-    # Compute FWHM angular divergence dT from the slits in degrees
-    dT = np.degrees(0.5*(s1+s2)/(d1-d2))
+    # Compute FWHM angular divergence dtheta from the slits in degrees
+    dtheta = np.degrees(0.5*(s1+s2)/(d1-d2))
 
     # For small samples, use the sample projection instead.
     if np.isfinite(sample_width):
-        sample_s = sample_width * np.sin(np.radians(T))
+        sample_s = sample_width * np.sin(np.radians(theta))
         if np.isscalar(sample_s):
             if sample_s < s2:
-                dT = np.degrees(0.5*(s1+sample_s)/d1)
+                dtheta = np.degrees(0.5*(s1+sample_s)/d1)
         else:
-            #print s1,s2,d1,d2,T,dT,sample_s
+            #print s1,s2,d1,d2,theta,dtheta,sample_s
             s1 = np.ones_like(sample_s)*s1
-            dT = np.ones_like(sample_s)*dT
+            dtheta = np.ones_like(sample_s)*dtheta
             idx = sample_s < s2
-            dT[idx] = np.degrees(0.5*(s1[idx] + sample_s[idx])/d1)
+            dtheta[idx] = np.degrees(0.5*(s1[idx] + sample_s[idx])/d1)
 
-    return dT
+    return dtheta

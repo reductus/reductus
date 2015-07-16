@@ -39,7 +39,7 @@ class Join(Correction):
     """
     parameters = [
         ["tolerance", 0.05, "",
-         "scale on dT used to determine whether angles are equivalent"],
+         "scale on dtheta used to determine whether angles are equivalent"],
         ["order", "file", "file|time|theta|slit|none",
          "sort order for joined files, which determines the name of the result"],
     ]

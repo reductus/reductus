@@ -28,4 +28,4 @@ class AdjustAlignment(Correction):
         if self.offset != 0.0:
             data.sample.angle_x += self.offset
             data.detector.angle_x -= self.offset
-            data.formula = data.formula+"[dT=%g]"%self.offset
+            data.formula = data.formula+"[theta offset=%g]"%self.offset

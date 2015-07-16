@@ -4,9 +4,12 @@
 Load a NeXus file into a reflectometry data structure.
 """
 import os
+import tempfile
+from zipfile import ZipFile
 
 import numpy as np
 import h5py as h5
+
 from .. import refldata
 from .. import corrections as cor
 from .. import unit
@@ -44,12 +47,70 @@ def load_entries(filename):
     """
     Load the summary info for all entries in a NeXus file.
     """
-    file = h5.File(filename)
+    #file = h5.File(filename)
+    file = h5_open_zip(filename)
+    file._opened_entries = 0  # keep track of the number of entries open
     measurements = []
     for name,entry in file.items():
         if entry.attrs.get('NX_class', None) == 'NXentry':
             measurements.append(NCNRNeXusRefl(entry, name, filename))
+            file._opened_entries += 1
     return measurements
+
+
+def h5_open_zip(filename, mode='r', **kw):
+    """
+    Open a NeXus file, even if it is in a zip file.
+
+    If the filename ends in '.zip', it will be unzipped to a temporary
+    directory before opening and deleted on :func:`closezip`.  If opened
+    for writing, then the file will be created in a temporary directory,
+    then zipped and deleted on :func:`closezip`.
+
+    Arguments are the same as for :func:`open`.
+    """
+    is_zip = filename.endswith('.zip')
+    zip_on_close = None
+    if is_zip:
+        path = tempfile.gettempdir()
+        if mode == 'r':
+            zf = ZipFile(filename)
+            members = zf.namelist()
+            assert len(members) == 1
+            zf.extract(members[0], path)
+            filename = os.path.join(path, members[0])
+        elif mode == 'w':
+            zip_on_close = filename
+            filename = os.path.join(path, os.path.basename(filename)[:-4])
+        else:
+            raise TypeError("zipped nexus files only support mode r and w")
+
+    f = h5.File(filename, mode=mode, **kw)
+    f.delete_on_close = is_zip
+    f.zip_on_close = zip_on_close
+    return f
+
+def h5_close_zip(f):
+    """
+    Close a NeXus file opened by :func:`open_zip`.
+
+    If the file was zipped and opened for reading, delete the temporary
+    file that was created
+    If opened for writing, create a zip file containing the file
+    before closing.
+
+    Delete the file after closing.
+    """
+    path = f.filename
+    delete_on_close = getattr(f, 'delete_on_close', False)
+    zip_on_close = getattr(f, 'zip_on_close', None)
+    f.close()
+    if zip_on_close is not None:
+        with ZipFile(f.zip_on_close, 'w') as zf:
+            zf.write(path, os.path.basename(path))
+    if delete_on_close:
+        os.unlink(path)
+
 
 class NCNRNeXusRefl(refldata.ReflData):
     """
@@ -69,6 +130,7 @@ class NCNRNeXusRefl(refldata.ReflData):
     def _set_metadata(self, entry):
         # TODO: ought to close file when we are done loading, which means
         # we shouldn't hold on to entry
+        print("Don't forget to close the hdf file!!")
         self._entry = entry
         #print(entry['instrument'].values())
         das = self._entry['DAS_logs']
@@ -180,6 +242,8 @@ def _get_pol(das, pol):
     else:
         result = ''
     return result
+
+
 
 def demo():
     import sys

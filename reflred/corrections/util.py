@@ -100,19 +100,27 @@ def nearest(x, xp, fp=None):
 
     If *fp* is missing, return the index of the nearest value.
     """
-    if fp is None:
-        fp = np.arange(len(xp))
-    is_scalar_x = np.isscalar(x)
     if len(xp) == 1:
-        return fp[0]
-    else:
-        xp = np.asarray(xp)
-        if np.any(np.diff(xp)<=0.):
-            raise ValueError("interp needs a sorted list")
-        if not is_scalar_x:
-            x = np.asarray(x)
-        idx = np.searchsorted(xp[1:-1], x)
-        return fp[idx + ( (x-xp[idx]) >= (xp[idx+1]-x) )]
+        if np.isscalar(x):
+            return fp[0] if fp is not None else 0
+        else:
+            return np.array(len(x)*(fp if fp is not None else [0]))
+
+    # if fp is not provided, want to return f as an index into the array xp
+    # for the target values x, so set it to integer indices.  if fp is
+    # provided, make sure it is an array.
+    fp = np.arange(len(xp)) if fp is None else np.asarray(fp)
+
+
+    # make sure that the xp array is sorted
+    xp = np.asarray(xp)
+    if np.any(np.diff(xp)<0.):
+        idx = np.argsort(xp)
+        xp, fp = xp[idx], fp[idx]
+
+    # find the midpoints of xp and use that as the index
+    xp = 0.5*(xp[:-1] + xp[1:])
+    return fp[np.searchsorted(xp, x)]
 
 
 def plot_sa(data):
@@ -133,4 +141,42 @@ def plot_sa(data):
     plt.xlabel("%s (%s)"%(pp.xlabel, pp.xunits) if pp.xunits else pp.xlabel)
     plt.ylabel(r'$(R^{++} -\, R^{--}) / (R^{++} +\, R^{--})$')
 
+def test_nearest():
+    # length 1 arrays
+    xp, fp = [1], [5]
+    assert (nearest(0, xp) == 0)
+    assert (nearest([0], xp) == [0]).all()
+    assert (nearest([0, 1], xp) == [0, 0]).all()
+    assert (nearest(0, xp, fp) == fp[0])
+    assert (nearest([0], xp, fp) == [fp[0]]).all()
+    assert (nearest([0, 1], xp, fp) == [fp[0]]*2).all()
+
+    # constants as arrays
+    xp, fp = [1, 1, 1], [5, 5, 5]
+    assert (nearest(0, xp) == 0)
+    assert (nearest([0], xp) == [0]).all()
+    assert (nearest([0, 1], xp) == [0, 0]).all()
+    assert (nearest(0, xp, fp) == fp[0])
+    assert (nearest([0], xp, fp) == [fp[0]]).all()
+    assert (nearest([0, 1], xp, fp) == [fp[0]]*2).all()
+
+    # actual arrays
+    xp, fp = [1, 2, 3], [4, 5, 6]
+    assert (nearest(0, xp) == 0)
+    assert (nearest([0], xp) == [0]).all()
+    assert (nearest([0,1,1.1,1.6,2.1,2.9,3,3.1], xp) == [0,0,0,1,1,2,2,2]).all()
+    assert (nearest(0, xp, fp) == fp[0])
+    assert (nearest([0], xp, fp) == [fp[0]]).all()
+    assert (nearest([0,1,1.1,1.6,2.1,2.9,3,3.1], xp, fp)
+            == [fp[i] for i in [0,0,0,1,1,2,2,2]]).all()
+
+    # unsorted arrays
+    xp, fp = [1, 3, 2], [4, 5, 6]
+    assert (nearest(0, xp) == 0)
+    assert (nearest([0], xp) == [0]).all()
+    assert (nearest([0,1,1.1,1.6,2.1,2.9,3,3.1], xp) == [0,0,0,2,2,1,1,1]).all()
+    assert (nearest(0, xp, fp) == fp[0])
+    assert (nearest([0], xp, fp) == [fp[0]]).all()
+    assert (nearest([0,1,1.1,1.6,2.1,2.9,3,3.1], xp, fp)
+            == [fp[i] for i in [0,0,0,2,2,1,1,1]]).all()
 

@@ -12,11 +12,11 @@ Supported formats are:
 The list of available formats can be found at runtime using
 reflred.formats()
 
-Sample data for some of these formats is available in datadir.  In ipython
+Sample data for some of these formats is available in examples.  In ipython
 type the following:
 
     import reflred as red
-    ls $red.datadir
+    ls $red.examples
 
 === Loading files ===
 
@@ -41,12 +41,12 @@ of loading the entire dataset, you can use:
 
 to load just the metadata, and later use:
 
-    data.load()
+    data[0].load()
 
 to load the data itself.  Again, loadmeta() returns a list of data
-objects if there are multiple datasets in the file.  Note that the
-metadata can be wrong if for example an NCNR ICP run was aborted
-before all the measurements were complete.  data.load() will return
+objects in case there are multiple datasets in the file.  Note that the
+metadata can have the details wrong, for example when an NCNR ICP run is
+aborted before all the measurements were complete.  data.load() will return
 the points which were actually measured.
 
 === Saving files ===  [Not implemented]
@@ -124,17 +124,18 @@ Currently available formats are returned from::
     red.formats.available()
 
 """
+__all__ = ['loadmeta','load','examples']
 
-import os.path
+from os.path import join as joinpath, dirname, abspath
+
 from ..registry import ExtensionRegistry
-__all__ = ['loadmeta','load','datadir']
 
-datadir = os.path.join(os.path.dirname(__file__),'examples')
+examples = abspath(joinpath(dirname(__file__),'..','..','doc','examples'))
 
 
 # Shared registry for all reflectometry formats
 _registry = ExtensionRegistry()
-def loadmeta(file, format=None):
+def loadmeta(pattern, format=None):
     """
     Load the measurement description from the file but not the data.
     Use measurement.load() to load the data for each measurement.
@@ -144,10 +145,19 @@ def loadmeta(file, format=None):
 
     Use formats() to list available file formats.
     """
-    measurements = _registry.load(file, format=format)
-    return measurements[0] if len(measurements)==1 else measurements
+    if hasattr(pattern, 'read'):  # we have a file handle, not a path
+        return _registry.load(pattern, format=format)
+    else:
+        return _flatten_one_level(_registry.load_pattern(pattern, format=format))
 
-def load(file, format=None):
+def _flatten_one_level(nested_list):
+    """
+    Remove one level of nesting from a list
+    """
+    return [k for nest in nested_list for k in nest]
+
+
+def load(pattern, format=None):
     """
     Load the reflectometry measurement description and the data.
 
@@ -157,15 +167,18 @@ def load(file, format=None):
 
     Use formats() to list available file formats.
     """
-    measurements = _registry.load(file, format=format)
-    for data in measurements: data.load() # Load the dataset
+    measurements = loadmeta(pattern, format)
+    for data in measurements:  # Load the datasets
+        data.load()
     return measurements
+
 
 def available():
     """
     Return a list of available file formats.
     """
     return _registry.formats()
+
 
 def register(ext,loader):
     """
@@ -216,63 +229,76 @@ def register(ext,loader):
     """
     _registry[ext] = loader
 
+
 # Delayed loading of file formats
 def icp_ng7((filename)):
     """NCNR NG-7 ICP file loader"""
     from .ncnr_ng7 import NG7Icp
     return [NG7Icp(filename)]
 
+
 def icp_ng1(filename):
     """NCNR NG-7 ICP file loader"""
     from .ncnr_ng1 import NG1Icp
     return [NG1Icp(filename)]
+
 
 def icp_ng1p(filename):
     """NCNR NG-7 ICP file loader"""
     from .ncnr_ng1 import NG1pIcp
     return [NG1pIcp(filename)]
 
+
 def nexus(filename):
     """NeXus file loader"""
     from .nexusref import load_entries
     return load_entries(filename)
 
-# Register extensions with file formats
-register('.ng7', icp_ng7)
-register('.ng7.gz', icp_ng7)
-register('NCNR NG-7',icp_ng7)
 
-register('.nxs', nexus)
-register('.nxs.magik', nexus)
-register('.nxs.pbr', nexus)
-register('NeXus', nexus)
-register('NCNR NG-1', icp_ng1)
+def _register_extensions():
+    # Register extensions with file formats
+    register('.ng7', icp_ng7)
+    register('.ng7.gz', icp_ng7)
+    register('NCNR NG-7',icp_ng7)
 
-for ext in ['.ngd', '.cgd', '.ng1', '.cg1']:
-    register(ext, icp_ng1)
-    register(ext+'.gz', icp_ng1)
+    register('.nxs', nexus)
+    register('.nxs.magik', nexus)
+    register('.nxs.pbr', nexus)
+    register('.nxs.magik.zip', nexus)
+    register('.nxs.pbr.zip', nexus)
+    register('NeXus', nexus)
+    register('NCNR NG-1', icp_ng1)
 
-for ext in ['.nad', '.cad', '.na1', '.ca1']:
-    for xs in 'abcd':
-        register(ext.replace('a',xs), icp_ng1)
+    for ext in ['.ngd', '.cgd', '.ng1', '.cg1']:
+        register(ext, icp_ng1)
+        register(ext+'.gz', icp_ng1)
+
+    for ext in ['.nad', '.cad', '.na1', '.ca1']:
+        for xs in 'abcd':
+            register(ext.replace('a',xs), icp_ng1)
+_register_extensions()
 
 def test():
     # demostrate loading of NG-7 files; just check that the file
     # is found and loaded properlty, not that it
-    from os.path import join as joinpath, dirname, abspath
-    root = abspath(joinpath(dirname(__file__),'..','..','doc','examples'))
-    ng7file = joinpath(root,'ng7','jul04032.ng7')
-    ng1file = joinpath(root,'ng1','psih1001.ng1')
-    cg1file = joinpath(root,'cg1area','psdca022.cg1.gz')
-    assert load(ng7file).detector.wavelength == 4.76
-    assert load(ng1file).name == 'gsip4007.ng1'
-    assert loadmeta(cg1file).name == 'psdca022.cg1'
-    assert load(open(ng7file),format=".ng7").detector.wavelength == 4.76
-    assert load(open(ng1file),format=".ng1").name == 'gsip4007.ng1'
+    ng7file = joinpath(examples,'ng7','jul04032.ng7')
+    ng1file = joinpath(examples,'ng1','psih1001.ng1')
+    cg1file = joinpath(examples,'cg1area','psdca022.cg1.gz')
+    assert load(ng7file)[0].detector.wavelength == 4.76
+    assert load(ng1file)[0].name == 'psih1001'
+    assert loadmeta(cg1file)[0].name == 'psdca022'
+    assert load(open(ng7file),format=".ng7")[0].detector.wavelength == 4.76
+    print
+    print load(open(ng1file),format='ng1')[0].name
+    assert load(open(ng1file),format=".ng1")[0].name == 'gsip4007.ng1'
     assert available() == ['NCNR NG-1','NCNR NG-7','NeXus'],available()
-    ng1pfile = joinpath(root,'ng1p','f1333057.na1')
+    ng1pfile = joinpath(examples, 'ng1p', 'jd907_2706.n?d')
     pdata = load(ng1pfile)
-    assert pdata.pp.name == 'F1333057.ND1'
+    assert pdata[0].polarization == '--'
+    assert pdata[1].polarization == '--'
+    assert pdata[2].polarization == '--'
+    assert pdata[3].polarization == '++'
 
 
-if __name__ == "__main__": test()
+if __name__ == "__main__":
+    test()

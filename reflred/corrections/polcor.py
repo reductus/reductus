@@ -228,14 +228,14 @@ NSF_XS = '++','--'
 
 def correct(beam, data, Emin=0, Imin=0, FRbal=0.5, spinflip=True, clip=False):
     spinflip = spinflip and '+-' in data and '-+' in data
-    dT = data['++'].angular_resolution
-    beta,fp,rp,x,y,mask =  _calc_efficiency(beam=beam, dT=dT, FRbal=FRbal,
+    dtheta = data['++'].angular_resolution
+    beta,fp,rp,x,y,mask =  _calc_efficiency(beam=beam, dtheta=dtheta, FRbal=FRbal,
                                       Imin=Imin, Emin=Emin, clip=clip)
 
     Hinv = _correction_matrix(beta, fp, rp, x, y, spinflip)
-    _apply_correction(dT, Hinv, data, spinflip)
+    _apply_correction(dtheta, Hinv, data, spinflip)
 
-def _apply_correction(dT, Hinv, data, spinflip=True):
+def _apply_correction(dtheta, Hinv, data, spinflip=True):
     """Apply the efficiency correction in eff to the data."""
 
     # Get the intensities from the datasets
@@ -245,7 +245,7 @@ def _apply_correction(dT, Hinv, data, spinflip=True):
     Y = np.vstack([U(data[xs].v, data[xs].dv) for xs in parts])
 
     # Look up correction matrix for each point using the ++ cross section
-    index = util.nearest(data['++'].angular_resolution, dT)
+    index = util.nearest(data['++'].angular_resolution, dtheta)
 
     # Apply the correction at each point
     X, dX = np.zeros(Y.shape), np.zeros(Y.shape)
@@ -256,6 +256,8 @@ def _apply_correction(dT, Hinv, data, spinflip=True):
     # Put the corrected intensities back into the datasets
     for i, xs in enumerate(parts):
         data[xs].v, data[xs].dv = X[i,:], dX[i,:]
+        data[xs].vlabel = 'Reflectivity'
+        data[xs].vunits = None
 
 
 def _correction_matrix(beta, fp, rp, x, y, spinflip):
@@ -300,6 +302,7 @@ def plot_efficiency(beam, Imin=0, Emin=0, FRbal=0.5, clip=False):
     plt.ylabel("efficiency (%)")
     #plt.xlabel('angular resolution (degrees FWHM)')
     plt.xlabel('slit 1 opening (mm)')
+
 
 EFF_LABELS = {'ff':'front flipper','rf':'rear flipper',
               'fp':'front polarizer','rp':'rear polarizer'}
@@ -349,17 +352,17 @@ def polarization_efficiency(beam, Imin=0, Emin=0, FRbal=0.5, clip=False):
     """
     # Assume the '++' cross section exists and completely covers the
     # resolution range
-    dT = beam['++'].angular_resolution
+    dtheta = beam['++'].angular_resolution
     s1 = beam['++'].slit1.x
     beta,fp,rp,x,y,mask = \
-        _calc_efficiency(beam=beam, dT=dT, FRbal=FRbal, Imin=Imin, Emin=Emin, clip=clip)
+        _calc_efficiency(beam=beam, dtheta=dtheta, FRbal=FRbal, Imin=Imin, Emin=Emin, clip=clip)
     ff,rf = (1-x)/2, (1-y)/2
-    return dict(dT=dT,slit1=s1,beta=beta,ff=ff,rf=rf,fp=fp,rp=rp,mask=mask)
+    return dict(dtheta=dtheta,slit1=s1,beta=beta,ff=ff,rf=rf,fp=fp,rp=rp,mask=mask)
 
-def _calc_efficiency(beam, dT, FRbal, Imin, Emin, clip):
+def _calc_efficiency(beam, dtheta, FRbal, Imin, Emin, clip):
     # Beam intensity.
     # NOTE: A:mm, B:pm, C:mp, D:mm
-    pp,pm,mp,mm = [_interp_intensity(dT, beam[xs]) for xs in ALL_XS]
+    pp,pm,mp,mm = [_interp_intensity(dtheta, beam[xs]) for xs in ALL_XS]
 
     Ic = ((mm*pp) - (pm*mp)) / ((mm+pp) - (pm+mp))
     reject = (Ic!=Ic)  # Reject nothing initially
@@ -443,7 +446,7 @@ def demo():
     raw_slit,spec,back = [d|join(tolerance=0.01)
                           for d in group.slit(), group.spec(), group.back()]
     slit = raw_slit | smooth_slits(degree=2,span=45,dx=0.001)
-    corrected = spec+slit | PolarizationCorrection()
+    corrected = (spec+slit) | PolarizationCorrection()
 
     #pylab.subplot(211); [d.plot() for d in raw_slit]
     #pylab.subplot(212); [d.plot() for d in slit]

@@ -128,7 +128,7 @@ def demo(path='.'):
     frame.Show()
 
 if __name__ == "__main__":
-    app = wx.PySimpleApp(False)
+    app = wx.App(False)
     path = sys.argv[1] if len(sys.argv)>1 else '.'
     demo(path)
     app.MainLoop()

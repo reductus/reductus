@@ -654,33 +654,33 @@ def infer_intent(data):
     Returns one of the Intent strings.
     """
     # TODO: doesn't handle alignment scans
-    Ti = data.sample.angle_x
-    Tf = 0.5*data.detector.angle_x
-    dT = 0.1*data.angular_resolution
-    n = len(Ti)
+    theta_i = data.sample.angle_x
+    theta_f = 0.5*data.detector.angle_x
+    dtheta = 0.1*data.angular_resolution
+    n = len(theta_i)
 
-    scan_i = (max(Ti) - min(Ti) > dT).any()
-    scan_f = (max(Tf) - min(Tf) > dT).any()
-    if (abs(Ti) < dT).all() and (abs(Tf) < dT).all():
+    scan_i = (max(theta_i) - min(theta_i) > dtheta).any()
+    scan_f = (max(theta_f) - min(theta_f) > dtheta).any()
+    if (abs(theta_i) < dtheta).all() and (abs(theta_f) < dtheta).all():
         # incident and reflected angles are both 0
         intent = Intent.slit
     elif (scan_i and scan_f) or (not scan_i and not scan_f):
-        # both Ti and Tf are moving, or neither is moving
-        if (abs(Tf - Ti) < dT).all():
+        # both theta_i and theta_f are moving, or neither is moving
+        if (abs(theta_f - theta_i) < dtheta).all():
             intent = Intent.spec
         elif abs(data.Qx.max() - data.Qx.min()) > data.dQ.max():
             intent = Intent.rockQ
-        elif np.sum(Tf - Ti > dT) > 0.9*n:
+        elif np.sum(theta_f - theta_i > dtheta) > 0.9*n:
             intent = Intent.backp
-        elif np.sum(Ti - Tf > dT) > 0.9*n:
+        elif np.sum(theta_i - theta_f > dtheta) > 0.9*n:
             intent = Intent.backm
         else:
             intent = Intent.none
     elif scan_i:
-        # only Ti is moving
+        # only theta_i is moving
         intent = Intent.rock3
     elif scan_f:
-        # only Tf is moving
+        # only theta_f is moving
         intent = Intent.rock4
     else:
         # never gets here
@@ -881,8 +881,8 @@ class ReflData(object):
     def __str__(self):
         base = [_str(self,indent=2)]
         others = ["  "+s+"\n"+str(getattr(self,s))
-                  for s in ("slit1","slit2","slit3","slit4",
-                            "sample","detector","monitor","roi")
+                  for s in ("slit1", "slit2", "slit3", "slit4",
+                            "sample", "detector", "monitor", "roi")
                   ]
         return "\n".join(base+others+self.messages)
 
@@ -904,7 +904,7 @@ class ReflData(object):
     def resetQ(self):
         """Recompute Qx,Qz from geometry and wavelength"""
         raise RuntimeError("No longer need resetQ")
-        A,B = self.sample.angle_x,self.detector.angle_x
+        A, B = self.sample.angle_x, self.detector.angle_x
         L = self.detector.wavelength
         Qx,Qz = ABL_to_QxQz(A,B,L)
         self.Qx,self.Qz = Qx,Qz
@@ -914,9 +914,20 @@ class ReflData(object):
         plt.errorbar(self.x, self.v, self.dv,
                      label=self.name+self.polarization, fmt='.')
         plt.xlabel("%s (%s)"%(self.xlabel, self.xunits) if self.xunits else self.xlabel)
-        plt.ylabel("%s (%s)"%(self.vlabel, self.vunits))
+        plt.ylabel("%s (%s)"%(self.vlabel, self.vunits) if self.vunits else self.vlabel)
         if not Intent.isslit(self.intent):
             plt.yscale('log')
+
+    def save(self, filename):
+        with open(filename, 'w') as fid:
+            fid.write("# ")
+            fid.write("%s(%s)"%(self.xlabel, self.xunits) if self.xunits else self.xlabel)
+            fid.write(" ")
+            fid.write("%s(%s)"%(self.vlabel, self.vunits) if self.vunits else self.vlabel)
+            fid.write(" ")
+            fid.write("error")
+            fid.write("\n")
+            np.savetxt(fid, np.vstack([self.x, self.v, self.dv]).T)
 
 def _str(object, indent=4):
     """
