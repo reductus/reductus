@@ -210,7 +210,7 @@ class ICP(object):
             self.filename = os.path.basename(self.path)
             tokens = line.split()
             self.date = parse_date(" ".join(tokens[-4:]))
-            self.columnnames = ["motor_"+c for c in tokens[:-5]] + [tokens[-5]]
+            self.columnnames = ["a"+c for c in tokens[:-5]] + [tokens[-5]]
             self.scantype = 'F'  # New scan type
             return
 
@@ -321,6 +321,13 @@ class ICP(object):
         #skip line describing fields
         file.readline()
 
+    def readphipsi(self, file):
+        tokenized = get_tokenized_line(file)
+        assert tokenized[0] == "Phi:"
+        assert tokenized[2] == "Psi:"
+        self.phi = float(tokenized[1])
+        self.psi = float(tokenized[3])
+
     def check_wavelength(self, default, overrides):
         """
         ICP sometimes records the incorrect wavelength in the file.  Make
@@ -369,6 +376,26 @@ class ICP(object):
             motor.start=float(words[1])
             motor.step=float(words[2])
             motor.stop=float(words[3])
+            name = words[0] if not words[0].isdigit() else 'a'+words[0]
+            setattr(self.motor,name,motor)
+
+    def readfixedmotors(self, file):
+        """
+        Read the 6 motor lines, returning a dictionary of
+        motor names and start-step-stop values.
+        E.g.,
+
+        M = _readfixedmotors(file)
+        print M['a1'].start
+        """
+        self.motor = MotorSet()
+        while True:  # read until 'Mot:' line
+            words=get_tokenized_line(file)
+            if words[0] == 'Mot:': break
+            motor = Motor()
+            motor.start=float(words[1])
+            motor.step=0.0
+            motor.stop=motor.start
             name = words[0] if not words[0].isdigit() else 'a'+words[0]
             setattr(self.motor,name,motor)
 
@@ -442,6 +469,11 @@ class ICP(object):
         elif self.scantype == 'B':
             self.readqheader(file)
             self.readmotors(file)
+        elif self.scantype == 'D':
+            self.readrheader(file)
+            self.readmotors(file)
+            self.readfixedmotors(file)
+            self.readphipsi(file)
         elif self.scantype == 'R':
             self.readrheader(file)
             self.readmotors(file)
@@ -610,9 +642,16 @@ def asdata(icp):
     d.v = np.asarray(icp.counts, 'd') / norm
     d.dv = np.sqrt(icp.counts) / norm
 
+    if icp.scantype == 'D':
+        x_name, y_name = icp.columnnames[0:2]
+        d.x, d.y = icp.column[x_name], icp.column[y_name]
+        d.xlabel, d.ylabel = x_name.capitalize(), y_name.capitalize()
+
+    # Find first moving column, returning point numbers if no moving columns
     for c in icp.columnnames:
         x = icp.column[c]
-        if c not in ('counts', 'counts2', 'monitor') and max(x) - min(x) > 1e-3:
+        if (c not in ('counts', 'counts2', 'monitor', 'time',)
+            and max(x) - min(x) > 1e-3):
             d.xlabel = c.capitalize()
             d.x = x
             break
@@ -641,6 +680,8 @@ class Data(object):
             pylab.gca().pcolormesh(x, y, self.v[:, :, 0])
             pylab.xlabel(self.xlabel)
             pylab.ylabel(self.ylabel)
+            h = pylab.colorbar()
+            h.set_label(self.vlabel)
         elif len(self.v.shape) == 2:
             idx = slice(1,50) if self.filename.endswith('.bt4') else slice()
             x, y = edges_from_centers(self.x), edges_from_centers(self.y[idx])
@@ -648,6 +689,15 @@ class Data(object):
             pylab.gca().pcolormesh(x, y, self.v[:, idx].T)
             pylab.xlabel(self.xlabel)
             pylab.ylabel(self.ylabel)
+            h = pylab.colorbar()
+            h.set_label(self.vlabel)
+        elif hasattr(self, 'y'):
+            # make a scatter plot
+            pylab.scatter(self.x, self.y, c=self.v, s=20, lw=0)
+            pylab.xlabel(self.xlabel)
+            pylab.ylabel(self.ylabel)
+            h = pylab.colorbar()
+            h.set_label(self.vlabel)
         else:
             pylab.errorbar(self.x, self.v, yerr=self.dv,
                            fmt='.', label=self.filename)
