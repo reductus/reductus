@@ -231,11 +231,15 @@ def register(ext,loader):
 
 
 # Delayed loading of file formats
-def icp_ng7((filename)):
+def icp_ng7(filename):
     """NCNR NG-7 ICP file loader"""
     from .ncnr_ng7 import NG7Icp
     return [NG7Icp(filename)]
 
+
+def icp_bt4(filename):
+    from . import icpformat
+    return [icpformat.data(filename)]
 
 def icp_ng1(filename):
     """NCNR NG-7 ICP file loader"""
@@ -247,7 +251,6 @@ def icp_ng1p(filename):
     """NCNR NG-7 ICP file loader"""
     from .ncnr_ng1 import NG1pIcp
     return [NG1pIcp(filename)]
-
 
 def nexus(filename):
     """NeXus file loader"""
@@ -276,6 +279,8 @@ def _register_extensions():
     for ext in ['.nad', '.cad', '.na1', '.ca1']:
         for xs in 'abcd':
             register(ext.replace('a',xs), icp_ng1)
+
+    register('.bt4', icp_bt4)
 _register_extensions()
 
 def test():

@@ -3,11 +3,13 @@ GUI driver for the polarization correction code polcor.
 """
 
 import sys
+import os
 import traceback
 
 import wx,wx.aui
 
 from .. import formats
+from ..formats.icpformat import gzopen
 from .selection import SelectionPanel, EVT_ITEM_SELECT, EVT_ITEM_VIEW
 from .wxpylab import PlotPanel
 
@@ -55,12 +57,23 @@ class DataSelection(wx.Panel):
         if filename in self.datasets:
             return self.datasets[filename]
 
+        if os.path.isdir(filename):
+            return []
+
         # Try loading data, guessing format from file extension
         try:
             data = formats.load(filename)
         except:
-            traceback.print_exc()
-            print "unable to load %s\n  %s"%(filename, sys.exc_value)
+            metadata = ["=== %s ==="%filename]
+            if not filename.lower().endswith('.log'):
+                metadata += [str(sys.exc_value), "", traceback.format_exc(),
+                             "=============="]
+            try:
+                with gzopen(filename) as fid:
+                    metadata += [line.rstrip() for line in fid]
+            except:
+                pass
+            self._show_metadata("\n".join(metadata))
             data = []
         else:
             pass
@@ -70,28 +83,34 @@ class DataSelection(wx.Panel):
         self.datasets[filename] = data
         return data
 
+    def _show_metadata(self, metadata):
+        # TODO this isn't shifting the text control on aqua
+        # Tried setting focus first without success:
+        #   focuswin = wx.Window.FindFocus()
+        #   self.metadata.SetFocus()
+        #   ...
+        #   if focuswin: focuswin.SetFocus()
+        #self.metadata.SetFocus()
+        pt = self.metadata.GetInsertionPoint()
+        metadata = metadata.decode('latin-1').encode('utf8')
+        self.metadata.Replace(0,self.metadata.GetLastPosition(),metadata)
+        self.metadata.SetInsertionPoint(pt)
+        # See if simulating a right-left sequence moves the view
+        #kevent = wx.KeyEvent(wx.EVT_CHAR)
+        #kevent.m_keyCode = wx.WXK_RIGHT
+        #self.metadata.EmulateKeyPress(kevent)
+        #kevent.m_keyCode = wx.WXK_LEFT
+        #self.metadata.EmulateKeyPress(kevent)
+        #print "Setting point to",pt
+        self.metadata.ShowPosition(pt)
+
     def onView(self, event):
         filename = event.data
+        wx.GetTopLevelParent(self).SetTitle(filename)
         data = self.load(filename)
+
         if data:
-            # TODO this isn't shifting the text control on aqua
-            # Tried setting focus first without success:
-            #   focuswin = wx.Window.FindFocus()
-            #   self.metadata.SetFocus()
-            #   ...
-            #   if focuswin: focuswin.SetFocus()
-            #self.metadata.SetFocus()
-            pt = self.metadata.GetInsertionPoint()
-            self.metadata.Replace(0,self.metadata.GetLastPosition(),str(data[0]))
-            self.metadata.SetInsertionPoint(pt)
-            # See if simulating a right-left sequence moves the view
-            #kevent = wx.KeyEvent(wx.EVT_CHAR)
-            #kevent.m_keyCode = wx.WXK_RIGHT
-            #self.metadata.EmulateKeyPress(kevent)
-            #kevent.m_keyCode = wx.WXK_LEFT
-            #self.metadata.EmulateKeyPress(kevent)
-            #print "Setting point to",pt
-            self.metadata.ShowPosition(pt)
+            self._show_metadata("=== %s ===\n"%filename + str(data[0]))
             with self.plotter.pylab_figure as pylab:
                 pylab.clf()
                 pylab.hold(True)

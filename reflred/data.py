@@ -11,6 +11,7 @@ some point refldata may be made to inherit from data, but for data
 will act as a platform for developing plotting ideas, and is not part
 of the main reflectometry code.
 """
+from __future__ import division
 import numpy as np
 
 def edges_from_centers(x):
@@ -31,7 +32,7 @@ def centers_from_edges(x):
     """
     Given a series of bin edges, return the bin centers.
     """
-    return (x[:-1]+x[1:])/2
+    return (x[:-1]+x[1:])/2.
 
 def dims(a):
     """

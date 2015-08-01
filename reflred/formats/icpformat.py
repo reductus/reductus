@@ -9,9 +9,15 @@ ICP data reader.
 summary(filename)  - reads the header information
 read(filename) - reads header information and data
 """
+from __future__ import division
+
+import os
+import datetime
 
 import numpy as np
-import datetime
+
+from ..data import edges_from_centers
+
 
 # Try using precompiled matrix loader
 try:
@@ -62,7 +68,7 @@ def readdata(fh):
 
     line = fh.readline().rstrip()
     linenum = 1
-    while line != '':
+    while line != '' and ord(line[0]) != 0:
         # While it might be easy to check for a comment mark on the beginning
         # of the line, supporting this is ill-adviced.  First, users should
         # be strongly discouraged from modifying the original data.
@@ -125,13 +131,12 @@ def get_tokenized_line(file):
     line=file.readline()
     return line.split()
 
-def get_quoted_tokens(file):
+def get_quoted_tokens(line):
     """
     Build a token list from a line which can be a mix of quoted strings
     and unquoted values separated by spaces.  Uses single quotes only.
     Does not test for escaped single quotes.
     """
-    line = file.readline()
     tokens = []
     curtoken=None
     inquote = False
@@ -197,15 +202,27 @@ class ICP(object):
         Read the tow line summary at the start of the ICP data files.
         """
 
-        tokens = get_quoted_tokens(file)
+        line = file.readline()
+        if line.startswith(' Motor no.'):
+            line = line.replace('Motor no.', '')
+            line = line.replace('Intensity', 'counts')
+            # must be a find-peak
+            self.filename = os.path.basename(self.path)
+            tokens = line.split()
+            self.date = parse_date(" ".join(tokens[-4:]))
+            self.columnnames = ["motor_"+c for c in tokens[:-5]] + [tokens[-5]]
+            self.scantype = 'F'  # New scan type
+            return
+
+        tokens = get_quoted_tokens(line)
         self.filename=tokens[0]
         self.date = parse_date(tokens[1])
         self.scantype = tokens[2]
         self.prefactor = float(tokens[3])
-        self.monitor=float(tokens[4])
-        self.count_type=tokens[5]
-        self.points=int(tokens[6])
-        self.data_type=tokens[7]
+        self.monitor = float(tokens[4])
+        self.count_type = tokens[5]
+        self.points = int(tokens[6])
+        self.data_type = tokens[7]
 
         #skip over names of fields
         file.readline()
@@ -398,6 +415,7 @@ class ICP(object):
         Generate vectors for each of the motors if a vector is not
         already stored in the file.
         """
+        if not hasattr(self, 'motor'): return
         if self.scantype in ['T']: return  # Skip motor generation for now for 'T'
         for (M,R) in self.motor.__dict__.iteritems():
             if not hasattr(self.column,M):
@@ -416,17 +434,19 @@ class ICP(object):
         """
         # Determine FileType
         self.readheader1(file)
-        if self.scantype=='I':
+        if self.scantype == 'I':
             self.readiheader(file)
             self.readmotors(file)
         elif self.scantype in ['Q','T']:
             self.readqheader(file)
-        elif self.scantype=='B':
+        elif self.scantype == 'B':
             self.readqheader(file)
             self.readmotors(file)
-        elif self.scantype=='R':
+        elif self.scantype == 'R':
             self.readrheader(file)
             self.readmotors(file)
+        elif self.scantype == 'F':
+            return # Not going to read column headers
         else:
             raise ValueError, "Unknown scantype %s in ICP file"%self.scantype
         self.readcolumnheaders(file)
@@ -470,8 +490,10 @@ class ICP(object):
         else:
             return self.column.counts
 
+
 def write_icp_header(file, icpfile):
     raise NotImplemented
+
 
 def _write_icp_frame(file, frame):
     # Round data to the nearest integer
@@ -493,6 +515,8 @@ def _write_icp_frame(file, frame):
         offset = next+1
     file.write(text[offset:])
     file.write('\n')
+
+
 def write_icp_data(file, formats, columns, detector=None):
     """
     Write the data portion of the icp file.
@@ -503,6 +527,8 @@ def write_icp_data(file, formats, columns, detector=None):
         file.write('\n')
         if detector != None and detector.size > 0:
             _write_icp_frame(file,detector[i])
+
+
 def replace_data(infilename, outfilename, columns, detector=None):
     infile = open(infilename,'r')
     outfile = open(outfilename, 'w')
@@ -555,7 +581,7 @@ def summary(filename):
     icp.summary()
     return icp
 
-def gzopen(filename,mode='r'):
+def gzopen(filename, mode='r'):
     """
     Open file or gzip file
     """
@@ -567,15 +593,37 @@ def gzopen(filename,mode='r'):
     return file
 
 def asdata(icp):
-    from . import data
-    d = data.Data()
-    d.vlabel = 'Counts'
-    d.v = icp.counts
-    d.xlabel = icp.columnnames[0].capitalize()
-    d.x = icp.column[icp.columnnames[0]]
+    d = Data()
+    d.path = icp.path
+    d.filename = icp.filename
+    if 'monitor' in icp.columnnames:
+        d.vlabel = 'Counts per monitor'
+        norm = icp.column['monitor']
+    elif 'time' in icp.columnnames:
+        d.vlabel = 'Counts per minute'
+        norm = icp.column['time']
+    else:
+        d.vlabel = 'Counts'
+        norm = np.ones(icp.counts.shape[0])
+    if icp.counts.ndim == 2:
+        norm = norm[:, None]
+    d.v = np.asarray(icp.counts, 'd') / norm
+    d.dv = np.sqrt(icp.counts) / norm
+
+    for c in icp.columnnames:
+        x = icp.column[c]
+        if c not in ('counts', 'counts2', 'monitor') and max(x) - min(x) > 1e-3:
+            d.xlabel = c.capitalize()
+            d.x = x
+            break
+    else:
+        d.xlabel = 'Point'
+        d.x = np.arange(1, 1+d.v.shape[0])
+
     if len(d.v.shape) > 1:
         d.ylabel = 'Pixel'
-        d.y = np.arange(d.v.shape[0])
+        d.y = np.arange(1, 1+d.v.shape[1])
+
     return d
 
 def data(filename):
@@ -583,11 +631,38 @@ def data(filename):
     icp.read()
     return asdata(icp)
 
+class Data(object):
+    def load(self):
+        pass
+    def plot(self):
+        import pylab
+        if len(self.v.shape) > 2:
+            x,y = edges_from_centers(self.x), edges_from_centers(self.y)
+            pylab.gca().pcolormesh(x, y, self.v[:, :, 0])
+            pylab.xlabel(self.xlabel)
+            pylab.ylabel(self.ylabel)
+        elif len(self.v.shape) == 2:
+            idx = slice(1,50) if self.filename.endswith('.bt4') else slice()
+            x, y = edges_from_centers(self.x), edges_from_centers(self.y[idx])
+            #x, y = self.x, self.y[idx]
+            pylab.gca().pcolormesh(x, y, self.v[:, idx].T)
+            pylab.xlabel(self.xlabel)
+            pylab.ylabel(self.ylabel)
+        else:
+            pylab.errorbar(self.x, self.v, yerr=self.dv,
+                           fmt='.', label=self.filename)
+            pylab.xlabel(self.xlabel)
+            pylab.ylabel(self.vlabel)
+    def text(self):
+        with gzopen(self.path) as fid:
+            return "\n".join(line.rstrip() for line in fid)
+    __str__ = text
 
 
 # TODO: need message/question functions
 def message(text): pass
 def question(text): return True
+
 
 def copy_test():
     import sys
@@ -599,6 +674,7 @@ def copy_test():
     icp.read()
     columns = [icp.column[n] for n in icp.columnnames]
     replace_data(filename,'copy.icp',columns,detector=icp.detector)
+
 
 def demo():
     """
@@ -613,38 +689,14 @@ def demo():
         keys.sort()
         for k in keys: print k,getattr(fields,k)
 
-def plot(filename):
-    """
-    Read and print all command line arguments
-    """
-    import pylab
-
-    canvas = pylab.gcf().canvas
-    d = data(filename)
-    if len(d.v.shape) > 2:
-        pylab.gca().pcolormesh(d.v[0,:,:])
-        pylab.xlabel(d.xlabel)
-        pylab.ylabel(d.ylabel)
-    elif len(d.v.shape) > 1:
-        if filename.lower().endswith('bt4'):
-            offset=1
-        else:
-            offset=0
-        pylab.gca().pcolorfast(d.v[:,offset:])
-        pylab.xlabel(d.xlabel)
-        pylab.ylabel(d.ylabel)
-    else:
-        pylab.plot(d.x,d.v)
-        pylab.xlabel(d.xlabel)
-        pylab.ylabel(d.vlabel)
-    pylab.show()
 
 def plot_demo():
     import sys
     if len(sys.argv) != 2:
         print "usage: python icpformat.py file"
     else:
-        plot(sys.argv[1])
+        data(sys.argv[1]).plot()
+        import pylab; pylab.show()
 
 if __name__=='__main__':
     plot_demo()
