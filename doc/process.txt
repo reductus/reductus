@@ -1,0 +1,309 @@
+Point detector reduction
+
+0. Maintain experiment properties
+    instrument
+	beam wavelength and wavelength spread
+	distance between slits, sample and detector
+	needed for resolution calculation
+	should be available in nexus, but user may need to override
+    samples
+	shape, size used for resolution and footprint estimates
+	surface/substrate sld used for fresnel reflectivity plots
+	    will also help in auto-fitting
+	a hydrogenated substrate changes the background correction
+	may be many samples associated with an experiment
+	should be available in nexus, but user may need to override
+    attenuators
+	attenuators are needed for slit scans, and for specular x-ray
+	want to share attenuators across experiment => database of values
+	can estimate attenuator values and uncertainties from overlap
+	    interpolate points to common slits, if single point overlap
+	    extend overlap by fitting p(x) to (y,dy) below, a*(y,dy) above
+	    p(x) could be linear or quadratic; user chosen range?
+	    ignore points which aren't corrected for dead time
+	simultaneous fitting across polarization cross sections
+	make sure to include resolution when fitting specular attenuators
+	can enter attenuator values by hand
+    background-specular association variable: theta in, theta out, or qz
+	maybe relative to theta in, theta out, or qz
+	maybe infer from associated specular?
+	    background should have same delta theta as specular
+	    theta in or out from background will match range in specular
+	maybe identified in trajectory?
+	user needs to be able to override
+    helium-3 polarizer
+	cell details, such as polarization vs time measurements
+	maybe available as separate files in the directory
+	can be entered/updated by hand
+
+1. Display available datasets
+    - preprocess all data files, marking intent, sample, and environment
+	record scanned range for primary motor of each measurement
+	primary motor depends on the intent for the measurement
+	load as little data as possible during pre-analysis
+	preprocess files on data server; send metadata on directory request
+	create thumbnail data plot to preview data before transmitting file
+	maybe stash preprocessed values
+    - display hierarchical list ordered by sample+environment then by intent
+    - display range for each file relative to total range in group
+    - indicate location of zero, particularly for rocking curves
+    - processed data appears as separate group within each sample+environment
+
+2. Select datasets to view/process
+    - click to add/remove data to currently selected set
+    - indicate which datasets have been selected
+    - maybe indicate which files have been processed
+	show list of processed files which depend on the current file
+    - warn if different sample or environment from first selected dataset
+	writes warning on status bar
+	requires control-click; click refuses to select the file
+    - clear/accept selected data
+    - displays already processed data with reduced saturation/value
+	it is useful to overlay the new file over an already processed file
+	processed selections do not need to be in the same set
+    - can’t really display spec+background, slit, rock on the same x-axis
+	current program does it anyway
+
+3. Preprocess data
+    - monitor dead-time correction (from counts per second on monitor)
+    - detector dead-time correction (from counts per second on detector)
+    - rate normalization (by monitor if available, otherwise by second)
+    - auto-exclude points outside the valid dead-time correction range
+    - auto-exclude specular points from background scans 	some "background" measurements cross the specular ridge, and for 
+	simplicity in ICP, included a point on the specular ridge
+    - auto-select attenuator from data overlap
+    - auto-select background offset from data (if possible)
+    - rocking curve estimates
+	pre-join rocking curves to one continuous curve
+	estimate theta offset and uncertainty for rocking curves
+	estimate delta theta and sample broadening for rocking curves
+		
+
+4. File selector view
+    - x-axis: theta in, theta out, qx, qz, slit, point number, other
+    - y-axis: counts, count rate, fresnel (if qz)
+    - default x-axis/y-axis depends on line type
+	beam intensity: slit 1
+	rock: theta in, theta out, qx  depending on what was rocked
+	spec/back: qz
+	other: primary motor in scan
+    - toggle linear/log on x-axis, y-axis
+    - hide/show individual lines by toggling legend
+    - highlight line on hover legend/highlight legend on hover line
+    - show instrument configuration on hover point
+
+    - toggle points to exclude
+    - change measurement intent
+    - select different attenuator
+    - toggle rate normalization between seconds and monitors
+    - override monitor counts using time and user supplied monitor rate
+	use this when the monitor value is not trusted for some measurements
+	and you want to mix time and monitor normalized data
+
+    - view metadata for current dataset
+	show complete ICP data header
+	show hierarchical view of nexus data
+    - view data table for current dataset
+	show table with one row per point, one column per value
+    - view/hide plot of environment data for current dataset
+	show average and target values for environment sensor for each point
+	count time, monitor count, reactor power are like environment data
+	show/hide individual environment variables
+	hover on point to show value
+	spark lines are a compact representation, with axis tied to data plot
+    - view measurement timeline for current dataset
+	show individual sensor values, not per point averages
+	plot time on the x-axis
+	requires full environment history as a separate file
+	plot individual environment variable measurements as separate lines
+	show/hide individual environment variables
+	plot average count rate for point while counting as a separate line
+	hover on count rate to show instrument config values (angles, etc)
+	for interleaved measurements, show all measurements together
+    - show regions of overlap where measurements are significantly different
+	use this to decide if datasets should be combined or kept separate
+	multiple points in a row carry more weight than individual points
+
+5. Join data
+    - separate datasets into lines (beam, spec, rock, slit)
+    - find common theta, delta theta, lambda, delta lambda within each line
+	intensity normalization is based on slits
+	    => combine on similar delta theta
+	keep dQ similar
+	    => constrain delta lambda
+	similar means e.g,, 5% range of values?
+	constrain theta/lambda based on e.g., 0.2 delta Q total range
+	minimize range of values within a point
+	minimize number of points
+	include all polarization cross sections in point selection
+	keep monitor normalized and time normalized points separate
+    - join common points together
+	use the target value to decide which points to join
+	use count weighted mean for point theta/lambda
+	maybe interpolate counts to common point
+	    linear interpolation of Q vs count rate
+	    scale factor is interpolated rate/original rate
+	    scale counts by scale factor, leaving monitors/time constant
+	    change in counts assumed to be due to change in T,dT,L,dL
+	    	=> interpolate dT, dL as well
+	    extrapolation is allowed (since it is a small extrapolation)
+	    skip interpolation for single point scans
+	    note: rate may be counts per second or counts per monitor
+	set delta theta/delta lambda based on variance of gaussian mixture
+	sum counts/monitors/time across points using poisson statistics
+	ideally should get the same results from 10 measurements for
+	    1/10th the time as a single measurement for the full time
+	don’t forget scale factors due to dead-time, attenuators, etc.
+    - show joined line as preprocessed data, and add it to the file selector
+    - name of joined line is name of first dataset + intent
+    - Note: prefer to set common T,dT,L,dL across spec/back/slit.  How?
+
+6. Combine datasets
+    - select spec, back, slit, rock inputs to normalization
+    - maybe select more than one line of each type
+    - if more than one spec, repeat join with data for each spec
+    - for all back+, and separately for back-
+	repeat join, preferring T,dT,L,dL from spec
+	if spec point is missing from background, leave it missing
+	if points left over, combine as for spec
+    - interpolate back+,back- into spec
+    - if hydrogenous backing material, 4 pi scatter changes background
+	don’t know the math to correct for it yet
+    - otherwise, average back+ and back- as back
+    - repeat join for slit scans
+	find set of delta theta for all spec,back
+	interpolate data to target delta theta
+	if points left over, combine as for spec
+    - normalize spec/back to slit
+    - subtract back from spec
+    - may want to mask points below the critical edge before saving
+
+7. Footprint correction
+    - ab initio footprint estimation based on slit geometry and angles
+    - measured footprint from sample blank with Fresnel reflectivity
+    - footprint settings from previously reduced dataset
+    - enter footprint slope, etc. by hand
+    - estimate footprint from total reflection below the critical edge
+	extrapolate to 1 or to point of opening slits
+	opening slits are assumed to maintain constant footprint
+	    check that this is so
+		select ++ or --, whichever has a higher critical edge
+	combine estimate from several measurements
+	- footprint completely determined by angles
+		just as applicable in TOF and Candor, but may need different method to estimate it
+
+8. Intensity scaling
+    - scales reflectivity by a constant
+    - used when monitor is after slit 2
+	detector to monitor ratio is equivalent to slit scan normalization
+	NG7 has a ratio of about 12
+    - used when beam is larger than sample
+	Ideally, slits will be set so that the beam fully intercepts but
+	no more.  Sometimes they are opened larger, and continue to open
+	so as to maintain a constant beam profile with respect to the
+	sample.  In this occurs in the area of total reflection below
+	the critical edge, then the reflected intensity will be a fraction
+	of the incident intensity, and will never reach 1.  We do not want
+	to introduce a footprint correction in this case, with its
+	attendant uncertainty, and instead correct to 1 with a simple
+	intensity scale factor.
+    - used as an incident medium absorption factor
+	Ideally, slits should be measured in the same configuration as
+	the sample.  If the beam goes through the substrate, there will
+	be an attenuation effect based on path length.  At the angles
+	seen in reflectometry, the path length is approximately the same
+	for the direct beam as for the reflected beam, and if the slit
+	scan and the specular are both measured through the substrate, this
+	attenuation factor cancels.  However, if the specular was measured
+	through the substrate but the slit scan was not, then the normalized
+	reflectivity will need an intensity scale factor to correct this.
+    - used for any other systematic error that scales the entire curve
+    - estimate the scale factor from the region below the critical edge
+    - a fitted footprint correction will mask this effect
+
+8. Position sensitive detectors for specular reflectometry
+    - pixel area correction (rebin to fixed pixel area)
+    - detector efficiency correction (balance relative efficiency of pixels)
+    - vertical integration for 2D detector
+	perform this operation on the data server to reduce network traffic
+	requires vertical pixel range input
+	serve individual detector frames to inform pixel range selectio
+    - normalize 1D frames by monitor or time
+	toggle between monitor and time normalization
+	set monitor from time and monitor rate if monitor is not trusted
+    - specify integration region
+	specular region is set based on a fraction of delta theta
+	background region is on either side of specular
+	allow back to cross specular, as is done for point detectors
+    - integrate into specular and background measurements
+	estimate background using fit to a line through back+/back- regions
+	set specular to integrated counts in specular region
+	set back to area under background line in specular region
+    - reduction then proceeds as for normal point detector measurements
+
+    - view Qx-Qz plot for each polarization cross section 
+    - view individual detector frames (for area detector)
+    - view slices in Qx-Qz
+    - view integrated regions in Qz
+
+9. Polarized neutron data
+    - file selector and viewer show individual polarization cross sections
+    - need to be able to exclude spin flip cross sections
+    - need to be able to treat individual cross sections as non-polarized
+    - estimate polarization/flipping efficiency from He3 data and slits
+	view efficiency as a function of delta theta
+	correction is underdetermined: set front/back flipper ratio
+	correction is not numerically stable: want to choose between
+	    raw efficiency estimates
+	    smooth slits before estimate (savitsky-golay or linear-quadratic)
+	    smooth efficiency after estimate (savitsky-golay)
+	clip efficiency to lie in [0,1]
+    - correct background before interpolating to the specular points
+	=> correct specular and background before subtracting
+    - polarization correction automatically corrects for beam intensity
+	=> slit normalization is no longer necessary
+    - when using He3, do polarization correction before combining points
+	=> He3 data and slit scan must be set in file selector view
+    - when not using He3, polarization correction can occur later
+    - don’t know when polarization correction should occur for PSDs
+	Can be applied to each 2D frame, after vertical integration 
+	to 1D or after integration to specular and background.  
+	It is probably best applied to 1D detector before
+	integrating to specular and background.
+		
+
+    Note: consider alternate efficiency calculation
+	Simultaneously fit all cross sections with a cost term based
+	on how much the fitted parameters change from point to point.  
+	Constrain the results so that efficiency lies in [0,1].  
+	Currently the problem is expressed as a solution to a linear 
+	equation with no fittable parameters, so reframing this will
+	require some thought
+    Note: currently clipping efficiency to [0,1] because neutrons 
+	cannot be created.  This was done without careful consideration 
+	of the effect.  The polarization correction should simply move 
+	neutrons between cross sections on the assumption that neutrons 
+	counted in one cross section really belong in another cross 
+	section because they were either selected incorrectly by the 
+	polarizer or analyzer, or were not properly flipped.  Clipping 
+	the coefficients will probably reduce the number of neutrons 
+	in the system rather than simply moving them between cross 
+	sections.  This needs to be checked, and perhaps a different 
+	algorithm used to correct for >100% efficiency. 
+
+10. Candor for specular reflectometry
+    - split each detector bank into a measurement, over lambda not theta
+    - track which incident beams are active
+    - assign intent to each detector bank (specular, background, slit)
+    - need slit measurements for each channel on every beam
+    - need polarization correction for each channel on every beam
+    - reduction then proceeds as for normal point detector measurements
+
+
+11. Time of flight reflectometry
+    - rebin detector time-of-flight channels so that dL/L is a constant
+	select L,dL such that Q,dQ matches in overlapping regions
+    - convert detector time-of-flight to wavelength
+    - rebin monitor time-of-flight channels to match detector wavelengths
+    - reduction then proceeds as for normal point detector measurements
+
