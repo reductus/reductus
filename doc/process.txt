@@ -1,19 +1,20 @@
 Point detector reduction
 
 0. Maintain experiment properties
-    instrument
+    - instrument
 	beam wavelength and wavelength spread
+	    on CANDOR, this is a property of individual analyzer blades
 	distance between slits, sample and detector
 	needed for resolution calculation
 	should be available in nexus, but user may need to override
-    samples
+    - samples
 	shape, size used for resolution and footprint estimates
 	surface/substrate sld used for fresnel reflectivity plots
 	    will also help in auto-fitting
 	a hydrogenated substrate changes the background correction
 	may be many samples associated with an experiment
 	should be available in nexus, but user may need to override
-    attenuators
+    - attenuators
 	attenuators are needed for slit scans, and for specular x-ray
 	want to share attenuators across experiment => database of values
 	can estimate attenuator values and uncertainties from overlap
@@ -24,14 +25,14 @@ Point detector reduction
 	simultaneous fitting across polarization cross sections
 	make sure to include resolution when fitting specular attenuators
 	can enter attenuator values by hand
-    background-specular association variable: theta in, theta out, or qz
-	maybe relative to theta in, theta out, or qz
+    - background-specular association variable: theta in, theta out, or qz
+	background maybe relative to theta in, theta out, or qz
 	maybe infer from associated specular?
 	    background should have same delta theta as specular
 	    theta in or out from background will match range in specular
 	maybe identified in trajectory?
 	user needs to be able to override
-    helium-3 polarizer
+    - helium-3 polarizer
 	cell details, such as polarization vs time measurements
 	maybe available as separate files in the directory
 	can be entered/updated by hand
@@ -67,9 +68,19 @@ Point detector reduction
 3. Preprocess data
     - monitor dead-time correction (from counts per second on monitor)
     - detector dead-time correction (from counts per second on detector)
+    - detector efficiency correction is not required (usually)
+        dead-time correction handles rate dependent efficiency
+        rate independent efficiency cancels when scaling specular by slit
+        Note: with the uncertainties package, the cancellation is complete
+            but naive gaussian error propagation leads to different answers
+        need to correct for relative efficiency before combining data from
+            different detectors.  Normalizing by slits does this automatically.
+            This may affect how data is combined/visualized as it is coming
+            off of Candor.
     - rate normalization (by monitor if available, otherwise by second)
     - auto-exclude points outside the valid dead-time correction range
-    - auto-exclude specular points from background scans 	some "background" measurements cross the specular ridge, and for 
+    - auto-exclude specular points from background scans
+    	some "background" measurements cross the specular ridge, and for
 	simplicity in ICP, included a point on the specular ridge
     - auto-select attenuator from data overlap
     - auto-select background offset from data (if possible)
@@ -187,10 +198,11 @@ Point detector reduction
 	extrapolate to 1 or to point of opening slits
 	opening slits are assumed to maintain constant footprint
 	    check that this is so
-		select ++ or --, whichever has a higher critical edge
+	select ++ or --, whichever has a higher critical edge
 	combine estimate from several measurements
-	- footprint completely determined by angles
-		just as applicable in TOF and Candor, but may need different method to estimate it
+    - footprint completely determined by angles
+	just as applicable in TOF and Candor, but may need different
+	method to estimate it
 
 8. Intensity scaling
     - scales reflectivity by a constant
@@ -298,7 +310,13 @@ Point detector reduction
     - need slit measurements for each channel on every beam
     - need polarization correction for each channel on every beam
     - reduction then proceeds as for normal point detector measurements
-
+    - intensity will be wavelength dependent, both due to source spectrum
+      and due to the beam passing through successive analyzers
+         Mildner, D. F. R.; Arif, M.; Werner, S. A.
+         Neutron transmission through pyrolytic graphite monochromators
+         Journal of Applied Crystallography 2001, 34 (3), 258–262.
+    - wavelength dispersion may also be detector dependent
+        perhaps we will need resolution modeling beyond simple Q-dQ
 
 11. Time of flight reflectometry
     - rebin detector time-of-flight channels so that dL/L is a constant
@@ -307,3 +325,19 @@ Point detector reduction
     - rebin monitor time-of-flight channels to match detector wavelengths
     - reduction then proceeds as for normal point detector measurements
 
+12. live SLD (not part of reduction)
+    - want to be able to estimate the reflectivity as soon as it comes
+        off the instrument, without waiting for all the runs to complete
+    - specular measurement may be good enough to start analysis
+        apply dead time correction
+        for candor, correct spectral tilt
+        estimate relative beam intensity from theta resolution
+        estimate relative footprint from slits and angles
+        skip polarization correction
+        use substrate/surround for the model if available
+        fit background and intensity scale
+    - combine with recent scans using auto-reduction
+    - build up freeform model using monosplines, PBS, or slabs
+        need to be able to start with a simple model and add complexity
+        look for overall thickness using fft
+        maybe identify superlattice peak and add multilayer to sample
