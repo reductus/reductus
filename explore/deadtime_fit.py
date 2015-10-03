@@ -278,41 +278,50 @@ def attenuation_estimate(observed_rate, tau_NP, tau_P, above=False):
         # relative uncertainty as the scale factor.
         idx = (R*tau_NP[0]*DEADTIME_SCALE > (1-dR/R))
         I[idx] = R[idx]**2/dR[idx]
-        print("override",R[idx])
 
-    else:
-        # Use root finding if p is not trivial; note that we could be
-        # using the Lambert-W for pure p models, but we already have
-        # the mechanism for non-p, so we might as well use it.
+    elif above:
+        # Use bisection for intensity above Ipeak.  This was stable enough
+        # for the problems tried.  We haven't put effort into improving
+        # performance this capability isn't likely to be used in production.
         n, p = tau_NP[0]*DEADTIME_SCALE, tau_P[0]*DEADTIME_SCALE
-        if above:
-            I = [_invert_above(Ipeak, Rpeak, rk, n, p) for rk in R]
-        else:
-            #I = [_invert_below(Ipeak, Rpeak, rk, n, p) for rk in R]
-
-            ### In case bisection is too slow, use Newton-Raphson; unfortunately
-            ### we may need to do this if we are correcting 2-D detector frames
-            # Some Newton steps to solve for incident rate given observed rate
-            r = np.asarray(observed_rate[0], 'd')
-            I = r*0.
-            for _ in range(4):
-                I = I - _forward(I, r, n, p)/_dforward(I, r, n, p)
-            I[r > Rpeak] = Ipeak
+        I = [_invert_above(Ipeak, Rpeak, rk, n, p) for rk in R]
+        # We can probably get Newton-Raphson iteration to work if we start
+        # it in the right place.  The first try with Io = Ipeak*Rpeak/r
+        # gave numerical problems, presumably because it was starting too
+        # far out in I.  If this capability becomes important this problem
+        # can be solved for reasonable values of r.
+    else:
+        # Use solver for P and mixed P-NP problems.
+        n, p = tau_NP[0]*DEADTIME_SCALE, tau_P[0]*DEADTIME_SCALE
+        r = np.asarray(observed_rate[0], 'd')
+        # Use Newton-Raphson iteration starting from the observed rate.
+        # It converges quickly and stably away from Rpeak.  Near Rpeak
+        # it may give numerical problems, but these points are handled
+        # elsewhere, so the errors and warnings are suppressed.
+        with np.errstate(all='ignore'):
+            I = r.copy()
+            I -= _forward(I, n, p, r) / _dforward(I, n, p)
+            I -= _forward(I, n, p, r) / _dforward(I, n, p)
+            I -= _forward(I, n, p, r) / _dforward(I, n, p)
+        # Use bisection near Rpeak since the slope approaches zero and
+        # Newton-Raphson may fail.  These should be rare.
+        index = (r>0.9*Rpeak)
+        I[index] = [_invert_below(Ipeak, Rpeak, rk, n, p) for rk in r[index]]
 
     A = I/uarray(R,dR)
     return A
 
 def _invert_below(Ipeak, Rpeak, r, n, p):
-    return bisect(_forward, 0., Ipeak, args=(r, n, p)) if r < Rpeak else Ipeak
+    return bisect(_forward, r, Ipeak, args=(n, p, r)) if r < Rpeak else Ipeak
 
 def _invert_above(Ipeak, Rpeak, r, n, p):
-    return bisect(_forward, Ipeak, 1e6*Ipeak, args=(r, n, p)) if r < Rpeak else Ipeak
+    return bisect(_forward, Ipeak, 1e6*Ipeak, args=(n, p, r)) if r < Rpeak else Ipeak
 
-def _forward(I, r, n, p):
-    return I*exp(-I*p)/(1+I*n) -  r
+def _forward(I, n, p, r):
+    return I*exp(-I*p)/(I*n + 1.) - r
 
-def _dforward(I, r, n, p):
-    return -exp(-I*p)*(I*p*(I*n + 1) - 1)/(I*n + 1)**2
+def _dforward(I, n, p):
+    return -exp(-I*p)/(I*n + 1.)*(I*p - 1./(I*n + 1.))
 
 def deadtime_from_counts(attenuated, unattenuated, mode='mixed'):
     """
@@ -332,7 +341,7 @@ def deadtime_from_counts(attenuated, unattenuated, mode='mixed'):
     return deadtime_estimate(wt, wo, mode=mode)
 
 
-def deadtime_estimate(attenuated, unattenuated, mode='mixed'):
+def deadtime_estimate(attenuated, unattenuated, mode='auto'):
     """
     Fit the dead time tau for the measured rate data.
 
@@ -641,7 +650,7 @@ def run_sim(tau_NP=0, tau_P=0, attenuator=10, mode='mixed', plot=True):
     wt = (attenuated[0]/attenuated[1], sqrt(attenuated[0])/attenuated[1])
     wo = (unattenuated[0]/unattenuated[1], sqrt(unattenuated[0])/unattenuated[1])
     scale = attenuation_estimate((wo[0],wo[1]), tau_NP=tau_NP_f, tau_P=tau_P_f,
-       #above=True
+        #above=True
     )
     corrected = scale*uarray(wo[0], wo[1])
     #print("correction",ufloat(wo[0][-1],wo[1][-1]),"*",scale[-1],"=",corrected[-1])
