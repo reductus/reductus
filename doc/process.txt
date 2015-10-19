@@ -3,7 +3,9 @@ Point detector reduction
 0. Maintain experiment properties
     - instrument
 	beam wavelength and wavelength spread
-	    on CANDOR, this is a property of individual analyzer blades
+	    on CANDOR, this is a property of individual analyzer blades;
+	    CANDOR also needs the angle of each detector bank relative to the
+	    detector angle so each pixel can be tagged with theta, lambda.
 	distance between slits, sample and detector
 	needed for resolution calculation
 	should be available in nexus, but user may need to override
@@ -45,6 +47,7 @@ Point detector reduction
 	preprocess files on data server; send metadata on directory request
 	create thumbnail data plot to preview data before transmitting file
 	maybe stash preprocessed values
+	doens't support mix of spec/background/rock in same scan file
     - display hierarchical list ordered by sample+environment then by intent
     - display range for each file relative to total range in group
     - indicate location of zero, particularly for rocking curves
@@ -233,7 +236,7 @@ Point detector reduction
     - estimate the scale factor from the region below the critical edge
     - a fitted footprint correction will mask this effect
 
-8. Position sensitive detectors for specular reflectometry
+9. Position sensitive detectors for specular reflectometry
     - pixel area correction (rebin to fixed pixel area)
     - detector efficiency correction (balance relative efficiency of pixels)
     - vertical integration for 2D detector
@@ -258,7 +261,7 @@ Point detector reduction
     - view slices in Qx-Qz
     - view integrated regions in Qz
 
-9. Polarized neutron data
+10. Polarized neutron data
     - file selector and viewer show individual polarization cross sections
     - need to be able to exclude spin flip cross sections
     - need to be able to treat individual cross sections as non-polarized
@@ -303,7 +306,7 @@ Point detector reduction
 	sections.  This needs to be checked, and perhaps a different 
 	algorithm used to correct for >100% efficiency. 
 
-10. Candor for specular reflectometry
+11. Candor for specular reflectometry
     - split each detector bank into a measurement, over lambda not theta
     - track which incident beams are active
     - assign intent to each detector bank (specular, background, slit)
@@ -312,20 +315,24 @@ Point detector reduction
     - reduction then proceeds as for normal point detector measurements
     - intensity will be wavelength dependent, both due to source spectrum
       and due to the beam passing through successive analyzers
-         Mildner, D. F. R.; Arif, M.; Werner, S. A.
-         Neutron transmission through pyrolytic graphite monochromators
-         Journal of Applied Crystallography 2001, 34 (3), 258–262.
+        Mildner, D. F. R.; Arif, M.; Werner, S. A.
+        Neutron transmission through pyrolytic graphite monochromators
+        Journal of Applied Crystallography 2001, 34 (3), 258–262.
     - wavelength dispersion may also be detector dependent
         perhaps we will need resolution modeling beyond simple Q-dQ
+    - when measuring through the substrate, the wavelength dependent
+        refraction angle will lead to different wavelengths being
+	centered on different parts of the sample.  Check whether this
+	shift is large compared to dTheta for theta large and small.
 
-11. Time of flight reflectometry
+12. Time of flight reflectometry
     - rebin detector time-of-flight channels so that dL/L is a constant
 	select L,dL such that Q,dQ matches in overlapping regions
     - convert detector time-of-flight to wavelength
     - rebin monitor time-of-flight channels to match detector wavelengths
     - reduction then proceeds as for normal point detector measurements
 
-12. live SLD (not part of reduction)
+13. live SLD (not part of reduction)
     - want to be able to estimate the reflectivity as soon as it comes
         off the instrument, without waiting for all the runs to complete
     - specular measurement may be good enough to start analysis
