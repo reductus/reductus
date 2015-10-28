@@ -13,9 +13,9 @@ Basic usage::
     >>> iso8601.parse_date("2007-01-25T12:34:56-0500")
     datetime.datetime(2007, 1, 25, 12, 34, 56, tzinfo=<TimeZone '-0500'>)
     >>> iso8601.seconds_since_epoch("2007-01-25T12:00:00Z")
-    1169744400.0
-    >>> print iso8601.format_date(1169744400.0)
-    2007-01-25T07:00:00-05:00
+    1169726400.0
+    >>> print(iso8601.format_date(1169726400.0))
+    2007-01-25T07:00:00-0500
 
 The above examples assume US Eastern Standard Time, and may be different
 in your time zone.
@@ -141,9 +141,9 @@ def format_date(timestamp, precision=0):
 
     # Do the formatting
     local = time.strftime('%Y-%m-%dT%H:%M:%S',timestamp)
-    sign = "+" if dt >= 0 else "-"
-    offset = "%02d:%02d"%(abs(dt)//3600,(abs(dt)%3600)//60)
     fraction = ".%0*d"%(precision,microsecond//10**(6-precision)) if precision else ""
+    sign = "+" if dt >= 0 else "-"
+    offset = "%02d%02d"%(abs(dt)//3600,(abs(dt)%3600)//60)
     return "".join((local,fraction,sign,offset))
 
 class TimeZone(tzinfo):
@@ -159,12 +159,14 @@ class TimeZone(tzinfo):
             sign = '-' if offset < 0 else '+'
             hour = second//3600
             minute = (second%3600)//60
-            name = "%s%02d:%02d"%(sign,hour,minute)
+            name = "%s%02d%02d"%(sign,hour,minute)
         self.__name = name
 
     def utcoffset(self, dt):
         """
         Return offset from UTC.
+
+        *dt* is True for daylight savings time.
         """
         return self.__offset
 
@@ -173,6 +175,8 @@ class TimeZone(tzinfo):
         Return a description of the time zone.
 
         This will just be the string offset, or it will be UTC.
+
+        *dt* is True for daylight savings time.
         """
         return self.__name
 
@@ -183,6 +187,8 @@ class TimeZone(tzinfo):
         We can't tell from the +/- offset timestamp if daylight savings
         is in effect, or if we are just one timezone removed, so DST always
         returns a time delta of 0.
+
+        *dt* is True for daylight savings time.
         """
         return timedelta(0)
 
@@ -206,13 +212,17 @@ def parse_date(datestring, default_timezone=UTC, strict=False):
     Raises TypeError if not passed a string.
     Raises ValueError if the string is not a valid time stamp.
     """
+    #print("parse_date with",datestring)
     try:
         if not strict:
             m = ISO8601_RELAXED.match(datestring)
         else:
             m = ISO8601_STRICT.match(datestring)
     except TypeError:
-        raise TypeError("parse_date expects a string")
+        # Cruft python 2.x; in 3.x use 'raise TypeError(...) from None'
+        exc = TypeError("parse_date expects a string, not %s"%(str(datestring)))
+        exc.__cause__ = None
+        raise exc
     if not m:
         raise ValueError("Unable to parse date string %r" % datestring)
     groups = m.groupdict()
@@ -244,29 +254,29 @@ def seconds_since_epoch(datestring, default_timezone=UTC):
 
 
 # ================= TESTS =================
-def _check_date(s,d,strict):
+def _check_date(s,d,strict): # pragma: no cover
     t = parse_date(s)
     assert t-d == timedelta(0),"%r != %s"%(s,d)
     try:
         parse_date(s, strict=True)
         if not strict:
             raise Exception("exception not raised for strict %r"%s)
-    except ValueError, exc:
+    except ValueError as exc:
         if strict:
             raise Exception("unexpected exception for strict %r\n  %s"
                             %(s,str(exc)))
-def _check_fail(s):
+def _check_fail(s): # pragma: no cover
     try: parse_date(s)
     except: return
     raise Exception("exception not raised for %r")
 
-def _check_equal(s1,s2):
+def _check_equal(s1,s2): # pragma: no cover
     assert parse_date(s1)-parse_date(s2) == timedelta(0), "%r != %r"%(s1,s2)
 
-def _check_format(s,d):
+def _check_format(s,d): # pragma: no cover
     s2 = format_date(d)
     assert s==s2, "%r != %r"%(s,s2)
-def test():
+def test(): # pragma: no cover
     _check_fail("2007-03-23T05:27Z0500")
     _check_fail("200")
     _check_fail("garbage")
@@ -296,6 +306,9 @@ def test():
     # Check seconds since epoch calculations
     got = seconds_since_epoch("2007-01-25T12:30:00Z")
     expected = 1169728200
+    #>>> iso8601.seconds_since_epoch("2007-01-25T12:00:00Z")
+    #1169744400.0
+
     assert got == expected,"%s != %s"%(got,expected)
     got = seconds_since_epoch("2007-01-25T12:30:00-0100")
     assert got == expected+3600,"%s != %s"%(got,expected+3600)
@@ -305,7 +318,7 @@ def test():
     # Determine local time offset
     hrs = abs(time.timezone)//3600
     mins = (abs(time.timezone)%3600)//60
-    utcoffset = "%s%02d:%02d"%('-' if time.timezone>=0 else '+', hrs, mins)
+    utcoffset = "%s%02d%02d"%('-' if time.timezone>=0 else '+', hrs, mins)
 
     # Check format from naive datetime object
     _check_format("2007-01-24T05:27:23"+utcoffset,
@@ -321,9 +334,17 @@ def test():
     assert got == expected, "%r != %r"%(got, expected)
 
     # Check formatting from zoned datetime objects
-    expected = "2007-01-25T11:30:00-01:00"
+    expected = "2007-01-25T11:30:00-0100"
     got = format_date(parse_date(expected))
     assert got == expected, "%r != %r"%(got, expected)
 
-if __name__ == "__main__":
+    try: TimeZone(offset=1)
+    except ValueError: pass
+    else: raise Exception("exception not raised for TimeZone offset not minute")
+
+    assert TimeZone(offset=3600).tzname(False) == "+0100"
+    assert repr(TimeZone(offset=-3600)) == "<TimeZone '-0100'>"
+    assert repr(TimeZone(name='-1', offset=-3600)) == "<TimeZone '-1'>"
+
+if __name__ == "__main__": # pragma: no cover
     test()
