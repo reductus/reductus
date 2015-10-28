@@ -5,7 +5,8 @@ Data file reader for NCNR NG-1 data.
 import os
 
 import numpy as np
-from .. import refldata, properties, corrections as cor
+from .. import properties
+from .. import refldata
 from . import icpformat
 
 # Instrument parameters
@@ -25,8 +26,8 @@ ng1default.dLoL = (0.015,'')
 
 # Detector saturates at 15000 counts/s.  The efficiency curve above
 # 15000 has not been measured.
-ng1default.saturation = (np.array([[1,15000,0]]),'')
-ng1default.psd_saturation = (np.array([[1,8000,0]]),'')
+ng1default.saturation = (np.array([[15000.,1.,0.]]).T,'')
+ng1default.psd_saturation = (np.array([[8000.,1.,0.]]).T,'')
 
 # NG-1 detector closer than slit 4?
 ng1default.detector_distance = (36*25.4, '') # mm
@@ -46,8 +47,8 @@ cg1default.dLoL = (0.009,'')
 
 # Detector saturates at 15000 counts/s.  The efficiency curve above
 # 15000 has not been measured.
-cg1default.saturation = (np.array([[1,15000,0]]),'')
-cg1default.psd_saturation = (np.array([[1,8000,0]]),'')
+cg1default.saturation = (np.array([[15000.,1.,0.]]).T,'')
+cg1default.psd_saturation = (np.array([[8000.,1.,0.]]).T,'')
 
 # NG-1 detector closer than slit 4?
 cg1default.detector_distance = (1600., '') # mm
@@ -225,4 +226,3 @@ class NG1Icp(refldata.ReflData):
             # record the temperature in sample environment
             self.sample.environment.magnetic_field = data.column['h-field']
 
-        cor.apply_standard_corrections(self)
