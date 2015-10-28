@@ -13,7 +13,7 @@ import h5py as h5
 from .. import refldata
 from .. import corrections as cor
 from .. import unit
-from . import iso8601
+from .. import iso8601
 
 def data_as(group, fieldname, units, rep=1):
     """
