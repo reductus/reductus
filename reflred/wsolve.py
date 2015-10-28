@@ -49,7 +49,7 @@ information about the variance in the data, and the weight vector
 serves only to provide relative weighting between the points.
 """
 
-__all__ = ['wsolve', 'wpolyfit', 'LinearModel', 'PolynomialModel']
+__all__ = ['wsolve', 'wpolyfit', 'LinearModel', 'PolynomialModel', 'smooth']
 
 # FIXME: test second example
 #
@@ -389,6 +389,65 @@ def wpolyplot(poly, with_pi=False, with_ci=True):
          pylab.plot(px, py + pdy, 'g-.', px, py - pdy, 'g-.', hold=True)
     if with_ci:
          pylab.plot(px, cy + cdy, 'r-.', px, cy - cdy, 'r-.', hold=True)
+
+
+def smooth(x, xp, yp, dyp=None, degree=2, span=5):
+    """
+    Moving least squares smoother.
+
+    *x* are the points at which to evaluate the smoothed values, returning
+    estimated *y +/- dy* for each point, where *dy* is the confidence interval
+    for the value of *y*.
+
+    *xp*, *yp*, *dyp* are the original data points and uncertainties.
+
+    *degree* is the degree of the polynomial smoother, and *span* is the
+    number of neighbouring points to use. If *xp* is equally spaced and
+    evaluated at *x=xp*, then this is equivalent to a Savitsky-Golay filter
+    of the same degree and span.  Linear interpolation is *degree=1* and
+    *span=2*, but for that it will be much faster to use a linear interpolation
+    function directly.
+
+    Note: *xp* does not need to be equally spaced, but if it has large clumps
+    then a fixed window length is not the most appropriate algorithm.
+    Instead, one could specify a window width *dx* for each *x*, and use
+    all data points within *[x-dx,x+dx]* as the input to the polynomial.
+    This capability is not yet implemented.
+    """
+    if dyp is None:
+        dyp = np.ones(len(yp))
+
+    if len(xp) <= span:
+        n = len(xp)
+        if n <= degree:
+            degree = n-1
+        poly = wpolyfit(xp, yp, dyp, degree=degree)
+        y, dy = poly.ci(x)
+
+    else:
+        y, dy = np.empty(x.shape), np.empty(x.shape)
+        if span%2 == 0:
+            # Even span is an odd number of intervals, so set boundaries
+            # at the x points.
+            index = np.searchsorted(xp[span//2:-span//2], x)
+        else:
+            # Odd span is even number of intervals, so set boundaries
+            # at the midpoints between x.
+            index = np.searchsorted(0.5*(xp[:-span]+xp[span:]), x)
+
+        last = -1  # save a little when densely interpolating by caching poly
+        for i, start in enumerate(index):
+            if last != start:
+                # Note that the centers are offset by -span//2 because the
+                # search started that far into the xp array.
+                s = slice(start, start+span)
+                poly = wpolyfit(xp[s], yp[s], dyp[s], degree=degree)
+            #if i%10 == 0:
+            #    from ..wsolve import wpolyplot;wpolyplot(poly)
+            y[i], dy[i] = [v[0] for v in poly.ci([y[i]])]
+
+    return y, dy
+
 
 def demo():
     """

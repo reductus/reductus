@@ -1,10 +1,11 @@
 """
 
-Uncertainty propagation class, and log() and exp() functions.
+Uncertainty propagation class
 
 Based on scalars or numpy vectors, this class allows you to store and
 manipulate values+uncertainties, with propagation of gaussian error for
-addition, subtraction, multiplication, division, power, exp() and log().
+addition, subtraction, multiplication, division, power, exp() and log()
+and trig.  Also includes mean, weighted average,
 
 Storage properties are determined by the numbers used to set the value
 and uncertainty.  Be sure to use floating point uncertainty vectors
@@ -22,6 +23,8 @@ import numpy as np
 
 from . import err1d
 from .formatnum import format_uncertainty
+from . import wsolve
+
 
 # TODO: rename to Measurement and add support for units?
 # TODO: C implementation of *,/,**?
@@ -221,18 +224,28 @@ def arccos(x):
     return Uncertainty(*err1d.arccos(x.x,x.variance))
 def arctan(x):
     return Uncertainty(*err1d.arctan(x.x,x.variance))
-def arctan2(x,y):
-    Uncertainty(*err1d.arctan2(x.x,x.variance,y.x,y.variance))
+def arctan2(y, x):
+    Uncertainty(*err1d.arctan2(y.x, y.variance, x.x, x.variance))
+
 
 def mean(x, biased=True):
     r"""
     Return the mean and variance of a dataset.
 
-    If varX is estimated from the data, then *biased* is True, and the
+    If variance is estimated from the data, then *biased* is True, and the
     estimated variance is scaled by the normalized $\chi^2$.
     """
     M, varM = err1d.mean(x, x.variance, biased=biased)
     return Uncertainty(M, varM)
+
+
+def average(x, w):
+    r"""
+    Return the weighted average of a data set.
+    """
+    M, varM = err1d.average(x, x.variance, w, w.variance)
+    return Uncertainty(M, varM)
+
 
 def interp(x,xp,fp,left=None,right=None):
     """
@@ -260,6 +273,18 @@ def interp(x,xp,fp,left=None,right=None):
     else:
         F, varF = err1d.interp(x, xp, fp.x, fp.variance, left, right)
     return Uncertainty(F, varF)
+
+
+def smooth(x, xp, fp, degree=2, span=5):
+    """
+    Windowed least squares smoothing.
+    """
+    if span > 2:
+        y, dy = wsolve.smooth(x, xp, fp, fp.dx, degree=degree, span=span)
+        return Uncertainty(y, dy**2)
+    else:
+        # TODO: smooth with extrapolate, but interp will not.
+        return interp(x, xp, fp)
 
 
 def test():
