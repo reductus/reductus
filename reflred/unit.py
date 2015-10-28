@@ -97,6 +97,7 @@ def _build_metric_units(unit,abbr):
         map.update([(P+name+'s',scale) for (P,scale) in prefix.iteritems()])
     return map
 
+
 def _build_plural_units(**kw):
     """
     Construct names for the given units.  Builds singular and plural form.
@@ -105,6 +106,7 @@ def _build_plural_units(**kw):
     map.update([(name,scale) for name,scale in kw.iteritems()])
     map.update([(name+'s',scale) for name,scale in kw.iteritems()])
     return map
+
 
 def _build_all_units():
     # Various distance measures
@@ -155,6 +157,7 @@ def _build_all_units():
     dims = [unknown, distance, time, angle, frequency,
             temperature, charge, sld, Q, energy]
     return dims
+
 
 class Converter(object):
     """
