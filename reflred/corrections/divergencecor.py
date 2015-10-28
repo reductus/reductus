@@ -7,7 +7,7 @@ class AngularResolution(Correction):
     Calculate the angular resolution for each data point given the slit
     geometry.
     """
-    parameters = [] # No parameters
+    # no parameters
     def apply(self, data):
         slits = data.slit1.x, data.slit2.x
         distance = abs(data.slit1.distance), abs(data.slit2.distance)

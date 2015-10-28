@@ -35,8 +35,8 @@ class SmoothSlits(Correction):
     Updates *slit1.x*, *slit2.x* and *angular_resolution* attributes of the
     slit measurements so they all use a common set of points.
 
-    Odd sized *span* is preferred.   *span* must be larger than *degree*.
-    *degree=1* and  *span=2* is equivalent to linear interpolation.
+    Odd sized *span* is preferred.  *span* must be larger than *degree*.
+    *degree=1* and *span=2* is equivalent to linear interpolation.
     """
     parameters = [
         ['degree', 1, '', 'polynomial degree'],
@@ -65,18 +65,18 @@ def smooth_slits(slits, dx, degree, span):
     #import pylab;pylab.plot(np.arange(len(s[0])),s.T); pylab.show(); import sys; sys.exit()
 
     for d in slits:
-        v,dv = smooth(s[0], d.angular_resolution, d.v, d.dv,
-                      degree=degree, span=span)
-        d.slit1,d.slit2 = copy(d.slit1), copy(d.slit2)
+        v, dv = smooth(s[0], d.angular_resolution, d.v, d.dv,
+                       degree=degree, span=span)
+        d.slit1, d.slit2 = copy(d.slit1), copy(d.slit2)
         d.slit1.x = s[1]
         d.slit2.x = s[2]
-        d.v,d.dv = v,dv
+        d.v, d.dv = v, dv
         # Update the calculated resolution
         divergence.apply(d)
 
 def find_common(x, dx):
     x = x[np.argsort(x[:,0])]
-    xo,sum,n = x[0]+0,x[0]+0,1
+    xo, sum, n = x[0]+0, x[0]+0, 1
     out = []
     for xk in x[1:]:
         if (xk[1:] - xo[1:] <= dx).all():
@@ -84,7 +84,7 @@ def find_common(x, dx):
             n += 1
             continue
         out.append(sum/n)
-        xo,sum,n = xk+0,xk+0,1
+        xo, sum, n = xk+0, xk+0, 1
     out.append(sum/n)
     return np.vstack(out)
 
@@ -96,29 +96,31 @@ def smooth(xp, x, y, dy=None, degree=1, span=2):
     filter of the same degree and span.  Default is linear interpolation,
     with *degree=1* and *span=2*.
     """
-    if dy is None: dy = np.ones(y.shape)
-    yp,dyp = np.empty(xp.shape),np.empty(xp.shape)
+    if dy is None:
+        dy = np.ones(y.shape)
+    yp, dyp = np.empty(xp.shape), np.empty(xp.shape)
 
     n = len(x)
     k = (span+1)//2
 
 
     if n <= span:
-        if n <= degree: degree = n-1
-        poly = wpolyfit(x,y,dy,degree=degree)
+        if n <= degree:
+            degree = n-1
+        poly = wpolyfit(x, y, dy, degree=degree)
         yp[:], dyp[:] = poly.ci(xp)
     else:
-        idx = np.searchsorted(x[k:-k],xp)
-        for i,start in enumerate(idx):
+        idx = np.searchsorted(x[k:-k], xp)
+        for i, start in enumerate(idx):
             poly = wpolyfit(x[start:start+span],
                             y[start:start+span],
                             dy[start:start+span],
                             degree=degree)
             #if i%10 == 0:
             #    from ..wsolve import wpolyplot;wpolyplot(poly)
-            yp[i],dyp[i] = [v[0] for v in poly.ci([xp[i]])]
+            yp[i], dyp[i] = [v[0] for v in poly.ci([xp[i]])]
 
-    return yp,dyp
+    return yp, dyp
 
 
 def demo():

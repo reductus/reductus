@@ -418,11 +418,10 @@ class Detector(object):
         if isinstance(value, weakref.ref):
             self._pcounts = value
         else:
-            def static(): return value
-            self._pcounts = static
+            self._pcounts = lambda: value
         #self._pcounts = lambda:value
     def _delcounts(self):
-        _pcounts = lambda:None
+        self._pcounts = lambda: None
     counts = property(_getcounts,_setcounts,_delcounts)
 
     def __init__(self, **kw): _set(self,kw)
@@ -523,13 +522,17 @@ class Monitor(object):
         Units for source power.
     source_power_variance (n source_power_units)
         Variance in the measured source power
-    monitor_rate (counts/second)
-        For normalizing by counts when only count time is recorded, we
-        need an estimate of the monitor rate during the measurement.
+
+    The corrected monitor counts field will start as None, but may be
+    set by a dead time correction, which scales the monitor according
+    to the monitor rate.  If for some reason the monitor is flaky, then
+    the corrected monitor counts could be set by multiplying time by
+    the monitor rate.
     """
     properties = ['distance','sampled_fraction','counts','start_time',
                   'count_time','time_step','time_of_flight','base',
-                  'monitor_rate','source_power','source_power_units']
+                  'source_power','source_power_units',
+                  ]
     distance = None
     sampled_fraction = None
     counts = None
@@ -541,7 +544,7 @@ class Monitor(object):
     source_power = 1 # Default to 1 MW power
     source_power_units = "MW"
     source_power_variance = 0
-    monitor_rate = 0 # counts/sec
+    counts_variance = None
 
     def __init__(self, **kw): _set(self,kw)
     def __str__(self): return _str(self)
@@ -787,6 +790,7 @@ class ReflData(object):
     _intent = Intent.none
     _v = None
     _dv = None
+    angular_resolution = None
 
     ## Data representation for generic plotter as (x,y,z,v) -> (qz,qx,qy,Iq)
     ## TODO: subclass Data so we get pixel edges calculations
@@ -844,22 +848,24 @@ class ReflData(object):
         self._dv = dv
     # vlabel and vunits depend on monitor normalization
 
+    # TODO: retrieving properties should not do significant calculation
     @property
     def Qz(self):
-        A,B,L = self.sample.angle_x, self.detector.angle_x,self.detector.wavelength
+        A, B, L = self.sample.angle_x, self.detector.angle_x, self.detector.wavelength
         return 2*pi/L * (sin(radians(B - A)) + sin(radians(A)))
 
     @property
     def Qx(self):
-        A,B,L = self.sample.angle_x, self.detector.angle_x,self.detector.wavelength
+        A, B, L = self.sample.angle_x, self.detector.angle_x, self.detector.wavelength
         return 2*pi/L * ( cos(radians(B - A)) - cos(radians(A)))
 
     @property
     def dQ(self):
-        T,dT = self.sample.angle_x, self.angular_resolution+self.sample.broadening
-        L,dL = self.detector.wavelength, self.detector.wavelength_resolution
+        if self.angular_resolution is None:
+            raise ValueError("Need to estimate divergence before requesting dQ")
+        T, dT = self.sample.angle_x, self.angular_resolution+self.sample.broadening
+        L, dL = self.detector.wavelength, self.detector.wavelength_resolution
         return resolution.dTdL2dQ(T,dT,L,dL)
-
 
     def __init__(self, **kw):
         # Note: because _set is ahead of the following, the caller will not

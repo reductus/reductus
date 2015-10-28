@@ -475,4 +475,5 @@ def demo():
     pylab.show()
 
 
-if __name__ == "__main__": demo()
+if __name__ == "__main__":
+    demo()

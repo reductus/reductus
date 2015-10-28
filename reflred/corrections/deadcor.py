@@ -3,10 +3,11 @@
 Detector saturation correction.
 """
 from __future__ import division
+
 import numpy as np
 
 from ..pipeline import Correction
-from ..err1d import interp as interp_err, div as div_err
+from ..err1d import interp, div
 
 # TODO: deadtime correction must feed into normalization!!
 class DetectorSaturation(Correction):
@@ -20,9 +21,10 @@ class DetectorSaturation(Correction):
                                       data.monitor.count_time,
                                       data.detector.saturation)
         data.v, data.dv = v, dv
-        data.vunits = 'countd'
+        data.vunits = 'counts'
         data.vlabel = 'Intensity'
         data.normbase = 'none'
+
 
 class MonitorSaturation(Correction):
     """
@@ -39,13 +41,13 @@ class MonitorSaturation(Correction):
         data.vlabel = 'Monitor Intensity'
         data.normbase = 'none'
 
+
 def saturation_correction(counts, time, saturation):
     rate = counts / time
     if saturation.shape[0] == 3:
-        E, varE = interp_err(rate, saturation[0], saturation[1], saturation[2]**2)
-        C, varC = div_err(counts, counts, E, varE)
+        E, varE = interp(rate, saturation[0], saturation[1], saturation[2]**2)
+        C, varC = div(counts, counts, E, varE)
     else:
         E = np.interp(rate, saturation[0], saturation[1])
         C, varC = counts/E, counts/E**2
     return C, np.sqrt(varC)
-

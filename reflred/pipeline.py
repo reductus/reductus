@@ -8,6 +8,23 @@ example, polarized data supports a polarized data correction
 as well as the usual data corrections on the polarization
 cross sections.
 
+Corrections have a list of parameters.  Each parameter has a name,
+a default value, units and description.  This should be defined at
+the class level since it is fixed for each class.  For example,
+
+::
+
+    class AlignSlits(Correction):
+        parameters = (
+            # name default units description
+            ('degree', 1, '', 'polynomial degree'),
+            ('span', 7, '', 'number of consecutive points in the fit'),
+            ('dx', 0.01, 'mm', 'alignment jitter; values with dx are equal')
+            )
+
+Tuples are preferred to lists since the parameter descriptions are
+fixed.
+
 A correction has a string name that can be stored in a log file.
 
 We may want to support an undo/redo stack, either by providing
@@ -61,11 +78,18 @@ def _apply_and_return_data(correction, data):
         label = getattr(data, 'name', 'data')
         annotate_exception("while processing %s"%label)
         raise
-    if newdata is None: newdata = data
+    if newdata is None:
+        newdata = data
     return newdata
 
+
 class Correction(object):
+    parameters = tuple()  # tuples are safe read-only iterables, unlike lists
+
     def apply(self, data):
+        """
+        Apply the correction to one dataset.
+        """
         raise NotImplementedError
 
     def apply_list(self, datasets):
@@ -119,14 +143,14 @@ class Correction(object):
         if isinstance(other,Correction):
             # stage | stage: form a pipeline
             return Pipeline([self,other])
-        raise NotImplementedError
+        return NotImplemented
 
     def __ror__(self, other):
         if not isinstance(other, Pipeline):
             # data | stage: apply stage to data
             return self.__call__(other)
         # pipeline | stage: handled by pipeline
-        raise NotImplementedError
+        return NotImplemented
 
     def __init__(self, **kw):
         for name,default,_,_ in self.parameters:
@@ -156,8 +180,10 @@ def _format_par(p):
     try: return "".join(('"',p,'"'))
     except TypeError: return str(p)
 
+
 class Pipeline(Correction):
     def __init__(self, stages):
+        Correction.__init__(self)
         self.stages = stages
 
     def __str__(self):
@@ -176,7 +202,7 @@ class Pipeline(Correction):
             # pipeline | stage
             return Pipeline(self.stages + [other])
         else:
-            raise NotImplementedError
+            return NotImplemented
 
     def __ror__(self, stage_or_data):
         if isinstance(stage_or_data, Correction):
@@ -194,18 +220,27 @@ class Pipeline(Correction):
             # pipeline |= stage
             self.stages.append(pipeline_or_stage)
         else:
-            raise NotImplementedError
+            return NotImplemented
         return self
+
 
 def test():
     class Add(Correction):
-        def __init__(self, v): self.v = v
-        def __str__(self): return "Add(%g)"%self.v
-        def apply(self, data): data.x += self.v
+        def __init__(self, v):
+            Correction.__init__(self)
+            self.v = v
+        def __str__(self):
+            return "Add(%g)"%self.v
+        def apply(self, data):
+            data.x += self.v
     class Mul(Correction):
-        def __init__(self, v): self.v = v
-        def __str__(self): return "Mul(%g)"%self.v
-        def apply(self, data):  data.x *= self.v
+        def __init__(self, v):
+            Correction.__init__(self)
+            self.v = v
+        def __str__(self):
+            return "Mul(%g)"%self.v
+        def apply(self, data):
+            data.x *= self.v
     class Data(object):
         x = 0
         messages = []
