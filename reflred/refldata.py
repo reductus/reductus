@@ -85,6 +85,10 @@ import numpy as np
 from numpy import inf, arctan2, sqrt, sin, cos, pi, radians
 from . import resolution
 
+# for sample background angle offset
+QZ_FROM_SAMPLE = 'sample angle'
+QZ_FROM_DETECTOR = 'detector angle'
+
 # TODO: attribute documentation and units should be integrated with the
 # TODO: definition of the attributes.  Value attributes should support
 # TODO: unit conversion
@@ -370,7 +374,8 @@ class Detector(object):
     """
     properties=["dims",'distance','size','center','widths_x','widths_y',
                 'angle_x','angle_y','rotation','efficiency','saturation',
-                'wavelength','wavelength_resolution','time_of_flight','counts']
+                'wavelength','wavelength_resolution','time_of_flight',
+                'counts','counts_variance']
     dims = [1,1] # i,j
     distance = None # mm
     size = [1,1]  # mm
@@ -400,29 +405,36 @@ class Detector(object):
         """Load the data"""
         raise NotImplementedError(
            "Data format must set detector.counts or detector.loadcounts")
-    def _pcounts(self):
-        """Simulated empty weak reference"""
-        return None
+
+    _counts = lambda: None
     def _getcounts(self):
-        counts = self._pcounts()
+        counts = self._counts()
         if counts is None:
             counts = self.loadcounts()
             if counts is None:
                 raise RuntimeError("Detector counts not loadable")
-            self._pcounts = weakref.ref(counts)
+            self._counts = weakref.ref(counts)
         return counts
     def _setcounts(self, value):
         # File formats which are small do not need to use weak references,
         # however, for convenience the should use the same interface, which
         # is value() rather than value.
         if isinstance(value, weakref.ref):
-            self._pcounts = value
+            self._counts = value
         else:
-            self._pcounts = lambda: value
+            self._counts = lambda: value
         #self._pcounts = lambda:value
     def _delcounts(self):
-        self._pcounts = lambda: None
+        self._counts = lambda: None
     counts = property(_getcounts,_setcounts,_delcounts)
+
+    _variance = None
+    @property
+    def counts_variance(self):
+        return self._variance if self._variance is not None else self.counts
+    @counts_variance.setter
+    def counts_variance(self, v):
+        self._variance = v
 
     def __init__(self, **kw): _set(self,kw)
     def __str__(self): return _str(self)
@@ -531,8 +543,8 @@ class Monitor(object):
     """
     properties = ['distance','sampled_fraction','counts','start_time',
                   'count_time','time_step','time_of_flight','base',
-                  'source_power','source_power_units',
-                  ]
+                  'saturation', 'source_power','source_power_units',
+                  'counts_variance']
     distance = None
     sampled_fraction = None
     counts = None
@@ -544,10 +556,18 @@ class Monitor(object):
     source_power = 1 # Default to 1 MW power
     source_power_units = "MW"
     source_power_variance = 0
-    counts_variance = None
+    saturation = None
 
     def __init__(self, **kw): _set(self,kw)
     def __str__(self): return _str(self)
+
+    _variance = None
+    @property
+    def counts_variance(self):
+        return self._variance if self._variance is not None else self.counts
+    @counts_variance.setter
+    def counts_variance(self, v):
+        self._variance = v
 
 class Moderator(object):
     """
@@ -607,28 +627,33 @@ class Intent:
 
         intensity: Normalization scan for computing absolute reflection
         specular: Specular intensity measurement
-        backgound qx: Background measurement, offset from Qx=0 in Q
-        background sample: Background measurement, sample rotated
-        background detector: Background measurement, detector moved
+        background+: Background measurement, sample rotated
+        background-: Background measurement, detector offset
         rock qx: Rocking curve with fixed Qz
         rock sample: Rocking curve with fixed detector angle
         rock detector: Rocking curve with fixed sample angle
-        slice: Slice through Qx-Qz
-        area: Measurement of a region of Qx-Qz plane
+        unknown: Some other kind of measurement
+
+        detector efficiency: Flood fill
+
+    Not supported:
         alignment: Sample alignment measurement
-        other: Some other kind of measurement
+        area: Measurement of a region of Qx-Qz plane
+        slice: Slice through Qx-Qz
     """
-    none = 'unknown'
-    time = 'time'
     slit = 'intensity'
     spec = 'specular'
+    backp = 'background+'
+    backm = 'background-'
     rockQ = 'rock qx'
     rock3 = 'rock sample'
     rock4 = 'rock detector'
-    backp = 'background+'
-    backm = 'background-'
-    other = 'other'
+    none = 'unknown'
     deff = 'detector efficiency'
+    time = 'time'
+    other = 'other'
+
+    intents = [slit,spec,backp,backm,rockQ,rock3,rock4,deff,time,other,none]
 
     @staticmethod
     def isback(intent):
@@ -669,13 +694,14 @@ def infer_intent(data):
         intent = Intent.slit
     elif (scan_i and scan_f) or (not scan_i and not scan_f):
         # both theta_i and theta_f are moving, or neither is moving
-        if (abs(theta_f - theta_i) < dtheta).all():
+        if (abs(theta_f - theta_i) < dtheta).all():       # all specular
             intent = Intent.spec
-        elif abs(data.Qx.max() - data.Qx.min()) > data.dQ.max():
+        elif (data.Qz.max() - data.Qz.min() < data.dQ.max()
+              and data.Qx.max() - data.Qx.min()) > data.dQ.max():
             intent = Intent.rockQ
-        elif np.sum(theta_f - theta_i > dtheta) > 0.9*n:
+        elif np.sum(theta_f - theta_i > dtheta) > 0.9*n:  # 90% above
             intent = Intent.backp
-        elif np.sum(theta_i - theta_f > dtheta) > 0.9*n:
+        elif np.sum(theta_i - theta_f > dtheta) > 0.9*n:  # 90% below
             intent = Intent.backm
         else:
             intent = Intent.none
@@ -725,6 +751,8 @@ class ReflData(object):
         or qz (Qz value of background computed from sample and detector angle)
     mask
         points excluded from reduction
+    scale
+        The desired scale factor for displaying the data.
 
     File details
     ============
@@ -758,10 +786,10 @@ class ReflData(object):
         Format specific file handle, for actions like showing the summary,
         updating the data and reading the frames.
     """
-    properties = ['instrument', 'geometry', 'probe', 'points','channels',
+    properties = ['instrument', 'geometry', 'probe', 'points', 'channels',
                   'name','description','date','duration','attenuator',
                   'polarization','warnings','path','formula',
-                  'intent', 'background_offset',
+                  'intent', 'Qz_basis', 'angular_resolution',
                   'vlabel', 'vunits', 'xlabel', 'xunits',
                   ]
     instrument = "unknown"
@@ -770,6 +798,7 @@ class ReflData(object):
     path = "unknown"
     points = 1
     channels = 1
+    scale = 1.0
     name = ""
     description = ""
     date = datetime.datetime(1970,1,1)
@@ -785,12 +814,12 @@ class ReflData(object):
     vunits = 'counts'
     xlabel = 'unknown intent'
     xunits = ''
-    background_offset = None
     mask = None
     _intent = Intent.none
     _v = None
     _dv = None
     angular_resolution = None
+    Qz_basis = None
 
     ## Data representation for generic plotter as (x,y,z,v) -> (qz,qx,qy,Iq)
     ## TODO: subclass Data so we get pixel edges calculations
@@ -835,14 +864,21 @@ class ReflData(object):
             return np.arange(1, len(self.v)+1)
 
     @property
+    def dx(self):
+        return self.dQ
+
+    @property
     def v(self):
         return self.detector.counts if self._v is None else self._v
+
     @v.setter
     def v(self, v):
         self._v = v
+
     @property
     def dv(self):
         return sqrt(self.detector.counts) if self._dv is None else self._dv
+
     @dv.setter
     def dv(self, dv):
         self._dv = dv
@@ -852,7 +888,12 @@ class ReflData(object):
     @property
     def Qz(self):
         A, B, L = self.sample.angle_x, self.detector.angle_x, self.detector.wavelength
-        return 2*pi/L * (sin(radians(B - A)) + sin(radians(A)))
+        if self.Qz_basis == 'sample angle':
+            return 4*pi/L * sin(radians(A))
+        elif self.Qz_basis == 'detector angle':
+            return 4*pi/L * sin(radians(B)/2)
+        else:
+            return 2*pi/L * (sin(radians(B - A)) + sin(radians(A)))
 
     @property
     def Qx(self):
@@ -898,14 +939,23 @@ class ReflData(object):
     def __ior__(self, pipeline):
         return pipeline.apply_and_log(self)
 
-    def warn(self,msg):
+    def warn(self, msg):
         """Record a warning that should be displayed to the user"""
         warnings.warn(msg)
         self.warnings.append(msg)
 
-    def log(self,msg):
+    def log(self, msg):
         """Record corrections that have been applied to the data"""
+        print "log:",msg
         self.messages.append(msg)
+
+    def log_dependency(self, label, other):
+        if other.messages:
+            self.messages.append(label + ":")
+            self.messages.append(other.messages)
+        if other.warnings:
+            self.messages.append(label + ":")
+            self.messages.append(other.messages)
 
     def resetQ(self):
         """Recompute Qx,Qz from geometry and wavelength"""
@@ -915,10 +965,11 @@ class ReflData(object):
         Qx,Qz = ABL_to_QxQz(A,B,L)
         self.Qx,self.Qz = Qx,Qz
 
-    def plot(self):
+    def plot(self, label=None):
         from matplotlib import pyplot as plt
-        plt.errorbar(self.x, self.v, self.dv,
-                     label=self.name+self.polarization, fmt='.')
+        if label is None:
+            label = self.name+self.polarization
+        plt.errorbar(self.x, self.v, self.dv, label=label, fmt='.')
         plt.xlabel("%s (%s)"%(self.xlabel, self.xunits) if self.xunits else self.xlabel)
         plt.ylabel("%s (%s)"%(self.vlabel, self.vunits) if self.vunits else self.vlabel)
         if not Intent.isslit(self.intent):
@@ -932,8 +983,10 @@ class ReflData(object):
             fid.write("%s(%s)"%(self.vlabel, self.vunits) if self.vunits else self.vlabel)
             fid.write(" ")
             fid.write("error")
+            fid.write(" ")
+            fid.write("resolution")
             fid.write("\n")
-            np.savetxt(fid, np.vstack([self.x, self.v, self.dv]).T)
+            np.savetxt(fid, np.vstack([self.x, self.v, self.dv, self.dx]).T)
 
 def _str(object, indent=4):
     """

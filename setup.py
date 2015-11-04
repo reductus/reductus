@@ -55,7 +55,9 @@ dist = setup(
         'Topic :: Scientific/Engineering :: Physics',
     ],
     packages=packages,
-    #install_requires=['six'],
+    # needs scipy and numpy as well, but these have binary bits that don't
+    # do well with pip install
+    #install_requires=['six', 'uncertainties', 'numdifftools'],
 )
 
 # End of file
