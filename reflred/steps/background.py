@@ -27,10 +27,15 @@ def set_background_alignment(back, offset):
     Guess whether background is offset from sample angle or from detector angle.
     """
     if offset is None or offset=='auto':
-        if back.Qz_basis:  # for auto, if Qz_basis is set then use it
+        if back.Qz_target:  # for auto, if Qz_basis is set then use it
             return
         offset = guess_background_offset(back)
-    back.Qz_basis = QZ_FROM_SAMPLE if offset=='detector' else QZ_FROM_DETECTOR
+        A, B, L = back.sample.angle_x, back.detector.angle_x, back.detector.wavelength
+        if offset == 'sample':
+            back.Qz_target = 4*np.pi/L * np.sin(np.radians(A))
+        elif offset == 'detector':
+            back.Qz_target = 4*np.pi/L * np.sin(np.radians(B)/2)
+        back.Qz_basis = offset
 
 
 # TODO: should only subtract items with the same angular resolution
@@ -51,8 +56,8 @@ def subtract_background(spec, backp, backm):
     backp_v = U(backp.v, backp.dv**2) if backp else None
     backm_v = U(backm.v, backm.dv**2) if backm else None
 
-    backp_v = interp(spec.Qz, backp.Qz, backp_v) if backp else None
-    backm_v = interp(spec.Qz, backm.Qz, backm_v) if backm else None
+    backp_v = interp(spec.Qz, backp.Qz_target, backp_v) if backp else None
+    backm_v = interp(spec.Qz, backm.Qz_target, backm_v) if backm else None
 
     #print "+",backp
     #print "-",backm

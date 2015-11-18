@@ -128,7 +128,7 @@ class Slit(object):
 
     def __init__(self, **kw): _set(self,kw)
     def __str__(self): return _str(self)
-    def _dict(self): return _dict(self)
+    def _toDict(self): return _toDict(self)
 
 class Sample(object):
     """
@@ -191,7 +191,7 @@ class Sample(object):
         self.environment = {}
         _set(self,kw)
     def __str__(self): return _str(self)
-    def _dict(self): return _dict(self)
+    def _toDict(self): return _toDict(self)
 
 
 class Environment(object):
@@ -240,7 +240,7 @@ class Environment(object):
 
     def __init__(self, **kw): _set(self,kw)
     def __str__(self): return _str(self)
-    def _dict(self): return _dict(self)
+    def _toDict(self): return _toDict(self)
 
 
 class Beamstop(object):
@@ -277,7 +277,7 @@ class Beamstop(object):
 
     def __init__(self, **kw): _set(self,kw)
     def __str__(self): return _str(self)
-    def _dict(self): return _dict(self)
+    def _toDict(self): return _toDict(self)
 
 
 class Detector(object):
@@ -441,7 +441,7 @@ class Detector(object):
 
     def __init__(self, **kw): _set(self,kw)
     def __str__(self): return _str(self)
-    def _dict(self): return _dict(self)
+    def _toDict(self): return _toDict(self)
 
 
 class ROI(object):
@@ -465,7 +465,7 @@ class ROI(object):
 
     def __init__(self, **kw): _set(self,kw)
     def __str__(self): return _str(self)
-    def _dict(self): return _dict(self)
+    def _toDict(self): return _toDict(self)
 
 class Monitor(object):
     """
@@ -553,6 +553,7 @@ class Monitor(object):
     distance = None
     sampled_fraction = None
     counts = None
+    counts_variance = None
     start_time = None
     count_time = None
     time_step = 1 # Default to nearest second
@@ -563,17 +564,12 @@ class Monitor(object):
     source_power_variance = 0
     saturation = None
 
-    def __init__(self, **kw): _set(self,kw)
+    def __init__(self, **kw): 
+        _set(self,kw)
+        if self.counts_variance is None and self.counts is not None:
+            self.counts_variance = self.counts
     def __str__(self): return _str(self)
-    def _dict(self): return _dict(self)
-
-    _variance = None
-    @property
-    def counts_variance(self):
-        return self._variance if self._variance is not None else self.counts
-    @counts_variance.setter
-    def counts_variance(self, v):
-        self._variance = v
+    def _toDict(self): return _toDict(self)
 
 class Moderator(object):
     """
@@ -601,7 +597,7 @@ class Moderator(object):
 
     def __init__(self, **kw): _set(self, kw)
     def __str__(self): return _str(self)
-    def _dict(self): return _dict(self)
+    def _toDict(self): return _toDict(self)
 
 class Warning(object):
     """
@@ -796,7 +792,7 @@ class ReflData(object):
     properties = ['instrument', 'geometry', 'probe', 'points', 'channels',
                   'name','description','date','duration','attenuator',
                   'polarization','warnings','path','formula',
-                  'intent', 'Qz_basis', 'angular_resolution',
+                  'intent', 'Qz_target', 'angular_resolution',
                   'vlabel', 'vunits', 'xlabel', 'xunits',
                   ]
     instrument = "unknown"
@@ -826,7 +822,7 @@ class ReflData(object):
     _v = None
     _dv = None
     angular_resolution = None
-    Qz_basis = None
+    Qz_target = None
 
     ## Data representation for generic plotter as (x,y,z,v) -> (qz,qx,qy,Iq)
     ## TODO: subclass Data so we get pixel edges calculations
@@ -895,12 +891,7 @@ class ReflData(object):
     @property
     def Qz(self):
         A, B, L = self.sample.angle_x, self.detector.angle_x, self.detector.wavelength
-        if self.Qz_basis == 'sample angle':
-            return 4*pi/L * sin(radians(A))
-        elif self.Qz_basis == 'detector angle':
-            return 4*pi/L * sin(radians(B)/2)
-        else:
-            return 2*pi/L * (sin(radians(B - A)) + sin(radians(A)))
+        return 2*pi/L * (sin(radians(B - A)) + sin(radians(A)))
 
     @property
     def Qx(self):
@@ -940,14 +931,40 @@ class ReflData(object):
                   ]
         return "\n".join(base+others+self.messages)
 
-    def _dict(self): 
-        base = _dict(self)
-        others = dict([[s, _dict(getattr(self,s))]
+    def _toDict(self): 
+        base = _toDict(self)
+        others = dict([[s, _toDict(getattr(self,s))]
                   for s in ("slit1", "slit2", "slit3", "slit4",
                             "sample", "detector", "monitor", "roi")
                   ])
         base.update(others)
         return base
+        
+    def dumps(self, sanitized=False):
+        import json
+        output_dict = self._toDict()
+        if sanitized:
+            output_dict = sanitizeForJSON(output_dict)
+        return json.dumps(output_dict)
+        
+    def loads(self, input_str):
+        import json
+        input_dict = json.loads(input_str)
+        for prop in self.properties:
+            if prop in input_dict:
+                setattr(self, prop, input_dict[prop])
+        for s in ("slit1", "slit2", "slit3", "slit4"):
+            if s in input_dict:
+                setattr(self, s, Slit(**input_dict[s]))
+        if 'detector' in input_dict:
+            setattr(self, 'detector', Detector(**input_dict['detector']))
+        if 'sample' in input_dict:
+            setattr(self, 'sample', Sample(**input_dict['sample']))
+        if 'monitor' in input_dict:
+            setattr(self, 'monitor', Monitor(**input_dict['monitor']))
+        if 'roi' in input_dict:
+            setattr(self, 'roi', ROI(**input_dict['roi']))
+        
 
     def __or__(self, pipeline):
         return pipeline(self)
@@ -1013,92 +1030,43 @@ def _str(object, indent=4):
     prefix = " "*indent
     return prefix+("\n"+prefix).join(props)
 
-def _dict(object):
-    import copy
+def _toDict(object):
+    import copy, numpy
     props = {}
     for a in object.properties:
-        prop = copy.deepcopy(getattr(object, a))
-        props[a] = prop
+        obj = copy.deepcopy(getattr(object, a))
+        if isinstance(obj, numpy.integer):
+            obj = int(obj)
+        elif isinstance(obj, numpy.floating):
+            obj = float(obj)          
+        elif isinstance(obj, numpy.ndarray):
+            obj = obj.tolist()
+        elif isinstance(obj, datetime.datetime):
+            obj =  [obj.year, obj.month, obj.day, obj.hour, obj.minute, obj.second]
+        props[a] = obj
     return props
 
-def _json(object, indent=4):
-    import json
-    import numpy
-    class MyEncoder(json.JSONEncoder):
-        def __init__(self, nan_str="null", **kwargs):
-            super(MyEncoder, self).__init__(**kwargs)
-            self.nan_str = nan_str
-
-        def iterencode(self, o, _one_shot=False):
-            """Encode the given object and yield each string
-            representation as available.
-
-            For example::
-
-                for chunk in JSONEncoder().iterencode(bigobject):
-                    mysocket.write(chunk)
-            """
-            if self.check_circular:
-                markers = {}
-            else:
-                markers = None
-            if self.ensure_ascii:
-                _encoder = json.encoder.encode_basestring_ascii
-            else:
-                _encoder = json.encoder.encode_basestring
-            if self.encoding != 'utf-8':
-                def _encoder(o, _orig_encoder=_encoder, _encoding=self.encoding):
-                    if isinstance(o, str):
-                        o = o.decode(_encoding)
-                    return _orig_encoder(o)
-
-            def floatstr(o, allow_nan=self.allow_nan, _repr=json.encoder.FLOAT_REPR,
-                    _inf=json.encoder.INFINITY, _neginf=-json.encoder.INFINITY,
-                    nan_str=self.nan_str):
-                # Check for specials.  Note that this type of test is processor
-                # and/or platform-specific, so do tests which don't depend on the
-                # internals.
-
-                if o != o:
-                    text = nan_str
-                elif o == _inf:
-                    text = '"Infinity"'
-                elif o == _neginf:
-                    text = '"-Infinity"'
-                else:
-                    return _repr(o)
-
-                if not allow_nan:
-                    raise ValueError(
-                        "Out of range float values are not JSON compliant: " +
-                        repr(o))
-
-                return text
-
-            _iterencode = json.encoder._make_iterencode(
-                    markers, self.default, _encoder, self.indent, floatstr,
-                    self.key_separator, self.item_separator, self.sort_keys,
-                    self.skipkeys, _one_shot)
-            return _iterencode(o, 0)
-            
-        def default(self, obj):
-            print obj, numpy.isscalar(obj)
-            if isinstance(obj, numpy.integer):
-                return int(obj)
-            elif isinstance(obj, numpy.floating):
-                return float(obj)          
-            elif isinstance(obj, numpy.ndarray):
-                #obj[numpy.isinf(obj)] = numpy.nan
-                return obj.tolist()
-            #elif numpy.isscalar(obj) and numpy.isinf(obj):
-            #    # replace infinities with nan for JSON
-            #    return numpy.nan
-            elif isinstance(obj, datetime.datetime):
-                return [obj.year, obj.month, obj.day, obj.hour, obj.minute, obj.second]
-            else:
-                    return super(MyEncoder, self).default(obj)
-                    
-    return json.dumps(object._dict(), cls=MyEncoder, allow_nan=True)
+def sanitizeForJSON(obj):
+    """ take an object made of python objects and remove inf and nan """
+    import types, json
+    if type(obj) is types.DictionaryType:
+        output = {}
+        for k,v in obj.items():
+            output[k] = sanitizeForJSON(v)
+        return output
+    elif type(obj) is types.ListType:
+        print 'list:', obj
+        return map(sanitizeForJSON, obj)
+        print obj
+    elif obj == json.encoder.INFINITY:
+        return u"\u221E"
+    elif obj == -json.encoder.INFINITY:
+        return u"-\u221E"
+    elif obj != obj:
+        return None
+    else: 
+        return obj
+    
 
 def _set(object,kw):
     """
@@ -1111,10 +1079,10 @@ def _set(object,kw):
         def __init__(self, **kw): _set(self,kw)
     """
     for k,v in kw.iteritems():
-        if hasattr(object,k):
-            setattr(object,k,v)
-        else:
-            raise AttributeError, "Unknown attribute %s"%(k)
+        # this will fail with an attribute error for incorrect keys
+        getattr(object,k)       
+        setattr(object,k,v)
+        
 
 # Ignore the remainder of this file --- I don't yet have the computational
 # interface set up.

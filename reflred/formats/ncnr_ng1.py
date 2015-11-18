@@ -199,6 +199,9 @@ class NG1Icp(refldata.ReflData):
             # will have to provide the means of setting the rate
             # and computing the counts based on that rate.
             pass
+            
+        if self.monitor.counts_variance is None and self.monitor.counts is not None:
+            self.monitor.counts_variance = self.monitor.counts
 
         # Counting time may be recorded or may be inferred from header
         if data.count_type == 'TIME':

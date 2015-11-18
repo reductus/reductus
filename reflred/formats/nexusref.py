@@ -5,11 +5,12 @@ Load a NeXus file into a reflectometry data structure.
 """
 import os
 import tempfile
-from zipfile import ZipFile
+from zipfile import ZipFile, is_zipfile
 
 import numpy as np
 import h5py as h5
 
+from .. import hzf_readonly_stripped as hzf
 from .. import refldata
 from .. import corrections as cor
 from .. import unit
@@ -60,34 +61,45 @@ def load_entries(filename):
 
 def h5_open_zip(filename, mode='r', **kw):
     """
-    Open a NeXus file, even if it is in a zip file.
+    Open a NeXus file, even if it is in a zip file, 
+    or if it is a NeXus-zip file.
 
     If the filename ends in '.zip', it will be unzipped to a temporary
     directory before opening and deleted on :func:`closezip`.  If opened
     for writing, then the file will be created in a temporary directory,
     then zipped and deleted on :func:`closezip`.
+    
+    If it is a zipfile but doesn't end in '.zip', it is assumed
+    to be a NeXus-zip file and is opened with that library.
 
     Arguments are the same as for :func:`open`.
     """
-    is_zip = filename.endswith('.zip')
-    zip_on_close = None
-    if is_zip:
-        path = tempfile.gettempdir()
-        if mode == 'r':
-            zf = ZipFile(filename)
-            members = zf.namelist()
-            assert len(members) == 1
-            zf.extract(members[0], path)
-            filename = os.path.join(path, members[0])
-        elif mode == 'w':
-            zip_on_close = filename
-            filename = os.path.join(path, os.path.basename(filename)[:-4])
-        else:
-            raise TypeError("zipped nexus files only support mode r and w")
+    is_zip = is_zipfile(filename)
+    if is_zip and not filename.endswith('.zip'):
+        # then it's a nexus-zip file, rather than
+        # a zipped hdf5 nexus file
+        f = hzf.File(filename)
+        f.delete_on_close = False
+        f.zip_on_close = False
+    else:
+        zip_on_close = None
+        if is_zip:
+            path = tempfile.gettempdir()
+            if mode == 'r':
+                zf = ZipFile(filename)
+                members = zf.namelist()
+                assert len(members) == 1
+                zf.extract(members[0], path)
+                filename = os.path.join(path, members[0])
+            elif mode == 'w':
+                zip_on_close = filename
+                filename = os.path.join(path, os.path.basename(filename)[:-4])
+            else:
+                raise TypeError("zipped nexus files only support mode r and w")
 
-    f = h5.File(filename, mode=mode, **kw)
-    f.delete_on_close = is_zip
-    f.zip_on_close = zip_on_close
+        f = h5.File(filename, mode=mode, **kw)
+        f.delete_on_close = is_zip
+        f.zip_on_close = zip_on_close
     return f
 
 def h5_close_zip(f):
