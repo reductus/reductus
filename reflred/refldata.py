@@ -393,6 +393,7 @@ class Detector(object):
     wavelength = 1 # angstrom
     wavelength_resolution = 0 # angstrom
     time_of_flight = None  # ms
+    counts = None
 
     @property
     def solid_angle(self):
@@ -408,28 +409,6 @@ class Detector(object):
         """Load the data"""
         raise NotImplementedError(
            "Data format must set detector.counts or detector.loadcounts")
-
-    _counts = lambda: None
-    def _getcounts(self):
-        counts = self._counts()
-        if counts is None:
-            counts = self.loadcounts()
-            if counts is None:
-                raise RuntimeError("Detector counts not loadable")
-            self._counts = weakref.ref(counts)
-        return counts
-    def _setcounts(self, value):
-        # File formats which are small do not need to use weak references,
-        # however, for convenience the should use the same interface, which
-        # is value() rather than value.
-        if isinstance(value, weakref.ref):
-            self._counts = value
-        else:
-            self._counts = lambda: value
-        #self._pcounts = lambda:value
-    def _delcounts(self):
-        self._counts = lambda: None
-    counts = property(_getcounts,_setcounts,_delcounts)
 
     _variance = None
     @property
