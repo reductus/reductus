@@ -158,7 +158,6 @@ from numpy import exp, sqrt, inf
 from scipy.optimize import curve_fit, minimize, brentq, bisect, fminbound
 
 from scipy import stats
-import numdifftools as nd
 
 from uncertainties.unumpy import nominal_values as uval, std_devs as udev
 from uncertainties import ufloat
@@ -166,6 +165,7 @@ from uncertainties import ufloat
 DEADTIME_UNITS = u'μs'
 DEADTIME_SCALE = 1e-6
 
+#import numdifftools as nd
 def masked_curve_fit(f, x, y, p0=None, sigma=None, fixed=None, method='lm', **kw):
     """
     Wrapper around *scipy.optimize.curve_fit* which allows fixed parameters.
@@ -194,6 +194,8 @@ def masked_curve_fit(f, x, y, p0=None, sigma=None, fixed=None, method='lm', **kw
     if method == 'lm':
         popt, pcov = curve_fit(cost, x, y, p0=init, sigma=sigma, **kw)
     else:
+        raise NotImplementedError("support for other fitters is commented out to avoid a numdifftools dependency")
+        """
         if sigma is None: sigma = 1
         def chisq(p):
             resid = (cost(x, *p, **kw) - y)/sigma
@@ -212,6 +214,7 @@ def masked_curve_fit(f, x, y, p0=None, sigma=None, fixed=None, method='lm', **kw
         except Exception, exc:
             print(exc)
             pcov = np.zeros((len(p0),len(p0)))
+        """
 
     # Restore fixed parameters
     if fixed is not None:
