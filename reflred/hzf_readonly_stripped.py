@@ -207,15 +207,21 @@ class FieldFile(object):
             attrs = self.attrs
             target = self.path
             with self.root.open(target, 'rb') as infile:
+                dtype=numpy.dtype(str(attrs['format']))
                 if attrs.get('binary', False) == True:
-                    d = numpy.fromfile(infile, dtype=attrs['format'])
+                    d = numpy.fromfile(infile, dtype=dtype)
                 else:
                     if self.root.getsize(target) == 1:
                         # empty entry: only contains \n
                         # this is only possible with empty string being written.
-                        d = numpy.array([''], dtype=numpy.dtype(str(attrs['format'])))
+                        d = numpy.array([''], dtype=dtype)
                     else:
-                        d = numpy.loadtxt(infile, dtype=numpy.dtype(str(attrs['format'])))
+                        d = numpy.loadtxt(infile, dtype=dtype, delimiter='\t')
+                        if dtype.kind == 'S':
+                            vrep = numpy.vectorize(str.replace)
+                            vrep(d, r'\t', '\t')
+                            vrep(d, r'\r', '\r')
+                            vrep(d, r'\n', '\n')
             if 'shape' in attrs:
                 d = d.reshape(attrs['shape'])
             self._value = d
