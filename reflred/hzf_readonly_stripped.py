@@ -85,11 +85,12 @@ class Node(object):
         
 
 class File(Node):
-    def __init__(self, filename):
+    def __init__(self, filename, file_obj=None):
         self.readonly = True
         Node.__init__(self, parent_node=None, path="/")
-        if self.readonly:
-            self.zipfile = zipfile.ZipFile(filename) 
+        if file_obj is None:
+            file_obj = open(filename, 'r')
+        self.zipfile = zipfile.ZipFile(file_obj) 
         self.attrs = self.makeAttrs()
         self.filename = filename
         self.mode = "r"

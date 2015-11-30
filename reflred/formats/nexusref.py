@@ -44,12 +44,12 @@ def nxfind(group, nxclass):
         if nxclass == entry.attrs.get('NX_class', None):
             yield entry
 
-def load_entries(filename):
+def load_entries(filename, file_obj=None):
     """
     Load the summary info for all entries in a NeXus file.
     """
     #file = h5.File(filename)
-    file = h5_open_zip(filename)
+    file = h5_open_zip(filename, file_obj)
     file._opened_entries = 0  # keep track of the number of entries open
     measurements = []
     for name,entry in file.items():
@@ -59,7 +59,7 @@ def load_entries(filename):
     return measurements
 
 
-def h5_open_zip(filename, mode='r', **kw):
+def h5_open_zip(filename, file_obj=None, mode='r', **kw):
     """
     Open a NeXus file, even if it is in a zip file, 
     or if it is a NeXus-zip file.
@@ -74,11 +74,13 @@ def h5_open_zip(filename, mode='r', **kw):
 
     Arguments are the same as for :func:`open`.
     """
-    is_zip = is_zipfile(filename)
+    if file_obj is None:
+        file_obj = open(filename, mode=mode)
+    is_zip = is_zipfile(file_obj)
     if is_zip and not filename.endswith('.zip'):
         # then it's a nexus-zip file, rather than
         # a zipped hdf5 nexus file
-        f = hzf.File(filename)
+        f = hzf.File(filename, file_obj)
         f.delete_on_close = False
         f.zip_on_close = False
     else:
