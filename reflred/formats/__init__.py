@@ -266,7 +266,9 @@ def _register_extensions():
 
     register('.nxs', nexus)
     register('.nxs.magik', nexus)
+    register('.nxz.cgd', nexus)
     register('.nxs.pbr', nexus)
+    register('.nxz.pbr', nexus)
     register('.nxs.magik.zip', nexus)
     register('.nxs.pbr.zip', nexus)
     register('NeXus', nexus)

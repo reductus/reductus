@@ -545,8 +545,15 @@ class Monitor(object):
 
     def __init__(self, **kw): 
         _set(self,kw)
-        if self.counts_variance is None and self.counts is not None:
-            self.counts_variance = self.counts
+        #if self.counts_variance is None and self.counts is not None:
+        #    self.counts_variance = self.counts
+    _variance = None
+    @property
+    def counts_variance(self):
+        return self._variance if self._variance is not None else self.counts
+    @counts_variance.setter
+    def counts_variance(self, v):
+        self._variance = v
     def __str__(self): return _str(self)
     def _toDict(self): return _toDict(self)
 

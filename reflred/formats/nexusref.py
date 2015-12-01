@@ -186,6 +186,7 @@ class NCNRNeXusRefl(refldata.ReflData):
         self.detector.dims = self.detector.counts.shape
         n = self.detector.dims[0]
         self.monitor.counts = np.asarray(data_as(das,'counter/liveMonitor','',rep=n), 'd')
+        self.monitor.counts_variance = np.asarray(data_as(das,'counter/liveMonitor','',rep=n), 'd')
         self.monitor.count_time = data_as(das,'counter/liveTime','s',rep=n)
         self.slit1.x = data_as(das,'slitAperture1/softPosition','mm',rep=n)
         self.slit2.x = data_as(das,'slitAperture2/softPosition','mm',rep=n)

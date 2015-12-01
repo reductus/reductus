@@ -4,6 +4,7 @@ import numpy, json
 import iso8601
 
 __version__ = "0.0.1"
+import __builtin__
 
 class Node(object):
     _attrs_filename = ".attrs"
@@ -89,7 +90,7 @@ class File(Node):
         self.readonly = True
         Node.__init__(self, parent_node=None, path="/")
         if file_obj is None:
-            file_obj = open(filename, 'r')
+            file_obj = __builtin__.open(filename, mode='r')
         self.zipfile = zipfile.ZipFile(file_obj) 
         self.attrs = self.makeAttrs()
         self.filename = filename

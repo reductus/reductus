@@ -4,12 +4,14 @@ Load data sets.
 
 import sys
 sys.path.append("/home/brian/work/dataflow")
+sys.path.append("/home/bbm/pydev/dataflow")
 from reflred.formats import nexusref
 from dataflow.core import Module
 from dataflow.core import lookup_module, lookup_datatype
 import os, gzip
 
-test_dataset = [{'url': "http://www.ncnr.nist.gov/pub/ncnrdata/cgd/201511/21066/data/HMDSO_17nm_dry14.nxz.cgd", "mtime": 1447353278}]
+test_dataset = [{'path': "ncnrdata/cgd/201511/21066/data/HMDSO_17nm_dry14.nxz.cgd", "mtime": 1447353278}]
+DATA_SOURCE = "http://ncnr.nist.gov/pub/"
 
 def load_action(files=[], **kwargs):
     print "loading saved results"
@@ -20,9 +22,9 @@ def load_action(files=[], **kwargs):
     for f in files:
         print 'f: ', f
         try:
-            fc = urllib2.urlopen(f['url'])
-            fn = f['url'].split("/")[-1]
-            mtime = fc.info().getdate('last-modified')
+            fp = urllib2.urlopen(DATA_SOURCE + f['path'])
+            fn = f['path'].split("/")[-1]
+            mtime = fp.info().getdate('last-modified')
             cm = datetime.datetime(*mtime[:7], tzinfo=pytz.utc)
             fm = datetime.datetime.fromtimestamp(f['mtime'], pytz.utc)
             if fm < cm:
@@ -31,9 +33,12 @@ def load_action(files=[], **kwargs):
                 print fm, cm, "older file in archive"
             else:
                 #get it!
-                fcontent = fc.read()
+                fcontent = fp.read()
                 ff = StringIO.StringIO(fcontent)
                 nx_entries = nexusref.load_entries(fn, ff)
+                for entry in nx_entries:
+                    # why is this a separate step?
+                    entry.load()
                 result.extend(nx_entries)
         except urllib2.HTTPError:
             print("couldn't open file")
@@ -55,52 +60,95 @@ def load_action(files=[], **kwargs):
     #result = [FilterableMetaArray.loads(robj.read()) for robj in result_objs]
     return dict(output=result)
 
-def load_module(id=None, datatype=None, action=load_action,
-                version='0.0', fields={}, xtype='WireIt.Container', **kwargs):
-    """Module for loading data from a raw datafile"""
-
-   
-    terminals = [
-        #dict(id='input',
-        #     datatype=datatype,
-        #     use='in',
-        #     description='data',
-        #     required=False,
-        #     multiple=True,
-        #     ),
-        dict(id='output',
-             datatype=datatype,
-             use='out',
-             description='data',
-             ),
-    ]
-
-    files_field = {
-        "type":"files",
-        "label": "Files",
-        "name": "files",
-        "value": [],
-    }
-    intent_field = {
-        "type":"string",
-        "label":"Intent",
-        "name": "intent",
-        "value": '',
-    }
+load_kw = {
+    "id": "ncnr.refl.load",
+    "version": 0.1,
+    "description": "load reflectometry NeXus files",
+    "terminals": [
+        {
+            "id": "output", 
+            "datatype": "ncnr.refl.data",
+            "use": "out",
+            "description": "data"
+        }
+    ],
+    "fields": {
+        "files": {
+            "type":"files",
+            "label": "Files",
+            "name": "files",
+            "value": []
+        }
+    },
+    "action": load_action,
+    "name": "Load NeXuS Reflectometry Data"
     
-    fields.update({'files': files_field, 'intent': intent_field})
-    
-    # Combine everything into a module.
-    module = Module(id=id,
-                  name='Load Raw',
-                  version=version,
-                  description=action.__doc__,
-                  #icon=icon,
-                  terminals=terminals,
-                  fields=fields,
-                  action=action,
-                  xtype=xtype,
-                  **kwargs
-                  )
+}
 
-    return module
+load_module = Module(**load_kw)
+
+from reflred.steps import steps as cor
+
+normalize_kw = {
+    "id": "ncnr.refl.normalize",
+    "version": 0.1,
+    "description": "normalize reflectometry NeXus files",
+    "terminals": [
+        {
+            "id": "output", 
+            "datatype": "ncnr.refl.data",
+            "use": "out",
+            "description": "normalized data"
+        },
+        {
+            "id": "input",
+            "datatype": "ncnr.refl.data",
+            "use": "in",
+            "description": "unnormalized data"
+        }        
+    ],
+    "fields": {
+        "base": {
+            "type":"string",
+            "label": "base",
+            "name": "base",
+            "value": "auto"
+        }
+    },
+    "action": cor.normalize,
+    "name": "Load NeXuS Reflectometry Data"
+    
+}
+
+normalize_module = Module(**normalize_kw)
+"""
+modules : [TemplateModule]
+
+Modules used in the template
+module : string
+module id for template node
+
+version : string
+
+version number of the module
+
+config : map
+initial values for the fields
+position : [int,int]
+location of the module on the canvas.
+"""
+
+def test():
+    from dataflow.core import register_module, register_datatype, Template, Data
+    from dataflow.calc import calc_single
+    from reflred.refldata import ReflData
+    rdata = Data("ncnr.refl.data", ReflData, loaders=[{'function':load_action, 'id':'LoadNeXuS'}])
+    register_module(load_module)
+    register_module(normalize_module)
+    register_datatype(rdata)
+    a = load_action(files=test_dataset)
+    modules = [{"module": "ncnr.refl.load", "version": 0.1, "config": {"files": test_dataset}}]
+    template = Template("test", "test template", modules, [], "ncnr.magik", version='0.0')
+    refl = calc_single(template, {}, 0, "output")
+    return refl
+    
