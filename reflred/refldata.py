@@ -932,24 +932,27 @@ class ReflData(object):
         if sanitized:
             output_dict = sanitizeForJSON(output_dict)
         return json.dumps(output_dict)
-        
-    def loads(self, input_str):
+    
+    @classmethod    
+    def loads(cls, input_str):
         import json
         input_dict = json.loads(input_str)
-        for prop in self.properties:
+        new_obj = cls()
+        for prop in new_obj.properties:
             if prop in input_dict:
-                setattr(self, prop, input_dict[prop])
+                setattr(new_obj, prop, input_dict[prop])
         for s in ("slit1", "slit2", "slit3", "slit4"):
             if s in input_dict:
-                setattr(self, s, Slit(**input_dict[s]))
+                setattr(new_obj, s, Slit(**input_dict[s]))
         if 'detector' in input_dict:
-            setattr(self, 'detector', Detector(**input_dict['detector']))
+            setattr(new_obj, 'detector', Detector(**input_dict['detector']))
         if 'sample' in input_dict:
-            setattr(self, 'sample', Sample(**input_dict['sample']))
+            setattr(new_obj, 'sample', Sample(**input_dict['sample']))
         if 'monitor' in input_dict:
-            setattr(self, 'monitor', Monitor(**input_dict['monitor']))
+            setattr(new_obj, 'monitor', Monitor(**input_dict['monitor']))
         if 'roi' in input_dict:
-            setattr(self, 'roi', ROI(**input_dict['roi']))
+            setattr(new_obj, 'roi', ROI(**input_dict['roi']))
+        return new_obj
         
 
     def __or__(self, pipeline):
