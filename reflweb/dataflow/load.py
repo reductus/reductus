@@ -13,6 +13,14 @@ import os, gzip
 test_dataset = [{'path': "ncnrdata/cgd/201511/21066/data/HMDSO_17nm_dry14.nxz.cgd", "mtime": 1447353278}]
 DATA_SOURCE = "http://ncnr.nist.gov/pub/"
 
+class FileNewerError(Exception):
+    def __str__(self):
+        return "File mtime specified is newer than the one in the repository: " + Exception.__str__(self) 
+
+class FileOlderError(Exception):
+    def __str__(self):
+        return "File mtime specified is older than the one in the repository: " + Exception.__str__(self) 
+
 def load_action(files=[], **kwargs):
     print "loading saved results"
     #import tarfile
@@ -28,9 +36,9 @@ def load_action(files=[], **kwargs):
             cm = datetime.datetime(*mtime[:7], tzinfo=pytz.utc)
             fm = datetime.datetime.fromtimestamp(f['mtime'], pytz.utc)
             if fm < cm:
-                print fm, cm, "newer file in archive"
+                raise FileNewerError
             elif fm > cm:
-                print fm, cm, "older file in archive"
+                raise FileOlderError
             else:
                 #get it!
                 fcontent = fp.read()
@@ -146,9 +154,10 @@ def test():
     register_module(load_module)
     register_module(normalize_module)
     register_datatype(rdata)
-    a = load_action(files=test_dataset)
-    modules = [{"module": "ncnr.refl.load", "version": 0.1, "config": {"files": test_dataset}}]
+    # a = load_action(files=test_dataset)
+    #modules = [{"module": "ncnr.refl.load", "version": 0.1, "config": {"files": test_dataset}}]
+    modules = [{"module": "ncnr.refl.load", "version": 0.1, "config": {}}]
     template = Template("test", "test template", modules, [], "ncnr.magik", version='0.0')
-    refl = calc_single(template, {}, 0, "output")
+    refl = calc_single(template, {0: {"files": test_dataset}}, 0, "output")
     return refl
     
