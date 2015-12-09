@@ -119,7 +119,19 @@ def get_file_metadata(pathlist=None):
     response = urllib2.urlopen(req)
     fn = response.read()
     return fn
-    
+ 
+def refl_load(file_descriptors):
+    """ 
+    file_descriptors will be a list of dicts like 
+    [{"path": "ncnrdata/cgd/201511/21066/data/HMDSO_17nm_dry14.nxz.cgd", "mtime": 1447353278}, ...]
+    """
+    from dataflow.core import register_module, register_datatype, Template, Data
+    from dataflow.calc import calc_single
+    from dataflow_modules.load import load_module
+    from reflred.refldata import ReflData
+    rdata = Data("ncnr.refl.data", ReflData, loaders=[{'function':load_action, 'id':'LoadNeXuS'}])
+    register_module(load_module)
+    register_datatype(rdata)
 #    fns = os.listdir(path)
 #    fns.sort()
 #    metadata = []
