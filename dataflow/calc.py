@@ -7,15 +7,14 @@ The function run_template
 import sys
 from pprint import pprint
 from inspect import getsource
-from .core import lookup_module, lookup_datatype
-import hashlib, redis, types, os
+import hashlib, types, os
 from copy import deepcopy
+
 import numpy
 
-if not sys.platform=='win32':
-    os.system("nohup redis-server --maxmemory 4gb --maxmemory-policy allkeys-lru > /dev/null 2>&1 &") # ensure redis is running
-server = redis.Redis("localhost")
-#if not hasattr(server, 'rpush'): server.rpush = server.push
+from .cache import get_cache
+from .core import lookup_module, lookup_datatype
+
 
 def run_template(template, config):
     """
@@ -29,6 +28,7 @@ def run_template(template, config):
     Note: this version keeps all intermediates, and so isn't suitable for
     large data sets.
     """
+    cache = get_cache()
     all_results = {}
     fingerprints = fingerprint_template(template, config)
     for nodenum, wires in template:
@@ -61,20 +61,20 @@ def run_template(template, config):
         fp = name_fingerprint(fingerprints[nodenum])
         
         # Overwrite even if there was already the same reduction?
-        if server.exists(fp):# or module.name == 'Save': 
+        if cache.exists(fp):# or module.name == 'Save':
             result = {}
             for terminal in module.terminals:
                 if terminal['use'] == 'out':
                     cls = lookup_datatype(terminal['datatype']).cls
                     terminal_fp = name_terminal(fp, terminal['id'])
-                    result[terminal['id']] = [cls.loads(str) for str in server.lrange(terminal_fp, 0, -1)]
+                    result[terminal['id']] = [cls.loads(str) for str in cache.lrange(terminal_fp, 0, -1)]
         else:
             result = module.action(**kwargs)
             for terminal_id, res in result.items():
                 terminal_fp = name_terminal(fp, terminal_id)
                 for data in res:
-                    server.rpush(terminal_fp, data.dumps())
-            server.set(fp, fp) # used for checking if the calculation exists; could wrap this whole thing with loop of output terminals
+                    cache.rpush(terminal_fp, data.dumps())
+            cache.set(fp, fp) # used for checking if the calculation exists; could wrap this whole thing with loop of output terminals
         all_results[nodenum] = result
     # retrieve plottable results
     ans = {}
@@ -83,18 +83,25 @@ def run_template(template, config):
         plottable = {}
         for terminal_id, arr in result.items():
             terminal_fp = name_terminal(fp, terminal_id)
-            if server.exists(terminal_fp):
-                plottable[terminal_id] = server.lrange(terminal_fp, 0, -1)
+            if cache.exists(terminal_fp):
+                plottable[terminal_id] = cache.lrange(terminal_fp, 0, -1)
             else:
                 plottable[terminal_id] = convert_to_plottable(arr)
                 for str in plottable[terminal_id]:
-                    server.rpush(terminal_fp, str)
+                    cache.rpush(terminal_fp, str)
         ans[nodenum] = plottable
     return ans
 
 def calc_single(template, config, nodenum, terminal_id):
-    """ Calculate fingerprint of terminal in question - if it exists in the cache,
-    get it.  Otherwise, calculate from scratch (retrieving parent values recursively) """
+    """
+    Return the value for a terminal.
+
+    If the terminal fingerprint is already in the cache, retrieve it and
+    return the associated value.  If not, then compute the value for the
+    terminal and place it in the cache.
+    """
+    cache = get_cache()
+
     # Find the modules
     node = template.modules[nodenum]
     module_id = node['module'] # template.modules[node]
@@ -107,10 +114,10 @@ def calc_single(template, config, nodenum, terminal_id):
     all_fp = fingerprint_template(template, config)
     fp = name_fingerprint(all_fp[nodenum])
     terminal_fp = name_terminal(fp, terminal_id)
-    if server.exists(terminal_fp):
+    if cache.exists(terminal_fp):
         print "retrieving cached value: " + terminal_fp
         cls = lookup_datatype(terminal['datatype']).cls
-        result = [cls.loads(str) for str in server.lrange(terminal_fp, 0, -1)]
+        result = [cls.loads(str) for str in cache.lrange(terminal_fp, 0, -1)]
     else:
         # get inputs from parents
         print "no cached calc value: calculating..."
@@ -139,12 +146,14 @@ def calc_single(template, config, nodenum, terminal_id):
         for terminal_name, arr in calc_value.items():
             terminal_fp = name_terminal(fp, terminal_name)
             for data in arr:
-                server.rpush(terminal_fp, data.dumps())
+                cache.rpush(terminal_fp, data.dumps())
         result = calc_value[terminal_id]
     print "result calculated: ", fp
     return result
 
 def get_plottable(template, config, nodenum, terminal_id):
+    cache = get_cache()
+
     # Find the modules
     node = template.modules[nodenum]
     module_id = node['module'] # template.modules[node]
@@ -155,9 +164,9 @@ def get_plottable(template, config, nodenum, terminal_id):
     fp = all_fp[nodenum]
     plottable_fp = name_terminal(name_plottable(fp), terminal_id)
     binary_fp = "Binary:" + fp + ":" + terminal_id
-    if server.exists(plottable_fp):
+    if cache.exists(plottable_fp):
         print "retrieving cached plottable: " + plottable_fp
-        plottable = server.lrange(plottable_fp, 0, -1)
+        plottable = cache.lrange(plottable_fp, 0, -1)
     else:
         print "no cached plottable: calculating..."
         data = calc_single(template, config, nodenum, terminal_id)
@@ -171,19 +180,21 @@ def get_plottable(template, config, nodenum, terminal_id):
                 for i, item in enumerate(binary_data):
                     # need this so we can look up individual plottable columns later
                     new_fp = bundle_fp + ":" + str(i)
-                    server.rpush(new_fp, item)
+                    cache.rpush(new_fp, item)
                 p = datum.get_plottable(binary_fp=bundle_fp)
             else:
                 p = datum.get_plottable()
                 
             plottable.append(p)
         for item in plottable:
-            server.rpush(plottable_fp, item)
+            cache.rpush(plottable_fp, item)
             
     return plottable
 
 
 def get_csv(template, config, nodenum, terminal_id):
+    cache = get_cache()
+
     # Find the modules
     node = template.modules[nodenum]
     module_id = node['module'] # template.modules[node]
@@ -193,14 +204,14 @@ def get_csv(template, config, nodenum, terminal_id):
     all_fp = fingerprint_template(template, config)
     fp = all_fp[nodenum]
     csv_fp = name_terminal(name_csv(fp), terminal_id)
-    if server.exists(csv_fp):
+    if cache.exists(csv_fp):
         print "retrieving cached value: " + csv_fp
-        csv = server.lrange(csv_fp, 0, -1)
+        csv = cache.lrange(csv_fp, 0, -1)
     else:
         data = calc_single(template, config, nodenum, terminal_id)
         csv = convert_to_csv(data)
         for item in csv:
-            server.rpush(csv_fp, item)   
+            cache.rpush(csv_fp, item)
     return csv
 
 def fingerprint_template(template, config):

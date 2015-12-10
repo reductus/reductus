@@ -5,7 +5,7 @@ Core class definitions
 from .deps import processing_order
 
 from collections import deque
-import simplejson
+import json
 import inspect
 
 _registry = {}
@@ -360,7 +360,7 @@ dataid : string
         self.__dict__ = state
         
     def get_plottable(self):
-        return simplejson.dumps({})
+        return json.dumps({})
     
     def dumps(self):
         return ""

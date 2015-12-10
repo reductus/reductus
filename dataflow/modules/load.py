@@ -1,29 +1,10 @@
 """
 Load data sets.
 """
-
-import os, gzip
-
-try:
-    import dataflow
-except ImportError:
-    def _cousin_path(path, degree, *parts):
-        from os.path import dirname, join as joinpath, abspath
-        path = abspath(path)
-        for _ in range(degree):
-            path = dirname(path)
-        return joinpath(path, *parts)
-    def _add_cousin_path(degree, *parts):
-        import sys
-        sys.path.append(_cousin_path(__file__, degree, *parts))
-        #print("\n".join(sys.path))
-    _add_cousin_path(4, "dataflow")
-
-from dataflow.core import Module
-from dataflow.core import lookup_module, lookup_datatype
-
 from reflred.formats import nexusref
 from reflred.steps import steps
+
+from dataflow.core import Module
 
 test_dataset = [{'path': "ncnrdata/cgd/201511/21066/data/HMDSO_17nm_dry14.nxz.cgd", "mtime": 1447353278}]
 DATA_SOURCE = "http://ncnr.nist.gov/pub/"
