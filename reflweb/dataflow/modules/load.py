@@ -3,11 +3,10 @@ Load data sets.
 """
 
 import sys
-sys.path.append("/home/brian/work/dataflow")
-sys.path.append("/home/bbm/pydev/dataflow")
+#sys.path.append("/home/brian/work/dataflow")
+#sys.path.append("/home/bbm/pydev/dataflow")
 from reflred.formats import nexusref
-from dataflow.core import Module
-from dataflow.core import lookup_module, lookup_datatype
+from ..core import Module, lookup_module, lookup_datatype
 import os, gzip
 
 test_dataset = [{'path': "ncnrdata/cgd/201511/21066/data/HMDSO_17nm_dry14.nxz.cgd", "mtime": 1447353278}]

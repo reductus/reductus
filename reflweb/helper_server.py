@@ -118,20 +118,27 @@ def get_file_metadata(pathlist=None):
     req = urllib2.Request(url, data)
     response = urllib2.urlopen(req)
     fn = response.read()
+    print fn
     return fn
- 
+
+from dataflow.core import register_module, register_datatype, Template, Data
+from dataflow.calc import calc_single
+from dataflow.modules.load import load_module, load_action
+from reflred.refldata import ReflData
+rdata = Data("ncnr.refl.data", ReflData, loaders=[{'function':load_action, 'id':'LoadNeXuS'}])
+register_module(load_module)
+register_datatype(rdata)
+    
 def refl_load(file_descriptors):
     """ 
     file_descriptors will be a list of dicts like 
     [{"path": "ncnrdata/cgd/201511/21066/data/HMDSO_17nm_dry14.nxz.cgd", "mtime": 1447353278}, ...]
     """
-    from dataflow.core import register_module, register_datatype, Template, Data
-    from dataflow.calc import calc_single
-    from dataflow_modules.load import load_module
-    from reflred.refldata import ReflData
-    rdata = Data("ncnr.refl.data", ReflData, loaders=[{'function':load_action, 'id':'LoadNeXuS'}])
-    register_module(load_module)
-    register_datatype(rdata)
+    modules = [{"module": "ncnr.refl.load", "version": 0.1, "config": {}}]
+    template = Template("test", "test template", modules, [], "ncnr.magik", version='0.0')
+    refl = calc_single(template, {0: {"files": file_descriptors}}, 0, "output")
+    return [r._toDict(sanitized=True) for r in refl]
+    
 #    fns = os.listdir(path)
 #    fns.sort()
 #    metadata = []
@@ -239,6 +246,7 @@ server.register_function(categorize_files) # deprecated
 server.register_function(get_plottable)
 server.register_function(get_jstree) # deprecated
 server.register_function(get_file_metadata)
+server.register_function(refl_load)
 server.serve_forever()
 print "done serving rpc forever"
 #httpd_process.terminate()

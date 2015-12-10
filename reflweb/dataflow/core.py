@@ -1,7 +1,7 @@
 """
 Core class definitions
 """
-from . import config
+#from reflweb.dataflow import config
 from .deps import processing_order
 
 from collections import deque
@@ -14,7 +14,7 @@ def register_instrument(instrument):
     """
 Add a new instrument to the server.
 """
-    config.INSTRUMENTS.append(instrument.id)
+    #config.INSTRUMENTS.append(instrument.id)
     for m in instrument.modules:
         register_module(m)
     for d in instrument.datatypes:
