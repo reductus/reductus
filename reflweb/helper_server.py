@@ -41,100 +41,21 @@ class JSONRPCRequestHandler(SimpleJSONRPCRequestHandler):
     
     Put all static files to be served in 'static' subdirectory.
     """
-    disable_nagle_algorithm = False
-    rbufsize=-1
-    wbufsize=-1
     
     #rpc_paths = ('/', '/RPC2')
     rpc_paths = () # accept all
     def __init__(self, request, client_address, server):
-        print "init of request handler", request, time.ctime(), self.timeout
+        #print "init of request handler", request, time.ctime(), self.timeout
         SimpleJSONRPCRequestHandler.__init__(self, request, client_address, server)
-        
-    def setup(self):
-        print "setting up", time.ctime()
-        SimpleJSONRPCRequestHandler.setup(self)
-        
-    def handle(self):
-        print "handling", time.ctime(), self.rbufsize, self.request._sock.gettimeout()
-        SimpleJSONRPCRequestHandler.handle(self)
     
-    def finish(self):
-        print "finishing", time.ctime()
-        SimpleJSONRPCRequestHandler.setup(self)
-        
-    def parse_request(self):
-        print "parse_requesting", time.ctime()
-        return SimpleJSONRPCRequestHandler.parse_request(self)
-    
-    def handle_one_request(self):
-        """Handle a single HTTP request.
-
-        You normally don't need to override this method; see the class
-        __doc__ string for information on how to handle specific HTTP
-        commands such as GET and POST.
-
-        """
-        import socket
-        try:
-            print "handle one start:", time.ctime()
-            #print self.rfile.read(10)
-            #print "read"
-            self.raw_requestline = self.rfile.readline(65537)
-            print "handle one raw request:", self.raw_requestline, time.ctime()
-            if len(self.raw_requestline) > 65536:
-                self.requestline = ''
-                self.request_version = ''
-                self.command = ''
-                self.send_error(414)
-                return
-            if not self.raw_requestline:
-                print "not!"
-                self.close_connection = 1
-                return
-            if not self.parse_request():
-                # An error code has been sent, just exit
-                return
-            mname = 'do_' + self.command
-            if not hasattr(self, mname):
-                self.send_error(501, "Unsupported method (%r)" % self.command)
-                return
-            method = getattr(self, mname)
-            method()
-            self.wfile.flush() #actually send the response if not already done.
-        except socket.timeout, e:
-            #a read or a write timed out.  Discard this connection
-            self.log_error("Request timed out: %r", e)
-            self.close_connection = 1
-            return
-
-    
-    def do_OPTIONSOLD(self):
-        print 'sending response', time.ctime()
-        self.send_response(200)
-        self.send_header('Access-Control-Allow-Origin', '*')
-        #self.send_header('Access-Control-Allow-Origin', 'http://localhost:8000')
-        #self.send_header('Access-Control-Allow-Origin', "http://localhost:%d" % (http_port,))           
-        self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-        self.send_header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept")
-        print 'response sent', time.ctime()
-        #self.end_headers()
-        #self.connection.shutdown(0)
-
     def do_OPTIONS(self):
         print 'sending response', time.ctime()
         self.send_response(200)
-        #self.send_header('Access-Control-Allow-Origin', '*')
         #self.send_header('Access-Control-Allow-Origin', 'http://localhost:8000')
         #self.send_header('Access-Control-Allow-Origin', "http://localhost:%d" % (http_port,))           
         self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-        #self.send_header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept")
-        print 'response sent', time.ctime()
         self.end_headers()
-        self.wfile.write("OK")
-        #self.connection.shutdown(1)
 
-      
     # Add these headers to all responses
     def end_headers(self):
         self.send_header("Access-Control-Allow-Headers", 
@@ -197,7 +118,26 @@ def get_file_metadata(pathlist=None):
     req = urllib2.Request(url, data)
     response = urllib2.urlopen(req)
     fn = response.read()
+    print fn
     return fn
+
+from dataflow.core import register_module, register_datatype, Template, Data
+from dataflow.calc import calc_single
+from dataflow.modules.load import load_module, load_action
+from reflred.refldata import ReflData
+rdata = Data("ncnr.refl.data", ReflData, loaders=[{'function':load_action, 'id':'LoadNeXuS'}])
+register_module(load_module)
+register_datatype(rdata)
+    
+def refl_load(file_descriptors):
+    """ 
+    file_descriptors will be a list of dicts like 
+    [{"path": "ncnrdata/cgd/201511/21066/data/HMDSO_17nm_dry14.nxz.cgd", "mtime": 1447353278}, ...]
+    """
+    modules = [{"module": "ncnr.refl.load", "version": 0.1, "config": {}}]
+    template = Template("test", "test template", modules, [], "ncnr.magik", version='0.0')
+    refl = calc_single(template, {0: {"files": file_descriptors}}, 0, "output")
+    return [r._toDict(sanitized=True) for r in refl]
     
 #    fns = os.listdir(path)
 #    fns.sort()
@@ -306,6 +246,7 @@ server.register_function(categorize_files) # deprecated
 server.register_function(get_plottable)
 server.register_function(get_jstree) # deprecated
 server.register_function(get_file_metadata)
+server.register_function(refl_load)
 server.serve_forever()
 print "done serving rpc forever"
 #httpd_process.terminate()

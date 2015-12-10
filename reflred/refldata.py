@@ -917,14 +917,17 @@ class ReflData(object):
                   ]
         return "\n".join(base+others+self.messages)
 
-    def _toDict(self): 
+    def _toDict(self, sanitized=False): 
         base = _toDict(self)
         others = dict([[s, _toDict(getattr(self,s))]
                   for s in ("slit1", "slit2", "slit3", "slit4",
                             "sample", "detector", "monitor", "roi")
                   ])
         base.update(others)
-        return base
+        if sanitized:
+            return sanitizeForJSON(base)
+        else:
+            return base
         
     def dumps(self, sanitized=False):
         import json
@@ -1044,9 +1047,7 @@ def sanitizeForJSON(obj):
             output[k] = sanitizeForJSON(v)
         return output
     elif type(obj) is types.ListType:
-        print 'list:', obj
         return map(sanitizeForJSON, obj)
-        print obj
     elif obj == json.encoder.INFINITY:
         return u"\u221E"
     elif obj == -json.encoder.INFINITY:
