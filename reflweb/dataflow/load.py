@@ -2,13 +2,28 @@
 Load data sets.
 """
 
-import sys
-sys.path.append("/home/brian/work/dataflow")
-sys.path.append("/home/bbm/pydev/dataflow")
-from reflred.formats import nexusref
+import os, gzip
+
+try:
+    import dataflow
+except ImportError:
+    def _cousin_path(path, degree, *parts):
+        from os.path import dirname, join as joinpath, abspath
+        path = abspath(path)
+        for _ in range(degree):
+            path = dirname(path)
+        return joinpath(path, *parts)
+    def _add_cousin_path(degree, *parts):
+        import sys
+        sys.path.append(_cousin_path(__file__, degree, *parts))
+        #print("\n".join(sys.path))
+    _add_cousin_path(4, "dataflow")
+
 from dataflow.core import Module
 from dataflow.core import lookup_module, lookup_datatype
-import os, gzip
+
+from reflred.formats import nexusref
+from reflred.steps import steps
 
 test_dataset = [{'path': "ncnrdata/cgd/201511/21066/data/HMDSO_17nm_dry14.nxz.cgd", "mtime": 1447353278}]
 DATA_SOURCE = "http://ncnr.nist.gov/pub/"
@@ -36,18 +51,16 @@ def load_action(files=[], **kwargs):
             cm = datetime.datetime(*mtime[:7], tzinfo=pytz.utc)
             fm = datetime.datetime.fromtimestamp(f['mtime'], pytz.utc)
             if fm < cm:
-                raise FileNewerError
+                raise FileNewerError()
             elif fm > cm:
-                raise FileOlderError
+                raise FileOlderError()
             else:
                 #get it!
-                fcontent = fp.read()
-                ff = StringIO.StringIO(fcontent)
+                ff = StringIO.StringIO(fp.read())
                 nx_entries = nexusref.load_entries(fn, ff)
-                for entry in nx_entries:
-                    # why is this a separate step?
-                    entry.load()
                 result.extend(nx_entries)
+                ff.close()
+            fp.close()
         except urllib2.HTTPError:
             print("couldn't open file")
         
@@ -95,7 +108,6 @@ load_kw = {
 
 load_module = Module(**load_kw)
 
-from reflred.steps import steps as cor
 
 normalize_kw = {
     "id": "ncnr.refl.normalize",
@@ -123,7 +135,7 @@ normalize_kw = {
             "value": "auto"
         }
     },
-    "action": cor.normalize,
+    "action": steps.normalize,
     "name": "Load NeXuS Reflectometry Data"
     
 }
@@ -147,6 +159,7 @@ location of the module on the canvas.
 """
 
 def test():
+    import numpy; numpy.seterr(all='raise')
     from dataflow.core import register_module, register_datatype, Template, Data
     from dataflow.calc import calc_single
     from reflred.refldata import ReflData
@@ -161,3 +174,5 @@ def test():
     refl = calc_single(template, {0: {"files": test_dataset}}, 0, "output")
     return refl
     
+if __name__ == "__main__":
+    test()

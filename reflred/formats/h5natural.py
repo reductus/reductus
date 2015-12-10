@@ -7,7 +7,7 @@ field in the h5py Group object.
 Attributes are accessed using group.Aname or dataset.Aname, where name is the name
 of the attribute in the Group or Dataset object.
 
-After importing h5natural, ll files opened with h5py will have the additional 
+After importing h5natural, all files opened with h5py will have the additional
 attributes.
 """
 

@@ -76,15 +76,18 @@ class NG7Icp(refldata.ReflData):
     def __init__(self, path, *args, **kw):
         super(NG7Icp,self).__init__(*args, **kw)
 
+        self._data_loaded =  False
         if hasattr(path,'read'):
+            # Reading from a file stream, so read the whole thing
             data = icpformat.read(path)
             self._set_metadata(data)
             self._set_data(data)
+            self.path = None
         else:
+            # Reading from disk, so get metadata only
             data = icpformat.summary(path)
             self._set_metadata(data)
             self.path = path
-            self._need_data = True
 
     def _set_metadata(self, data):
         if data.scantype != 'R':
@@ -145,17 +148,16 @@ class NG7Icp(refldata.ReflData):
         self.detector.width_y = self.default.psd_height
 
     def loadcounts(self):
-        if not self._need_data:
-            self.load()
+        self.load()
         return self.detector.counts
 
     def load(self):
-        if self._need_data:
+        if not self._data_loaded:
             data = icpformat.read(self.path)
             self._set_data(data)
 
     def _set_data(self, data):
-        self._need_data = False
+        self._data_loaded = True
         self.detector.wavelength \
             = data.check_wavelength(self.default.wavelength,
                                     NG7Icp._wavelength_override)
