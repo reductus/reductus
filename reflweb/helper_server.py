@@ -134,37 +134,47 @@ def refl_load(file_descriptors):
     file_descriptors will be a list of dicts like 
     [{"path": "ncnrdata/cgd/201511/21066/data/HMDSO_17nm_dry14.nxz.cgd", "mtime": 1447353278}, ...]
     """
-    modules = [{"module": "ncnr.refl.load", "version": 0.1, "config": {}}]
+    modules = [{"module": "ncnr.refl.load", "version": "0.1", "config": {}}]
     template = Template("test", "test template", modules, [], "ncnr.magik", version='0.0')
     refl = calc_single(template, {0: {"files": file_descriptors}}, 0, "output")
     return [r._toDict(sanitized=True) for r in refl]
-    
-#    fns = os.listdir(path)
-#    fns.sort()
-#    metadata = []
-#    for fn in fns:
-#        try:
-#            f = h5py.File(os.path.join(path, fn))
-#            for entry in f.keys():
-#                output = {}
-#                _name = f[entry].get('DAS_logs/sample/name').value.flatten()[0]
-#                output['sample_name'] = str(_name)
-#                _num = f[entry].get('DAS_logs/trajectoryData/fileNum').value.flatten()[0]
-#                output['fileNum'] = "%d" % (_num,)
-#                _scanType = f[entry].get('DAS_logs/trajectoryData/_scanType')
-#                if _scanType is not None:
-#                    _scanType = _scanType.value.flatten()[0]
-#                else:
-#                    _scanType = 'uncategorized'
-#                output['scanType'] = _scanType
-#                output['filename'] = fn
-#                output['path'] = path
-#                output['entry'] = entry
-#                metadata.append(output)
-#        except:
-#            pass
-#    return metadata
 
+def calc_dict(template_def, config, nodenum, terminal_id):
+    """ json-rpc wrapper for calc_single
+    template_def = 
+    {"name": "template_name",
+     "description": "template description!",
+     "modules": ["list of modules"],
+     "wires": ["list of wires"],
+     "instrument": "facility.instrument_name",
+     "version": "2.7.3"
+    }
+    
+    where modules in list of modules above have structure:
+    module = 
+    {"module": "facility.instrument_name.module_name",
+     "version": "0.3.2"
+    }
+    
+    and wires have structure:
+    [["wire_start_module_id:wire_start_terminal_id", "wire_end_module_id:wire_end_terminal_id"],
+     ["1:output", "2:input"],
+     ["0:xslice", "3:input"]
+    ]
+    
+    config = 
+    [{"param": "value"}, ...]
+    
+    nodenum is the module number from the template for which you wish to get the calculated value
+    
+    terminal_id is the id of the terminal for that module, that you want to get the value from
+    (output terminals only).
+    """
+    template = Template(**template_def)
+    print template
+    retvals = calc_single(template, config, nodenum, terminal_id)
+    return [r._toDict(sanitized=True) for r in retvals]
+    
 def get_jstree(path='./'):
     files = categorize_files(path)
     categories = ['SPEC','BG','ROCK','SLIT','uncategorized']
@@ -187,66 +197,11 @@ def get_jstree(path='./'):
         output['core']['data'].append(samp_out)
     return output 
         
-def get_plottable(file_and_entry):
-    """ file_and_entry should be list of dicts:
-    [{ "filename": fn1, "entry": entryname1 }, { "filename": fn2, ...} ...]
-    """
-    print file_and_entry
-    fig = {
-        "title": "plot",
-        "type": "1d",
-        "data": [],
-        "options": {
-            "axes": {"xaxis": {}, "yaxis": {}},
-            "series": [],
-            },
-        }
-    for item in file_and_entry:
-        f = h5py.File(item['filename'])
-        DAS = f[item['entry']]['DAS_logs']
-        print DAS
-        xAxis = DAS.get('trajectoryData/xAxis')
-        if xAxis is not None:
-            xAxis = xAxis.value[0].replace('.', '/')
-        if xAxis in DAS.keys() and 'primary' in DAS[xAxis].attrs: 
-            # then it's a device name: convert to primary node
-            xAxis = xAxis + "/" + DAS[xAxis].attrs['primary']
-        if not xAxis in DAS:
-            xAxis = DAS.get('trajectory/defaultXAxisPlotNode', "").value[0].replace('.', '/')
-        if xAxis == "":
-            xAxis = DAS['trajectory/scannedVariables'].value[0].split()[0].replace('.', '/')
-        
-        yAxis=DAS.get('trajectory/defaultYAxisPlotNode', "").value[0].replace('.', '/')
-        if yAxis == "":
-            yAxis = "counter/liveROI"
-        yAxisChannel = DAS.get('trajectory/defaultYAxisPlotChannel', -1)
-        fig_x = fig['options']['axes']['xaxis']
-        fig_y = fig['options']['axes']['yaxis']
-        if "label" in fig_x:
-            if not fig_x['label'] == xAxis:
-                raise Exception("axes do not match")
-        else:
-            fig_x['label'] = xAxis
-        if "label" in fig_y:
-            if not fig_y['label'] == yAxis:
-                raise Exception("axes do not match")
-        else: 
-            fig_y['label'] = yAxis
-        fig['options']['series'].append({"label": item['filename'] + ':' + item['entry']})
-        x = DAS[xAxis].value.astype('float')
-        y = DAS[yAxis].value.astype('float')
-        xy = [[xx,yy] for xx, yy in zip(x,y)]
-        fig['data'].append(xy)
-        
-    fig['options']['axes']['xaxis']['label'] = fig['options']['axes']['xaxis']['label'].replace('/', '.')
-    fig['options']['axes']['yaxis']['label'] = fig['options']['axes']['yaxis']['label'].replace('/', '.')
-    return fig
     
-server.register_function(categorize_files) # deprecated
-server.register_function(get_plottable)
 server.register_function(get_jstree) # deprecated
 server.register_function(get_file_metadata)
 server.register_function(refl_load)
+server.register_function(calc_dict)
 server.serve_forever()
 print "done serving rpc forever"
 #httpd_process.terminate()
