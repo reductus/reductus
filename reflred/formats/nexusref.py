@@ -44,18 +44,35 @@ def nxfind(group, nxclass):
         if nxclass == entry.attrs.get('NX_class', None):
             yield entry
 
+def load_metadata(filename, file_obj=None):
+    """
+    Load the summary info for all entries in a NeXus file.
+    """
+    #file = h5.File(filename)
+    file = h5_open_zip(filename, file_obj)
+    measurements = []
+    for name,entry in file.items():
+        if entry.attrs.get('NX_class', None) == 'NXentry':
+            data = NCNRNeXusRefl(entry, name, filename)
+            measurements.append(data)
+    if file_obj is None:
+        file.close()
+    return measurements
+
 def load_entries(filename, file_obj=None):
     """
     Load the summary info for all entries in a NeXus file.
     """
     #file = h5.File(filename)
     file = h5_open_zip(filename, file_obj)
-    file._opened_entries = 0  # keep track of the number of entries open
     measurements = []
     for name,entry in file.items():
         if entry.attrs.get('NX_class', None) == 'NXentry':
-            measurements.append(NCNRNeXusRefl(entry, name, filename))
-            file._opened_entries += 1
+            data = NCNRNeXusRefl(entry, name, filename)
+            data.load(entry)
+            measurements.append(data)
+    if file_obj is None:
+        file.close()
     return measurements
 
 
@@ -142,12 +159,8 @@ class NCNRNeXusRefl(refldata.ReflData):
         self._set_metadata(entry)
 
     def _set_metadata(self, entry):
-        # TODO: ought to close file when we are done loading, which means
-        # we shouldn't hold on to entry
-        print("Don't forget to close the hdf file!!")
-        self._entry = entry
         #print(entry['instrument'].values())
-        das = self._entry['DAS_logs']
+        das = entry['DAS_logs']
         self.probe = 'neutron'
         self.date = iso8601.parse_date(entry['start_time'][0])
         self.description = entry['experiment_description'][0]
@@ -180,8 +193,8 @@ class NCNRNeXusRefl(refldata.ReflData):
             self.warn("Wavelength resolution is missing; using 2% dL/L FWHM")
             self.detector.wavelength_resolution = 0.02*self.detector.wavelength
 
-    def load(self):
-        das = self._entry['DAS_logs']
+    def load(self, entry):
+        das = entry['DAS_logs']
         self.detector.counts = np.asarray(das['pointDetector/counts'][:,0], 'd')
         self.detector.dims = self.detector.counts.shape
         n = self.detector.dims[0]
@@ -198,13 +211,6 @@ class NCNRNeXusRefl(refldata.ReflData):
         #TODO: temperature, field
         if '_theta_offset' in das['trajectoryData']:
             self.background_offset = 'theta'
-
-        try:
-            cor.apply_standard_corrections(self)
-        except:
-            print self.filename
-            import traceback; traceback.print_exc()
-
 
     def _load_slits(self, instrument):
         """

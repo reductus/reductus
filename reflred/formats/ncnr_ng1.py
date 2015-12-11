@@ -72,11 +72,13 @@ class NG1Icp(refldata.ReflData):
     def __init__(self, path, *args, **kw):
         super(NG1Icp,self).__init__(*args, **kw)
 
+        self._data_loaded = False
         if hasattr(path, 'read'):
             # Reading from a file stream, so read the whole thing
             data = icpformat.read(path)
             self._set_metadata(data)
             self._set_data(data)
+            self.path = None
         else:
             # Reading from disk, so get metadata only
             data = icpformat.summary(path)
@@ -149,16 +151,16 @@ class NG1Icp(refldata.ReflData):
 
 
     def loadcounts(self):
-        # Load the counts from the data file
-        return self.load()
+        self.load()
+        return self.detector.counts
 
     def load(self):
-        # Load the icp data
+        if not self._data_loaded:
         data = icpformat.read(self.path)
         self._set_data(data)
-        return data.counts
 
     def _set_data(self, data):
+        self._data_loaded = True
         self.detector.counts = data.counts
         if data.counts.ndim == 1:
             self.detector.dims = (1,1)

@@ -209,7 +209,11 @@ class FieldFile(object):
             attrs = self.attrs
             target = self.path
             with self.root.open(target, 'rb') as infile:
-                dtype=numpy.dtype(str(attrs['format']))
+                dtype = str(attrs['format'])
+                # CRUFT: <l4, <d8 are not sensible dtypes
+                if dtype == '<l4': dtype = '<i4'
+                if dtype == '<d8': dtype = '<f8'
+                dtype=numpy.dtype(dtype)
                 if attrs.get('binary', False) == True:
                     d = numpy.fromfile(infile, dtype=dtype)
                 else:
