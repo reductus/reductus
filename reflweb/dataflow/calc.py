@@ -67,7 +67,7 @@ def run_template(template, config):
                 if terminal['use'] == 'out':
                     cls = lookup_datatype(terminal['datatype']).cls
                     terminal_fp = name_terminal(fp, terminal['id'])
-                    result[terminal['id']] = [cls.loads(str) for str in server.lrange(terminal_fp, 0, -1)]
+                    result[terminal['id']] = [cls.loads(string) for string in server.lrange(terminal_fp, 0, -1)]
         else:
             result = module.action(**kwargs)
             for terminal_id, res in result.items():
@@ -87,8 +87,8 @@ def run_template(template, config):
                 plottable[terminal_id] = server.lrange(terminal_fp, 0, -1)
             else:
                 plottable[terminal_id] = convert_to_plottable(arr)
-                for str in plottable[terminal_id]:
-                    server.rpush(terminal_fp, str)
+                for string in plottable[terminal_id]:
+                    server.rpush(terminal_fp, string)
         ans[nodenum] = plottable
     return ans
 
@@ -110,7 +110,7 @@ def calc_single(template, config, nodenum, terminal_id):
     if server.exists(terminal_fp):
         print "retrieving cached value: " + terminal_fp
         cls = lookup_datatype(terminal['datatype']).cls
-        result = [cls.loads(str) for str in server.lrange(terminal_fp, 0, -1)]
+        result = [cls.loads(string) for string in server.lrange(terminal_fp, 0, -1)]
     else:
         # get inputs from parents
         print "no cached calc value: calculating..."
@@ -131,7 +131,7 @@ def calc_single(template, config, nodenum, terminal_id):
         # Include configuration information
         configuration = {}
         configuration.update(node.get('config', {}))
-        configuration.update(config.get(nodenum, {}))
+        configuration.update(config.get(str(nodenum), {}))
         kwargs.update(configuration)
         calc_value = module.action(**kwargs)
         # pushing the value of all the outputs for this node to cache, 
@@ -209,6 +209,7 @@ def fingerprint_template(template, config):
     fingerprints = {}
     index = 0
     config = deepcopy(config)
+    print config
     for nodenum, wires in template:
         # Find the modules
         node = template.modules[nodenum]
@@ -229,7 +230,7 @@ def fingerprint_template(template, config):
         # let's not grab config information from the node... like position.
         # only taking configuration defined for this group number.
         #configuration.update(node.get('config', {}))
-        configuration.update(config.get(nodenum, {}))
+        configuration.update(config.get(str(nodenum), {})) # keys must be strings...
         print "configuration for fingerprint:", configuration
         
         # Fingerprinting

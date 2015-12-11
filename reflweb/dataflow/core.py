@@ -198,7 +198,7 @@ module id in template and terminal name in module
 target : [int, string]
 module id in template and terminal name in module
 """
-    def __init__(self, name, description, modules, wires, instrument,
+    def __init__(self, name=None, description=None, modules=None, wires=None, instrument="",
                  version='0.0'):
         self.name = name
         self.description = description
