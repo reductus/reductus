@@ -157,6 +157,6 @@ def test():
     #modules = [{"module": "ncnr.refl.load", "version": 0.1, "config": {"files": test_dataset}}]
     modules = [{"module": "ncnr.refl.load", "version": 0.1, "config": {}}]
     template = Template("test", "test template", modules, [], "ncnr.magik", version='0.0')
-    refl = calc_single(template, {0: {"files": test_dataset}}, 0, "output")
+    refl = calc_single(template, {"0": {"files": test_dataset}}, 0, "output")
     return refl
     
