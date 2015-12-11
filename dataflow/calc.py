@@ -67,7 +67,7 @@ def run_template(template, config):
                 if terminal['use'] == 'out':
                     cls = lookup_datatype(terminal['datatype']).cls
                     terminal_fp = name_terminal(fp, terminal['id'])
-                    result[terminal['id']] = [cls.loads(s) for s in server.lrange(terminal_fp, 0, -1)]
+                    result[terminal['id']] = [cls.loads(s) for s in cache.lrange(terminal_fp, 0, -1)]
         else:
             result = module.action(**kwargs)
             for terminal_id, res in result.items():
@@ -88,7 +88,7 @@ def run_template(template, config):
             else:
                 plottable[terminal_id] = convert_to_plottable(arr)
                 for s in plottable[terminal_id]:
-                    server.rpush(terminal_fp, s)
+                    cache.rpush(terminal_fp, s)
         ans[nodenum] = plottable
     return ans
 
@@ -117,7 +117,7 @@ def calc_single(template, config, nodenum, terminal_id):
     if cache.exists(terminal_fp):
         print "retrieving cached value: " + terminal_fp
         cls = lookup_datatype(terminal['datatype']).cls
-        result = [cls.loads(s) for s in server.lrange(terminal_fp, 0, -1)]
+        result = [cls.loads(s) for s in cache.lrange(terminal_fp, 0, -1)]
     else:
         # get inputs from parents
         print "no cached calc value: calculating..."

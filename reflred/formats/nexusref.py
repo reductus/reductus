@@ -174,6 +174,7 @@ class NCNRNeXusRefl(refldata.ReflData):
         self.detector.wavelength = data_as(entry,'instrument/monochromator/wavelength','Ang')
         self.detector.wavelength_resolution = data_as(entry,'instrument/monochromator/wavelength_error','Ang')
 
+        self.sample.name = entry['sample/name'][0] if 'name' in entry['sample'] else ""
         self.sample.description = entry['sample/description'][0] if 'description' in entry['sample'] else ""
         self.monitor.base = das['counter/countAgainst'][0]
         self.monitor.time_step = 0.001  # assume 1 ms accuracy on reported clock

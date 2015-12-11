@@ -172,9 +172,10 @@ class Sample(object):
         Sample environment data.  See Environment class for a list of
         common environment data.
     """
-    properties = ['description','width','length','thickness','shape',
+    properties = ['name', 'description','width','length','thickness','shape',
                   'angle_x','angle_y','rotation',
                   'broadening', 'incident_sld', 'substrate_sld']
+    name = ''
     description = ''
     width = inf  # mm
     length = inf  # mm
