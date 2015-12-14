@@ -150,6 +150,13 @@ class NCNRNeXusRefl(refldata.ReflData):
     See :class:`reflred.refldata.ReflData` for details.
     """
     format = "NeXus"
+    trajectory_intents = {
+        'SPEC': 'specular',
+        'SLIT': 'slit',
+        'BGP': 'background+',
+        'BGM': 'background-',
+        'ROCK': 'rock sample'
+    }
 
     def __init__(self, entry, entryname, filename):
         super(NCNRNeXusRefl,self).__init__()
@@ -176,6 +183,9 @@ class NCNRNeXusRefl(refldata.ReflData):
 
         self.sample.name = entry['sample/name'][0] if 'name' in entry['sample'] else ""
         self.sample.description = entry['sample/description'][0] if 'description' in entry['sample'] else ""
+        raw_intent = das['trajectoryData/_scanType'][0] if '_scanType' in das['trajectoryData'] else ""
+        if raw_intent in self.trajectory_intents:
+            self.intent = self.trajectory_intents[raw_intent]
         self.monitor.base = das['counter/countAgainst'][0]
         self.monitor.time_step = 0.001  # assume 1 ms accuracy on reported clock
         self.polarization = _get_pol(das, 'frontPolarization') \
