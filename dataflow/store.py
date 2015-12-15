@@ -1,7 +1,6 @@
 """
 Convert reduction flows to and from the stored representation.
 
-
 The stored representation is given in terms of python primitives
 which are suitable for calls to json loads/dumps.  The reduction
 flows are represented using our internal instrument classes.  Only

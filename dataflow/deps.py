@@ -84,7 +84,7 @@ def _check(msg, n, pairs):
     print msg, order
 
 def test():
-    import numpy
+    import numpy as np
 
     # No dependencies
     _check("test empty", 9, [])
@@ -95,7 +95,7 @@ def test():
     # Some chain dependencies
     pairs = [(4, 0), (0, 1), (1, 2), (7, 0), (3, 5)]
     _check("test1", 9, pairs)
-    _check("test1 numpy", 9, numpy.array(pairs))
+    _check("test1 numpy", 9, np.array(pairs))
 
     # Cycle test
     pairs = [(1, 4), (4, 3), (4, 5), (5, 1)]
@@ -104,16 +104,16 @@ def test():
     else: raise Exception, "test3 expect ValueError exception for %s" % (pairs,)
 
     # large test for gross speed check
-    A = numpy.random.randint(4000, size=(1000, 2))
+    A = np.random.randint(4000, size=(1000, 2))
     A[:, 1] += 4000  # Avoid cycles
     _check("test-large", 8000, A)
 
     # depth tests
     k = 200
-    A = numpy.array([range(0, k), range(1, k + 1)]).T
+    A = np.array([range(0, k), range(1, k + 1)]).T
     _check("depth-1", 201, A)
 
-    A = numpy.array([range(1, k + 1), range(0, k)]).T
+    A = np.array([range(1, k + 1), range(0, k)]).T
     _check("depth-2", 201, A)
 
 if __name__ == "__main__":

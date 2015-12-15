@@ -3,6 +3,8 @@ import sys
 import os
 import pycache
 
+def memory_cache():
+    return pycache.MemoryCache()
 
 # port 6379 is the default port value for the python redis connection
 def redis_connect(host="localhost", port=6379, **kwargs):
@@ -29,7 +31,7 @@ def redis_connect(host="localhost", port=6379, **kwargs):
 Redis connection failed with:
     %s
 Falling back to in-memory cache."""%str(exc))
-        cache = pycache.MemoryCache()
+        cache = memory_cache()
 
     return cache
 
@@ -46,7 +48,7 @@ class CacheManager:
             if self._redis_kwargs is not None:
                 self._cache = redis_connect(**self._redis_kwargs)
             else:
-                self._cache = pycache.MemoryCache()
+                self._cache = memory_cache()
         return self._cache
 
 # Singleton cache manager if you only need one cache
@@ -55,5 +57,3 @@ CACHE_MANAGER = CacheManager()
 # direct access to singleton methods
 use_redis = CACHE_MANAGER.use_redis
 get_cache = CACHE_MANAGER.get_cache
-
-

@@ -31,10 +31,8 @@ __all__ = ['instrument_to_wireit_menu', 'instrument_to_wireit_language',
            'wireit_diagram_to_template', 'template_to_wireit_diagram',
            'template_list']
 
-import json, pickle
-
-from .core import lookup_module, Template
 from . import config
+from .core import lookup_module, Template
 
 
 def instrument_to_wireit_menu(instrument):    
