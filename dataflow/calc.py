@@ -139,7 +139,7 @@ def calc_single(template, config, nodenum, terminal_id):
         
         # Include configuration information
         node_config = node.get('config', {})  # Template defaults
-        node_config.update(config[nodenum])  # Instance arguments
+        node_config.update(config.get(str(nodenum), {}))  # Instance arguments
         node_config.update(input_args)
 
         calc_value = module.action(**node_config)
@@ -241,8 +241,8 @@ def fingerprint_template(template, config):
         # let's not grab config information from the node... like position.
         # only taking configuration defined for this group number.
         #configuration.update(node.get('config', {}))
-        #node_config.update(config.get(str(nodenum), {}))  # keys must be strings...
-        node_config.update(config[nodenum])
+        node_config.update(config.get(str(nodenum), {}))  # keys must be strings...
+        #node_config.update(config[nodenum])
         print "configuration for fingerprint:", node_config
         
         # Fingerprinting

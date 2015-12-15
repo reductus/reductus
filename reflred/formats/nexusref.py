@@ -268,7 +268,7 @@ def _get_pol(das, pol):
             result = '+'
         elif direction == 'DOWN':
             result = '-'
-        elif direction == '':
+        elif direction == '' or direction == 'BEAM_OUT':
             result = ''
         else:
             raise ValueError("Don't understand DAS_logs/%s/direction=%r"%(pol,direction))
