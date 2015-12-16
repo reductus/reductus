@@ -1,10 +1,10 @@
 import warnings
 import sys
 import os
-import pycache
 
 def memory_cache():
-    return pycache.MemoryCache()
+    import fakeredis
+    return fakeredis.MemoryCache()
 
 # port 6379 is the default port value for the python redis connection
 def redis_connect(host="localhost", port=6379, **kwargs):

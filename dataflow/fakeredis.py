@@ -2,6 +2,7 @@ import warnings
 
 def lrucache(size):
     try:
+        #raise ImportError("no pylru")
         import pylru
         return pylru.lrucache(size)
     except ImportError:
@@ -38,8 +39,8 @@ class MemoryCache:
         else:
             self.cache[key].append(value)
     def lrange(self, key, low, high):
-        return self.cache[key][low:high]
-
+        """Note: returned range includes high index, not high-1 like lists"""
+        return self.cache[key][low:(high+1 if high != -1 else None)]
 
 def demo():
     class Expensive(object):
@@ -74,8 +75,8 @@ def demo():
     a = cache2[5]
     print "=== inserting 10 and deleting 6"
     cache2[10] = Expensive(10)
-    
-    print "=== cleanup can happen in any order"
+
+    print "=== cleanup of cache and cache2 can happen in any order"
 
 if __name__ == "__main__":
     demo()    
