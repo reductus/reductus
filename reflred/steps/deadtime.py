@@ -45,23 +45,23 @@ def fit_dead_time(attenuated, unattenuated, source='detector', mode='auto'):
     return dead_time
 
 
-def apply_monitor_dead_time(data, dead_time):
+def apply_monitor_dead_time(data, tau_NP=0.0, tau_P=0.0):
     m = data.monitor.counts
     t = data.monitor.count_time
     dm = np.sqrt(data.monitor.counts_variance
                  if data.monitor.counts_variance else data.monitor.counts)
     I, dI = estimate_incident((m/t, dm/t),
-                              tau_NP=dead_time.tau_NP, tau_P=dead_time.tau_P)
+                              tau_NP=tau_NP, tau_P=tau_P)
     data.monitor.counts, data.monitor.counts_variance = I, dI**2
 
 
-def apply_detector_dead_time(data, dead_time):
+def apply_detector_dead_time(data, tau_NP=0.0, tau_P=0.0):
     m = data.detector.counts
     t = data.monitor.count_time
     dm = np.sqrt(data.detector.counts_variance
                  if data.detector.counts_variance else data.detector.counts)
     I, dI = estimate_incident((m/t, dm/t),
-                              tau_NP=dead_time.tau_NP, tau_P=dead_time.tau_P)
+                              tau_NP=tau_NP, tau_P=tau_P)
     data.detector.counts, data.detector.counts_variance = I, dI**2
 
 

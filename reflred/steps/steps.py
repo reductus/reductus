@@ -21,25 +21,25 @@ def fit_dead_time(attenuated, unattenuated, source='detector', mode='auto'):
     return data
 
 
-def monitor_dead_time(data, dead_time):
+def monitor_dead_time(data, tau_NP=None, tau_P=None):
     from .deadtime import apply_monitor_dead_time
 
     data = copy(data)
     data.monitor = copy(data.monitor)
     data.log('monitor_dead_time(dead_time)')
     data.log_dependency('dead_time', dead_time)
-    apply_monitor_dead_time(data, dead_time)
+    apply_monitor_dead_time(data, tau_NP=tau_NP, tau_P=tau_P)
     return data
 
 
-def detector_dead_time(data, dead_time):
+def detector_dead_time(data, tau_NP=None, tau_P=None):
     from .deadtime import apply_detector_dead_time
 
     data = copy(data)
     data.detector = copy(data.detector)
     data.log('detector_dead_time(dead_time)')
     data.log_dependency('dead_time', dead_time)
-    apply_detector_dead_time(data, dead_time)
+    apply_detector_dead_time(data, tau_NP=tau_NP, tau_P=tau_P)
     return data
 
 
@@ -406,8 +406,8 @@ def demo():
                                               monitor_unattenuated)
         detector_dead_time = cor.fit_dead_time(detector_attenuated,
                                                detector_unattenuated)
-        files = [cor.monitor_dead_time(d, monitor_dead_time) for d in files]
-        files = [cor.detector_dead_time(d, detector_dead_time) for d in files]
+        files = [cor.monitor_dead_time(d, tau_NP=monitor_dead_time.tau_NP, tau_P=monitor_dead_time.tau_P) for d in files]
+        files = [cor.detector_dead_time(d, tau_NP=detector_dead_time.tau_NP, tau_P=detector_dead_time.tau_P) for d in files]
     else:
         files = [cor.monitor_saturation(d) for d in files]
         files = [cor.detector_saturation(d) for d in files]
