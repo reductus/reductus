@@ -156,8 +156,8 @@ class NG1Icp(refldata.ReflData):
 
     def load(self):
         if not self._data_loaded:
-        data = icpformat.read(self.path)
-        self._set_data(data)
+            data = icpformat.read(self.path)
+            self._set_data(data)
 
     def _set_data(self, data):
         self._data_loaded = True
