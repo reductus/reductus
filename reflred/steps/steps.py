@@ -3,11 +3,92 @@ import os
 from copy import copy
 from warnings import warn
 
-# TODO: maybe bring back formula
+# TODO: maybe bring back formula to show the math of each step
 # TODO: what about polarized data?
 
+DATA_PREFIX = "refl1d.ncnr."
 
+ALL_MODULES = []
+def module(action):
+    """
+    Decorator which records the action in *ALL_MODULES*.
+
+    This just collects the action, it does not otherwise modify it.
+    """
+    ALL_MODULES.append(action)
+
+    # This is a decorator, so return the original function
+    return action
+
+
+def register_actions():
+    """
+    Register each action as a dataflow module.
+
+    This operates on the list of actions collected in *ALL_MODULES*
+    by the @module decorator
+    """
+    from dataflow.core import Module, auto_module, register_module
+
+    for action in ALL_MODULES:
+        # Read the module defintion from the docstring
+        module_description = auto_module(action)
+
+        # Tag each terminal data type with the data type prefix, if it is
+        # not already a fully qualified name
+        for v in module_description['terminals']:
+            if '.' not in v['type']:
+                v['type'] = DATA_PREFIX + v['type']
+
+        # Define and register the module
+        module = Module(action=action, **module_description)
+        register_module(module)
+
+        from pprint import pprint
+        pprint(module_description)
+
+
+@module
+def ncnr_load(filelist=None):
+    """
+    Load a list of nexus files from the NCNR data server.
+
+    **Inputs**
+
+    filelist (fileinfo+): List of files to open.  Fileinfo is a structure
+    with { path: location on server, mtime: expected modification time }.
+
+    **Returns**
+
+    entries (refldata+): All entries of all files in the list.
+
+    2015-12-17 Brian Maranville
+    """
+    from .load import url_load_list
+    return url_load_list(filelist)
+
+@module
 def fit_dead_time(attenuated, unattenuated, source='detector', mode='auto'):
+    """
+    Fit detector dead time constants (paralyzing and non-paralyzing) from
+    measurement of attenuated and unattenuated data for a range of count rates.
+
+    **Inputs**
+
+    attenuated (refldata): Attenuated detector counts
+
+    unattenuated (refldata): Unattenuated detector counts
+
+    source (detector|monitor): Measured tube
+
+    mode (P|NP|mixed|auto): Dead-time mode
+
+    **Returns**
+
+    dead_time (deadtime): Dead time constants, attenuator estimate and beam rate
+
+    2015-12-17 Paul Kienzle
+    """
     from .deadtime import fit_dead_time
 
     data = fit_dead_time(attenuated, unattenuated, source=source, mode=mode)
@@ -21,7 +102,23 @@ def fit_dead_time(attenuated, unattenuated, source='detector', mode='auto'):
     return data
 
 
+@module
 def monitor_dead_time(data, dead_time):
+    """
+    Correct the monitor dead time from the fitted dead time.
+
+    **Inputs**
+
+    data (refldata): Uncorrected data
+
+    dead_time (deadtime): Dead time information
+
+    **Returns**
+
+    output (refldata): Dead-time corrected data
+
+    2015-12-17 Paul Kienzle
+    """
     from .deadtime import apply_monitor_dead_time
 
     data = copy(data)
@@ -32,7 +129,23 @@ def monitor_dead_time(data, dead_time):
     return data
 
 
+@module
 def detector_dead_time(data, dead_time):
+    """
+    Correct the detector dead time from the fitted dead time.
+
+    **Inputs**
+
+    data (refldata): Uncorrected data
+
+    dead_time (deadtime): Dead time information
+
+    **Returns**
+
+    output (refldata): Dead-time corrected data
+
+    2015-12-17 Paul Kienzle
+    """
     from .deadtime import apply_detector_dead_time
 
     data = copy(data)
@@ -43,7 +156,21 @@ def detector_dead_time(data, dead_time):
     return data
 
 
+@module
 def monitor_saturation(data):
+    """
+    Correct the monitor dead time from stored saturation curve.
+
+    **Inputs**
+
+    data (refldata): Uncorrected data
+
+    **Returns**
+
+    output (refldata): Dead-time corrected data
+
+    2015-12-17 Paul Kienzle
+    """
     from .deadtime import apply_monitor_saturation
     if getattr(data.monitor, 'saturation', None) is not None:
         data = copy(data)
@@ -56,7 +183,21 @@ def monitor_saturation(data):
     return data
 
 
+@module
 def detector_saturation(data):
+    """
+    Correct the detector dead time from stored saturation curve.
+
+    **Inputs**
+
+    data (refldata): Uncorrected data
+
+    **Returns**
+
+    output (refldata): Dead-time corrected data
+
+    2015-12-17 Paul Kienzle
+    """
     from .deadtime import apply_detector_saturation
 
     data = copy(data)
@@ -66,7 +207,25 @@ def detector_saturation(data):
     return data
 
 
-def theta_offset(data, offset):
+@module
+def theta_offset(data, offset=0.0):
+    """
+    Correct the theta offset of the data, shifting sample and detector
+    angle and updating $q_x$ and $q_z$.
+
+    **Inputs**
+
+    data (refldata) : Uncorrected data
+
+    offset (float) : amount of shift to add to sample angle and subtract
+    from detector angle
+
+    **Returns**
+
+    output (refldata): Offset corrected data
+
+    2015-12-17 Paul Kienzle
+    """
     from .angles import apply_theta_offset
     data = copy(data)
     data.sample = copy(data.sample)
@@ -78,10 +237,21 @@ def theta_offset(data, offset):
     return data
 
 
+@module
 def back_reflection(data):
     """
     Reverse the sense of the reflection angles, making positive angles
-    negative and vice versa
+    negative and vice versa.
+
+    **Inputs**
+
+    data (refldata): Uncorrected data
+
+    **Returns**
+
+    output (refldata): Angle corrected data
+
+    2015-12-17 Paul Kienzle
     """
     from .angles import apply_back_reflection
     data = copy(data)
@@ -94,10 +264,21 @@ def back_reflection(data):
     return data
 
 
+@module
 def absolute_angle(data):
     """
     Assume all reflection is off the top surface, reversing the sense
     of negative angles.
+
+    **Inputs**
+
+    data (refldata): Uncorrected data
+
+    **Returns**
+
+    output (refldata): Angle corrected data
+
+    2015-12-17 Paul Kienzle
     """
     from .angles import apply_absolute_angle
     data = copy(data)
@@ -110,7 +291,21 @@ def absolute_angle(data):
     return data
 
 
+@module
 def divergence(data):
+    """
+    Estimate divergence from slit openings.
+
+    **Inputs**
+
+    data (refldata): data without resolution estimate
+
+    **Returns**
+
+    output (refldata): data with resolution estimate
+
+    2015-12-17 Paul Kienzle
+    """
     from .angles import apply_divergence
     data = copy(data)
     data.log('divergence()')
@@ -118,6 +313,7 @@ def divergence(data):
     return data
 
 
+@module
 def mask_specular(data):
     """
     Identify and mask out specular points.
@@ -125,6 +321,16 @@ def mask_specular(data):
     This defines the *mask* attribute of *data* as including all points that
     are not specular or not previously masked.  The points are not actually
     removed from the data, since this operation is done by *join*.
+
+    **Inputs**
+
+    data (refldata) : background data which may contain specular point
+
+    **Returns**
+
+    output (refldata) : masked data
+
+    2015-12-17 Paul Kienzle
     """
     from .background import apply_specular_mask
     data = copy(data)
@@ -133,7 +339,8 @@ def mask_specular(data):
     return data
 
 
-def mark_intent(data, intent):
+@module
+def mark_intent(data, intent='auto'):
     """
     Mark the file type based on the contents of the file, or override.
 
@@ -148,6 +355,19 @@ def mark_intent(data, intent):
     'rock sample' if only the incident angle changes, 'rock detector' if
     only the detector angle changes, or 'rock qx' if only $Q_x$ is changing
     throughout the scan.
+
+    **Inputs**
+
+    data (refldata) : data file which may or may not have intent marked
+
+    intent (auto|infer|specular|background+|background-|slit|rock sample|rock detector|rock qx)
+    : intent to register with the datafile, or auto/infer to guess
+
+    **Returns**
+
+    output (refldata) : marked data
+
+    2015-12-17 Paul Kienzle
     """
     from .intent import apply_intent
     data = copy(data)
@@ -155,6 +375,7 @@ def mark_intent(data, intent):
     apply_intent(data, intent)
     return data
 
+@module
 def normalize(data, base='auto'):
     """
     Estimate the detector count rate.
@@ -164,11 +385,25 @@ def normalize(data, base='auto'):
     per monitor count.  Note that operations that combine datasets require
     the same normalization on the points.
 
-    If *bases* is auto then the NORMALIZE_DEFAULT will be chosen.
+    If *base* is auto then the default will be chosen, which is 'monitor'
+    if the monitor exists, otherwise it is 'time'.
 
     When viewing data, you sometimes want to scale it to a nice number
     such that the number of counts displayed for the first point is
     approximately the number of counts on the detector.
+
+    **Inputs**
+
+    data (refldata) : data to normalize
+
+    base (auto|monitor|time|power|none)
+    : how to convert from counts to count rates
+
+    **Returns**
+
+    output (refldata) : data with count rate rather than counts
+
+    2015-12-17 Paul Kienzle
     """
     from .scale import apply_norm
     data = copy(data)
@@ -177,13 +412,32 @@ def normalize(data, base='auto'):
     return data
 
 
-def rescale(data, scale, dscale):
+@module
+def rescale(data, scale=1.0, dscale=0.0):
+    """
+    Rescale the count rate by some scale and uncertainty.
+
+    **Inputs**
+
+    data (refldata) : data to scale
+
+    scale (float) : amount to scale
+
+    dscale (float) : scale uncertainty for gaussian error propagation
+
+    **Returns**
+
+    output (refldata) : scaled data
+
+    2015-12-17 Paul Kienzle
+    """
     from .scale import apply_rescale
     data = copy(data)
     data.log("scale(%.15g,%.15g)" % (scale, dscale))
     apply_rescale(data, scale, dscale)
     return data
 
+@module
 def join(datasets, tolerance=0.05, order='file'):
     """
     Join operates on a list of datasets, returning a list with one dataset
@@ -208,6 +462,23 @@ def join(datasets, tolerance=0.05, order='file'):
 
     The joined datasets will be sorted as appropriate for the the
     measurement intent.  Masked points will be removed.
+
+    **Inputs**
+
+    datasets (refldata*) : data to join
+
+    tolerance (float) : allowed separation between points while still joining
+    them to a single point; this is relative to the angular resolution of the
+    each point
+
+    order (file|time|theta|slit|none) : order determines which file is the
+    base file, supplying the metadata for the joind set
+
+    **Returns**
+
+    output (refldata) : joined data
+
+    2015-12-17 Paul Kienzle
     """
     from .joindata import sort_files, join_datasets
     # No copy necessary; join is never in-place.
@@ -220,6 +491,7 @@ def join(datasets, tolerance=0.05, order='file'):
         data.log_dependency('data[%d]' % i, d)
     return data
 
+@module
 def align_background(data, offset='auto'):
     """
     Determine the Qz value associated with the background measurement.
@@ -239,6 +511,18 @@ def align_background(data, offset='auto'):
 
     The 'auto' test is robust: 90% of the points should be within 5% of the
     median value of the vector for the offset to be considered a constant.
+
+    **Inputs**
+
+    data (refldata) : background data with unknown $q$
+
+    offset (auto|sample|detector) : angle which determines $q_z$
+
+    **Returns**
+
+    output (refldata) : background with known $q$
+
+    2015-12-17 Paul Kienzle
     """
     if offset is None:
         offset = 'auto'
@@ -251,7 +535,8 @@ def align_background(data, offset='auto'):
     return data
 
 
-def subtract_background(data, backp=None, backm=None):
+@module
+def subtract_background(data, backp, backm):
     """
     Subtract the background datasets from the specular dataset.
 
@@ -269,6 +554,20 @@ def subtract_background(data, backp=None, backm=None):
 
     Background subtraction is applied independently to the different
     polarization cross sections.
+
+    **Inputs**
+
+    data (refldata) : specular data
+
+    backp (refldata?) : plus-offset background data
+
+    backm (refldata?) : minus-offset background data
+
+    **Returns**
+
+    output (refldata) : background subtracted specular data
+
+    2015-12-17 Paul Kienzle
     """
     from .background import apply_background_subtraction
 
@@ -284,7 +583,26 @@ def subtract_background(data, backp=None, backm=None):
     return data
 
 
+@module
 def divide_intensity(data, base):
+    """
+    Scale data by incident intensity.
+
+    Data is matched according to angular resolution, assuming all data with
+    the same angular resolution was subject to the same incident intensity.
+
+    **Inputs**
+
+    data (refldata) : specular, background or subtracted data
+
+    base (refldata) : intensity data
+
+    **Returns**
+
+    output (refldata) : reflected intensity
+
+    2015-12-17 Paul Kienzle
+    """
     from .scale import apply_intensity_norm
     data = copy(data)
     data.log("divide(base)")
@@ -293,6 +611,7 @@ def divide_intensity(data, base):
     return data
 
 
+@module
 def smooth_slits(datasets, degree=1, span=2, dx=0.01):
     """
     Align slits with a moving window 1-D polynomial least squares filter.
@@ -300,15 +619,26 @@ def smooth_slits(datasets, degree=1, span=2, dx=0.01):
     Updates *slit1.x*, *slit2.x* and *angular_resolution* attributes of the
     slit measurements so they all use a common set of points.
 
-    *degree* is the polynomial degree.
 
-    *span* is the number of consecutive points to use in the fit. Odd
+    Updates divergence automatically after smoothing.
+
+    **Inputs**
+
+    datasets (refldata*) : slits to align and smooth
+
+    degree (int) : polynomial degree on smoothing filter
+
+    span (int) : number of consecutive points to use in the fit. Odd
     sized *span* is preferred.  *span* must be larger than *degree*.
     *degree=1* and *span=2* is equivalent to linear interpolation.
 
-    *dx* is the size in mm within which slits can be merged.
+    dx (float) :  size in mm within which slits can be merged.
 
-    Updates divergence automatically after smoothing.
+    **Returns**
+
+    outputs (refldata*) : aligned and smoothed slits.
+
+    2015-12-17 Paul Kienzle
     """
     from .smoothslits import apply_smoothing
     datasets = [copy(d) for d in datasets]
@@ -322,7 +652,8 @@ def smooth_slits(datasets, degree=1, span=2, dx=0.01):
     return datasets
 
 
-def estimate_polarization(beam, FRbalance=0.5, Emin=0., Imin=0., clip=False):
+@module
+def estimate_polarization(data, FRbalance=0.5, Emin=0., Imin=0., clip=False):
     """
     Compute polarizer and flipper efficiencies from the intensity data.
 
@@ -340,17 +671,23 @@ def estimate_polarization(beam, FRbalance=0.5, Emin=0., Imin=0., clip=False):
 
     See PolarizationEfficiency.pdf for details on the calculation.
 
-    *beam* direct beam measurement to determine polarization
+    **Inputs**
 
-    *FRbalance* front/rear balance of to use for efficiency loss
+    data (refldata) : direct beam measurement to determine polarization
 
-    *Emin* Minimum efficiency cutoff
+    FRbalance (float) : front/rear balance of to use for efficiency loss
 
-    *Imin* Minimum intensity cutoff
+    Emin (float) : minimum efficiency cutoff
 
-    *spinflip* Correct spinflip data if available
+    Imin (float) : minimum intensity cutoff
 
-    *clip* Clip efficiency between minimum and one
+    clip (boolean) : clip efficiency between minimum and one
+
+    **Returns**
+
+    polarization (poldata) : estimated polarization correction factors
+
+    2015-12-17 Paul Kienzle
     """
     from .polarization import PolarizationData
 
@@ -364,11 +701,24 @@ def estimate_polarization(beam, FRbalance=0.5, Emin=0., Imin=0., clip=False):
     return data
 
 
+@module
 def correct_polarization(data, polarization, spinflip=True):
     """
-    *data* polarized data to be corrected
+    Correct data for polarizer and flipper efficiencies.
 
-    *polarization* previously measured polarization efficiency
+    **Inputs**
+
+    data (refldata) : polarized data to be corrected
+
+    polarization (poldata) : estimated polarization efficiency
+
+    spinflip (boolean) : correct spinflip data if available
+
+    **Returns**
+
+    output (refldata) : polarization corrected data
+
+    2015-12-17 Paul Kienzle
     """
     from .polarization import apply_polarization_correction
     data = copy(data)
@@ -378,8 +728,33 @@ def correct_polarization(data, polarization, spinflip=True):
     return data
 
 
-def save(data, ext, path="."):
-    filename = os.path.join(path, ".".join((data.name, ext)))
+@module
+def save(data, name='auto', ext='auto', path="."):
+    """
+    Save data to a particular file
+
+    **Inputs**
+
+    data (refldata) : data to save
+
+    name (string) : name of the file, or 'auto' to use the basename
+
+    ext (string) : file extension, or 'auto' to use the id of the last step
+
+    path (string) : data path, or 'auto' to use the current directory
+
+    2015-12-17 Paul Kienzle
+    """
+    if path == 'auto':
+        path = '.'
+    if ext == 'auto':
+        # TODO: look in the log to guess an extension
+        ext = '.dat'
+    elif not ext.startswith('.'):
+        ext = '.' + ext
+    if name == 'auto':
+        name = data.name
+    filename = os.path.join(path, name+ext)
     data.save(filename)
 
 

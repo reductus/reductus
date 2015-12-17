@@ -2,7 +2,7 @@ import numpy as np
 
 def apply_theta_offset(data, offset):
     data.sample.angle_x += offset
-    data.detector.angle_x += offset
+    data.detector.angle_x -= offset
 
 
 def apply_absolute_angle(data):

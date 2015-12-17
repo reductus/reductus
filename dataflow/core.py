@@ -1,9 +1,11 @@
 """
 Core class definitions
 """
+import sys
 from collections import deque
 import inspect
 import json
+import re
 
 from .deps import processing_order
 
@@ -88,22 +90,34 @@ class Module(object):
                 direction of the wire as it first leaves the terminal;
                 default is straight out
 
-    *fields* : Form
-        An inputEx form defining the constants needed for the module. For
+    *fields* : [Parameter]
+        An form defining the constants needed for the module. For
         example, an attenuator will have an attenuation scalar. Field
         names must be distinct from terminal names.
+
+        *id* : string
+            name of the variable associated with the date
+
+        *label* : string
+            display name for the terminal.
+
+
 
     *terminals* : [Terminal]
         List module inputs and outputs.
 
         *id* : string
-            name of the variable associated with the data
+            name of the variable associated with the data; this must
+            correspond to a parameter name in the module action.
 
-        *datatype* : string
+        *label* : string
+            display name for the terminal.
+
+        *type* : string
             name of the datatype associated with the data, with the
             output of one module needing to match the input of the
             next. Using a hierarchical type system, such as
-            data1d.refl, we can attach to generic modules like scaling
+            refl.data, we can attach to generic modules like scaling
             as well as specific modules like footprint correction. By
             defining the type of data that flows through the terminal
             we can highlight valid connections automatically.
@@ -122,13 +136,18 @@ class Module(object):
             true if multiple inputs are accepted; ignored on output
             terminals.
 
-        *xtype* : string
-            name of the xtype to be used for this container.
-            Common ones include WireIt.Container, WireIt.ImageContainer
-            and the locally-defined AutosizeImageContainer (see lang_common.js)
+        *action* : callable
+            function which performs the action
+
+        *module* : string
+            name of the module which contains the action.  You should
+            be able to import id from module to get action.
     """
     def __init__(self, id, version, name, description, icon=None,
-                 terminals=None, fields=None, action=None, xtype=None, filterModule=None):
+                 terminals=None, fields=None, action=None,
+                 author="", module="",
+                 xtype=None, filterModule=None,
+                 ):
         self.id = id
         self.version = version
         self.name = name
@@ -137,6 +156,7 @@ class Module(object):
         self.fields = fields if fields is not None else {}
         self.terminals = terminals
         self.action = action
+        self.module = module
         self.xtype = xtype
         self.filterModule = filterModule
 
@@ -419,3 +439,258 @@ if __name__ == '__main__':
                       {'id':'dad'})],
                 {'id':'son'})
     print "Dirty" if head.searchDirty() else "Clean"
+
+
+def bundle(fn):
+    """
+    Decorator which turns a single file function into a bundle function.
+
+    Note: untested code.
+
+    Note: not sure we want to do this; it would be better for the
+    infrastructure to identify that a bundle is given to an action
+    and unless the action is known to accept a bundle, it will open
+    up a table of parameter values, one for each file in the bundle
+    so that the can be set individually.
+    """
+    argspec = inspect.getargspec(fn)
+    full_args = argspec.args
+    call_args = full_args if not inspect.ismethod(fn) else full_args[1:]
+    first = call_args[0]
+    sig = ",".join(full_args)
+    call = ",".join(call_args)
+    source = """
+    def wrapper(%(sig)s):
+        if isinstance(%(first)s, list):
+            return [fn(%(call)s) for d in %(first)s]
+        else:
+            return fn(%(call)s)
+    """%dict(first=first, sig=sig, call=call)
+    context = dict(fn=fn)
+    code = compile(source, fn.__file__, 'single')
+    exec(code, context)
+    wrapper = context['wrapper']
+    wrapper.__name__ = fn.__name__
+    wrapper.__doc__ = fn.__doc__
+    wrapper.__module__ = fn.__module__
+    wrapper.__defaults__ = argspec.defaults
+    wrapper.__annotations__ = fn.__annotations__
+    wrapper.__dict__.update(fn.__dict__)
+
+
+def auto_module(action):
+    """
+    Given an action function, parse the docstring and return a node.
+
+    The action name and docstring are highly stylized.
+
+    The description is first.  It can span multiple lines.
+
+    The parameter sections are ``**Inputs**``, ``**Outputs**`` and
+    ``**Fields**``.  These must occur on a line by themselves, with
+    the ``**...**`` markup to make them show up bold in the sphinx docs.
+
+    Each parameter has name, type, description and optional default value.
+    The name is the first on the line, followed by the type in
+    (parentheses), then ':', a description string and default value in
+    [brackets].  The parameter definition can span multiple lines, but
+    the description will be joined to a single line.
+
+    If the input is optional, then mark the type with '?'.  If the node
+    accepts zero or more inputs, then mark the type with '*'.  If the node
+    accepts one or more inputs, then mark the type with '+'.
+
+    The possible types are determined by the
+
+        str, int, float, [float], opt1|opt2|...|optn
+
+
+    The resulting doc string should look okay in sphinx. For example,
+
+    ``
+        Fit detector dead time constants (paralyzing and non-paralyzing) from
+        measurement of attenuated and unattenuated data.
+
+        **Inputs**
+
+        attenuated (data): Attenuated detector counts
+
+        unattenuated (data): Unattenuated detector counts
+
+        source (detector|monitor): Measured tube [detector]
+
+        mode (P|NP|mixed|auto): Dead-time mode [auto]
+
+        **Returns**
+
+        deadtime (deadtime): Deadtime constants
+
+        2015-12-17 Paul Kienzle
+    ``
+    """
+    return _parse_function(action)
+
+timestamp = re.compile(r"^(?P<date>[0-9]{4}-[0-9]{2}-[0-9]{2})\s+(?P<author>.*?)\s*$")
+def _parse_function(action):
+    # Grab the docstring from the function
+    # Note: inspect.getdoc() cleans the docstring, removing the indentation and
+    # the leading and trailing carriage returns
+    lines = inspect.getdoc(action).split('\n')
+
+    # Default values for docstring portions
+    description_lines = []
+    input_lines = []
+    output_lines = []
+    version, author = "", ""
+
+    # Split docstring into sections
+    state = 0 # processing description
+    for line in lines:
+        match = timestamp.match(line)
+        stripped = line.strip()
+        if match is not None:
+            state = 3
+            version = match.group('date')
+            author = match.group('author')
+        elif stripped == "**Inputs**":
+            state = 1
+        elif line.strip() == "**Returns**":
+            state = 2
+        elif state == 0:
+            description_lines.append(line)
+        elif state == 1:
+            input_lines.append(line)
+        elif state == 2:
+            output_lines.append(line)
+        elif state == 3:
+            raise ValueError("docstring continues after time stamp")
+        else:
+            raise RuntimeError("Unknown state %s"%state)
+
+    # parse the sections
+    description = "".join(description_lines).strip()
+    inputs = _parse_parameters(input_lines)
+    output_terminals = _parse_parameters(output_lines)
+
+    # grab arguments and defaults from the function definition
+    argspec = inspect.getargspec(action)
+    args = argspec.args if not inspect.ismethod(action) else argspec.args[1:]
+    defaults = (dict(zip(args[-len(argspec.defaults):], argspec.defaults))
+                if argspec.defaults else {})
+    if argspec.varargs is not None or argspec.keywords is not None:
+        raise ValueError("function contains *args or **kwargs")
+
+    # Check that all defined arguments are described
+    defined = set(args)
+    described = set(p['id'] for p in inputs)
+    if defined-described:
+        raise ValueError("Parameters defined but not described: "
+                         + ",".join(sorted(defined-described)))
+    if described-defined:
+        raise ValueError("Parameters described but not defined: "
+                         + ",".join(sorted(described-defined)))
+
+    # Make sure there are no duplicates
+    all_described = set(p['id'] for p in inputs+output_terminals)
+    if len(all_described) != len(inputs)+len(output_terminals):
+        raise ValueError("Parameter and return value names must be unique")
+
+    # Split parameters into terminals (non-keyword) and fields (keyword)
+    field_names = args[-len(defaults):] if defaults else []
+    field_set = set(field_names)
+    input_terminals = [p for p in inputs if p['id'] not in field_set]
+    input_fields = [p for p in inputs if p['id'] in field_set]
+
+    # Set the defaults for the fields from the keyword arguments
+    for p in input_fields:
+        if p['default'] is None:
+            p['default'] = str(defaults[p['id']])
+
+    # Set the terminal direction
+    for p in input_terminals:
+        p['use'] = 'in'
+    for p in output_terminals:
+        p['use'] = 'out'
+
+    # Collect all the node info
+    result = {
+        'id': action.__name__,
+        'name': _unsplit_name(action.__name__),
+        'description': description,
+        'terminals': input_terminals + output_terminals,
+        'fields': input_fields,
+        'version': version,
+        'author': author,
+        'module': action.__module__
+        }
+
+    return result
+
+def _unsplit_name(name):
+    """
+    Convert "this_name" into "This Name".
+    """
+    return " ".join(s.capitalize() for s in name.split('_'))
+
+
+# name (optional type): description [optional default]
+parameter_re = re.compile("""\A
+    \s*(?P<id>\w+)                       # name
+    \s*([(]\s*(?P<type>[^)]*)\s*[)])?    # ( type )
+    \s*:                                 # :
+    \s*(?P<description>.*?)              # non-greedy description
+    \s*([[]\s*(?P<default>.*?)\s*[]])?   # [ default ]
+    \s*\Z""", re.VERBOSE)
+
+def _parse_parameters(lines):
+    """
+    Interpret the doc strings for the parameters.
+
+    Each parameter must use the form defined by parameter_re above:
+
+        name (optional type): description [optional default]
+
+    *lines* is the set of lines after ``**Inputs**`` and ``**Returns**``.
+    Note that parameters are defined by consecutive non-blank lines separated
+    by blank lines.  :func:`_group_parameters` is used to gather all of the
+    relevant lines together, skipping the blank bits.
+    """
+    ret = []
+    for group in _get_paragraphs(lines):
+        s = " ".join(s.strip() for s in group)
+        match = parameter_re.match(s)
+        if match is None:
+            raise ValueError("unable to parse parameter:\n  "+"  ".join(group))
+        d = match.groupdict()
+        d['required'] = False
+        d['multiple'] = False
+        if d['type'].endswith('?'):
+            d['type'] = d['type'][:-1]
+            d['required'] = True
+        elif d['type'].endswith('*'):
+            d['type'] = d['type'][:-1]
+            d['multiple'] = True
+        elif d['type'].endswith('+'):
+            d['type'] = d['type'][:-1]
+            d['required'] = True
+            d['multiple'] = True
+        d['label'] = _unsplit_name(d['id'])
+        ret.append(d)
+    return ret
+
+def _get_paragraphs(lines):
+    """
+    Yield a list of paragraphs defined as lines separated by blank lines.
+
+    Each paragraph is returned as a list of lines.
+    """
+    group = []
+    for line in lines:
+        if line.strip() == "":
+            if group:
+                yield group
+            group = []
+        else:
+            group.append(line)
+    if group:
+        yield group
