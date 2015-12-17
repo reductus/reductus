@@ -122,6 +122,8 @@ def get_file_metadata(pathlist=None):
     return fn
 
 from dataflow.core import register_module, register_datatype, Template, Data
+from dataflow.cache import use_redis
+use_redis()
 from dataflow.calc import calc_single
 from dataflow.modules.load import load_module, load_action
 from reflred.refldata import ReflData

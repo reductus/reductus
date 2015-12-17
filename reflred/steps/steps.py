@@ -102,16 +102,26 @@ def fit_dead_time(attenuated, unattenuated, source='detector', mode='auto'):
     return data
 
 
+
 @module
-def monitor_dead_time(data, dead_time):
+def monitor_dead_time(data, dead_time, nonparalyzing=0.0, paralyzing=0.0):
     """
     Correct the monitor dead time from the fitted dead time.
 
+    If *tau_NP* and *tau_P* are non-zero, then use them.  If a dead_time
+    fit result is supplied, then use it.  If the dead time constants are
+    given in the data file, then use them.  Otherwise don't do any
+    dead time correction.
+
     **Inputs**
 
-    data (refldata): Uncorrected data
+    data (refldata) : Uncorrected data
 
-    dead_time (deadtime): Dead time information
+    dead_time (deadtime?) : Dead time information
+
+    nonparalyzing (float,us) : non-paralyzing dead time constant
+
+    paralyzing (float,us) : paralyzing dead time constant
 
     **Returns**
 
@@ -123,22 +133,48 @@ def monitor_dead_time(data, dead_time):
 
     data = copy(data)
     data.monitor = copy(data.monitor)
-    data.log('monitor_dead_time(dead_time)')
-    data.log_dependency('dead_time', dead_time)
-    apply_monitor_dead_time(data, dead_time)
+    if nonparalyzing != 0.0 or paralyzing != 0.0:
+        data.log('monitor_dead_time(nonparalyzing=%.15g, paralyzing=%.15g)'
+                 % (nonparalyzing, paralyzing))
+        apply_monitor_dead_time(data, tau_NP=nonparalyzing,
+                                tau_P=paralyzing)
+    elif dead_time != None:
+        data.log('monitor_dead_time(dead_time)')
+        data.log_dependency('dead_time', dead_time)
+        apply_monitor_dead_time(data, tau_NP=dead_time.tau_NP,
+                                tau_P=dead_time.tau_P)
+    elif data.monitor.deadtime is not None:
+        try:
+            tau_NP, tau_P = data.monitor.deadtime
+        except:
+            tau_NP, tau_P = data.monitor.deadtime, 0.0
+        data.log('monitor_dead_time()')
+        apply_monitor_dead_time(data, tau_NP=tau_NP, tau_P=tau_P)
+    else:
+        pass  # no deadtime correction parameters available.
+
     return data
 
 
 @module
-def detector_dead_time(data, dead_time):
+def detector_dead_time(data, dead_time, nonparalyzing=0.0, paralyzing=0.0):
     """
     Correct the detector dead time from the fitted dead time.
 
+    If *tau_NP* and *tau_P* are non-zero, then use them.  If a dead_time
+    fit result is supplied, then use it.  If the dead time constants are
+    given in the data file, then use them.  Otherwise don't do any
+    dead time correction.
+
     **Inputs**
 
-    data (refldata): Uncorrected data
+    data (refldata) : Uncorrected data
 
-    dead_time (deadtime): Dead time information
+    dead_time (deadtime?) : Dead time information
+
+    nonparalyzing (float,us) : non-paralyzing dead time constant
+
+    paralyzing (float,us) : paralyzing dead time constant
 
     **Returns**
 
@@ -150,9 +186,26 @@ def detector_dead_time(data, dead_time):
 
     data = copy(data)
     data.detector = copy(data.detector)
-    data.log('detector_dead_time(dead_time)')
-    data.log_dependency('dead_time', dead_time)
-    apply_detector_dead_time(data, dead_time)
+    if nonparalyzing != 0.0 or paralyzing != 0.0:
+        data.log('detector_dead_time(nonparalyzing=%.15g, paralyzing=%.15g)'
+                 % (nonparalyzing, paralyzing))
+        apply_detector_dead_time(data, tau_NP=nonparalyzing,
+                                tau_P=paralyzing)
+    elif dead_time != None:
+        data.log('detector_dead_time(dead_time)')
+        data.log_dependency('dead_time', dead_time)
+        apply_detector_dead_time(data, tau_NP=dead_time.tau_NP,
+                                tau_P=dead_time.tau_P)
+    elif data.detector.deadtime is not None:
+        try:
+            tau_NP, tau_P = data.detector.deadtime
+        except:
+            tau_NP, tau_P = data.detector.deadtime, 0.0
+        data.log('detector_dead_time()')
+        apply_detector_dead_time(data, tau_NP=tau_NP, tau_P=tau_P)
+    else:
+        pass  # no deadtime correction parameters available.
+
     return data
 
 
@@ -781,8 +834,8 @@ def demo():
                                               monitor_unattenuated)
         detector_dead_time = cor.fit_dead_time(detector_attenuated,
                                                detector_unattenuated)
-        files = [cor.monitor_dead_time(d, monitor_dead_time) for d in files]
-        files = [cor.detector_dead_time(d, detector_dead_time) for d in files]
+        files = [cor.monitor_dead_time(d, tau_NP=monitor_dead_time.tau_NP, tau_P=monitor_dead_time.tau_P) for d in files]
+        files = [cor.detector_dead_time(d, tau_NP=detector_dead_time.tau_NP, tau_P=detector_dead_time.tau_P) for d in files]
     else:
         files = [cor.monitor_saturation(d) for d in files]
         files = [cor.detector_saturation(d) for d in files]
