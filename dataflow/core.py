@@ -71,6 +71,12 @@ class Module(object):
         is just the name of the operation. By convention, it should have
         every word capitalized, with spaces between words.
 
+    *action* : callable
+        function which performs the action
+
+    *action_id* : string
+        fully qualified name required to import the action
+
     *description* : string
         A tooltip shown when hovering over the icon
 
@@ -135,17 +141,10 @@ class Module(object):
         *multiple* : boolean
             true if multiple inputs are accepted; ignored on output
             terminals.
-
-        *action* : callable
-            function which performs the action
-
-        *module* : string
-            name of the module which contains the action.  You should
-            be able to import id from module to get action.
     """
     def __init__(self, id, version, name, description, icon=None,
                  terminals=None, fields=None, action=None,
-                 author="", module="",
+                 author="", action_id="",
                  xtype=None, filterModule=None,
                  ):
         self.id = id
@@ -156,7 +155,7 @@ class Module(object):
         self.fields = fields if fields is not None else {}
         self.terminals = terminals
         self.action = action
-        self.module = module
+        self.action_id = action_id
         self.xtype = xtype
         self.filterModule = filterModule
 
@@ -354,7 +353,7 @@ class Data(object):
 
     *version* : string
 
-    *inputs* : { <input terminal name> : [(<hist iindex>, <output terminal>), ...] }
+    *inputs* : { <input terminal name> : [(<hist index>, <output terminal>), ...] }
 
     *config* : { <field name> : value, ... }
 
@@ -477,6 +476,59 @@ def bundle(fn):
     wrapper.__annotations__ = fn.__annotations__
     wrapper.__dict__.update(fn.__dict__)
 
+def outputs_wrapper(module_description, action):
+    """
+    Turn the action which returns a list of outputs into an action
+    that returns a dictionary.
+    """
+    keys = [p['id'] for p in module_description['terminals']
+            if p['use'] == 'out']
+    if len(keys) > 1:
+        def wrapper(*args, **kw):
+            result = action(*args, **kw)
+            print action.__name__,"returns",result,"into",keys
+            return dict(zip(keys, result))
+        return wrapper
+    elif len(keys) == 1:
+        def wrapper(*args, **kw):
+            result = action(*args, **kw)
+            return {keys[0]: result}
+        return wrapper
+    else:
+        return action
+
+
+def make_modules(actions, prefix=""):
+    """
+    Convert a list of action functions into modules using auto_module.
+
+    All ids are prefixed with prefix.
+    """
+    modules = []
+    for action in actions:
+        # Read the module defintion from the docstring
+        module_description = auto_module(action)
+
+        # Tag module ids with prefix
+        module_description['id'] = prefix + module_description['id']
+
+        # Tag each terminal data type with the data type prefix, if it is
+        # not already a fully qualified name
+        for v in module_description['terminals']:
+            if '.' not in v['datatype']:
+                v['datatype'] = prefix + v['datatype']
+
+        action = outputs_wrapper(module_description, action)
+        # Define and register the module
+        module = Module(action=action, **module_description)
+        modules.append(module)
+
+        #from pprint import pprint
+        #pprint(module_description)
+
+    return modules
+
+
 
 def auto_module(action):
     """
@@ -500,10 +552,14 @@ def auto_module(action):
     accepts zero or more inputs, then mark the type with '*'.  If the node
     accepts one or more inputs, then mark the type with '+'.
 
-    The possible types are determined by the
+    The possible types are determined by the user interface.  Here is the
+    currently suggested types:
 
-        str, int, float, [float], opt1|opt2|...|optn
+        str, int, bool, float, float:units, float[n], opt1|opt2|...|optn
 
+    Each instrument will likely have its own data types as well, which are
+    associated with the wires and have enough information that they can
+    be plotted.
 
     The resulting doc string should look okay in sphinx. For example,
 
@@ -621,7 +677,7 @@ def _parse_function(action):
         'fields': input_fields,
         'version': version,
         'author': author,
-        'module': action.__module__
+        'action_id': action.__module__ + "." + action.__name__
         }
 
     return result
@@ -635,11 +691,11 @@ def _unsplit_name(name):
 
 # name (optional type): description [optional default]
 parameter_re = re.compile("""\A
-    \s*(?P<id>\w+)                       # name
-    \s*([(]\s*(?P<type>[^)]*)\s*[)])?    # ( type )
-    \s*:                                 # :
-    \s*(?P<description>.*?)              # non-greedy description
-    \s*([[]\s*(?P<default>.*?)\s*[]])?   # [ default ]
+    \s*(?P<id>\w+)                           # name
+    \s*([(]\s*(?P<datatype>[^)]*)\s*[)])?    # ( datatype )
+    \s*:                                     # :
+    \s*(?P<description>.*?)                  # non-greedy description
+    \s*([[]\s*(?P<default>.*?)\s*[]])?       # [ default ]
     \s*\Z""", re.VERBOSE)
 
 def _parse_parameters(lines):
@@ -664,14 +720,14 @@ def _parse_parameters(lines):
         d = match.groupdict()
         d['required'] = False
         d['multiple'] = False
-        if d['type'].endswith('?'):
-            d['type'] = d['type'][:-1]
+        if d['datatype'].endswith('?'):
+            d['datatype'] = d['datatype'][:-1]
             d['required'] = True
-        elif d['type'].endswith('*'):
-            d['type'] = d['type'][:-1]
+        elif d['datatype'].endswith('*'):
+            d['datatype'] = d['datatype'][:-1]
             d['multiple'] = True
-        elif d['type'].endswith('+'):
-            d['type'] = d['type'][:-1]
+        elif d['datatype'].endswith('+'):
+            d['datatype'] = d['datatype'][:-1]
             d['required'] = True
             d['multiple'] = True
         d['label'] = _unsplit_name(d['id'])

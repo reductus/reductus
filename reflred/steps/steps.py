@@ -6,46 +6,17 @@ from warnings import warn
 # TODO: maybe bring back formula to show the math of each step
 # TODO: what about polarized data?
 
-DATA_PREFIX = "refl1d.ncnr."
-
-ALL_MODULES = []
+ALL_ACTIONS = []
 def module(action):
     """
-    Decorator which records the action in *ALL_MODULES*.
+    Decorator which records the action in *ALL_ACTIONS*.
 
     This just collects the action, it does not otherwise modify it.
     """
-    ALL_MODULES.append(action)
+    ALL_ACTIONS.append(action)
 
     # This is a decorator, so return the original function
     return action
-
-
-def register_actions():
-    """
-    Register each action as a dataflow module.
-
-    This operates on the list of actions collected in *ALL_MODULES*
-    by the @module decorator
-    """
-    from dataflow.core import Module, auto_module, register_module
-
-    for action in ALL_MODULES:
-        # Read the module defintion from the docstring
-        module_description = auto_module(action)
-
-        # Tag each terminal data type with the data type prefix, if it is
-        # not already a fully qualified name
-        for v in module_description['terminals']:
-            if '.' not in v['type']:
-                v['type'] = DATA_PREFIX + v['type']
-
-        # Define and register the module
-        module = Module(action=action, **module_description)
-        register_module(module)
-
-        from pprint import pprint
-        pprint(module_description)
 
 
 @module
@@ -60,7 +31,7 @@ def ncnr_load(filelist=None):
 
     **Returns**
 
-    entries (refldata+): All entries of all files in the list.
+    output (refldata+): All entries of all files in the list.
 
     2015-12-17 Brian Maranville
     """
@@ -119,9 +90,9 @@ def monitor_dead_time(data, dead_time, nonparalyzing=0.0, paralyzing=0.0):
 
     dead_time (deadtime?) : Dead time information
 
-    nonparalyzing (float,us) : non-paralyzing dead time constant
+    nonparalyzing (float:us) : non-paralyzing dead time constant
 
-    paralyzing (float,us) : paralyzing dead time constant
+    paralyzing (float:us) : paralyzing dead time constant
 
     **Returns**
 
@@ -172,9 +143,9 @@ def detector_dead_time(data, dead_time, nonparalyzing=0.0, paralyzing=0.0):
 
     dead_time (deadtime?) : Dead time information
 
-    nonparalyzing (float,us) : non-paralyzing dead time constant
+    nonparalyzing (float:us) : non-paralyzing dead time constant
 
-    paralyzing (float,us) : paralyzing dead time constant
+    paralyzing (float:us) : paralyzing dead time constant
 
     **Returns**
 
@@ -270,7 +241,7 @@ def theta_offset(data, offset=0.0):
 
     data (refldata) : Uncorrected data
 
-    offset (float) : amount of shift to add to sample angle and subtract
+    offset (float:degree) : amount of shift to add to sample angle and subtract
     from detector angle
 
     **Returns**
@@ -474,9 +445,9 @@ def rescale(data, scale=1.0, dscale=0.0):
 
     data (refldata) : data to scale
 
-    scale (float) : amount to scale
+    scale (float:) : amount to scale
 
-    dscale (float) : scale uncertainty for gaussian error propagation
+    dscale (float:) : scale uncertainty for gaussian error propagation
 
     **Returns**
 
@@ -520,7 +491,7 @@ def join(datasets, tolerance=0.05, order='file'):
 
     datasets (refldata*) : data to join
 
-    tolerance (float) : allowed separation between points while still joining
+    tolerance (float:) : allowed separation between points while still joining
     them to a single point; this is relative to the angular resolution of the
     each point
 
@@ -685,7 +656,7 @@ def smooth_slits(datasets, degree=1, span=2, dx=0.01):
     sized *span* is preferred.  *span* must be larger than *degree*.
     *degree=1* and *span=2* is equivalent to linear interpolation.
 
-    dx (float) :  size in mm within which slits can be merged.
+    dx (float:mm) :  size within which slits can be merged.
 
     **Returns**
 
@@ -706,7 +677,7 @@ def smooth_slits(datasets, degree=1, span=2, dx=0.01):
 
 
 @module
-def estimate_polarization(data, FRbalance=0.5, Emin=0., Imin=0., clip=False):
+def estimate_polarization(data, FRbalance=0.5, Emin=0.0, Imin=0.0, clip=False):
     """
     Compute polarizer and flipper efficiencies from the intensity data.
 
@@ -728,13 +699,13 @@ def estimate_polarization(data, FRbalance=0.5, Emin=0., Imin=0., clip=False):
 
     data (refldata) : direct beam measurement to determine polarization
 
-    FRbalance (float) : front/rear balance of to use for efficiency loss
+    FRbalance (float:) : front/rear balance of to use for efficiency loss
 
-    Emin (float) : minimum efficiency cutoff
+    Emin (float:) : minimum efficiency cutoff
 
-    Imin (float) : minimum intensity cutoff
+    Imin (float:) : minimum intensity cutoff
 
-    clip (boolean) : clip efficiency between minimum and one
+    clip (bool) : clip efficiency between minimum and one
 
     **Returns**
 
@@ -765,7 +736,7 @@ def correct_polarization(data, polarization, spinflip=True):
 
     polarization (poldata) : estimated polarization efficiency
 
-    spinflip (boolean) : correct spinflip data if available
+    spinflip (bool) : correct spinflip data if available
 
     **Returns**
 
@@ -790,11 +761,11 @@ def save(data, name='auto', ext='auto', path="."):
 
     data (refldata) : data to save
 
-    name (string) : name of the file, or 'auto' to use the basename
+    name (str) : name of the file, or 'auto' to use the basename
 
-    ext (string) : file extension, or 'auto' to use the id of the last step
+    ext (str)  : file extension, or 'auto' to use the id of the last step
 
-    path (string) : data path, or 'auto' to use the current directory
+    path (str) : data path, or 'auto' to use the current directory
 
     2015-12-17 Paul Kienzle
     """
