@@ -538,51 +538,61 @@ def auto_module(action):
 
     The description is first.  It can span multiple lines.
 
-    The parameter sections are ``**Inputs**``, ``**Outputs**`` and
-    ``**Fields**``.  These must occur on a line by themselves, with
-    the ``**...**`` markup to make them show up bold in the sphinx docs.
+    The parameter sections are ``**Inputs**`` and ``**Returns**``.
+    These must occur on a line by themselves, with the ``**...**`` markup
+    to make them show up bold in the sphinx docs.  The Inputs are split
+    into input terminals and input fields depending on whether a default
+    value is given in the function definition (see example below).
 
     Each parameter has name, type, description and optional default value.
     The name is the first on the line, followed by the type in
-    (parentheses), then ':', a description string and default value in
-    [brackets].  The parameter definition can span multiple lines, but
-    the description will be joined to a single line.
+    (parentheses), then ':' and a description string. The parameter
+    definition can span multiple lines, but the description will be
+    joined to a single line.  The default value for the parameter is taken
+    from the keyword argument list.  If for some reason this doesn't work,
+    then add [default] in square brackets after the description, and it
+    will override the keyword value.
 
-    If the input is optional, then mark the type with '?'.  If the node
+    If the input is optional, then mark the input type with '?'.  If the node
     accepts zero or more inputs, then mark the type with '*'.  If the node
-    accepts one or more inputs, then mark the type with '+'.
+    accepts one or more inputs, then mark the type with '+'.  These flags
+    set the *required* and *multiple* properties of the terminal/field.
 
     The possible types are determined by the user interface.  Here is the
     currently suggested types:
 
         str, int, bool, float, float:units, float[n], opt1|opt2|...|optn
 
-    Each instrument will likely have its own data types as well, which are
+    Each instrument will have its own data types as well, which are
     associated with the wires and have enough information that they can
     be plotted.
 
     The resulting doc string should look okay in sphinx. For example,
 
     ``
-        Fit detector dead time constants (paralyzing and non-paralyzing) from
-        measurement of attenuated and unattenuated data.
+        def rescale(data, scale=1.0, dscale=0.0):
+            \"""
+            Rescale the count rate by some scale and uncertainty.
 
-        **Inputs**
+            **Inputs**
 
-        attenuated (data): Attenuated detector counts
+            data (refldata) : data to scale
 
-        unattenuated (data): Unattenuated detector counts
+            scale (float:) : amount to scale
 
-        source (detector|monitor): Measured tube [detector]
+            dscale (float:) : scale uncertainty for gaussian error propagation
 
-        mode (P|NP|mixed|auto): Dead-time mode [auto]
+            **Returns**
 
-        **Returns**
+            output (refldata) : scaled data
 
-        deadtime (deadtime): Deadtime constants
-
-        2015-12-17 Paul Kienzle
+            2015-12-17 Paul Kienzle
+            \"""
     ``
+
+    The 'float:' type indicates that it is a floating point value with no
+    units, as opposed to a floating point value for which we haven't thought
+    about the units that are needed.
     """
     return _parse_function(action)
 
