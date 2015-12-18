@@ -7,13 +7,11 @@ import pytz
 
 from reflred.formats import nexusref
 
-DATA_SOURCE = "http://ncnr.nist.gov/pub/"
-
 def url_load(fileinfo):
     path, file_mtime = fileinfo['path'], fileinfo['mtime']
     name = basename(path)
     try:
-        url = urllib2.urlopen(DATA_SOURCE + path)
+        url = urllib2.urlopen(path)
         url_mtime = url.info().getdate('last-modified')
         cm = datetime.datetime(*url_mtime[:7], tzinfo=pytz.utc)
         fm = datetime.datetime.fromtimestamp(file_mtime, pytz.utc)

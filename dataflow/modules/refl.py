@@ -42,6 +42,9 @@ def test():
     from dataflow.calc import calc_single
     test_dataset = [{'path': "ncnrdata/cgd/201511/21066/data/HMDSO_17nm_dry14.nxz.cgd",
                      "mtime": 1447353278}]
+    # join data source to path within data source for full urls
+    for d in test_dataset:
+        d['path'] = refl1d.archive + d['path']
     import numpy; numpy.seterr(all='raise')
     modules = [{"module": "refl1d.ncnr.ncnr_load", "version": 0.1, "config": {}}]
     template = Template("test", "test template", modules, [],
