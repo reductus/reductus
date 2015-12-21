@@ -7,11 +7,14 @@ import pytz
 
 from reflred.formats import nexusref
 
+DATA_SOURCE = None
 def url_load(fileinfo):
     path, file_mtime = fileinfo['path'], fileinfo['mtime']
     name = basename(path)
     try:
-        url = urllib2.urlopen(path)
+        if DATA_SOURCE is None:
+            raise RuntimeError("Need to set reflred.steps.load.DATA_SOURCE first!")
+        url = urllib2.urlopen(DATA_SOURCE+path)
         url_mtime = url.info().getdate('last-modified')
         cm = datetime.datetime(*url_mtime[:7], tzinfo=pytz.utc)
         fm = datetime.datetime.fromtimestamp(file_mtime, pytz.utc)

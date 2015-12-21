@@ -5,7 +5,6 @@ from reflred.refldata import ReflData
 from reflred.steps.polarization import PolarizationData
 from reflred.steps.deadtime import DeadTimeData
 
-DATA_SOURCE = "http://ncnr.nist.gov/pub/"
 INSTRUMENT_PREFIX = "refl1d.ncnr."
 
 # Define modules
@@ -30,7 +29,7 @@ refl1d = df.Instrument(
     name='NCNR reflectometer',
     menu=[('steps', modules)],
     datatypes=[refldata, poldata, deadtime],
-    archive=DATA_SOURCE,
+    archive="NCNR",
     )
 
 # Register instrument
@@ -40,6 +39,9 @@ df.register_instrument(refl1d)
 def test():
     from dataflow.core import Template
     from dataflow.calc import calc_single
+    from reflred.steps import load
+    load.DATA_SOURCE = "http://ncnr.nist.gov/pub/"
+
     test_dataset = [{'path': "ncnrdata/cgd/201511/21066/data/HMDSO_17nm_dry14.nxz.cgd",
                      "mtime": 1447353278}]
     # join data source to path within data source for full urls
