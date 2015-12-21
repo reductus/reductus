@@ -1,0 +1,55 @@
+<html>
+<head>
+<title>Demo: Printer</title>
+<script type="text/javascript" src="/~brian/icejs/Ice.js"></script>
+<script type="text/javascript" src="/~brian/reduction/reflweb/zeroc/dataflow.js"></script>
+<script type="text/javascript">
+
+ 
+  var ic;
+  var response;
+  var calc
+   
+  Ice.Promise.try(
+      function()
+      {
+          ic = Ice.initialize();
+          var calc_base = ic.stringToProxy("Calc:ws -h localhost -p 10001"),
+              util_base = ic.stringToProxy("Util:ws -h localhost -p 10001");
+          return Dataflow.CalcPrx.checkedCast(calc_base).then(
+              function(c)
+              {
+                  calc = c;
+                  console.log('calc object created');
+                  return Dataflow.UtilPrx.checkedCast(util_base)
+                  //return printer.printString("Hello World!");
+              }
+          ).then(
+            function(u) {
+              util = u;
+              console.log('util object created');
+            }
+          );
+      }
+  ).finally(
+      function()
+      {
+          //if(ic)
+          //{
+          //    return ic.destroy();
+          //}
+      }
+  ).exception(
+      function(ex)
+      {
+          console.log(ex.toString());
+          process.exit(1);
+      }
+  );
+</script>
+</head>
+<body>
+Print!
+</body>
+</html>
+
