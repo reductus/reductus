@@ -75,16 +75,11 @@ server.register_function(pow)
 server.register_function(lambda x,y: x+y, 'add')
 server.register_function(lambda x: x, 'ping')
 
-import h5py, os, simplejson
+import h5py, os
 
 def categorize_files(path='./'):
     fns = os.listdir(path)
     fns.sort()
-    categories = {\
-        'Specular': 'SPEC',
-        'Background': 'BG', 
-        'Rocking': 'ROCK',
-        'Slit': 'SLIT'}
     output = {}
     for fn in fns:
         try:
@@ -103,7 +98,7 @@ def categorize_files(path='./'):
         except:
             pass
             
-    #return simplejson.dumps(output)
+    #return json.dumps(output)
     return output
 
 def get_file_metadata(pathlist=None):
