@@ -18,6 +18,22 @@ def module(action):
     # This is a decorator, so return the original function
     return action
 
+@module
+def nop(data):
+    """
+    No operation.
+
+    **Inputs**
+
+    data (refldata): Input data
+
+    **Returns**
+
+    output (refldata): Unaltered data
+
+    2015-12-31 Paul Kienzle
+    """
+    return data
 
 @module
 def ncnr_load(filelist=None):

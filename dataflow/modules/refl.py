@@ -57,7 +57,10 @@ def demo():
 def unpolarized_template():
     from dataflow.core import make_template
     diagram = [
+        # Load the data
         ["ncnr_load", {}],
+
+        # Preprocessing common to all data sets
         ["monitor_saturation", {"data": "-.output"}],
         ["detector_saturation", {"data": "-.output"}],
         ["divergence", {"data": "-.output"}],
@@ -65,19 +68,27 @@ def unpolarized_template():
         ["mark_intent", {"data": "-.output", "intent": "auto"}],
         ["group_by_intent => split", {"data": "-.output"}],
 
-        ["join => spec", {"data": "split.specular"}],
+        # Preprocessing particular to each data type
+        # Use nop to restart pipeline after split so that it is easier to
+        # add/remove/rearrange steps for the different data types.
+        ["nop", {"data": "split.specular"}],
+        ["join => spec", {"data": "-.output"}],
 
-        ["mask_specular",  {"data": "split.backp"}],
+        ["nop", {"data": "split.backp"}],
+        ["mask_specular",  {"data": "-.output"}],
         ["align_background",  {"data": "-.output", "offset": "auto"}],
         ["join => backp",  {"data": "-.output"},],
 
-        ["mask_specular",  {"data": "split.backm"}],
+        ["nop", {"data": "split.backm"}],
+        ["mask_specular",  {"data": "-.output"}],
         ["align_background",  {"data": "-.output", "offset": "auto"}],
         ["join => backm",  {"data": "-.output"}],
 
-        ["rescale",  {"data": "split.slit", "scale": 1.0, "dscale": 0.0}],
+        ["nop", {"data": "split.slit"}],
+        ["rescale",  {"data": "-.output", "scale": 1.0, "dscale": 0.0}],
         ["join => slit",  {"data": "-.output", "tolerance": 0.0001}],
 
+        # Operate on the combined data for the final reduction
         ["subtract_background", {
             "data": "spec.output",
             "backp": "backp.output",
