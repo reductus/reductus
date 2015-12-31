@@ -173,7 +173,6 @@ def get_plottable(template, config, nodenum, terminal_id):
         print "no cached plottable: calculating..."
         data = calc_single(template, config, nodenum, terminal_id)
         plottable = []
-        binary_data = []
         for dnum, datum in enumerate(data):
             if hasattr(datum, 'use_binary') and datum.use_binary() == True:
                 binary_data = datum.get_plottable_binary()
@@ -197,12 +196,14 @@ def get_plottable(template, config, nodenum, terminal_id):
 def get_csv(template, config, nodenum, terminal_id):
     cache = get_cache()
 
+    """
     # Find the modules
     node = template.modules[nodenum]
     module_id = node['module'] # template.modules[node]
     module = lookup_module(module_id)
     terminal = module.get_terminal_by_id(terminal_id)
-    
+    """
+
     all_fp = fingerprint_template(template, config)
     fp = all_fp[nodenum]
     csv_fp = name_terminal(name_csv(fp), terminal_id)
