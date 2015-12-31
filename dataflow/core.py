@@ -96,20 +96,36 @@ class Module(object):
                 direction of the wire as it first leaves the terminal;
                 default is straight out
 
-    *fields* : [Parameter]
-        An form defining the constants needed for the module. For
+    *fields* : [{Parameter}, ...]
+        A form defining the constants needed for the module. For
         example, an attenuator will have an attenuation scalar. Field
         names must be distinct from terminal names.
 
         *id* : string
-            name of the variable associated with the date
+            name of the variable associated with the data; this must
+            correspond to a parameter name in the module action.
 
         *label* : string
-            display name for the terminal.
+            display name for the field.
+
+        *type* : string
+            name of the datatype associated with the data
+
+        *default* : object
+            default value if none specified in template
+
+        *description* : string
+            A tooltip shown when hovering over the field
+
+        *required* : boolean
+            true if a value is required
+
+        *multiple* : boolean
+            true if each input should get a different value when processing
+            a bundle with the module.
 
 
-
-    *terminals* : [Terminal]
+    *terminals* : [{Terminal}, ...]
         List module inputs and outputs.
 
         *id* : string
@@ -139,13 +155,12 @@ class Module(object):
             true if an input is required; ignored on output terminals.
 
         *multiple* : boolean
-            true if multiple inputs are accepted; ignored on output
-            terminals.
+            true if multiple inputs are accepted on input terminals,
+            or if multiple outputs are produced on output terminals.
     """
     def __init__(self, id, version, name, description, icon=None,
                  terminals=None, fields=None, action=None,
                  author="", action_id="",
-                 xtype=None, filterModule=None,
                  ):
         self.id = id
         self.version = version
@@ -156,16 +171,17 @@ class Module(object):
         self.terminals = terminals
         self.action = action
         self.action_id = action_id
-        self.xtype = xtype
-        self.filterModule = filterModule
 
     def get_terminal_by_id(self, id):
         """ 
         Lookup terminal by id, and return.
         Returns None if id does not exist.
         """
-        terminal_lookup = dict((t['id'], t) for t in self.terminals)
-        return terminal_lookup[id]
+        try:
+            self._terminal_by_id
+        except AttributeError:
+            self._terminal_by_id = dict((t['id'], t) for t in self.terminals)
+        return self._terminal_by_id[id]
         
     def get_source_code(self):
         """
@@ -173,11 +189,13 @@ class Module(object):
         does the actual calculation.  If no module is identified
         it returns an empty string
         """
-        source = ""
-        if self.filterModule is not None:
-            source = "".join(inspect.getsourcelines(self.filterModule)[0])
-        return source        
-        
+        try:
+            self._source
+        except AttributeError:
+            self._source = "".join(inspect.getsourcelines(self.action)[0])
+        return self._source
+
+
 class Template(object):
     """
     A template captures the computational workflow as a wiring diagram.
@@ -188,7 +206,7 @@ class Template(object):
     *description* : string
         Extended description to be displayed as help to the template user.
 
-    *modules* : [TemplateModule]
+    *modules* : [{TemplateModule}, ...]
         Modules used in the template
 
         *module* : string
@@ -203,7 +221,7 @@ class Template(object):
         *position* : [int,int]
             location of the module on the canvas.
 
-    *wires* : [TemplateWire]
+    *wires* : [{TemplateWire}, ...]
         Wires connecting the modules
 
         *source* : [int, string]
@@ -318,7 +336,25 @@ class Instrument(object):
         names = set(m.name for m in self.modules)
         if len(names) != len(self.modules):
             raise TypeError("names must be unique within an instrument")
-        
+
+    def get_module_by_id(self, id):
+        if '.' not in id:
+            id = ".".join((self.id, id))
+        for m in self.modules:
+            #print "checking %r against %r"%(m.id, id)
+            if m.id == id:
+                return m
+        else:
+            raise KeyError(id + ' does not exist in instrument ' + self.name)
+
+    def get_module_by_name(self, name):
+        for m in self.modules:
+            if m.name == name:
+                return m
+        else:
+            raise KeyError(name + ' does not exist in instrument ' + self.name)
+
+
     def id_by_name(self, name):
         for m in self.modules:
             if m.name == name: return m.id
@@ -384,60 +420,153 @@ class Data(object):
         return Data(str, Data)
 
 
-# ============= Parent traversal =============
-class Node(object):
+def make_template(name, description, diagram, instrument, version):
     """
-    Base node
+    Convert a diagram into a template.
 
-    A diagram is created by connecting nodes with wires.
+    A diagram is a list of action steps with configuration for each action
+    and links between the steps.  Each step is indicated by a
+    (string, dictionary) pair, with the string giving the action and
+    the dictionary giving the configuration value for each field and
+    input terminal in the action.  Links are given as 'source.terminal',
+    where source is '-' to link to the action in the previous step.
+    Source can also be the name of an action.  In cases where the action
+    is duplicated (e.g., join), use "action => source" instead to give
+    the source a unique name.  Use ',' to separate sources for multiple
+    inputs sources for the same terminal.
 
-    *parents* : [Node]
-        List of parents that this node has
+    For example::
 
-    *params* : dictionary
-        Somehow matches a parameter to its current value,
-        which will be compared to the previous value as found
-        in the database.
+        diagram = [
+            ["ncnr_load", {}],
+            ["mark_intent", {"data": "-.output", "intent": "auto"}],
+            ["group_by_intent => split", {"data": "-.output"}],
+
+            ["join => spec", {"data": "split.specular"}],
+            ["join => backp",  {"data": "split.backp"},],
+            ["join => backm",  {"data": "split.backm"}],
+            ["join => slit",  {"data": "split.slit", "tolerance": 0.0001}],
+
+            ["subtract_background", {
+                "data": "spec.output",
+                "backp": "backp.output",
+                "backm": "backm.output"}],
+            ["divide_intensity",  {"data": "-.output", "base": "slit.output"}],
+        ]
+
+    Note that spacing is optional in action and source values.
+
+    The diagram is a directed acyclic graph, and so forward references aren't
+    required and aren't accepted.  Ambiguous references aren't identified, and
+    if you refer to an action, the most recent action will be used as the
+    source, not the first action.
     """
-    def __init__(self, parents, params):
-        self.parents = parents
-        self.params = params
-        
-    def searchDirty(self):
-        queue = deque([self])
-        while queue:
-            node = queue.popleft()
-            if node.isDirty():
-                return True
-            for parent in node.parents:
-                queue.append(parent)
-        return False
-        
-    def isDirty(self):
-        # Use inspect or __code__ for introspection?
-        return self.params != self._get_inputs()
-    
-    def _get_inputs(self):
-        # Get data from database
-        #pass
-        data = {'maternal grandpa':{'id':'maternal grandpa'},
-                'maternal grandma':{'id':'maternal grandma'},
-                'mom':{'id':'mom'},
-                'paternal grandpa':{'id':'paternal grandpa'},
-                'paternal grandma':{'id':'paternal grandma'},
-                'dad':{'id':'dad'},
-                'son':{'id':'son'}, }
-        return data.get(self.params['id'], {})
-    
-if __name__ == '__main__':
-    head = Node([Node([Node([], {'id':'maternal grandpa'}),
-                       Node([], {'id':'maternal grandma'})],
-                      {'id':'mom'}),
-                 Node([Node([], {'id':'paternal grandpa'}),
-                       Node([], {'id':'paternal grandma'})],
-                      {'id':'dad'})],
-                {'id':'son'})
-    print "Dirty" if head.searchDirty() else "Clean"
+    def err(s):
+        return "%s in step %d: [%r, %r]"%(s, target_index, action, config)
+    def target_err(s):
+        return "%s in step %d: [%r, %r]" %(
+            s, target_index, action, {target_terminal:source_string})
+
+    module_handles = []
+    modules = []
+    wires = []
+    refs = {}
+    for target_index, (action, config) in enumerate(diagram):
+
+        # Split "name => ref" into "name", "ref"
+        parts = [w.strip() for w in action.split('=>')]
+        if len(parts) == 1:
+            name = parts[0]
+            refs[name] = target_index
+        elif len(parts) == 2:
+            name, ref = parts
+            if ref in refs:
+                raise ValueError(err("redefining source reference"))
+            refs[ref] = target_index
+        else:
+            raise ValueError(err("too many source references"))
+
+        try:
+            module = instrument.get_module_by_id(name)
+        except KeyError:
+            raise ValueError(err("action not defined for %s"%instrument.id))
+        module_handles.append(module)
+
+        # convert config info for terminals into wires
+        config = config.copy()
+        for target in module.terminals:
+            # retrieve the target terminal, and its configuration
+            target_terminal = target["id"]
+            source_string = config.pop(target_terminal, None)
+
+            # check if it is required
+            if source_string is None:
+                if target["use"] == "in" and target["required"]:
+                    raise ValueError(target_err("input terminal requires link"))
+                continue
+            # check if linking to an output terminal
+            if target["use"] == "out":
+                raise ValueError(target_err("link should be set on input terminals not output terminals"))
+
+            # check for multiple links
+            parts = [w.strip() for w in source_string.split(',')]
+            if len(parts) > 1 and not target["multiple"]:
+                raise ValueError(target_err("only one input allowed"))
+
+            # for each given link
+            for p in parts:
+                # make sure it is source.terminal
+                try:
+                    source_id, source_terminal = p.split('.')
+                except:
+                    raise ValueError(target_err("expected %r"%{target_terminal:'source.terminal'}))
+
+                # interpret source
+                if source_id == '-':
+                    if target_index == 0:
+                        raise ValueError(target_err("no prior step"))
+                    source_index = target_index-1
+                elif source_id in refs:
+                    source_index = refs[source_id]
+                else:
+                    raise ValueError(target_err("source does not exist"))
+
+                # retrieve source terminal info
+                source_module = module_handles[source_index]
+                try:
+                    source = source_module.get_terminal_by_id(source_terminal)
+                except KeyError:
+                    raise ValueError(target_err("terminal %r does not exist"
+                                                % source_terminal))
+
+                # make sure that source is an output terminal of the correct
+                # data type
+                if source["use"] != "out":
+                    raise ValueError(target_err("terminal %r is not an output terminal"
+                                                % source_terminal))
+                if target["datatype"] != source["datatype"]:
+                    raise ValueError(target_err("data types don't match"))
+
+                # all is good; create a wire and add it to the list of wires
+                wires.append({"source": [source_index, source_terminal],
+                              "target": [target_index, target_terminal]})
+
+        # TODO: validate field inputs in template, or at least check the type
+        # check that the remaining config info refers to fields in the
+        # module
+        fields = set(p["id"] for p in module.fields)
+        for k,v in config.items():
+            if k not in fields:
+                raise ValueError(err("unknown config field %r"%k))
+
+        # Add the module to the list of modules in the template
+        modules.append({"module": module.id,
+                        "version": module.version,
+                        "config": config})
+
+    return Template(name=name, description=description,
+                    modules=modules, wires=wires, instrument=instrument,
+                    version=version)
 
 
 def bundle(fn):
