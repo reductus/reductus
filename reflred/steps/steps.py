@@ -400,6 +400,48 @@ def mark_intent(data, intent='auto'):
     return data
 
 @module
+def group_by_intent(data):
+    """
+    Split a bundle into multiple bundles using intent.
+
+    **Inputs**
+
+    data (refldata*) : data files with intent marked
+
+    **Returns**
+
+    specular (refldata*) : specular measurements
+
+    backp (refldata*) : positive offset background measurements
+
+    backm (refldata*) : negative offset background measurements
+
+    slit (refldata*) : beam intensity measurements
+
+    rock (refldata*) : rocking curve measurements
+
+    other (refldata*) : everything else
+    """
+    map_intent = {
+        'specular': 'specular',
+        'slit': 'slit',
+        'background+': 'backp',
+        'background-': 'backm',
+        'rock sample': 'rock',
+        'rock detector': 'rock',
+        'rock qx': 'rock',
+        }
+    groups = {}
+    for intent in set(map_intent.values()):
+        groups[intent] = []
+    groups['other'] = []
+    for d in data:
+        groups[map_intent.get(d.intent, 'other')] = d
+
+    return [groups[intent]
+            for intent in 'specular backp backm slit rock other'.split()]
+
+@module
 def normalize(data, base='auto'):
     """
     Estimate the detector count rate.
@@ -462,7 +504,7 @@ def rescale(data, scale=1.0, dscale=0.0):
     return data
 
 @module
-def join(datasets, tolerance=0.05, order='file'):
+def join(data, tolerance=0.05, order='file'):
     """
     Join operates on a list of datasets, returning a list with one dataset
     per intent/polarization.  When operating on a single dataset, it joins
@@ -489,7 +531,7 @@ def join(datasets, tolerance=0.05, order='file'):
 
     **Inputs**
 
-    datasets (refldata*) : data to join
+    data (refldata*) : data to join
 
     tolerance (float:) : allowed separation between points while still joining
     them to a single point; this is relative to the angular resolution of the
@@ -507,13 +549,13 @@ def join(datasets, tolerance=0.05, order='file'):
     from .joindata import sort_files, join_datasets
     # No copy necessary; join is never in-place.
 
-    datasets = sort_files(datasets, order)
-    data = join_datasets(datasets, tolerance)
+    data = sort_files(data, order)
+    output = join_datasets(data, tolerance)
 
-    data.log("join(*data)")
-    for i, d in enumerate(datasets):
-        data.log_dependency('data[%d]' % i, d)
-    return data
+    output.log("join(*data)")
+    for i, d in enumerate(data):
+        output.log_dependency('data[%d]' % i, d)
+    return output
 
 @module
 def align_background(data, offset='auto'):
