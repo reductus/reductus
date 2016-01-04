@@ -8,6 +8,11 @@ import multiprocessing
 import webbrowser
 import time
 
+try:
+    import config
+except ImportError:
+    import default_config as config
+
 jsonrpclib.config.use_jsonclass = False
 HandlerClass = SimpleHTTPRequestHandler
 ServerClass  = BaseHTTPServer.HTTPServer
@@ -68,12 +73,9 @@ class ThreadedJSONRPCServer(SocketServer.ThreadingMixIn, SimpleJSONRPCServer):
     pass
     
 #server = SimpleJSONRPCServer(('localhost', 8001), encoding='utf8', requestHandler=JSONRPCRequestHandler)
-server = ThreadedJSONRPCServer(('localhost', 8001), encoding='utf8', requestHandler=JSONRPCRequestHandler)
+server = ThreadedJSONRPCServer((config.jsonrpc_servername, config.jsonrpc_port), encoding='utf8', requestHandler=JSONRPCRequestHandler)
 rpc_port = server.socket.getsockname()[1]
 #webbrowser.open_new_tab('http://localhost:%d/index.html?rpc_port=%d' % (http_port, rpc_port))
-server.register_function(pow)
-server.register_function(lambda x,y: x+y, 'add')
-server.register_function(lambda x: x, 'ping')
 
 import h5py, os
 
@@ -120,6 +122,9 @@ from dataflow.core import register_module, register_datatype, Template, Data
 from dataflow.cache import use_redis
 use_redis()
 from dataflow.calc import calc_single
+from reflred.steps import load
+load.DATA_SOURCE = config.data_repository
+
 from dataflow.modules.load import load_module, load_action
 from reflred.refldata import ReflData
 rdata = Data("ncnr.refl.data", ReflData, loaders=[{'function':load_action, 'id':'LoadNeXuS'}])
