@@ -232,7 +232,11 @@ class FieldFile(object):
                             #vrep(d, r'\r', '\r')
                             #vrep(d, r'\n', '\n')
             if 'shape' in attrs:
-                d = d.reshape(attrs['shape'])
+                try:
+                    d = d.reshape(attrs['shape'])
+                except:
+                    # liberally do nothing.  Should be logging this.
+                    pass
             self._value = d
         return self._value              
 
