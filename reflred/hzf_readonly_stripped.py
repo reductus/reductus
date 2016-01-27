@@ -224,10 +224,13 @@ class FieldFile(object):
                     else:
                         d = numpy.loadtxt(infile, dtype=dtype, delimiter='\t')
                         if dtype.kind == 'S':
-                            vrep = numpy.vectorize(str.replace)
-                            vrep(d, r'\t', '\t')
-                            vrep(d, r'\r', '\r')
-                            vrep(d, r'\n', '\n')
+                            d = numpy.char.replace(d, r'\t', '\t')
+                            d = numpy.char.replace(d, r'\r', '\r')
+                            d = numpy.char.replace(d, r'\n', '\n')
+                            #vrep = numpy.vectorize(str.replace)
+                            #vrep(d, r'\t', '\t')
+                            #vrep(d, r'\r', '\r')
+                            #vrep(d, r'\n', '\n')
             if 'shape' in attrs:
                 d = d.reshape(attrs['shape'])
             self._value = d
