@@ -6,7 +6,11 @@ from reflred.steps import steps
 
 from dataflow.core import Module
 
-test_dataset = [{'path': "ncnrdata/cgd/201511/21066/data/HMDSO_17nm_dry14.nxz.cgd", "mtime": 1447353278}]
+test_dataset = [
+  {'path': "ncnrdata/cgd/201511/21066/data/HMDSO_17nm_dry14.nxz.cgd", "mtime": 1447353278},
+  {'path': "ncnrdata/cgd/201511/21066/data/HMDSO_17nm_dry15.nxz.cgd", "mtime": 1447353664},
+  {'path': "ncnrdata/cgd/201511/21066/data/HMDSO_17nm_dry16.nxz.cgd", "mtime": 1447354137}
+]
 DATA_SOURCE = "http://ncnr.nist.gov/pub/"
 
 class FileNewerError(Exception):
@@ -89,6 +93,48 @@ load_kw = {
 
 load_module = Module(**load_kw)
 
+def mask_action(input=None, mask_indices=None, **kwargs):
+    import numpy
+    if input is not None: 
+        for i, data in enumerate(input):
+            data.mask = numpy.ones(data.detector.counts.shape, dtype="bool")
+            if mask_indices is not None:
+                for j in mask_indices[i]:
+                    data.mask[j] = False
+    return dict(output=input)
+    
+mask_kw = {
+    "id": "ncnr.refl.mask",
+    "version": 0.1,
+    "description": "mask reflectometry NeXus files",
+    "terminals": [
+        {
+            "id": "output", 
+            "datatype": "ncnr.refl.data",
+            "use": "out",
+            "description": "masked data"
+        },
+        {
+            "id": "input",
+            "datatype": "ncnr.refl.data",
+            "use": "in",
+            "description": "unmasked data"
+        }        
+    ],
+    "fields": {
+        "base": {
+            "type":"string",
+            "label": "base",
+            "name": "base",
+            "value": "auto"
+        }
+    },
+    "action": mask_action,
+    "name": "Load NeXuS Reflectometry Data"
+    
+}
+
+mask_module = Module(**mask_kw)
 
 normalize_kw = {
     "id": "ncnr.refl.normalize",
@@ -122,6 +168,10 @@ normalize_kw = {
 }
 
 normalize_module = Module(**normalize_kw)
+
+
+
+
 """
 modules : [TemplateModule]
 
@@ -147,12 +197,17 @@ def test():
     rdata = Data("ncnr.refl.data", ReflData, loaders=[{'function':load_action, 'id':'LoadNeXuS'}])
     register_module(load_module)
     register_module(normalize_module)
+    register_module(mask_module)
     register_datatype(rdata)
     # a = load_action(files=test_dataset)
     #modules = [{"module": "ncnr.refl.load", "version": 0.1, "config": {"files": test_dataset}}]
-    modules = [{"module": "ncnr.refl.load", "version": 0.1, "config": {}}]
-    template = Template("test", "test template", modules, [], "ncnr.magik", version='0.0')
-    refl = calc_single(template, {"0": {"files": test_dataset}}, 0, "output")
+    modules = [
+        {"module": "ncnr.refl.load", "version": 0.1, "config": {}},
+        {"module": "ncnr.refl.mask", "version": 0.1, "config": {}}
+    ]
+    wires = [{"source": [0,"output"], "target": [1,"input"]}]
+    template = Template("test", "test template", modules, wires, "ncnr.magik", version='0.0')
+    refl = calc_single(template, {"0": {"files": test_dataset}, "1": {"mask_indices": [[0,], [], []]}}, 1, "output")
     return refl
     
 if __name__ == "__main__":
