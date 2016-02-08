@@ -121,7 +121,7 @@ def get_file_metadata(pathlist=None):
 from dataflow.core import register_module, register_datatype, Template, Data
 from dataflow.cache import use_redis
 use_redis()
-from dataflow.calc import calc_single
+from dataflow.calc import process_template
 from reflred.steps import load
 load.DATA_SOURCE = config.data_repository
 
@@ -174,7 +174,7 @@ def calc_dict(template_def, config, nodenum, terminal_id):
     """
     template = Template(**template_def)
     print template
-    retvals = calc_single(template, config, nodenum, terminal_id)
+    retvals = process_template(template, config, target=(nodenum, terminal_id))
     return [r._toDict(sanitized=True) for r in retvals]
     
 def get_jstree(path='./'):
