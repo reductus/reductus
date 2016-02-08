@@ -8,3 +8,4 @@
 jsonrpc_servername = "localhost"
 jsonrpc_port = 8001
 data_repository = "http://ncnr.nist.gov/pub/"
+file_helper = "http://ncnr.nist.gov/ipeek/listftpfiles.php"

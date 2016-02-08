@@ -109,7 +109,7 @@ def get_file_metadata(pathlist=None):
     import urllib
     import urllib2
 
-    url = 'http://ncnr.nist.gov/ipeek/listftpfiles.php'
+    url = config.file_helper #'http://ncnr.nist.gov/ipeek/listftpfiles.php'
     values = {'pathlist[]' : pathlist}
     data = urllib.urlencode(values, True)
     req = urllib2.Request(url, data)
