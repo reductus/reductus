@@ -6,6 +6,9 @@ from collections import deque
 import inspect
 import json
 import re
+import types
+
+from numpy import NaN, inf
 
 from .deps import processing_order
 
@@ -13,7 +16,7 @@ TEMPLATE_VERSION = '1.0'
 
 _instrument_registry = []
 _module_registry = {}
-_data_registry = {}
+_datatype_registry = {}
 def register_instrument(instrument):
     """
     Add a new instrument to the server.
@@ -40,12 +43,13 @@ def lookup_module(id):
     return _module_registry[id]
 
 def register_datatype(datatype):
-    if datatype.id in _data_registry and datatype != _data_registry[datatype.id]:
+    if (datatype.id in _datatype_registry and
+                datatype != _datatype_registry[datatype.id]):
         raise TypeError("Datatype already registered")
-    _data_registry[datatype.id] = datatype
+    _datatype_registry[datatype.id] = datatype
 
 def lookup_datatype(id):
-    return _data_registry[id]
+    return _datatype_registry[id]
 
 class Module(object):
     """
@@ -195,6 +199,20 @@ class Module(object):
             self._source = "".join(inspect.getsourcelines(self.action)[0])
         return self._source
 
+    def __getstate__(self):
+        # Don't pickle the function reference
+        return (self.version, self.id, self.name, self.description,
+                self.icon, self.fields, self.terminals,
+                self.action_id)
+
+    def __setstate__(self, state):
+        from importlib import import_module
+        (self.version, self.id, self.name, self.description,
+         self.icon, self.fields, self.terminals, self.action_id) = state
+        # Restore the function reference after unpickling
+        parts = self.action_id.split('.')
+        mod = import_module(".".join(parts[:-1]))
+        self.action = getattr(mod, parts[-1])
 
 class Template(object):
     """
@@ -245,41 +263,69 @@ class Template(object):
         self.instrument = instrument
         self.version = version
 
-    def order(self):
+    def order(self, target=None):
         """
         Return the module ids in processing order.
         """
-        pairs = [(w['source'][0], w['target'][0]) for w in self.wires]
-        return processing_order(len(self.modules), pairs)
+        if target is None:
+            # Order to evaluate all nodes
+            pairs = [(w['source'][0], w['target'][0]) for w in self.wires]
+            n = len(self.modules)
+        else:
+            pairs = []
+            n = 0
+            remaining = set([target])
+            processed = set()
+            while remaining:
+                target = remaining.pop()
+                sources = [w['source'][0] for w in self.inputs(target)]
+                pairs.extend((source, target) for source in sources)
+                processed.add(target)
+                remaining |= set(sources) - processed
+        return processing_order(pairs, n)
 
-    def __iter__(self):
-        """
-        Yields module#, inputs for each module in the template in order.
-        """
-        for id in self.order():
-            inputs = [w for w in self.wires if w['target'][0] == id]
-            yield id, inputs
-
-    def __getstate__(self):
-        """
-        Version aware pickler. Returns (version, state)
-        """
-        return TEMPLATE_VERSION, self.__dict__
-    def __setstate__(self, state):
-        """
-        Version aware unpickler. Expects (version, state)
-        """
-        version, state = state
-        if version != TEMPLATE_VERSION:
-            raise TypeError('Template definition mismatch')
-        self.__dict__ = state
-        
-    def get_parents(self, id):
+    def inputs(self, id):
         """
         Retrieve the data objects that go into the inputs of a module
         """
-        parents = [w for w in self.wires if w['target'][0] == id]
-        return parents
+        wires = [w for w in self.wires if w['target'][0] == id]
+        return wires
+
+    def ordered(self, target=None):
+        """
+        Yields (module, inputs) for each module in evaluation order.
+
+        If *target* is specified, only include modules required to
+        evaluate the target.
+        """
+        for id in self.order(target):
+            yield id, self.inputs(id)
+
+    def dumps(self, **kw):
+        """
+        Convert template to json.
+        """
+        return json.dumps(self.__getstate__(), **kw)
+
+    def show(self):
+        """
+        Print template on console as prettified json.
+        """
+        print(json.dumps(self.__getstate__(), indent=2, sort_keys=True,
+              separators=(',', ': ')))
+
+    def __getstate__(self):
+        return self.__dict__
+    def __setstate__(self, state):
+        # As the template definition changes we need to increment the version
+        # number in TEMPLATE_VERSION.  This code must be able to interpret
+        # older versions of the template; it should never need to interpret
+        # newer versions of the template, but should still protect against it.
+        # In the initial release, clearly the the template version must
+        # match TEMPLATE_VERSION since there is only one version.
+        if state['version'] != TEMPLATE_VERSION:
+            raise TypeError('Template definition mismatch')
+        self.__dict__ = state
 
 
 class Instrument(object):
@@ -395,29 +441,78 @@ class Data(object):
 
     *dataid* : string
     """
-    def __new__(subtype, id, cls, loaders=[]):
-        obj = object.__new__(subtype)
-        obj.id = id
-        obj.cls = cls
-        obj.loaders = loaders
+    def __init__(self, id, cls, loaders=None):
+        self.id = id
+        self.cls = cls
+        self.loaders = loaders if loaders else []
+
+    def data_to_dict(self, value):
+        state = value.__getstate__()
+        state = sanitizeForJSON(state)
+        return state
+    
+    def dict_to_data(self, state):
+        state = sanitizeFromJSON(state)
+        obj = self.cls()
+        obj.__setstate__(state)
         return obj
-    
-    def __getstate__(self):
-        return "1.0", self.__dict__
-    
-    def __setstate__(self, state):
-        version, state = state
-        self.__dict__ = state
-        
-    def get_plottable(self):
-        return self.dumps()
-    
-    def dumps(self):
-        return json.dumps(self.__dict__)
-    
-    @classmethod
-    def loads(cls, str):
-        return Data(str, Data)
+
+
+# Inf/NaN representation options:
+#     javascript names: "Infinity", "-Infinity", "NaN"
+#     python names: "inf", "-inf", "nan"
+#     math expressions: "1/0", "-1/0", "0/0"
+#     unicode symbols: u"\u221E", u"-\u221E", u"\u26A0"
+#     u26A0 is WARNING SIGN (! in triangle)
+#     uFFFD is REPLACEMENT CHARACTER (? in diamond)
+_NAN_STRING = u"\u26A0"  # WARNING SIGN (! in triangle)
+_INF_STRING = u"\u221E"  # INFINITY
+_MINUS_INF_STRING = u"-\u221E"  # -INFINITY
+_
+def sanitizeForJSON(obj):
+    """
+    Take an object made of python objects and remove inf and nan
+    """
+    if type(obj) is types.DictionaryType:
+        output = {}
+        for k,v in obj.items():
+            output[k] = sanitizeForJSON(v)
+        return output
+    elif type(obj) is types.ListType:
+        return map(sanitizeForJSON, obj)
+    elif obj == inf:
+        # Use WARNING SIGN for NaN
+        return _INF_STRING
+    elif obj == -inf:
+        return _MINUS_INF_STRING
+    elif obj != obj:
+        # Use WARNING SIGN for NaN
+        return _NAN_STRING
+    else:
+        return obj
+
+
+def sanitizeFromJSON(obj):
+    """
+    Convert inf/nan from json representation to python.
+    """
+    if type(obj) is types.DictionaryType:
+        output = {}
+        for k,v in obj.items():
+            output[k] = sanitizeFromJSON(v)
+        return output
+    elif type(obj) is types.ListType:
+        return map(sanitizeFromJSON, obj)
+    elif obj == _INF_STRING:
+        return inf
+    elif obj == _MINUS_INF_STRING:
+        return -inf
+    elif obj == _NAN_STRING:
+        return NaN
+    else:
+        return obj
+
+
 
 
 def make_template(name, description, diagram, instrument, version):
@@ -476,10 +571,10 @@ def make_template(name, description, diagram, instrument, version):
         # Split "name => ref" into "name", "ref"
         parts = [w.strip() for w in action.split('=>')]
         if len(parts) == 1:
-            name = parts[0]
-            refs[name] = target_index
+            module_name = parts[0]
+            refs[module_name] = target_index
         elif len(parts) == 2:
-            name, ref = parts
+            module_name, ref = parts
             if ref in refs:
                 raise ValueError(err("redefining source reference"))
             refs[ref] = target_index
@@ -487,7 +582,7 @@ def make_template(name, description, diagram, instrument, version):
             raise ValueError(err("too many source references"))
 
         try:
-            module = instrument.get_module_by_id(name)
+            module = instrument.get_module_by_id(module_name)
         except KeyError:
             raise ValueError(err("action not defined for %s"%instrument.id))
         module_handles.append(module)
@@ -565,7 +660,7 @@ def make_template(name, description, diagram, instrument, version):
                         "config": config})
 
     return Template(name=name, description=description,
-                    modules=modules, wires=wires, instrument=instrument,
+                    modules=modules, wires=wires, instrument=instrument.id,
                     version=version)
 
 
@@ -647,7 +742,7 @@ def make_modules(actions, prefix=""):
             if '.' not in v['datatype']:
                 v['datatype'] = prefix + v['datatype']
 
-        action = outputs_wrapper(module_description, action)
+        #action = outputs_wrapper(module_description, action)
         # Define and register the module
         module = Module(action=action, **module_description)
         modules.append(module)
@@ -690,7 +785,7 @@ def auto_module(action):
     The possible types are determined by the user interface.  Here is the
     currently suggested types:
 
-        str, int, bool, float, float:units, float[n], opt1|opt2|...|optn
+        str, int, bool, float, float:units, float[n]:units, opt1|opt2|...|optn
 
     Each instrument will have its own data types as well, which are
     associated with the wires and have enough information that they can

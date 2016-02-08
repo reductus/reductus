@@ -209,6 +209,8 @@ def _vectorize(v, data, field):
     n = len(data.v)
     if np.isscalar(v):
         return [v]*n
+    elif len(v) == 1:
+        return [v[0]]*n
     elif len(v) == n:
         return v
     else:

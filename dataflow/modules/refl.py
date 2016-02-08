@@ -61,8 +61,8 @@ def unpolarized_template():
         ["ncnr_load", {}],
 
         # Preprocessing common to all data sets
-        ["monitor_saturation", {"data": "-.output"}],
-        ["detector_saturation", {"data": "-.output"}],
+        #["monitor_saturation", {"data": "-.output"}],
+        #["detector_saturation", {"data": "-.output"}],
         ["divergence", {"data": "-.output"}],
         ["normalize", {"data": "-.output", "base": "auto"}],
         ["mark_intent", {"data": "-.output", "intent": "auto"}],
@@ -84,16 +84,16 @@ def unpolarized_template():
         ["align_background",  {"data": "-.output", "offset": "auto"}],
         ["join => backm",  {"data": "-.output"}],
 
-        ["nop", {"data": "split.slit"}],
+        ["nop", {"data": "split.intensity"}],
         ["rescale",  {"data": "-.output", "scale": 1.0, "dscale": 0.0}],
-        ["join => slit",  {"data": "-.output", "tolerance": 0.0001}],
+        ["join => intensity",  {"data": "-.output", "tolerance": 0.0001}],
 
         # Operate on the combined data for the final reduction
         ["subtract_background", {
             "data": "spec.output",
             "backp": "backp.output",
             "backm": "backm.output"}],
-        ["divide_intensity",  {"data": "-.output", "base": "slit.output"}],
+        ["divide_intensity",  {"data": "-.output", "base": "intensity.output"}],
         #["footprint",  {"data": "-.output")}],
     ]
     #for m in refl1d.modules: print m.__dict__
@@ -108,12 +108,15 @@ def unpolarized_template():
     return template
 
 def demo6():
-    from dataflow.calc import calc_single
+    import json
+    from dataflow.calc import process_template
     from reflred.steps import load
     load.DATA_SOURCE = "http://ncnr.nist.gov/pub/"
 
     template = unpolarized_template()
-    print template
+    #print "========== Template ========"
+    #template.show()
+    #print "="*24
     test_dataset = [{'path': "ncnrdata/cgd/201511/21066/data/HMDSO_17nm_dry14.nxz.cgd",
                      "mtime": 1447353278}]
     experiment = "ncnrdata/cgd/201511/21066/data/"
@@ -121,14 +124,14 @@ def demo6():
     datasets = ["..."]
     #files = [{'path':experiment+f+ext,'mtime':0} for f in datasets]
     files = test_dataset
-    refl = calc_single(template=template,
-                       config={"0": {"filelist": test_dataset}},
-                       nodenum=len(template.modules)-1, terminal_id="output")
+    refl = process_template(template=template,
+                            config={"0": {"filelist": test_dataset}},
+                            target=(len(template.modules)-1, "output"))
     return refl
 
 
 if __name__ == "__main__":
-    demo()
+    demo6()
 
 
 """

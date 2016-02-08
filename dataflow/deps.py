@@ -4,7 +4,7 @@
 Functions for manipulating dependencies.
 """
 
-def processing_order(n, pairs):
+def processing_order(pairs, n=0):
     """
     Order the work in a workflow.
 
@@ -14,13 +14,14 @@ def processing_order(n, pairs):
 
     :Parameters:
 
-    *n* : int
-
-        Number of items
-
     *pairs* : [(int, int), ...]
 
         Pairwise dependencies amongst items.
+
+    *n* : int
+
+        Number of items, or 0 if we don't care about any item that is not
+        mentioned in the list of pairs
 
     :Returns:
 
@@ -30,9 +31,12 @@ def processing_order(n, pairs):
 
     """
     order = _dependencies(pairs)
-    if any(id >= n for id in order):
-        raise ValueError("Not all dependencies are in the set")
-    rest = set(range(n)) - set(order)
+    if n:
+        if any(id >= n for id in order):
+            raise ValueError("Not all dependencies are in the set")
+        rest = set(range(n)) - set(order)
+    else:
+        rest = set(k for p in pairs for k in p) - set(order)
     #print "order",order,"from",pairs
     return order + list(rest)
 

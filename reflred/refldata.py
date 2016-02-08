@@ -78,8 +78,9 @@ __all__ = ['ReflData']
 ## Something similar can be used for uncertainty, preferably stored as variance
 
 import datetime
-import weakref
 import warnings
+import types
+import json
 
 import numpy as np
 from numpy import inf, arctan2, sqrt, sin, cos, pi, radians
@@ -743,6 +744,8 @@ class ReflData(object):
         points excluded from reduction
     scale
         The desired scale factor for displaying the data.
+    normbase
+        The base for normalization (e.g., 'monitor' or 'time')
 
     File details
     ============
@@ -778,9 +781,11 @@ class ReflData(object):
     """
     properties = ['instrument', 'geometry', 'probe', 'points', 'channels',
                   'name','description','date','duration','attenuator',
-                  'polarization','warnings','path','formula',
+                  'polarization','path','formula',
                   'intent', 'Qz_target', 'angular_resolution',
                   'vlabel', 'vunits', 'xlabel', 'xunits',
+                  'normbase',
+                  'warnings', 'messages',
                   ]
     instrument = "unknown"
     geometry = "vertical"
@@ -797,6 +802,7 @@ class ReflData(object):
     attenuator = 1.
     polarization = ""
     formula = ""
+    normbase = None
     reversed = False
     warnings = None
     messages = None
@@ -918,46 +924,28 @@ class ReflData(object):
                   ]
         return "\n".join(base+others+self.messages)
 
-    def _toDict(self, sanitized=False): 
-        base = _toDict(self)
+    def __getstate__(self):
+        state = _toDict(self)
         others = dict([[s, _toDict(getattr(self,s))]
                   for s in ("slit1", "slit2", "slit3", "slit4",
                             "sample", "detector", "monitor", "roi")
                   ])
-        base.update(others)
-        if sanitized:
-            return sanitizeForJSON(base)
-        else:
-            return base
-        
-    def dumps(self, sanitized=False):
-        import json
-        output_dict = self._toDict()
-        if sanitized:
-            output_dict = sanitizeForJSON(output_dict)
-        return json.dumps(output_dict)
-    
-    @classmethod    
-    def loads(cls, input_str):
-        import json
-        input_dict = json.loads(input_str)
-        new_obj = cls()
-        for prop in new_obj.properties:
-            if prop in input_dict:
-                setattr(new_obj, prop, input_dict[prop])
-        for s in ("slit1", "slit2", "slit3", "slit4"):
-            if s in input_dict:
-                setattr(new_obj, s, Slit(**input_dict[s]))
-        if 'detector' in input_dict:
-            setattr(new_obj, 'detector', Detector(**input_dict['detector']))
-        if 'sample' in input_dict:
-            setattr(new_obj, 'sample', Sample(**input_dict['sample']))
-        if 'monitor' in input_dict:
-            setattr(new_obj, 'monitor', Monitor(**input_dict['monitor']))
-        if 'roi' in input_dict:
-            setattr(new_obj, 'roi', ROI(**input_dict['roi']))
-        return new_obj
-        
+        state.update(others)
+        return state
+
+    def __setstate__(self, state):
+        props = dict((k,v) for k,v in state.items() if k in self.properties)
+        props = _fromDict(props)
+        self.__dict__.update(props)
+        for attr, cls in [
+            ("slit1",Slit), ("slit2", Slit), ("slit3", Slit), ("slit4", Slit),
+            ("detector", Detector),
+            ("sample", Sample),
+            ("monitor", Monitor),
+            ("roi", ROI),
+            ]:
+            props = _fromDict(state[attr])
+            setattr(self, attr, cls(**props))
 
     def __or__(self, pipeline):
         return pipeline(self)
@@ -1023,41 +1011,32 @@ def _str(object, indent=4):
     prefix = " "*indent
     return prefix+("\n"+prefix).join(props)
 
-def _toDict(object):
-    import copy, numpy
+def _toDict(obj):
     props = {}
-    for a in object.properties:
-        obj = copy.deepcopy(getattr(object, a))
-        if isinstance(obj, numpy.integer):
-            obj = int(obj)
-        elif isinstance(obj, numpy.floating):
-            obj = float(obj)          
-        elif isinstance(obj, numpy.ndarray):
-            obj = obj.tolist()
-        elif isinstance(obj, datetime.datetime):
-            obj =  [obj.year, obj.month, obj.day, obj.hour, obj.minute, obj.second]
-        props[a] = obj
+    for a in obj.properties:
+        attr = getattr(obj, a)
+        if isinstance(attr, np.integer):
+            obj = int(attr)
+        elif isinstance(attr, np.floating):
+            attr = float(attr)
+        elif isinstance(attr, np.ndarray):
+            attr = attr.tolist()
+        elif isinstance(attr, datetime.datetime):
+            attr =  [attr.year, attr.month, attr.day,
+                     attr.hour, attr.minute, attr.second]
+        props[a] = attr
     return props
 
-def sanitizeForJSON(obj):
-    """ take an object made of python objects and remove inf and nan """
-    import types, json
-    if type(obj) is types.DictionaryType:
-        output = {}
-        for k,v in obj.items():
-            output[k] = sanitizeForJSON(v)
-        return output
-    elif type(obj) is types.ListType:
-        return map(sanitizeForJSON, obj)
-    elif obj == json.encoder.INFINITY:
-        return u"\u221E"
-    elif obj == -json.encoder.INFINITY:
-        return u"-\u221E"
-    elif obj != obj:
-        return None
-    else: 
-        return obj
-    
+def _fromDict(props):
+    # Note: timestamps must have the property named "date"
+    for name,value in props.items():
+        if isinstance(value, list) and value:
+            if all(isinstance(v, (int, float)) for v in value):
+                props[name] = np.asarray(value)
+        elif name == 'date':
+            props[name] = datetime.datetime(*value)
+    return props
+
 
 def _set(object,kw):
     """

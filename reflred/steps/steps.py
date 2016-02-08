@@ -212,14 +212,13 @@ def monitor_saturation(data):
     2015-12-17 Paul Kienzle
     """
     from .deadtime import apply_monitor_saturation
+    data = copy(data)
     if getattr(data.monitor, 'saturation', None) is not None:
-        data = copy(data)
         data.monitor = copy(data.monitor)
         data.log('monitor_saturation()')
         apply_monitor_saturation(data)
     else:
-        warn("no monitor saturation for %r"%data.name)
-
+        data.warn("no monitor saturation for %r"%data.name)
     return data
 
 
@@ -239,11 +238,14 @@ def detector_saturation(data):
     2015-12-17 Paul Kienzle
     """
     from .deadtime import apply_detector_saturation
-
     data = copy(data)
-    data.detector = copy(data.detector)
-    data.log('detector_saturation()')
-    apply_detector_saturation(data)
+    if getattr(data.detector, 'saturation', None) is not None:
+        print "detector",data.detector.__dict__
+        data.detector = copy(data.detector)
+        data.log('detector_saturation()')
+        apply_detector_saturation(data)
+    else:
+        data.warn("no detector saturation for %r"%data.name)
     return data
 
 
@@ -432,7 +434,7 @@ def group_by_intent(data):
 
     backm (refldata*) : negative offset background measurements
 
-    slit (refldata*) : beam intensity measurements
+    intensity (refldata*) : beam intensity measurements
 
     rock (refldata*) : rocking curve measurements
 
@@ -440,7 +442,7 @@ def group_by_intent(data):
     """
     map_intent = {
         'specular': 'specular',
-        'slit': 'slit',
+        'intensity': 'intensity',
         'background+': 'backp',
         'background-': 'backm',
         'rock sample': 'rock',
@@ -452,10 +454,11 @@ def group_by_intent(data):
         groups[intent] = []
     groups['other'] = []
     for d in data:
-        groups[map_intent.get(d.intent, 'other')] = d
+        print "intent",d.intent, d.path
+        groups[map_intent.get(d.intent, 'other')].append(d)
 
     return [groups[intent]
-            for intent in 'specular backp backm slit rock other'.split()]
+            for intent in 'specular backp backm intensity rock other'.split()]
 
 @module
 def normalize(data, base='auto'):
@@ -558,20 +561,23 @@ def join(data, tolerance=0.05, order='file'):
 
     **Returns**
 
-    output (refldata) : joined data
+    output (refldata*) : joined data
 
     2015-12-17 Paul Kienzle
     """
     from .joindata import sort_files, join_datasets
     # No copy necessary; join is never in-place.
 
-    data = sort_files(data, order)
-    output = join_datasets(data, tolerance)
+    if len(data) > 0:
+        data = sort_files(data, order)
+        output = join_datasets(data, tolerance)
 
-    output.log("join(*data)")
-    for i, d in enumerate(data):
-        output.log_dependency('data[%d]' % i, d)
-    return output
+        output.log("join(*data)")
+        for i, d in enumerate(data):
+            output.log_dependency('data[%d]' % i, d)
+        return [output]
+    else:
+        return []
 
 @module
 def align_background(data, offset='auto'):
