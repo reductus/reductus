@@ -108,7 +108,6 @@ def unpolarized_template():
     return template
 
 def demo6():
-    import json
     from dataflow.calc import process_template
     from reflred.steps import load
     load.DATA_SOURCE = "http://ncnr.nist.gov/pub/"
