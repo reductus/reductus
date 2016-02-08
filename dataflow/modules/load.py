@@ -68,14 +68,15 @@ def load_action(files=[], **kwargs):
 
 load_kw = {
     "id": "ncnr.refl.load",
-    "version": 0.1,
+    "version": "0.1",
     "description": "load reflectometry NeXus files",
     "terminals": [
         {
             "id": "output", 
             "datatype": "ncnr.refl.data",
             "use": "out",
-            "description": "data"
+            "description": "data",
+            "multiple": True
         }
     ],
     "fields": {
@@ -109,20 +110,23 @@ def mask_action(input=None, mask_indices=None, **kwargs):
     
 mask_kw = {
     "id": "ncnr.refl.mask",
-    "version": 0.1,
+    "version": "0.1",
     "description": "mask reflectometry NeXus files",
     "terminals": [
         {
             "id": "output", 
             "datatype": "ncnr.refl.data",
             "use": "out",
-            "description": "masked data"
+            "description": "masked data",
+            "multiple": True
         },
         {
             "id": "input",
             "datatype": "ncnr.refl.data",
             "use": "in",
-            "description": "unmasked data"
+            "description": "unmasked data",
+            "multiple": True,
+            "required": True
         }        
     ],
     "fields": {
@@ -148,20 +152,23 @@ def normalize_action(input=None, base='auto'):
     
 normalize_kw = {
     "id": "ncnr.refl.normalize",
-    "version": 0.1,
+    "version": "0.1",
     "description": "normalize reflectometry NeXus files",
     "terminals": [
         {
             "id": "output", 
             "datatype": "ncnr.refl.data",
             "use": "out",
-            "description": "normalized data"
+            "description": "normalized data",
+            "multiple": True,            
         },
         {
             "id": "input",
             "datatype": "ncnr.refl.data",
             "use": "in",
-            "description": "unnormalized data"
+            "description": "unnormalized data",
+            "multiple": True,
+            "required": True
         }        
     ],
     "fields": {
@@ -185,7 +192,7 @@ def join_action(input=None, tolerance=0.0):
     
 join_kw = {
     "id": "ncnr.refl.join",
-    "version": 0.1,
+    "version": "0.1",
     "description": "join reflectometry NeXus files",
     "terminals": [
         {
@@ -238,7 +245,7 @@ location of the module on the canvas.
 def test():
     import numpy; numpy.seterr(all='raise')
     from dataflow.core import register_module, register_datatype, Template, Data
-    from dataflow.calc import calc_single
+    from dataflow.calc import process_template
     from reflred.refldata import ReflData
     rdata = Data("ncnr.refl.data", ReflData, loaders=[{'function':load_action, 'id':'LoadNeXuS'}])
     register_module(load_module)
@@ -249,17 +256,52 @@ def test():
     # a = load_action(files=test_dataset)
     #modules = [{"module": "ncnr.refl.load", "version": 0.1, "config": {"files": test_dataset}}]
     modules = [
-        {"module": "ncnr.refl.load", "version": 0.1, "config": {}},
-        {"module": "ncnr.refl.mask", "version": 0.1, "config": {}},
-        {"module": "ncnr.refl.join", "version": 0.1, "config": {}}
+        {"module": "ncnr.refl.load", "version": "0.1", "config": {}},
+        {"module": "ncnr.refl.mask", "version": "0.1", "config": {}},
+        {"module": "ncnr.refl.join", "version": "0.1", "config": {}}
     ]
     wires = [
         {"source": [0,"output"], "target": [1,"input"]},
         {"source": [1,"output"], "target": [2,"input"]},
     ]
     template = Template("test", "test template", modules, wires, "ncnr.magik", version='0.0')
-    refl = calc_single(template, {"0": {"files": test_dataset}, "1": {"mask_indices": {"0": [0,-1]}}}, 1, "output")
+    refl = process_template(template, {"0": {"files": test_dataset}, "1": {"mask_indices": {"0": [0,-1]}}}, target=(1, "output"))
     return refl
+
+def test2():
+    from dataflow.core import register_module, register_datatype, Template, Data
+    #from dataflow.cache import use_redis
+    #use_redis()
+    from dataflow import core as df
+    from dataflow.calc import process_template
+    from reflred.steps import load, steps
+    load.DATA_SOURCE = "http://ncnr.nist.gov/pub/"
+    from reflred.refldata import ReflData
+    INSTRUMENT_PREFIX = "ncnr.refl."
+
+    modules = df.make_modules(steps.ALL_ACTIONS, prefix=INSTRUMENT_PREFIX)
+    loader_name = INSTRUMENT_PREFIX + "ncnr_load"
+    loader = [m for m in modules if m.id == loader_name][0]
+
+    refldata = df.Data(INSTRUMENT_PREFIX+"refldata", ReflData,
+                       loaders=[{'function': loader, 'id': 'LoadNeXuS'}])
+    for m in modules:
+        df.register_module(m)
+    df.register_module(loader)
+    df.register_datatype(refldata)
     
+    modules = [
+        {"module": "ncnr.refl.ncnr_load", "version": "0.1", "config": {}},
+        {"module": "ncnr.refl.mask_points", "version": "0.1", "config": {}},
+        {"module": "ncnr.refl.join", "version": "0.1", "config": {}}
+    ]
+    wires = [
+        {"source": [0,"output"], "target": [1,"data"]},
+        {"source": [1,"output"], "target": [2,"input"]},
+    ]
+    template = Template("test", "test template", modules, wires, "ncnr.magik", version='0.0')
+    refl = process_template(template, {"0": {"filelist": test_dataset}, "1": {"mask_indices": {"0": [0,-1]}}}, target=(1, "output"))
+    return refl
+
 if __name__ == "__main__":
     test()

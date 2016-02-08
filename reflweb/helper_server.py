@@ -121,15 +121,27 @@ def get_file_metadata(pathlist=None):
 from dataflow.core import register_module, register_datatype, Template, Data
 from dataflow.cache import use_redis
 use_redis()
+from dataflow import core as df
 from dataflow.calc import process_template
-from reflred.steps import load
-load.DATA_SOURCE = config.data_repository
-
-from dataflow.modules.load import load_module, load_action
+from reflred.steps import load, steps
 from reflred.refldata import ReflData
-rdata = Data("ncnr.refl.data", ReflData, loaders=[{'function':load_action, 'id':'LoadNeXuS'}])
-register_module(load_module)
-register_datatype(rdata)
+load.DATA_SOURCE = config.data_repository
+INSTRUMENT_PREFIX = "ncnr.refl"
+
+modules = df.make_modules(steps.ALL_ACTIONS, prefix=INSTRUMENT_PREFIX)
+loader_name = INSTRUMENT_PREFIX + "ncnr_load"
+loader = [m for m in modules if m.id == loader_name][0]
+
+refldata = df.Data(INSTRUMENT_PREFIX+"refldata", ReflData,
+                   loaders=[{'function': loader, 'id': 'LoadNeXuS'}])
+df.register_module(loader)
+df.register_datatype(refldata)
+
+#from dataflow.modules.load import load_module, load_action
+#from reflred.refldata import ReflData
+#rdata = Data("ncnr.refl.data", ReflData, loaders=[{'function':load_action, 'id':'LoadNeXuS'}])
+#register_module(load_module)
+#df.register_datatype(refldata)
     
 def refl_load(file_descriptors):
     """ 

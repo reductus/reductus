@@ -31,6 +31,7 @@ def url_load(fileinfo):
     url.close()
     return nx_entries
 
-def url_load_list(filelist):
-    result = [entry for fileinfo in filelist for entry in url_load(fileinfo)]
+def url_load_list(files=None):
+    if files is None: return []
+    result = [entry for fileinfo in files for entry in url_load(fileinfo)]
     return result

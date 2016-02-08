@@ -380,6 +380,46 @@ def mask_specular(data):
     apply_specular_mask(data)
     return data
 
+def mask_action(input=None, mask_indices=None, **kwargs):
+    """ take sparse index lists for masking
+    e.g. mask_indices = {"0": [1,4,6], "5": [0]}
+    operates to put masks on data items 0 and 5
+    """
+    if hasattr(input, '__iter__') and hasattr(mask_indices, '__contains__') :
+        import numpy
+        print "!", mask_indices
+        for i, data in enumerate(input):
+            data.mask = numpy.ones(data.detector.counts.shape, dtype="bool")
+            if str(i) in mask_indices:
+                for j in mask_indices[str(i)]:
+                    data.mask[j] = False
+    return dict(output=input)
+
+@module
+def mask_points(data, mask_indices=None):
+    """
+    Identify and mask out user-specified points.
+
+    This defines the *mask* attribute of *data* as including all points that
+    are not previously masked.  The points are not actually
+    removed from the data, since this operation is done by *join*.
+
+    **Inputs**
+
+    data (refldata*) : background data which may contain specular point
+    
+    mask_indices (indexlist) : sparse dict of masked data points, as {"0": [2,4,5], "5": [0]}
+
+    **Returns**
+
+    output (refldata) : masked data
+
+    2016-02-08 Brian Maranville
+    """
+    data = copy(data)
+    #data.log('mask_points(%r)' % (mask_indices))
+    output = mask_action(input=data, mask_indices=mask_indices)
+    return output['output']
 
 @module
 def mark_intent(data, intent='auto'):
