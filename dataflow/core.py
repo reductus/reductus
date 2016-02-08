@@ -468,7 +468,6 @@ class Data(object):
 _NAN_STRING = u"\u26A0"  # WARNING SIGN (! in triangle)
 _INF_STRING = u"\u221E"  # INFINITY
 _MINUS_INF_STRING = u"-\u221E"  # -INFINITY
-_
 def sanitizeForJSON(obj):
     """
     Take an object made of python objects and remove inf and nan
