@@ -406,13 +406,13 @@ def mask_points(data, mask_indices=None):
 
     **Inputs**
 
-    data (refldata*) : background data which may contain specular point
+    data (refldata+) : background data which may contain specular point
     
-    mask_indices (indexlist) : sparse dict of masked data points, as {"0": [2,4,5], "5": [0]}
+    mask_indices (indexlist+) : sparse dict of masked data points, as {"0": [2,4,5], "5": [0]}
 
     **Returns**
 
-    output (refldata) : masked data
+    output (refldata+) : masked data
 
     2016-02-08 Brian Maranville
     """
@@ -885,6 +885,37 @@ def save(data, name='auto', ext='auto', path="."):
     filename = os.path.join(path, name+ext)
     data.save(filename)
 
+@module
+def super_load(filelist=None, auto_divergence=True, auto_detector_saturation=False, auto_monitor_saturation=False):
+    """
+    Load a list of nexus files from the NCNR data server.
+
+    **Inputs**
+
+    filelist (fileinfo+): List of files to open.  Fileinfo is a structure
+    with { path: location on server, mtime: expected modification time }.
+    
+    auto_divergence (bool?): Automatically calculate the angular divergence of the beam
+    
+    auto_detector_saturation (bool?): Automatically correct the detector saturation
+    
+    auto_monitor_saturation (bool?): Automatically correct the monitor saturation
+
+    **Returns**
+
+    output (refldata+): All entries of all files in the list.
+
+    2015-02-08 Brian Maranville
+    """
+    from .load import url_load_list
+    dataset = url_load_list(filelist)
+    if auto_divergence:
+        from .angles import apply_divergence
+        for data in dataset:
+            #data = copy(data)
+            #data.log('divergence()')
+            apply_divergence(data)
+    return dataset
 
 # ==================
 

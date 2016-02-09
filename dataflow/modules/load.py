@@ -7,9 +7,12 @@ from reflred.steps import steps
 from dataflow.core import Module
 
 test_dataset = [
-  {'path': "ncnrdata/cgd/201511/21066/data/HMDSO_17nm_dry14.nxz.cgd", "mtime": 1447353278},
-  {'path': "ncnrdata/cgd/201511/21066/data/HMDSO_17nm_dry15.nxz.cgd", "mtime": 1447353664},
-  {'path': "ncnrdata/cgd/201511/21066/data/HMDSO_17nm_dry16.nxz.cgd", "mtime": 1447354137}
+  #{'path': "ncnrdata/cgd/201511/21066/data/HMDSO_17nm_dry14.nxz.cgd", "mtime": 1447353278},
+  #{'path': "ncnrdata/cgd/201511/21066/data/HMDSO_17nm_dry15.nxz.cgd", "mtime": 1447353664},
+  #{'path': "ncnrdata/cgd/201511/21066/data/HMDSO_17nm_dry16.nxz.cgd", "mtime": 1447354137},
+  {'path': "ncnrdata/cgd/201511/21066/data/HMDSO_50w_45nm160.nxz.cgd", "mtime": 1447562764},
+  {'path': "ncnrdata/cgd/201511/21066/data/HMDSO_50w_45nm159.nxz.cgd", "mtime": 1447551474},
+  {'path': "ncnrdata/cgd/201511/21066/data/HMDSO_50w_45nm158.nxz.cgd", "mtime": 1447548245}
 ]
 DATA_SOURCE = "http://ncnr.nist.gov/pub/"
 
@@ -291,16 +294,18 @@ def test2():
     df.register_datatype(refldata)
     
     modules = [
-        {"module": "ncnr.refl.ncnr_load", "version": "0.1", "config": {}},
+        {"module": "ncnr.refl.super_load", "version": "0.1", "config": {}},
         {"module": "ncnr.refl.mask_points", "version": "0.1", "config": {}},
+        {"module": "ncnr.refl.normalize", "version": "0.1", "config": {}},
         {"module": "ncnr.refl.join", "version": "0.1", "config": {}}
     ]
     wires = [
         {"source": [0,"output"], "target": [1,"data"]},
-        {"source": [1,"output"], "target": [2,"input"]},
+        {"source": [1,"output"], "target": [2,"data"]},
+        {"source": [2,"output"], "target": [3,"data"]},
     ]
     template = Template("test", "test template", modules, wires, "ncnr.magik", version='0.0')
-    refl = process_template(template, {"0": {"filelist": test_dataset}, "1": {"mask_indices": {"0": [0,-1]}}}, target=(1, "output"))
+    refl = process_template(template, {"0": {"filelist": test_dataset}, "1": {"mask_indices": {"1": [0,-1]}}}, target=(2, "output"))
     return refl
 
 if __name__ == "__main__":
