@@ -199,6 +199,10 @@ class Module(object):
             self._source = "".join(inspect.getsourcelines(self.action)[0])
         return self._source
 
+    def get_definition(self):
+        keys = ['version', 'id', 'name', 'description', 'icon', 'fields', 'terminals', 'action_id']
+        return dict([(k, getattr(self, k)) for k in keys])
+
     def __getstate__(self):
         # Don't pickle the function reference
         return (self.version, self.id, self.name, self.description,
@@ -318,6 +322,8 @@ class Template(object):
 
     def __getstate__(self):
         return self.__dict__
+    def get_definition(self):
+        return self.__dict__
     def __setstate__(self, state):
         # As the template definition changes we need to increment the version
         # number in TEMPLATE_VERSION.  This code must be able to interpret
@@ -354,14 +360,16 @@ class Instrument(object):
         implement an interface that allows data sets to be listed and
         retrieved for a particular instrument/experiment.
     """
-    def __init__(self, id, name=None, menu=None,
+    def __init__(self, id, name=None, menu=None, templates=None,
                  datatypes=None, requires=None, archive=None, loaders=None):
         self.id = id
         self.name = name
         self.menu = menu
+        self.templates = templates if templates is not None else []
         self.datatypes = datatypes
         self.requires = requires
         self.archive = archive
+
         self.loaders = loaders
 
         self.modules = []
@@ -402,11 +410,19 @@ class Instrument(object):
         else:
             raise KeyError(name + ' does not exist in instrument ' + self.name)
 
-
+    
     def id_by_name(self, name):
         for m in self.modules:
             if m.name == name: return m.id
         raise KeyError(name + ' does not exist in instrument ' + self.name)
+        
+    def get_definition(self):
+        keys = ['id', 'name', 'archive']
+        definition = dict([(k, getattr(self, k)) for k in keys])
+        definition['modules'] = [m.get_definition() for m in self.modules]
+        definition['datatypes'] = [d.get_definition() for d in self.datatypes]
+        definition['templates'] = [t.get_definition() for t in self.templates]
+        return definition
         
 class Data(object):
     """
@@ -458,6 +474,10 @@ class Data(object):
         obj = self.cls()
         obj.__setstate__(state)
         return obj
+    
+    def get_definition(self):
+        return {"id": self.id}
+        
 
 
 # Inf/NaN representation options:
