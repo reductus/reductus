@@ -282,6 +282,8 @@ class Template(object):
                 pairs.extend((source, target) for source in sources)
                 processed.add(target)
                 remaining |= set(sources) - processed
+            if not pairs:  # No dependencies; calculate node only
+                return [target]
         return processing_order(pairs, n)
 
     def inputs(self, id):
