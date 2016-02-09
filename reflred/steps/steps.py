@@ -25,11 +25,11 @@ def nop(data):
 
     **Inputs**
 
-    data (refldata): Input data
+    data (refldata*): Input data
 
     **Returns**
 
-    output (refldata): Unaltered data
+    output (refldata*): Unaltered data
 
     2015-12-31 Paul Kienzle
     """
@@ -203,11 +203,11 @@ def monitor_saturation(data):
 
     **Inputs**
 
-    data (refldata): Uncorrected data
+    data (refldata*): Uncorrected data
 
     **Returns**
 
-    output (refldata): Dead-time corrected data
+    output (refldata*): Dead-time corrected data
 
     2015-12-17 Paul Kienzle
     """
@@ -229,11 +229,11 @@ def detector_saturation(data):
 
     **Inputs**
 
-    data (refldata): Uncorrected data
+    data (refldata*): Uncorrected data
 
     **Returns**
 
-    output (refldata): Dead-time corrected data
+    output (refldata*): Dead-time corrected data
 
     2015-12-17 Paul Kienzle
     """
@@ -886,7 +886,7 @@ def save(data, name='auto', ext='auto', path="."):
     data.save(filename)
 
 @module
-def super_load(filelist=None, auto_divergence=True, auto_detector_saturation=False, auto_monitor_saturation=False):
+def super_load(filelist=None, auto_divergence=True, auto_detector_saturation=False, auto_monitor_saturation=False, intent='auto'):
     """
     Load a list of nexus files from the NCNR data server.
 
@@ -900,6 +900,8 @@ def super_load(filelist=None, auto_divergence=True, auto_detector_saturation=Fal
     auto_detector_saturation (bool?): Automatically correct the detector saturation
     
     auto_monitor_saturation (bool?): Automatically correct the monitor saturation
+    
+    intent (str?): set the intent of the files as with the mark_intent filter
 
     **Returns**
 
@@ -908,6 +910,8 @@ def super_load(filelist=None, auto_divergence=True, auto_detector_saturation=Fal
     2015-02-08 Brian Maranville
     """
     from .load import url_load_list
+    from .intent import apply_intent
+    
     dataset = url_load_list(filelist)
     if auto_divergence:
         from .angles import apply_divergence
@@ -915,6 +919,16 @@ def super_load(filelist=None, auto_divergence=True, auto_detector_saturation=Fal
             #data = copy(data)
             #data.log('divergence()')
             apply_divergence(data)
+            
+    if auto_detector_saturation:
+        data = detector_saturation(data)
+            
+    if auto_monitor_saturation:
+        data = monitor_saturation(data)
+        
+    for data in dataset:
+        #data.log('mark_intent(%r)' % intent)
+        apply_intent(data, intent)
     return dataset
 
 # ==================
