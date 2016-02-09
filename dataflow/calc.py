@@ -18,12 +18,14 @@ def process_template(template, config, target=(None,None)):
     Evaluate the template.
 
     If *target=(node number, "terminal id")* is specified, then only
-    calculate the nodes required to evaluate the target, and return
-    only the target, otherwise return all nodes and all targets.
+    calculate the nodes required to evaluate the target.
 
     For each node, if its fingerprint is already in the cache, retrieve
     the cached value and use it for subsequent nodes.  If not, then run
     the node action and place the results in the cache.
+
+    If *target* is specified, then return the target as a json serialized
+    object containing the list of values on the specified output terminal.
     """
     cache = get_cache()
 
@@ -56,7 +58,7 @@ def process_template(template, config, target=(None,None)):
             if tuple(key) not in results:
                 fp = fingerprints[source_node]
                 print "retrieving cached value for node %d:"%source_node, fp
-                bundles = _deserialize(cache.get(fp), output_terminals)
+                bundles = _retrieve(cache, fp, output_terminals)
                 results.update(((source_node,k),v) for k,v in bundles)
             inputs[target_terminal].extend(results[key])
 
@@ -152,35 +154,43 @@ def process_template(template, config, target=(None,None)):
         print "caching", node, module.id
         #print "caching", module.id, bundles
         #print "caching",_serialize(bundles, output_terminals)
-        cache.set(fingerprints[node], _serialize(bundles, output_terminals))
+        _store(cache, fingerprints[node], bundles, output_terminals)
         results.update(((node,k),v) for k,v in bundles.items())
 
     print list(sorted(results.keys()))
     if return_node is not None:
-        return results[(return_node, return_terminal)]
+        #print "returning", return_node, return_terminal
+        #print "key",_cache_key(fingerprints[return_node], return_terminal)
+        return cache.get(_cache_key(fingerprints[return_node], return_terminal))
     else:
-        return results
+        return None
 
 
-def _serialize(data, terminals):
-    data = data.copy()
+def _store(cache, fp, data, terminals):
     for t in terminals:
         terminal_id = t["id"]
         datatype = lookup_datatype(t["datatype"])
-        data[terminal_id]= [datatype.data_to_dict(v)
-                            for v in data[terminal_id]]
-    return json.dumps(data)
+        bundle = [datatype.data_to_dict(v) for v in data[terminal_id]]
+        string = json.dumps(bundle)
+        #print ">>>>>>>>>>>>>> storing",fp,terminal_id
+        #print "datatype",datatype
+        #print "data",data[terminal_id]
+        #print "bundle",bundle
+        #print "string",string
+        cache.set(_cache_key(fp, terminal_id), string)
 
-
-def _deserialize(string, terminals):
-    data = json.loads(string)
+def _retrieve(cache, fp, terminals):
+    data = {}
     for t in terminals:
         terminal_id = t["id"]
         datatype = lookup_datatype(t["datatype"])
-        data[terminal_id]= [datatype.dict_to_data(v)
-                            for v in data[terminal_id]]
+        string = cache.get(_cache_key(fp, terminal_id))
+        bundle = json.loads(string)
+        data[terminal_id] = [datatype.dict_to_data(v) for v in bundle]
     return data
 
+def _cache_key(fp, terminal_id):
+    return ":".join((fp, terminal_id))
 
 def fingerprint_template(template, config):
     """
@@ -336,10 +346,10 @@ def run_example(template, config, seed=None, verbose=False): # pragma no cover
         print 'config: ', json.dumps(config, sort_keys=True, indent=2)
 
     with push_seed(seed):
-        result = run_template(template, config)
+        result = process_template(template, config)
 
     if verbose:
-        print 'result: ', json.dumps(result,sort_keys=True, indent=2)
+        print 'result: ', json.dumps(result, sort_keys=True, indent=2)
     for key, value in result.items():
         for output in value.get('output',[]):
             if not isinstance(output, dict):

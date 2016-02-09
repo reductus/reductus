@@ -126,6 +126,7 @@ def demo6():
     refl = process_template(template=template,
                             config={"0": {"filelist": test_dataset}},
                             target=(len(template.modules)-1, "output"))
+    print "refl",refl
     return refl
 
 
