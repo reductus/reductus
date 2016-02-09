@@ -34,18 +34,16 @@ def process_template(template, config, target=(None,None)):
     results = {}
     fingerprints = fingerprint_template(template, config)
     for node, input_wires in template.ordered(target=return_node):
-        if cache.exists(fingerprints[node]):
-            # Node value is already computed; don't retrieve it quite yet
-            # since it may not be needed for subsequent nodes
-            print "already cached",node
-            continue
-
         node_info = template.modules[node]
         module = lookup_module(node_info['module'])
         input_terminals = [t for t in module.terminals if t["use"] == "in"]
         output_terminals = [t for t in module.terminals if t["use"] == "out"]
         # Initialize input terminals to empty bundles
         inputs = dict((t["id"], []) for t in input_terminals)
+        if all([cache.exists(_cache_key(fingerprints[node], t['id'])) for t in output_terminals]):
+            print "already cached", node
+            continue
+        
 
         # Extend input terminals from the bundles on the wires
         for wire in input_wires:
@@ -157,7 +155,7 @@ def process_template(template, config, target=(None,None)):
         _store(cache, fingerprints[node], bundles, output_terminals)
         results.update(((node,k),v) for k,v in bundles.items())
 
-    print list(sorted(results.keys()))
+    #print list(sorted(results.keys()))
     if return_node is not None:
         #print "returning", return_node, return_terminal
         #print "key",_cache_key(fingerprints[return_node], return_terminal)
@@ -178,6 +176,9 @@ def _store(cache, fp, data, terminals):
         #print "bundle",bundle
         #print "string",string
         cache.set(_cache_key(fp, terminal_id), string)
+
+def _exists_all(cache, fp, terminals):
+    return all([cache.exists(_cache_key(fp, t)) for t in terminals])
 
 def _retrieve(cache, fp, terminals):
     data = {}
