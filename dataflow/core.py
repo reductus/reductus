@@ -27,6 +27,7 @@ def register_instrument(instrument):
     for d in instrument.datatypes:
         register_datatype(d)
 
+
 def register_module(module):
     """
     Register a new calculation module.
@@ -35,12 +36,14 @@ def register_module(module):
         #raise TypeError("Module already registered")
         return
     _module_registry[module.id] = module
-    
+
+
 def lookup_module(id):
     """
     Lookup a module in the registry.
     """
     return _module_registry[id]
+
 
 def register_datatype(datatype):
     if (datatype.id in _datatype_registry and
@@ -48,8 +51,10 @@ def register_datatype(datatype):
         raise TypeError("Datatype already registered")
     _datatype_registry[datatype.id] = datatype
 
+
 def lookup_datatype(id):
     return _datatype_registry[id]
+
 
 class Module(object):
     """
@@ -200,23 +205,23 @@ class Module(object):
         return self._source
 
     def get_definition(self):
-        keys = ['version', 'id', 'name', 'description', 'icon', 'fields', 'terminals', 'action_id']
-        return dict([(k, getattr(self, k)) for k in keys])
+        return self.__getstate__()
 
     def __getstate__(self):
         # Don't pickle the function reference
-        return (self.version, self.id, self.name, self.description,
-                self.icon, self.fields, self.terminals,
-                self.action_id)
+        keys = ['version', 'id', 'name', 'description', 'icon',
+                'fields', 'terminals', 'action_id']
+        return dict([(k, getattr(self, k)) for k in keys])
 
     def __setstate__(self, state):
         from importlib import import_module
-        (self.version, self.id, self.name, self.description,
-         self.icon, self.fields, self.terminals, self.action_id) = state
+        for k, v in state.items():
+            setattr(self, k, v)
         # Restore the function reference after unpickling
         parts = self.action_id.split('.')
         mod = import_module(".".join(parts[:-1]))
         self.action = getattr(mod, parts[-1])
+
 
 class Template(object):
     """
@@ -320,10 +325,12 @@ class Template(object):
         print(json.dumps(self.__getstate__(), indent=2, sort_keys=True,
               separators=(',', ': ')))
 
+    def get_definition(self):
+        return self.__getstate__()
+
     def __getstate__(self):
         return self.__dict__
-    def get_definition(self):
-        return self.__dict__
+
     def __setstate__(self, state):
         # As the template definition changes we need to increment the version
         # number in TEMPLATE_VERSION.  This code must be able to interpret
@@ -410,7 +417,6 @@ class Instrument(object):
         else:
             raise KeyError(name + ' does not exist in instrument ' + self.name)
 
-    
     def id_by_name(self, name):
         for m in self.modules:
             if m.name == name: return m.id
@@ -423,61 +429,44 @@ class Instrument(object):
         definition['datatypes'] = [d.get_definition() for d in self.datatypes]
         definition['templates'] = [t.get_definition() for t in self.templates]
         return definition
+
         
-class Data(object):
+class DataType(object):
     """
     Data objects represent the information flowing over a wire.
 
-    *name* : string
-        User visible identifier for the data. Usually this is file name.
+    *id* : string
+        Name of the data type.
 
-    *datatype* : string
-        Type of the data. This determines how the data may be plotted
-        and filtered.
-
-    *intent* : string
-        What role the data is intended for, such as 'background' for
-        data that is used for background subtraction.
-
-    *dataid* : string
-        Key to the data. The data itself can be stored and retrieved by key.
-
-    *history* : list
-        History is the set of modules used to create the data. Each module
-        is identified by the module id, its version number and the module
-        configuration used for this data set. For input terminals, the
-        configuration will be {string: [int,...]} identifying
-        the connection between nodes in the history list for each input.
-
-    *module* : string
-
-    *version* : string
-
-    *inputs* : { <input terminal name> : [(<hist index>, <output terminal>), ...] }
-
-    *config* : { <field name> : value, ... }
-
-    *dataid* : string
+    *cls* : Classs
+        Python class defining the data type.
     """
-    def __init__(self, id, cls, loaders=None):
+    def __init__(self, id, cls):
         self.id = id
         self.cls = cls
-        self.loaders = loaders if loaders else []
 
-    def data_to_dict(self, value):
-        state = value.__getstate__()
-        state = sanitizeForJSON(state)
-        return state
-    
-    def dict_to_data(self, state):
-        state = sanitizeFromJSON(state)
-        obj = self.cls()
-        obj.__setstate__(state)
-        return obj
-    
     def get_definition(self):
         return {"id": self.id}
+
         
+class Bundle(object):
+    def __init__(self, datatype, values):
+        self.datatype = datatype
+        self.values = values
+
+    def todict(self):
+        values = [v.__getstate__() for v in self.values]
+        return { 'datatype': self.datatype.id, 'values': values }
+
+    @staticmethod
+    def fromdict(state):
+        datatype = lookup_datatype(state['datatype'])
+        values = []
+        for value in state['values']:
+            obj = datatype.cls()
+            obj.__setstate__(state)
+            values.append(obj)
+        return Bundle(datatype, values)
 
 
 # Inf/NaN representation options:
@@ -532,8 +521,6 @@ def sanitizeFromJSON(obj):
         return NaN
     else:
         return obj
-
-
 
 
 def make_template(name, description, diagram, instrument, version):
@@ -721,6 +708,7 @@ def bundle(fn):
     wrapper.__annotations__ = fn.__annotations__
     wrapper.__dict__.update(fn.__dict__)
 
+
 def outputs_wrapper(module_description, action):
     """
     Turn the action which returns a list of outputs into an action
@@ -841,6 +829,7 @@ def auto_module(action):
     """
     return _parse_function(action)
 
+
 timestamp = re.compile(r"^(?P<date>[0-9]{4}-[0-9]{2}-[0-9]{2})\s+(?P<author>.*?)\s*$")
 def _parse_function(action):
     # Grab the docstring from the function
@@ -937,6 +926,7 @@ def _parse_function(action):
 
     return result
 
+
 def _unsplit_name(name):
     """
     Convert "this_name" into "This Name".
@@ -952,7 +942,6 @@ parameter_re = re.compile("""\A
     \s*(?P<description>.*?)                  # non-greedy description
     \s*([[]\s*(?P<default>.*?)\s*[]])?       # [ default ]
     \s*\Z""", re.VERBOSE)
-
 def _parse_parameters(lines):
     """
     Interpret the doc strings for the parameters.
@@ -988,6 +977,7 @@ def _parse_parameters(lines):
         d['label'] = _unsplit_name(d['id'])
         ret.append(d)
     return ret
+
 
 def _get_paragraphs(lines):
     """

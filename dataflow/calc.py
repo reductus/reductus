@@ -11,6 +11,18 @@ from inspect import getsource
 
 from .cache import get_cache
 from .core import lookup_module, lookup_datatype
+from .core import sanitizeForJSON, sanitizeFromJSON, Bundle
+
+def find_calculated(template, config):
+    """
+    Returns a boolean vector indicating whether or not each node in the
+    template has been computed and cached.
+    """
+    cache = get_cache()
+
+    fingerprints = fingerprint_template(template, config)
+    return [cache.exists(fingerprints[node])
+            for node, _ in enumerate(template.modules)]
 
 
 def process_template(template, config, target=(None,None)):
@@ -40,7 +52,7 @@ def process_template(template, config, target=(None,None)):
         output_terminals = [t for t in module.terminals if t["use"] == "out"]
         # Initialize input terminals to empty bundles
         inputs = dict((t["id"], []) for t in input_terminals)
-        if all([cache.exists(_cache_key(fingerprints[node], t['id'])) for t in output_terminals]):
+        if cache.exists(fingerprints[node]):
             print "already cached", node
             continue
         
@@ -56,9 +68,9 @@ def process_template(template, config, target=(None,None)):
             if tuple(key) not in results:
                 fp = fingerprints[source_node]
                 print "retrieving cached value for node %d:"%source_node, fp
-                bundles = _retrieve(cache, fp, output_terminals)
-                results.update(((source_node,k),v) for k,v in bundles)
-            inputs[target_terminal].extend(results[key])
+                bundles = _retrieve(cache, fp)
+                results.update(((source_node,k),v) for k,v in bundles.items())
+            inputs[target_terminal].extend(results[key].values)
 
         # Check arity of module. If the input terminals are all multiple
         # inputs, then the action needs to be called once with the bundle.
@@ -124,18 +136,18 @@ def process_template(template, config, target=(None,None)):
                 # Substitute input terminal values
                 for t in input_terminals:
                     tid = t["id"]
-                    data = inputs[tid]
+                    bundle = inputs[tid]
                     if t["multiple"]:
-                        node_config[tid] = data
-                    elif len(data) == 0:
+                        node_config[tid] = bundle
+                    elif len(bundle) == 0:
                         if t["required"]:
                             raise ValueError("missing required input for %d: %s"
                                              % (node, node_info["module"]))
                         node_config[tid] = None
-                    elif len(data) == 1:
-                        node_config[tid] = data[0]
+                    elif len(bundle) == 1:
+                        node_config[tid] = bundle[0]
                     else:
-                        node_config[tid] = data[i]
+                        node_config[tid] = bundle[i]
 
                 # Perform action and make sure outputs forms a list
                 outputs = module.action(**node_config)
@@ -149,49 +161,36 @@ def process_template(template, config, target=(None,None)):
                     else:
                         bundles[t["id"]].append(v)
 
+        data = {}
+        for t in output_terminals:
+            tid = t["id"]
+            datatype = lookup_datatype(t["datatype"])
+            data[t["id"]] = Bundle(datatype=datatype, values=bundles[tid])
         print "caching", node, module.id
         #print "caching", module.id, bundles
         #print "caching",_serialize(bundles, output_terminals)
-        _store(cache, fingerprints[node], bundles, output_terminals)
-        results.update(((node,k),v) for k,v in bundles.items())
+        _store(cache, fingerprints[node], data)
+        results.update(((node,k),v) for k,v in data.items())
 
     #print list(sorted(results.keys()))
     if return_node is not None:
         #print "returning", return_node, return_terminal
         #print "key",_cache_key(fingerprints[return_node], return_terminal)
-        return cache.get(_cache_key(fingerprints[return_node], return_terminal))
+        return results[(return_node,return_terminal)]
     else:
-        return None
+        return results
 
 
-def _store(cache, fp, data, terminals):
-    for t in terminals:
-        terminal_id = t["id"]
-        datatype = lookup_datatype(t["datatype"])
-        bundle = [datatype.data_to_dict(v) for v in data[terminal_id]]
-        string = json.dumps(bundle)
-        #print ">>>>>>>>>>>>>> storing",fp,terminal_id
-        #print "datatype",datatype
-        #print "data",data[terminal_id]
-        #print "bundle",bundle
-        #print "string",string
-        cache.set(_cache_key(fp, terminal_id), string)
+def _store(cache, fp, data):
+    stored = dict((k, v.todict()) for k,v in sorted(data.items()))
+    string = json.dumps(sanitizeForJSON(stored))
+    cache.set(fp, string)
 
-def _exists_all(cache, fp, terminals):
-    return all([cache.exists(_cache_key(fp, t)) for t in terminals])
-
-def _retrieve(cache, fp, terminals):
-    data = {}
-    for t in terminals:
-        terminal_id = t["id"]
-        datatype = lookup_datatype(t["datatype"])
-        string = cache.get(_cache_key(fp, terminal_id))
-        bundle = json.loads(string)
-        data[terminal_id] = [datatype.dict_to_data(v) for v in bundle]
+def _retrieve(cache, fp):
+    string = cache.get(fp)
+    stored = sanitizeFromJSON(json.loads(string))
+    data = dict((k, Bundle.fromdict(v)) for k,v in stored)
     return data
-
-def _cache_key(fp, terminal_id):
-    return ":".join((fp, terminal_id))
 
 def fingerprint_template(template, config):
     """

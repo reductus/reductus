@@ -9,19 +9,11 @@ INSTRUMENT_PREFIX = "refl1d.ncnr."
 
 # Define modules
 modules = df.make_modules(steps.ALL_ACTIONS, prefix=INSTRUMENT_PREFIX)
-#for m in modules: print m.id
 
 # Define data types
-# Note: retrieving the data loader is more awkward than just using
-# steps.ncnr_load because we need the automatic wrapper to turn the
-# output list into an output dictionary.
-# TODO: actions should return lists rather than dictionaries
-loader_name = INSTRUMENT_PREFIX + "ncnr_load"
-loader = [m for m in modules if m.id == loader_name][0]
-refldata = df.Data(INSTRUMENT_PREFIX+"refldata", ReflData,
-                   loaders=[{'function': loader, 'id': 'LoadNeXuS'}])
-poldata = df.Data(INSTRUMENT_PREFIX+"poldata", PolarizationData, loaders=[])
-deadtime = df.Data(INSTRUMENT_PREFIX+"deadtime", DeadTimeData, loaders=[])
+refldata = df.DataType(INSTRUMENT_PREFIX+"refldata", ReflData)
+poldata = df.DataType(INSTRUMENT_PREFIX+"poldata", PolarizationData)
+deadtime = df.DataType(INSTRUMENT_PREFIX+"deadtime", DeadTimeData)
 
 # Define instrument
 refl1d = df.Instrument(
@@ -124,8 +116,8 @@ def demo6():
     refl = process_template(template=template,
                             config={"0": {"filelist": test_dataset}},
                             target=(len(template.modules)-1, "output"))
-    print "refl",refl
-    return refl
+    print "refl",refl.values
+    return refl.values
 
 
 def demo1():
