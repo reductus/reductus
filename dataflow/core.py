@@ -14,19 +14,21 @@ from .deps import processing_order
 
 TEMPLATE_VERSION = '1.0'
 
-_instrument_registry = []
+_instrument_registry = {}
 _module_registry = {}
 _datatype_registry = {}
 def register_instrument(instrument):
     """
     Add a new instrument to the server.
     """
-    _instrument_registry.append(instrument.id)
+    _instrument_registry[instrument.id] = instrument
     for m in instrument.modules:
         register_module(m)
     for d in instrument.datatypes:
         register_datatype(d)
 
+def lookup_instrument(id):
+    return _instrument_registry[id]
 
 def register_module(module):
     """

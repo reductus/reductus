@@ -1,35 +1,42 @@
 from dataflow import core as df
 
 from reflred.steps import steps
+from reflred.steps import load
 from reflred.refldata import ReflData
 from reflred.steps.polarization import PolarizationData
 from reflred.steps.deadtime import DeadTimeData
 
-INSTRUMENT_PREFIX = "refl1d.ncnr."
+INSTRUMENT = "refl1d.ncnr"
 
-# Define modules
-modules = df.make_modules(steps.ALL_ACTIONS, prefix=INSTRUMENT_PREFIX)
+def define_instrument(data_source):
+    # Set the data source
+    load.DATA_SOURCE = data_source
 
-# Define data types
-refldata = df.DataType(INSTRUMENT_PREFIX+"refldata", ReflData)
-poldata = df.DataType(INSTRUMENT_PREFIX+"poldata", PolarizationData)
-deadtime = df.DataType(INSTRUMENT_PREFIX+"deadtime", DeadTimeData)
+    # Define modules
+    modules = df.make_modules(steps.ALL_ACTIONS, prefix=INSTRUMENT+'.')
 
-# Define instrument
-refl1d = df.Instrument(
-    id=INSTRUMENT_PREFIX[:-1],
-    name='NCNR reflectometer',
-    menu=[('steps', modules)],
-    datatypes=[refldata, poldata, deadtime],
-    archive="NCNR",
-    )
+    # Define data types
+    refldata = df.DataType(INSTRUMENT+".refldata", ReflData)
+    poldata = df.DataType(INSTRUMENT+".poldata", PolarizationData)
+    deadtime = df.DataType(INSTRUMENT+".deadtime", DeadTimeData)
 
-# Register instrument
-df.register_instrument(refl1d)
+    # Define instrument
+    refl1d = df.Instrument(
+        id=INSTRUMENT,
+        name='NCNR reflectometer',
+        menu=[('steps', modules)],
+        datatypes=[refldata, poldata, deadtime],
+        archive="NCNR",
+        )
+
+    # Register instrument
+    df.register_instrument(refl1d)
+    return refl1d
 
 
 def loader_template():
-    from dataflow.core import make_template
+    from dataflow.core import make_template, lookup_instrument
+    refl1d = lookup_instrument(INSTRUMENT)
     diagram = [
             ["ncnr_load", {}],
             ["divergence", {"data": "-.output"}],
@@ -45,7 +52,8 @@ def loader_template():
 
 
 def unpolarized_template():
-    from dataflow.core import make_template
+    from dataflow.core import make_template, lookup_instrument
+    refl1d = lookup_instrument(INSTRUMENT)
     diagram = [
         # Load the data
         ["ncnr_load", {}],
@@ -75,8 +83,8 @@ def unpolarized_template():
         ["join => backm",  {"data": "-.output"}],
 
         ["nop", {"data": "split.intensity"}],
-        ["rescale",  {"data": "-.output", "scale": [1.0], "dscale": [0.0]}],
-        ["join => intensity",  {"data": "-.output", "tolerance": [0.0001]}],
+        ["rescale",  {"data": "-.output", "scale": 1.0, "dscale": 0.0}],
+        ["join => intensity",  {"data": "-.output", "tolerance": 0.0001}],
 
         # Operate on the combined data for the final reduction
         ["subtract_background", {
@@ -99,8 +107,7 @@ def unpolarized_template():
 
 def demo6():
     from dataflow.calc import process_template
-    from reflred.steps import load
-    load.DATA_SOURCE = "http://ncnr.nist.gov/pub/"
+    define_instrument(data_source="http://ncnr.nist.gov/pub/")
 
     template = unpolarized_template()
     #print "========== Template ========"
@@ -122,8 +129,7 @@ def demo6():
 
 def demo1():
     from dataflow.calc import process_template
-    from reflred.steps import load
-    load.DATA_SOURCE = "http://ncnr.nist.gov/pub/"
+    define_instrument(data_source="http://ncnr.nist.gov/pub/")
 
     template = loader_template()
     #print "========== Template ========"

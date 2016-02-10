@@ -1,12 +1,12 @@
 import sys
+import time
 import BaseHTTPServer, SocketServer
 from SimpleHTTPServer import SimpleHTTPRequestHandler
+#import multiprocessing
+#import webbrowser
+
 from jsonrpclib.SimpleJSONRPCServer import SimpleJSONRPCServer, SimpleJSONRPCRequestHandler
 import jsonrpclib.config
-
-import multiprocessing
-import webbrowser
-import time
 
 try:
     import config
@@ -120,32 +120,14 @@ def get_file_metadata(pathlist=None):
 
 from dataflow.core import Template, sanitizeForJSON
 from dataflow.cache import use_redis
-from dataflow import core as df
 from dataflow.calc import process_template
-from reflred.steps import load, steps
-from reflred.refldata import ReflData
+
+from dataflow.modules.refl import define_instrument
 
 use_redis()
-load.DATA_SOURCE = config.data_repository
-INSTRUMENT_PREFIX = "ncnr.refl."
+define_instrument(data_source=config.data_repository)
 
-modules = df.make_modules(steps.ALL_ACTIONS, prefix=INSTRUMENT_PREFIX)
-for m in modules:
-        df.register_module(m)
-loader_name = INSTRUMENT_PREFIX + "super_load"
-loader = [m for m in modules if m.id == loader_name][0]
 
-refldata = df.Data(INSTRUMENT_PREFIX+"refldata", ReflData,
-                   loaders=[{'function': loader, 'id': 'LoadNeXuS'}])
-#df.register_module(loader)
-df.register_datatype(refldata)
-
-#from dataflow.modules.load import load_module, load_action
-#from reflred.refldata import ReflData
-#rdata = Data("ncnr.refl.data", ReflData, loaders=[{'function':load_action, 'id':'LoadNeXuS'}])
-#register_module(load_module)
-#df.register_datatype(refldata)
-    
 def refl_load(file_descriptors):
     """ 
     file_descriptors will be a list of dicts like 
@@ -153,8 +135,8 @@ def refl_load(file_descriptors):
     """
     modules = [{"module": "ncnr.refl.load", "version": "0.1", "config": {}}]
     template = Template("test", "test template", modules, [], "ncnr.magik", version='0.0')
-    refl = calc_single(template, {0: {"files": file_descriptors}}, 0, "output")
-    return [r._toDict(sanitized=True) for r in refl]
+    retval = process_template(template, {0: {"files": file_descriptors}}, target=(0, "output"))
+    return sanitizeForJSON(retval.todict())
 
 def find_calculated(template_def, config):
     """

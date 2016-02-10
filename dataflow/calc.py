@@ -135,11 +135,13 @@ def process_template(template, config, target=(None,None)):
                             if f["required"]:
                                 raise ValueError("missing required input for %r for %d: %s"
                                                  % (node, fid, node_info["module"]))
-                            node_config[fid] = f["default"]
+                            # No need to specify default
                         elif len(bundle) == 1:
                             node_config[fid] = bundle[0]
                         else:
                             node_config[fid] = bundle[i]
+                    # else:
+                    #     pass # No need to specify default
 
                 # Substitute input terminal values
                 for t in input_terminals:
