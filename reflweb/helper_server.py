@@ -118,15 +118,22 @@ def get_file_metadata(pathlist=None):
     print fn
     return fn
 
-from dataflow.core import Template, sanitizeForJSON
+from dataflow.core import Template, sanitizeForJSON, lookup_instrument
 from dataflow.cache import use_redis
 from dataflow.calc import process_template
 
-from dataflow.modules.refl import define_instrument
+from dataflow.modules.refl import define_instrument, INSTRUMENT
 
 use_redis()
 define_instrument(data_source=config.data_repository)
 
+
+def get_instrument():
+    """
+    Make the instrument definition available to clients
+    """
+    instrument = lookup_instrument(INSTRUMENT)
+    return instrument.get_defintion()
 
 def refl_load(file_descriptors):
     """ 
