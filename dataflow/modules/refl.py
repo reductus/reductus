@@ -32,7 +32,7 @@ def loader_template():
     from dataflow.core import make_template
     diagram = [
             ["ncnr_load", {}],
-            #["divergence", {"data": "-.output"}],
+            ["divergence", {"data": "-.output"}],
     ]
     template = make_template(
         name="loader",

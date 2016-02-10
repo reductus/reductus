@@ -48,8 +48,8 @@ def process_template(template, config, target=(None,None)):
     for node, input_wires in template.ordered(target=return_node):
         node_info = template.modules[node]
         module = lookup_module(node_info['module'])
-        input_terminals = [t for t in module.terminals if t["use"] == "in"]
-        output_terminals = [t for t in module.terminals if t["use"] == "out"]
+        input_terminals = module.inputs
+        output_terminals = module.outputs
         # Initialize input terminals to empty bundles
         inputs = dict((t["id"], []) for t in input_terminals)
         if cache.exists(fingerprints[node]):

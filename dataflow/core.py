@@ -134,7 +134,7 @@ class Module(object):
             a bundle with the module.
 
 
-    *terminals* : [{Terminal}, ...]
+    *inputs*, "outputs" : [{Terminal}, ...]
         List module inputs and outputs.
 
         *id* : string
@@ -153,9 +153,6 @@ class Module(object):
             defining the type of data that flows through the terminal
             we can highlight valid connections automatically.
 
-        *use* : string | "in|out"
-            whether this is an input parameter or an output parameter
-
         *description* : string
             A tooltip shown when hovering over the terminal; defaults
             to datatype name
@@ -168,7 +165,7 @@ class Module(object):
             or if multiple outputs are produced on output terminals.
     """
     def __init__(self, id, version, name, description, icon=None,
-                 terminals=None, fields=None, action=None,
+                 inputs=None, outputs=None, fields=None, action=None,
                  author="", action_id="",
                  ):
         self.id = id
@@ -177,7 +174,8 @@ class Module(object):
         self.description = description
         self.icon = icon
         self.fields = fields if fields is not None else {}
-        self.terminals = terminals
+        self.inputs = inputs
+        self.outputs = outputs
         self.action = action
         self.action_id = action_id
 
@@ -189,7 +187,8 @@ class Module(object):
         try:
             self._terminal_by_id
         except AttributeError:
-            self._terminal_by_id = dict((t['id'], t) for t in self.terminals)
+            self._terminal_by_id = dict((t['id'], t)
+                                        for t in self.inputs+self.outputs)
         return self._terminal_by_id[id]
         
     def get_source_code(self):
@@ -210,7 +209,7 @@ class Module(object):
     def __getstate__(self):
         # Don't pickle the function reference
         keys = ['version', 'id', 'name', 'description', 'icon',
-                'fields', 'terminals', 'action_id']
+                'fields', 'inputs', 'outputs', 'action_id']
         return dict([(k, getattr(self, k)) for k in keys])
 
     def __setstate__(self, state):
@@ -389,7 +388,7 @@ class Instrument(object):
         defined = set(d.id for d in self.datatypes)
         used = set()
         for m in self.modules:
-            used |= set(t['datatype'] for t in m.terminals)
+            used |= set(t['datatype'] for t in m.inputs+m.outputs)
         if used - defined:
             raise TypeError("undefined types: %s" % ", ".join(used - defined))
         if defined - used:
@@ -595,24 +594,29 @@ def make_template(name, description, diagram, instrument, version):
             raise ValueError(err("action not defined for %s"%instrument.id))
         module_handles.append(module)
 
-        # convert config info for terminals into wires
+        # Check that we are not setting config info for the output terminals.
+        for target in module.outputs:
+            target_terminal = target["id"]
+            if target_terminal in config:
+                raise ValueError("link should not be set on output terminal %r"
+                                 %target_terminal)
+
+        # Scan through the input terminals, and for each input terminal
+        # convert the config information for that terminal into a wire.
         config = config.copy()
-        for target in module.terminals:
+        for target in module.inputs:
             # retrieve the target terminal, and its configuration
             target_terminal = target["id"]
-            source_string = config.pop(target_terminal, None)
+            config_value = config.pop(target_terminal, None)
 
             # check if it is required
-            if source_string is None:
-                if target["use"] == "in" and target["required"]:
+            if config_value is None:
+                if target["required"]:
                     raise ValueError(target_err("input terminal requires link"))
                 continue
-            # check if linking to an output terminal
-            if target["use"] == "out":
-                raise ValueError(target_err("link should be set on input terminals not output terminals"))
 
             # check for multiple links
-            parts = [w.strip() for w in source_string.split(',')]
+            parts = [w.strip() for w in config_value.split(',')]
             if len(parts) > 1 and not target["multiple"]:
                 raise ValueError(target_err("only one input allowed"))
 
@@ -622,7 +626,8 @@ def make_template(name, description, diagram, instrument, version):
                 try:
                     source_id, source_terminal = p.split('.')
                 except:
-                    raise ValueError(target_err("expected %r"%{target_terminal:'source.terminal'}))
+                    expected = {target_terminal: 'source.terminal'}
+                    raise ValueError(target_err("expected %r"%(expected,)))
 
                 # interpret source
                 if source_id == '-':
@@ -644,7 +649,7 @@ def make_template(name, description, diagram, instrument, version):
 
                 # make sure that source is an output terminal of the correct
                 # data type
-                if source["use"] != "out":
+                if source not in source_module.outputs:
                     raise ValueError(target_err("terminal %r is not an output terminal"
                                                 % source_terminal))
                 if target["datatype"] != source["datatype"]:
@@ -667,68 +672,8 @@ def make_template(name, description, diagram, instrument, version):
                         "version": module.version,
                         "config": config})
 
-    return Template(name=name, description=description,
-                    modules=modules, wires=wires, instrument=instrument.id,
-                    version=version)
-
-
-def bundle(fn):
-    """
-    Decorator which turns a single file function into a bundle function.
-
-    Note: untested code.
-
-    Note: not sure we want to do this; it would be better for the
-    infrastructure to identify that a bundle is given to an action
-    and unless the action is known to accept a bundle, it will open
-    up a table of parameter values, one for each file in the bundle
-    so that the can be set individually.
-    """
-    argspec = inspect.getargspec(fn)
-    full_args = argspec.args
-    call_args = full_args if not inspect.ismethod(fn) else full_args[1:]
-    first = call_args[0]
-    sig = ",".join(full_args)
-    call = ",".join(call_args)
-    source = """
-    def wrapper(%(sig)s):
-        if isinstance(%(first)s, list):
-            return [fn(%(call)s) for d in %(first)s]
-        else:
-            return fn(%(call)s)
-    """%dict(first=first, sig=sig, call=call)
-    context = dict(fn=fn)
-    code = compile(source, fn.__file__, 'single')
-    exec(code, context)
-    wrapper = context['wrapper']
-    wrapper.__name__ = fn.__name__
-    wrapper.__doc__ = fn.__doc__
-    wrapper.__module__ = fn.__module__
-    wrapper.__defaults__ = argspec.defaults
-    wrapper.__annotations__ = fn.__annotations__
-    wrapper.__dict__.update(fn.__dict__)
-
-
-def outputs_wrapper(module_description, action):
-    """
-    Turn the action which returns a list of outputs into an action
-    that returns a dictionary.
-    """
-    keys = [p['id'] for p in module_description['terminals']
-            if p['use'] == 'out']
-    if len(keys) > 1:
-        def wrapper(*args, **kw):
-            result = action(*args, **kw)
-            print action.__name__,"returns",result,"into",keys
-            return dict(zip(keys, result))
-        return wrapper
-    elif len(keys) == 1:
-        def wrapper(*args, **kw):
-            result = action(*args, **kw)
-            return {keys[0]: result}
-        return wrapper
-    else:
-        return action
+    return Template(name=name, description=description, version=version,
+                    modules=modules, wires=wires, instrument=instrument.id)
 
 
 def make_modules(actions, prefix=""):
@@ -747,7 +692,7 @@ def make_modules(actions, prefix=""):
 
         # Tag each terminal data type with the data type prefix, if it is
         # not already a fully qualified name
-        for v in module_description['terminals']:
+        for v in module_description['inputs'] + module_description['outputs']:
             if '.' not in v['datatype']:
                 v['datatype'] = prefix + v['datatype']
 
@@ -906,18 +851,13 @@ def _parse_function(action):
         if p['default'] is None:
             p['default'] = str(defaults[p['id']])
 
-    # Set the terminal direction
-    for p in input_terminals:
-        p['use'] = 'in'
-    for p in output_terminals:
-        p['use'] = 'out'
-
     # Collect all the node info
     result = {
         'id': action.__name__,
         'name': _unsplit_name(action.__name__),
         'description': description,
-        'terminals': input_terminals + output_terminals,
+        'inputs': input_terminals,
+        'outputs': output_terminals,
         'fields': input_fields,
         'version': version,
         'author': author,
