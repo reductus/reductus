@@ -118,13 +118,14 @@ def get_file_metadata(pathlist=None):
     print fn
     return fn
 
-from dataflow.core import register_module, register_datatype, Template, Data
+from dataflow.core import Template, sanitizeForJSON
 from dataflow.cache import use_redis
-use_redis()
 from dataflow import core as df
 from dataflow.calc import process_template
 from reflred.steps import load, steps
 from reflred.refldata import ReflData
+
+use_redis()
 load.DATA_SOURCE = config.data_repository
 INSTRUMENT_PREFIX = "ncnr.refl."
 
@@ -188,22 +189,19 @@ def calc_terminal(template_def, config, nodenum, terminal_id):
     """
     template = Template(**template_def)
     #print "template_def:", template_def, "config:", config
-    retvals = process_template(template, config, target=(nodenum, terminal_id))
-    import json
-    return json.loads(retvals)
+    retval = process_template(template, config, target=(nodenum, terminal_id))
+    return sanitizeForJSON(retval.todict())
     
 def calc_template(template_def, config):
     """ json-rpc wrapper for process_template """
     template = Template(**template_def)
     retvals = process_template(template, config, target=(None,None))
     output = {}
-    for rkey in retvals:
+    for rkey, rv in retvals.items():
         module_id, terminal_id = rkey
-        rv = retvals[rkey]
-        module_key = "%d" % (module_id,)
-        if not module_key in output:
-            output[module_key] = {}
-        output[module_key][terminal_id] = [r.__getstate__() for r in rv]
+        module_key = str(module_id)
+        output.setdefault(module_key, {})
+        output[module_key][terminal_id] = sanitizeForJSON(rv.todict())
     return output
     
 def get_jstree(path='./'):
