@@ -156,6 +156,15 @@ def refl_load(file_descriptors):
     refl = calc_single(template, {0: {"files": file_descriptors}}, 0, "output")
     return [r._toDict(sanitized=True) for r in refl]
 
+def find_calculated(template_def, config):
+    """
+    Returns a vector of true/false for each node in the template indicating
+    whether that node value has been calculated yet.
+    """
+    template = Template(**template_def)
+    retval = find_calculated(template, config)
+    return retval
+
 def calc_terminal(template_def, config, nodenum, terminal_id):
     """ json-rpc wrapper for calc_single
     template_def = 
@@ -232,6 +241,7 @@ server.register_function(get_file_metadata)
 server.register_function(refl_load)
 server.register_function(calc_terminal)
 server.register_function(calc_template)
+server.register_function(find_calculated)
 server.serve_forever()
 print "done serving rpc forever"
 #httpd_process.terminate()
