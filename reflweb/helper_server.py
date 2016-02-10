@@ -78,6 +78,15 @@ rpc_port = server.socket.getsockname()[1]
 #webbrowser.open_new_tab('http://localhost:%d/index.html?rpc_port=%d' % (http_port, rpc_port))
 
 import h5py, os
+from dataflow.core import Template, sanitizeForJSON, lookup_instrument
+from dataflow.cache import use_redis
+from dataflow.calc import process_template
+
+from dataflow.modules.refl import define_instrument, INSTRUMENT
+
+use_redis()
+define_instrument(data_source=config.data_repository)
+
 
 def categorize_files(path='./'):
     fns = os.listdir(path)
@@ -117,15 +126,6 @@ def get_file_metadata(pathlist=None):
     fn = response.read()
     print fn
     return fn
-
-from dataflow.core import Template, sanitizeForJSON, lookup_instrument
-from dataflow.cache import use_redis
-from dataflow.calc import process_template
-
-from dataflow.modules.refl import define_instrument, INSTRUMENT
-
-use_redis()
-define_instrument(data_source=config.data_repository)
 
 
 def get_instrument():
@@ -231,6 +231,7 @@ server.register_function(refl_load)
 server.register_function(calc_terminal)
 server.register_function(calc_template)
 server.register_function(find_calculated)
+print "serving on",rpc_port
 server.serve_forever()
 print "done serving rpc forever"
 #httpd_process.terminate()
