@@ -119,22 +119,24 @@ def get_file_metadata(pathlist=None):
     return fn
 
 from dataflow.core import register_module, register_datatype, Template, Data
-#from dataflow.cache import use_redis
-#use_redis()
+from dataflow.cache import use_redis
+use_redis()
 from dataflow import core as df
 from dataflow.calc import process_template
 from reflred.steps import load, steps
 from reflred.refldata import ReflData
 load.DATA_SOURCE = config.data_repository
-INSTRUMENT_PREFIX = "ncnr.refl"
+INSTRUMENT_PREFIX = "ncnr.refl."
 
 modules = df.make_modules(steps.ALL_ACTIONS, prefix=INSTRUMENT_PREFIX)
+for m in modules:
+        df.register_module(m)
 loader_name = INSTRUMENT_PREFIX + "super_load"
 loader = [m for m in modules if m.id == loader_name][0]
 
 refldata = df.Data(INSTRUMENT_PREFIX+"refldata", ReflData,
                    loaders=[{'function': loader, 'id': 'LoadNeXuS'}])
-df.register_module(loader)
+#df.register_module(loader)
 df.register_datatype(refldata)
 
 #from dataflow.modules.load import load_module, load_action
@@ -153,7 +155,7 @@ def refl_load(file_descriptors):
     refl = calc_single(template, {0: {"files": file_descriptors}}, 0, "output")
     return [r._toDict(sanitized=True) for r in refl]
 
-def calc_dict(template_def, config, nodenum, terminal_id):
+def calc_terminal(template_def, config, nodenum, terminal_id):
     """ json-rpc wrapper for calc_single
     template_def = 
     {"name": "template_name",
@@ -185,9 +187,24 @@ def calc_dict(template_def, config, nodenum, terminal_id):
     (output terminals only).
     """
     template = Template(**template_def)
-    print template
+    #print "template_def:", template_def, "config:", config
     retvals = process_template(template, config, target=(nodenum, terminal_id))
-    return [r._toDict(sanitized=True) for r in retvals]
+    import json
+    return json.loads(retvals)
+    
+def calc_template(template_def, config):
+    """ json-rpc wrapper for process_template """
+    template = Template(**template_def)
+    retvals = process_template(template, config, target=(None,None))
+    output = {}
+    for rkey in retvals:
+        module_id, terminal_id = rkey
+        rv = retvals[rkey]
+        module_key = "%d" % (module_id,)
+        if not module_key in output:
+            output[module_key] = {}
+        output[module_key][terminal_id] = [r.__getstate__() for r in rv]
+    return output
     
 def get_jstree(path='./'):
     files = categorize_files(path)
@@ -215,7 +232,8 @@ def get_jstree(path='./'):
 server.register_function(get_jstree) # deprecated
 server.register_function(get_file_metadata)
 server.register_function(refl_load)
-server.register_function(calc_dict)
+server.register_function(calc_terminal)
+server.register_function(calc_template)
 server.serve_forever()
 print "done serving rpc forever"
 #httpd_process.terminate()
