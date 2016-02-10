@@ -75,8 +75,8 @@ def unpolarized_template():
         ["join => backm",  {"data": "-.output"}],
 
         ["nop", {"data": "split.intensity"}],
-        ["rescale",  {"data": "-.output", "scale": 1.0, "dscale": 0.0}],
-        ["join => intensity",  {"data": "-.output", "tolerance": 0.0001}],
+        ["rescale",  {"data": "-.output", "scale": [1.0], "dscale": [0.0]}],
+        ["join => intensity",  {"data": "-.output", "tolerance": [0.0001]}],
 
         # Operate on the combined data for the final reduction
         ["subtract_background", {

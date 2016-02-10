@@ -736,6 +736,19 @@ def auto_module(action):
     accepts one or more inputs, then mark the type with '+'.  These flags
     set the *required* and *multiple* properties of the terminal/field.
 
+    If the input terminals are all multiple inputs, then the action will
+    be called once with the entire bundle as a list.  If the input terminals
+    are all single input, then the action will be called once for each dataset
+    in the bundle.  For mixed single/multiple inputs the first input must
+    be single.  If the output is single, it is made into a length one bundle.
+    If the output is multiple, then it is assumed to already be a bundle.
+    With mixed single input/multiple output, all outputs are concatenated
+    into one bundle.
+
+    All fields should be the length of the first input, or length 1 if the
+    the field value is the same across all inputs, or length 0 if the
+    field is optional and not defined.
+
     The possible types are determined by the user interface.  Here is the
     currently suggested types:
 
@@ -849,7 +862,7 @@ def _parse_function(action):
     # Set the defaults for the fields from the keyword arguments
     for p in input_fields:
         if p['default'] is None:
-            p['default'] = str(defaults[p['id']])
+            p['default'] = defaults[p['id']]
 
     # Collect all the node info
     result = {

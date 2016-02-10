@@ -128,10 +128,18 @@ def process_template(template, config, target=(None,None)):
                 for f in module.fields:
                     fid = f["id"]
                     if fid in fields:
+                        bundle = fields[fid]
                         if f["multiple"]:
-                            node_config[fid] = fields[fid][i]
+                            node_config[fid] = bundle
+                        elif len(bundle) == 0:
+                            if f["required"]:
+                                raise ValueError("missing required input for %r for %d: %s"
+                                                 % (node, fid, node_info["module"]))
+                            node_config[fid] = f["default"]
+                        elif len(bundle) == 1:
+                            node_config[fid] = bundle[0]
                         else:
-                            node_config[fid] = fields[fid]
+                            node_config[fid] = bundle[i]
 
                 # Substitute input terminal values
                 for t in input_terminals:
@@ -141,8 +149,8 @@ def process_template(template, config, target=(None,None)):
                         node_config[tid] = bundle
                     elif len(bundle) == 0:
                         if t["required"]:
-                            raise ValueError("missing required input for %d: %s"
-                                             % (node, node_info["module"]))
+                            raise ValueError("missing required input %r for %d: %s"
+                                             % (node, tid, node_info["module"]))
                         node_config[tid] = None
                     elif len(bundle) == 1:
                         node_config[tid] = bundle[0]
