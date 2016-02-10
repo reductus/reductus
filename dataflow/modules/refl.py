@@ -6,7 +6,7 @@ from reflred.refldata import ReflData
 from reflred.steps.polarization import PolarizationData
 from reflred.steps.deadtime import DeadTimeData
 
-INSTRUMENT = "refl1d.ncnr"
+INSTRUMENT = "ncnr.refl"
 
 def define_instrument(data_source):
     # Set the data source
@@ -107,7 +107,6 @@ def unpolarized_template():
 
 def demo6():
     from dataflow.calc import process_template
-    define_instrument(data_source="http://ncnr.nist.gov/pub/")
 
     template = unpolarized_template()
     #print "========== Template ========"
@@ -129,7 +128,6 @@ def demo6():
 
 def demo1():
     from dataflow.calc import process_template
-    define_instrument(data_source="http://ncnr.nist.gov/pub/")
 
     template = loader_template()
     #print "========== Template ========"
@@ -153,5 +151,8 @@ def demo1():
 
 
 if __name__ == "__main__":
+    from dataflow.cache import use_redis
+    use_redis()
+    define_instrument(data_source="http://ncnr.nist.gov/pub/")
     demo6()
 

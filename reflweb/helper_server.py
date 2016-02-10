@@ -81,6 +81,7 @@ import h5py, os
 from dataflow.core import Template, sanitizeForJSON, lookup_instrument
 from dataflow.cache import use_redis
 from dataflow.calc import process_template
+import dataflow.core as df
 
 from dataflow.modules.refl import define_instrument, INSTRUMENT
 
@@ -186,13 +187,15 @@ def calc_terminal(template_def, config, nodenum, terminal_id):
     (output terminals only).
     """
     template = Template(**template_def)
-    #print "template_def:", template_def, "config:", config
+    #print "template_def:", template_def, "config:", config, "target:",nodenum,terminal_id
+    #print "modules","\n".join(m for m in df._module_registry.keys())
     retval = process_template(template, config, target=(nodenum, terminal_id))
     return sanitizeForJSON(retval.todict())
     
 def calc_template(template_def, config):
     """ json-rpc wrapper for process_template """
     template = Template(**template_def)
+    #print "template_def:", template_def, "config:", config
     retvals = process_template(template, config, target=(None,None))
     output = {}
     for rkey, rv in retvals.items():

@@ -465,7 +465,7 @@ class Bundle(object):
         values = []
         for value in state['values']:
             obj = datatype.cls()
-            obj.__setstate__(state)
+            obj.__setstate__(value)
             values.append(obj)
         return Bundle(datatype, values)
 

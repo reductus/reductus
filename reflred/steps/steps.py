@@ -886,7 +886,11 @@ def save(data, name='auto', ext='auto', path="."):
     data.save(filename)
 
 @module
-def super_load(filelist=None, auto_divergence=True, auto_detector_saturation=False, auto_monitor_saturation=False, intent='auto'):
+def super_load(filelist=None,
+               auto_divergence=True,
+               auto_detector_saturation=False,
+               auto_monitor_saturation=False,
+               intent='auto'):
     """
     Load a list of nexus files from the NCNR data server.
 
@@ -921,11 +925,11 @@ def super_load(filelist=None, auto_divergence=True, auto_detector_saturation=Fal
             apply_divergence(data)
             
     if auto_detector_saturation:
-        data = detector_saturation(data)
-            
+        dataset = [detector_saturation(data) for data in dataset]
+
     if auto_monitor_saturation:
-        data = monitor_saturation(data)
-        
+        dataset = [monitor_saturation(data) for data in dataset]
+
     for data in dataset:
         #data.log('mark_intent(%r)' % intent)
         apply_intent(data, intent)

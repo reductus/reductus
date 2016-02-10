@@ -52,10 +52,13 @@ def process_template(template, config, target=(None,None)):
         output_terminals = module.outputs
         # Initialize input terminals to empty bundles
         inputs = dict((t["id"], []) for t in input_terminals)
-        if cache.exists(fingerprints[node]):
-            print "already cached", node
+        fp = fingerprints[node]
+        if cache.exists(fp):
+            print "retrieving cached value for node %d:"%node, fp
+            bundles = _retrieve(cache, fp)
+            results.update(((node,k),v) for k,v in bundles.items())
             continue
-        
+
 
         # Extend input terminals from the bundles on the wires
         for wire in input_wires:
@@ -65,11 +68,6 @@ def process_template(template, config, target=(None,None)):
             # a mutable list, and can't be used as a dictionary key, but
             # an (int, string) tuple can be.
             key = source_node, source_terminal
-            if tuple(key) not in results:
-                fp = fingerprints[source_node]
-                print "retrieving cached value for node %d:"%source_node, fp
-                bundles = _retrieve(cache, fp)
-                results.update(((source_node,k),v) for k,v in bundles.items())
             inputs[target_terminal].extend(results[key].values)
 
         # Check arity of module. If the input terminals are all multiple
@@ -186,7 +184,8 @@ def process_template(template, config, target=(None,None)):
     if return_node is not None:
         #print "returning", return_node, return_terminal
         #print "key",_cache_key(fingerprints[return_node], return_terminal)
-        return results[(return_node,return_terminal)]
+        key = (return_node, str(return_terminal))
+        return results[key]
     else:
         return results
 
@@ -199,7 +198,8 @@ def _store(cache, fp, data):
 def _retrieve(cache, fp):
     string = cache.get(fp)
     stored = sanitizeFromJSON(json.loads(string))
-    data = dict((k, Bundle.fromdict(v)) for k,v in stored)
+    data = dict((str(terminal), Bundle.fromdict(values))
+                for terminal,values in stored.items())
     return data
 
 def fingerprint_template(template, config):
