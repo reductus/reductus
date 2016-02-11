@@ -244,11 +244,16 @@ def parse_date(datestring, default_timezone=UTC, strict=False):
         tz = TimeZone(name=groups["timezone"], offset=sign*dt*60)
     return datetime(year,month,day,hour,minute,second,fraction,tz)
 
-def seconds_since_epoch(datestring, default_timezone=UTC):
+def seconds_since_epoch(date, default_timezone=UTC):
     """
     Parse ISO 8601 dates into seconds since epoch.
+
+    *date* can either be a string or a datetime object with timezone specified.
     """
-    t = parse_date(datestring, default_timezone=default_timezone)
+    if isinstance(date, datetime):
+        t = date
+    else:
+        t = parse_date(date, default_timezone=default_timezone)
     dt = t - EPOCH
     return dt.days*86400 + dt.seconds + dt.microseconds*1e-6
 
