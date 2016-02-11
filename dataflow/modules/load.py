@@ -73,7 +73,7 @@ load_kw = {
     "id": "ncnr.refl.load",
     "version": "0.1",
     "description": "load reflectometry NeXus files",
-    "terminals": [
+    "outputs": [
         {
             "id": "output", 
             "datatype": "ncnr.refl.data",
@@ -115,7 +115,7 @@ mask_kw = {
     "id": "ncnr.refl.mask",
     "version": "0.1",
     "description": "mask reflectometry NeXus files",
-    "terminals": [
+    "outputs": [
         {
             "id": "output", 
             "datatype": "ncnr.refl.data",
@@ -123,6 +123,8 @@ mask_kw = {
             "description": "masked data",
             "multiple": True
         },
+    ],
+    "inputs": [
         {
             "id": "input",
             "datatype": "ncnr.refl.data",
@@ -157,7 +159,7 @@ normalize_kw = {
     "id": "ncnr.refl.normalize",
     "version": "0.1",
     "description": "normalize reflectometry NeXus files",
-    "terminals": [
+    "outputs": [
         {
             "id": "output", 
             "datatype": "ncnr.refl.data",
@@ -165,6 +167,8 @@ normalize_kw = {
             "description": "normalized data",
             "multiple": True,            
         },
+    ],
+    "inputs": [
         {
             "id": "input",
             "datatype": "ncnr.refl.data",
@@ -197,13 +201,15 @@ join_kw = {
     "id": "ncnr.refl.join",
     "version": "0.1",
     "description": "join reflectometry NeXus files",
-    "terminals": [
+    "outputs": [
         {
             "id": "output", 
             "datatype": "ncnr.refl.data",
             "use": "out",
             "description": "joined data"
         },
+    ],
+    "inputs": [
         {
             "id": "input",
             "datatype": "ncnr.refl.data",
@@ -247,10 +253,10 @@ location of the module on the canvas.
 
 def test():
     import numpy; numpy.seterr(all='raise')
-    from dataflow.core import register_module, register_datatype, Template, Data
+    from dataflow.core import register_module, register_datatype, Template, DataType
     from dataflow.calc import process_template
     from reflred.refldata import ReflData
-    rdata = Data("ncnr.refl.data", ReflData, loaders=[{'function':load_action, 'id':'LoadNeXuS'}])
+    rdata = DataType("ncnr.refl.data", ReflData, loaders=[{'function':load_action, 'id':'LoadNeXuS'}])
     register_module(load_module)
     register_module(normalize_module)
     register_module(join_module)
@@ -272,7 +278,7 @@ def test():
     return refl
 
 def test2():
-    from dataflow.core import register_module, register_datatype, Template, Data
+    from dataflow.core import register_module, register_datatype, Template, DataType
     #from dataflow.cache import use_redis
     #use_redis()
     from dataflow import core as df
@@ -286,8 +292,7 @@ def test2():
     loader_name = INSTRUMENT_PREFIX + "ncnr_load"
     loader = [m for m in modules if m.id == loader_name][0]
 
-    refldata = df.Data(INSTRUMENT_PREFIX+"refldata", ReflData,
-                       loaders=[{'function': loader, 'id': 'LoadNeXuS'}])
+    refldata = df.DataType(INSTRUMENT_PREFIX+"refldata", ReflData);
     for m in modules:
         df.register_module(m)
     df.register_module(loader)
@@ -305,8 +310,88 @@ def test2():
         {"source": [2,"output"], "target": [3,"data"]},
     ]
     template = Template("test", "test template", modules, wires, "ncnr.magik", version='0.0')
-    refl = process_template(template, {"0": {"filelist": test_dataset}, "1": {"mask_indices": {"1": [0,-1]}}}, target=(2, "output"))
+    refl = process_template(template, {"0": {"filelist": test_dataset, "auto_detector_saturation": False, "intent": "spec"}, "1": {"mask_indices": {"1": [0,-1]}}}, target=(1, "output"))
     return refl
+    
+def test3():
+    from dataflow.core import register_module, register_datatype, Template, DataType
+    #from dataflow.cache import use_redis
+    #use_redis()
+    from dataflow import core as df
+    from dataflow.calc import process_template
+    from reflred.steps import load, steps
+    load.DATA_SOURCE = "http://ncnr.nist.gov/pub/"
+    from reflred.refldata import ReflData
+    INSTRUMENT_PREFIX = "ncnr.refl."
+
+    modules = df.make_modules(steps.ALL_ACTIONS, prefix=INSTRUMENT_PREFIX)
+    loader_name = INSTRUMENT_PREFIX + "ncnr_load"
+    loader = [m for m in modules if m.id == loader_name][0]
+
+    refldata = df.DataType(INSTRUMENT_PREFIX+"refldata", ReflData)
+    
+    for m in modules:
+        df.register_module(m)
+    df.register_module(loader)
+    df.register_datatype(refldata)
+    
+    modules = [
+        {"module": "ncnr.refl.super_load", "version": "0.1", "config": {}},
+        #{"module": "ncnr.refl.nop", "version": "0.1", "config": {}},
+    ]
+    wires = [
+        #{"source": [0,"output"], "target": [1,"data"]}
+    ]
+    template = Template("test", "test template", modules, wires, "ncnr.magik", version='0.0')
+    refl = process_template(template, {"0": {"filelist": test_dataset}}, target=(0, str("output")))
+    return refl
+
+
+
+def unpolarized_template():
+    from dataflow import core as df
+    from reflred.refldata import ReflData
+    from reflred.steps.polarization import PolarizationData
+    from reflred.steps.deadtime import DeadTimeData
+    INSTRUMENT_PREFIX = "ncnr.refl."
+    modules = df.make_modules(steps.ALL_ACTIONS, prefix=INSTRUMENT_PREFIX)
+    loader_name = INSTRUMENT_PREFIX + "ncnr_load"
+    loader = [m for m in modules if m.id == loader_name][0]
+    refldata = df.Data(INSTRUMENT_PREFIX+"refldata", ReflData,
+                       loaders=[{'function': loader, 'id': 'LoadNeXuS'}])
+    poldata = df.Data(INSTRUMENT_PREFIX+"poldata", PolarizationData, loaders=[])
+    deadtime = df.Data(INSTRUMENT_PREFIX+"deadtime", DeadTimeData, loaders=[])
+                       
+    refl1d = df.Instrument(
+        id=INSTRUMENT_PREFIX[:-1],
+        name='NCNR reflectometer',
+        menu=[('steps', modules)],
+        datatypes=[refldata, poldata, deadtime],
+        archive="NCNR",
+    )
+    
+    from dataflow.core import make_template
+    diagram = [
+        # Load the data
+        ["super_load", {"intent": "specular"}],
+        ["mask_points", {"data": "-.output"}],
+        ["join", {"data": "-.output"}],
+        
+        ["super_load", {"intent": "background+"}],
+        ["mask_points", {"data": "-.output"}],
+        ["join", {"data": "-.output"}],
+        #["footprint",  {"data": "-.output")}],
+    ]
+    #for m in refl1d.modules: print m.__dict__
+    #for m in refl1d.modules: print m.terminals[0]
+    template = make_template(
+        name="unpolarized",
+        description="standard unpolarized reduction",
+        diagram=diagram,
+        instrument=refl1d,
+        version=1.0,
+        )
+    return template
 
 if __name__ == "__main__":
     test()
