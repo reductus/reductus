@@ -160,6 +160,7 @@ from scipy.optimize import curve_fit, minimize, brentq, bisect, fminbound
 from scipy import stats
 
 from uncertainties.unumpy import nominal_values as uval, std_devs as udev
+from uncertainties.unumpy import uarray
 from uncertainties import ufloat
 
 DEADTIME_UNITS = u'μs'
@@ -631,8 +632,10 @@ def run_sim(tau_NP=0, tau_P=0, attenuator=10, mode='mixed', plot=True):
     """
 
     # set rate, target counts and cutoff time
-    tmax = -np.log10(DEADTIME_SCALE*(tau_NP+tau_P)/2)
-    rate = np.logspace(tmax-3,tmax+0.5,10)
+    tmax = -np.log10(DEADTIME_SCALE*(tau_NP+tau_P)/2)+0.5
+    tmin = tmax-3.5
+    #tmin, tmax = np.log10(5000.), np.log10(35000.)
+    rate = np.logspace(tmin, tmax, 10)
     rate[0], rate[-1] = rate[0]-1, rate[-1]+1
 
     target_counts, cutoff_time = int(rate[-1]*0.2), 5*60
@@ -802,6 +805,7 @@ if __name__ == "__main__":
     #TAU_NP, TAU_P = 0.001, 30
     #TAU_NP, TAU_P = 0., 30
     #TAU_NP, TAU_P = 10, 10
+    #TAU_NP, TAU_P = 10, 0
     #TAU_NP, TAU_P = 30, 0.0
     #TAU_NP, TAU_P = 30, 0.1
     #TAU_NP, TAU_P = 5, 15
