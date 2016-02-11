@@ -456,7 +456,7 @@ class Bundle(object):
         self.values = values
 
     def todict(self):
-        values = [v.__getstate__() for v in self.values]
+        values = [v.todict() for v in self.values]
         return { 'datatype': self.datatype.id, 'values': values }
 
     @staticmethod
@@ -465,7 +465,7 @@ class Bundle(object):
         values = []
         for value in state['values']:
             obj = datatype.cls()
-            obj.__setstate__(value)
+            obj.fromdict(value)
             values.append(obj)
         return Bundle(datatype, values)
 

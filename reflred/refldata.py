@@ -924,7 +924,7 @@ class ReflData(object):
                   ]
         return "\n".join(base+others+self.messages)
 
-    def __getstate__(self):
+    def todict(self):
         state = _toDict(self)
         others = dict([[s, _toDict(getattr(self,s))]
                   for s in ("slit1", "slit2", "slit3", "slit4",
@@ -933,10 +933,11 @@ class ReflData(object):
         state.update(others)
         return state
 
-    def __setstate__(self, state):
+    def fromdict(self, state):
         props = dict((k,v) for k,v in state.items() if k in self.properties)
         props = _fromDict(props)
-        self.__dict__.update(props)
+        for k, v in props.items():
+            setattr(self, k, v)
         for attr, cls in [
             ("slit1",Slit), ("slit2", Slit), ("slit3", Slit), ("slit4", Slit),
             ("detector", Detector),
