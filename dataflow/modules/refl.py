@@ -8,6 +8,8 @@ from reflred.steps.deadtime import DeadTimeData
 
 INSTRUMENT = "ncnr.refl"
 
+
+
 def define_instrument(data_source):
     # Set the data source
     load.DATA_SOURCE = data_source
@@ -20,6 +22,9 @@ def define_instrument(data_source):
     poldata = df.DataType(INSTRUMENT+".poldata", PolarizationData)
     deadtime = df.DataType(INSTRUMENT+".deadtime", DeadTimeData)
 
+    import json
+    import os
+    from unpolarized_template import template
     # Define instrument
     refl1d = df.Instrument(
         id=INSTRUMENT,
@@ -27,6 +32,7 @@ def define_instrument(data_source):
         menu=[('steps', modules)],
         datatypes=[refldata, poldata, deadtime],
         archive="NCNR",
+        template_defs = [template],
         )
 
     # Register instrument
@@ -149,6 +155,25 @@ def demo1():
     print "refl",refl
     return refl
 
+
+def demo7():
+    from dataflow.core import Template
+    from dataflow.calc import process_template
+    template = Template("unpolarized", "reflweb default unpolarized template", modules=template_def['modules'], wires=template_def['wires'], instrument="ncnr.magik", version=1.0)
+    test_dataset = [{'path': "ncnrdata/cgd/201511/21066/data/HMDSO_17nm_dry14.nxz.cgd",
+                     "mtime": 1447353278}]
+    files = test_dataset
+    template_config = {"0": {"filelist": test_dataset}, "1": {"mask_indices": {"0": [1,2]}}}
+    #for i in range(len(template_def['modules'])):
+    #    if not str(i) in template_config:
+    #        template_config[str(i)] = {}
+    #    template_config[str(i)]['version'] = '1.0'
+    #print template_config
+    refl = process_template(template=template,
+                            config=template_config,
+                            target=(1, "output"))
+    print "refl",refl.values
+    return refl.values
 
 if __name__ == "__main__":
     from dataflow.cache import use_redis

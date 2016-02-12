@@ -368,12 +368,12 @@ class Instrument(object):
         implement an interface that allows data sets to be listed and
         retrieved for a particular instrument/experiment.
     """
-    def __init__(self, id, name=None, menu=None, templates=None,
+    def __init__(self, id, name=None, menu=None, template_defs=None,
                  datatypes=None, requires=None, archive=None, loaders=None):
         self.id = id
         self.name = name
         self.menu = menu
-        self.templates = templates if templates is not None else []
+        self.template_defs = template_defs if template_defs is not None else []
         self.datatypes = datatypes
         self.requires = requires
         self.archive = archive
@@ -428,7 +428,7 @@ class Instrument(object):
         definition = dict([(k, getattr(self, k)) for k in keys])
         definition['modules'] = [m.get_definition() for m in self.modules]
         definition['datatypes'] = [d.get_definition() for d in self.datatypes]
-        definition['templates'] = [t.get_definition() for t in self.templates]
+        definition['templates'] = self.template_defs
         return definition
 
         

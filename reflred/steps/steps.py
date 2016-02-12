@@ -406,13 +406,13 @@ def mask_points(data, mask_indices=None):
 
     **Inputs**
 
-    data (refldata+) : background data which may contain specular point
+    data (refldata) : background data which may contain specular point
     
-    mask_indices (indexlist+) : sparse dict of masked data points, as {"0": [2,4,5], "5": [0]}
+    mask_indices (indexlist) : list of data point indices to mask, e.g. [0, 4, 5]
 
     **Returns**
 
-    output (refldata+) : masked data
+    output (refldata) : masked data
 
     2016-02-08 Brian Maranville
     """

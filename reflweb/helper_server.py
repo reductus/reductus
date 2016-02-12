@@ -85,7 +85,7 @@ import dataflow.core as df
 
 from dataflow.modules.refl import define_instrument, INSTRUMENT
 
-use_redis()
+#use_redis()
 define_instrument(data_source=config.data_repository)
 
 
@@ -134,7 +134,7 @@ def get_instrument():
     Make the instrument definition available to clients
     """
     instrument = lookup_instrument(INSTRUMENT)
-    return instrument.get_defintion()
+    return instrument.get_definition()
 
 def refl_load(file_descriptors):
     """ 
@@ -233,6 +233,7 @@ server.register_function(get_file_metadata)
 server.register_function(refl_load)
 server.register_function(calc_terminal)
 server.register_function(calc_template)
+server.register_function(get_instrument)
 server.register_function(find_calculated)
 print "serving on",rpc_port
 server.serve_forever()
