@@ -118,6 +118,7 @@ def get_file_metadata(pathlist=None):
     print pathlist
     import urllib
     import urllib2
+    import json
 
     url = config.file_helper #'http://ncnr.nist.gov/ipeek/listftpfiles.php'
     values = {'pathlist[]' : pathlist}
@@ -125,8 +126,9 @@ def get_file_metadata(pathlist=None):
     req = urllib2.Request(url, data)
     response = urllib2.urlopen(req)
     fn = response.read()
-    print fn
-    return fn
+    # this converts json to python object, then the json-rpc lib converts it 
+    # right back, but it is more consistent for the client this way:
+    return json.loads(fn)
 
 
 def get_instrument():
