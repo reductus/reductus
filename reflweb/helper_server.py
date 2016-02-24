@@ -131,11 +131,11 @@ def get_file_metadata(pathlist=None):
     return json.loads(fn)
 
 
-def get_instrument():
+def get_instrument(instrument_id=INSTRUMENT):
     """
     Make the instrument definition available to clients
     """
-    instrument = lookup_instrument(INSTRUMENT)
+    instrument = lookup_instrument(instrument_id)
     return instrument.get_definition()
 
 def refl_load(file_descriptors):
