@@ -59,7 +59,7 @@ def load_metadata(filename, file_obj=None):
         file.close()
     return measurements
 
-def load_entries(filename, file_obj=None):
+def load_entries(filename, file_obj=None, entries=None):
     """
     Load the summary info for all entries in a NeXus file.
     """
@@ -67,6 +67,8 @@ def load_entries(filename, file_obj=None):
     file = h5_open_zip(filename, file_obj)
     measurements = []
     for name,entry in file.items():
+        if entries is not None and name not in entries:
+            continue
         if entry.attrs.get('NX_class', None) == 'NXentry':
             data = NCNRNeXusRefl(entry, name, filename)
             data.load(entry)

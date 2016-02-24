@@ -17,6 +17,7 @@ def check_datasource():
 
 def url_load(fileinfo):
     path, file_mtime = fileinfo['path'], fileinfo['mtime']
+    entries = fileinfo.get('entries', None)
     name = basename(path)
     check_datasource()
     try:
@@ -34,7 +35,7 @@ def url_load(fileinfo):
         fid = StringIO.StringIO(url.read())
     except urllib2.HTTPError as exc:
         raise ValueError("Could not open %r\n%s"%(path, str(exc)))
-    nx_entries = nexusref.load_entries(name, fid)
+    nx_entries = nexusref.load_entries(name, fid, entries = entries)
     fid.close()
     url.close()
     return nx_entries
