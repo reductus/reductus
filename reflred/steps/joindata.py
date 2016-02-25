@@ -42,8 +42,8 @@ def join_datasets(group, tolerance):
     This is a multistep operation with the various parts broken into separate
     functions.
     """
-    # Make sure all datasets are normalized by monitor.
-    assert all(data.normbase == 'monitor' for data in group)
+    # Make sure all datasets are normalized by the same factor.
+    assert all(data.normbase == group[0].normbase for data in group)
 
     # Gather the columns
     columns = get_columns(group)

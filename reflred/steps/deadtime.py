@@ -1,4 +1,5 @@
 import numpy as np
+from uncertainties.unumpy import uarray, nominal_values as uval, std_devs as udev
 
 from .. import err1d
 
@@ -6,17 +7,17 @@ from .deadtime_fit import deadtime_from_counts, estimate_incident
 
 
 class DeadTimeData:
-    def __init__(self, attenuated, unattenuated, tau_NP, tau_P,
-                 attenuator, rates):
+    def __init__(self, datasets, tau_NP, tau_P,
+                 attenuators, rates, index):
         self.messages = []
         self.warnings = []
 
-        self.attenuated = attenuated
-        self.unattenuated = unattenuated
+        self.datasets = datasets
         self.tau_NP = tau_NP
         self.tau_P = tau_P
-        self.attenuator = attenuator
+        self.attenuators = attenuators
         self.incident_beam = rates
+        self.index = index
 
     def plot(self):
         raise NotImplementedError("see deadtime_fit for plots we want")
@@ -25,22 +26,22 @@ class DeadTimeData:
         self.messages.append(msg)
 
 
-def fit_dead_time(attenuated, unattenuated, source='detector', mode='auto'):
-    t1 = attenuated.monitor.count_time
-    t2 = unattenuated.monitor.count_time
+def fit_dead_time(datasets, source='detector', mode='auto'):
+    time = [data.monitor.count_time for data in datasets]
     if source == 'monitor':
-        c1 = attenuated.monitor.counts
-        c2 = unattenuated.monitor.counts
+        counts = [data.monitor.counts for data in datasets]
     elif source == 'detector':
-        c1 = attenuated.detector.counts
-        c2 = attenuated.detector.counts
+        counts = [data.detector.counts for data in datasets]
     else:
         raise ValueError("Source should be detector or monitor")
-    res = deadtime_from_counts((c1, t1), (c2, t2), mode=mode)
-    tau_NP, tau_P, attenuator, rates = res
-
-    dead_time = DeadTimeData(attenuated, unattenuated, tau_NP, tau_P,
-                             attenuator, rates)
+    data = datasets[-1]
+    index = ~data.mask if data.mask is not None else slice(None, None)
+    pairs = [(c[index], t[index]) for c, t in zip(counts, time)]
+    res = deadtime_from_counts(pairs, mode=mode)
+    tau_NP, tau_P, attenuators, rates = res
+    attenuators = 1.0/uarray(*attenuators)
+    attenuators = list(zip(uval(attenuators), udev(attenuators)))
+    dead_time = DeadTimeData(datasets, tau_NP, tau_P, attenuators, rates, index)
 
     return dead_time
 

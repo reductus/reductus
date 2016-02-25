@@ -62,7 +62,7 @@ def fit_dead_time(attenuated, unattenuated, source='detector', mode='auto'):
 
     **Inputs**
 
-    attenuated (refldata): Attenuated detector counts
+    attenuated (refldata*): Attenuated detector counts
 
     unattenuated (refldata): Unattenuated detector counts
 
@@ -78,12 +78,13 @@ def fit_dead_time(attenuated, unattenuated, source='detector', mode='auto'):
     """
     from .deadtime import fit_dead_time
 
-    data = fit_dead_time(attenuated, unattenuated, source=source, mode=mode)
+    data = fit_dead_time(attenuated+[unattenuated], source=source, mode=mode)
 
     data.log("fit_dead_time(attenuated, unattenuated, source=%r, mode=%r)"
              % (source, mode))
-    data.log("attenuated:")
-    data.log(attenuated.messages)
+    for d in attenuated:
+        data.log("attenuated:")
+        data.log(d.messages)
     data.log("unattenuated:")
     data.log(unattenuated.messages)
     return data
