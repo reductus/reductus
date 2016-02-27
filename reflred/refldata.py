@@ -780,7 +780,7 @@ class ReflData(object):
         updating the data and reading the frames.
     """
     properties = ['instrument', 'geometry', 'probe', 'points', 'channels',
-                  'name','description','date','duration','attenuator',
+                  'name','entry','description','date','duration','attenuator',
                   'polarization','path','formula',
                   'intent', 'Qz_target', 'angular_resolution',
                   'vlabel', 'vunits', 'xlabel', 'xunits',
@@ -795,6 +795,7 @@ class ReflData(object):
     channels = 1
     scale = 1.0
     name = ""
+    entry = ""
     description = ""
     date = datetime.datetime(1970,1,1)
     duration = 0
