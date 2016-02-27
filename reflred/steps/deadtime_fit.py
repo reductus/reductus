@@ -21,10 +21,10 @@ where $n$ is the incident rate, $m$ is the measured rate, and
 $\tau_{\text NP}$ is the "non-paralyzed" dead time.
 
 The reality is more complicated: each event produces some physical effect
-in the detector, such as ionizing an excited gas.  The paralyzed dead
+in the detector, such as ionizing an excited gas.  The paralyzing dead
 time corresponds to the recharge time of the gas, below which any new
 event will not cause ionization.  Another type of detector may rely on
-scintillation resulting from a particle travelling through it.  The
+scintillation resulting from a particle traveling through it.  The
 photon counter will register voltage spikes each time the particle causes
 a new cascade of photons to be emitted. The detector must wait until the
 scintillation ends before being sure that the particle has finished traversing
@@ -195,19 +195,18 @@ def masked_curve_fit(f, x, y, p0=None, sigma=None, fixed=None, method='lm', **kw
     if method == 'lm':
         popt, pcov = curve_fit(cost, x, y, p0=init, sigma=sigma, **kw)
     else:
-        raise NotImplementedError("support for other fitters is commented out to avoid a numdifftools dependency")
-        """
         if sigma is None: sigma = 1
         def chisq(p):
             resid = (cost(x, *p, **kw) - y)/sigma
             v = np.sum(resid**2)/(len(x)-len(p))
             return v
-        #res = minimize(chisq, init, method=method, options={'maxiter':10})
-        #print("result",res)
-        #popt = res.x
-        from scipy.optimize import fmin
-        popt = fmin(chisq, init, maxiter=10)
+        from scipy.optimize import minimize
+        res = minimize(chisq, init, method=method, options={'maxiter':1000})
+        popt = res.x
+        #from scipy.optimize import fmin
+        #popt = fmin(chisq, init, maxiter=10)
         try:
+            import numdifftools as nd
             H = nd.Hessian(chisq)(popt)
             L = np.linalg.cholesky(H)
             Linv = np.linalg.inv(L)
@@ -215,7 +214,6 @@ def masked_curve_fit(f, x, y, p0=None, sigma=None, fixed=None, method='lm', **kw
         except Exception, exc:
             print(exc)
             pcov = np.zeros((len(p0),len(p0)))
-        """
 
     # Restore fixed parameters
     if fixed is not None:
@@ -260,28 +258,32 @@ def estimate_incident(observed_rate, tau_NP, tau_P, above=False):
 
     Returns (I,dI), the estimated incident rate and its uncertainty.
 
-    Note: the uncertainty analysis is dodgy, as it simply scales the
-    uncertainty in the observed counts, suggesting the model is perfectly
-    known.  This is fine for most points, but for high saturation where
-    the observed rate flattens, a large change in incident rate only
-    causes a small change in observed rate.
+    Note: the uncertainty analysis for paralyzing models is dodgy, as it
+    simply scales the uncertainty in the observed counts, suggesting the
+    model is perfectly known.  This is fine for most points, but for high
+    saturation where the observed rate flattens, a large change in incident
+    rate only causes a small change in observed rate.
     """
-    R, dR = observed_rate
-    Ipeak, Rpeak = peak_rate(tau_NP[0], tau_P[0])
 
+    # Nonparalyzing dead time only
     if tau_P[0] == 0.:
-        # Use direct inversion for pure non-paralyzing models
-        I = R/(1-R*tau_NP[0]*DEADTIME_SCALE)
-
+        # Use direct calculation for pure non-paralyzing models
+        R = uarray(*observed_rate)
+        tau_NP = ufloat(*tau_NP)
+        I = R/(1-R*tau_NP*DEADTIME_SCALE)
         # May accidentally exceed the peak rate; in that case, limit
         # the damage to the lowest rate consistent with the uncertainty
         # in the observed rate.  Basically, look at the denominator in
         # the above equation, and if it is within error of zero, use the
         # relative uncertainty as the scale factor.
-        idx = (R*tau_NP[0]*DEADTIME_SCALE > (1-dR/R))
-        I[idx] = R[idx]**2/dR[idx]
+        #idx = (R*tau_NP[0]*DEADTIME_SCALE > (1-dR/R))
+        #I[idx] = R[idx]**2/dR[idx]
+        return uval(I), udev(I)
 
-    elif above:
+    # Paralyzing and mixed dead time
+    R, dR = observed_rate
+    Ipeak, Rpeak = peak_rate(tau_NP[0], tau_P[0])
+    if above:
         # Use bisection for intensity above Ipeak.  This was stable enough
         # for the problems tried.  We haven't put effort into improving
         # performance this capability isn't likely to be used in production.
@@ -292,6 +294,7 @@ def estimate_incident(observed_rate, tau_NP, tau_P, above=False):
         # gave numerical problems, presumably because it was starting too
         # far out in I.  If this capability becomes important this problem
         # can be solved for reasonable values of r.
+        I = np.array(I)
     else:
         # Use solver for P and mixed P-NP problems.
         n, p = tau_NP[0]*DEADTIME_SCALE, tau_P[0]*DEADTIME_SCALE
@@ -338,25 +341,22 @@ def _forward(I, n, p, r):
 def _dforward(I, n, p):
     return -exp(-I*p)/(I*n + 1.)*(I*p - 1./(I*n + 1.))
 
-def deadtime_from_counts(attenuated, unattenuated, mode='mixed'):
+def deadtime_from_counts(counts, mode='mixed'):
     """
     Convert from counts to rates and estimate detector dead times.
 
-    *attenuated* and *unattenuated* are pairs of vectors containing
-    (counts, time).  These are converted to rate and uncertainty using
-    Poisson statistics.  *mode* is described in :func:`deadtime_estimate`.
+    *counts* are pairs of vectors containing (counts, time).  These are
+    converted to rate and uncertainty using Poisson statistics.
+
+    *mode* is described in :func:`estimate_deadtime`.
     """
     # assumes data is aligned and sorted by slit opening
-    wt_counts, wt_time = attenuated
-    wo_counts, wo_time = unattenuated
+    rates = [(c/t, np.sqrt(c)/t) for c,t in counts]
 
-    wt = (wt_counts/wt_time, np.sqrt(wt_counts)/wt_time)
-    wo = (wo_counts/wo_time, np.sqrt(wo_counts)/wo_time)
-
-    return estimate_deadtime(wt, wo, mode=mode)
+    return estimate_deadtime(rates, mode=mode)
 
 
-def estimate_deadtime(attenuated, unattenuated, mode='auto'):
+def estimate_deadtime(datasets, mode='auto'):
     """
     Fit the dead time tau for the measured rate data.
 
@@ -387,16 +387,18 @@ def estimate_deadtime(attenuated, unattenuated, mode='auto'):
     """
     # guess attenuator from first point and dead time from highest point
     # use these guesses as the initial values
-    A = attenuated[0][0] / unattenuated[0][0]
+    num_atten = len(datasets) - 1
+    unattenuated = datasets[-1]
+    A = [(a[0][0] / unattenuated[0][0]) for a in datasets[:-1]]
     idx = np.argmax(unattenuated[0])
-    R1,R2 = unattenuated[0][idx], attenuated[0][idx]
-    T = (1/R1 - (R1+R2)/(R1*R2*(1/A - 1)))/DEADTIME_SCALE
+    R1, R2 = unattenuated[0][idx], datasets[0][0][idx]
+    T = (1/R1 - (R1+R2)/(R1*R2*(1/A[0] - 1)))/DEADTIME_SCALE
     #print("A",1/A,"NP",T)
     p0 = np.hstack((
-        A,                # attenuation_factor
         T, 0,             # tau_NP and tau_P
         #1, 2,            # tau_NP and tau_P
-        attenuated[0]/A,  # incident rates
+        A,                # attenuation factor(s)
+        datasets[0][0]/A[0],  # incident rates
     ))
 
     # Set the fixed parameters
@@ -405,37 +407,42 @@ def estimate_deadtime(attenuated, unattenuated, mode='auto'):
 
     fixed = None
     if mode == 'NP':
-        fixed = [2]
-    elif mode == 'P':
         fixed = [1]
+    elif mode == 'P':
+        fixed = [0]
     elif mode == 'mixed' or mode == 'auto':
         fixed = None
     elif mode is not None:
         raise ValueError("mode %r should be P, NP, mixed or auto"%mode)
 
     # perform the fit
-    y = np.hstack((attenuated[0], unattenuated[0]))
-    dy = np.hstack((attenuated[1], unattenuated[1]))
+    y = np.hstack([a[0] for a in datasets])
+    dy = np.hstack([a[1] for a in datasets])
     #y, dy = rate[0,:], rate_err[0,:]
     x = np.arange(len(y))
-    p, s = masked_curve_fit(_fit_tau_cost, y, y, p0, sigma=dy, fixed=fixed)
+
+    def prediction(x, *p):
+        if any(v < 0 for v in p):
+            return 1000*y
+        return _rate_estimate(p[0],p[1],p[2:2+num_atten],p[2+num_atten:])
+
+    p, s = masked_curve_fit(prediction, x, y, p0, sigma=dy, fixed=fixed)
     if mode == 'auto':
         # Pick the better fit from pure np, pure p or both
         # Note: spurious P components can appear, even in truncated ranges
-        pn, sn = masked_curve_fit(_fit_tau_cost, y, y, p0, sigma=dy, fixed=[2])
-        p0[1], p0[2] = 0., T
-        pp, sp = masked_curve_fit(_fit_tau_cost, y, y, p0, sigma=dy, fixed=[1])
+        pn, sn = masked_curve_fit(prediction, x, y, p0, sigma=dy, fixed=[1])
+        p0[0], p0[1] = 0., T
+        pp, sp = masked_curve_fit(prediction, x, y, p0, sigma=dy, fixed=[0])
 
-        w = 1./dy
-        chisq_np = _fit_cost(pn, x, y, _fit_tau_cost, w)
-        chisq_p = _fit_cost(pp, x, y, _fit_tau_cost, w)
+        chisq_np = _chisq(pn, prediction, x, y, dy)
+        chisq_p = _chisq(pp, prediction, x, y, dy)
         if chisq_np <= chisq_p:
             chisq_one, p1, s1 = (chisq_np, pn, sn)
         else:
             chisq_one, p1, s1 = (chisq_p, pp, sp)
 
         # Compare the single fit to the fit to both p and np
-        chisq_both = _fit_cost(p, x, y, _fit_tau_cost, w)
+        chisq_both = _chisq(p, prediction, x, y, dy)
         dof = len(y) - len(p0)
         F = (chisq_one - chisq_both)/(chisq_both/dof)
         pF = stats.f.cdf(F, 1, dof)
@@ -451,35 +458,35 @@ def estimate_deadtime(attenuated, unattenuated, mode='auto'):
     dp = sqrt(np.diag(s))
 
     # extract the return values
-    attenuator = (p[0], dp[0])
-    tau_NP = (p[1], dp[1])
-    tau_P = (p[2], dp[2])
-    rates = (p[3:], dp[3:])
-    return tau_NP, tau_P, attenuator, rates
+    tau_NP = (p[0], dp[0])
+    tau_P = (p[1], dp[1])
+    attenuators = (p[2:2+num_atten], dp[2:2+num_atten])
+    rates = (p[2+num_atten:], dp[2+num_atten:])
+    return tau_NP, tau_P, attenuators, rates
 
+def _chisq(p, f, x, y, dy):
+    resid = (f(x, *p) - y)/dy
+    return np.sum(resid**2)
 
-def _fit_tau_cost(x, attenuation, tau_NP, tau_P, *rate):
+def _rate_estimate(tau_NP, tau_P, attenuators, rates):
     """
-    Cost function for scipy optimize curve_fit.
-
-    The x vector is ignored, other than to determine the total number of points.
-
-    Used by :func:`deadtime_estimate` to fit the dead time constants.
+    Given time constants *tau_NP* and *tau_P*, a list of *attenuators*
+    [A1, A2, ...] and true incident *rates* [r1, r2, ...], return the
+    estimated observed rates for [A1r1 A1r2 ... A2r1 A2r2 ... r1 r2 ...].
     """
-    #penalty = sum((v<=0)*(v**2+1) for v in rate)
-    #penalty += (attenuation<=0)*(attenuation**2+1)
-    #penalty += (tau_NP<0)*tau_NP**2 + (tau_P<0)*tau_P**2
-    direct_rate = np.asarray(rate, 'd')
-    attenuated_rate = direct_rate*attenuation
-    incident = np.hstack((attenuated_rate, direct_rate))
+    direct_rate = np.asarray(rates, 'd')
+    rates = [direct_rate*attenuation for attenuation in attenuators]
+    rates.append(direct_rate)
+    incident = np.hstack(rates)
     y = expected_rate(incident, tau_NP, tau_P)
-    return y #+ penalty*1e10
+    return y
 
 def _fit_resid_jacobian(p, x, y, f, w):
     """
     Analytic jacobian of the _fit_resid function.
     """
-    attenuation, tau_NP, tau_P = p[:3]
+    tau_NP, tau_P = p[:2]
+    raise RuntimeError("not updated for multiple attenuators")
     direct_rate = np.asarray(p[3:], 'd')
     attenuated_rate = direct_rate*attenuation
     rate = np.hstack((attenuated_rate, direct_rate))
@@ -526,21 +533,6 @@ def _fit_resid_jacobian(p, x, y, f, w):
     return wJ
 
 
-def _fit_resid(p, x, y, f, w):
-    """
-    Residuals calculation, needed for non-lm fits.
-    """
-    attenuation, tau_NP, tau_P = p[:3]
-    direct_rate = np.asarray(p[3:], 'd')
-    attenuated_rate = direct_rate*attenuation
-    rate = np.hstack((attenuated_rate, direct_rate))
-    fx = expected_rate(rate, tau_NP, tau_P)
-    return w * (fx - y)
-
-def _fit_cost(p, x, y, f, w):
-    return np.sum(_fit_resid(p, x, y, f, w)**2)
-
-
 def peak_rate(tau_NP=0., tau_P=0.):
     """
     Return incident and observed rates for the peak observed rate.
@@ -562,7 +554,7 @@ def peak_rate(tau_NP=0., tau_P=0.):
 
 def expected_rate(rate, tau_NP=0., tau_P=0.):
     """
-    Calculate the expected count rate given the observed count rate and the
+    Calculate the expected count rate given the true count rate and the
     hybrid model dead time parameters
     """
     rate = np.asarray(rate, 'd')
@@ -649,7 +641,7 @@ def run_sim(tau_NP=0, tau_P=0, attenuator=10, mode='mixed', plot=True):
 
     # estimate dead time
     try:
-        res = deadtime_from_counts(attenuated, unattenuated, mode=mode)
+        res = deadtime_from_counts([attenuated, unattenuated], mode=mode)
         #print(*res)
     except Exception as exc:
         res = (tau_NP,0), (tau_P,0), (1./attenuator,0), (rate,0*rate)
