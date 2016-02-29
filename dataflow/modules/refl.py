@@ -159,6 +159,8 @@ def demo1():
 def demo7():
     from dataflow.core import Template
     from dataflow.calc import process_template
+    from unpolarized_template import template as template_def
+    define_instrument(data_source="http://ncnr.nist.gov/pub/")
     template = Template("unpolarized", "reflweb default unpolarized template", modules=template_def['modules'], wires=template_def['wires'], instrument="ncnr.magik", version=1.0)
     test_dataset = [{'path': "ncnrdata/cgd/201511/21066/data/HMDSO_17nm_dry14.nxz.cgd",
                      "mtime": 1447353278}]
@@ -171,7 +173,7 @@ def demo7():
     #print template_config
     refl = process_template(template=template,
                             config=template_config,
-                            target=(1, "output"))
+                            target=(0, "output"))
     print "refl",refl.values
     return refl.values
 

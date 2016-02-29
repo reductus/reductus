@@ -787,6 +787,7 @@ class ReflData(object):
                   'normbase',
                   'warnings', 'messages',
                   ]
+    readonly_properties = ['v', 'x', 'Qz', 'Qx']
     instrument = "unknown"
     geometry = "vertical"
     probe = "unknown"
@@ -1015,7 +1016,9 @@ def _str(object, indent=4):
 
 def _toDict(obj):
     props = {}
-    for a in obj.properties:
+    properties = list(getattr(obj, 'properties', [])) # make a copy
+    properties += getattr(obj, 'readonly_properties', [])
+    for a in properties:
         attr = getattr(obj, a)
         if isinstance(attr, np.integer):
             obj = int(attr)
