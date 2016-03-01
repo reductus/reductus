@@ -77,7 +77,7 @@ server = ThreadedJSONRPCServer((config.jsonrpc_servername, config.jsonrpc_port),
 rpc_port = server.socket.getsockname()[1]
 #webbrowser.open_new_tab('http://localhost:%d/index.html?rpc_port=%d' % (http_port, rpc_port))
 
-import h5py, os
+import h5py, os, dataflow
 from dataflow.core import Template, sanitizeForJSON, lookup_instrument
 from dataflow.cache import use_redis
 from dataflow.calc import process_template
@@ -154,7 +154,7 @@ def find_calculated(template_def, config):
     whether that node value has been calculated yet.
     """
     template = Template(**template_def)
-    retval = find_calculated(template, config)
+    retval = dataflow.calc.find_calculated(template, config)
     return retval
 
 def calc_terminal(template_def, config, nodenum, terminal_id):

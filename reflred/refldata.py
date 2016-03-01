@@ -785,7 +785,7 @@ class ReflData(object):
                   'intent', 'Qz_target', 'angular_resolution',
                   'vlabel', 'vunits', 'xlabel', 'xunits',
                   'normbase',
-                  'warnings', 'messages',
+                  'warnings', 'messages', "_v"
                   ]
     readonly_properties = ['v', 'x', 'Qz', 'Qx']
     instrument = "unknown"
