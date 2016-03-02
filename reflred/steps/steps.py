@@ -802,13 +802,13 @@ def estimate_polarization(data, FRbalance=0.5, Emin=0.0, Imin=0.0, clip=False):
 
     **Inputs**
 
-    data (refldata) : direct beam measurement to determine polarization
+    data (refldata*) : direct beam measurement to determine polarization
 
-    FRbalance (float:) : front/rear balance of to use for efficiency loss
+    FRbalance (float:%) : front/rear balance of to use for efficiency loss
 
-    Emin (float:) : minimum efficiency cutoff
+    Emin (float:%) : minimum efficiency cutoff
 
-    Imin (float:) : minimum intensity cutoff
+    Imin (float:counts/s) : minimum intensity cutoff
 
     clip (bool) : clip efficiency between minimum and one
 
@@ -820,8 +820,8 @@ def estimate_polarization(data, FRbalance=0.5, Emin=0.0, Imin=0.0, clip=False):
     """
     from .polarization import PolarizationData
 
-    poldata = PolarizationData(beam=data, FRbal=FRbalance,
-                               Emin=Emin, Imin=Imin, clip=clip)
+    poldata = PolarizationData(beam=data, FRbal=0.01*FRbalance,
+                               Emin=0.01*Emin, Imin=Imin, clip=clip)
 
     poldata.log("PolarizationData(beam, Imin=%.15g, Emin=%.15g, FRbal=%.15g, clip=%d)"
              %(Imin, Emin, FRbalance, 0+clip))
