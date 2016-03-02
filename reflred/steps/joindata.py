@@ -10,6 +10,15 @@ from .. import unit
 from ..refldata import Intent, ReflData, Environment
 from .util import poisson_average
 
+def group_by_entry(datasets):
+    """
+    Return a list of groups, one per entry name in the file.
+    """
+    groups = {}
+    for d in datasets:
+        groups.setdefault(d.entry, []).append(d)
+    return groups.items()
+
 def sort_files(datasets, key):
     """
     Order files by key.
@@ -53,6 +62,11 @@ def join_datasets(group, tolerance):
     columns = apply_mask(group, columns)
 
     # Sort the columns so that nearly identical points are together
+    # Column keys are:
+    #    Td: detector theta
+    #    Ti: incident (sample) theta
+    #    dT: angular divergence
+    #    L: wavelength
     if group[0].intent == Intent.rock4:
         # Sort detector rocking curves so that small deviations in sample
         # angle don't throw off the order in detector angle.

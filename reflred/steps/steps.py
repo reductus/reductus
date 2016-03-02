@@ -564,11 +564,11 @@ def rescale(data, scale=1.0, dscale=0.0):
     return data
 
 @module
-def join(data, tolerance=0.05, order='file'):
+def join(data, tolerance=0.05, order='file', by_entry=True):
     """
-    Join operates on a list of datasets, returning a list with one dataset
-    per intent/polarization.  When operating on a single dataset, it joins
-    repeated points into single points.
+    Join operates on a list of datasets, returning a list with one dataset,
+    or one dataset per entry name if by_entry is True.  When operating on
+    a single dataset, it joins repeated points into single points.
 
     *tolerance* (default=0.05) is a scale factor on $\Delta \theta$ used to
     determine whether two angles are equivalent.  For a given tolerance
@@ -600,25 +600,36 @@ def join(data, tolerance=0.05, order='file'):
     order (file|time|theta|slit|none) : order determines which file is the
     base file, supplying the metadata for the joind set
 
+    by_entry(boolean) : True if datasets should be joined by entry name.  For
+    polarized neutron measurements, this will keep the polarization
+    cross sections separate since each cross section has a different entry
+    name.
+
     **Returns**
 
     output (refldata*) : joined data
 
-    2015-12-17 Paul Kienzle
+    2016-03-02 Paul Kienzle
     """
-    from .joindata import sort_files, join_datasets
+    from .joindata import sort_files, group_by_entry, join_datasets
     # No copy necessary; join is never in-place.
 
-    if len(data) > 0:
-        data = sort_files(data, order)
-        output = join_datasets(data, tolerance)
-
-        output.log("join(*data)")
-        for i, d in enumerate(data):
-            output.log_dependency('data[%d]' % i, d)
-        return [output]
+    if by_entry:
+        datasets = group_by_entry(data)
+    elif len(data) > 0:
+        datasets = [data]
     else:
-        return []
+        datasets = []
+    output = []
+    for group in datasets:
+        group = sort_files(group, order)
+        result = join_datasets(group, tolerance)
+
+        result.log("join(*data)")
+        for i, d in enumerate(group):
+            result.log_dependency('data[%d]' % i, d)
+        output.append(result)
+    return output
 
 @module
 def align_background(data, offset='auto'):
