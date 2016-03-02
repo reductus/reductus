@@ -43,7 +43,7 @@ def process_template(template, config, target=(None,None)):
 
     return_node, return_terminal = target
     def key(node, terminal):
-        return ":".join((node, str(terminal)))
+        return ":".join((str(node), str(terminal)))
 
     results = {}
     fingerprints = fingerprint_template(template, config)
