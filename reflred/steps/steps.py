@@ -600,7 +600,7 @@ def join(data, tolerance=0.05, order='file', by_entry=True):
     order (file|time|theta|slit|none) : order determines which file is the
     base file, supplying the metadata for the joind set
 
-    by_entry(boolean) : True if datasets should be joined by entry name.  For
+    by_entry(bool?) : True if datasets should be joined by entry name.  For
     polarized neutron measurements, this will keep the polarization
     cross sections separate since each cross section has a different entry
     name.
