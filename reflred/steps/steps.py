@@ -820,14 +820,14 @@ def estimate_polarization(data, FRbalance=0.5, Emin=0.0, Imin=0.0, clip=False):
     """
     from .polarization import PolarizationData
 
-    data = PolarizationData(beam=beam, FRbal=FRbalance,
-                            Emin=Emin, Imin=Imin, clip=clip)
+    poldata = PolarizationData(beam=data, FRbal=FRbalance,
+                               Emin=Emin, Imin=Imin, clip=clip)
 
-    data.log("PolarizationData(beam, Imin=%.15g, Emin=%.15g, FRbal=%.15g, clip=%d)"
+    poldata.log("PolarizationData(beam, Imin=%.15g, Emin=%.15g, FRbal=%.15g, clip=%d)"
              %(Imin, Emin, FRbalance, 0+clip))
     for xs in ('++','+-','-+','--'):
-        data.log_dependency("beam"+xs, beam[xs])
-    return data
+        poldata.log_dependency("beam"+xs, poldata[xs])
+    return poldata
 
 
 @module
