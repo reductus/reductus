@@ -42,6 +42,8 @@ def process_template(template, config, target=(None,None)):
     cache = get_cache()
 
     return_node, return_terminal = target
+    def key(node, terminal):
+        return ":".join((node, str(terminal)))
 
     results = {}
     fingerprints = fingerprint_template(template, config)
@@ -56,7 +58,7 @@ def process_template(template, config, target=(None,None)):
         if cache.exists(fp):
             print "retrieving cached value for node %d:"%node, fp
             bundles = _retrieve(cache, fp)
-            results.update(((node,k),v) for k,v in bundles.items())
+            results.update((key(node, k), v) for k, v in bundles.items())
             continue
 
 
@@ -67,8 +69,8 @@ def process_template(template, config, target=(None,None)):
             # Make key a tuple; wire["source"] won't work because it is
             # a mutable list, and can't be used as a dictionary key, but
             # an (int, string) tuple can be.
-            key = source_node, source_terminal
-            inputs[target_terminal].extend(results[key].values)
+            v = results[key(source_node, source_terminal)].values
+            inputs[target_terminal].extend(v)
 
         # Check arity of module. If the input terminals are all multiple
         # inputs, then the action needs to be called once with the bundle.
@@ -178,17 +180,15 @@ def process_template(template, config, target=(None,None)):
         #print "caching", module.id, bundles
         #print "caching",_serialize(bundles, output_terminals)
         _store(cache, fingerprints[node], data)
-        results.update(((node,k),v) for k,v in data.items())
+        results.update((key(node, k), v) for k, v in data.items())
 
     #print list(sorted(results.keys()))
     if return_node is not None:
         #print "returning", return_node, return_terminal
         #print "key",_cache_key(fingerprints[return_node], return_terminal)
-        key = (return_node, str(return_terminal))
-        return results[key]
+        return results[key(return_node, return_terminal)]
     else:
         return results
-
 
 def _store(cache, fp, data):
     stored = dict((k, v.todict()) for k,v in sorted(data.items()))
