@@ -106,11 +106,11 @@ def monitor_dead_time(data, dead_time, nonparalyzing=0.0, paralyzing=0.0):
 
     data (refldata) : Uncorrected data
 
-    dead_time (deadtime?) : Dead time information
+    dead_time (deadtime?) : Output of dead time estimator
 
-    nonparalyzing (float:us) : non-paralyzing dead time constant
+    nonparalyzing (float:us<0,>) : non-paralyzing dead time constant
 
-    paralyzing (float:us) : paralyzing dead time constant
+    paralyzing (float:us<0,>) : paralyzing dead time constant
 
     **Returns**
 
@@ -159,11 +159,11 @@ def detector_dead_time(data, dead_time, nonparalyzing=0.0, paralyzing=0.0):
 
     data (refldata) : Uncorrected data
 
-    dead_time (deadtime?) : Dead time information
+    dead_time (deadtime?) : Output from dead time estimator
 
-    nonparalyzing (float:us) : non-paralyzing dead time constant
+    nonparalyzing (float:us<0,>) : non-paralyzing dead time constant
 
-    paralyzing (float:us) : paralyzing dead time constant
+    paralyzing (float:us<0,>) : paralyzing dead time constant
 
     **Returns**
 
@@ -445,8 +445,8 @@ def mark_intent(data, intent='auto'):
     data (refldata) : data file which may or may not have intent marked
 
     intent (opt*:auto|infer|specular|background+|background-|slit
-            |rock sample|rock detector|rock qx)
-    : intent to register with the datafile, or auto/infer to guess
+    |rock sample|rock detector|rock qx) : intent to register with the
+    datafile, or auto/infer to guess
 
     **Returns**
 
@@ -473,13 +473,13 @@ def group_by_intent(data):
 
     specular (refldata*) : specular measurements
 
-    backp (refldata*) : positive offset background measurements
+    backp {Background+} (refldata*) : positive offset background measurements
 
-    backm (refldata*) : negative offset background measurements
+    backm {Background-} (refldata*) : negative offset background measurements
 
     intensity (refldata*) : beam intensity measurements
 
-    rock (refldata*) : rocking curve measurements
+    rock {Rocking curve} (refldata*) : rocking curve measurements
 
     other (refldata*) : everything else
     """
@@ -524,7 +524,7 @@ def normalize(data, base='auto'):
 
     data (refldata) : data to normalize
 
-    base (opt:auto|monitor|time|power|none)
+    base {Normalize by} (opt:auto|monitor|time|power|none)
     : how to convert from counts to count rates
 
     **Returns**
@@ -549,9 +549,9 @@ def rescale(data, scale=1.0, dscale=0.0):
 
     data (refldata) : data to scale
 
-    scale (float:) : amount to scale
+    scale (float:<0,>) : amount to scale
 
-    dscale (float:) : scale uncertainty for gaussian error propagation
+    dscale (float:<0,>) : scale uncertainty for gaussian error propagation
 
     **Returns**
 
@@ -595,7 +595,7 @@ def join(data, tolerance=0.05, order='file'):
 
     data (refldata*) : data to join
 
-    tolerance (float:) : allowed separation between points while still joining
+    tolerance (float:<0,>) : allowed separation between points while still joining
     them to a single point; this is relative to the angular resolution of the
     each point
 
@@ -692,9 +692,9 @@ def subtract_background(data, backp, backm):
 
     data (refldata) : specular data
 
-    backp (refldata?) : plus-offset background data
+    backp {Background+} (refldata?) : plus-offset background data
 
-    backm (refldata?) : minus-offset background data
+    backm {Background-} (refldata?) : minus-offset background data
 
     **Returns**
 
@@ -765,7 +765,7 @@ def smooth_slits(datasets, degree=1, span=2, dx=0.01):
     sized *span* is preferred.  *span* must be larger than *degree*.
     *degree=1* and *span=2* is equivalent to linear interpolation.
 
-    dx (float:mm) :  size within which slits can be merged.
+    dx (float:mm<0,>) :  size within which slits can be merged.
 
     **Returns**
 
@@ -808,11 +808,11 @@ def estimate_polarization(data, FRbalance=0.5, Emin=0.0, Imin=0.0, clip=False):
 
     data (refldata*) : direct beam measurement to determine polarization
 
-    FRbalance (float:%) : front/rear balance of to use for efficiency loss
+    FRbalance (float:%<0,100>) : front/rear balance of to use for efficiency loss
 
-    Emin (float:%) : minimum efficiency cutoff
+    Emin (float:%<0,100>) : minimum efficiency cutoff
 
-    Imin (float:counts/s) : minimum intensity cutoff
+    Imin (float:counts/s<0,>) : minimum intensity cutoff
 
     clip {Clip efficiency} (bool) : clip efficiency between Emin and one
 
@@ -870,11 +870,11 @@ def save(data, name='auto', ext='auto', path="."):
 
     data (refldata) : data to save
 
-    name (str) : name of the file, or 'auto' to use the basename
+    name (opt:auto|...) : name of the file, or 'auto' to use the basename
 
-    ext (str)  : file extension, or 'auto' to use the id of the last step
+    ext {Extension} (opt:auto|...) : file extension, or 'auto' to use the id of the last step
 
-    path (str) : data path, or 'auto' to use the current directory
+    path (opt:auto|...) : data path, or 'auto' to use the current directory
 
     2015-12-17 Paul Kienzle
     """
