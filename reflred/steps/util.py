@@ -22,15 +22,11 @@ def group_data(datasets):
 
 def group_by_xs(datasets):
     """
-    Return datasets grouped by polarization cross section, and by intent within
-    each polarization cross section.
+    Return datasets grouped by polarization cross section.
     """
     cross_sections = {}
     for data in datasets:
-        group = cross_sections.setdefault(data.polarization,{})
-        if data.intent in group:
-            raise ValueError("More than one %r in reduction"%data.intent)
-        group[data.intent] = data
+        cross_sections.setdefault(data.polarization,[]).append(data)
 
     #print "datasets",[":".join((d.name,d.entry,d.polarization,d.intent)) for d in datasets]
     #print "xs",cross_sections
@@ -39,15 +35,11 @@ def group_by_xs(datasets):
 
 def group_by_intent(datasets):
     """
-    Return datasets grouped by polarization cross section, and by intent within
-    each polarization cross section.
+    Return datasets grouped by intent.
     """
     intents = {}
     for data in datasets:
-        group = intents.setdefault(data.intent,{})
-        if data.polarization in group:
-            raise ValueError("More than one %r in reduction"%data.polarization)
-        group[data.polarization] = data
+        intents.setdefault(data.intent,[]).append(data)
 
     #print "datasets",[":".join((d.name,d.entry,d.polarization,d.intent)) for d in datasets]
     #print "xs",cross_sections
