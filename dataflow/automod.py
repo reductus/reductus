@@ -390,6 +390,7 @@ def _unsplit_name(name):
 # parameter definition regular expression
 parameter_re = re.compile("""\A
     \s*(?P<id>\w+)                           # name
+    \s*([{]\s*(?P<label>.*?)\s*[}])?         # { label }    (optional)
     \s*([(]                                  # (
         \s*(?P<datatype>.*?)                 #    datatype  (non-greedy)
         \s*([[]\s*(?P<length>[0-9]*)\s*[]])? #    [length]  (optional)
@@ -406,7 +407,7 @@ def parse_parameters(lines):
 
     Each parameter must use the form defined by the following syntax:
 
-        name (type[length]#:attr): description [default]
+        id {label} (type[length]#:attr): description [default]
 
     The *(type)* specifier is optional, defaulting to str.  The *[default]*
     value is rarely needed since it can be extracted from the function
@@ -450,7 +451,8 @@ def parse_parameters(lines):
             d['multiple'] = True
         else:
             raise RuntimeError("Can't get here")
-        d['label'] = _unsplit_name(d['id'])
+        if d['label'] is None:
+            d['label'] = _unsplit_name(d['id'])
         parse_datatype(d)
         ret.append(d)
     return ret
@@ -565,11 +567,7 @@ def parse_datatype(par):
     attr = {}
 
     #print "type: %r"%type
-    if type == "bool":
-        # bare attrstr below tests for not None and not empty string
-        attr["label"] = attrstr if attrstr else name
-
-    elif type == "int":
+    if type == "int":
         try:
             min, max = parse_range(attrstr, limit=1e9)
             if int(min) != min or int(max) != max:
@@ -619,7 +617,7 @@ def parse_datatype(par):
             raise ValueError("range must be one of x, y or xy for " + name)
         attr["range"] = attrstr
 
-    else: # type in ["str", "fileinfo", "index", "coordinate"]:
+    else: # type in ["str", "bool", "fileinfo", "index", "coordinate"]:
         if par["typeattr"] is not None:
             raise ValueError("No restrictions on type %s for parameter %s"
                              % (type, name))
@@ -713,9 +711,12 @@ def test_parse_parameters():
 
         r3 (range: xy ) : xy range
 
-        filename (fileinfo) :
+        spinflip {Correct Spinflip Data} (bool)
+            : Correct spinflip data if available.
 
-        datapoint (index) :
+        file_name (fileinfo) :
+
+        point (index) :
 
         coord (coordinate) :
     """
@@ -732,8 +733,21 @@ def test_parse_parameters():
     assert p['i1']['description'] == 'optional integer extended description can be indented.'
     assert p['e1']['description'] == ''
 
+    assert p['spinflip']['label'] == 'Correct Spinflip Data'
+    assert p['file_name']['label'] == 'File Name'
+    assert p['r3']['label'] == 'R3'
+
+    # See FIELD_TYPES for list of available field types
     assert p['s3']['datatype'] == 'str'
+    assert p['spinflip']['datatype'] == 'bool'
+    assert p['i2']['datatype'] == 'int'
+    assert p['f4']['datatype'] == 'float'
     assert p['o2']['datatype'] == 'opt'
+    assert p['e1']['datatype'] == 'regex'
+    assert p['r1']['datatype'] == 'range'
+    assert p['point']['datatype'] == 'index'
+    assert p['coord']['datatype'] == 'coordinate'
+    assert p['file_name']['datatype'] == 'fileinfo'
 
     assert p['f5']['required'] == True   # multiplicity: none
     assert p['f5']['multiple'] == False
