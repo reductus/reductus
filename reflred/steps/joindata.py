@@ -293,7 +293,7 @@ def join_columns(columns, tolerance):
             w = weight[current:i]
             #print "join", current, i, w, tolerance
             for k, v in columns.items():
-                if k not in {'v', 'dv', 'time', 'monitor'}:
+                if k not in ['v', 'dv', 'time', 'monitor']:
                     #print "averaging", k, current, i
                     #print columns[k][current:i]
                     #print "weights", w
