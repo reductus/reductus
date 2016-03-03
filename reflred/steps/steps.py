@@ -42,8 +42,7 @@ def ncnr_load(filelist=None):
 
     **Inputs**
 
-    filelist (fileinfo+): List of files to open.  Fileinfo is a structure
-    with { path: location on server, mtime: expected modification time }.
+    filelist (fileinfo+): List of files to open.
 
     **Returns**
 
@@ -51,6 +50,8 @@ def ncnr_load(filelist=None):
 
     2015-12-17 Brian Maranville
     """
+    # NB: Fileinfo is a structure with
+    #     { path: "location/on/server", mtime: timestamp }
     from .load import url_load_list
     return url_load_list(filelist)
 
@@ -813,7 +814,7 @@ def estimate_polarization(data, FRbalance=0.5, Emin=0.0, Imin=0.0, clip=False):
 
     Imin (float:counts/s) : minimum intensity cutoff
 
-    clip (bool) : clip efficiency between minimum and one
+    clip {Clip efficiency} (bool) : clip efficiency between Emin and one
 
     **Returns**
 
@@ -826,7 +827,7 @@ def estimate_polarization(data, FRbalance=0.5, Emin=0.0, Imin=0.0, clip=False):
     poldata = PolarizationData(beam=data, FRbal=0.01*FRbalance,
                                Emin=0.01*Emin, Imin=Imin, clip=clip)
 
-    poldata.log("PolarizationData(beam, Imin=%.15g, Emin=%.15g, FRbal=%.15g, clip=%d)"
+    poldata.log("PolarizationData(beam, Imin=%.15g, Emin=%.15g%%, FRbal=%.15g%%, clip=%d)"
              %(Imin, Emin, FRbalance, 0+clip))
     for xs in ('++','+-','-+','--'):
         poldata.log_dependency("beam"+xs, poldata[xs])
@@ -844,7 +845,7 @@ def correct_polarization(data, polarization, spinflip=True):
 
     polarization (poldata) : estimated polarization efficiency
 
-    spinflip (bool) : correct spinflip data if available
+    spinflip {Correct spinflip data} (bool) : correct spinflip data if available
 
     **Returns**
 
@@ -891,35 +892,44 @@ def save(data, name='auto', ext='auto', path="."):
 
 @module
 def super_load(filelist=None,
-               auto_divergence=True,
-               auto_detector_saturation=False,
-               auto_monitor_saturation=False,
+               detector_correction=False,
+               monitor_correction=False,
                intent='auto'):
     """
     Load a list of nexus files from the NCNR data server.
 
     **Inputs**
 
-    filelist (fileinfo+): List of files to open.  Fileinfo is a structure
-    with { path: location on server, mtime: expected modification time }.
-    
-    auto_divergence (bool?): Automatically calculate the angular divergence of the beam
-    
-    auto_detector_saturation (bool?): Automatically correct the detector saturation
-    
-    auto_monitor_saturation (bool?): Automatically correct the monitor saturation
-    
-    intent (str?): set the intent of the files as with the mark_intent filter
+    filelist (fileinfo+): List of files to open.
+
+    detector_correction {Apply detector deadtime correction} (bool)
+    : Which deadtime constant to use for detector deadtime.
+
+    monitor_correction {Apply monitor deadtime correction} (bool)
+    : Which deadtime constant to use for monitor deadtime.
+
+    intent (str) : Measurement intent (specular, background+, background-,
+    slit, rock), auto or infer.
 
     **Returns**
 
     output (refldata+): All entries of all files in the list.
 
-    2015-02-08 Brian Maranville
+    2016-03-03 Brian Maranville
     """
     from .load import url_load_list
     from .intent import apply_intent
-    
+    # Note: Fileinfo is a structure with
+    #     { path: "location/on/server", mtime: timestamp }
+
+    # Note: divergence is required for join, so always calculate it.  If you
+    # really want it optional then use:
+    #
+    #  auto_divergence {Calculate dQ} (bool)
+    #    : Automatically calculate the angular divergence of the beam.
+    #
+    auto_divergence = True
+
     dataset = url_load_list(filelist)
     if auto_divergence:
         from .angles import apply_divergence
@@ -928,11 +938,11 @@ def super_load(filelist=None,
             #data.log('divergence()')
             apply_divergence(data)
             
-    if auto_detector_saturation:
-        dataset = [detector_saturation(data) for data in dataset]
+    if detector_correction:
+        dataset = [detector_dead_time(data, None) for data in dataset]
 
-    if auto_monitor_saturation:
-        dataset = [monitor_saturation(data) for data in dataset]
+    if monitor_correction:
+        dataset = [monitor_dead_time(data, None) for data in dataset]
 
     for data in dataset:
         #data.log('mark_intent(%r)' % intent)
