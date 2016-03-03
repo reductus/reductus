@@ -350,11 +350,12 @@ def test3():
 
 def unpolarized_template():
     from dataflow import core as df
+    from dataflow.automod import make_modules, make_template
     from reflred.refldata import ReflData
     from reflred.steps.polarization import PolarizationData
     from reflred.steps.deadtime import DeadTimeData
     INSTRUMENT_PREFIX = "ncnr.refl."
-    modules = df.make_modules(steps.ALL_ACTIONS, prefix=INSTRUMENT_PREFIX)
+    modules = make_modules(steps.ALL_ACTIONS, prefix=INSTRUMENT_PREFIX)
     loader_name = INSTRUMENT_PREFIX + "ncnr_load"
     loader = [m for m in modules if m.id == loader_name][0]
     refldata = df.Data(INSTRUMENT_PREFIX+"refldata", ReflData,
@@ -370,7 +371,6 @@ def unpolarized_template():
         archive="NCNR",
     )
     
-    from dataflow.core import make_template
     diagram = [
         # Load the data
         ["super_load", {"intent": "specular"}],

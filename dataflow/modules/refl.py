@@ -1,4 +1,5 @@
 from dataflow import core as df
+from dataflow.automod import make_modules
 
 from reflred.steps import steps
 from reflred.steps import load
@@ -15,7 +16,7 @@ def define_instrument(data_source):
     load.DATA_SOURCE = data_source
 
     # Define modules
-    modules = df.make_modules(steps.ALL_ACTIONS, prefix=INSTRUMENT+'.')
+    modules = make_modules(steps.ALL_ACTIONS, prefix=INSTRUMENT+'.')
 
     # Define data types
     refldata = df.DataType(INSTRUMENT+".refldata", ReflData)
@@ -41,7 +42,8 @@ def define_instrument(data_source):
 
 
 def loader_template():
-    from dataflow.core import make_template, lookup_instrument
+    from dataflow.automod import make_template
+    from dataflow.core import lookup_instrument
     refl1d = lookup_instrument(INSTRUMENT)
     diagram = [
             ["ncnr_load", {}],
@@ -58,7 +60,8 @@ def loader_template():
 
 
 def unpolarized_template():
-    from dataflow.core import make_template, lookup_instrument
+    from dataflow.automod import make_template
+    from dataflow.core import lookup_instrument
     refl1d = lookup_instrument(INSTRUMENT)
     diagram = [
         # Load the data
