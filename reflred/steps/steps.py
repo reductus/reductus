@@ -66,9 +66,9 @@ def fit_dead_time(attenuated, unattenuated, source='detector', mode='auto'):
 
     unattenuated (refldata): Unattenuated detector counts
 
-    source (detector|monitor): Measured tube
+    source (opt:detector|monitor): Measured tube
 
-    mode (P|NP|mixed|auto): Dead-time mode
+    mode (opt:P|NP|mixed|auto): Dead-time mode
 
     **Returns**
 
@@ -443,7 +443,8 @@ def mark_intent(data, intent='auto'):
 
     data (refldata) : data file which may or may not have intent marked
 
-    intent (auto|infer|specular|background+|background-|slit|rock sample|rock detector|rock qx)
+    intent (opt*:auto|infer|specular|background+|background-|slit
+            |rock sample|rock detector|rock qx)
     : intent to register with the datafile, or auto/infer to guess
 
     **Returns**
@@ -522,7 +523,7 @@ def normalize(data, base='auto'):
 
     data (refldata) : data to normalize
 
-    base (auto|monitor|time|power|none)
+    base (opt:auto|monitor|time|power|none)
     : how to convert from counts to count rates
 
     **Returns**
@@ -564,11 +565,11 @@ def rescale(data, scale=1.0, dscale=0.0):
     return data
 
 @module
-def join(data, tolerance=0.05, order='file', by_entry=True):
+def join(data, tolerance=0.05, order='file'):
     """
     Join operates on a list of datasets, returning a list with one dataset,
-    or one dataset per entry name if by_entry is True.  When operating on
-    a single dataset, it joins repeated points into single points.
+    or one dataset per polarization state.  When operating on a single
+    dataset, it joins repeated points into single points.
 
     *tolerance* (default=0.05) is a scale factor on $\Delta \theta$ used to
     determine whether two angles are equivalent.  For a given tolerance
@@ -597,13 +598,8 @@ def join(data, tolerance=0.05, order='file', by_entry=True):
     them to a single point; this is relative to the angular resolution of the
     each point
 
-    order (file|time|theta|slit|none) : order determines which file is the
-    base file, supplying the metadata for the joind set
-
-    by_entry(bool?) : True if datasets should be joined by entry name.  For
-    polarized neutron measurements, this will keep the polarization
-    cross sections separate since each cross section has a different entry
-    name.
+    order (opt:file|time|theta|slit|none) : order determines which file is the
+    base file, supplying the metadata for the joined set
 
     **Returns**
 
@@ -611,15 +607,11 @@ def join(data, tolerance=0.05, order='file', by_entry=True):
 
     2016-03-02 Paul Kienzle
     """
-    from .joindata import sort_files, group_by_entry, join_datasets
+    from .joindata import sort_files, join_datasets
+    from .util import group_by_xs
     # No copy necessary; join is never in-place.
 
-    if by_entry:
-        datasets = group_by_entry(data)
-    elif len(data) > 0:
-        datasets = [data]
-    else:
-        datasets = []
+    datasets = group_by_xs(data).values()
     output = []
     for group in datasets:
         group = sort_files(group, order)
@@ -656,7 +648,7 @@ def align_background(data, offset='auto'):
 
     data (refldata) : background data with unknown $q$
 
-    offset (auto|sample|detector) : angle which determines $q_z$
+    offset (opt:auto|sample|detector) : angle which determines $q_z$
 
     **Returns**
 

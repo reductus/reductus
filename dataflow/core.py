@@ -569,7 +569,7 @@ def make_template(name, description, diagram, instrument, version):
         return "%s in step %d: [%r, %r]"%(s, target_index, action, config)
     def target_err(s):
         return "%s in step %d: [%r, %r]" %(
-            s, target_index, action, {target_terminal:source_string})
+            s, target_index, action, {target_terminal:s})
 
     module_handles = []
     modules = []
@@ -733,12 +733,13 @@ def auto_module(action):
     then add [default] in square brackets after the description, and it
     will override the keyword value.
 
-    If the input is optional, then mark the input type with '?'.  If the node
-    accepts zero or more inputs, then mark the type with '*'.  If the node
-    accepts one or more inputs, then mark the type with '+'.  These flags
-    set the *required* and *multiple* properties of the terminal/field.
+    If the field is optional, then mark the type with '?'.  If the node
+    accepts zero or more values, then mark the type with '*'.  If the node
+    accepts one or more values, then mark the type with '+'.  These flags
+    set the *required* and *multiple* properties of the field.
 
-    If the input terminals are all multiple inputs, then the action will
+    Datasets move through the template as bundles of files. If the input
+    terminals for a node are all multiple inputs, then the action will
     be called once with the entire bundle as a list.  If the input terminals
     are all single input, then the action will be called once for each dataset
     in the bundle.  For mixed single/multiple inputs the first input must
@@ -751,10 +752,12 @@ def auto_module(action):
     the field value is the same across all inputs, or length 0 if the
     field is optional and not defined.
 
-    The possible types are determined by the user interface.  Here is the
-    currently suggested types:
+    The possible types are determined by the user interface.  They include
+    items such as:
 
-        str, int, bool, float, float:units, float[n]:units, opt1|opt2|...|optn
+        str, int, bool, float, float:units, opt:opt1|opt2|...|optn
+
+    See :func:`parse_datatype` for the complete list.
 
     Each instrument will have its own data types as well, which are
     associated with the wires and have enough information that they can
@@ -829,8 +832,8 @@ def _parse_function(action):
 
     # parse the sections
     description = "".join(description_lines).strip()
-    inputs = _parse_parameters(input_lines)
-    output_terminals = _parse_parameters(output_lines)
+    inputs = parse_parameters(input_lines)
+    output_terminals = parse_parameters(output_lines)
 
     # grab arguments and defaults from the function definition
     argspec = inspect.getargspec(action)
@@ -866,6 +869,11 @@ def _parse_function(action):
         if p['default'] is None:
             p['default'] = defaults[p['id']]
 
+    # Check the types on the input fields
+    for p in input_fields:
+        if p['type'] not in FIELD_TYPES:
+            raise ValueError("Invalid type %s for %s"%(p['type'], p['id']))
+
     # Collect all the node info
     result = {
         'id': action.__name__,
@@ -889,52 +897,263 @@ def _unsplit_name(name):
     return " ".join(s.capitalize() for s in name.split('_'))
 
 
-# name (optional type): description [optional default]
+# parameter definition regular expression
 parameter_re = re.compile("""\A
     \s*(?P<id>\w+)                           # name
-    \s*([(]\s*(?P<datatype>[^)]*)\s*[)])?    # ( datatype )
+    \s*([(]                                  # (
+        \s*(?P<type>.*?)                     #    type      (non-greedy)
+        \s*([[]\s*(?P<length>[0-9]*)\s*[]])? #    [length]  (optional)
+        \s*(?P<multiple>[?*+])?              #    multiple  (optional [*+?])
+        \s*(:\s*(?P<typeattr>.*?))?          #    :typeattr (optional)
+    \s*[)])?                                 # )
     \s*:                                     # :
-    \s*(?P<description>.*?)                  # non-greedy description
-    \s*([[]\s*(?P<default>.*?)\s*[]])?       # [ default ]
+    \s*(?P<description>.*?)                  # description  (non-greedy)
+    \s*([[]\s*(?P<default>.*?)\s*[]])?       # [default]    (optional)
     \s*\Z""", re.VERBOSE)
-def _parse_parameters(lines):
+def parse_parameters(lines):
     """
     Interpret the doc strings for the parameters.
 
-    Each parameter must use the form defined by parameter_re above:
+    Each parameter must use the form defined by the following syntax:
 
-        name (optional type): description [optional default]
+        name (type[length]#:attr): description [default]
+
+    The *(type)* specifier is optional, defaulting to str.  The *[default]*
+    value is rarely needed since it can be extracted from the function
+    defintion.  Within the type specifier, the *[length]* is not required
+    if only a single value is needed.  The multiplicity specifier *#* can be
+    one of '?', '*', or '+' if there can be zero or one, zero or more or one
+    or more values respectively.
 
     *lines* is the set of lines after ``**Inputs**`` and ``**Returns**``.
     Note that parameters are defined by consecutive non-blank lines separated
-    by blank lines.  :func:`_group_parameters` is used to gather all of the
+    by blank lines.  :func:`get_paragraphs` is used to gather all of the
     relevant lines together, skipping the blank bits.
     """
     ret = []
-    for group in _get_paragraphs(lines):
+    for group in get_paragraphs(lines):
         s = " ".join(s.strip() for s in group)
         match = parameter_re.match(s)
         if match is None:
             raise ValueError("unable to parse parameter:\n  "+"  ".join(group))
         d = match.groupdict()
-        d['required'] = False
-        d['multiple'] = False
-        if d['datatype'].endswith('?'):
-            d['datatype'] = d['datatype'][:-1]
+        if d['length'] is None:
+            d['length'] = 1
+        elif d['length'].strip() == "":
+            d['length'] = 0
+        else:
+            try:
+                d['length'] = int(d['length'])
+            except:
+                ValueError("bad length specifier:\n "+"  ".join(group))
+        if d['multiple'] is None:
             d['required'] = True
-        elif d['datatype'].endswith('*'):
-            d['datatype'] = d['datatype'][:-1]
+            d['multiple'] = False
+        elif d['multiple'] == '?':
+            d['required'] = False
+            d['multiple'] = False
+        elif d['multiple'] == '*':
+            d['required'] = False
             d['multiple'] = True
-        elif d['datatype'].endswith('+'):
-            d['datatype'] = d['datatype'][:-1]
+        elif d['multiple'] == '+':
             d['required'] = True
             d['multiple'] = True
+        else:
+            raise RuntimeError("Can't get here")
         d['label'] = _unsplit_name(d['id'])
+        parse_datatype(d)
         ret.append(d)
     return ret
 
+def parse_datatype(par):
+    r"""
+    Interpret the data type into a base type and attributes.
 
-def _get_paragraphs(lines):
+    *str* : String input.
+
+    *bool:label* : True/false.
+
+        Boolean options can be represented using a check box in the user
+        interface, using the given label.  If the label is not provided,
+        then the name of the parameter will be used.  If *multiple=True*,
+        then there should be a separate checkbox for each dataset, which
+        could be added as a check menu item on the drop down associated
+        with each graph line.
+
+    *int:<min,max>* : Integer value.
+
+        If a range is given, then the value should lie within the range.
+        The type attribute is set as *typeattr={range: [min, max]}*, with
+        range defaulting to *[-inf, inf]* if no range is given.  Note that
+        inf is represented as 1e9 for integers.
+
+    *float:units<min,max>* : Floating point value.
+
+        Units should be a string, which may be the empty string if the value
+        is unitless.  The type attribute is set as
+        *typeattr={units: "units", range: [min, max]}*, with range defaulting
+        to *[-inf, inf]* if no range is given.  Note that inf is represented
+        as 1e300 for float.
+
+    *opt:opt1|...|optn* : Choice list.
+
+        Select from the list of options.  Options are sent as string
+        values.  This could be represented as radio buttons, as a single
+        selection list or as a dropdown list, depending on the number of
+        options to choose from and the amount of screen real estate available.
+        If *length=0* because *opt[]:...* was specified, then a multiple
+        selection list should be used to return a list of strings. If
+        *multiple=True*, then the options could show up on the drop down
+        menu associated with each data line.
+
+        Normally the option name matches the option label, unless the option
+        is given as "...|name=label|...". If the final choice is "...", then
+        the response is an open set response, with the list being the list of
+        common options.  This can be implemented using a combo box, with
+        users able to enter a string or choose one of the predefined options
+        from the drop-down list.  The option may be missing, in which case
+        a block separation should be indicated and the option never selected.
+
+        The type attribute is set as
+        *typeattr={choices: [[opt1,label1], ...], open: true/false}*
+
+    *regex:pattern* -> *datatype=regex, pattern=pattern*
+
+        String which must match the given regular expression.  The type
+        attribute is set as *typeattr={pattern: "pattern"}*.
+
+    *fileinfo* -> *datatype=fileinfo*
+
+        A file identifier on the server with the following structure::
+
+            {
+                *path*: location on server,
+                *mtime*: modification time
+            }
+
+        The user interface should present a list of files to choose from,
+        and fill in the structure.
+
+    *index* -> *datatype=index*
+
+        This should be a zero-origin point number in the plotted data.  There
+        are several use cases, but the first one is most sensible:
+
+        - index[]\* -> *length=0, multiple=true*
+
+            an arbitrary list of points should be selected for each
+            dataset independently
+
+        - index\* -> *length=1, multiple=true*
+
+            a single point should be selected for each dataset independently
+
+        - index -> *length=1, multiple=false*
+
+            a single point should be selected for all lines simultaneously,
+            and that point will be used in all datasets.
+
+        - index[] -> *length=0, multiple=false*
+
+            multiple points should be selected for all lines simultaneously,
+            and those points will apply to all datasets.
+
+    *range:axis* -> *datatype=range, axis=axis*
+
+        This is a selection of a range from the graph, where *axis* is *x* or
+        *y* for a range of *x* or *y* values, or *xy* for a region of the
+        graph. This makes most sense with *length=1, multiple=false*.
+        The type attribute is set as *typeattr={axis: "axis"}*.
+
+    *coordinate* -> *datatype=coordinate*
+
+        A point *[x, y]* should be selected from the graph.
+    """
+    name = par['id']
+    type = par["type"] if par["type"] else "str"
+    attrstr = par["typeattr"] if par["typeattr"] else ""
+    attr = {}
+
+    #print "type: %r"%type
+    if type == "bool":
+        # bare attrstr below tests for not None and not empty string
+        attr["label"] = attrstr if attrstr else name
+
+    elif type == "int":
+        try:
+            min, max = parse_range(attrstr, limit=1e9)
+            if int(min) != min or int(max) != max:
+                raise Exception("use integers for int range")
+        except Exception, exc:
+            raise ValueError("invalid range for %s: %s"%(name, str(exc)))
+        attr["range"] = [int(min), int(max)]
+
+    elif type == "float":
+        split_index = attrstr.find("<")
+        if split_index >= 0:
+            units, range = attrstr[:split_index], attrstr[split_index:]
+        else:
+            units, range = attrstr, ""
+        try:
+            min, max = parse_range(range, limit=1e300)
+        except Exception, exc:
+            raise ValueError("invalid range for %s: %s"%(name, str(exc)))
+
+        attr["units"] = units.strip()
+        attr["range"] = [min, max]
+
+    elif type == "opt":
+        if "|" not in attrstr:
+            raise ValueError("options not specified for parameter " + name)
+        choices = [v.split('=') for v in attrstr.split("|", 2)]
+        choices = [(v*2 if len(v) == 1 else v) for v in choices]
+        choices = [[v[0].strip(), v[1].strip()] for v in choices]
+        open = (choices[-1][0] == "...")
+        if open:
+            choices = choices[:-1]
+
+        attr["choices"] = choices
+        attr["open"] = open
+
+    elif type == "regex":
+        if not attrstr:
+            raise ValueError("regex is empty for " + name)
+        try:
+            re.compile(attrstr)
+        except Exception, exc:
+            raise ValueError("regex error %r for %s"%(str(exc),name))
+        attr["pattern"] = attrstr
+
+    elif type == "range":
+        if attrstr not in ("x", "y", "xy"):
+            raise ValueError("range must be one of x, y or xy for " + name)
+        attr["range"] = attrstr
+
+    else: # type in ["str", "fileinfo", "index", "coordinate"]:
+        if par["typeattr"] is not None:
+            raise ValueError("No restrictions on type %s for parameter %s"
+                             % (type, name))
+
+
+    par["type"] = type
+    par["typeattr"] = attr
+
+FIELD_TYPES = set("str bool int float opt regex range index coordinate fileinfo".split())
+
+def parse_range(range, limit=inf):
+    range = range.strip()
+    if range == "":
+        return [-limit, limit]
+    if not (range.startswith('<') and range.endswith('>') and "," in range):
+        raise ValueError("expected <min, max>")
+    minstr, maxstr = [v.strip() for v in range[1:-1].split(',', 2)]
+    min = float(minstr) if minstr and minstr != "-inf" else -limit
+    max = float(maxstr) if maxstr and maxstr != "inf" else limit
+    if min >= max:
+        raise ValueError("min must be less than max")
+    return min, max
+
+def get_paragraphs(lines):
     """
     Yield a list of paragraphs defined as lines separated by blank lines.
 
@@ -950,3 +1169,126 @@ def _get_paragraphs(lines):
             group.append(line)
     if group:
         yield group
+
+
+def test_parse_parameters():
+    all_good = """
+        s1 (str) : p1 description [s1]
+
+        s2 (str) : colon not allowed after str.
+        Description can go on for many lines.
+        Default value is still at the end [s2 default]
+
+        s3 : input defaults to string
+
+        i1 (int?) : optional integer
+            extended description can be indented.
+
+        i2 (int*:<0,5>) : multiple integers in <0,5>
+
+        i3 (int[]:<3,>) : integer >= 3
+
+        i4 ( int [ ] * : < 3, inf > ) : integer >= 3
+
+        i5(int+:<,6>):atleastoneinteger<=6
+
+        i6 (int:<-inf,-6>) : i <= -6
+
+        f1 (float:s) : floating point with seconds unit
+
+        f2 (float:<2.718, 3.142>) :floating point with range and no units
+
+        f3 (float:neutrons/s<0,inf>) : count rates must be non-negative
+
+        f4 ( float: neutrons/s ) : count rates must be non-negative
+
+        f5 (float: neutrons/s <0,inf> ) : count rates must be non-negative
+
+        f6 (float[3]) : x,y,z coordinates
+
+        o1 (opt:a|b|c) : simple options
+
+        o2 (opt*: space in name | allowed | ... ) : spaces in options
+
+        o3 (opt[]: long|options
+            |split) : over multiple lines
+
+        o4 (opt: p1=Parameter 1||Parameter 2) : empty option allowed
+
+        e1 (regex:.*) :
+
+        r1 (range:x) : x range
+
+        r2 (range:y ) : y range
+
+        r3 (range: xy ) : xy range
+
+        filename (fileinfo) :
+
+        datapoint (index) :
+
+        coord (coordinate) :
+    """
+
+    p = dict((p['id'], p) for p in parse_parameters(all_good.split('\n')))
+
+    #import pprint; pprint.pprint(p)
+
+    assert p['s1']['default'] == 's1'
+    assert p['s2']['default'] == 's2 default'
+    assert p['s3']['default'] is None
+
+    assert p['s1']['description'] == 'p1 description'
+    assert p['i1']['description'] == 'optional integer extended description can be indented.'
+    assert p['e1']['description'] == ''
+
+    assert p['s3']['type'] == 'str'
+    assert p['o2']['type'] == 'opt'
+
+    assert p['f5']['required'] == True   # multiplicity: none
+    assert p['f5']['multiple'] == False
+    assert p['i1']['required'] == False  # multiplicity: ?
+    assert p['i1']['multiple'] == False
+    assert p['i5']['required'] == True   # multiplicity: +
+    assert p['i5']['multiple'] == True
+    assert p['o2']['required'] == False  # mulitplicity: *
+    assert p['o2']['multiple'] == True
+
+    assert p['f4']['length'] == 1  # no vector tag
+    assert p['i4']['length'] == 0  # tagged with [ ]
+    assert p['f6']['length'] == 3  # tagged with [3]
+
+    assert p['s1']['typeattr'] == {}
+
+    assert p['i1']['typeattr']['range'] == [-1e9, 1e9]
+    assert p['i2']['typeattr']['range'] == [0, 5]
+    assert p['i3']['typeattr']['range'] == [3, 1e9]
+    assert p['i4']['typeattr']['range'] == [3, 1e9]
+    assert p['i5']['typeattr']['range'] == [-1e9, 6]
+    assert p['i6']['typeattr']['range'] == [-1e9, -6]
+
+    assert p['f1']['typeattr']['units'] == 's'
+    assert p['f2']['typeattr']['units'] == ''
+    assert p['f3']['typeattr']['units'] == 'neutrons/s'
+    assert p['f4']['typeattr']['units'] == 'neutrons/s'
+    assert p['f5']['typeattr']['units'] == 'neutrons/s'
+
+    assert p['f1']['typeattr']['range'] == [-1e300, 1e300]
+    assert p['f2']['typeattr']['range'] == [2.718, 3.142]
+
+    assert p['o1']['typeattr']['choices'] == [
+        ['a', 'a'], ['b', 'b'], ['c', 'c']
+    ]
+    assert p['o2']['typeattr']['choices'] == [
+        ['space in name', 'space in name'], ['allowed', 'allowed']
+    ]
+    assert p['o3']['typeattr']['choices'] == [
+        ['long', 'long'], ['options', 'options'], ['split', 'split']
+    ]
+    assert p['o4']['typeattr']['choices'] == [
+        ['p1', 'Parameter 1'], ['',''], ['Parameter 2', 'Parameter 2']
+    ]
+
+    assert p['e1']['typeattr'] == {'pattern': '.*'}
+
+    assert p['r1']['typeattr'] == {'range': 'x'}

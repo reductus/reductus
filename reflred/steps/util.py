@@ -9,7 +9,7 @@ def indent(text, prefix="  "):
 
 def group_data(datasets):
     """
-    Groups data files by intent and polarization.
+    Groups data files by intent and polarization cross section.
 
     Returns a dictionary with the groups, keyed by (intent,polarization).
     """

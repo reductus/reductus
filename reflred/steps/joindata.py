@@ -10,15 +10,6 @@ from .. import unit
 from ..refldata import Intent, ReflData, Environment
 from .util import poisson_average
 
-def group_by_entry(datasets):
-    """
-    Return a list of groups, one per entry name in the file.
-    """
-    groups = {}
-    for d in datasets:
-        groups.setdefault(d.entry, []).append(d)
-    return groups.items()
-
 def sort_files(datasets, key):
     """
     Order files by key.
