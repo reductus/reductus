@@ -409,7 +409,7 @@ def mask_points(data, mask_indices=None):
 
     data (refldata) : background data which may contain specular point
     
-    mask_indices (indexlist) : list of data point indices to mask, e.g. [0, 4, 5]
+    mask_indices (index[]*) : list of data point indices to mask, e.g. [0, 4, 5]
 
     **Returns**
 
