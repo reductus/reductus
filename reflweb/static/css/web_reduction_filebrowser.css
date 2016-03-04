@@ -1,0 +1,179 @@
+    canvas {
+      position: absolute;
+      image-rendering: optimizeSpeed;
+      image-rendering: crisp-edges;
+      image-rendering: -moz-crisp-edges;
+      image-rendering: -webkit-optimize-contrast;
+      image-rendering: optimize-contrast;
+      -ms-interpolation-mode: nearest-neighbor;
+    }
+    
+    html {
+        font-size: 100%;
+    }
+    
+    a svg, a span {
+      vertical-align: middle;
+      position: relative;
+    }
+    
+    svg.editor {
+      width: 100%;
+      height: 100%;
+      float: left;
+      margin-right: -1px;
+      margin-bottom: -1px;
+    }
+    
+    .output.label, .input.label {
+      display: none
+    }
+    
+    .axis-label {
+      font-size: 18px;
+    }
+
+    .axis .tick text {
+      font-size: 14px;
+    }
+
+    .axis path,
+    .axis line {
+      fill: none;
+      stroke: #000;
+      shape-rendering: crispEdges;
+    }
+
+
+    .grid .tick {
+        stroke: lightgrey;
+        opacity: 0.7;
+    }
+    .grid path {
+          stroke-width: 0;
+    }
+    .grid .tick {
+        stroke: lightgrey;
+        opacity: 0.7;
+        shape-rendering: crispEdges;
+        user-select: none;
+        -webkit-user-select: none;
+        -moz-user-select: none;
+    }
+
+    .grid path {
+        stroke-width: 0;
+        fill: none;
+    }
+
+
+
+    .axis .axis-label {
+        user-select: none;
+        -webkit-user-select: none;
+        -moz-user-select: none;
+    }
+
+    .legend, .tick {
+        user-select: none;
+        -webkit-user-select: none;
+        -moz-user-select: none;
+    }
+
+    .line {
+        fill: none;
+        stroke-width: 1.5px;
+    }
+
+    .highlight {
+        stroke-width: 4.5px !important;
+    }
+
+    .dot {
+        /* consider the stroke-with the mouse detect radius? */
+        stroke: transparent;
+        stroke-width: 10px;
+        cursor: pointer;
+    }
+
+    .dot:hover {
+        stroke: rgba(68, 127, 255, 0.3);
+    }
+
+    .mainview rect {
+      fill: none;
+      user-select: none;
+      -webkit-user-select: none;
+      -moz-user-select: none;
+    }
+
+    rect.zoom {
+      stroke: steelblue;
+      fill-opacity: 0.5;
+    }
+    .ui-layout-north {
+      background-color: yellow;
+    }
+    #plotdiv {
+      height: 100%;
+    }
+    #controls {
+      position: absolute;
+      margin: auto;
+      bottom: 0;
+      left: 0;
+      right: 0;
+    }
+    .ui-layout-center {
+      /* adding padding to hold controls */
+      padding-bottom: 30px;
+      text-align: center;
+    }
+
+    .jstree > ul > li > a > .jstree-checkbox {
+      display: none !important;
+    }
+    
+    svg g.module {
+        cursor: pointer !important;
+    }
+    
+    svg g.module .selected {
+      stroke-width: 5px !important;
+    }
+    
+    svg g.module .terminal {
+      cursor: pointer !important;
+    }
+    
+    svg polygon.terminal.state {
+        fill-opacity: 0;
+    }
+    
+    svg polygon.terminal.state.calculated {
+        fill-opacity: 1.0;
+    }
+    
+    svg polygon.terminal.state.calculating {
+        display: inline-block !important;
+        position: relative;
+        -webkit-animation-name: strobe; /* Chrome, Safari, Opera */
+        -webkit-animation-duration: 1s; /* Chrome, Safari, Opera */
+        -webkit-animation-iteration-count: infinite; /* Chrome, Safari, Opera */
+        animation-name: strobe;
+        animation-duration: 1s;
+        animation-iteration-count: infinite;
+    }
+    
+    /* Chrome, Safari, Opera */
+    @-webkit-keyframes strobe {
+        0%   {fill-opacity: 0;}
+        100% {fill-opacity: 1.0;}
+    }
+
+    
+    @keyframes strobe {
+        0%   {fill-opacity: 0;}
+        100% {fill-opacity: 1.0;}
+    }
+

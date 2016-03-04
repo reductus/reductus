@@ -1,0 +1,73 @@
+<html>
+<head>
+<!--  <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">-->
+  <link rel="stylesheet" href="//www.ncnr.nist.gov/instruments/magik/jstree/dist/themes/default/style.min.css"/>
+  <link rel="stylesheet" href="css/layout-default-latest.css" />
+  <link rel="stylesheet" href="css/web_reduction_filebrowser.css" />
+  <link rel="stylesheet" href="https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.4/themes/redmond/jquery-ui.css">
+
+  <script type="text/javascript" src="//ajax.googleapis.com/ajax/libs/jquery/1.10.1/jquery.min.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.11.4/jquery-ui.min.js"></script>
+<!--  <script type="text/javascript" src="//ajax.googleapis.com/ajax/libs/jqueryui/1.10.3/jquery-ui.min.js"></script>-->
+  <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.min.js" charset="utf-8"></script>
+
+  <script type="text/javascript" src="//www.ncnr.nist.gov/instruments/magik/jstree/dist/jstree.js"></script>
+  <script type="text/javascript" src="js/Dexie.js"></script>
+  <script type="text/javascript" src="js/sha1.js"></script>
+  <script type="text/javascript" src="js/jquery.layout-latest.js"></script>
+  <script type="text/javascript" src="js/jquery.jsonrpc.js"></script>
+
+<!--  <script type="text/javascript" src="//www.ncnr.nist.gov/instruments/magik/d3-science/xy-chart.js"></script>  -->
+  <script type="text/javascript" src="//www.ncnr.nist.gov/instruments/magik/d3-science/xy-chart.js"></script>
+  <script type="text/javascript" src="//www.ncnr.nist.gov/instruments/magik/d3-science/dataflow-editor-streamline-new.js"></script>
+  <script type="text/javascript" src="js/webreduce/server_api/jsonRPC-api.js"></script>
+  <script type="text/javascript" src="js/webreduce/instruments/ncnr.refl.js"></script>  
+  <script type="text/javascript" src="js/webreduce/filebrowser.js"></script>
+  <script type="text/javascript" src="js/webreduce/main.js"></script>
+</head>
+
+<body>
+<div id="navigation" class="ui-layout-wrapper ui-layout-west">
+  <div id="remote_source_1" class="source-data"></div>
+  <div id="processed_data" class="processed-data">Processed</div>
+</div>
+<div id="bottom_panel" class="ui-layout-south">
+
+</div>
+<div id="top_panel" class="ui-layout-north">
+    <div id="status">
+        <span id="top_label">Reflectometry reduction</span>
+        <span id="instrument_name" class="instrument-name"></span>
+        <span id="statusline"></span>
+    </div>
+</div>
+ 
+<div id="centerpane" class="ui-layout-center">
+  <div id="plotdiv"></div>
+  <div id="controls">
+<!--    <span class="axis-select-label">x-axis:</span><select id="xcol" ></select>-->
+    <label>x-axis</label>
+    <select id="xscale" axis="x">
+      <option value="linear">linear</option>
+      <option value="log">log</option>
+    </select>
+<!--    <span class="axis-select-label">y-axis:</span><select id="ycol" ></select>-->
+    <label>y-axis</label>
+    <select id="yscale" axis="y">
+      <option value="linear">linear</option>
+      <option value="log">log</option>
+    </select>
+<!--    <span class="axis-select-label">divide by:</span>-->
+<!--    <select id="ynormalize">-->
+<!--    </select>-->
+  </div>
+</div>
+<div id="right" class="ui-layout-east">
+  <div id="device_values"></div>
+  <div id="device_attrs"></div>
+</div>
+
+</body>
+</html>
+
+

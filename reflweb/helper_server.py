@@ -4,6 +4,7 @@ import BaseHTTPServer, SocketServer
 from SimpleHTTPServer import SimpleHTTPRequestHandler
 #import multiprocessing
 #import webbrowser
+import urlparse, os
 
 from jsonrpclib.SimpleJSONRPCServer import SimpleJSONRPCServer, SimpleJSONRPCRequestHandler
 import jsonrpclib.config
@@ -17,6 +18,9 @@ jsonrpclib.config.use_jsonclass = False
 HandlerClass = SimpleHTTPRequestHandler
 ServerClass  = BaseHTTPServer.HTTPServer
 Protocol     = "HTTP/1.0"
+homepage = 'web_reduction_filebrowser.html'
+currdir = os.path.dirname( __file__ )
+
 
 if sys.argv[1:]:
     port = int(sys.argv[1])
@@ -67,7 +71,53 @@ class JSONRPCRequestHandler(SimpleJSONRPCRequestHandler):
                           "Origin, X-Requested-With, Content-Type, Accept")
         self.send_header("Access-Control-Allow-Origin", "*")
         SimpleJSONRPCRequestHandler.end_headers(self)
+
+
+if getattr(config, 'serve_staticfiles', True) == True:    
+    def do_GET(self):
+        """Handles the HTTP GET request.
+
+        Interpret all HTTP GET requests as requests for static content.
+        """
+        # Check that the path is legal
+        #if not self.is_rpc_path_valid():
+        #    self.report_404()
+        #    return
+
+        # Parse query data & params to find out what was passed
+        parsedParams = urlparse.urlparse(self.path)
+        ## don't need the parsed GET query, at least not yet.
+        #queryParsed = urlparse.parse_qs(parsedParams.query)
+        #docname = os.path.basename(parsedParams.path)
+        docname = parsedParams.path.lstrip('/')
+        print docname
+        if (docname == "" or docname == "/"):
+            docname = homepage
+        docpath = os.path.join(currdir, 'static',  *(docname.split("/")))
+        if (os.path.exists(docpath)):
+            response = open(docpath, 'r').read()
+        else:
+            self.report_404()
+            return
+        self.send_response(200)
+        self.send_header('Access-Control-Allow-Origin', '*')
+        if docname.endswith('.js'):
+            self.send_header("Content-type", "text/javascript")
+        elif docname.endswith('.css'):
+            self.send_header("Content-type", "text/css")
+        elif docname.endswith('.json'):
+            self.send_header("Content-type", "application/json")
+        elif docname.endswith('.gif'):
+            self.send_header("Content-type", "image/gif")
+        elif docname.endswith('.png'):
+            self.send_header("Content-type", "image/png")
+        else:
+            self.send_header("Content-type", "text/html")
+        self.send_header("Content-length", str(len(response)))
+        self.end_headers()
+        self.wfile.write(response)
     
+    JSONRPCRequestHandler.do_GET = do_GET
 
 class ThreadedJSONRPCServer(SocketServer.ThreadingMixIn, SimpleJSONRPCServer):
     pass
