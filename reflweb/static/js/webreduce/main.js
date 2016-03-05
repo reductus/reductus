@@ -63,6 +63,8 @@ webreduce.instruments = webreduce.instruments || {};
       });
 
 		  layout.toggle('east');
+		  
+      webreduce.layout = layout;
       //$.post(dirHelper, {'pathlist': $("#remote_path").val().split("/")}, function(r) { categorize_files(r.files)});
 
       webreduce.editor.create_instance("bottom_panel");

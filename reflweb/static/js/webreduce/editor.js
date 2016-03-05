@@ -4,6 +4,8 @@
 webreduce.editor = webreduce.editor || {};
 
 (function () {
+	webreduce.editor.dispatch = d3.dispatch("accept");
+	
   webreduce.editor.create_instance = function(target_id) {
     // create an instance of the dataflow editor in
     // the html element referenced by target_id
@@ -23,7 +25,7 @@ webreduce.editor = webreduce.editor || {};
       fields_dict[f.id] = f.default}
     );
     jQuery.extend(true, fields_dict, active_module.config);
-    layout.open("east");
+    webreduce.layout.open("east");
     var target = d3.select(".ui-layout-pane-east");
     target.selectAll("div").remove();
     webreduce.editor.make_form(fields, active_module);
