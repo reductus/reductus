@@ -12,6 +12,7 @@
 <!--  <script type="text/javascript" src="//ajax.googleapis.com/ajax/libs/jqueryui/1.10.3/jquery-ui.min.js"></script>-->
   <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.min.js" charset="utf-8"></script>
 
+
   <script type="text/javascript" src="//www.ncnr.nist.gov/instruments/magik/jstree/dist/jstree.js"></script>
   <script type="text/javascript" src="js/sha1.js"></script>
   <script type="text/javascript" src="js/jquery.layout-latest.js"></script>
@@ -40,6 +41,13 @@
         <span id="top_label">Reflectometry reduction</span>
         <span id="instrument_name" class="instrument-name"></span>
         <span id="statusline"></span>
+        <div class="dropdown menu file">
+          <button class="dropbtn">File</button>
+          <div class="dropdown-content menu-items">
+            <span class="download">Download template</span>
+            <span class="upload">Upload template</span>
+          </div>
+        </div>
     </div>
 </div>
  
@@ -67,7 +75,9 @@
   <div id="device_values"></div>
   <div id="device_attrs"></div>
 </div>
-
+<div id="upload_template" title="Upload Template">
+  <p>to upload: <input type="file" multiple="false" id="template_file" name="template_file" /></p>
+</div>
 </body>
 </html>
 

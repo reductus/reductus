@@ -176,4 +176,8 @@
         0%   {fill-opacity: 0;}
         100% {fill-opacity: 1.0;}
     }
+    
+    .ui-menu {
+        width: 200px;
+    }
 

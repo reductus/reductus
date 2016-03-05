@@ -138,31 +138,6 @@ from dataflow.modules.refl import define_instrument, INSTRUMENT
 #use_redis()
 define_instrument(data_source=config.data_repository)
 
-
-def categorize_files(path='./'):
-    fns = os.listdir(path)
-    fns.sort()
-    output = {}
-    for fn in fns:
-        try:
-            f = h5py.File(os.path.join(path, fn))
-            for entry in f.keys():
-                _name = f[entry].get('DAS_logs/sample/name').value.flatten()[0]
-                output.setdefault(_name, {})
-                _num = f[entry].get('DAS_logs/trajectoryData/fileNum').value.flatten()[0]
-                _scanType = f[entry].get('DAS_logs/trajectoryData/_scanType')
-                if _scanType is not None:
-                    _scanType = _scanType.value.flatten()[0]
-                else:
-                    _scanType = 'uncategorized'
-                output[_name].setdefault(_scanType, {})
-                output[_name][_scanType]['%d:%s' % (_num, entry)] = {'filename': fn, 'entry': entry}
-        except:
-            pass
-            
-    #return json.dumps(output)
-    return output
-
 def get_file_metadata(pathlist=None):
     if pathlist is None: pathlist = []
     print pathlist
@@ -256,31 +231,8 @@ def calc_template(template_def, config):
         output.setdefault(module_key, {})
         output[module_key][terminal_id] = sanitizeForJSON(rv.todict())
     return output
-    
-def get_jstree(path='./'):
-    files = categorize_files(path)
-    categories = ['SPEC','BG','ROCK','SLIT','uncategorized']
-    output = {'core': {'data': []}}
-    sample_names = files.keys()
-    for sample in sample_names:
-        samp_out = {"text": sample}
-        samp_out['children'] = []
-        for cat in categories:
-            if not cat in files[sample]: break
-            cat_out = {"text": cat, "children": []}
-            item_keys = files[sample][cat].keys()
-            item_keys.sort()
-            for child in item_keys:
-                cat_out['children'].append({"text": child, "extra_data": {
-                    "filename": files[sample][cat][child]['filename'],
-                    "entry": files[sample][cat][child]['entry'],
-                    "path": path}});
-            samp_out['children'].append(cat_out)
-        output['core']['data'].append(samp_out)
-    return output 
         
     
-server.register_function(get_jstree) # deprecated
 server.register_function(get_file_metadata)
 server.register_function(refl_load)
 server.register_function(calc_terminal)

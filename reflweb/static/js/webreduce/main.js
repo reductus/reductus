@@ -36,6 +36,7 @@ webreduce.instruments = webreduce.instruments || {};
 
     webreduce.hooks = {};
     webreduce.hooks.resize_center = null;
+    
 
     window.onpopstate = function(e) {
       // called by load on Safari with null state, so be sure to skip it.
@@ -62,11 +63,51 @@ webreduce.instruments = webreduce.instruments || {};
         ,  center__onresize:    webreduce.hooks.resize_center
       });
 
-		  layout.toggle('east');
+      layout.toggle('east');
+      layout.allowOverflow('north');
+      //$("#menu").menu({width: '200px;', position: {my: "left top", at: "left+15 bottom"}});
 		  
       webreduce.layout = layout;
+      webreduce.download = (function () {
+        var a = document.createElement("a");
+        document.body.appendChild(a);
+        a.style = "display: none";
+        a.id = "savedata";
+        return function (data, fileName) {
+          var blob = new Blob([data], {type: "text/plain"}),
+            url = window.URL.createObjectURL(blob);
+          a.href = url;
+          a.download = fileName;
+          //window.open(url, '_blank', fileName);
+          a.click();
+          setTimeout(function() { window.URL.revokeObjectURL(url) }, 1000);
+        };
+      }());
+      var upload_dialog = $("#upload_template").dialog({autoOpen: false});
       //$.post(dirHelper, {'pathlist': $("#remote_path").val().split("/")}, function(r) { categorize_files(r.files)});
-
+      $(".file .menu-items .download").on("click", function() {
+        var filename = prompt("Save template as:", "template.json");
+        if (filename == null) {return} // cancelled
+        webreduce.download(JSON.stringify(webreduce.editor._active_template, null, 2), filename);
+      });
+      $(".file .menu-items .upload").on("click", function() {
+        upload_dialog.dialog("open");
+      });
+      $("input#template_file").change(function() {
+        var file = this.files[0]; // only one file allowed
+        datafilename = file.name;
+        this.value = "";
+        upload_dialog.dialog("close");
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            //console.log(this.result);
+            var template_def = JSON.parse(this.result);
+            webreduce.editor._instance.data()[0].modules = template_def.modules;
+            webreduce.editor._instance.data()[0].wires = template_def.wires;
+            webreduce.editor._instance.update(); 
+        }
+        reader.readAsText(file);
+      });
       webreduce.editor.create_instance("bottom_panel");
       webreduce.editor.load_instrument(current_instrument)
         .then(function(instrument_def) { webreduce.editor.load_template(instrument_def.templates[0]); });
