@@ -215,7 +215,8 @@ class FieldFile(object):
                 if dtype == '<d8': dtype = '<f8'
                 dtype=numpy.dtype(dtype)
                 if attrs.get('binary', False) == True:
-                    d = numpy.fromfile(infile, dtype=dtype)
+                    s = infile.read()
+                    d = numpy.frombuffer(s, dtype=dtype)
                 else:
                     if self.root.getsize(target) == 1:
                         # empty entry: only contains \n

@@ -42,38 +42,40 @@ webreduce.editor = webreduce.editor || {};
           webreduce.editor.handle_module_clicked();
         })
   }
+  
   webreduce.editor.handle_terminal_clicked = function() {
     var target = d3.select("#" + this._target_id);
-    var instrument_id = this._instrument_id;
     var selected = target.select(".module .selected");
     var index = parseInt(d3.select(selected.node().parentNode.parentNode).attr("index"));
     var terminal_id = selected.attr("terminal_id");
-    console.log(index, terminal_id);
     webreduce.server_api.calc_terminal(this._active_template, {}, index, terminal_id).then(function(result) {
-      var options={series: [], axes: {xaxis: {label: "x-axis"}, yaxis: {label: "y-axis"}}};
-      var new_plotdata = webreduce.instruments[instrument_id].plot(result.values);
-      console.log(result.values);
-      options.series = options.series.concat(new_plotdata.series);
-      var datas = new_plotdata.data;
-      var xlabel = new_plotdata.xlabel;
-      var ylabel = new_plotdata.ylabel;
-      options.legend = {"show": true, "left": 125};
-      options.axes.xaxis.label = xlabel;
-      options.axes.yaxis.label = ylabel;
-      options.xtransform = $("#xscale").val();
-      options.ytransform = $("#yscale").val();
-      var mychart = new xyChart(options);
-      d3.selectAll("#plotdiv svg").remove();
-      d3.selectAll("#plotdiv").data([datas]).call(mychart);
-      d3.selectAll("#xscale, #yscale").on("change", function() {
-        var axis = d3.select(this).attr("axis") + "transform",
-            transform = this.value;
-        mychart[axis](transform);  
-      });
-      //$("#xscale, #yscale").change(handleChecked);
-      mychart.zoomRect(true);
-      
+      webreduce.editor.show_plots(result.values);      
     }); 
+  }
+  
+  webreduce.editor.show_plots = function(values) {
+    var instrument_id = this._instrument_id;
+    var options={series: [], axes: {xaxis: {label: "x-axis"}, yaxis: {label: "y-axis"}}};
+    var new_plotdata = webreduce.instruments[instrument_id].plot(values);
+    options.series = options.series.concat(new_plotdata.series);
+    var datas = new_plotdata.data;
+    var xlabel = new_plotdata.xlabel;
+    var ylabel = new_plotdata.ylabel;
+    options.legend = {"show": true, "left": 125};
+    options.axes.xaxis.label = xlabel;
+    options.axes.yaxis.label = ylabel;
+    options.xtransform = $("#xscale").val();
+    options.ytransform = $("#yscale").val();
+    var mychart = new xyChart(options);
+    d3.selectAll("#plotdiv svg").remove();
+    d3.selectAll("#plotdiv").data([datas]).call(mychart);
+    d3.selectAll("#xscale, #yscale").on("change", function() {
+      var axis = d3.select(this).attr("axis") + "transform",
+          transform = this.value;
+      mychart[axis](transform);  
+    });
+    //$("#xscale, #yscale").change(handleChecked);
+    mychart.zoomRect(true);
   }
 
   webreduce.editor.accept_parameters = function(target, active_module) {
