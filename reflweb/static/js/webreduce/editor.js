@@ -136,9 +136,17 @@ webreduce.editor = webreduce.editor || {};
     var target = d3.select(".ui-layout-pane-east");
     var mask_display = target.append("div")
       .attr("id", "indexlist");
-    var active_module = active_template[module_index];
+    var active_module = active_template.modules[module_index];
     var input_id = "data"
     indexlists.forEach(function(il) {
+      var datum = {"id": il.id, value: []};
+      if (active_module.config && active_module.config[il.id] ) {
+        datum.value = active_module.config[il.id];
+      }
+      var index_div = target.select("#indexlist").append("div")
+        .classed("fields", true)
+        .datum([datum])
+      index_div.text(JSON.stringify(datum.value));
       var inputs = active_template.wires.filter(function(w) {return (w.target[0] == module_index && w.target[1] == input_id)});
       console.log(inputs, il, module_index);
       var data_promises = [];
@@ -152,9 +160,27 @@ webreduce.editor = webreduce.editor || {};
         var datasets = [];
         results.forEach(function(r) {datasets = datasets.concat(r.values)});
         // now have a list of datasets.
-        var index_lists = [];
-        datasets.forEach(function(d,i) {index_lists[i] = []});
+        datasets.forEach(function(d,i) {
+          datum.value[i] = datum.value[i] || [];
+          datum.value[i].forEach(function(d,i) {
+            
+          });
+        });
         webreduce.editor.show_plots(datasets);
+        d3.selectAll("#plotdiv svg g.series").each(function(d,i) {
+          // i is index of dataset
+          d3.select(this).selectAll(".dot").each(function(dd, ii) {
+            // ii is the index of the point in that dataset.
+            var index_list = datum.value[i];
+            var index_index = index_list.indexOf(ii);
+            if (index_index > -1) { 
+              d3.select(this).classed("masked", true); 
+            }
+            else {
+              d3.select(this).classed("masked", false);
+            }
+          });
+        });
         d3.selectAll("#plotdiv .dot").on("click", null); // clear previous handlers
         d3.selectAll("#plotdiv svg g.series").each(function(d,i) {
           // i is index of dataset
@@ -163,11 +189,18 @@ webreduce.editor = webreduce.editor || {};
             d3.event.stopPropagation();
             d3.event.preventDefault();
             console.log(d3.event);
-            var index_list = index_lists[i];
+            var index_list = datum.value[i];
             var index_index = index_list.indexOf(ii);
-            if (index_index > -1) { index_list.splice(index_index, 1); d3.select(this).classed("masked", false); }
-            else {index_list.push(ii); d3.select(this).classed("masked", true);}
-            mask_display.text(JSON.stringify(index_lists));
+            if (index_index > -1) { 
+              index_list.splice(index_index, 1); 
+              d3.select(this).classed("masked", false); 
+            }
+            else {
+              index_list.push(ii); 
+              d3.select(this).classed("masked", true);
+            }
+            index_div.datum([datum]);
+            index_div.text(JSON.stringify(datum.value));
           });
         });
       });
