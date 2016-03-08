@@ -30,6 +30,7 @@ webreduce.editor = webreduce.editor || {};
     target.selectAll("div").remove();
     webreduce.editor.make_form(fields, active_module);
     webreduce.editor.handle_fileinfo(fields, active_module);
+    webreduce.editor.handle_indexlist(fields, this._active_template, index)
 
     target.append("div")
       .style("position", "absolute")
@@ -128,6 +129,46 @@ webreduce.editor = webreduce.editor || {};
     })
     $("#fileinfo").buttonset();
     webreduce.handleChecked(); // to populate the datum
+  }
+  
+  webreduce.editor.handle_indexlist = function(fields, active_template, module_index) {
+    var indexlists = fields.filter(function(f) {return f.datatype == 'index'});
+    var target = d3.select(".ui-layout-pane-east");
+    var active_module = active_template[module_index];
+    var input_id = "data"
+    indexlists.forEach(function(il) {
+      var inputs = active_template.wires.filter(function(w) {return (w.target[0] == module_index && w.target[1] == input_id)});
+      console.log(inputs, il, module_index);
+      var data_promises = [];
+      inputs.forEach(function(wire) {
+        var input_module = wire.source[0],
+            terminal_id = wire.source[1];
+        data_promises.push(webreduce.server_api.calc_terminal(active_template, {}, input_module, terminal_id));
+      });
+      Promise.all(data_promises).then(function(results) {
+        console.log('data to mask:', results);
+        var datasets = [];
+        results.forEach(function(r) {datasets = datasets.concat(r.values)});
+        // now have a list of datasets.
+        var index_lists = [];
+        datasets.forEach(function(d,i) {index_lists[i] = []});
+        webreduce.editor.show_plots(datasets);
+        d3.selectAll("#plotdiv .dot").on("click", null); // clear previous handlers
+        d3.selectAll("#plotdiv svg g.series").each(function(d,i) {
+          // i is index of dataset
+          d3.select(this).selectAll(".dot").on("click", function(dd, ii) {
+            // ii is the index of the point in that dataset.
+            var index_list = index_lists[i];
+            var index_index = index_list.indexOf(ii);
+            if (index_index > -1) { index_list.splice(index_index, 1); d3.select(this).classed("masked", false); }
+            else {index_list.push(ii); d3.select(this).classed("masked", true);}
+            console.log(JSON.stringify(index_lists));
+          });
+        });
+      });
+    });
+
+    
   }
   
   webreduce.editor.fileinfo_update = function(fileinfo) {

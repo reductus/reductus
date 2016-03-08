@@ -99,6 +99,10 @@
     .dot:hover {
         stroke: rgba(68, 127, 255, 0.3);
     }
+    
+    .dot.masked {
+        stroke: red !important;
+    }
 
     .mainview rect {
       fill: none;
