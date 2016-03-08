@@ -6,7 +6,8 @@ from copy import deepcopy
 
 from FilterableMetaArray import FilterableMetaArray as MetaArray
 from he3analyzer import He3AnalyzerCollection
-from reflred.reflred.formats import load
+from reflred.formats import load
+from reflred import hzf_readonly_stripped as hzf
 import h5py
 import dateutil.parser
 
@@ -69,14 +70,16 @@ def LoadMAGIKPSD(filename, path="", friendly_name="", collapse_y=True, auto_PolS
     Need to rebin and regrid if the detector is moving...
     """
     lookup = {"DOWN_DOWN":"_down_down", "UP_DOWN":"_up_down", "DOWN_UP":"_down_up", "UP_UP":"_up_up", "entry": ""}
-    file_obj = h5py.File(filename)
-    file_obj = h5py.File(os.path.join(path, filename))
+    if '.nxz' in filename:
+        file_obj = hzf.File(filename)
+    else:
+        # nexus
+        file_obj = h5py.File(os.path.join(path, filename))
     
     #if not (len(file_obj.detector.counts.shape) == 2):
         # not a 2D object!
     #    return
-    for entryname in file_obj:
-        entry = file_obj[entryname]
+    for entryname, entry in file_obj.items():
         active_slice = slice(None, DETECTOR_ACTIVE[0], DETECTOR_ACTIVE[1])
         counts_value = entry['DAS_logs']['areaDetector']['counts'].value[:, :DETECTOR_ACTIVE[0], :DETECTOR_ACTIVE[1]]
         dims = counts_value.shape
