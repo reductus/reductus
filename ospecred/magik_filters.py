@@ -1,5 +1,5 @@
 # -*- coding: latin-1 -*-
-from numpy import cos, pi, cumsum, arange, ndarray, ones, zeros, array, newaxis, linspace, empty, resize, sin, allclose, zeros_like, linalg, dot, arctan2, float64, histogram2d, sum, sqrt, loadtxt, searchsorted, NaN, logical_not, fliplr, flipud, indices
+from numpy import cos, pi, cumsum, arange, ndarray, ones, zeros, array, newaxis, linspace, empty, resize, sin, allclose, zeros_like, linalg, dot, arctan2, float64, histogram2d, sum, sqrt, loadtxt, searchsorted, NaN, logical_not, fliplr, flipud, indices, polyfit
 import numpy
 from numpy.ma import MaskedArray
 import os, simplejson, datetime, sys, types
@@ -7,8 +7,8 @@ from copy import deepcopy
 
 from FilterableMetaArray import FilterableMetaArray as MetaArray
 from he3analyzer import He3AnalyzerCollection
-from reflred.reflred.formats import load
-from reflred.reflred import rebin as reb
+from reflred.formats import load
+from reflred import rebin as reb
 import h5py
 import dateutil.parser
 import tempfile
@@ -240,6 +240,34 @@ def autoApplyToList(apply):
         else:
             return apply(self, data, *args, **kwargs)
     return newfunc
+
+def fitPSDCalibration(calibration, minimum_peak_intensity=500.0):
+    # takes a loaded psd calibration file, which 
+    # is direct beam measurements at a variety of detector angles with tight slits
+    #X = np.arange(data.size)
+    #x = np.sum(X*data)/np.sum(data)
+    #width = np.sqrt(np.abs(np.sum((X-x)**2*data)/np.sum(data)))
+    counts = calibration['Measurements':'counts']
+    twotheta = calibration.extrainfo['det_angle']
+    cpixels = []
+    tts = []
+    widths = []
+    for i in range(counts.shape[1]):
+        data = counts[:,i].view(ndarray)
+        tt  = twotheta[i]
+        if sum(data) < minimum_peak_intensity:
+            continue
+        X = arange(data.size) + 0.5
+        x = sum(X*data)/sum(data)
+        width = sqrt(abs(sum((X-x)**2*data)/sum(data)))
+        widths.append(width)
+        cpixels.append(x)
+        tts.append(tt)
+    # now fitting to polynomial:
+    fit = polyfit(tts, cpixels, 1)
+    # returns [pixels_per_degree, qzero_pixel]
+    return {"pixels_per_degree": -fit[0], "qzero_pixel": fit[1]}
+    
 
 class CoordinateOffset(Filter2D):
     """ apply an offset to one or both of the coordinate axes """
