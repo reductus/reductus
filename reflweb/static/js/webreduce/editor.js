@@ -134,6 +134,8 @@ webreduce.editor = webreduce.editor || {};
   webreduce.editor.handle_indexlist = function(fields, active_template, module_index) {
     var indexlists = fields.filter(function(f) {return f.datatype == 'index'});
     var target = d3.select(".ui-layout-pane-east");
+    var mask_display = target.append("div")
+      .attr("id", "indexlist");
     var active_module = active_template[module_index];
     var input_id = "data"
     indexlists.forEach(function(il) {
@@ -158,11 +160,14 @@ webreduce.editor = webreduce.editor || {};
           // i is index of dataset
           d3.select(this).selectAll(".dot").on("click", function(dd, ii) {
             // ii is the index of the point in that dataset.
+            d3.event.stopPropagation();
+            d3.event.preventDefault();
+            console.log(d3.event);
             var index_list = index_lists[i];
             var index_index = index_list.indexOf(ii);
             if (index_index > -1) { index_list.splice(index_index, 1); d3.select(this).classed("masked", false); }
             else {index_list.push(ii); d3.select(this).classed("masked", true);}
-            console.log(JSON.stringify(index_lists));
+            mask_display.text(JSON.stringify(index_lists));
           });
         });
       });
