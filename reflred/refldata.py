@@ -784,7 +784,7 @@ class ReflData(object):
                   'polarization','path','formula',
                   'intent', 'Qz_target', 'angular_resolution',
                   'vlabel', 'vunits', 'xlabel', 'xunits',
-                  'normbase',
+                  'normbase', 'mask',
                   'warnings', 'messages', "_v"
                   ]
     readonly_properties = ['v', 'x', 'Qz', 'Qx']

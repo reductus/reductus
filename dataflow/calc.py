@@ -184,7 +184,6 @@ def _eval_node(node_id, module, inputs, template_fields, user_fields):
     # Run the calculation
     print "calculating values for node", node_id
     if multiple or not input_terminals:
-
         # Get default field values from template
         action_args = template_fields.copy()
 
@@ -221,8 +220,12 @@ def _eval_node(node_id, module, inputs, template_fields, user_fields):
             # multiple, otherwise one for all inputs.
             for field in module.fields:
                 fid = field["id"]
+                bundle = None
+                if fid in template_fields:
+                    bundle = template_fields[fid]
                 if fid in user_fields:
                     bundle = user_fields[fid]
+                if bundle is not None:
                     if field["multiple"]:
                         action_args[fid] = bundle
                     elif len(bundle) == 0:

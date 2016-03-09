@@ -388,14 +388,11 @@ def mask_action(input=None, mask_indices=None, **kwargs):
     operates to put masks on data items 1,4,6 in dataset 0 and 0 in dataset 2
     """
     import numpy
-    print 'inside mask_action'
-    for data,mask in zip(input, mask_indices):
-        if len(mask) > 0:
-            print 'mask: ', mask
-            data.mask = numpy.ones(data.detector.counts.shape, dtype="bool")
-            data.mask[mask] = False
-            print data.mask
-    return dict(output=input)
+    data = input
+    if mask_indices:
+        data.mask = numpy.ones(data.detector.counts.shape, dtype="bool")
+        data.mask[mask_indices] = False
+    return input
 
 @module
 def mask_points(data, mask_indices=None):
@@ -410,7 +407,7 @@ def mask_points(data, mask_indices=None):
 
     data (refldata) : background data which may contain specular point
     
-    mask_indices (index[]*) : list of data point indices to mask, e.g. [0, 4, 5]
+    mask_indices (index[]) : list of data point indices to mask, e.g. [0, 4, 5]
 
     **Returns**
 
@@ -418,13 +415,10 @@ def mask_points(data, mask_indices=None):
 
     2016-02-08 Brian Maranville
     """
-    print "mask indices?", mask_indices, len(data)
     data = copy(data)
-    print "mask indices?", mask_indices, len(data)
-    #data.log('mask_points(%r)' % (mask_indices))
+    data.log('mask_points(%r)' % (mask_indices))
     output = mask_action(input=data, mask_indices=mask_indices)
-    print "output? ", output
-    return output['output']
+    return output
 
 @module
 def mark_intent(data, intent='auto'):

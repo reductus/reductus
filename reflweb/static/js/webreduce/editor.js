@@ -188,7 +188,6 @@ webreduce.editor = webreduce.editor || {};
             // ii is the index of the point in that dataset.
             d3.event.stopPropagation();
             d3.event.preventDefault();
-            console.log(d3.event);
             var index_list = datum.value[i];
             var index_index = index_list.indexOf(ii);
             if (index_index > -1) { 
