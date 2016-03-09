@@ -167,37 +167,40 @@ webreduce.editor = webreduce.editor || {};
           });
         });
         webreduce.editor.show_plots(datasets);
-        d3.selectAll("#plotdiv svg g.series").each(function(d,i) {
-          // i is index of dataset
-          d3.select(this).selectAll(".dot").each(function(dd, ii) {
-            // ii is the index of the point in that dataset.
-            var index_list = datum.value[i];
-            var index_index = index_list.indexOf(ii);
-            if (index_index > -1) { 
-              d3.select(this).classed("masked", true); 
-            }
-            else {
-              d3.select(this).classed("masked", false);
-            }
+        datum.value.forEach(function(index_list, i) {
+          var series_select = d3.select("#plotdiv svg g.series:nth-of-type(" + (i+1).toFixed() + ")");
+          index_list.forEach(function(index, ii) {
+            series_select.select(".dot:nth-of-type(" + (index+1).toFixed() + ")").classed("masked", true);
           });
         });
         d3.selectAll("#plotdiv .dot").on("click", null); // clear previous handlers
         d3.selectAll("#plotdiv svg g.series").each(function(d,i) {
           // i is index of dataset
-          d3.select(this).selectAll(".dot").on("click", function(dd, ii) {
+          var series_select = d3.select(this);
+          series_select.selectAll(".dot").on("click", function(dd, ii) {
             // ii is the index of the point in that dataset.
             d3.event.stopPropagation();
             d3.event.preventDefault();
+            var dot = d3.select(this);          
+            // manipulate data list directly:
             var index_list = datum.value[i];
             var index_index = index_list.indexOf(ii);
             if (index_index > -1) { 
               index_list.splice(index_index, 1); 
-              d3.select(this).classed("masked", false); 
+              dot.classed("masked", false); 
             }
             else {
               index_list.push(ii); 
-              d3.select(this).classed("masked", true);
+              dot.classed("masked", true);
             }
+            index_list.sort();
+            // else, pull masked dot list from class:
+            // (this has the advantage of always being ordered inherently)
+            /*
+            dot.classed("masked", !dot.classed("masked")); // toggle selection
+            datum.value[i] = [];
+            series_select.selectAll(".dot").each(function(ddd, iii) {if (d3.select(this).classed("masked")) {datum.value[i].push(iii)}});
+            */
             index_div.datum([datum]);
             index_div.text(JSON.stringify(datum.value));
           });
