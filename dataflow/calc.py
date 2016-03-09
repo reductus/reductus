@@ -58,15 +58,15 @@ def process_template(template, config, target=(None,None)):
         # case where the return target is an input terminal.
         inputs = _get_inputs(results, input_wires, input_terminals)
         if return_node == node and return_terminal in inputs:
-            # We are going to save these inputs for later return, so treat it
-            # as if it were an output.  That means put the inputs into a
-            # bundle so that we can convert to and from JSON.  First we have
-            # to find the terminal before we can call the bundler.
+            # We are returning inputs, so treat them as if it were outputs.
+            # That means putting them into a bundle so that we can convert
+            # to and from JSON.  But we have to find the terminal first so
+            # that we know the datatype.  Since we are only returning the
+            # inputs, we don't need to compute the node outputs, and we
+            # can return immediately.
             for terminal in input_terminals:
                 if terminal["id"] == return_terminal:
-                    results[_key(return_node, return_terminal)] \
-                        = _bundle(terminal, inputs[return_terminal])
-                    break
+                    return _bundle(terminal, inputs[return_terminal])
 
         # Use cached value if it exists, skipping to the next loop iteration.
         fp = fingerprints[node]
