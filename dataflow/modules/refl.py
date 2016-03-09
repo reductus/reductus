@@ -130,7 +130,9 @@ def demo6():
     files = test_dataset
     refl = process_template(template=template,
                             config={"0": {"filelist": test_dataset}},
-                            target=(len(template.modules)-1, "output"))
+                            #target=(len(template.modules)-1, "output"),
+                            target=(2, "data"),  # return an input
+                            )
     print "refl",refl.values
     return refl.values
 

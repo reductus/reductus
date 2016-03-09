@@ -41,161 +41,277 @@ def process_template(template, config, target=(None,None)):
     """
     cache = get_cache()
 
-    return_node, return_terminal = target
-    def key(node, terminal):
-        return ":".join((str(node), str(terminal)))
-
     results = {}
+    return_node, return_terminal = target
+
     fingerprints = fingerprint_template(template, config)
     for node, input_wires in template.ordered(target=return_node):
         node_info = template.modules[node]
         module = lookup_module(node_info['module'])
+        node_id = "%d: %s"%(node, node_info['module'])
         input_terminals = module.inputs
         output_terminals = module.outputs
-        # Initialize input terminals to empty bundles
-        inputs = dict((t["id"], []) for t in input_terminals)
+
+        # Build the inputs; if the returning an input terminal, put it in the
+        # results set.   This is extra work for the case where the results
+        # have already been computed, but it simplifies the code for the
+        # case where the return target is an input terminal.
+        inputs = _get_inputs(results, input_wires, input_terminals)
+        if return_node == node and return_terminal in inputs:
+            # We are going to save these inputs for later return, so treat it
+            # as if it were an output.  That means put the inputs into a
+            # bundle so that we can convert to and from JSON.  First we have
+            # to find the terminal before we can call the bundler.
+            for terminal in input_terminals:
+                if terminal["id"] == return_terminal:
+                    results[_key(return_node, return_terminal)] \
+                        = _bundle(terminal, inputs[return_terminal])
+                    break
+
+        # Use cached value if it exists, skipping to the next loop iteration.
         fp = fingerprints[node]
         if cache.exists(fp):
             print "retrieving cached value for node %d:"%node, fp
             bundles = _retrieve(cache, fp)
-            results.update((key(node, k), v) for k, v in bundles.items())
+            results.update((_key(node, k), v) for k, v in bundles.items())
             continue
 
-
-        # Extend input terminals from the bundles on the wires
-        for wire in input_wires:
-            source_node, source_terminal = wire["source"]
-            target_node, target_terminal = wire["target"]
-            # Make key a tuple; wire["source"] won't work because it is
-            # a mutable list, and can't be used as a dictionary key, but
-            # an (int, string) tuple can be.
-            v = results[key(source_node, source_terminal)].values
-            inputs[target_terminal].extend(v)
-
-        # Check arity of module. If the input terminals are all multiple
-        # inputs, then the action needs to be called once with the bundle.
-        # If the input terminals are all single input, then the action
-        # needs to be called once for each dataset in the bundle.
-        # For mixed single/multiple inputs the first input must be single.
-        # If the output is single, it is made into a length one bundle.
-        # If the output is multiple, then it is assumed to already be
-        # a bundle.  With mixed single input/multiple output, all outputs
-        # are concatenated into one bundle.
-        multiple = all(t["multiple"] == True for t in input_terminals)
-
         # Fields set for the current node
-        fields = config.get(str(node), {})
+        template_fields = node_info.get('config', {})
+        user_fields = config.get(str(node), {})
 
-        # Run the calculation
-        print "calculating values for node", node, node_info
-        if multiple or not input_terminals:
+        # Evaluate the node
+        outputs = _eval_node(node_id, module, inputs, template_fields, user_fields)
 
-            # Get default field values from template
-            node_config = node_info.get('config', {})
-
-            # Paste in field values from template application
-            node_config.update(fields)
-
-            # Paste in the input terminal values
-            node_config.update(inputs)
-
-            # Perform action and make sure outputs forms a list.
-            outputs = module.action(**node_config)
-            if len(output_terminals) <= 1:
-                outputs = [outputs]
-
-            # Outputs is a list, so map it into a dictionary based on
-            # terminal id.  Single outputs need to be converted to lists
-            # of length 1.
-            bundles = dict((t["id"],(v if t["multiple"] else [v]))
-                           for t,v in zip(output_terminals, outputs))
-        else:
-            # Single input, so call once for each datasets
-            bundles = dict((t["id"], []) for t in output_terminals)
-            # Assume that all inputs are the same length as the first input,
-            # or are length 1 (e.g., subtract background from list of specular)
-            # or are length 0 (e.g., no background specified, so background
-            # comes in as None).  Length 0 inputs are only allowed if the
-            # terminal is not a required input.  Fields may or may not need
-            # to be duplicated.
-            n = len(inputs[input_terminals[0]["id"]])
-            for i in range(n):
-                # Get default field values from template
-                node_config = node_info.get('config', {})
-
-                # Substitute field values, one per input if the field is
-                # multiple, otherwise one for all inputs.
-                for f in module.fields:
-                    fid = f["id"]
-                    if fid in fields:
-                        bundle = fields[fid]
-                        if f["multiple"]:
-                            node_config[fid] = bundle
-                        elif len(bundle) == 0:
-                            if f["required"]:
-                                raise ValueError("missing required input for %r for %d: %s"
-                                                 % (node, fid, node_info["module"]))
-                            # No need to specify default
-                        elif len(bundle) == 1:
-                            node_config[fid] = bundle[0]
-                        else:
-                            node_config[fid] = bundle[i]
-                    # else:
-                    #     pass # No need to specify default
-
-                # Substitute input terminal values
-                for t in input_terminals:
-                    tid = t["id"]
-                    bundle = inputs[tid]
-                    if t["multiple"]:
-                        node_config[tid] = bundle
-                    elif len(bundle) == 0:
-                        if t["required"]:
-                            raise ValueError("missing required input %r for %d: %s"
-                                             % (node, tid, node_info["module"]))
-                        node_config[tid] = None
-                    elif len(bundle) == 1:
-                        node_config[tid] = bundle[0]
-                    else:
-                        node_config[tid] = bundle[i]
-
-                # Perform action and make sure outputs forms a list
-                outputs = module.action(**node_config)
-                if len(output_terminals) <= 1:
-                    outputs = [outputs]
-
-                # Gather outputs
-                for t, v in zip(output_terminals, outputs):
-                    if t["multiple"]:
-                        bundles[t["id"]].extend(v)
-                    else:
-                        bundles[t["id"]].append(v)
-
-        data = {}
-        for t in output_terminals:
-            tid = t["id"]
-            datatype = lookup_datatype(t["datatype"])
-            data[t["id"]] = Bundle(datatype=datatype, values=bundles[tid])
+        # Collect the outputs
+        bundles = {}
+        for terminal in output_terminals:
+            tid = terminal["id"]
+            bundles[tid] = _bundle(terminal, outputs[tid])
         print "caching", node, module.id
         #print "caching", module.id, bundles
         #print "caching",_serialize(bundles, output_terminals)
-        _store(cache, fingerprints[node], data)
-        results.update((key(node, k), v) for k, v in data.items())
+        _store(cache, fingerprints[node], bundles)
+        results.update((_key(node, k), v) for k, v in bundles.items())
 
     #print list(sorted(results.keys()))
-    if return_node is not None:
-        #print "returning", return_node, return_terminal
-        #print "key",_cache_key(fingerprints[return_node], return_terminal)
-        return results[key(return_node, return_terminal)]
-    else:
+
+    if return_node is None:
         return results
+    else:
+        return results[_key(return_node, return_terminal)]
+
+
+def _bundle(terminal, values):
+    """
+    Build a bundle for the terminal values.  The bundle has to carry the
+    datatype around so that it has enough information to convert values
+    to and from JSON.
+    """
+    datatype = lookup_datatype(terminal["datatype"])
+    return Bundle(datatype=datatype, values=values)
+
+def _key(node, terminal):
+    """
+    Combine *node* and *terminal* to a key into the results set for the
+    current template.
+
+    Returns a string unique within the template that can be used in JSON.
+    """
+    return ":".join((str(node), str(terminal)))
+
+
+def _get_inputs(results, input_wires, input_terminals):
+    """
+    Lookup the inputs to all terminals from the results dictionary.
+
+    *results* are the previous results.
+
+    *input_wires* are all wires connecting to the input terminals for this
+    node.  Each wire is represented by a dictionary linking the upstream
+    source to the nodes target terminal as
+    *{source: [node, terminal], target: [node, terminal]}*
+
+    *input_terminals* is the list of input terminals for the node.
+
+    Returns *{terminal: [dataset, ...]}* for all input terminals.
+    """
+    # Create bundles for the input terminals
+    inputs = dict((terminal["id"], []) for terminal in input_terminals)
+    for wire in input_wires:
+        source_node, source_terminal = wire["source"]
+        target_node, target_terminal = wire["target"]
+        # Make key a tuple; wire["source"] won't work because it is
+        # a mutable list, and can't be used as a dictionary key, but
+        # an (int, string) tuple can be.
+        v = results[_key(source_node, source_terminal)].values
+        inputs[target_terminal].extend(v)
+    return inputs
+
+
+def _eval_node(node_id, module, inputs, template_fields, user_fields):
+    """
+    Run the action for the node.
+
+    *id* is a string identifier for the node, for errors and logging
+
+    *module* is the module activated by the node.
+
+    *inputs* contains the input terminal info as *{terminal: [data, ...]}*.
+
+    *template_fields* contains the field values stored in the
+    template as *{field: [value, ...]}*.
+
+    *user_fields* contains the field values sent as part of the template
+    config as *{field: [value, ...]}*.
+
+    Returns the output terminal bundle as *(terminal: [data, ...]}*.
+    """
+    input_terminals = module.inputs
+    output_terminals = module.outputs
+
+    # Check arity of module. If the input terminals are all multiple
+    # inputs, then the action needs to be called once with the bundle.
+    # If the input terminals are all single input, then the action
+    # needs to be called once for each dataset in the bundle.
+    # For mixed single/multiple inputs the first input must be single.
+    # If the output is single, it is made into a length one bundle.
+    # If the output is multiple, then it is assumed to already be
+    # a bundle.  With mixed single input/multiple output, all outputs
+    # are concatenated into one bundle.
+    multiple = all(terminal["multiple"] for terminal in input_terminals)
+
+    # Run the calculation
+    print "calculating values for node", node_id
+    if multiple or not input_terminals:
+
+        # Get default field values from template
+        action_args = template_fields.copy()
+
+        # Paste in field values from template application
+        action_args.update(user_fields)
+
+        # Paste in the input terminal values
+        action_args.update(inputs)
+
+        # Do the work
+        result = _do_action(module, **action_args)
+
+        # Gather the output.  Action outputs a list, so map it into a
+        # dictionary based on terminal id.  If the output is not multiple,
+        # it needs to be converted to a list of length 1.
+        outputs = dict((terminal["id"],(v if terminal["multiple"] else [v]))
+                       for terminal, v in zip(output_terminals, result))
+
+    else:
+        # Single input, so call once for each datasets
+        outputs = dict((terminal["id"], []) for terminal in output_terminals)
+        # Assume that all inputs are the same length as the first input,
+        # or are length 1 (e.g., subtract background from list of specular)
+        # or are length 0 (e.g., no background specified, so background
+        # comes in as None).  Length 0 inputs are only allowed if the
+        # terminal is not a required input.  Fields may or may not need
+        # to be duplicated.
+        n = len(inputs[input_terminals[0]["id"]])
+        for k in range(n):
+            # Get default field values from template
+            action_args = template_fields.copy()
+
+            # Substitute field values, one per input if the field is
+            # multiple, otherwise one for all inputs.
+            for field in module.fields:
+                fid = field["id"]
+                if fid in user_fields:
+                    bundle = user_fields[fid]
+                    if field["multiple"]:
+                        action_args[fid] = bundle
+                    elif len(bundle) == 0:
+                        if field["required"]:
+                            raise ValueError("missing required input %r for %s"
+                                             % (fid, node_id))
+                            # No need to specify default
+                    elif len(bundle) == 1:
+                        action_args[fid] = bundle[0]
+                    else:
+                        action_args[fid] = bundle[k]
+                        # else:
+                        #     pass # No need to specify default
+
+            # Substitute input terminal values
+            for terminal in input_terminals:
+                tid = terminal["id"]
+                bundle = inputs[tid]
+                if terminal["multiple"]:
+                    action_args[tid] = bundle
+                elif len(bundle) == 0:
+                    if terminal["required"]:
+                        raise ValueError("missing required input %r for %s"
+                                         % (tid, node_id))
+                    action_args[tid] = None
+                elif len(bundle) == 1:
+                    action_args[tid] = bundle[0]
+                else:
+                    action_args[tid] = bundle[k]
+
+            # Do the work
+            result = _do_action(module, **action_args)
+
+            # Gather outputs
+            for terminal, v in zip(output_terminals, result):
+                if terminal["multiple"]:
+                    outputs[terminal["id"]].extend(v)
+                else:
+                    outputs[terminal["id"]].append(v)
+
+    return outputs
+
+
+def _do_action(module, **action_args):
+    """
+    Perform the module action, returning the results as a list.
+
+    Because we know the number of outputs expected (each one is a terminal),
+    we can convert no outputs or a single output to lists of length 0 and 1
+    respectively.  This makes the module actions more natural to write.
+    """
+    num_outputs = len(module.outputs)
+    result = module.action(**action_args)
+    if num_outputs == 1:
+        result = [result]
+    elif num_outputs == 0:
+        result = []
+    return result
+
+
 
 def _store(cache, fp, data):
+    """
+    Store the output terminals associated with a node.
+
+    *cache* is the interface to the cache (which may be an in-memory
+    store, or may be a redis handle).
+
+    *fp* is the finger print of the node, which is based on the finger
+    print of its config plus the finger prints of all its inputs.
+
+    *data* is a dictionary of *{terminal: [dataset, dataset, ...]}*.
+    """
     stored = dict((k, v.todict()) for k,v in sorted(data.items()))
     string = json.dumps(sanitizeForJSON(stored))
     cache.set(fp, string)
 
 def _retrieve(cache, fp):
+    """
+    Retrieve data from the cache.
+
+    *cache* is the interface to the cache (which may be an in-memory
+    store, or may be a redis handle).
+
+    *fp* is the finger print of the node, which is based on the finger
+    print of its config plus the finger prints of all its inputs.
+
+    Returns *data* as a dictionary of *{ terminal: [dataset, dataset, ...]}*.
+    """
     string = cache.get(fp)
     stored = sanitizeFromJSON(json.loads(string))
     data = dict((str(terminal), Bundle.fromdict(values))
