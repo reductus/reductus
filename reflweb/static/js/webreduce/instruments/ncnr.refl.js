@@ -164,7 +164,8 @@ webreduce.instruments['ncnr.refl'] = webreduce.instruments['ncnr.refl'] || {};
         if (entry && entry[0]) {
           var e = entry[0];
           var xaxis = primary_axis[e.intent || 'specular'];
-          var extent = d3.extent(entry[0][xaxis]);
+          if (!(get_refl_item(entry[0], xaxis))) { console.log(entry[0]); throw "error: no such axis " + xaxis + " in entry for intent " + e.intent }
+          var extent = d3.extent(get_refl_item(entry[0], xaxis));
           leaf.li_attr.xmin = extent[0];
           leaf.li_attr.xmax = extent[1];
           var parent = leaf;
