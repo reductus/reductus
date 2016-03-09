@@ -720,8 +720,8 @@ class PixelsToTwotheta(Filter2D):
             # the detector is moving - have to rebin the dataset to contain all values of twoth
             # this is silly but have to set other axis!
             other_axis = (1 if pixel_axis == 0 else 0)
-            other_vector = new_info[other_axis]['values']
-            other_spacing = other_vector[1] - other_vector[0]
+            #other_vector = new_info[other_axis]['values']
+            #other_spacing = other_vector[1] - other_vector[0]
             pixels = new_info[pixel_axis]['values']
             twoth = (pixels - qzero_pixel) / pixels_per_degree
             #twoth = twoth[::-1] # reverse
@@ -732,13 +732,13 @@ class PixelsToTwotheta(Filter2D):
             #output_twoth_bin_edges = arange(twoth_max + dpp, twoth_min - dpp, -dpp)
             output_twoth_bin_edges = arange(twoth_min - dpp, twoth_max + dpp, dpp)
             output_twoth = output_twoth_bin_edges[:-1]
-            other_bin_edges = linspace(other_vector[0], other_vector[-1] + other_spacing, len(other_vector) + 1)
+            #other_bin_edges = linspace(other_vector[0], other_vector[-1] + other_spacing, len(other_vector) + 1)
             new_info[pixel_axis]['name'] = 'twotheta' # getting rid of pixel units: substitute twoth
             new_info[pixel_axis]['values'] = output_twoth
             new_info[pixel_axis]['units'] = 'degrees'
             output_shape = [0,0,0]
             output_shape[pixel_axis] = len(output_twoth)
-            output_shape[other_axis] = len(other_vector)
+            output_shape[other_axis] = data.shape[other_axis] # len(other_vector)
             output_shape[2] = data.shape[2] # number of columns is unchanged!
             new_data = MetaArray(tuple(output_shape), info=new_info) # create the output data object!
             
