@@ -208,7 +208,8 @@ class FieldFile(object):
         if self._value is None:
             attrs = self.attrs
             target = self.path
-            with self.root.open(target, 'rb') as infile:
+            try:
+                infile = self.root.open(target, 'rb')
                 dtype = str(attrs['format'])
                 # CRUFT: <l4, <d8 are not sensible dtypes
                 if dtype == '<l4': dtype = '<i4'
@@ -228,10 +229,8 @@ class FieldFile(object):
                             d = numpy.char.replace(d, r'\t', '\t')
                             d = numpy.char.replace(d, r'\r', '\r')
                             d = numpy.char.replace(d, r'\n', '\n')
-                            #vrep = numpy.vectorize(str.replace)
-                            #vrep(d, r'\t', '\t')
-                            #vrep(d, r'\r', '\r')
-                            #vrep(d, r'\n', '\n')
+            finally:
+                infile.close()
             if 'shape' in attrs:
                 try:
                     d = d.reshape(attrs['shape'])
