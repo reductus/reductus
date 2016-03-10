@@ -267,7 +267,53 @@ def fitPSDCalibration(calibration, minimum_peak_intensity=500.0):
     fit = polyfit(tts, cpixels, 1)
     # returns [pixels_per_degree, qzero_pixel]
     return {"pixels_per_degree": -fit[0], "qzero_pixel": fit[1]}
+
+def matplot2d(data, transform='log', aspect='auto'):
+    """ plot 2d data using matplotlib/pylab """
+    from pylab import figure, show, imshow, colorbar, title, xlabel, ylabel
+    from numpy import log10
+    # grab the first counts col:
+    cols = data._info[2]['cols']
+    data_cols = [col['name'] for col in cols if col['name'].startswith('counts')]
     
+    result = []
+    for colnum, col in enumerate(data_cols):      
+        array_out = data['Measurements':col].view(ndarray)
+        
+        dump = {}
+        
+            
+        #zbin_base64 = base64.b64encode(array_out.tostring())
+        #z = [arr[:, 0].tolist() for arr in self]
+        dims = {}
+        # can't display zeros effectively in log... set zmin to smallest non-zero
+        
+        lowest = 1e-10
+        non_zeros = array_out[array_out > lowest]
+        if len(non_zeros) > 0:
+            dims['zmin'] = float(non_zeros.min())
+            dims['zmax'] = float(non_zeros.max())
+        else:
+            dims['zmin'] = float(lowest)
+            dims['zmax'] = float(lowest)
+            
+        #dims['zmin'] = array_out.min()
+        #dims['zmax'] = array_out.max()
+        extent = [
+            data._info[0]['values'].min(),
+            data._info[0]['values'].max(),
+            data._info[1]['values'].min(),
+            data._info[1]['values'].max()
+        ]
+        
+        fig = figure()
+        title(data.extrainfo['filename'])
+        xlabel(data._info[0]['name'])
+        ylabel(data._info[1]['name'])
+        #zlabel = self._info[2]['cols'][0]['name']
+        toPlot = log10(array_out.T + lowest) if transform == 'log' else array_out.T
+        imshow(toPlot, extent=extent, aspect=aspect, origin='lower')
+        colorbar()
 
 class CoordinateOffset(Filter2D):
     """ apply an offset to one or both of the coordinate axes """
