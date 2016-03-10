@@ -32,16 +32,23 @@ webreduce.editor = webreduce.editor || {};
     webreduce.editor.handle_fileinfo(fields, active_module);
     webreduce.editor.handle_indexlist(fields, this._active_template, index)
 
-    target.append("div")
+    var buttons_div = target.append("div")
       .style("position", "absolute")
       .style("bottom", "0")
-      .append("button")
-        .text("accept")
-        .on("click", function() {
-          console.log(target, active_module);
-          webreduce.editor.accept_parameters(target, active_module);
-          webreduce.editor.handle_module_clicked();
-        })
+    buttons_div.append("button")
+      .text("accept")
+      .on("click", function() {
+        console.log(target, active_module);
+        webreduce.editor.accept_parameters(target, active_module);
+        webreduce.editor.handle_module_clicked();
+      })
+    buttons_div.append("button")
+      .text("clear")
+      .on("click", function() {
+        console.log(target, active_module);
+        if (active_module.config) { delete active_module.config }
+        webreduce.editor.handle_module_clicked();
+      })
   }
   
   webreduce.editor.handle_terminal_clicked = function() {
