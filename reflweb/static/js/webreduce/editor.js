@@ -82,7 +82,6 @@ webreduce.editor = webreduce.editor || {};
   webreduce.editor.accept_parameters = function(target, active_module) {
     target.selectAll("div.fields")
       .each(function(d) {
-        console.log(d)
         d.forEach(function(data) {
           if (!active_module.config) {active_module.config = {}};
           active_module.config[data.id] = data.value;
@@ -136,8 +135,9 @@ webreduce.editor = webreduce.editor || {};
     var target = d3.select(".ui-layout-pane-east");
     var mask_display = target.append("div")
       .attr("id", "indexlist");
+    var module_index = parseInt(module_index);
     var active_module = active_template.modules[module_index];
-    var input_id = "data"
+    var input_id = "data";
     indexlists.forEach(function(il) {
       var datum = {"id": il.id, value: []};
       if (active_module.config && active_module.config[il.id] ) {
@@ -146,19 +146,14 @@ webreduce.editor = webreduce.editor || {};
       var index_div = target.select("#indexlist").append("div")
         .classed("fields", true)
         .datum([datum])
-      index_div.text(JSON.stringify(datum.value));
-      var inputs = active_template.wires.filter(function(w) {return (w.target[0] == module_index && w.target[1] == input_id)});
-      console.log(inputs, il, module_index);
-      var data_promises = [];
-      inputs.forEach(function(wire) {
-        var input_module = wire.source[0],
-            terminal_id = wire.source[1];
-        data_promises.push(webreduce.server_api.calc_terminal(active_template, {}, input_module, terminal_id));
-      });
-      Promise.all(data_promises).then(function(results) {
-        console.log('data to mask:', results);
-        var datasets = [];
-        results.forEach(function(r) {datasets = datasets.concat(r.values)});
+      var index_label = index_div.append("label")
+        .text(il.id);
+      var display = index_label.append("div")
+        .classed("value-display", true)
+      display.text(JSON.stringify(datum.value));
+      
+      webreduce.server_api.calc_terminal(active_template, {}, module_index, input_id).then(function(result) {
+        var datasets = result.values;
         // now have a list of datasets.
         datasets.forEach(function(d,i) {
           datum.value[i] = datum.value[i] || [];
@@ -202,7 +197,7 @@ webreduce.editor = webreduce.editor || {};
             series_select.selectAll(".dot").each(function(ddd, iii) {if (d3.select(this).classed("masked")) {datum.value[i].push(iii)}});
             */
             index_div.datum([datum]);
-            index_div.text(JSON.stringify(datum.value));
+            display.text(JSON.stringify(datum.value));
           });
         });
       });
