@@ -1,6 +1,5 @@
 from numpy import exp, zeros, float64, vectorize, array, where, empty, linalg
 import datetime, time
-import wx, wx.calendar
 import simplejson, os, pickle
 #from ...dataflow.core import Data
 
@@ -382,6 +381,7 @@ class wxHe3AnalyzerCollection(He3AnalyzerCollection):
             dlg.Destroy()
             self.AddNew(params={"t0_str":ref_datetime.ctime()})
 
+"""
 class get_cell_params_dialog(wx.Dialog):
     def __init__(self, parent, id, title, params):
         import wx, wx.calendar
@@ -547,4 +547,4 @@ class get_cell_params_dialog(wx.Dialog):
     def onExit(self, event):
         self.Close(True)
     
-    
+"""    

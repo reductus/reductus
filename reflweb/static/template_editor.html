@@ -325,7 +325,10 @@ d3.select("#show_value").on("click", function() {
   win.document.write("<pre>" + JSON.stringify(e.data()[0], null, 2) + "</pre>");
 });
 
-d3.select("#show_example").on("click", function() { 
+d3.select("#show_example").on("click", function() {
+  e.data()[0].modules = [];
+  e.data()[0].wires=[];
+  e.update();
   e.data()[0].modules = example.modules;
   e.data()[0].wires = example.wires;
   e.update();
@@ -338,6 +341,9 @@ function loadData() {
     var reader = new FileReader();
     reader.onload = function(ev) {
         var template = JSON.parse(this.result);
+        e.data()[0].modules = [];
+        e.data()[0].wires=[];
+        e.update();
         e.data()[0].modules = template.modules;
         e.data()[0].wires = template.wires;
         e.update();

@@ -25,7 +25,9 @@ def define_instrument(data_source):
 
     import json
     import os
-    from unpolarized_template import template
+    from pkg_resources import resource_string, resource_listdir
+    template_names = [fn for fn in resource_listdir('dataflow', 'templates') if fn.endswith(".json")]
+    templates = [json.loads(resource_string('dataflow', 'templates/' + tn)) for tn in template_names]
     # Define instrument
     refl1d = df.Instrument(
         id=INSTRUMENT,
@@ -33,7 +35,7 @@ def define_instrument(data_source):
         menu=[('steps', modules)],
         datatypes=[refldata, poldata, deadtime],
         archive="NCNR",
-        template_defs = [template],
+        template_defs = templates,
         )
 
     # Register instrument

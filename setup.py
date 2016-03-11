@@ -20,7 +20,7 @@ for line in open(joinpath("reflred","__init__.py")):
     if "__version__" in line:
         version = line.split('"')[1]
 
-packages = find_packages(exclude=['reflbin','reflweb'])
+packages = find_packages(exclude=['reflbin', 'reflweb'])
 
 def module_config():
     S = ("reduction.cc","str2imat.c")
@@ -56,6 +56,7 @@ dist = setup(
         'Topic :: Scientific/Engineering :: Physics',
     ],
     packages=packages,
+    include_package_data=True,
     ext_modules=[module_config()]
     # needs scipy and numpy as well, but these have binary bits that don't
     # do well with pip install
