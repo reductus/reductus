@@ -232,7 +232,7 @@ webreduce.editor = webreduce.editor || {};
         .append("input")
           .attr("type", "text")
           .attr("field_id", field.id)
-          .text(value)
+          .attr("value", value)
           .on("change", function(d) { datum.value = this.value });
   }
   
@@ -248,7 +248,7 @@ webreduce.editor = webreduce.editor || {};
         .append("input")
           .attr("type", "number")
           .attr("field_id", field.id)
-          .text(value)
+          .attr("value", value)
           .on("change", function(d) { datum.value = this.value });
   }
   
