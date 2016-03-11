@@ -92,7 +92,7 @@ def process_template(template, config, target=(None,None)):
             bundles[tid] = _bundle(terminal, outputs[tid])
         #print "caching", module.id, bundles
         #print "caching",_serialize(bundles, module.outputs)
-        if getattr(module, 'cache', False):
+        if False and getattr(module, 'cache', False):
             print "caching", node, module.id
             _store(cache, fingerprints[node], bundles)
         results.update((_key(node, k), v) for k, v in bundles.items())
