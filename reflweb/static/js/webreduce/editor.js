@@ -16,29 +16,26 @@ webreduce.editor = webreduce.editor || {};
     // module group is 2 levels above module title in DOM
     webreduce.editor.dispatch.on("accept", null);
     var target = d3.select("#" + this._target_id);
-    var index = d3.select(target.select(".module .selected").node().parentNode.parentNode).attr("index");
-    var active_module = this._active_template.modules[index];
+    target.selectAll("div").remove();
+    var module_index = d3.select(target.select(".module .selected").node().parentNode.parentNode).attr("index");
+    var module_index = parseInt(module_index);
+    var active_template = this._active_template;
+    var active_module = this._active_template.modules[module_index];
     var module_def = this._module_defs[active_module.module];
+    var datasets_input_id = (module_def.inputs[0] || {}).id;  // undefined if no inputs
     var fields = module_def.fields || [];
-    var fields_dict = {};
-    fields.forEach(function(f) {
-      fields_dict[f.id] = f.default}
-    );
-    jQuery.extend(true, fields_dict, active_module.config);
+    
     webreduce.layout.open("east");
     var target = d3.select(".ui-layout-pane-east");
     target.selectAll("div").remove();
-    webreduce.editor.make_form(fields, active_module);
-    webreduce.editor.handle_fileinfo(fields, active_module);
-    webreduce.editor.handle_indexlist(fields, this._active_template, index)
 
     var buttons_div = target.append("div")
+      .classed("control-buttons", true)
       .style("position", "absolute")
       .style("bottom", "0")
     buttons_div.append("button")
       .text("accept")
       .on("click", function() {
-        console.log(target, active_module);
         webreduce.editor.accept_parameters(target, active_module);
         webreduce.editor.handle_module_clicked();
       })
@@ -49,6 +46,15 @@ webreduce.editor = webreduce.editor || {};
         if (active_module.config) { delete active_module.config }
         webreduce.editor.handle_module_clicked();
       })
+      
+    $(buttons_div).buttonset();
+    
+    for (var n=0; n<fields.length; n++) {
+      var field = fields[n];
+      if (webreduce.editor.make_fieldUI[field.datatype]) {
+        webreduce.editor.make_fieldUI[field.datatype](field, active_template, module_index, module_def, target);
+      }
+    }
   }
   
   webreduce.editor.handle_terminal_clicked = function() {
@@ -96,194 +102,174 @@ webreduce.editor = webreduce.editor || {};
       });
   }
   
-  webreduce.editor.handle_fileinfo = function(fields, active_module) {
-    var fileinfos = fields.filter(function(f) {return f.datatype == 'fileinfo'});
-    var target = d3.select(".ui-layout-pane-east");
-    target.append("div")
-      .attr("id", "fileinfo")
-      //.classed("fields", true);
-      
-    fileinfos.forEach(function(fi) {
-      var datum = {"id": fi.id, value: []},
-          existing_count = 0;
-      if (active_module.config && active_module.config[fi.id] ) {
-        existing_count = active_module.config[fi.id].length;
-        datum.value = active_module.config[fi.id];
-      }
-      var radio = target.select("#fileinfo").append("div")
-        .classed("fields", true)
-        .datum([datum])
-      radio.append("input")
-        .attr("id", fi.id)
-        .attr("type", "radio")
-        .attr("name", "fileinfo");
-      radio.append("label")
-        .attr("for", fi.id)
-        .text(fi.id + "(" + existing_count + ")");
-        
-      $(radio.node()).on("fileinfo.update", function(ev, info) {
-        if (radio.select("input").property("checked")) {
-            radio.datum([{id: fi.id, value: info}]);
-        } 
-      });
-
+  webreduce.editor.make_fieldUI = {}; // generators for field datatypes
+  
+  webreduce.editor.make_fieldUI.fileinfo = function(field, active_template, module_index, module_def, target) {
+    // this will add the div only once, even if called twice.
+    target.selectAll("div#fileinfo").data([0])
+      .enter()
+        .append("div")
+        .attr("id", "fileinfo")
+    
+    var active_module = active_template.modules[module_index];
+    var datum = {"id": field.id, value: []},
+        existing_count = 0;
+    if (active_module.config && active_module.config[field.id] ) {
+      existing_count = active_module.config[field.id].length;
+      datum.value = active_module.config[field.id];
+    }
+    var radio = target.select("div#fileinfo").append("div")
+      .classed("fields", true)
+      .datum([datum])
+    radio.append("input")
+      .attr("id", field.id)
+      .attr("type", "radio")
+      .attr("name", "fileinfo");
+    radio.append("label")
+      .attr("for", field.id)
+      .text(field.id + "(" + existing_count + ")");
+    
+    // jquery events handler for communications  
+    $(radio.node()).on("fileinfo.update", function(ev, info) {
+      if (radio.select("input").property("checked")) {
+          radio.datum([{id: field.id, value: info}]);
+      } 
     });
-    $("#fileinfo input").first().prop("checked", true);
-    $("#fileinfo input").on("click", function() {
-      //console.log(d3.select(this).datum());
-      $(".remote_filebrowser").trigger("fileinfo.update", d3.select(this).datum());
-    })
+
+    target.select("#fileinfo input").property("checked", true); // first one
+    target.selectAll("div#fileinfo input")
+      .on("click", null)
+      .on("click", function() {
+        $(".remote_filebrowser").trigger("fileinfo.update", d3.select(this).datum());
+      });
     $("#fileinfo").buttonset();
-    webreduce.handleChecked(); // to populate the datum
+    webreduce.handleChecked();    
   }
   
-  webreduce.editor.handle_indexlist = function(fields, active_template, module_index) {
-    var indexlists = fields.filter(function(f) {return f.datatype == 'index'});
-    var target = d3.select(".ui-layout-pane-east");
-    var mask_display = target.append("div")
-      .attr("id", "indexlist");
-    var module_index = parseInt(module_index);
+  webreduce.editor.make_fieldUI.index = function(field, active_template, module_index, module_def, target) {
+    target.selectAll("div#indexlist").data([0])
+      .enter()
+        .append("div")
+        .attr("id", "indexlist")
+    
     var active_module = active_template.modules[module_index];
-    var input_id = "data";
-    indexlists.forEach(function(il) {
-      var datum = {"id": il.id, value: []};
-      if (active_module.config && active_module.config[il.id] ) {
-        datum.value = active_module.config[il.id];
-      }
-      var index_div = target.select("#indexlist").append("div")
-        .classed("fields", true)
-        .datum([datum])
-      var index_label = index_div.append("label")
-        .text(il.id);
-      var display = index_label.append("div")
-        .classed("value-display", true)
-      display.text(JSON.stringify(datum.value));
-      
-      webreduce.server_api.calc_terminal(active_template, {}, module_index, input_id).then(function(result) {
-        var datasets = result.values;
-        // now have a list of datasets.
-        datasets.forEach(function(d,i) {
-          datum.value[i] = datum.value[i] || [];
-          datum.value[i].forEach(function(d,i) {
-            
-          });
-        });
-        webreduce.editor.show_plots(datasets);
-        datum.value.forEach(function(index_list, i) {
-          var series_select = d3.select("#plotdiv svg g.series:nth-of-type(" + (i+1).toFixed() + ")");
-          index_list.forEach(function(index, ii) {
-            series_select.select(".dot:nth-of-type(" + (index+1).toFixed() + ")").classed("masked", true);
-          });
-        });
-        d3.selectAll("#plotdiv .dot").on("click", null); // clear previous handlers
-        d3.selectAll("#plotdiv svg g.series").each(function(d,i) {
-          // i is index of dataset
-          var series_select = d3.select(this);
-          series_select.selectAll(".dot").on("click", function(dd, ii) {
-            // ii is the index of the point in that dataset.
-            d3.event.stopPropagation();
-            d3.event.preventDefault();
-            var dot = d3.select(this);          
-            // manipulate data list directly:
-            var index_list = datum.value[i];
-            var index_index = index_list.indexOf(ii);
-            if (index_index > -1) { 
-              index_list.splice(index_index, 1); 
-              dot.classed("masked", false); 
-            }
-            else {
-              index_list.push(ii); 
-              dot.classed("masked", true);
-            }
-            index_list.sort();
-            // else, pull masked dot list from class:
-            // (this has the advantage of always being ordered inherently)
-            /*
-            dot.classed("masked", !dot.classed("masked")); // toggle selection
-            datum.value[i] = [];
-            series_select.selectAll(".dot").each(function(ddd, iii) {if (d3.select(this).classed("masked")) {datum.value[i].push(iii)}});
-            */
-            index_div.datum([datum]);
-            display.text(JSON.stringify(datum.value));
-          });
+
+    var datum = {"id": field.id, value: []};
+    if (active_module.config && active_module.config[field.id] ) {
+      datum.value = active_module.config[field.id];
+    }
+    var input_id = module_def.inputs[0].id; // take data from the first input.
+    var index_div = target.select("div#indexlist").append("div")
+      .classed("fields", true)
+      .datum([datum])
+    var index_label = index_div.append("label")
+      .text(field.id);
+    var display = index_label.append("div")
+      .classed("value-display", true)
+    display.text(JSON.stringify(datum.value));
+    
+    var input_id = module_def.inputs[0].id; // take data from the first input.
+    webreduce.server_api.calc_terminal(active_template, {}, module_index, input_id).then(function(result) {
+      var datasets = result.values;
+      // now have a list of datasets.
+      datasets.forEach(function(d,i) {
+        datum.value[i] = datum.value[i] || [];
+        datum.value[i].forEach(function(d,i) {
+          
         });
       });
-    });
-
-    
+      webreduce.editor.show_plots(datasets);
+      datum.value.forEach(function(index_list, i) {
+        var series_select = d3.select("#plotdiv svg g.series:nth-of-type(" + (i+1).toFixed() + ")");
+        index_list.forEach(function(index, ii) {
+          series_select.select(".dot:nth-of-type(" + (index+1).toFixed() + ")").classed("masked", true);
+        });
+      });
+      d3.selectAll("#plotdiv .dot").on("click", null); // clear previous handlers
+      d3.selectAll("#plotdiv svg g.series").each(function(d,i) {
+        // i is index of dataset
+        var series_select = d3.select(this);
+        series_select.selectAll(".dot").on("click", function(dd, ii) {
+          // ii is the index of the point in that dataset.
+          d3.event.stopPropagation();
+          d3.event.preventDefault();
+          var dot = d3.select(this);          
+          // manipulate data list directly:
+          var index_list = datum.value[i];
+          var index_index = index_list.indexOf(ii);
+          if (index_index > -1) { 
+            index_list.splice(index_index, 1); 
+            dot.classed("masked", false); 
+          }
+          else {
+            index_list.push(ii); 
+            dot.classed("masked", true);
+          }
+          index_list.sort();
+          // else, pull masked dot list from class:
+          // (this has the advantage of always being ordered inherently)
+          /*
+          dot.classed("masked", !dot.classed("masked")); // toggle selection
+          datum.value[i] = [];
+          series_select.selectAll(".dot").each(function(ddd, iii) {if (d3.select(this).classed("masked")) {datum.value[i].push(iii)}});
+          */
+          index_div.datum([datum]);
+          display.text(JSON.stringify(datum.value));
+        });
+      });
+    }); 
+  }
+  
+  webreduce.editor.make_fieldUI.str = function(field, active_template, module_index, module_def, target) {
+    var active_module = active_template.modules[module_index];
+    var value = (active_module.config && field.id in active_module.config) ? active_module.config[field.id] : field.default;
+    var datum = {"id": field.id, "value": value};
+    target.append("div")
+      .classed("fields", true)
+      .datum([datum])
+      .append("label")
+        .text(field.label)
+        .append("input")
+          .attr("type", "text")
+          .attr("field_id", field.id)
+          .text(value)
+          .on("change", function(d) { datum.value = this.value });
+  }
+  
+  webreduce.editor.make_fieldUI.float = function(field, active_template, module_index, module_def, target) {
+    var active_module = active_template.modules[module_index];
+    var value = (active_module.config && field.id in active_module.config) ? active_module.config[field.id] : field.default;
+    var datum = {"id": field.id, "value": value};
+    target.append("div")
+      .classed("fields", true)
+      .datum([datum])
+      .append("label")
+        .text(field.label)
+        .append("input")
+          .attr("type", "number")
+          .attr("field_id", field.id)
+          .text(value)
+          .on("change", function(d) { datum.value = this.value });
+  }
+  
+  webreduce.editor.make_fieldUI.bool = function(field, active_template, module_index, module_def, target) {
+    var active_module = active_template.modules[module_index];
+    var value = (active_module.config && field.id in active_module.config) ? active_module.config[field.id] : field.default;   
+    var datum = {"id": field.id, "value": value};
+    target.append("div")
+      .classed("fields", true)
+      .datum([datum])
+      .append("label")
+        .text(field.label)
+        .append("input")
+          .attr("type", "checkbox")
+          .attr("field_id", field.id)
+          .property("checked", value)
+          .on("change", function(d) { datum.value = this.checked });
   }
   
   webreduce.editor.fileinfo_update = function(fileinfo) {
     $(".remote_filebrowser").trigger("fileinfo.update", [fileinfo]);
-  }
-
-  webreduce.editor.make_form = function(fields, active_module) {
-    var data = [];
-    var conversions = {
-      'bool': 'checkbox',
-      'int': 'number',
-      'float': 'number',
-      'str': 'text'
-    }
-    for (var i=0; i<fields.length; i++) {
-      var field = fields[i];
-      var dt = field.datatype.split(":"),
-          datatype = dt[0],
-          units = dt[1];
-      if (units === "") {units = "unitless"}
-      if (datatype in conversions) {
-        var value = (active_module.config && field.id in active_module.config)? active_module.config[field.id] : field.default;
-        data.push({
-          'type': conversions[field.datatype],
-          'value': value,
-          'label': field.label + ((units === undefined) ? "" : "(" + units + ")"),
-          'id': field.id
-        });
-      }
-    }
-
-    var target = d3.select(".ui-layout-pane-east");
-    target.selectAll("div").remove();
-    //var forms = target.select("div.form")
-    //.data([data]).enter()
-    var forms = target.append("div")
-      .classed("form fields", true)
-      .style("list-style", "none");
-    forms.datum(data);
-    
-    forms.selectAll("li")
-      .data(function(d) {return d})
-      .enter()
-      .append("li")
-      .append("label")
-      .text(function(d) {return d.label})
-      .append("input")
-      .attr("type", function(d) {return d.type})
-      .attr("field_id", function(d) {return d.id})
-      .attr("value", function(d) {return d.value})
-      .property("checked", function(d) {return d.value})
-      .on("change", function(d) {
-        var item = d3.select(this);
-        if (this.type == "checkbox") { d.value = this.checked }
-        else { d.value = this.value }
-      });
-    
-    //$(forms.node()).on("accept", function() {
-    /*webreduce.editor.dispatch.on("accept.form", function() {
-      active_module.config = active_module.config || {};
-      forms.selectAll("li")
-      .each(function() {
-        var item = d3.select(this).select("input");
-        var value = (item.attr("type") == "checkbox") ? item.property("checked") : item.attr("value");
-        var field_id = item.attr("field_id");
-        active_module.config[field_id] = value;
-      })
-    });
-    */
-      //  alert("accepting fields");
-      //  active_module.config = active_module.config || {};
-      //  active_module.config[d3.select(this).attr('field_id')] = this.value;
-      //})
   }
 
   webreduce.editor.load_instrument = function(instrument_id) {
