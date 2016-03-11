@@ -1,2 +1,8 @@
 *.pyc
 /build/
+/dist/
+/doc/_build/
+/doc/dataflow/
+/doc/reflred/
+/reflred.egg-info/
+/reflweb/config.py
