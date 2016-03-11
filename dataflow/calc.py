@@ -71,10 +71,9 @@ def process_template(template, config, target=(None,None)):
                     return _bundle(terminal, inputs[return_terminal])
 
         # Use cached value if it exists, skipping to the next loop iteration.
-        fp = fingerprints[node]
-        if cache.exists(fp):
-            print "retrieving cached value for node %d:"%node, fp
-            bundles = _retrieve(cache, fp)
+        if cache.exists(fingerprints[node]):
+            print "retrieving cached value for node %d:"%node, fingerprints[node]
+            bundles = _retrieve(cache, fingerprints[node])
             results.update((_key(node, k), v) for k, v in bundles.items())
             continue
 
@@ -93,7 +92,7 @@ def process_template(template, config, target=(None,None)):
         #print "caching", module.id, bundles
         #print "caching",_serialize(bundles, module.outputs)
         if False and getattr(module, 'cache', False):
-            print "caching", node, module.id
+            print "caching", node, module.id, fingerprints[node]
             _store(cache, fingerprints[node], bundles)
         results.update((_key(node, k), v) for k, v in bundles.items())
 
@@ -232,7 +231,7 @@ def _eval_node(node_id, module, inputs, template_fields, user_fields):
         # perform action
         result = _do_action(module, **action_args)
 
-        print node_id,result
+        #print node_id,result
         # Gather outputs
         for terminal, data in zip(module.outputs, result):
             if terminal["length"] == 0:
@@ -248,6 +247,7 @@ def _validate_par(node_id, par, value):
     Check that the parameters have the right type and length.
     """
     try:
+        #print "validating",par,value
         return validate(par, value)
     except ValueError, exc:
         annotate_exception(" in " + node_id, exc)

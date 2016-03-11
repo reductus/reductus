@@ -682,7 +682,6 @@ def validate(par, value, as_default=False):
     if n == 1:
         return _validate_one(par, value, as_default)
     elif not isinstance(value, list):
-        print value
         raise ValueError("invalid value for %s, expected list"%(name))
     elif n and len(value) != n:
         raise ValueError("invalid value for %s, wrong length"%(name))
@@ -733,7 +732,7 @@ def _validate_one(par, value, as_default):
         value = _list_check(name, value, n, float)
 
     elif datatype == "index":
-        value = _list_check(name, value, 0, int)
+        value = _type_check(name, value, int)
 
     elif datatype == "coordinate":
         value = _list_check(name, value, 2, float)
@@ -767,6 +766,7 @@ def _finfo_check(name, value):
     return value
 
 def _list_check(name, values, n, ptype):
+    #print "list check", name, values, n, ptype
     if isinstance(values, tuple):
         values = list(values)
     _type_check(name, values, list)
@@ -783,6 +783,8 @@ def _list_check(name, values, n, ptype):
 def _type_check(name, value, ptype):
     if ptype is int and isinstance(value, float) and int(value) == value:
         value = int(value)
+    elif ptype is float and isinstance(value, int):
+        value = float(value)
     elif ptype is str and isinstance(value, unicode):
         value = str(value)
     if not isinstance(value, ptype):
