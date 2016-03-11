@@ -25,11 +25,11 @@ def nop(data):
 
     **Inputs**
 
-    data (refldata*): Input data
+    data (refldata[]): Input data
 
     **Returns**
 
-    output (refldata*): Unaltered data
+    output (refldata[]): Unaltered data
 
     2015-12-31 Paul Kienzle
     """
@@ -42,11 +42,11 @@ def ncnr_load(filelist=None):
 
     **Inputs**
 
-    filelist (fileinfo+): List of files to open.
+    filelist (fileinfo[]): List of files to open.
 
     **Returns**
 
-    output (refldata+): All entries of all files in the list.
+    output (refldata[]): All entries of all files in the list.
 
     2015-12-17 Brian Maranville
     """
@@ -56,18 +56,16 @@ def ncnr_load(filelist=None):
     return url_load_list(filelist)
 
 @module
-def fit_dead_time(attenuated, unattenuated, source='detector', mode='auto'):
+def fit_dead_time(data, source='detector', mode='auto'):
     """
     Fit detector dead time constants (paralyzing and non-paralyzing) from
     measurement of attenuated and unattenuated data for a range of count rates.
 
     **Inputs**
 
-    attenuated (refldata*): Attenuated detector counts
+    data (refldata[]): Data sets with different attenuation levels
 
-    unattenuated (refldata): Unattenuated detector counts
-
-    source (opt:detector|monitor): Measured tube
+    source (opt:detector|monitor): Tube that is being measured
 
     mode (opt:P|NP|mixed|auto): Dead-time mode
 
@@ -79,15 +77,13 @@ def fit_dead_time(attenuated, unattenuated, source='detector', mode='auto'):
     """
     from .deadtime import fit_dead_time
 
-    data = fit_dead_time(attenuated+[unattenuated], source=source, mode=mode)
+    data = fit_dead_time(data, source=source, mode=mode)
 
     data.log("fit_dead_time(attenuated, unattenuated, source=%r, mode=%r)"
              % (source, mode))
-    for d in attenuated:
-        data.log("attenuated:")
+    for k, d in enumerate(data):
+        data.log("data %d:"%k)
         data.log(d.messages)
-    data.log("unattenuated:")
-    data.log(unattenuated.messages)
     return data
 
 
@@ -97,10 +93,12 @@ def monitor_dead_time(data, dead_time, nonparalyzing=0.0, paralyzing=0.0):
     """
     Correct the monitor dead time from the fitted dead time.
 
-    If *tau_NP* and *tau_P* are non-zero, then use them.  If a dead_time
-    fit result is supplied, then use it.  If the dead time constants are
-    given in the data file, then use them.  Otherwise don't do any
-    dead time correction.
+    The deadtime constants are chosen as follows:
+
+    #. If either *tau_NP* and *tau_P* are non-zero, then use them.
+    #. If the dead time terminal is attached to a dead time fit, use it.
+    #. If the dead time constants are given in the data file, then use them.
+    #. Otherwise don't do any dead time correction.
 
     **Inputs**
 
@@ -108,9 +106,9 @@ def monitor_dead_time(data, dead_time, nonparalyzing=0.0, paralyzing=0.0):
 
     dead_time (deadtime?) : Output of dead time estimator
 
-    nonparalyzing (float:us<0,>) : non-paralyzing dead time constant
+    nonparalyzing (float:us<0,inf>) : non-paralyzing dead time constant
 
-    paralyzing (float:us<0,>) : paralyzing dead time constant
+    paralyzing (float:us<0,inf>) : paralyzing dead time constant
 
     **Returns**
 
@@ -161,9 +159,9 @@ def detector_dead_time(data, dead_time, nonparalyzing=0.0, paralyzing=0.0):
 
     dead_time (deadtime?) : Output from dead time estimator
 
-    nonparalyzing (float:us<0,>) : non-paralyzing dead time constant
+    nonparalyzing (float:us<0,inf>) : non-paralyzing dead time constant
 
-    paralyzing (float:us<0,>) : paralyzing dead time constant
+    paralyzing (float:us<0,inf>) : paralyzing dead time constant
 
     **Returns**
 
@@ -205,11 +203,11 @@ def monitor_saturation(data):
 
     **Inputs**
 
-    data (refldata*): Uncorrected data
+    data (refldata): Uncorrected data
 
     **Returns**
 
-    output (refldata*): Dead-time corrected data
+    output (refldata): Dead-time corrected data
 
     2015-12-17 Paul Kienzle
     """
@@ -231,11 +229,11 @@ def detector_saturation(data):
 
     **Inputs**
 
-    data (refldata*): Uncorrected data
+    data (refldata): Uncorrected data
 
     **Returns**
 
-    output (refldata*): Dead-time corrected data
+    output (refldata): Dead-time corrected data
 
     2015-12-17 Paul Kienzle
     """
@@ -254,8 +252,8 @@ def detector_saturation(data):
 @module
 def theta_offset(data, offset=0.0):
     """
-    Correct the theta offset of the data, shifting sample and detector
-    angle and updating $q_x$ and $q_z$.
+    Correct the theta offset of the data for a misaligned sample, shifting
+    sample and detector angle and updating $q_x$ and $q_z$.
 
     **Inputs**
 
@@ -382,32 +380,33 @@ def mask_specular(data):
     apply_specular_mask(data)
     return data
 
-def mask_action(input=None, mask_indices=None, **kwargs):
-    """ take index lists for masking
-    e.g. mask_indices = [[1,4,6], [], [0]]
-    operates to put masks on data items 1,4,6 in dataset 0 and 0 in dataset 2
+def mask_action(data=None, mask_indices=None, **kwargs):
+    """
+    Set the data mask to the list of points, e.g. [0, 4, 5]
     """
     import numpy
-    data = input
     if mask_indices:
         data.mask = numpy.ones(data.detector.counts.shape, dtype="bool")
         data.mask[mask_indices] = False
-    return input
+    return data
 
 @module
 def mask_points(data, mask_indices=None):
     """
     Identify and mask out user-specified points.
 
-    This defines the *mask* attribute of *data* as including all points that
-    are not previously masked.  The points are not actually
-    removed from the data, since this operation is done by *join*.
+    This defines the *mask* attribute of *data* to include all data
+    except those indicated in *mask_indices*.  Any previous mask is cleared.
+    The masked data are not actually removed from the data, since this
+    operation is done by *join*.
 
     **Inputs**
 
     data (refldata) : background data which may contain specular point
     
-    mask_indices (index[]) : list of data point indices to mask, e.g. [0, 4, 5]
+    mask_indices (index[]*) : 0-origin data point indices to mask. For example,
+    *mask_indices=[1,4,6]* masks the 2nd, 5th and 7th point respectively. Each
+    dataset should have its own mask.
 
     **Returns**
 
@@ -416,8 +415,8 @@ def mask_points(data, mask_indices=None):
     2016-02-08 Brian Maranville
     """
     data = copy(data)
-    data.log('mask_points(%r)' % (mask_indices))
-    output = mask_action(input=data, mask_indices=mask_indices)
+    data.log('mask_points(%r)' % mask_indices)
+    output = mask_action(data=data, mask_indices=mask_indices)
     return output
 
 @module
@@ -464,21 +463,21 @@ def group_by_intent(data):
 
     **Inputs**
 
-    data (refldata*) : data files with intent marked
+    data (refldata[]) : data files with intent marked
 
     **Returns**
 
-    specular (refldata*) : specular measurements
+    specular (refldata[]) : specular measurements
 
-    backp {Background+} (refldata*) : positive offset background measurements
+    backp {Background+} (refldata[]) : positive offset background measurements
 
-    backm {Background-} (refldata*) : negative offset background measurements
+    backm {Background-} (refldata[]) : negative offset background measurements
 
-    intensity (refldata*) : beam intensity measurements
+    intensity (refldata[]) : beam intensity measurements
 
-    rock {Rocking curve} (refldata*) : rocking curve measurements
+    rock {Rocking curve} (refldata[]) : rocking curve measurements
 
-    other (refldata*) : everything else
+    other (refldata[]) : everything else
     """
     map_intent = {
         'specular': 'specular',
@@ -546,9 +545,9 @@ def rescale(data, scale=1.0, dscale=0.0):
 
     data (refldata) : data to scale
 
-    scale (float:<0,>) : amount to scale
+    scale (float*:<0,inf>) : amount to scale, one for each dataset
 
-    dscale (float:<0,>) : scale uncertainty for gaussian error propagation
+    dscale {Scale err} (float*:<0,inf>) : scale uncertainty for gaussian error propagation
 
     **Returns**
 
@@ -590,18 +589,18 @@ def join(data, tolerance=0.05, order='file'):
 
     **Inputs**
 
-    data (refldata*) : data to join
+    data (refldata[]) : data to join
 
-    tolerance (float:<0,>) : allowed separation between points while still joining
-    them to a single point; this is relative to the angular resolution of the
-    each point
+    tolerance (float:<0,inf>) : allowed separation between points while
+    still joining them to a single point; this is relative to the angular
+    resolution of the each point
 
     order (opt:file|time|theta|slit|none) : order determines which file is the
     base file, supplying the metadata for the joined set
 
     **Returns**
 
-    output (refldata*) : joined data
+    output (refldata[]) : joined data
 
     2016-03-02 Paul Kienzle
     """
@@ -749,12 +748,11 @@ def smooth_slits(datasets, degree=1, span=2, dx=0.01):
     Updates *slit1.x*, *slit2.x* and *angular_resolution* attributes of the
     slit measurements so they all use a common set of points.
 
-
     Updates divergence automatically after smoothing.
 
     **Inputs**
 
-    datasets (refldata*) : slits to align and smooth
+    datasets (refldata[]) : slits to align and smooth
 
     degree (int) : polynomial degree on smoothing filter
 
@@ -766,7 +764,7 @@ def smooth_slits(datasets, degree=1, span=2, dx=0.01):
 
     **Returns**
 
-    outputs (refldata*) : aligned and smoothed slits.
+    outputs (refldata[]) : aligned and smoothed slits.
 
     2015-12-17 Paul Kienzle
     """
@@ -803,7 +801,7 @@ def estimate_polarization(data, FRbalance=0.5, Emin=0.0, Imin=0.0, clip=False):
 
     **Inputs**
 
-    data (refldata*) : direct beam measurement to determine polarization
+    data (refldata[]) : direct beam measurement to determine polarization
 
     FRbalance (float:%<0,100>) : front/rear balance of to use for efficiency loss
 
@@ -859,7 +857,7 @@ def correct_polarization(data, polarization, spinflip=True):
 
 
 @module
-def save(data, name='auto', ext='auto', path="."):
+def save(data, name='auto', ext='auto', path='auto'):
     """
     Save data to a particular file
 
@@ -869,7 +867,8 @@ def save(data, name='auto', ext='auto', path="."):
 
     name (opt:auto|...) : name of the file, or 'auto' to use the basename
 
-    ext {Extension} (opt:auto|...) : file extension, or 'auto' to use the id of the last step
+    ext {Extension} (opt:auto|...) : file extension, or 'auto' to use the
+    id of the last step
 
     path (opt:auto|...) : data path, or 'auto' to use the current directory
 
@@ -897,7 +896,7 @@ def super_load(filelist=None,
 
     **Inputs**
 
-    filelist (fileinfo+): List of files to open.
+    filelist (fileinfo[]): List of files to open.
 
     detector_correction {Apply detector deadtime correction} (bool)
     : Which deadtime constant to use for detector deadtime.
@@ -910,7 +909,7 @@ def super_load(filelist=None,
 
     **Returns**
 
-    output (refldata+): All entries of all files in the list.
+    output (refldata[]): All entries of all files in the list.
 
     2016-03-03 Brian Maranville
     """

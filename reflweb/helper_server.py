@@ -1,10 +1,12 @@
-import sys
+import os
 import time
 import BaseHTTPServer, SocketServer
 from SimpleHTTPServer import SimpleHTTPRequestHandler
 #import multiprocessing
 #import webbrowser
-import urlparse, os
+import urlparse
+from pprint import pprint
+import traceback
 
 from jsonrpclib.SimpleJSONRPCServer import SimpleJSONRPCServer, SimpleJSONRPCRequestHandler
 import jsonrpclib.config
@@ -22,10 +24,6 @@ homepage = 'web_reduction_filebrowser.html'
 currdir = os.path.dirname( __file__ )
 
 
-if sys.argv[1:]:
-    port = int(sys.argv[1])
-else:
-    port = 8000
 #server_address = ('localhost', 0 ) # get next open socket
 
 #HandlerClass.protocol_version = Protocol
@@ -127,7 +125,7 @@ server = ThreadedJSONRPCServer((config.jsonrpc_servername, config.jsonrpc_port),
 rpc_port = server.socket.getsockname()[1]
 #webbrowser.open_new_tab('http://localhost:%d/index.html?rpc_port=%d' % (http_port, rpc_port))
 
-import h5py, os, dataflow
+import dataflow
 from dataflow.core import Template, sanitizeForJSON, lookup_instrument
 from dataflow.cache import use_redis
 from dataflow.calc import process_template
@@ -135,12 +133,12 @@ import dataflow.core as df
 
 from dataflow.modules.refl import define_instrument, INSTRUMENT
 
-#use_redis()
+use_redis()
 define_instrument(data_source=config.data_repository)
 
 def get_file_metadata(pathlist=None):
     if pathlist is None: pathlist = []
-    print pathlist
+    print "get file metadata", pathlist
     import urllib
     import urllib2
     import json
@@ -149,8 +147,10 @@ def get_file_metadata(pathlist=None):
     values = {'pathlist[]' : pathlist}
     data = urllib.urlencode(values, True)
     req = urllib2.Request(url, data)
+    #print "request",url,data
     response = urllib2.urlopen(req)
     fn = response.read()
+    #print "response",json.loads(fn)
     # this converts json to python object, then the json-rpc lib converts it 
     # right back, but it is more consistent for the client this way:
     return json.loads(fn)
@@ -216,14 +216,26 @@ def calc_terminal(template_def, config, nodenum, terminal_id):
     template = Template(**template_def)
     #print "template_def:", template_def, "config:", config, "target:",nodenum,terminal_id
     #print "modules","\n".join(m for m in df._module_registry.keys())
-    retval = process_template(template, config, target=(nodenum, terminal_id))
+    try:
+        retval = process_template(template, config, target=(nodenum, terminal_id))
+    except:
+        print "==== template ===="; pprint(template_def)
+        print "==== config ===="; pprint(config)
+        traceback.print_exc()
+        raise
     return sanitizeForJSON(retval.todict())
     
 def calc_template(template_def, config):
     """ json-rpc wrapper for process_template """
     template = Template(**template_def)
     #print "template_def:", template_def, "config:", config
-    retvals = process_template(template, config, target=(None,None))
+    try:
+        retvals = process_template(template, config, target=(None,None))
+    except:
+        print "==== template ===="; pprint(template_def)
+        print "==== config ===="; pprint(config)
+        traceback.print_exc()
+        raise
     output = {}
     for rkey, rv in retvals.items():
         module_id, terminal_id = rkey

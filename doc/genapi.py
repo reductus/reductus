@@ -56,6 +56,7 @@ def genfiles(package, package_name, modules, dir='api'):
 
 def dataflow():
     modules=[
+        ('anno_exc', 'annotate exceptions'),
         ('cache', 'redis/memory cache manager'),
         ('calc', 'template calculator'),
         ('core', 'instrument definition'),
@@ -70,7 +71,6 @@ def dataflow():
 
 def reflred():
     modules=[
-        ('anno_exc', 'annotate exceptions'),
         #('data', 'generic data file support'),
         ('err1d', '1-D error propagation functions'),
         ('errutil', 'extensions to the PyPI uncertainties package'),
