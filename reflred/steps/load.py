@@ -16,26 +16,25 @@ def check_datasource():
         raise RuntimeError("Need to set reflred.steps.load.DATA_SOURCE first!")
 
 def url_load(fileinfo):
-    path, file_mtime = fileinfo['path'], fileinfo['mtime']
-    entries = fileinfo.get('entries', None)
+    path, mtime, entries = fileinfo['path'], fileinfo['mtime'], fileinfo['entries']
     name = basename(path)
     check_datasource()
     try:
         url = urllib2.urlopen(DATA_SOURCE+path)
-        url_mtime = url.info().getdate('last-modified')
-        cm = datetime.datetime(*url_mtime[:7], tzinfo=pytz.utc)
-        fm = datetime.datetime.fromtimestamp(file_mtime, pytz.utc)
-        print cm
-        print fm
-        if fm < cm:
-            raise ValueError("File mtime is newer than repository mtime for %r"%path)
-        elif fm > cm:
-            raise ValueError("File mtime is older than repository mtime for %r"%path)
+        url_time_struct = url.info().getdate('last-modified')
+        t_repo = datetime.datetime(*url_time_struct[:7], tzinfo=pytz.utc)
+        t_request = datetime.datetime.fromtimestamp(mtime, pytz.utc)
+        if t_request > t_repo:
+            print "request mtime = %s, repo mtime = %s"%(t_request, t_repo)
+            raise ValueError("Requested mtime is newer than repository mtime for %r"%path)
+        elif t_request < t_repo:
+            print "request mtime = %s, repo mtime = %s"%(t_request, t_repo)
+            raise ValueError("Requested mtime is older than repository mtime for %r"%path)
 
         fid = StringIO.StringIO(url.read())
     except urllib2.HTTPError as exc:
         raise ValueError("Could not open %r\n%s"%(path, str(exc)))
-    nx_entries = nexusref.load_entries(name, fid, entries = entries)
+    nx_entries = nexusref.load_entries(name, fid, entries=entries)
     fid.close()
     url.close()
     return nx_entries

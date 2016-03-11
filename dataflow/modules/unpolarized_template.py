@@ -3,7 +3,7 @@ template = {
     {
       "module": "ncnr.refl.super_load",
       "title": "load spec",
-      "config": {"intent": "specular"},
+      "config": {"intent": ["specular"]},
       "module_id": 0,
       "x": 50,
       "y": 30
@@ -25,7 +25,7 @@ template = {
     {
       "module": "ncnr.refl.super_load",
       "title": "load bg+",
-      "config": {"intent": "background+"},
+      "config": {"intent": ["background+"]},
       "module_id": 3,
       "x": 50,
       "y": 70
@@ -40,7 +40,7 @@ template = {
     {
       "module": "ncnr.refl.super_load",
       "title": "load bg-",
-      "config": {"intent": "background-"},
+      "config": {"intent": ["background-"]},
       "module_id": 5,
       "x": 50,
       "y": 110
@@ -69,7 +69,7 @@ template = {
     {
       "module": "ncnr.refl.super_load",
       "title": "load slit",
-      "config": {"intent": "intensity"},
+      "config": {"intent": ["intensity"]},
       "module_id": 9,
       "x": 50,
       "y": 150

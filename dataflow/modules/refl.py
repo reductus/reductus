@@ -38,6 +38,8 @@ def define_instrument(data_source):
         template_defs = templates,
         )
 
+    refl1d.get_module_by_id('ncnr_load').cached = True
+
     # Register instrument
     df.register_instrument(refl1d)
     return refl1d
@@ -74,7 +76,7 @@ def unpolarized_template():
         #["detector_saturation", {"data": "-.output"}],
         ["divergence", {"data": "-.output"}],
         ["normalize", {"data": "-.output", "base": "auto"}],
-        ["mark_intent", {"data": "-.output", "intent": "auto"}],
+        ["mark_intent", {"data": "-.output", "intent": ["auto"]}],
         ["group_by_intent => split", {"data": "-.output"}],
 
         # Preprocessing particular to each data type
@@ -94,7 +96,7 @@ def unpolarized_template():
         ["join => backm",  {"data": "-.output"}],
 
         ["nop", {"data": "split.intensity"}],
-        ["rescale",  {"data": "-.output", "scale": 1.0, "dscale": 0.0}],
+        ["rescale",  {"data": "-.output", "scale": [1.0], "dscale": [0.0]}],
         ["join => intensity",  {"data": "-.output", "tolerance": 0.0001}],
 
         # Operate on the combined data for the final reduction
@@ -116,7 +118,7 @@ def unpolarized_template():
         )
     return template
 
-def demo6():
+def demo():
     from dataflow.calc import process_template
 
     template = unpolarized_template()
@@ -124,69 +126,19 @@ def demo6():
     #template.show()
     #print "="*24
     test_dataset = [{'path': "ncnrdata/cgd/201511/21066/data/HMDSO_17nm_dry14.nxz.cgd",
-                     "mtime": 1447353278}]
-    experiment = "ncnrdata/cgd/201511/21066/data/"
-    ext = '.nxz.cgd'
-    datasets = ["..."]
-    #files = [{'path':experiment+f+ext,'mtime':0} for f in datasets]
-    files = test_dataset
+                      'mtime': 1447353278}]
     refl = process_template(template=template,
                             config={"0": {"filelist": test_dataset}},
-                            #target=(len(template.modules)-1, "output"),
-                            target=(2, "data"),  # return an input
+                            target=(len(template.modules)-1, "output"),
+                            #target=(2, "data"),  # return an input
                             )
-    print "refl",refl.values
+    #print "refl",refl.values
     return refl.values
 
-
-def demo1():
-    from dataflow.calc import process_template
-
-    template = loader_template()
-    #print "========== Template ========"
-    #template.show()
-    #print "="*24
-    test_dataset = [{'path': "ncnrdata/cgd/201511/21066/data/HMDSO_17nm_dry14.nxz.cgd",
-                     "mtime": 1447353278}]
-    experiment = "ncnrdata/cgd/201511/21066/data/"
-    ext = '.nxz.cgd'
-    datasets = ["..."]
-    #files = [{'path':experiment+f+ext,'mtime':0} for f in datasets]
-    files = test_dataset
-    print "ready"
-    refl = process_template(template=template,
-                            config={"0": {"filelist": test_dataset}},
-                            #target=(len(template.modules)-1, "output"),
-                            target=(0, "output"),
-                            )
-    print "refl",refl
-    return refl
-
-
-def demo7():
-    from dataflow.core import Template
-    from dataflow.calc import process_template
-    from unpolarized_template import template as template_def
-    define_instrument(data_source="http://ncnr.nist.gov/pub/")
-    template = Template("unpolarized", "reflweb default unpolarized template", modules=template_def['modules'], wires=template_def['wires'], instrument="ncnr.magik", version=1.0)
-    test_dataset = [{'path': "ncnrdata/cgd/201511/21066/data/HMDSO_17nm_dry14.nxz.cgd",
-                     "mtime": 1447353278}]
-    files = test_dataset
-    template_config = {"0": {"filelist": test_dataset}, "1": {"mask_indices": {"0": [1,2]}}}
-    #for i in range(len(template_def['modules'])):
-    #    if not str(i) in template_config:
-    #        template_config[str(i)] = {}
-    #    template_config[str(i)]['version'] = '1.0'
-    #print template_config
-    refl = process_template(template=template,
-                            config=template_config,
-                            target=(0, "output"))
-    print "refl",refl.values
-    return refl.values
 
 if __name__ == "__main__":
     from dataflow.cache import use_redis
     use_redis()
     define_instrument(data_source="http://ncnr.nist.gov/pub/")
-    demo6()
+    demo()
 

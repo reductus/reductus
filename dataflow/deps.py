@@ -53,7 +53,7 @@ def _dependencies(pairs):
         independent = right - left
         if independent == emptyset:
             cycleset = ", ".join(str(s) for s in left)
-            raise ValueError, "Cyclic dependencies amongst %s" % cycleset
+            raise ValueError("Cyclic dependencies amongst %s" % cycleset)
 
         # The possibly resolvable items are those that depend on the independents
         dependent = set([a for a, b in pairs if b in independent])
@@ -105,7 +105,7 @@ def test():
     pairs = [(1, 4), (4, 3), (4, 5), (5, 1)]
     try: _ = processing_order(9, pairs)
     except ValueError: pass
-    else: raise Exception, "test3 expect ValueError exception for %s" % (pairs,)
+    else: raise Exception("test3 expect ValueError exception for %s" % (pairs,))
 
     # large test for gross speed check
     A = np.random.randint(4000, size=(1000, 2))

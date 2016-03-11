@@ -9,9 +9,11 @@ import hashlib
 import contextlib
 from inspect import getsource
 
+from .anno_exc import annotate_exception
 from .cache import get_cache
 from .core import lookup_module, lookup_datatype
 from .core import sanitizeForJSON, sanitizeFromJSON, Bundle
+from .automod import validate
 
 def find_calculated(template, config):
     """
@@ -48,9 +50,9 @@ def process_template(template, config, target=(None,None)):
     for node, input_wires in template.ordered(target=return_node):
         node_info = template.modules[node]
         module = lookup_module(node_info['module'])
-        node_id = "%d: %s"%(node, node_info['module'])
+        node_id = "node %d, %s"%(node, node_info['module'])
         input_terminals = module.inputs
-        output_terminals = module.outputs
+        module.outputs = module.outputs
 
         # Build the inputs; if the returning an input terminal, put it in the
         # results set.   This is extra work for the case where the results
@@ -85,13 +87,14 @@ def process_template(template, config, target=(None,None)):
 
         # Collect the outputs
         bundles = {}
-        for terminal in output_terminals:
+        for terminal in module.outputs:
             tid = terminal["id"]
             bundles[tid] = _bundle(terminal, outputs[tid])
-        print "caching", node, module.id
         #print "caching", module.id, bundles
-        #print "caching",_serialize(bundles, output_terminals)
-        _store(cache, fingerprints[node], bundles)
+        #print "caching",_serialize(bundles, module.outputs)
+        if getattr(module, 'cache', False):
+            print "caching", node, module.id
+            _store(cache, fingerprints[node], bundles)
         results.update((_key(node, k), v) for k, v in bundles.items())
 
     #print list(sorted(results.keys()))
@@ -100,7 +103,6 @@ def process_template(template, config, target=(None,None)):
         return results
     else:
         return results[_key(return_node, return_terminal)]
-
 
 def _bundle(terminal, values):
     """
@@ -157,7 +159,7 @@ def _eval_node(node_id, module, inputs, template_fields, user_fields):
 
     *module* is the module activated by the node.
 
-    *inputs* contains the input terminal info as *{terminal: [data, ...]}*.
+    *inputs* contains the input terminal values as *{terminal: [data, ...]}*.
 
     *template_fields* contains the field values stored in the
     template as *{field: [value, ...]}*.
@@ -167,11 +169,8 @@ def _eval_node(node_id, module, inputs, template_fields, user_fields):
 
     Returns the output terminal bundle as *(terminal: [data, ...]}*.
     """
-    input_terminals = module.inputs
-    output_terminals = module.outputs
-
-    # Check arity of module. If the input terminals are all multiple
-    # inputs, then the action needs to be called once with the bundle.
+    # If the first input terminal is a multiple input terminal, then the
+    # action needs to be called once with the bundle.
     # If the input terminals are all single input, then the action
     # needs to be called once for each dataset in the bundle.
     # For mixed single/multiple inputs the first input must be single.
@@ -179,94 +178,80 @@ def _eval_node(node_id, module, inputs, template_fields, user_fields):
     # If the output is multiple, then it is assumed to already be
     # a bundle.  With mixed single input/multiple output, all outputs
     # are concatenated into one bundle.
-    multiple = all(terminal["multiple"] for terminal in input_terminals)
 
-    # Run the calculation
-    print "calculating values for node", node_id
-    if multiple or not input_terminals:
-        # Get default field values from template
-        action_args = template_fields.copy()
+    # Check arity of module. This is determined by the first input terminal.
+    multiple = not module.inputs or module.inputs[0]["length"] == 0
+    bundle_length = 1 if multiple else len(inputs[module.inputs[0]["id"]])
 
-        # Paste in field values from template application
-        action_args.update(user_fields)
+    # determine field values
+    fields = dict((field["id"], field["default"]) for field in module.fields)
+    fields.update(template_fields)  # override with template
+    fields.update(user_fields)  # override with config
 
-        # Paste in the input terminal values
-        action_args.update(inputs)
+    # validate fields
+    for par in module.fields:
+        name = par["id"]
+        values = fields[name]
+        if not par['multiple']:
+            values = [values] if values is not None else []
+        #print node_id, name, values
+        values = [_validate_par(node_id, par, value) for value in values]
+        if len(values) == 0:
+            del fields[name]
+        elif len(values) == bundle_length:
+            fields[name] = values
+        elif len(values) == 1:
+            fields[name] = values * bundle_length
+        else:
+            raise ValueError("Need one value of %s for each dataset in %s"
+                             % (name, node_id))
 
-        # Do the work
+    # validate input terminals
+    for par in module.inputs:
+        name = par["id"]
+        values = inputs[name]
+        # for value in values: _check_datatype(par, value)
+        if len(values) == 0:
+            fields[name] = [[]]*bundle_length
+        elif par["length"] == 0:
+            fields[name] = [values]*bundle_length
+        elif len(values) == bundle_length:
+            fields[name] = values
+        elif len(values) == 1:
+            fields[name] = values*bundle_length
+        else:
+            raise ValueError("Need one value of %s for each dataset"%name)
+
+    # Allocate slots for results
+    outputs = dict((terminal["id"], []) for terminal in module.outputs)
+
+    for k in range(bundle_length):
+        # set up inputs
+        action_args = dict((name,values[k]) for name, values in fields.items())
+
+        # perform action
         result = _do_action(module, **action_args)
 
-        # Gather the output.  Action outputs a list, so map it into a
-        # dictionary based on terminal id.  If the output is not multiple,
-        # it needs to be converted to a list of length 1.
-        outputs = dict((terminal["id"],(v if terminal["multiple"] else [v]))
-                       for terminal, v in zip(output_terminals, result))
-
-    else:
-        # Single input, so call once for each datasets
-        outputs = dict((terminal["id"], []) for terminal in output_terminals)
-        # Assume that all inputs are the same length as the first input,
-        # or are length 1 (e.g., subtract background from list of specular)
-        # or are length 0 (e.g., no background specified, so background
-        # comes in as None).  Length 0 inputs are only allowed if the
-        # terminal is not a required input.  Fields may or may not need
-        # to be duplicated.
-        n = len(inputs[input_terminals[0]["id"]])
-        for k in range(n):
-            # Get default field values from template
-            action_args = template_fields.copy()
-
-            # Substitute field values, one per input if the field is
-            # multiple, otherwise one for all inputs.
-            for field in module.fields:
-                fid = field["id"]
-                bundle = None
-                if fid in template_fields:
-                    bundle = template_fields[fid]
-                if fid in user_fields:
-                    bundle = user_fields[fid]
-                if bundle is not None:
-                    if field["multiple"]:
-                        action_args[fid] = bundle
-                    elif len(bundle) == 0:
-                        if field["required"]:
-                            raise ValueError("missing required input %r for %s"
-                                             % (fid, node_id))
-                            # No need to specify default
-                    elif len(bundle) == 1:
-                        action_args[fid] = bundle[0]
-                    else:
-                        action_args[fid] = bundle[k]
-                        # else:
-                        #     pass # No need to specify default
-
-            # Substitute input terminal values
-            for terminal in input_terminals:
-                tid = terminal["id"]
-                bundle = inputs[tid]
-                if terminal["multiple"]:
-                    action_args[tid] = bundle
-                elif len(bundle) == 0:
-                    if terminal["required"]:
-                        raise ValueError("missing required input %r for %s"
-                                         % (tid, node_id))
-                    action_args[tid] = None
-                elif len(bundle) == 1:
-                    action_args[tid] = bundle[0]
-                else:
-                    action_args[tid] = bundle[k]
-
-            # Do the work
-            result = _do_action(module, **action_args)
-
-            # Gather outputs
-            for terminal, v in zip(output_terminals, result):
-                if terminal["multiple"]:
-                    outputs[terminal["id"]].extend(v)
-                else:
-                    outputs[terminal["id"]].append(v)
+        print node_id,result
+        # Gather outputs
+        for terminal, data in zip(module.outputs, result):
+            if terminal["length"] == 0:
+                outputs[terminal["id"]].extend(data)
+            else:
+                outputs[terminal["id"]].append(data)
 
     return outputs
+
+
+def _validate_par(node_id, par, value):
+    """
+    Check that the parameters have the right type and length.
+    """
+    try:
+        return validate(par, value)
+    except ValueError, exc:
+        annotate_exception(" in " + node_id, exc)
+        raise
 
 
 def _do_action(module, **action_args):

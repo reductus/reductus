@@ -12,6 +12,7 @@ import re
 
 from numpy import inf
 
+from .anno_exc import annotate_exception
 from .core import Module, Template
 
 def make_template(name, description, diagram, instrument, version):
@@ -280,11 +281,24 @@ def auto_module(action):
     units, as opposed to a floating point value for which we haven't thought
     about the units that are needed.
     """
-    return _parse_function(action)
+    try:
+        return _parse_function(action)
+    except ValueError, exc:
+        annotate_exception(" while initializing module " + action.__name__, exc)
+        raise
+
 
 
 timestamp = re.compile(r"^(?P<date>[0-9]{4}-[0-9]{2}-[0-9]{2})\s+(?P<author>.*?)\s*$")
 def _parse_function(action):
+    # grab arguments and defaults from the function definition
+    argspec = inspect.getargspec(action)
+    args = argspec.args if not inspect.ismethod(action) else argspec.args[1:]
+    defaults = (dict(zip(args[-len(argspec.defaults):], argspec.defaults))
+                if argspec.defaults else {})
+    if argspec.varargs is not None or argspec.keywords is not None:
+        raise ValueError("function contains *args or **kwargs")
+
     # Grab the docstring from the function
     # Note: inspect.getdoc() cleans the docstring, removing the indentation and
     # the leading and trailing carriage returns
@@ -325,14 +339,6 @@ def _parse_function(action):
     inputs = parse_parameters(input_lines)
     output_terminals = parse_parameters(output_lines)
 
-    # grab arguments and defaults from the function definition
-    argspec = inspect.getargspec(action)
-    args = argspec.args if not inspect.ismethod(action) else argspec.args[1:]
-    defaults = (dict(zip(args[-len(argspec.defaults):], argspec.defaults))
-                if argspec.defaults else {})
-    if argspec.varargs is not None or argspec.keywords is not None:
-        raise ValueError("function contains *args or **kwargs")
-
     # Check that all defined arguments are described
     defined = set(args)
     described = set(p['id'] for p in inputs)
@@ -349,20 +355,26 @@ def _parse_function(action):
         raise ValueError("Parameter and return value names must be unique")
 
     # Split parameters into terminals (non-keyword) and fields (keyword)
-    field_names = args[-len(defaults):] if defaults else []
-    field_set = set(field_names)
-    input_terminals = [p for p in inputs if p['id'] not in field_set]
-    input_fields = [p for p in inputs if p['id'] in field_set]
+    field_names = set(args[-len(defaults):] if defaults else [])
+    input_terminals = [p for p in inputs if p['id'] not in field_names]
+    input_fields = [p for p in inputs if p['id'] in field_names]
 
-    # Set the defaults for the fields from the keyword arguments
-    for p in input_fields:
-        if p['default'] is None:
-            p['default'] = defaults[p['id']]
-
-    # Check the types on the input fields
+    # Set the defaults for the fields from the keyword arguments, and make
+    # sure they are consistent with the datatype.
     for p in input_fields:
         if p['datatype'] not in FIELD_TYPES:
-            raise ValueError("Invalid type %s for %s"%(p['datatype'], p['id']))
+            raise ValueError("Invalid type %s for field %s"%(p['datatype'], p['id']))
+        value = defaults[p['id']]
+        if value is not None:
+            # Note: validate may change the value to conform to the type
+            value = validate(p, value, as_default=True)
+        if p['multiple']:
+            value = [value] if value is not None else []
+        p['default'] = value
+
+    for p in input_terminals + output_terminals:
+        if p['datatype'] in FIELD_TYPES:
+            raise ValueError("Invalid type %s for terminal %s"%(p['datatype'], p['id']))
 
     # Collect all the node info
     result = {
@@ -399,7 +411,6 @@ parameter_re = re.compile("""\A
     \s*[)])?                                 # )
     \s*:                                     # :
     \s*(?P<description>.*?)                  # description  (non-greedy)
-    \s*([[]\s*(?P<default>.*?)\s*[]])?       # [default]    (optional)
     \s*\Z""", re.VERBOSE)
 def parse_parameters(lines):
     """
@@ -407,7 +418,7 @@ def parse_parameters(lines):
 
     Each parameter must use the form defined by the following syntax:
 
-        id {label} (type[length]#:attr): description [default]
+        id {label} (type[length]#:attr): description
 
     The *(type)* specifier is optional, defaulting to str.  The *[default]*
     value is rarely needed since it can be extracted from the function
@@ -512,7 +523,14 @@ def parse_datatype(par):
     *regex:pattern* -> *datatype=regex, pattern=pattern*
 
         String which must match the given regular expression.  The type
-        attribute is set as *typeattr={pattern: "pattern"}*.
+        attribute is set as *typeattr={pattern: "pattern"}*.  Note that
+        matching is not anchored, so you probably want *^pattern$*.
+
+        To check the pattern, use::
+
+            if (RegExp(typeattr.pattern).test(inputstr)) {}  // javascript
+
+            if re.search(typeattr["pattern"], inputstr): pass  # python
 
     *fileinfo* -> *datatype=fileinfo*
 
@@ -555,7 +573,9 @@ def parse_datatype(par):
         This is a selection of a range from the graph, where *axis* is *x* or
         *y* for a range of *x* or *y* values, or *xy* for a region of the
         graph. This makes most sense with *length=1, multiple=false*.
-        The type attribute is set as *typeattr={axis: "axis"}*.
+        The type attribute is set as *typeattr={axis: "axis"}*.  The return
+        value is *[min, max]* for *x* and *y*, or *[minx, miny, maxx, maxy]*
+        for *xy*.
 
     *coordinate* -> *datatype=coordinate*
 
@@ -592,8 +612,8 @@ def parse_datatype(par):
 
     elif type == "opt":
         if "|" not in attrstr:
-            raise ValueError("options not specified for parameter " + name)
-        choices = [v.split('=') for v in attrstr.split("|", 2)]
+            raise ValueError("options not specified for " + name)
+        choices = [v.split('=', 2) for v in attrstr.split("|")]
         choices = [(v*2 if len(v) == 1 else v) for v in choices]
         choices = [[v[0].strip(), v[1].strip()] for v in choices]
         open = (choices[-1][0] == "...")
@@ -607,9 +627,14 @@ def parse_datatype(par):
         if not attrstr:
             raise ValueError("regex is empty for " + name)
         try:
-            re.compile(attrstr)
+            pattern = re.compile(attrstr)
         except Exception, exc:
             raise ValueError("regex error %r for %s"%(str(exc),name))
+        # if the default is given, check that it matches the pattern
+        default = par.get("default", None)
+        if default and not pattern.search(default):
+            raise ValueError("default %r does not match pattern %r for %s"
+                             %(default, attrstr, name))
         attr["pattern"] = attrstr
 
     elif type == "range":
@@ -628,7 +653,153 @@ def parse_datatype(par):
 
 FIELD_TYPES = set("str bool int float opt regex range index coordinate fileinfo".split())
 
+def check_multiplicity(par, values, bundle_length):
+    """
+    Check the number of values for the parameter against bundle length,
+    depending on whether the parameter is required or multiple.
+    """
+    name = par["name"]
+    required = par["required"]
+    multiple = par["multiple"]
+
+    if required and len(values) == 0:
+        raise ValueError("need a value for %s"%name)
+    if not multiple and len(values) not in [0, 1, bundle_length]:
+        raise ValueError("wrong number of values for %s"%name)
+
+def validate(par, value, as_default=False):
+    """
+    Check the parameter value.
+
+    If *as_default*, make sure that the value is a reasonable default.
+
+    Returns the value, possibly converted to the correct type.
+
+    Raise an error if the parameter value is not valid.
+    """
+    name = par["id"]
+    n = par["length"]
+    if n == 1:
+        return _validate_one(par, value, as_default)
+    elif not isinstance(value, list):
+        print value
+        raise ValueError("invalid value for %s, expected list"%(name))
+    elif n and len(value) != n:
+        raise ValueError("invalid value for %s, wrong length"%(name))
+    else:
+        return [_validate_one(par, v, as_default) for v in value]
+
+def _validate_one(par, value, as_default):
+    datatype = par["datatype"]
+    name = par["id"]
+
+    if datatype == "int":
+        # accept float values instead of integers
+        value = _type_check(name, value, int)
+        min, max = par["typeattr"]["range"]
+        if not min <= value <= max:
+            raise ValueError("invalid value for %s, %s not in [%s, %s]"
+                             %(name, value, min, max))
+    elif datatype == "float":
+        _type_check(name, value, float)
+        min, max = par["typeattr"]["range"]
+        if not min <= value <= max:
+            raise ValueError("invalid value for %s, %s not in [%s, %s]"
+                             %(name, value, min, max))
+    elif datatype == "str":
+        value = _type_check(name, value, str)
+
+    elif datatype == "opt":
+        value = _type_check(name, value, str)
+        choices = par["typeattr"]["choices"]
+        isopenset = par["typeattr"]["open"]
+        # Note: choices is a list of pairs [["option", "display"], ...]
+        if value not in zip(*choices)[0]:
+            #print value, choices
+            if not isopenset or as_default is True:
+                raise ValueError("value %r not in choice list for %s"
+                                 %(value, name))
+
+    elif datatype == "regex":
+        value = _type_check(name, value, str)
+        pattern = par["typeattr"]["pattern"]
+        if not re.match(pattern, value):
+            raise ValueError("value %r not does not match %r for %s"
+                             %(value, pattern, name))
+
+    elif datatype == "range":
+        range = par["typeattr"]["axis"]
+        n = 4 if range=="xy" else 2
+        value = _list_check(name, value, n, float)
+
+    elif datatype == "index":
+        value = _list_check(name, value, 0, int)
+
+    elif datatype == "coordinate":
+        value = _list_check(name, value, 2, float)
+
+    elif datatype == "bool":
+        value = _type_check(name, value, bool)
+
+    elif datatype == "fileinfo":
+        value = _finfo_check(name, value)
+
+    else:
+        raise ValueError("no %s type check for %s"%(datatype, name))
+
+    return value
+
+def _finfo_check(name, value):
+    try:
+        if (not isinstance(value, dict)
+                or "path" not in value or "mtime" not in value
+                or (len(value)>2 and "entries" not in value)
+                or len(value)>3):
+            raise ValueError("wrong structure")
+        value["path"] = _type_check(name, value["path"], str)
+        value["mtime"] = _type_check(name, value["mtime"], int)
+        if value.setdefault("entries", None) is not None:
+            value["entries"] = _list_check(name, value["entries"], 0, str)
+    except:
+        #raise
+        raise ValueError("value is not {path: str, mtime: int, entries: [str, ...]} for %s"
+                         % name)
+    return value
+
+def _list_check(name, values, n, ptype):
+    if isinstance(values, tuple):
+        values = list(values)
+    _type_check(name, values, list)
+    if n and len(values) != n:
+        raise ValueError("expected list of length %d for %s"
+                         %(n, name))
+    try:
+        values = [_type_check(name, v, ptype) for v in values]
+    except:
+        raise ValueError("all values in list must be of type %s for %s"
+                         %(str(ptype), name))
+    return values
+
+def _type_check(name, value, ptype):
+    if ptype is int and isinstance(value, float) and int(value) == value:
+        value = int(value)
+    elif ptype is str and isinstance(value, unicode):
+        value = str(value)
+    if not isinstance(value, ptype):
+        raise ValueError("expected %s for %s but got %s"
+                         % (str(ptype), name, str(type(value))))
+    return value
+
+
 def parse_range(range, limit=inf):
+    """
+    Parse the range string *<min,max>*.
+
+    *limit* sets the limiting value for the range, to use in place of inf or
+    a missing limit.
+
+    Returns (*min, max*), or *(-limit, limit)* if no range is provided.
+    """
     range = range.strip()
     if range == "":
         return [-limit, limit]
@@ -638,7 +809,11 @@ def parse_range(range, limit=inf):
     min = float(minstr) if minstr and minstr != "-inf" else -limit
     max = float(maxstr) if maxstr and maxstr != "inf" else limit
     if min >= max:
-        raise ValueError("min must be less than max")
+        raise ValueError("min must be less than max in (%g,%g)"%(min,max))
+    if min < -limit:
+        raise ValueError("min value %g must be more than %g"%(min, -limit))
+    if max > limit:
+        raise ValueError("max value %g must be more than %g"%(max, limit))
     return min, max
 
 def get_paragraphs(lines):
@@ -661,11 +836,11 @@ def get_paragraphs(lines):
 
 def test_parse_parameters():
     all_good = """
-        s1 (str) : p1 description [s1]
+        s1 (str) : p1 description
 
         s2 (str) : colon not allowed after str.
         Description can go on for many lines.
-        Default value is still at the end [s2 default]
+        Default value is still at the end
 
         s3 : input defaults to string
 
@@ -721,13 +896,14 @@ def test_parse_parameters():
         coord (coordinate) :
     """
 
-    p = dict((p['id'], p) for p in parse_parameters(all_good.split('\n')))
+    p = dict((pk['id'], pk) for pk in parse_parameters(all_good.split('\n')))
+    for pk in p:
+        # Note: parse_datatype is not part of parse_parameters because we
+        # want to be able to check the default value for each type, and we
+        # only want the t
+        parse_datatype(pk)
 
     #import pprint; pprint.pprint(p)
-
-    assert p['s1']['default'] == 's1'
-    assert p['s2']['default'] == 's2 default'
-    assert p['s3']['default'] is None
 
     assert p['s1']['description'] == 'p1 description'
     assert p['i1']['description'] == 'optional integer extended description can be indented.'
