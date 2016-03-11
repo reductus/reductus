@@ -32,7 +32,7 @@ webreduce.editor = webreduce.editor || {};
     var buttons_div = target.append("div")
       .classed("control-buttons", true)
       .style("position", "absolute")
-      .style("bottom", "0")
+      .style("bottom", "10px")
     buttons_div.append("button")
       .text("accept")
       .on("click", function() {
@@ -94,11 +94,9 @@ webreduce.editor = webreduce.editor || {};
 
   webreduce.editor.accept_parameters = function(target, active_module) {
     target.selectAll("div.fields")
-      .each(function(d) {
-        d.forEach(function(data) {
-          if (!active_module.config) {active_module.config = {}};
+      .each(function(data) {
+        if (!active_module.config) {active_module.config = {}};
           active_module.config[data.id] = data.value;
-        });
       });
   }
   
@@ -120,7 +118,7 @@ webreduce.editor = webreduce.editor || {};
     }
     var radio = target.select("div#fileinfo").append("div")
       .classed("fields", true)
-      .datum([datum])
+      .datum(datum)
     radio.append("input")
       .attr("id", field.id)
       .attr("type", "radio")
@@ -132,7 +130,7 @@ webreduce.editor = webreduce.editor || {};
     // jquery events handler for communications  
     $(radio.node()).on("fileinfo.update", function(ev, info) {
       if (radio.select("input").property("checked")) {
-          radio.datum([{id: field.id, value: info}]);
+          radio.datum({id: field.id, value: info});
       } 
     });
 
@@ -161,7 +159,7 @@ webreduce.editor = webreduce.editor || {};
     var input_id = module_def.inputs[0].id; // take data from the first input.
     var index_div = target.select("div#indexlist").append("div")
       .classed("fields", true)
-      .datum([datum])
+      .datum(datum)
     var index_label = index_div.append("label")
       .text(field.id);
     var display = index_label.append("div")
@@ -213,7 +211,7 @@ webreduce.editor = webreduce.editor || {};
           datum.value[i] = [];
           series_select.selectAll(".dot").each(function(ddd, iii) {if (d3.select(this).classed("masked")) {datum.value[i].push(iii)}});
           */
-          index_div.datum([datum]);
+          index_div.datum(datum);
           display.text(JSON.stringify(datum.value));
         });
       });
@@ -226,7 +224,7 @@ webreduce.editor = webreduce.editor || {};
     var datum = {"id": field.id, "value": value};
     target.append("div")
       .classed("fields", true)
-      .datum([datum])
+      .datum(datum)
       .append("label")
         .text(field.label)
         .append("input")
@@ -242,7 +240,7 @@ webreduce.editor = webreduce.editor || {};
     var datum = {"id": field.id, "value": value};
     target.append("div")
       .classed("fields", true)
-      .datum([datum])
+      .datum(datum)
       .append("label")
         .text(field.label)
         .append("input")
@@ -258,7 +256,7 @@ webreduce.editor = webreduce.editor || {};
     var datum = {"id": field.id, "value": value};
     target.append("div")
       .classed("fields", true)
-      .datum([datum])
+      .datum(datum)
       .append("label")
         .text(field.label)
         .append("input")
