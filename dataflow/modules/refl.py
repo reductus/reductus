@@ -38,8 +38,6 @@ def define_instrument(data_source):
         template_defs = templates,
         )
 
-    refl1d.get_module_by_id('ncnr_load').cached = True
-
     # Register instrument
     df.register_instrument(refl1d)
     return refl1d

@@ -7,6 +7,32 @@ from warnings import warn
 # TODO: what about polarized data?
 
 ALL_ACTIONS = []
+def cache(action):
+    """
+    Decorator which adds the *cached* attribute to the function.
+
+    Use *@cache* to force caching to always occur (for example, when
+    the function references remote resources, vastly reduces memory, or is
+    expensive to compute.  Use *@nocache* when debugging a function
+    so that it will be recomputed each time regardless of whether or not it
+    is seen again.
+    """
+    action.cached = True
+    return action
+
+def nocache(action):
+    """
+    Decorator which adds the *cached* attribute to the function.
+
+    Use *@cache* to force caching to always occur (for example, when
+    the function references remote resources, vastly reduces memory, or is
+    expensive to compute.  Use *@nocache* when debugging a function
+    so that it will be recomputed each time regardless of whether or not it
+    is seen again.
+    """
+    action.cached = False
+    return action
+
 def module(action):
     """
     Decorator which records the action in *ALL_ACTIONS*.
@@ -35,6 +61,7 @@ def nop(data):
     """
     return data
 
+@cache
 @module
 def ncnr_load(filelist=None):
     """

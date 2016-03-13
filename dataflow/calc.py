@@ -71,7 +71,7 @@ def process_template(template, config, target=(None,None)):
                     return _bundle(terminal, inputs[return_terminal])
 
         # Use cached value if it exists, skipping to the next loop iteration.
-        if cache.exists(fingerprints[node]):
+        if module.cached and cache.exists(fingerprints[node]):
             print "retrieving cached value for node %d:"%node, fingerprints[node]
             bundles = _retrieve(cache, fingerprints[node])
             results.update((_key(node, k), v) for k, v in bundles.items())
@@ -82,6 +82,7 @@ def process_template(template, config, target=(None,None)):
         user_fields = config.get(str(node), {})
 
         # Evaluate the node
+        print "calculating", node, module.id
         outputs = _eval_node(node_id, module, inputs, template_fields, user_fields)
 
         # Collect the outputs
@@ -91,7 +92,7 @@ def process_template(template, config, target=(None,None)):
             bundles[tid] = _bundle(terminal, outputs[tid])
         #print "caching", module.id, bundles
         #print "caching",_serialize(bundles, module.outputs)
-        if False and getattr(module, 'cache', False):
+        if module.cached:
             print "caching", node, module.id, fingerprints[node]
             _store(cache, fingerprints[node], bundles)
         results.update((_key(node, k), v) for k, v in bundles.items())

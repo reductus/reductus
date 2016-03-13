@@ -208,6 +208,10 @@ class Module(object):
     def get_definition(self):
         return self.__getstate__()
 
+    @property
+    def cached(self):
+        return not hasattr(self.action, 'cached') or self.action.cached
+
     def __getstate__(self):
         # Don't pickle the function reference
         keys = ['version', 'id', 'name', 'description', 'icon',
