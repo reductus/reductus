@@ -237,19 +237,33 @@ webreduce.editor = webreduce.editor || {};
   webreduce.editor.make_fieldUI.float = function(field, active_template, module_index, module_def, target) {
     var active_module = active_template.modules[module_index];
     var value = (active_module.config && field.id in active_module.config) ? active_module.config[field.id] : field.default;
-    var datum = {"id": field.id, "value": value};
-    target.append("div")
-      .classed("fields", true)
-      .datum(datum)
-      .append("label")
-        .text(field.label)
-        .append("input")
-          .attr("type", "number")
-          .attr("field_id", field.id)
-          .attr("value", value)
-          .on("change", function(d) { datum.value = parseFloat(this.value) });
+    var datum = {id: field.id, value: value};
+    if (field.multiple) { 
+      //datum.value = [datum.value]; 
+      target.append("div")
+        .classed("fields", true)
+        .datum(datum)
+        .append("label")           
+          .text(field.label)
+          .append("input")
+            .attr("type", "text")
+            .attr("field_id", field.id)
+            .attr("value", JSON.stringify(datum.value))
+            .on("change", function(d) { datum.value = JSON.parse(this.value) });
+    } else {
+      target.append("div")
+        .classed("fields", true)
+        .datum(datum)
+        .append("label")
+          .text(field.label)
+          .append("input")
+            .attr("type", "number")
+            .attr("field_id", field.id)
+            .attr("value", value)
+            .on("change", function(d) { datum.value = parseFloat(this.value) });
+    }
   }
-  
+
   webreduce.editor.make_fieldUI.int = function(field, active_template, module_index, module_def, target) {
     var active_module = active_template.modules[module_index];
     var value = (active_module.config && field.id in active_module.config) ? active_module.config[field.id] : field.default;
