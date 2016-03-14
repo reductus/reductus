@@ -22,7 +22,7 @@ webreduce.editor = webreduce.editor || {};
     var active_template = this._active_template;
     var active_module = this._active_template.modules[module_index];
     var module_def = this._module_defs[active_module.module];
-    var datasets_input_id = (module_def.inputs[0] || {}).id;  // undefined if no inputs
+    var input_datasets_id = (module_def.inputs[0] || {}).id;  // undefined if no inputs
     var fields = module_def.fields || [];
     
     webreduce.layout.open("east");
@@ -49,12 +49,23 @@ webreduce.editor = webreduce.editor || {};
       
     $(buttons_div).buttonset();
     
-    for (var n=0; n<fields.length; n++) {
-      var field = fields[n];
-      if (webreduce.editor.make_fieldUI[field.datatype]) {
-        webreduce.editor.make_fieldUI[field.datatype](field, active_template, module_index, module_def, target);
-      }
-    }
+    var input_datasets_promise = (input_datasets_id == undefined) ? new Promise(function(r,j) {r(null)}) : 
+      webreduce.server_api.calc_terminal(active_template, {}, module_index, input_datasets_id);
+    
+    input_datasets_promise.then(function(datasets_in) {
+      console.log('datasets in: ', datasets_in);
+      fields.forEach(function(field) {
+        if (webreduce.editor.make_fieldUI[field.datatype]) {
+          webreduce.editor.make_fieldUI[field.datatype](field, active_template, module_index, module_def, target, datasets_in);
+        }
+      });
+    });
+    //for (var n=0; n<fields.length; n++) {
+    //  var field = fields[n];
+    //  if (webreduce.editor.make_fieldUI[field.datatype]) {
+    //    webreduce.editor.make_fieldUI[field.datatype](field, active_template, module_index, module_def, target);
+    //  }
+    //}
   }
   
   webreduce.editor.handle_terminal_clicked = function() {
@@ -144,7 +155,7 @@ webreduce.editor = webreduce.editor || {};
     webreduce.handleChecked();    
   }
   
-  webreduce.editor.make_fieldUI.index = function(field, active_template, module_index, module_def, target) {
+  webreduce.editor.make_fieldUI.index = function(field, active_template, module_index, module_def, target, datasets_in) {
     target.selectAll("div#indexlist").data([0])
       .enter()
         .append("div")
@@ -156,7 +167,6 @@ webreduce.editor = webreduce.editor || {};
     if (active_module.config && active_module.config[field.id] ) {
       datum.value = active_module.config[field.id];
     }
-    var input_id = module_def.inputs[0].id; // take data from the first input.
     var index_div = target.select("div#indexlist").append("div")
       .classed("fields", true)
       .datum(datum)
@@ -166,56 +176,50 @@ webreduce.editor = webreduce.editor || {};
       .classed("value-display", true)
     display.text(JSON.stringify(datum.value));
     
-    var input_id = module_def.inputs[0].id; // take data from the first input.
-    webreduce.server_api.calc_terminal(active_template, {}, module_index, input_id).then(function(result) {
-      var datasets = result.values;
-      // now have a list of datasets.
-      datasets.forEach(function(d,i) {
-        datum.value[i] = datum.value[i] || [];
-        datum.value[i].forEach(function(d,i) {
-          
-        });
+    var datasets = datasets_in.values;
+    // now have a list of datasets.
+    datasets.forEach(function(d,i) {
+      datum.value[i] = datum.value[i] || [];
+    });
+    webreduce.editor.show_plots(datasets);
+    datum.value.forEach(function(index_list, i) {
+      var series_select = d3.select("#plotdiv svg g.series:nth-of-type(" + (i+1).toFixed() + ")");
+      index_list.forEach(function(index, ii) {
+        series_select.select(".dot:nth-of-type(" + (index+1).toFixed() + ")").classed("masked", true);
       });
-      webreduce.editor.show_plots(datasets);
-      datum.value.forEach(function(index_list, i) {
-        var series_select = d3.select("#plotdiv svg g.series:nth-of-type(" + (i+1).toFixed() + ")");
-        index_list.forEach(function(index, ii) {
-          series_select.select(".dot:nth-of-type(" + (index+1).toFixed() + ")").classed("masked", true);
-        });
+    });
+    d3.selectAll("#plotdiv .dot").on("click", null); // clear previous handlers
+    d3.selectAll("#plotdiv svg g.series").each(function(d,i) {
+      // i is index of dataset
+      var series_select = d3.select(this);
+      series_select.selectAll(".dot").on("click", function(dd, ii) {
+        // ii is the index of the point in that dataset.
+        d3.event.stopPropagation();
+        d3.event.preventDefault();
+        var dot = d3.select(this);          
+        // manipulate data list directly:
+        var index_list = datum.value[i];
+        var index_index = index_list.indexOf(ii);
+        if (index_index > -1) { 
+          index_list.splice(index_index, 1); 
+          dot.classed("masked", false); 
+        }
+        else {
+          index_list.push(ii); 
+          dot.classed("masked", true);
+        }
+        index_list.sort();
+        // else, pull masked dot list from class:
+        // (this has the advantage of always being ordered inherently)
+        /*
+        dot.classed("masked", !dot.classed("masked")); // toggle selection
+        datum.value[i] = [];
+        series_select.selectAll(".dot").each(function(ddd, iii) {if (d3.select(this).classed("masked")) {datum.value[i].push(iii)}});
+        */
+        index_div.datum(datum);
+        display.text(JSON.stringify(datum.value));
       });
-      d3.selectAll("#plotdiv .dot").on("click", null); // clear previous handlers
-      d3.selectAll("#plotdiv svg g.series").each(function(d,i) {
-        // i is index of dataset
-        var series_select = d3.select(this);
-        series_select.selectAll(".dot").on("click", function(dd, ii) {
-          // ii is the index of the point in that dataset.
-          d3.event.stopPropagation();
-          d3.event.preventDefault();
-          var dot = d3.select(this);          
-          // manipulate data list directly:
-          var index_list = datum.value[i];
-          var index_index = index_list.indexOf(ii);
-          if (index_index > -1) { 
-            index_list.splice(index_index, 1); 
-            dot.classed("masked", false); 
-          }
-          else {
-            index_list.push(ii); 
-            dot.classed("masked", true);
-          }
-          index_list.sort();
-          // else, pull masked dot list from class:
-          // (this has the advantage of always being ordered inherently)
-          /*
-          dot.classed("masked", !dot.classed("masked")); // toggle selection
-          datum.value[i] = [];
-          series_select.selectAll(".dot").each(function(ddd, iii) {if (d3.select(this).classed("masked")) {datum.value[i].push(iii)}});
-          */
-          index_div.datum(datum);
-          display.text(JSON.stringify(datum.value));
-        });
-      });
-    }); 
+    });
   }
   
   webreduce.editor.make_fieldUI.str = function(field, active_template, module_index, module_def, target) {
