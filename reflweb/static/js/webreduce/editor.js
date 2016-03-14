@@ -100,8 +100,8 @@ webreduce.editor = webreduce.editor || {};
     });
     //$("#xscale, #yscale").change(handleChecked);
     mychart.zoomRect(true);
-    // this needs to be implemented in the chart library:
-    //webreduce.callbacks.resize_center = mychart.autofit;
+    // this has been implemented in the chart library:
+    webreduce.callbacks.resize_center = mychart.autofit;
     return mychart
   }
 
