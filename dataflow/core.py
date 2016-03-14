@@ -300,6 +300,30 @@ class Template(object):
                 return [target]
         return processing_order(pairs, n)
 
+    def dependents(self, id):
+        """
+        Retrieve the list of nodes that depend on a particular node, including
+        the node itself.
+
+        Note: Algorithm is O(n^2) or worse, so be prepared to rewrite if
+        performance is an issue.
+        """
+        #print "wires", [(w['source'][0], w['target'][0]) for w in self.wires]
+        remaining = set([id])
+        processed = set([id])
+        while remaining:
+            # pick an unprocessed node
+            parent = remaining.pop()
+            # find which nodes depend on it
+            children = set(w['target'][0] for w in self.wires
+                           if w['source'][0]==parent)
+            # remember to process those that are not already listed
+            remaining |= children - processed
+            # list the new nodes as descendents
+            processed |= children
+            #print "deps",id,parent,children,remaining,processed
+        return processed
+
     def inputs(self, id):
         """
         Retrieve the data objects that go into the inputs of a module

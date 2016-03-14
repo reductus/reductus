@@ -70,8 +70,18 @@ def process_template(template, config, target=(None,None)):
                 if terminal["id"] == return_terminal:
                     return _bundle(terminal, inputs[return_terminal])
 
+        # If the module has been flagged "nocache" for debugging, then
+        # clear all cached entries that depend on it.  If we just ignore
+        # them for this evaluation, the cached values will simply pop
+        # back once we turn on caching again.
+        if not module.cached:
+            for child in template.dependents(node):
+                if cache.exists(fingerprints[child]):
+                    print "clearing cached value for node %d:"%child, fingerprints[child]
+                    _clear(cache, fingerprints[child])
+
         # Use cached value if it exists, skipping to the next loop iteration.
-        if module.cached and cache.exists(fingerprints[node]):
+        if cache.exists(fingerprints[node]):
             print "retrieving cached value for node %d:"%node, fingerprints[node]
             bundles = _retrieve(cache, fingerprints[node])
             results.update((_key(node, k), v) for k, v in bundles.items())
@@ -272,6 +282,11 @@ def _do_action(module, **action_args):
     return result
 
 
+def _clear(cache, fp):
+    """
+    Clear the data associated with a node.
+    """
+    cache.delete(fp)
 
 def _store(cache, fp, data):
     """
