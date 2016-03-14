@@ -109,6 +109,8 @@ if getattr(config, 'serve_staticfiles', True) == True:
             self.send_header("Content-type", "image/gif")
         elif docname.endswith('.png'):
             self.send_header("Content-type", "image/png")
+        elif docname.endswith('.ico'):
+            self.send_header("Content-type", "image/x-icon")
         else:
             self.send_header("Content-type", "text/html")
         self.send_header("Content-length", str(len(response)))
