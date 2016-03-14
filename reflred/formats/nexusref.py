@@ -182,6 +182,7 @@ class NCNRNeXusRefl(refldata.ReflData):
         #self.detector.rotation = data_as(entry,'instrument/detector/rotation','degree')
         self.detector.wavelength = data_as(entry,'instrument/monochromator/wavelength','Ang')
         self.detector.wavelength_resolution = data_as(entry,'instrument/monochromator/wavelength_error','Ang')
+        self.detector.deadtime = data_as(entry,'instrument/single_detector/dead_time','us')
 
         self.sample.name = entry['sample/name'][0] if 'name' in entry['sample'] else ""
         self.sample.description = entry['sample/description'][0] if 'description' in entry['sample'] else ""
@@ -190,6 +191,7 @@ class NCNRNeXusRefl(refldata.ReflData):
             self.intent = self.trajectory_intents[raw_intent]
         self.monitor.base = das['counter/countAgainst'][0]
         self.monitor.time_step = 0.001  # assume 1 ms accuracy on reported clock
+        self.monitor.deadtime = data_as(entry,'control/dead_time','us')
         self.polarization = _get_pol(das, 'frontPolarization') \
                             + _get_pol(das, 'backPolarization')
 
