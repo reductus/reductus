@@ -19,6 +19,15 @@ svg {
   width: 100%;
   height: 100%;
 }
+
+#field_editor_div {
+  width: 100%;
+  position: absolute;
+  padding: 10px;
+  bottom: 0;
+  left: 0;
+}
+
 .highlight {
   fill-opacity: 0.6 !important;
 }
@@ -32,10 +41,14 @@ svg {
     font-family: arial, helvetica, sans-serif;
     margin: 5px 5px 2px 2px;
 }
-.popup ul {
+.popup ul, .popup ul ul {
     padding: 5px;
     list-style-type: none;
     margin: 0;
+}
+
+.popup ul ul li {
+    padding-left: 5px;
 }
 
 .popup ul li {
@@ -226,6 +239,7 @@ e.svg().on('contextmenu',function (d,i) {
         contextMenuShowing = false;
     } else {
         d3_target = d3.select(d3.event.target);
+        var popup;
         if (d3_target.classed("wire")) {
             d3.event.preventDefault();
             contextMenuShowing = true;
@@ -260,7 +274,14 @@ e.svg().on('contextmenu',function (d,i) {
             d3.event.preventDefault();
             contextMenuShowing = true;
 
-            // Build the popup            
+            // Build the popup
+            var module_id = d3_target.datum().module_id;
+            var module = e.svg().datum().modules.find(function(m) {return m.module_id == module_id});
+            var fields = [];
+            if (module && module_defs[module.module] && module_defs[module.module].fields) {
+                fields = module_defs[module.module].fields;
+            } 
+            
             popup = d3.select("#editor_div")
             .append("div")
             .attr("class", "popup")
@@ -268,11 +289,30 @@ e.svg().on('contextmenu',function (d,i) {
             .style("top", d3.event.y + "px")
             .append("ul")
             
-            popup.append("li").text("configure").on("click", function() {alert("implement configure"); d3.select(".popup").remove(); contextMenuShowing=false;});
+            popup.append("li").text("Edit title")
+              .on("click", function() {
+                d3.select(".popup").remove(); 
+                contextMenuShowing=false;
+                var new_title = prompt("New title:", module.title);
+                console.log(new_title);
+                if (new_title != null) {
+                  module.title = new_title;
+                  d3.select('g.module[module_id="' + module_id + '"]').select("g.title text")
+                    .text(new_title);
+                }                  
+              });
+            if (fields.length > 0) {
+              popup.append("ul").text("Configure:").selectAll('li').data(fields)
+                  .enter()
+                  .append("li")
+                      .text(function(d) {return d.id})
+                      .on("click", edit_field(module))
+            }
+                    
+                    
             popup.append("hr")
             popup.append("li").text("delete").on("click", function() {
-                console.log(d3_target.datum().module_id);
-                var module_id = d3_target.datum().module_id;
+                console.log(d3_target.datum().module_id);               
                 e.svg().datum().modules = e.svg().datum().modules.filter(function(d) { return d.module_id != module_id});
                 d3.select(".popup").remove(); 
                 e.update();
@@ -282,6 +322,55 @@ e.svg().on('contextmenu',function (d,i) {
                      
     }
 })
+
+function edit_field(module) {
+    var field_editor = function(d,i) {
+      // first, clean up the contextmenu that brought us here:
+      d3.select(".popup").remove(); 
+      contextMenuShowing=false;
+      
+      var field_id = d.id,
+          field_default = d.default;
+      var config = (module.config || {})[field_id];
+      if (config == null) {
+        config = field_default;
+      }        
+      var fe = d3.select("#field_editor_div")
+      fe.selectAll("div").remove();
+      fe.append("div")
+        .text("Editing: " + d.id);
+      var input = fe.append("div")
+        .append("input")
+        .attr("type", "textarea")
+        .attr("value", JSON.stringify(config))
+      var feb = fe.append("div")
+      
+      feb.append("button")
+        .attr("value", "submit")
+        .text("submit")
+        .on("click", function() {
+          
+          var value = input.node().value;
+          try {
+            var parsed_val = JSON.parse(value);
+            if (!module.config) {module.config = {}};
+            module.config[field_id] = parsed_val;
+            d3.selectAll("#field_editor_div div").remove();
+          }
+          catch (error) {
+            alert("invalid JSON value: " + value);
+          }
+        });
+      feb.append("button")
+        .attr("value", "cancel")
+        .text("cancel")
+        .on("click", function() {
+          d3.selectAll("#field_editor_div div").remove();
+        });
+          
+    }
+    return field_editor;
+}
 
 instruments = {};
 module_defs = {};
@@ -365,4 +454,5 @@ d3.select("#upload_template").on("change", loadData);
 </div>
 <div id="editor_div">
 </div>
+<div id="field_editor_div"></div>
 </body>
