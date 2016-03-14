@@ -53,7 +53,6 @@ webreduce.editor = webreduce.editor || {};
       webreduce.server_api.calc_terminal(active_template, {}, module_index, input_datasets_id);
     
     input_datasets_promise.then(function(datasets_in) {
-      console.log('datasets in: ', datasets_in);
       fields.forEach(function(field) {
         if (webreduce.editor.make_fieldUI[field.datatype]) {
           webreduce.editor.make_fieldUI[field.datatype](field, active_template, module_index, module_def, target, datasets_in);
@@ -101,6 +100,9 @@ webreduce.editor = webreduce.editor || {};
     });
     //$("#xscale, #yscale").change(handleChecked);
     mychart.zoomRect(true);
+    // this needs to be implemented in the chart library:
+    //webreduce.callbacks.resize_center = mychart.autofit;
+    return mychart
   }
 
   webreduce.editor.accept_parameters = function(target, active_module) {
@@ -152,6 +154,7 @@ webreduce.editor = webreduce.editor || {};
         $(".remote_filebrowser").trigger("fileinfo.update", d3.select(this).datum());
       });
     $("#fileinfo").buttonset();
+    webreduce.callbacks.resize_center = webreduce.handleChecked;
     webreduce.handleChecked();    
   }
   

@@ -34,8 +34,8 @@ webreduce.instruments = webreduce.instruments || {};
       return vars;
     }
 
-    webreduce.hooks = {};
-    webreduce.hooks.resize_center = null;
+    webreduce.callbacks = {};
+    webreduce.callbacks.resize_center = function() {};
     
 
     window.onpopstate = function(e) {
@@ -60,7 +60,7 @@ webreduce.instruments = webreduce.instruments || {};
         ,  west__onresize:	    $.layout.callbacks.resizePaneAccordions
         ,  east__onresize:	    $.layout.callbacks.resizePaneAccordions
         ,  south__onresize:     $.layout.callbacks.resizePaneAccordions
-        ,  center__onresize:    webreduce.hooks.resize_center
+        ,  center__onresize:    function() {webreduce.callbacks.resize_center()}
       });
 
       layout.toggle('east');
