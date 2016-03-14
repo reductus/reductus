@@ -7,7 +7,6 @@ from __future__ import division
 import numpy as np
 
 from ..uncertainty import Uncertainty as U, interp
-from ..refldata import QZ_FROM_SAMPLE, QZ_FROM_DETECTOR
 
 def apply_specular_mask(data):
     theta_i = data.sample.angle_x
@@ -51,6 +50,9 @@ def subtract_background(spec, backp, backm):
 
     Returns I, varI
     """
+    #print "spec",spec
+    #print "+",backp
+    #print "-",backm
 
     spec_v = U(spec.v, spec.dv**2)
     backp_v = U(backp.v, backp.dv**2) if backp else None

@@ -590,6 +590,7 @@ def rescale(data, scale=1.0, dscale=0.0):
     apply_rescale(data, scale, dscale)
     return data
 
+#@nocache
 @module
 def join(data, tolerance=0.05, order='file'):
     """
