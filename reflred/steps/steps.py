@@ -143,6 +143,7 @@ def monitor_dead_time(data, dead_time, nonparalyzing=0.0, paralyzing=0.0):
 
     2015-12-17 Paul Kienzle
     """
+    from numpy import isfinite
     from .deadtime import apply_monitor_dead_time
 
     data = copy(data)
@@ -152,12 +153,12 @@ def monitor_dead_time(data, dead_time, nonparalyzing=0.0, paralyzing=0.0):
                  % (nonparalyzing, paralyzing))
         apply_monitor_dead_time(data, tau_NP=nonparalyzing,
                                 tau_P=paralyzing)
-    elif dead_time != None:
+    elif dead_time is not None:
         data.log('monitor_dead_time(dead_time)')
         data.log_dependency('dead_time', dead_time)
         apply_monitor_dead_time(data, tau_NP=dead_time.tau_NP,
                                 tau_P=dead_time.tau_P)
-    elif data.monitor.deadtime is not None:
+    elif data.monitor.deadtime is not None and isfinite(data.monitor.deadtime):
         try:
             tau_NP, tau_P = data.monitor.deadtime
         except:
@@ -196,6 +197,7 @@ def detector_dead_time(data, dead_time, nonparalyzing=0.0, paralyzing=0.0):
 
     2015-12-17 Paul Kienzle
     """
+    from numpy import isfinite
     from .deadtime import apply_detector_dead_time
 
     data = copy(data)
@@ -205,12 +207,12 @@ def detector_dead_time(data, dead_time, nonparalyzing=0.0, paralyzing=0.0):
                  % (nonparalyzing, paralyzing))
         apply_detector_dead_time(data, tau_NP=nonparalyzing,
                                 tau_P=paralyzing)
-    elif dead_time != None:
+    elif dead_time is not None:
         data.log('detector_dead_time(dead_time)')
         data.log_dependency('dead_time', dead_time)
         apply_detector_dead_time(data, tau_NP=dead_time.tau_NP,
                                 tau_P=dead_time.tau_P)
-    elif data.detector.deadtime is not None:
+    elif data.detector.deadtime is not None and isfinite(data.monitor.deadtime):
         try:
             tau_NP, tau_P = data.detector.deadtime
         except:
@@ -588,6 +590,7 @@ def rescale(data, scale=1.0, dscale=0.0):
     apply_rescale(data, scale, dscale)
     return data
 
+#@nocache
 @module
 def join(data, tolerance=0.05, order='file'):
     """
@@ -962,7 +965,7 @@ def super_load(filelist=None,
         if auto_divergence:
             data = divergence(data)
         if detector_correction:
-            data = detector_dead_time(data)
+            data = detector_dead_time(data, None)
         if monitor_correction:
             data = monitor_dead_time(data, None)
         data = mark_intent(data, intent)

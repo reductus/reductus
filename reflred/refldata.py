@@ -920,7 +920,7 @@ class ReflData(object):
 
     def __str__(self):
         base = [_str(self,indent=2)]
-        others = ["  "+s+"\n"+str(getattr(self,s))
+        others = ["".join(("  ", s, "\n", str(getattr(self,s))))
                   for s in ("slit1", "slit2", "slit3", "slit4",
                             "sample", "detector", "monitor", "roi")
                   ]
@@ -969,10 +969,10 @@ class ReflData(object):
     def log_dependency(self, label, other):
         if other.messages:
             self.messages.append(label + ":")
-            self.messages.append(other.messages)
+            self.messages.extend("  "+s for s in other.messages)
         if other.warnings:
-            self.messages.append(label + ":")
-            self.messages.append(other.messages)
+            self.warnings.append(label + ":")
+            self.warnings.extend("  "+s for s in other.warnings)
 
     def resetQ(self):
         """Recompute Qx,Qz from geometry and wavelength"""
