@@ -785,9 +785,9 @@ class ReflData(object):
                   'intent', 'Qz_target', 'angular_resolution',
                   'vlabel', 'vunits', 'xlabel', 'xunits',
                   'normbase', 'mask',
-                  'warnings', 'messages', "_v"
+                  'warnings', 'messages', "_v", "_dv"
                   ]
-    readonly_properties = ['v', 'x', 'Qz', 'Qx']
+    readonly_properties = ['v', 'dv', 'x', 'Qz', 'Qx']
     instrument = "unknown"
     geometry = "vertical"
     probe = "unknown"
