@@ -649,6 +649,7 @@ def join(data, tolerance=0.05, order='file'):
         result.log("join(*data)")
         for i, d in enumerate(group):
             result.log_dependency('data[%d]' % i, d)
+        #print "join", result.name, result.v, result.dv
         output.append(result)
     return output
 
@@ -740,6 +741,7 @@ def subtract_background(data, backp, backm):
         data.log_dependency("back+", backp)
     if backm is not None:
         data.log_dependency("back-", backm)
+    #print "%s - (%s+%s)/2"%(data.name, (backp.name if backp else "none"), (backm.name if backm else "none"))
     apply_background_subtraction(data, backp, backm)
     return data
 

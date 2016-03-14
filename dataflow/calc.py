@@ -204,7 +204,7 @@ def _eval_node(node_id, module, inputs, template_fields, user_fields):
         values = fields[name]
         if not par['multiple']:
             values = [values] if values is not None else []
-        #print node_id, name, values
+        #print "fields", node_id, name, values
         values = [_validate_par(node_id, par, value) for value in values]
         if len(values) == 0:
             del fields[name]
@@ -220,9 +220,12 @@ def _eval_node(node_id, module, inputs, template_fields, user_fields):
     for par in module.inputs:
         name = par["id"]
         values = inputs[name]
+        #print "inputs", node_id, name, values
         # for value in values: _check_datatype(par, value)
         if len(values) == 0:
-            fields[name] = [[]]*bundle_length
+            # If no inputs, then either send an empty list or None, depending
+            # on whether the input terminal is expecting a list or a singleton.
+            fields[name] = [(None if par["length"]==1 else [])]*bundle_length
         elif par["length"] == 0:
             fields[name] = [values]*bundle_length
         elif len(values) == bundle_length:
@@ -240,6 +243,7 @@ def _eval_node(node_id, module, inputs, template_fields, user_fields):
         action_args = dict((name,values[k]) for name, values in fields.items())
 
         # perform action
+        #print "args", node_id, k, action_args
         result = _do_action(module, **action_args)
 
         #print node_id,result

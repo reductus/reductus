@@ -50,25 +50,26 @@ def subtract_background(spec, backp, backm):
 
     Returns I, varI
     """
-    #print "spec",spec
-    #print "+",backp
-    #print "-",backm
-
+    #print "%s - (%s+%s)/2"%(spec.name, (backp.name if backp else "none"), (backm.name if backm else "none"))
     spec_v = U(spec.v, spec.dv**2)
     backp_v = U(backp.v, backp.dv**2) if backp else None
     backm_v = U(backm.v, backm.dv**2) if backm else None
 
+    #print "spec",spec_v,spec.v,spec.dv
+    #if backp: print "back+",backp_v,backp.v,backp.dv
+    #if backm: print "back-",backm_v,backm.v,backm.dv
+
     backp_v = interp(spec.Qz, backp.Qz_target, backp_v) if backp else None
     backm_v = interp(spec.Qz, backm.Qz_target, backm_v) if backm else None
 
-    #print "+",backp
-    #print "-",backm
     if backp and backm:
         spec_v -= (backp_v + backm_v)/2
     elif backp:
         spec_v -= backp_v
-    else:
+    elif backm:
         spec_v -= backm_v
+    else:
+        pass  # no background to subtract
 
     return spec_v.x, spec_v.variance
 
