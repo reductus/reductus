@@ -117,20 +117,21 @@ webreduce.instruments['ncnr.refl'] = webreduce.instruments['ncnr.refl'] || {};
     var datas = [], xcol;
     var ycol = "v", ylabel = "y-axis";
     var xcol = "x", xlabel = "x-axis";
-    var ynormcol = "monitor/counts";
+    //var ynormcol = "monitor/counts";
     refl_objs.forEach(function(entry) {
       var intent = entry['intent'];
       var ydata = get_refl_item(entry, ycol);
       var xdata = get_refl_item(entry, xcol);
       ylabel = get_refl_item(entry, "vlabel");
       xlabel = get_refl_item(entry, "xlabel");
-      var ynormdata = get_refl_item(entry, ynormcol);
+      //var ynormdata = get_refl_item(entry, ynormcol);
       var xydata = [], x, y, ynorm;
       for (var i=0; i<xdata.length || i<ydata.length; i++) {
         x = (i<xdata.length) ? xdata[i] : x; // use last value
         y = (i<ydata.length) ? ydata[i] : y; // use last value
-        ynorm = (i<ynormdata.length) ? ynormdata[i] : ynorm; // use last value
-        xydata[i] = [x,y/ynorm];
+        //ynorm = (i<ynormdata.length) ? ynormdata[i] : ynorm; // use last value
+        //xydata[i] = [x,y/ynorm];
+        xydata[i] = [x,y];
       }
       datas.push(xydata);
       series.push({label: entry.name + ":" + entry.entry});

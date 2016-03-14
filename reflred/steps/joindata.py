@@ -264,6 +264,7 @@ def join_columns(columns, tolerance):
     # build a structure to hold the results
     results = dict((k, []) for k in columns.keys())
 
+    #for k,v in columns.items(): print k, len(v), v
     # Merge points with nearly identical geometry by looping over the sorted
     # list, joining those within epsilon*delta of each other. The loop goes
     # one beyond the end so that the last group gets accumulated.
@@ -274,13 +275,15 @@ def join_columns(columns, tolerance):
         # use <= in condition so that identical points are combined when
         # tolerance is zero
         if (i < maximum
-                and abs(columns['dT'][i] - columns['dT'][current]) <= T_width
                 and abs(columns['Ti'][i] - columns['Ti'][current]) <= T_width
                 and abs(columns['Td'][i] - columns['Td'][current]) <= T_width
+                and abs(columns['dT'][i] - columns['dT'][current]) <= T_width
                 and abs(columns['dL'][i] - columns['dL'][current]) <= L_width
                 and abs(columns['L'][i] - columns['L'][current]) <= L_width):
+            #print "combining",current,i,T_width,L_width,[(k,columns[k][current],columns[k][i]) for k in 'Ti Td dT dL L'.split()]
             continue
         if i == current+1:
+            #print "adding point",current
             for k, v in columns.items():
                 results[k].append(v[current])
         else:
@@ -291,6 +294,8 @@ def join_columns(columns, tolerance):
             results['time'].append(np.sum(columns['time'][current:i]))
             results['monitor'].append(np.sum(columns['monitor'][current:i]))
             w = weight[current:i]
+            #print "adding range",current,i,[columns[k][current:i] for k in "v dv time monitor".split()]
+            #print "yields",[results[k][-1] for k in "v dv time monitor".split()]
             #print "join", current, i, w, tolerance
             for k, v in columns.items():
                 if k not in ['v', 'dv', 'time', 'monitor']:
@@ -300,6 +305,7 @@ def join_columns(columns, tolerance):
                     results[k].append(np.average(columns[k][current:i],
                                                  weights=w))
         current = i
+    #print "done", current, i, maximum
 
     # Turn lists into arrays
     results = dict((k, np.array(v)) for k, v in results.items())

@@ -614,6 +614,8 @@ def join(data, tolerance=0.05, order='file'):
     The joined datasets will be sorted as appropriate for the the
     measurement intent.  Masked points will be removed.
 
+    Data must be normalized before join.
+
     **Inputs**
 
     data (refldata[]) : data to join
@@ -913,6 +915,7 @@ def save(data, name='auto', ext='auto', path='auto'):
     filename = os.path.join(path, name+ext)
     data.save(filename)
 
+@cache
 @module
 def super_load(filelist=None,
                detector_correction=False,
@@ -941,7 +944,8 @@ def super_load(filelist=None,
     2016-03-03 Brian Maranville
     """
     from .load import url_load_list
-    from .intent import apply_intent
+    #from .intent import apply_intent
+    #from .angles import apply_divergence
     # Note: Fileinfo is a structure with
     #     { path: "location/on/server", mtime: timestamp }
 
@@ -953,24 +957,20 @@ def super_load(filelist=None,
     #
     auto_divergence = True
 
-    dataset = url_load_list(filelist)
-    if auto_divergence:
-        from .angles import apply_divergence
-        for data in dataset:
-            #data = copy(data)
-            #data.log('divergence()')
-            apply_divergence(data)
-            
-    if detector_correction:
-        dataset = [detector_dead_time(data, None) for data in dataset]
+    datasets = []
+    for data in url_load_list(filelist):
+        if auto_divergence:
+            data = divergence(data)
+        if detector_correction:
+            data = detector_dead_time(data)
+        if monitor_correction:
+            data = monitor_dead_time(data, None)
+        data = mark_intent(data, intent)
+        data = normalize(data)
+        #print "data loaded and normalized"
+        datasets.append(data)
 
-    if monitor_correction:
-        dataset = [monitor_dead_time(data, None) for data in dataset]
-
-    for data in dataset:
-        #data.log('mark_intent(%r)' % intent)
-        apply_intent(data, intent)
-    return dataset
+    return datasets
 
 # ==================
 

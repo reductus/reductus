@@ -19,6 +19,7 @@ def url_load(fileinfo):
     path, mtime, entries = fileinfo['path'], fileinfo['mtime'], fileinfo['entries']
     name = basename(path)
     check_datasource()
+    print "loading", path, entries
     try:
         url = urllib2.urlopen(DATA_SOURCE+path)
         url_time_struct = url.info().getdate('last-modified')
