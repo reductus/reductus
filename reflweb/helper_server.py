@@ -134,9 +134,14 @@ from dataflow.calc import process_template
 import dataflow.core as df
 
 from dataflow.modules.refl import define_instrument, INSTRUMENT
+from dataflow.modules import load
+load.DATA_SOURCES = config.data_sources
 
-use_redis()
-define_instrument(data_source=config.data_repository)
+if config.use_redis == True:
+    use_redis()
+
+define_instrument()
+
 
 def get_file_metadata(pathlist=None):
     if pathlist is None: pathlist = []
