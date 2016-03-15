@@ -59,12 +59,6 @@ webreduce.editor = webreduce.editor || {};
         }
       });
     });
-    //for (var n=0; n<fields.length; n++) {
-    //  var field = fields[n];
-    //  if (webreduce.editor.make_fieldUI[field.datatype]) {
-    //    webreduce.editor.make_fieldUI[field.datatype](field, active_template, module_index, module_def, target);
-    //  }
-    //}
   }
   
   webreduce.editor.handle_terminal_clicked = function() {
@@ -98,7 +92,6 @@ webreduce.editor = webreduce.editor || {};
           transform = this.value;
       mychart[axis](transform);  
     });
-    //$("#xscale, #yscale").change(handleChecked);
     mychart.zoomRect(true);
     // this has been implemented in the chart library:
     webreduce.callbacks.resize_center = mychart.autofit;
@@ -186,7 +179,7 @@ webreduce.editor = webreduce.editor || {};
     });
     webreduce.editor.show_plots(datasets);
     datum.value.forEach(function(index_list, i) {
-      var series_select = d3.select("#plotdiv svg g.series:nth-of-type(" + (i+1).toFixed() + ")");
+      var series_select = d3.select(d3.selectAll("#plotdiv svg g.series")[0][i]);
       index_list.forEach(function(index, ii) {
         series_select.select(".dot:nth-of-type(" + (index+1).toFixed() + ")").classed("masked", true);
       });
