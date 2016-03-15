@@ -133,6 +133,25 @@
     });
   }
 
+  webreduce.collate_sourcepaths = function(template) {
+    var sourcepaths = d3.set();
+    template.modules.forEach(function(m) {
+      var module_def = webreduce.editor._module_defs[m.module];
+      var file_fields = module_def.fields.filter(function(f) {return f.datatype == 'fileinfo'});
+      file_fields.forEach(function(ff) {
+        if (m.config && ff.id in m.config) {
+          var fileinfos = m.config[ff.id];
+          if (fileinfos instanceof Array) {
+            fileinfos.forEach(function(fi) {
+              var path = fi.path.split("/").slice(0,-1).join("/");
+              sourcepaths.add(path);
+            });
+          }
+        }
+      });
+    });
+    return sourcepaths;
+  }
   /*
   function finfo_to_tree(finfo, path, categorizers){
       var out = [], sample_names = {};
@@ -251,31 +270,8 @@
           dirbrowser.appendChild(subdiritem);
         });
 
-        //var deadtime_choose = document.createElement('div');
-        //deadtime_choose.classList.add("deadtime-chooser");
-        //var deadtime_text = document.createElement('span');
-        //deadtime_text.textContent = "deadtime correct:";
-        //deadtime_choose.appendChild(deadtime_text);
-        //var deadtime_detector = document.createElement('label');
-        //deadtime_detector.textContent = "det";
-        //var deadtime_detector_select = document.createElement('input');
-        //deadtime_detector_select.type = "checkbox";
-        //deadtime_detector_select.checked = true;
-        //deadtime_detector.appendChild(deadtime_detector_select);
-        //deadtime_choose.appendChild(deadtime_detector);
-        //var deadtime_monitor = document.createElement('label');
-        //deadtime_monitor.textContent = "mon";
-        //var deadtime_monitor_select = document.createElement('input');
-        //deadtime_monitor_select.type = "checkbox";
-        //deadtime_monitor_select.checked = true;
-        //deadtime_monitor.appendChild(deadtime_monitor_select);
-        //deadtime_choose.appendChild(deadtime_monitor);
-
         var filebrowser = document.createElement('div');
-        //filebrowser.id = "filebrowser";
         filebrowser.classList.add("remote_filebrowser");
-        //filebrowser.classList.add("tablesorter");
-
 
         $('#' + target_id).empty()
           .append(buttons)
@@ -328,7 +324,7 @@
       options.series = options.series.concat(new_plotdata.series);
       datas = datas.concat(new_plotdata.data);
       if (xcol != null && new_plotdata.xcol != xcol) {
-        throw "mismatched x axes in selection: " + xcol.toString() + " and " + new_plotdata.xcol.toString();
+        throw "mismatched x axes in selection: " + String(xcol) + " and " + String(new_plotdata.xcol);
       }
       else {
         xcol = new_plotdata.xcol;
