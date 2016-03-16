@@ -22,7 +22,8 @@ def url_get(fileinfo):
     name = basename(path)
     check_datasource(source)
     full_url = join(DATA_SOURCES[source], path)
-    print "loading", path, entries
+    url = None
+    print "loading", full_url
     try:
         url = urllib2.urlopen(full_url)
         url_time_struct = url.info().getdate('last-modified')
@@ -39,7 +40,8 @@ def url_get(fileinfo):
     except urllib2.HTTPError as exc:
         raise ValueError("Could not open %r\n%s"%(path, str(exc)))
     finally:
-        url.close()
+        if url is not None:
+            url.close()
         
     return ret
 

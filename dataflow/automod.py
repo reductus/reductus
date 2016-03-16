@@ -751,18 +751,22 @@ def _validate_one(par, value, as_default):
 def _finfo_check(name, value):
     try:
         if (not isinstance(value, dict)
-                or "path" not in value or "mtime" not in value
-                or (len(value)>2 and "entries" not in value)
-                or len(value)>3):
+                or "path" not in value 
+                or "mtime" not in value
+                or "source" not in value
+                or (len(value)>3 and "entries" not in value)
+                or len(value)>4):
             raise ValueError("wrong structure")
         value["path"] = _type_check(name, value["path"], str)
         value["mtime"] = _type_check(name, value["mtime"], int)
+        value["source"] = _type_check(name, value["source"], str)
         if value.setdefault("entries", None) is not None:
             value["entries"] = _list_check(name, value["entries"], 0, str)
+            
     except:
         #raise
-        raise ValueError("value is not {path: str, mtime: int, entries: [str, ...]} for %s"
-                         % name)
+        raise ValueError("value %r is not {source: str, path: str, mtime: int, entries: [str, ...]} for %s"
+                         % (value, name))
     return value
 
 def _list_check(name, values, n, ptype):

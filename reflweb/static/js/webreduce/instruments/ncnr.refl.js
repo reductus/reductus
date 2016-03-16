@@ -5,7 +5,7 @@ webreduce.instruments['ncnr.refl'] = webreduce.instruments['ncnr.refl'] || {};
 
 // define the loader and categorizers for ncnr.refl instrument
 (function(instrument) {
-  function load_refl(path, mtime, db){
+  function load_refl(datasource, path, mtime, db){
     var template = {
       "name": "loader_template",
       "description": "ReflData remote loader",
@@ -16,7 +16,7 @@ webreduce.instruments['ncnr.refl'] = webreduce.instruments['ncnr.refl'] || {};
       "instrument": "ncnr.magik",
       "version": "0.0"
     }
-    var config = {"0": {"filelist": [{"path": path, "mtime": mtime}]}},
+    var config = {"0": {"filelist": [{"path": path, "source": datasource, "mtime": mtime}]}},
         module_id = 0,
         terminal_id = "output";
     return webreduce.server_api.calc_terminal(template, config, module_id, terminal_id).then(function(result) {

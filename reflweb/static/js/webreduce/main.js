@@ -46,7 +46,7 @@ webreduce.instruments = webreduce.instruments || {};
       if (url_vars.pathlist && url_vars.pathlist.length) {
         start_path = url_vars.pathlist.split("+");
       }
-      webreduce.addRemoteSource("navigation", start_path);
+      webreduce.addRemoteSource("navigation", "ncnr", start_path);
     }
 
     

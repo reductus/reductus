@@ -16,7 +16,7 @@
     return output
   }
 
-  function categorizeFiles(files, files_metadata, path, target_in, instrument_id) {
+  function categorizeFiles(files, files_metadata, datasource, path, target_in, instrument_id) {
     var load_promises = [];
     var fileinfo = {};
     var file_objs = {};
@@ -30,7 +30,7 @@
       )});
     var loader = webreduce.instruments[instrument_id].load_file;
     datafiles.forEach(function(j) {
-      load_promises.push(loader(path + "/" + j, files_metadata[j].mtime, file_objs));
+      load_promises.push(loader(datasource, path + "/" + j, files_metadata[j].mtime, file_objs));
     });
     Promise.all(load_promises).then(function(results) {
       var categorizers = webreduce.instruments[instrument_id].categorizers;
@@ -121,11 +121,11 @@
     return out
   }
 
-  var add_remote_source = function(target_id, path) {
+  var add_remote_source = function(target_id, source, path) {
     var new_div = $("<div />", {"class": "remote-filebrowser"});
     $("#" + target_id).append(new_div);
-    webreduce.server_api.get_file_metadata(path).then(function(result) {
-      webreduce.updateFileBrowserPane(new_div[0], path, current_instrument)(result);
+    webreduce.server_api.get_file_metadata(source, path).then(function(result) {
+      webreduce.updateFileBrowserPane(new_div[0], source, path, current_instrument)(result);
     });
   }
 
@@ -213,7 +213,7 @@
     return path;
   }
 
-  function updateFileBrowserPane(target, pathlist, instrument_id) {
+  function updateFileBrowserPane(target, datasource, pathlist, instrument_id) {
       function handler(dirdata) {
         var buttons = $("<div />", {class: "buttons"});
         var clear_all = $("<button />", {text: "clear all"});
@@ -238,9 +238,9 @@
             dirlink.textContent = pathitem + "/";
             dirlink.onclick = function() {
               history.pushState({}, "", "?pathlist=" + new_pathlist.slice(0, index+1).join("+"));
-              webreduce.server_api.get_file_metadata(new_pathlist.slice(0, index+1))
+              webreduce.server_api.get_file_metadata(datasource, new_pathlist.slice(0, index+1))
               .then( function (metadata) {
-                 updateFileBrowserPane(target, new_pathlist.slice(0, index+1), instrument_id)(metadata);
+                 updateFileBrowserPane(target, datasource, new_pathlist.slice(0, index+1), instrument_id)(metadata);
               })
             }
             patheditor.appendChild(dirlink);
@@ -259,9 +259,9 @@
           new_pathlist.push(subdir);
           subdiritem.onclick = function() {
             history.pushState({}, "", "?pathlist=" + new_pathlist.join("+"));
-            webreduce.server_api.get_file_metadata(new_pathlist)
+            webreduce.server_api.get_file_metadata(datasource, new_pathlist)
               .then( function (metadata) {
-                 updateFileBrowserPane(target, new_pathlist, instrument_id)(metadata);
+                 updateFileBrowserPane(target, datasource, new_pathlist, instrument_id)(metadata);
               })
           }
           dirbrowser.appendChild(subdiritem);
@@ -279,7 +279,7 @@
 
         // instrument-specific categorizers
         // webreduce.instruments[instrument_id].categorizeFiles(files, metadata, pathlist.join("/"), target_id);
-        categorizeFiles(files, metadata, pathlist.join("/"), target, instrument_id);
+        categorizeFiles(files, metadata, datasource, pathlist.join("/"), target, instrument_id);
 
         //$(dirbrowser).selectable({
         //    filter:'td',

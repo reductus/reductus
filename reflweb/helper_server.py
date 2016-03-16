@@ -123,8 +123,7 @@ class ThreadedJSONRPCServer(SocketServer.ThreadingMixIn, SimpleJSONRPCServer):
     pass
     
 #server = SimpleJSONRPCServer(('localhost', 8001), encoding='utf8', requestHandler=JSONRPCRequestHandler)
-server = ThreadedJSONRPCServer((config.jsonrpc_servername, config.jsonrpc_port), encoding='utf8', requestHandler=JSONRPCRequestHandler)
-rpc_port = server.socket.getsockname()[1]
+
 #webbrowser.open_new_tab('http://localhost:%d/index.html?rpc_port=%d' % (http_port, rpc_port))
 
 import dataflow
@@ -142,25 +141,51 @@ if config.use_redis == True:
 
 define_instrument()
 
+def local_file_metadata(pathlist):
+    # only absolute paths are supported:
+    path = os.path.join(os.sep, *pathlist)
+    dirlisting = os.listdir(path)
+    subdirs = []
+    files = []
+    files_metadata = {}
+    for di in dirlisting:
+        d = os.path.join(path, di)
+        if os.path.isdir(d):
+            subdirs.append(di)
+        elif os.path.isfile(d):
+            files.append(di)
+            files_metadata[di] = {"mtime": int(os.path.getmtime(d))}
+        else:
+            # you've probably hit an unfulfilled path link or something.
+            pass
+            
+    metadata = {"subdirs": subdirs, "files": files, "pathlist": pathlist, "files_metadata": files_metadata} 
+    return metadata 
 
-def get_file_metadata(pathlist=None):
+
+def get_file_metadata(source="ncnr", pathlist=None):
     if pathlist is None: pathlist = []
-    print "get file metadata", pathlist
+    print "get file metadata", source, pathlist
     import urllib
     import urllib2
     import json
-
-    url = config.file_helper #'http://ncnr.nist.gov/ipeek/listftpfiles.php'
-    values = {'pathlist[]' : pathlist}
-    data = urllib.urlencode(values, True)
-    req = urllib2.Request(url, data)
-    #print "request",url,data
-    response = urllib2.urlopen(req)
-    fn = response.read()
-    #print "response",json.loads(fn)
-    # this converts json to python object, then the json-rpc lib converts it 
-    # right back, but it is more consistent for the client this way:
-    return json.loads(fn)
+    
+    if source == "local":
+        metadata = local_file_metadata(pathlist)
+    else:
+        url = config.file_helper_url[source] #'http://ncnr.nist.gov/ipeek/listftpfiles.php'
+        values = {'pathlist[]' : pathlist}
+        data = urllib.urlencode(values, True)
+        req = urllib2.Request(url, data)
+        #print "request",url,data
+        response = urllib2.urlopen(req)
+        fn = response.read()
+        metadata = json.loads(fn)
+        #print "response",json.loads(fn)
+        # this converts json to python object, then the json-rpc lib converts it 
+        # right back, but it is more consistent for the client this way:
+        
+    return metadata
 
 
 def get_instrument(instrument_id=INSTRUMENT):
@@ -251,14 +276,16 @@ def calc_template(template_def, config):
         output[module_key][terminal_id] = sanitizeForJSON(rv.todict())
     return output
         
-    
-server.register_function(get_file_metadata)
-server.register_function(refl_load)
-server.register_function(calc_terminal)
-server.register_function(calc_template)
-server.register_function(get_instrument)
-server.register_function(find_calculated)
-print "serving on",rpc_port
-server.serve_forever()
-print "done serving rpc forever"
-#httpd_process.terminate()
+if __name__ == '__main__':
+    server = ThreadedJSONRPCServer((config.jsonrpc_servername, config.jsonrpc_port), encoding='utf8', requestHandler=JSONRPCRequestHandler)
+    rpc_port = server.socket.getsockname()[1]
+    server.register_function(get_file_metadata)
+    server.register_function(refl_load)
+    server.register_function(calc_terminal)
+    server.register_function(calc_template)
+    server.register_function(get_instrument)
+    server.register_function(find_calculated)
+    print "serving on",rpc_port
+    server.serve_forever()
+    print "done serving rpc forever"
+    #httpd_process.terminate()
