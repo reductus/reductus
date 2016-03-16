@@ -121,8 +121,8 @@
     return out
   }
 
-  var add_remote_source = function(target_id, source, path) {
-    var new_div = $("<div />", {"class": "remote-filebrowser"});
+  var add_data_source = function(target_id, source, path) {
+    var new_div = $("<div />", {"class": "databrowser", "datasource": source});
     $("#" + target_id).append(new_div);
     webreduce.server_api.get_file_metadata(source, path).then(function(result) {
       webreduce.updateFileBrowserPane(new_div[0], source, path, current_instrument)(result);
@@ -212,6 +212,10 @@
     if (/\/$/.test(path)) {path = path.slice(0,-1)}
     return path;
   }
+  
+  var getDataSource = function(target) {
+    return $(target).attr("datasource");
+  }
 
   function updateFileBrowserPane(target, datasource, pathlist, instrument_id) {
       function handler(dirdata) {
@@ -300,6 +304,7 @@
       var jstree = $(this).jstree(true);
       if (jstree) {
         var path = getCurrentPath(this.parentNode);
+        var source = getDataSource(this.parentNode);
         var file_objs = webreduce.editor._file_objs[path] || {};
         //var selected_nodes = jstree.get_selected().map(function(s) {return jstree.get_node(s)});
         var checked_nodes = jstree.get_checked().map(function(s) {return jstree.get_node(s)});
@@ -311,7 +316,7 @@
               entryname = n.li_attr.entryname,
               filename = file_obj_key.split("/").slice(-1).join("");
               mtime = n.li_attr.mtime;
-          fileinfo.push({path: file_obj_key, mtime: mtime, entries: [entryname]})
+          fileinfo.push({path: file_obj_key, source: source, mtime: mtime, entries: [entryname]})
           /*var file_entry = n.li_attr.file_entry,
               file_obj = file_entry.split(":").slice(0,1).join(""),
               filename = file_obj.split("/").slice(-1).join(""),
@@ -357,6 +362,6 @@
   webreduce.updateFileBrowserPane = updateFileBrowserPane;
   webreduce.handleChecked = handleChecked;
   webreduce.getCurrentPath = getCurrentPath;
-  webreduce.addRemoteSource = add_remote_source;
+  webreduce.addDataSource = add_data_source;
 
 })();
