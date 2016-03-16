@@ -155,7 +155,8 @@ webreduce.instruments['ncnr.refl'] = webreduce.instruments['ncnr.refl'] || {};
     var propagate_up_levels = 2; // levels to push up xmin and xmax.
     var jstree = target.jstree(true);
     var source_id = target.parent().attr("id");
-    var file_objs = webreduce.editor._file_objs[source_id];
+    var path = webreduce.getCurrentPath(target.parent());
+    var file_objs = webreduce.editor._file_objs[path];
     var leaf, entry;
     // first set min and max for entries:
     for (fn in jstree._model.data) {

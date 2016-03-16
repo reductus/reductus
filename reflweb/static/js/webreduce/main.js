@@ -46,10 +46,11 @@ webreduce.instruments = webreduce.instruments || {};
       if (url_vars.pathlist && url_vars.pathlist.length) {
         start_path = url_vars.pathlist.split("+");
       }
-      webreduce.server_api.get_file_metadata(start_path).then(webreduce.updateFileBrowserPane("remote_source_1", start_path, current_instrument));
+      var target = document.getElementById('remote_source_1');
+      webreduce.server_api.get_file_metadata(start_path).then(webreduce.updateFileBrowserPane(target, start_path, current_instrument));
     }
 
-    window.onpopstate();
+    
 
     window.onload = function() {
       var layout = $('body').layout({
@@ -111,6 +112,8 @@ webreduce.instruments = webreduce.instruments || {};
       webreduce.editor.create_instance("bottom_panel");
       webreduce.editor.load_instrument(current_instrument)
         .then(function(instrument_def) { webreduce.editor.load_template(instrument_def.templates[0]); });
+        
+      window.onpopstate();
   }
 
 })();
