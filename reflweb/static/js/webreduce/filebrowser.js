@@ -124,9 +124,7 @@
   var add_remote_source = function(target_id, path) {
     var new_div = $("<div />", {"class": "remote-filebrowser"});
     $("#" + target_id).append(new_div);
-    //$("#" + target_id + " #processed_data").before(new_div);
     webreduce.server_api.get_file_metadata(path).then(function(result) {
-      //metadata = JSON.parse(result.result);
       webreduce.updateFileBrowserPane(new_div[0], path, current_instrument)(result);
     });
   }
@@ -359,6 +357,6 @@
   webreduce.updateFileBrowserPane = updateFileBrowserPane;
   webreduce.handleChecked = handleChecked;
   webreduce.getCurrentPath = getCurrentPath;
-  webreduce.add_remote_source = add_remote_source;
+  webreduce.addRemoteSource = add_remote_source;
 
 })();

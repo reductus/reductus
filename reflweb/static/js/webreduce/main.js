@@ -46,8 +46,7 @@ webreduce.instruments = webreduce.instruments || {};
       if (url_vars.pathlist && url_vars.pathlist.length) {
         start_path = url_vars.pathlist.split("+");
       }
-      var target = document.getElementById('remote_source_1');
-      webreduce.server_api.get_file_metadata(start_path).then(webreduce.updateFileBrowserPane(target, start_path, current_instrument));
+      webreduce.addRemoteSource("navigation", start_path);
     }
 
     
