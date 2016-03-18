@@ -234,6 +234,26 @@ webreduce.editor = webreduce.editor || {};
           .on("change", function(d) { datum.value = this.value });
   }
   
+  webreduce.editor.make_fieldUI.opt = function(field, active_template, module_index, module_def, target) {
+    var active_module = active_template.modules[module_index];
+    var value = (active_module.config && field.id in active_module.config) ? active_module.config[field.id] : field.default;
+    var datum = {"id": field.id, "value": value};
+    target.append("div")
+      .classed("fields", true)
+      .datum(datum)
+      .append("label")
+        .text(field.label)
+        .append("select")
+          .attr("field_id", field.id)
+          .attr("value", value)
+          .on("change", function(d) { datum.value = this.value })
+          .selectAll("option").data(field.typeattr.choices)
+            .enter().append("option")
+            .attr("value", function(d) {return d[1]})
+            .property("selected", function(d) {return d[1] == value})
+            .text(function(d) {return d[0]});
+  }
+  
   webreduce.editor.make_fieldUI.float = function(field, active_template, module_index, module_def, target) {
     var active_module = active_template.modules[module_index];
     var value = (active_module.config && field.id in active_module.config) ? active_module.config[field.id] : field.default;
