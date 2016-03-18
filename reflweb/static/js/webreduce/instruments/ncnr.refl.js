@@ -58,49 +58,6 @@ webreduce.instruments['ncnr.refl'] = webreduce.instruments['ncnr.refl'] || {};
     }
     return result;
   }
-
-    
-  function plot_files(file_objs, entry_ids) {
-    // entry_ids is list of {path: path, filename: filename, entryname: entryname} ids
-    var series = new Array();
-    var options = {
-      series: series,
-      legend: {show: true, left: 150},
-      axes: {xaxis: {label: "x-axis"}, yaxis: {label: "y-axis"}}
-    };
-    var datas = [], xcol;
-    var ycol = "detector/counts";
-    var ynormcol = "monitor/counts";
-    entry_ids.forEach(function(eid) {
-      var refl = file_objs[eid.file_obj]
-      var entry = refl.filter(function(r) {return r.entry == eid.entryname})[0]
-      var intent = entry['intent'];
-      var new_xcol = primary_axis[intent];
-      if (xcol != null && new_xcol != xcol) {
-        throw "mismatched x axes in selection: " + xcol.toString() + " and " + new_xcol.toString();
-      }
-      else {
-        xcol = new_xcol;
-      }
-      var ydata = get_refl_item(entry, ycol);
-      var xdata = get_refl_item(entry, xcol);
-      var ynormdata = get_refl_item(entry, ynormcol);
-      var xydata = [], x, y, ynorm;
-      for (var i=0; i<xdata.length || i<ydata.length; i++) {
-        x = (i<xdata.length) ? xdata[i] : x; // use last value
-        y = (i<ydata.length) ? ydata[i] : y; // use last value
-        ynorm = (i<ynormdata.length) ? ynormdata[i] : ynorm; // use last value
-        xydata[i] = [x,y/ynorm];
-      }
-      datas.push(xydata);
-      series.push({label: entry.name + ":" + entry.entry});
-
-    });
-    ycol = "detector/counts";
-    ynormcol = "monitor/counts";
-
-    return {xcol: xcol, ycol: ycol, series: series, data: datas};
-  }
   
   function plot(refl_objs) {
     // entry_ids is list of {path: path, filename: filename, entryname: entryname} ids
@@ -138,7 +95,6 @@ webreduce.instruments['ncnr.refl'] = webreduce.instruments['ncnr.refl'] || {};
   } 
   
   instrument.plot = plot;
-  instrument.plot_files = plot_files;
   instrument.load_file = load_refl; 
   instrument.categorizers = [
     function(info) { return info.sample.name },
@@ -161,7 +117,7 @@ webreduce.instruments['ncnr.refl'] = webreduce.instruments['ncnr.refl'] || {};
         entry = file_objs[leaf.li_attr.filename].filter(function(f) {return f.entry == leaf.li_attr.entryname});
         if (entry && entry[0]) {
           var e = entry[0];
-          var xaxis = primary_axis[e.intent || 'specular'];
+          var xaxis = 'x'; // primary_axis[e.intent || 'specular'];
           if (!(get_refl_item(entry[0], xaxis))) { console.log(entry[0]); throw "error: no such axis " + xaxis + " in entry for intent " + e.intent }
           var extent = d3.extent(get_refl_item(entry[0], xaxis));
           leaf.li_attr.xmin = extent[0];

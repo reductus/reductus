@@ -301,7 +301,7 @@
 
   function handleChecked(d, i, stopPropagation) {
     var instrument_id = webreduce.editor._instrument_id;
-    var xcol,
+    var xlabel, ylabel
         datas = [],
         options={series: [], axes: {xaxis: {label: "x-axis"}, yaxis: {label: "y-axis"}}},
         fileinfo = [];
@@ -316,27 +316,30 @@
         var entrynodes = checked_nodes.filter(function(n) {
           return (n.li_attr.filename != null && n.li_attr.entryname != null)
         });
-        var entry_ids = entrynodes.map(function(n) {
+        var entry_objs = entrynodes.map(function(n) {
           var file_obj_key = n.li_attr.filename,
+              file_obj = file_objs[file_obj_key],
               entryname = n.li_attr.entryname,
-              filename = file_obj_key.split("/").slice(-1).join("");
+              entry_obj = file_obj.find(function(r) {return r.entry == entryname}),
+              filename = file_obj_key.split("/").slice(-1).join(""),
               mtime = n.li_attr.mtime;
-          fileinfo.push({path: file_obj_key, source: source, mtime: mtime, entries: [entryname]})
-          /*var file_entry = n.li_attr.file_entry,
-              file_obj = file_entry.split(":").slice(0,1).join(""),
-              filename = file_obj.split("/").slice(-1).join(""),
-              entryname = file_entry.split(":").slice(-1).join("");
-          */
-          return {file_obj: file_obj_key, filename: filename, entryname: entryname}
+          fileinfo.push({path: file_obj_key, source: source, mtime: mtime, entries: [entryname]});
+          return entry_obj;
         });
-        var new_plotdata = webreduce.instruments[instrument_id].plot_files(file_objs, entry_ids);
+        var new_plotdata = webreduce.instruments[instrument_id].plot(entry_objs);
         options.series = options.series.concat(new_plotdata.series);
         datas = datas.concat(new_plotdata.data);
-        if (xcol != null && new_plotdata.xcol != xcol) {
-          throw "mismatched x axes in selection: " + String(xcol) + " and " + String(new_plotdata.xcol);
+        if (xlabel != null && new_plotdata.xlabel != xlabel) {
+          throw "mismatched x axes in selection: " + String(xlabel) + " and " + String(new_plotdata.xlabel);
         }
         else {
-          xcol = new_plotdata.xcol;
+          xlabel = new_plotdata.xlabel;
+        }
+        if (ylabel != null && new_plotdata.ylabel != ylabel) {
+          throw "mismatched y axes in selection: " + String(ylabel) + " and " + String(new_plotdata.ylabel);
+        }
+        else {
+          ylabel = new_plotdata.ylabel;
         }
       }
     });
@@ -345,8 +348,8 @@
     }
     //options.axes.xaxis.label = "Qz (target)";
     options.legend = {"show": true, "left": 125};
-    options.axes.xaxis.label = xcol;
-    options.axes.yaxis.label = "counts/monitor";
+    options.axes.xaxis.label = xlabel;
+    options.axes.yaxis.label = ylabel;
     options.xtransform = $("#xscale").val();
     options.ytransform = $("#yscale").val();
     var mychart = new xyChart(options);
