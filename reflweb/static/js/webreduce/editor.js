@@ -5,7 +5,14 @@ webreduce.editor = webreduce.editor || {};
 
 (function () {
 	webreduce.editor.dispatch = d3.dispatch("accept");
-	
+
+  webreduce.guid = function() {
+    var uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      var r = Math.random()*16|0,v=c=='x'?r:r&0x3|0x8;
+      return v.toString(16);});
+    return uuid;
+  }
+
   webreduce.editor.create_instance = function(target_id) {
     // create an instance of the dataflow editor in
     // the html element referenced by target_id
