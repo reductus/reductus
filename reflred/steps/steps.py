@@ -378,7 +378,7 @@ def divergence(data):
     2015-12-17 Paul Kienzle
     """
     from .angles import apply_divergence
-    data = copy(data)
+    #data = copy(data)
     data.log('divergence()')
     apply_divergence(data)
     return data
