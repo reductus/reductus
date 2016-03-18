@@ -22,10 +22,6 @@ webreduce.instruments['ncnr.refl'] = webreduce.instruments['ncnr.refl'] || {};
     return webreduce.server_api.calc_terminal(template, config, module_id, terminal_id).then(function(result) {
       result.values.forEach(function(v) {v.mtime = mtime});
       if (db) { db[path] = result.values; }
-      //console.log(result.result);
-      if (webreduce.statusline_log) {
-        webreduce.statusline_log("loaded: " + path);
-      }
       return result.values
     })
   }
