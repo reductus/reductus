@@ -29,11 +29,12 @@
       (/^scripted_findpeak/.test(x) == false)
       )});
     var loader = webreduce.instruments[instrument_id].load_file;
+    var numloaded = 0;
     var numdatafiles = datafiles.length;
     datafiles.forEach(function(j, i) {
       load_promises.push(
         loader(datasource, path + "/" + j, files_metadata[j].mtime, file_objs)
-          .then(function(r) {webreduce.statusline_log("loaded " + (i+1) + " of " + numdatafiles + ": "+ j); return r})
+          .then(function(r) {webreduce.statusline_log("loaded " + (++numloaded) + " of " + numdatafiles + ": "+ j); return r})
         );
     });
     Promise.all(load_promises).then(function(results) {
