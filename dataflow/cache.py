@@ -7,7 +7,7 @@ def memory_cache():
     return fakeredis.MemoryCache()
 
 # port 6379 is the default port value for the python redis connection
-def redis_connect(host="localhost", port=6379, **kwargs):
+def redis_connect(host="localhost", port=6379, maxmemory=4.0, **kwargs):
     """
     Open a redis connection.
 
@@ -19,10 +19,13 @@ def redis_connect(host="localhost", port=6379, **kwargs):
 
     # ensure redis is running, at least if we are not on a windows box
     if host == "localhost" and not sys.platform=='win32':
-        os.system("nohup redis-server --maxmemory 4gb --maxmemory-policy --port %d allkeys-lru > /dev/null 2>&1 &"
+        os.system("nohup redis-server --maxmemory 4gb --maxmemory-policy allkeys-lru --port %d  > /dev/null 2>&1 &"
                   % port)
 
     cache = redis.Redis(host=host, port=port, **kwargs)
+    # set the memory settings for already-running Redis:
+    cache.config_set("maxmemory", "%d" % (int(maxmemory*2**30),))
+    cache.config_set("maxmemory-policy", "allkeys-lru")
 
     try:
         cache.info()
