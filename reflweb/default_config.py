@@ -20,4 +20,6 @@ data_sources = {
     "ncnr": "http://ncnr.nist.gov/pub/",
     "local": "file:///"
 }
-file_helper = "http://ncnr.nist.gov/ipeek/listftpfiles.php"
+file_helper_url = {
+    "ncnr": "http://ncnr.nist.gov/ipeek/listftpfiles.php"
+}
