@@ -380,7 +380,7 @@ class Detector(object):
     properties=["dims",'distance','size','center','widths_x','widths_y',
                 'angle_x','angle_y','rotation','efficiency','saturation',
                 'wavelength','wavelength_resolution','time_of_flight',
-                'counts','counts_variance']
+                'counts','counts_variance', 'deadtime']
     dims = [1,1] # i,j
     distance = None # mm
     size = [1,1]  # mm
@@ -396,6 +396,7 @@ class Detector(object):
     wavelength_resolution = 0 # angstrom
     time_of_flight = None  # ms
     counts = None
+    deadtime = None
 
     @property
     def solid_angle(self):
