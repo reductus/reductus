@@ -200,8 +200,9 @@ def detector_dead_time(data, dead_time, nonparalyzing=0.0, paralyzing=0.0):
     from numpy import isfinite
     from .deadtime import apply_detector_dead_time
 
-    data = copy(data)
-    data.detector = copy(data.detector)
+    #data = copy(data)
+    #data.detector = copy(data.detector)
+    data.log('trying to do detector_dead_time()' + str(data.detector.deadtime))
     if nonparalyzing != 0.0 or paralyzing != 0.0:
         data.log('detector_dead_time(nonparalyzing=%.15g, paralyzing=%.15g)'
                  % (nonparalyzing, paralyzing))
@@ -592,7 +593,7 @@ def rescale(data, scale=1.0, dscale=0.0):
 
 #@nocache
 @module
-def join(data, tolerance=0.05, order='file'):
+def join(data, tolerance=0.05, order='file', group_by = "polarization"):
     """
     Join operates on a list of datasets, returning a list with one dataset,
     or one dataset per polarization state.  When operating on a single
@@ -629,6 +630,8 @@ def join(data, tolerance=0.05, order='file'):
 
     order (opt:file|time|theta|slit|none) : order determines which file is the
     base file, supplying the metadata for the joined set
+    
+    group_by (str) : key by which the files are grouped prior to join.
 
     **Returns**
 
@@ -637,10 +640,10 @@ def join(data, tolerance=0.05, order='file'):
     2016-03-02 Paul Kienzle
     """
     from .joindata import sort_files, join_datasets
-    from .util import group_by_xs
+    from .util import group_by_key
     # No copy necessary; join is never in-place.
 
-    datasets = group_by_xs(data).values()
+    datasets = group_by_key(group_by, data).values()
     output = []
     for group in datasets:
         group = sort_files(group, order)
@@ -946,7 +949,7 @@ def super_load(filelist=None,
 
     output (refldata[]): All entries of all files in the list.
 
-    2016-03-03 Brian Maranville
+    2016-03-21 Brian Maranville
     """
     from .load import url_load_list
     #from .intent import apply_intent

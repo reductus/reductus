@@ -32,6 +32,27 @@ def group_by_xs(datasets):
     #print "xs",cross_sections
     return cross_sections
 
+def group_by_key(key, datasets):
+    """
+    Return datasets grouped by a value that can be found in a refldata file.
+    Handle dotted namespace through recursive lookup.
+    Handle union with comma. (e.g. key = "polarization,sample.name" would 
+     create group where sample.name and polarization are the same for all)
+    """
+    groups = {}
+    key_items = key.split(",")
+    for data in datasets:
+        groupkey = []
+        for item in key_items:
+            item = item.strip()
+            value = data
+            for k in item.split("."):
+                value = getattr(value, k)
+            groupkey.append(value)
+        groupkey = tuple(sorted(groupkey))
+        groups.setdefault(groupkey, []).append(data)
+    return groups
+    
 
 def group_by_intent(datasets):
     """
