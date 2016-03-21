@@ -261,7 +261,7 @@ webreduce.editor = webreduce.editor || {};
             .text(function(d) {return d[0]});
   }
   
-  webreduce.editor.make_fieldUI.float = function(field, active_template, module_index, module_def, target) {
+  webreduce.editor.make_fieldUI.float = function(field, active_template, module_index, module_def, target, datasets_in) {
     var active_module = active_template.modules[module_index];
     var value = (active_module.config && field.id in active_module.config) ? active_module.config[field.id] : field.default;
     var datum = {id: field.id, value: value};
@@ -291,6 +291,42 @@ webreduce.editor = webreduce.editor || {};
     }
   }
 
+  webreduce.editor.make_fieldUI.float_expand = function(field, active_template, module_index, module_def, target, datasets_in) {
+    var active_module = active_template.modules[module_index];
+    var value = (active_module.config && field.id in active_module.config) ? active_module.config[field.id] : field.default;
+    var datum = {id: field.id, value: value};
+    if (field.multiple) { 
+      //datum.value = [datum.value]; 
+      target.append("div")
+        .classed("fields", true)
+        .datum(datum)
+        .append("label")           
+          .text(field.label)
+          .append("input")
+            .attr("type", "text")
+            .attr("field_id", field.id)
+            .attr("value", JSON.stringify(datum.value))
+            .on("change", function(d) { datum.value = JSON.parse(this.value) });
+    } else {
+      target.append("div")
+        .classed("fields", true)
+        .datum(datum)
+        .selectAll("label").data(d3.range(datasets_in.values.length))
+          .enter().append("label")
+          .text(field.label)
+          .append("input")
+            .attr("type", "number")
+            .attr("value", function(d,i) {return (value instanceof Array)? value[i] : value})
+            .on("change", function(d,i) { 
+              if (!(datum.value instanceof Array)) {
+                var new_value = d3.range(datasets_in.values.length).map(function() {return datum.value})
+                datum.value = new_value;
+              }
+              datum.value[i] = parseFloat(this.value);
+            });
+    }
+  }
+  
   webreduce.editor.make_fieldUI.int = function(field, active_template, module_index, module_def, target) {
     var active_module = active_template.modules[module_index];
     var value = (active_module.config && field.id in active_module.config) ? active_module.config[field.id] : field.default;
