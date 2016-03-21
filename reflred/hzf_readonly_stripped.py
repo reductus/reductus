@@ -78,6 +78,13 @@ class Node(object):
             # the item doesn't exist
             raise KeyError(path)
     
+    def get(self, path, default_value):
+        try: 
+            value = self.__getitem__(path)
+            return value
+        except KeyError:
+            return default_value
+    
     def add_field(self, path, **kw):
         FieldFile(self, path, **kw)
         
