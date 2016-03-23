@@ -155,9 +155,6 @@ __all__ = [
 
 import numpy as np
 from numpy import exp, sqrt, inf
-from scipy.optimize import curve_fit, minimize, brentq, bisect, fminbound
-
-from scipy import stats
 
 from uncertainties.unumpy import nominal_values as uval, std_devs as udev
 from uncertainties.unumpy import uarray
@@ -178,6 +175,7 @@ def masked_curve_fit(f, x, y, p0=None, sigma=None, fixed=None, method='lm', **kw
 
     Otherwise the interface is the same as *curve_fit*.
     """
+    from scipy.optimize import curve_fit
     # Hide fixed parameters
     if fixed is not None:
         p = p0+0.
@@ -330,9 +328,11 @@ def estimate_attenuation(observed_rate, tau_NP, tau_P, above=False):
     return A
 
 def _invert_below(Ipeak, Rpeak, r, n, p):
+    from scipy.optimize bisect
     return bisect(_forward, r, Ipeak, args=(n, p, r)) if r < Rpeak else Ipeak
 
 def _invert_above(Ipeak, Rpeak, r, n, p):
+    from scipy.optimize bisect
     return bisect(_forward, Ipeak, 1e6*Ipeak, args=(n, p, r)) if r < Rpeak else Ipeak
 
 def _forward(I, n, p, r):
@@ -445,6 +445,7 @@ def estimate_deadtime(datasets, mode='auto'):
         chisq_both = _chisq(p, prediction, x, y, dy)
         dof = len(y) - len(p0)
         F = (chisq_one - chisq_both)/(chisq_both/dof)
+        from scipy import stats
         pF = stats.f.cdf(F, 1, dof)
         #print("  chisq np=%.2f  p=%.2f  both=%.2f  p(F-stat)=%.3f"
         #      %(chisq_np, chisq_p, chisq_both, pF))
