@@ -5,7 +5,7 @@ Load a NeXus file into a reflectometry data structure.
 """
 import os
 import tempfile
-from zipfile import ZipFile, is_zipfile
+from zipfile import ZipFile, is_zipfile, _EndRecData
 
 import numpy as np
 import h5py as h5
@@ -95,7 +95,7 @@ def h5_open_zip(filename, file_obj=None, mode='r', **kw):
     """
     if file_obj is None:
         file_obj = open(filename, mode=mode)
-    is_zip = is_zipfile(file_obj)
+    is_zip = _EndRecData(file_obj) # is_zipfile(file_obj) doens't work in py2.6
     if is_zip and not filename.endswith('.zip'):
         # then it's a nexus-zip file, rather than
         # a zipped hdf5 nexus file
@@ -182,8 +182,9 @@ class NCNRNeXusRefl(refldata.ReflData):
         #self.detector.rotation = data_as(entry,'instrument/detector/rotation','degree')
         self.detector.wavelength = data_as(entry,'instrument/monochromator/wavelength','Ang')
         self.detector.wavelength_resolution = data_as(entry,'instrument/monochromator/wavelength_error','Ang')
-        self.detector.deadtime = data_as(entry,'instrument/single_detector/dead_time','us')
-
+        self.detector.deadtime = data_as(entry, 'instrument/single_detector/dead_time', 'us')
+        self.detector.deadtime_error = data_as(entry, 'instrument/single_detector/dead_time_error', 'us')
+        
         self.sample.name = entry['sample/name'][0] if 'name' in entry['sample'] else ""
         self.sample.description = entry['sample/description'][0] if 'description' in entry['sample'] else ""
         raw_intent = das['trajectoryData/_scanType'][0] if '_scanType' in das['trajectoryData'] else ""
