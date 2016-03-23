@@ -328,11 +328,11 @@ def estimate_attenuation(observed_rate, tau_NP, tau_P, above=False):
     return A
 
 def _invert_below(Ipeak, Rpeak, r, n, p):
-    from scipy.optimize bisect
+    from scipy.optimize import bisect
     return bisect(_forward, r, Ipeak, args=(n, p, r)) if r < Rpeak else Ipeak
 
 def _invert_above(Ipeak, Rpeak, r, n, p):
-    from scipy.optimize bisect
+    from scipy.optimize import bisect
     return bisect(_forward, Ipeak, 1e6*Ipeak, args=(n, p, r)) if r < Rpeak else Ipeak
 
 def _forward(I, n, p, r):
