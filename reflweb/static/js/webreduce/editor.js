@@ -151,7 +151,7 @@ webreduce.editor = webreduce.editor || {};
     target.selectAll("div#fileinfo input")
       .on("click", null)
       .on("click", function() {
-        $(".remote_filebrowser").trigger("fileinfo.update", d3.select(this).datum());
+        $(".remote-filebrowser").trigger("fileinfo.update", d3.select(this).datum());
       });
     $("#fileinfo").buttonset();
     webreduce.callbacks.resize_center = webreduce.handleChecked;
