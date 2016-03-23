@@ -314,6 +314,28 @@ def matplot2d(data, transform='log', aspect='auto'):
         toPlot = log10(array_out.T + lowest) if transform == 'log' else array_out.T
         imshow(toPlot, extent=extent, aspect=aspect, origin='lower')
         colorbar()
+        
+def gnuplot2d(data, transform='log'):
+    """ plot 2d data using matplotlib/pylab """
+    from numpy import log10
+    # grab the first counts col:
+    cols = data._info[2]['cols']
+    data_cols = [col['name'] for col in cols if col['name'].startswith('counts')]
+    
+    result = []
+    for colnum, col in enumerate(data_cols):      
+        array_out = data['Measurements':col].view(ndarray)
+        
+        dump = ""
+        xlist = data._info[0]['values'].tolist()
+        ylist = data._info[1]['values'].tolist()
+        for ix, x in enumerate(xlist):
+            dump += "\n"
+            for iy, y in enumerate(ylist):
+                dump += "%g\t%g\t%g\n" % (x, y, array_out[ix, iy])
+        result.append(dump)
+        
+    return result
 
 class CoordinateOffset(Filter2D):
     """ apply an offset to one or both of the coordinate axes """

@@ -81,7 +81,7 @@ def LoadMAGIKPSD(filename, path="", friendly_name="", collapse_y=True, auto_PolS
     #    return
     for entryname, entry in file_obj.items():
         active_slice = slice(None, DETECTOR_ACTIVE[0], DETECTOR_ACTIVE[1])
-        counts_value = entry['DAS_logs']['areaDetector']['counts'].value[:, :DETECTOR_ACTIVE[0], :DETECTOR_ACTIVE[1]]
+        counts_value = entry['DAS_logs']['areaDetector']['counts'].value[:, 1:DETECTOR_ACTIVE[0]+1, :DETECTOR_ACTIVE[1]]
         dims = counts_value.shape
         print dims
         ndims = len(dims)
