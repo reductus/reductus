@@ -28,6 +28,10 @@ svg {
   left: 0;
 }
 
+path.wire {
+    stroke-width: 5px !important;
+}
+
 .highlight {
   fill-opacity: 0.6 !important;
 }
@@ -263,7 +267,7 @@ e.svg().on('contextmenu',function (d,i) {
                         break;
                     }
                 };
-                parentNode.update();
+                e.update();
                 d3.select(".popup").remove(); 
                 contextMenuShowing=false;
                 
@@ -294,7 +298,6 @@ e.svg().on('contextmenu',function (d,i) {
                 d3.select(".popup").remove(); 
                 contextMenuShowing=false;
                 var new_title = prompt("New title:", module.title);
-                console.log(new_title);
                 if (new_title != null) {
                   module.title = new_title;
                   d3.select('g.module[module_id="' + module_id + '"]').select("g.title text")
