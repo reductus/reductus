@@ -80,7 +80,14 @@ def ncnr_load(filelist=None):
     # NB: Fileinfo is a structure with
     #     { path: "location/on/server", mtime: timestamp }
     from .load import url_load_list
-    return url_load_list(filelist)
+    auto_divergence = True
+
+    datasets = []
+    for data in url_load_list(filelist):
+        if auto_divergence:
+            data = divergence(data)
+        datasets.append(data)
+    return datasets
 
 @module
 def fit_dead_time(data, source='detector', mode='auto'):
@@ -195,7 +202,7 @@ def detector_dead_time(data, dead_time, nonparalyzing=0.0, paralyzing=0.0):
 
     output (refldata): Dead-time corrected data
 
-    2015-12-17 Paul Kienzle
+    2016-03-21 Paul Kienzle
     """
     from numpy import isfinite
     from .deadtime import apply_detector_dead_time
@@ -213,11 +220,13 @@ def detector_dead_time(data, dead_time, nonparalyzing=0.0, paralyzing=0.0):
         data.log_dependency('dead_time', dead_time)
         apply_detector_dead_time(data, tau_NP=dead_time.tau_NP,
                                 tau_P=dead_time.tau_P)
-    elif data.detector.deadtime is not None and isfinite(data.monitor.deadtime):
+    elif data.detector.deadtime is not None:
         try:
             tau_NP, tau_P = data.detector.deadtime
         except:
             tau_NP, tau_P = data.detector.deadtime, 0.0
+        tau_NP *= 1.0e6 # convert to microseconds
+        tau_P *= 1.0e6
         data.log('detector_dead_time()')
         apply_detector_dead_time(data, tau_NP=tau_NP, tau_P=tau_P)
     else:
@@ -470,7 +479,7 @@ def mark_intent(data, intent='auto'):
 
     data (refldata) : data file which may or may not have intent marked
 
-    intent (opt*:auto|infer|specular|background+|background-|slit
+    intent (opt:auto|infer|specular|background+|background-|slit
     |rock sample|rock detector|rock qx) : intent to register with the
     datafile, or auto/infer to guess
 
@@ -478,10 +487,10 @@ def mark_intent(data, intent='auto'):
 
     output (refldata) : marked data
 
-    2015-12-17 Paul Kienzle
+    2016-03-20 Paul Kienzle
     """
     from .intent import apply_intent
-    data = copy(data)
+    #data = copy(data)
     data.log('mark_intent(%r)' % intent)
     apply_intent(data, intent)
     return data
@@ -692,7 +701,7 @@ def align_background(data, offset='auto'):
     if offset is None:
         offset = 'auto'
     from .background import set_background_alignment
-    data = copy(data)
+    #data = copy(data)
     # TODO: do we want to log the alignment chosen when alignment is auto?
     # Or do we log the fact that auto alignment was chosen?
     set_background_alignment(data, offset)
@@ -701,7 +710,7 @@ def align_background(data, offset='auto'):
 
 
 @module
-def subtract_background(data, backp, backm):
+def subtract_background(data, backp, backm, auto_align=True):
     """
     Subtract the background datasets from the specular dataset.
 
@@ -727,12 +736,15 @@ def subtract_background(data, backp, backm):
     backp {Background+} (refldata?) : plus-offset background data
 
     backm {Background-} (refldata?) : minus-offset background data
+    
+    auto_align (bool?) : apply align_background to background inputs 
+    with offset='auto'
 
     **Returns**
 
     output (refldata) : background subtracted specular data
 
-    2015-12-17 Paul Kienzle
+    2016-03-23 Paul Kienzle
     """
     from .background import apply_background_subtraction
 
@@ -742,8 +754,12 @@ def subtract_background(data, backp, backm):
                 "backm" if backm is not None else "None"))
     if backp is not None:
         data.log_dependency("back+", backp)
+        if auto_align:
+            align_background(backp, offset='auto')
     if backm is not None:
         data.log_dependency("back-", backm)
+        if auto_align:
+            align_background(backm, offset='auto')
     #print "%s - (%s+%s)/2"%(data.name, (backp.name if backp else "none"), (backm.name if backm else "none"))
     apply_background_subtraction(data, backp, backm)
     return data
@@ -973,7 +989,7 @@ def super_load(filelist=None,
             data = detector_dead_time(data, None)
         if monitor_correction:
             data = monitor_dead_time(data, None)
-        data = mark_intent(data, intent)
+        data.intent = intent
         data = normalize(data)
         #print "data loaded and normalized"
         datasets.append(data)
