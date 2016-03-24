@@ -343,9 +343,10 @@ function edit_field(module) {
       fe.append("div")
         .text("Editing: " + d.id);
       var input = fe.append("div")
-        .append("input")
-        .attr("type", "textarea")
-        .attr("value", JSON.stringify(config))
+        .append("textarea")
+        .attr("rows", "10")
+        .style("width", "95%")
+        .text(JSON.stringify(config))
       var feb = fe.append("div")
       
       feb.append("button")
@@ -353,7 +354,7 @@ function edit_field(module) {
         .text("submit")
         .on("click", function() {
           
-          var value = input.node().value;
+          var value = input.text();
           try {
             var parsed_val = JSON.parse(value);
             if (!module.config) {module.config = {}};
