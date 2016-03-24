@@ -60,7 +60,7 @@ def apply_detector_dead_time(data, tau_NP=0.0, tau_P=0.0):
     m = data.detector.counts
     t = data.monitor.count_time
     dm = np.sqrt(data.detector.counts_variance
-                 if data.detector.counts_variance else data.detector.counts)
+                 if data.detector.counts_variance is not None else data.detector.counts)
     I, dI = estimate_incident((m/t, dm/t),
                               tau_NP=tau_NP, tau_P=tau_P)
     data.detector.counts, data.detector.counts_variance = I, dI**2
