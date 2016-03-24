@@ -4,7 +4,7 @@ import os
 
 def memory_cache():
     import fakeredis
-    return fakeredis.MemoryCache()
+    return fakeredis.FileBasedCache()
 
 # port 6379 is the default port value for the python redis connection
 def redis_connect(host="localhost", port=6379, maxmemory=4.0, **kwargs):
