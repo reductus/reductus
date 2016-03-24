@@ -710,7 +710,7 @@ def align_background(data, offset='auto'):
 
 
 @module
-def subtract_background(data, backp, backm, auto_align=True):
+def subtract_background(data, backp, backm, align="auto"):
     """
     Subtract the background datasets from the specular dataset.
 
@@ -737,7 +737,7 @@ def subtract_background(data, backp, backm, auto_align=True):
 
     backm {Background-} (refldata?) : minus-offset background data
     
-    auto_align (bool?) : apply align_background to background inputs 
+    align (opt:none|sample|detector|auto) : apply align_background to background inputs 
     with offset='auto'
 
     **Returns**
@@ -754,12 +754,12 @@ def subtract_background(data, backp, backm, auto_align=True):
                 "backm" if backm is not None else "None"))
     if backp is not None:
         data.log_dependency("back+", backp)
-        if auto_align:
-            align_background(backp, offset='auto')
+        if align != "none":
+            align_background(backp, offset=align)
     if backm is not None:
         data.log_dependency("back-", backm)
-        if auto_align:
-            align_background(backm, offset='auto')
+        if align != "none":
+            align_background(backm, offset=align)
     #print "%s - (%s+%s)/2"%(data.name, (backp.name if backp else "none"), (backm.name if backm else "none"))
     apply_background_subtraction(data, backp, backm)
     return data

@@ -27,15 +27,19 @@ def set_background_alignment(back, offset):
     """
     if offset is None or offset=='auto':
         if back.Qz_target and not np.isnan(back.Qz_target):  # for auto, if Qz_target is set then use it
+            back.Qz_basis = offset
             return
         offset = guess_background_offset(back)
-        A, B, L = back.sample.angle_x, back.detector.angle_x, back.detector.wavelength
-        if offset == 'sample':
-            back.Qz_target = 4*np.pi/L * np.sin(np.radians(A))
-        elif offset == 'detector':
-            back.Qz_target = 4*np.pi/L * np.sin(np.radians(B)/2)
-        back.Qz_basis = offset
-
+    
+    A, B, L = back.sample.angle_x, back.detector.angle_x, back.detector.wavelength
+    if offset == 'sample':
+        back.Qz_target = 4*np.pi/L * np.sin(np.radians(A))
+    elif offset == 'detector':
+        back.Qz_target = 4*np.pi/L * np.sin(np.radians(B)/2)
+    else:
+        raise KeyError('unknown offset: must be sample|detector')
+    back.Qz_basis = offset
+    
 
 # TODO: should only subtract items with the same angular resolution
 def subtract_background(spec, backp, backm):
