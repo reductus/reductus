@@ -1,5 +1,6 @@
 from dataflow import core as df
 from dataflow.automod import make_modules
+from dataflow import templates
 
 from reflred.steps import steps
 from reflred.steps import load
@@ -18,18 +19,22 @@ def define_instrument():
     poldata = df.DataType(INSTRUMENT+".poldata", PolarizationData)
     deadtime = df.DataType(INSTRUMENT+".deadtime", DeadTimeData)
 
-    import json
-    import os
-    from pkg_resources import resource_string, resource_listdir
-    template_names = [fn for fn in resource_listdir('dataflow', 'templates') if fn.endswith(".json")]
-    templates = [json.loads(resource_string('dataflow', 'templates/' + tn)) for tn in template_names]
+    #import json
+    #import os
+    #from pkg_resources import resource_string, resource_listdir
+    #template_names = [fn for fn in resource_listdir('dataflow', 'templates') if fn.endswith(".json")]
+    #templates = [json.loads(resource_string('dataflow', 'templates/' + tn)) for tn in template_names]
+    #template_path = resource_path("../dataflow/templates")
+    #template_names = [fn for fn in os.listdir(template_path) if fn.endswith(".json")]
+    #templates = [json.loads(open(os.path.join(template_path, tn), 'r').read()) for tn in template_names]
+    
     # Define instrument
     refl1d = df.Instrument(
         id=INSTRUMENT,
         name='NCNR reflectometer',
         menu=[('steps', modules)],
         datatypes=[refldata, poldata, deadtime],
-        template_defs = templates,
+        template_defs = templates.get_templates(),
         )
 
     # Register instrument
