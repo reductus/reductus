@@ -77,6 +77,7 @@ webreduce.instruments['ncnr.refl'] = webreduce.instruments['ncnr.refl'] || {};
       var ydata = get_refl_item(entry, ycol);
       var xdata = get_refl_item(entry, xcol);
       ylabel = get_refl_item(entry, "vlabel");
+      ylabel += "(" + get_refl_item(entry, "vunits") + ")";
       xlabel = get_refl_item(entry, "xlabel");
       //var ynormdata = get_refl_item(entry, ynormcol);
       var xydata = [], x, y, ynorm;
