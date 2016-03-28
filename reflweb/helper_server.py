@@ -1,4 +1,4 @@
-import os
+import os, sys
 import time
 import BaseHTTPServer, SocketServer
 from SimpleHTTPServer import SimpleHTTPRequestHandler
@@ -8,20 +8,20 @@ import urlparse
 from pprint import pprint
 import traceback
 
-from jsonrpclib.SimpleJSONRPCServer import SimpleJSONRPCServer, SimpleJSONRPCRequestHandler
-import jsonrpclib.config
+from reflweb.jsonrpclib.SimpleJSONRPCServer import SimpleJSONRPCServer, SimpleJSONRPCRequestHandler
+import reflweb.jsonrpclib.config
 
 try:
     import config
 except ImportError:
     import default_config as config
 
-jsonrpclib.config.use_jsonclass = False
+reflweb.jsonrpclib.config.use_jsonclass = False
 HandlerClass = SimpleHTTPRequestHandler
 ServerClass  = BaseHTTPServer.HTTPServer
 Protocol     = "HTTP/1.0"
 homepage = 'web_reduction_filebrowser.html'
-currdir = os.path.dirname( __file__ )
+currdir = getattr(sys, "_MEIPASS", os.path.dirname( __file__ ))
 
 
 #server_address = ('localhost', 0 ) # get next open socket
