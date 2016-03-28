@@ -408,23 +408,18 @@ webreduce.server_api.get_instrument(current_instrument)
 d3.select('#new_module').on("change", function(ev) {
     var title = this.value,
         module = module_names[this.selectedIndex];
-    e.data()[0].modules.push({module: module, title: title});
+    e.svg().datum().modules.push({module: module, title: title});
     e.update();
     this.selectedIndex=0;
 });
 
 d3.select("#show_value").on("click", function() { 
   var win = window.open();
-  win.document.write("<pre>" + JSON.stringify(e.data()[0], null, 2) + "</pre>");
+  win.document.write("<pre>" + JSON.stringify(e.export(), null, 2) + "</pre>");
 });
 
 d3.select("#show_example").on("click", function() {
-  e.data()[0].modules = [];
-  e.data()[0].wires=[];
-  e.update();
-  e.data()[0].modules = example.modules;
-  e.data()[0].wires = example.wires;
-  e.update();
+  e.import(example);
 });
 
 function loadData() {
@@ -434,12 +429,7 @@ function loadData() {
     var reader = new FileReader();
     reader.onload = function(ev) {
         var template = JSON.parse(this.result);
-        e.data()[0].modules = [];
-        e.data()[0].wires=[];
-        e.update();
-        e.data()[0].modules = template.modules;
-        e.data()[0].wires = template.wires;
-        e.update();
+        e.import(template);
     }
     reader.readAsText(file);
 }
