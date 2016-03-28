@@ -21,6 +21,8 @@ HandlerClass = SimpleHTTPRequestHandler
 ServerClass  = BaseHTTPServer.HTTPServer
 Protocol     = "HTTP/1.0"
 homepage = 'web_reduction_filebrowser.html'
+# this is specifically to support pyinstaller, which uses this special
+# key in sys for the temp directory for single-file executables.
 currdir = getattr(sys, "_MEIPASS", os.path.dirname( __file__ ))
 
 
