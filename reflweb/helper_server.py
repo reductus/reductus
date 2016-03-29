@@ -1,33 +1,34 @@
 import os, sys
 import time
-import BaseHTTPServer, SocketServer
-from SimpleHTTPServer import SimpleHTTPRequestHandler
+#import BaseHTTPServer, SocketServer
+#from SimpleHTTPServer import SimpleHTTPRequestHandler
 #import multiprocessing
 #import webbrowser
+import SocketServer
 import urlparse
 from pprint import pprint
 import traceback
-
-from reflweb.jsonrpclib.SimpleJSONRPCServer import SimpleJSONRPCServer, SimpleJSONRPCRequestHandler
-import reflweb.jsonrpclib.config
 
 try:
     import config
 except ImportError:
     import default_config as config
+    
+from jsonrpclib.SimpleJSONRPCServer import SimpleJSONRPCServer, SimpleJSONRPCRequestHandler
+import jsonrpclib.config
 
-reflweb.jsonrpclib.config.use_jsonclass = False
-HandlerClass = SimpleHTTPRequestHandler
-ServerClass  = BaseHTTPServer.HTTPServer
+jsonrpclib.config.use_jsonclass = False
+
 Protocol     = "HTTP/1.0"
 homepage = 'web_reduction_filebrowser.html'
 # this is specifically to support pyinstaller, which uses this special
 # key in sys for the temp directory for single-file executables.
 currdir = getattr(sys, "_MEIPASS", os.path.dirname( __file__ ))
 
-
+## not serving get requests from this for the moment...
+#HandlerClass = SimpleHTTPRequestHandler
+#ServerClass  = BaseHTTPServer.HTTPServer
 #server_address = ('localhost', 0 ) # get next open socket
-
 #HandlerClass.protocol_version = Protocol
 #httpd = ServerClass(server_address, HandlerClass)
 #http_port = httpd.socket.getsockname()[1]
