@@ -18,6 +18,9 @@ webreduce.editor = webreduce.editor || {};
     // the html element referenced by target_id
     this._instance = new dataflow.editor();
     this._target_id = target_id;
+    this._instance.data([{modules:[],wires: []}]);
+    var target = d3.select("#" + target_id);
+    target.call(this._instance);
   }
   webreduce.editor.handle_module_clicked = function() {
     // module group is 2 levels above module title in DOM
@@ -384,11 +387,9 @@ webreduce.editor = webreduce.editor || {};
   }
   
   webreduce.editor.load_template = function(template_def) {
-    this._instance.data([template_def]);
     this._active_template = template_def;
     var target = d3.select("#" + this._target_id);
-
-    target.call(this._instance);
+    this._instance.import(template_def);
 
     target.selectAll(".module").classed("draggable wireable", false);
 

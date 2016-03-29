@@ -102,9 +102,7 @@ webreduce.instruments = webreduce.instruments || {};
         reader.onload = function(e) {
             //console.log(this.result);
             var template_def = JSON.parse(this.result);
-            webreduce.editor._instance.data()[0].modules = template_def.modules;
-            webreduce.editor._instance.data()[0].wires = template_def.wires;
-            webreduce.editor._instance.update(); 
+            webreduce.editor.load_template(template_def);
         }
         reader.readAsText(file);
       });

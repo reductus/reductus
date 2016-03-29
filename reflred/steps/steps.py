@@ -996,6 +996,30 @@ def super_load(filelist=None,
 
     return datasets
 
+@module
+def spin_asymmetry(data):
+    """
+    Do the calculation (-- - ++) / (-- + ++) and return a single dataset.
+
+    **Inputs**
+
+    data (refldata[]): input data;  must contain ++ and -- polarizations
+
+    **Returns**
+
+    output (refldata): calculated spin asymmetry.
+
+    2016-03-29 Brian Maranville
+    """
+    mm = [d for d in data if d.polarization == '--'][0]
+    pp = [d for d in data if d.polarization == '++'][0]
+    output = copy(mm)
+    output.vlabel = "Spin asymmetry (mm - pp) / (mm + pp)"
+    output.vunits = "unitless"
+    output.v = (mm.v - pp.v) / (mm.v + pp.v)
+    output.dv = (mm.dv + pp.dv)
+    return output
+
 # ==================
 
 def demo():
