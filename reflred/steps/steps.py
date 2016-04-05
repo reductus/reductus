@@ -1014,7 +1014,7 @@ def spin_asymmetry(data):
     mm = [d for d in data if d.polarization == '--'][0]
     pp = [d for d in data if d.polarization == '++'][0]
     output = copy(mm)
-    output.vlabel = "Spin asymmetry (mm - pp) / (mm + pp)"
+    output.vlabel = "Spin asymmetry (mm-pp)/(mm+pp) "
     output.vunits = "unitless"
     output.v = (mm.v - pp.v) / (mm.v + pp.v)
     output.dv = (mm.dv + pp.dv)
