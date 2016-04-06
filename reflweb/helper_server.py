@@ -263,8 +263,10 @@ def calc_terminal(template_def, config, nodenum, terminal_id, return_type='full'
         return sanitizeForJSON(retval.get_plottable())
     elif return_type == 'metadata':
         return sanitizeForJSON(retval.get_metadata())
+    elif return_type == 'export':
+        return retval.get_export()
     else:
-        raise KeyError(return_type + " not a valid return_type (should be one of ['full', 'plottable', 'metadata'])")
+        raise KeyError(return_type + " not a valid return_type (should be one of ['full', 'plottable', 'metadata', 'export'])")
 
 
 def calc_template(template_def, config):

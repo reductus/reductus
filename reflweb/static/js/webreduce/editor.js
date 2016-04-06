@@ -77,7 +77,9 @@ webreduce.editor = webreduce.editor || {};
     var index = parseInt(d3.select(selected.node().parentNode.parentNode).attr("index"));
     var terminal_id = selected.attr("terminal_id");
     webreduce.server_api.calc_terminal(this._active_template, {}, index, terminal_id).then(function(result) {
-      webreduce.editor._active_plot = webreduce.editor.show_plots(result.values);      
+      webreduce.editor._active_plot = webreduce.editor.show_plots(result.values);
+      webreduce.editor._active_node = index;
+      webreduce.editor._active_terminal = terminal_id;
     }); 
   }
   
@@ -110,6 +112,19 @@ webreduce.editor = webreduce.editor || {};
       var o = mychart.options();
       o[this.id] = this.checked;
       mychart.options(o).update();
+    });
+    d3.select("#export_data").on("click", function() {
+      var filename = prompt("Export data as:", "myfile.refl");
+      if (filename == null) {return} // cancelled
+      var w = webreduce.editor,
+        node = w._active_node,
+        terminal = w._active_terminal,
+        template = w._active_template;
+      webreduce.server_api.calc_terminal(template, {}, node, terminal, 'export').then(function(result) {
+        //webreduce.editor._export_string = result;
+        var header = {template: template, node: node, terminal: terminal};
+        webreduce.download('#' + JSON.stringify(header) + '\n' + result.values.join('\n\n'), filename);
+      });       
     });
     mychart.zoomRect(true);
     // this has been implemented in the chart library:
