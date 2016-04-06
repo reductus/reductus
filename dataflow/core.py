@@ -486,6 +486,18 @@ class Bundle(object):
     def todict(self):
         values = [v.todict() for v in self.values]
         return { 'datatype': self.datatype.id, 'values': values }
+        
+    def get_plottable(self):
+        values = [v.get_plottable() for v in self.values]
+        return { 'datatype': self.datatype.id, 'values': values }
+        
+    def get_metadata(self):
+        values = [v.get_metadata() for v in self.values]
+        return { 'datatype': self.datatype.id, 'values': values }
+        
+    def get_export(self):
+        values = [v.export() for v in self.values]
+        return { 'datatype': self.datatype.id, 'values': values }
 
     @staticmethod
     def fromdict(state):

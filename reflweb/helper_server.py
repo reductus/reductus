@@ -217,7 +217,7 @@ def find_calculated(template_def, config):
     retval = dataflow.calc.find_calculated(template, config)
     return retval
 
-def calc_terminal(template_def, config, nodenum, terminal_id):
+def calc_terminal(template_def, config, nodenum, terminal_id, return_type='full'):
     """ json-rpc wrapper for calc_single
     template_def = 
     {"name": "template_name",
@@ -257,9 +257,16 @@ def calc_terminal(template_def, config, nodenum, terminal_id):
         print "==== template ===="; pprint(template_def)
         print "==== config ===="; pprint(config)
         traceback.print_exc()
-        raise
-    return sanitizeForJSON(retval.todict())
-    
+    if return_type == 'full':
+        return sanitizeForJSON(retval.todict())
+    elif return_type == 'plottable':
+        return sanitizeForJSON(retval.get_plottable())
+    elif return_type == 'metadata':
+        return sanitizeForJSON(retval.get_metadata())
+    else:
+        raise KeyError(return_type + " not a valid return_type (should be one of ['full', 'plottable', 'metadata'])")
+
+
 def calc_template(template_def, config):
     """ json-rpc wrapper for process_template """
     template = Template(**template_def)

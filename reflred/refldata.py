@@ -995,16 +995,28 @@ class ReflData(object):
 
     def save(self, filename):
         with open(filename, 'w') as fid:
-            fid.write("# ")
-            fid.write("%s(%s)"%(self.xlabel, self.xunits) if self.xunits else self.xlabel)
-            fid.write(" ")
-            fid.write("%s(%s)"%(self.vlabel, self.vunits) if self.vunits else self.vlabel)
-            fid.write(" ")
-            fid.write("error")
-            fid.write(" ")
-            fid.write("resolution")
-            fid.write("\n")
-            np.savetxt(fid, np.vstack([self.x, self.v, self.dv, self.dx]).T)
+            fid.write(self.export())
+    
+    def export(self):
+        import StringIO
+        fid = StringIO.StringIO()
+        fid.write("# ")
+        fid.write("%s(%s)"%(self.xlabel, self.xunits) if self.xunits else self.xlabel)
+        fid.write(" ")
+        fid.write("%s(%s)"%(self.vlabel, self.vunits) if self.vunits else self.vlabel)
+        fid.write(" ")
+        fid.write("error")
+        fid.write(" ")
+        fid.write("resolution")
+        fid.write("\n")
+        np.savetxt(fid, np.vstack([self.x, self.v, self.dv, self.dx]).T)
+        fid.seek(0)
+        return fid.read()
+    
+    def get_plottable(self):
+        return self.todict()
+    def get_metadata(self):
+        return self.todict()
 
 def _str(object, indent=4):
     """
