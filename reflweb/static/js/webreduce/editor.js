@@ -95,6 +95,9 @@ webreduce.editor = webreduce.editor || {};
     options.axes.yaxis.label = ylabel;
     options.xtransform = $("#xscale").val();
     options.ytransform = $("#yscale").val();
+    options.show_errorbars = $("#show_errorbars").prop("checked");
+    options.show_points = $("#show_points").prop("checked");
+    options.show_line = $("#show_line").prop("checked");
     var mychart = new xyChart(options);
     d3.selectAll("#plotdiv svg").remove();
     d3.selectAll("#plotdiv").data([datas]).call(mychart);
@@ -102,6 +105,11 @@ webreduce.editor = webreduce.editor || {};
       var axis = d3.select(this).attr("axis") + "transform",
           transform = this.value;
       mychart[axis](transform);  
+    });
+    d3.selectAll("#show_errorbars, #show_points, #show_line").on("change", function() {
+      var o = mychart.options();
+      o[this.id] = this.checked;
+      mychart.options(o).update();
     });
     mychart.zoomRect(true);
     // this has been implemented in the chart library:
