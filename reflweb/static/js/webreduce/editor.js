@@ -77,7 +77,7 @@ webreduce.editor = webreduce.editor || {};
     var index = parseInt(d3.select(selected.node().parentNode.parentNode).attr("index"));
     var terminal_id = selected.attr("terminal_id");
     webreduce.server_api.calc_terminal(this._active_template, {}, index, terminal_id).then(function(result) {
-      webreduce.editor.show_plots(result.values);      
+      webreduce.editor._active_plot = webreduce.editor.show_plots(result.values);      
     }); 
   }
   
@@ -90,6 +90,7 @@ webreduce.editor = webreduce.editor || {};
     var xlabel = new_plotdata.xlabel;
     var ylabel = new_plotdata.ylabel;
     options.legend = {"show": true, "left": 125};
+    options.show_errorbars = true;
     options.axes.xaxis.label = xlabel;
     options.axes.yaxis.label = ylabel;
     options.xtransform = $("#xscale").val();
