@@ -999,7 +999,7 @@ def super_load(filelist=None,
 @module
 def spin_asymmetry(data):
     """
-    Do the calculation (-- - ++) / (-- + ++) and return a single dataset.
+    Do the calculation (++ - --) / (++ + --) and return a single dataset.
 
     **Inputs**
 
@@ -1009,15 +1009,18 @@ def spin_asymmetry(data):
 
     output (refldata): calculated spin asymmetry.
 
-    2016-03-29 Brian Maranville
+    2016-04-04 Brian Maranville
     """
+    from numpy import sqrt
     mm = [d for d in data if d.polarization == '--'][0]
     pp = [d for d in data if d.polarization == '++'][0]
     output = copy(mm)
-    output.vlabel = "Spin asymmetry (mm-pp)/(mm+pp) "
+    output.vlabel = "Spin asymmetry (pp-mm)/(pp+mm) "
     output.vunits = "unitless"
-    output.v = (mm.v - pp.v) / (mm.v + pp.v)
-    output.dv = (mm.dv + pp.dv)
+    denom = (mm.v + pp.v)
+    output.v = (pp.v - mm.v) / denom
+    # d(sa)/d(x) = 2*x/(x+y)**2, d(sa)/d(y) = -2*y/(x+y)**2
+    output.dv = sqrt( ((2.0*mm.v*mm.dv)/(denom**2))**2 + ((2.0*pp.v*pp.dv)/(denom**2))**2 )
     return output
 
 # ==================
