@@ -257,6 +257,7 @@ def calc_terminal(template_def, config, nodenum, terminal_id, return_type='full'
         print "==== template ===="; pprint(template_def)
         print "==== config ===="; pprint(config)
         traceback.print_exc()
+        raise
     if return_type == 'full':
         return sanitizeForJSON(retval.todict())
     elif return_type == 'plottable':
