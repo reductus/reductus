@@ -2,7 +2,8 @@
 
 (function () {
   var NEXUS_ZIP_REGEXP = /\.nxz\.[^\.\/]+$/
-
+  var PARALLEL_LOAD = false;
+  
   function make_range_icon(global_min_x, global_max_x, min_x, max_x) {
     var icon_width = 75;
     var rel_width = Math.abs((max_x - min_x) / (global_max_x - global_min_x));
@@ -31,30 +32,71 @@
     var loader = webreduce.instruments[instrument_id].load_file;
     var numloaded = 0;
     var numdatafiles = datafiles.length;
-    datafiles.forEach(function(j, i) {
-      load_promises.push(
-        loader(datasource, path + "/" + j, files_metadata[j].mtime, file_objs)
-          .then(function(r) {webreduce.statusline_log("loaded " + (++numloaded) + " of " + numdatafiles + ": "+ j); return r})
-        );
-    });
-    Promise.all(load_promises).then(function(results) {
-      var categorizers = webreduce.instruments[instrument_id].categorizers;
-      var treeinfo = file_objs_to_tree(file_objs, categorizers);
-      // add decorators etc to the tree with postprocess:
-      var postprocess = webreduce.instruments[instrument_id].postprocess;
-      if (postprocess) { postprocess(treeinfo, file_objs) }
-      var target = $(target_in).find(".remote-filebrowser");
-      var jstree = target.jstree({
-        "plugins": ["checkbox", "changed", "sort"],
-        "checkbox" : {
-          "three_state": true,
-          //"cascade": "down",
-          "tie_selection": false,
-          "whole_node": false
-        },
-        "core": {"data": treeinfo}
+    
+    if (PARALLEL_LOAD) {
+      ////////////////////////////////////////////////////////////////////////////
+      // Sends a flotilla of rpc requests to the server
+      ////////////////////////////////////////////////////////////////////////////
+      datafiles.forEach(function(j, i) {
+        load_promises.push(
+          loader(datasource, path + "/" + j, files_metadata[j].mtime, file_objs)
+            .then(function(r) {webreduce.statusline_log("loaded " + (++numloaded) + " of " + numdatafiles + ": "+ j); return r})
+          );
       });
+      var p = Promise.all(load_promises).then(function(results) {
+        var categorizers = webreduce.instruments[instrument_id].categorizers;
+        var treeinfo = file_objs_to_tree(file_objs, categorizers);
+        // add decorators etc to the tree with postprocess:
+        var postprocess = webreduce.instruments[instrument_id].postprocess;
+        if (postprocess) { postprocess(treeinfo, file_objs) }
+        var target = $(target_in).find(".remote-filebrowser");
+        var jstree = target.jstree({
+          "plugins": ["checkbox", "changed", "sort"],
+          "checkbox" : {
+            "three_state": true,
+            //"cascade": "down",
+            "tie_selection": false,
+            "whole_node": false
+          },
+          "core": {"data": treeinfo}
+        });
+        return target
+      });
+    }
+    else {
+      ////////////////////////////////////////////////////////////////////////////
+      // Sends rpc requests one after the other to the server
+      ////////////////////////////////////////////////////////////////////////////
+      var p = new Promise(function(resolve, reject) {resolve()}),
+          results = [];
+      datafiles.forEach(function(j, i) {
+        p = p.then(function() {
+          return loader(datasource, path + "/" + j, files_metadata[j].mtime, file_objs)
+            .then(function(r) {webreduce.statusline_log("loaded " + (++numloaded) + " of " + numdatafiles + ": "+ j); results.push(r); return r})
+          });
+      });
+      p = p.then(function() {
+        var categorizers = webreduce.instruments[instrument_id].categorizers;
+        var treeinfo = file_objs_to_tree(file_objs, categorizers);
+        // add decorators etc to the tree with postprocess:
+        var postprocess = webreduce.instruments[instrument_id].postprocess;
+        if (postprocess) { postprocess(treeinfo, file_objs) }
+        var target = $(target_in).find(".remote-filebrowser");
+        var jstree = target.jstree({
+          "plugins": ["checkbox", "changed", "sort"],
+          "checkbox" : {
+            "three_state": true,
+            //"cascade": "down",
+            "tie_selection": false,
+            "whole_node": false
+          },
+          "core": {"data": treeinfo}
+        });
+        return target
+      });
+    }
 
+    p.then(function(target) {
       target.on("ready.jstree", function() {
         if (webreduce.instruments[instrument_id].decorators) {
             webreduce.instruments[instrument_id].decorators.forEach(function(d) {
