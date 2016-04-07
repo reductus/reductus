@@ -3,6 +3,10 @@
 // defines webreduce.server_api for json-rpc
 // (wrap the jsonRPC server in a generic API interface)
 
+// all API implementations should provide the functions 
+// ["find_calculated", "get_file_metadata", "get_instrument", "calc_terminal"]
+// and return a native javascript Promise object from those functions
+
 webreduce = window.webreduce || {};
 webreduce.server_api = webreduce.server_api || {};
 
@@ -13,7 +17,7 @@ $.jsonRPC.setup({
   cache: false
 });
 
-(function(server_api) {
+(function(app) {
   function wrap_jsonRPC(method_name) {
     function wrapped() {
       // pass every argument to the wrapped function as a list:
@@ -30,8 +34,18 @@ $.jsonRPC.setup({
           success: function(result) {
             resolve(result.result);
           },
-          error: function(result) {console.log('error in ' + method_name, 'params: ', params, 'caller: ', wrapped.caller, result); reject(result);}
+          error: function(result) {
+            reject({method_name: method_name, params: params, caller: wrapped.caller, resolver: resolve, result: result});
+          }
         });
+      })
+      .catch(function(error) {
+        // hook in a custom handler
+        if (app.api_exception_handler) {
+          app.api_exception_handler(error); 
+        } else {
+          throw(error);
+        }
       });
       return r
     }
@@ -41,8 +55,8 @@ $.jsonRPC.setup({
   var toWrap = ["find_calculated", "get_file_metadata", "get_instrument", "calc_terminal"];
   for (var i=0; i<toWrap.length; i++) {
     var method_name = toWrap[i];
-    server_api[method_name] = wrap_jsonRPC(method_name);
+    app.server_api[method_name] = wrap_jsonRPC(method_name);
   }
-})(webreduce.server_api);
+})(webreduce);
 
 
