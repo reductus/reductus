@@ -109,7 +109,84 @@ webreduce.instruments = webreduce.instruments || {};
       webreduce.editor.create_instance("bottom_panel");
       webreduce.editor.load_instrument(current_instrument)
         .then(function(instrument_def) { webreduce.editor.load_template(instrument_def.templates[0]); });
+      
+      webreduce.update_file_mtimes = function(template) {
+        var template = template || webreduce.editor._active_template;
+        var fsp = {}; // group by source and path for retrieval of info from server
+        template.modules.forEach(function(m, i) {
+          var def = webreduce.editor._module_defs[m.module];
+          var fileinfo_fields = def.fields.filter(function(f) { return f.datatype == "fileinfo" })
+            .map(function(f) {return f.id});
+          fileinfo_fields.forEach(function(fname) {
+            if (m.config && m.config[fname]) {
+              m.config[fname].forEach(function(finfo) {
+                var parsepath = finfo.path.match(/(.*)\/([^\/]+)*$/);
+                if (parsepath) {
+                  var path = parsepath[1],
+                      fname = parsepath[2];
+                  if (! (finfo.source in fsp)) { fsp[finfo.source] = {} }
+                  if (! (path in fsp[finfo.source])) { fsp[finfo.source][path] = [] }
+                  fsp[finfo.source][path].push(fname);
+                }
+              });
+            }
+          });
+          
+        });
         
+        // now step through the list of sources and paths and get the mtimes from the server:
+        var times_promise = new Promise(function(resolve, reject) {resolve(null)});
+        var updated_times = {};
+        for (var source in fsp) {
+          updated_times[source] = {};
+          for (var path in fsp[source]) {
+            times_promise = times_promise.then(function() {
+              return webreduce.server_api.get_file_metadata(source, path.split("/")).then(function(r) {
+                for (var fn in r.files_metadata) {
+                  updated_times[source][path + "/" + fn] = r.files_metadata[fn].mtime;
+                }
+              });
+            })
+          }
+        }
+        
+        // then step through all the modules again and update the mtimes from the new list
+        times_promise.then(function() {
+          template.modules.forEach(function(m, i) {
+            var def = webreduce.editor._module_defs[m.module];
+            var fileinfo_fields = def.fields.filter(function(f) { return f.datatype == "fileinfo" })
+              .map(function(f) {return f.id});
+            fileinfo_fields.forEach(function(fname) {
+              if (m.config && m.config[fname]) {
+                m.config[fname].forEach(function(finfo) {
+                  var new_mtime = updated_times[finfo.source][finfo.path];
+                  if (finfo.mtime != new_mtime) {
+                    console.log(finfo.path + " old mtime=" + finfo.mtime + ", new mtime=" + new_mtime);
+                  }
+                  finfo.mtime = new_mtime;
+                });
+              }
+            });
+          });
+        })
+        return times_promise;
+      }
+        
+      webreduce.api_exception_handler = function(exc) {
+        console.log("api exception: ", exc);
+        // catch the error that comes from stale timestamps for files
+        if (exc.result.error.message.indexOf("ValueError: Requested mtime is") > -1) {
+          setTimeout(function() { 
+            alert("Newer version of data file(s) found in source...\n\n" + 
+                  "updating template with new file-modified times\n\n" + 
+                  "Please repeat your last request."); 
+          }, 1);
+          webreduce.update_file_mtimes();
+        }
+        else {
+          throw(exc);
+        }
+      }
       window.onpopstate();
   }
 
