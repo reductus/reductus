@@ -1,5 +1,5 @@
 # -*- coding: latin-1 -*-
-from numpy import cos, pi, cumsum, arange, ndarray, ones, zeros, array, newaxis, linspace, empty, resize, sin, allclose, zeros_like, linalg, dot, arctan2, float64, histogram2d, sum, sqrt, loadtxt, searchsorted, NaN, logical_not, fliplr, flipud, indices, polyfit
+from numpy import cos, pi, cumsum, arange, ndarray, ones, zeros, array, newaxis, linspace, empty, resize, sin, allclose, zeros_like, linalg, dot, arctan2, float64, histogram2d, sum, nansum, sqrt, loadtxt, searchsorted, NaN, logical_not, fliplr, flipud, indices, polyfit
 import numpy
 from numpy.ma import MaskedArray
 import os, simplejson, datetime, sys, types
@@ -488,8 +488,8 @@ class SliceData(Filter2D):
         yslice = slice(get_index(y_array, ymin), get_index(y_array, ymax))
         dataslice = (xslice, yslice)
         
-        x_out = sum(data.view(ndarray)[dataslice], axis=1)
-        y_out = sum(data.view(ndarray)[dataslice], axis=0)
+        x_out = nansum(data.view(ndarray)[dataslice], axis=1)
+        y_out = nansum(data.view(ndarray)[dataslice], axis=0)
         x_axis['values'] = x_axis['values'][xslice]
         y_axis['values'] = y_axis['values'][yslice]
         
@@ -698,7 +698,7 @@ class NormalizeToMonitor(Filter2D):
         monitor_cols = [col for col in cols if col.startswith('monitor')]
         info = data.infoCopy()
         info[-2]['cols'] = []
-        output_array = zeros( data.shape[:-1] + (len(counts_cols) + len(passthrough_cols),), dtype=float)
+        output_array = zeros( data.shape[:-1] + (len(counts_cols) + len(passthrough_cols),), dtype=float) * NaN
         expressions = []
         for i, col in enumerate(passthrough_cols):
             info[-2]['cols'].append({"name":col})
