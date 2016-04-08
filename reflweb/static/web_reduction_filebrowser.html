@@ -32,17 +32,15 @@
 <div id="navigation" class="ui-layout-wrapper ui-layout-west"></div>
 <div id="bottom_panel" class="ui-layout-south"></div>
 <div id="top_panel" class="ui-layout-north">
-    <div id="status">
-        <span id="top_label">Reflectometry reduction</span>
+    <div id="main_menu_div" style="display:inline-block;">
+      <input type="button" id="show_main_menu" value="Menu"></input>
+      <ul id="main_menu" style="display:none">
+      </ul> 
+    </div>
+    <div id="status" style="display:inline-block;vertical-align:top;">
+        <span id="top_label">Reduction</span>
         <span id="instrument_name" class="instrument-name"></span>
         <span id="statusline"></span>
-        <div class="dropdown menu file">
-          <button class="dropbtn">File</button>
-          <div class="dropdown-content menu-items">
-            <span class="download">Download template</span>
-            <span class="upload">Upload template</span>
-          </div>
-        </div>
     </div>
 </div>
  

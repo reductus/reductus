@@ -83,16 +83,28 @@ webreduce.instruments = webreduce.instruments || {};
           setTimeout(function() { window.URL.revokeObjectURL(url) }, 1000);
         };
       }());
+      
       var upload_dialog = $("#upload_template").dialog({autoOpen: false});
-      //$.post(dirHelper, {'pathlist': $("#remote_path").val().split("/")}, function(r) { categorize_files(r.files)});
-      $(".file .menu-items .download").on("click", function() {
-        var filename = prompt("Save template as:", "template.json");
-        if (filename == null) {return} // cancelled
-        webreduce.download(JSON.stringify(webreduce.editor._active_template, null, 2), filename);
-      });
-      $(".file .menu-items .upload").on("click", function() {
-        upload_dialog.dialog("open");
-      });
+      
+      ////////////////////////////////////////////////////////////////////
+      // Make a menu
+      ////////////////////////////////////////////////////////////////////
+      $("#main_menu").append($("<li />", {id: "file_menu", text: "File"})
+        .append($("<ul />")
+          .append($("<li />", {text: "Download template"})
+            .on("click", function() {
+              $("#main_menu").hide();
+              var filename = prompt("Save template as:", "template.json");
+              if (filename == null) {return} // cancelled
+              webreduce.download(JSON.stringify(webreduce.editor._active_template, null, 2), filename);
+            })
+          )
+          .append($("<li />", {text: "Upload template"})
+            .on("click", function() {$("#main_menu").hide(); upload_dialog.dialog("open")})
+          )
+        )).menu();
+      $("#show_main_menu").on("click", function() {$("#main_menu").toggle()});
+   
       $("input#template_file").change(function() {
         var file = this.files[0]; // only one file allowed
         datafilename = file.name;
