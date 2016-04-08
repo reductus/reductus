@@ -77,6 +77,9 @@ class FilterableMetaArray(MetaArray):
         else:
             return False
 
+    def get_metadata(self):
+        return self.get_plottable()
+        
     def get_plottable(self, binary_fp=None):
         if len(self.shape) == 3:
             return self.get_plottable_2d(binary_fp)
