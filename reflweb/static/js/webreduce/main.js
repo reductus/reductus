@@ -102,7 +102,22 @@ webreduce.instruments = webreduce.instruments || {};
           .append($("<li />", {text: "Upload template"})
             .on("click", function() {$("#main_menu").hide(); upload_dialog.dialog("open")})
           )
-        )).menu();
+          
+          .append($("<li />", {text: "Predefined templates", id: "predefined_templates"})
+            .append($("<ul />"))
+            .on("click", "ul li", function(ev) {
+              // delegated click handler, so it can get events on elements not added yet
+              // (added during instrument_load)
+                //$("#main_menu").menu("collapseAll", null, true)
+                $("#main_menu").hide();
+                webreduce.editor.load_template(webreduce.editor._instrument_def.templates[$(this).text()]);
+                console.log(this, $(this).text(), ev);
+              })
+          )
+          
+        ))
+        .menu()
+
       $("#show_main_menu").on("click", function() {$("#main_menu").toggle()});
    
       $("input#template_file").change(function() {
@@ -120,11 +135,21 @@ webreduce.instruments = webreduce.instruments || {};
       });
       webreduce.editor.create_instance("bottom_panel");
       webreduce.editor.load_instrument(current_instrument)
-        .then(function(instrument_def) { webreduce.editor.load_template(instrument_def.templates[0]); });
+        .then(function(instrument_def) { 
+          var template_names = Object.keys(instrument_def.templates);
+          template_names.forEach(function (t,i) {
+            $("#main_menu #predefined_templates ul").append($("<li />", {text: t}));
+            $("#main_menu").menu("refresh");
+          })
+          var default_template = template_names[0];
+          webreduce.editor.load_template(instrument_def.templates[default_template]); 
+        });
       
       webreduce.update_file_mtimes = function(template) {
         var template = template || webreduce.editor._active_template;
-        var fsp = {}; // group by source and path for retrieval of info from server
+        
+        // First, generate a list of all sources/paths for getting needed info from server
+        var fsp = {}; // group by source and path
         template.modules.forEach(function(m, i) {
           var def = webreduce.editor._module_defs[m.module];
           var fileinfo_fields = def.fields.filter(function(f) { return f.datatype == "fileinfo" })
@@ -143,7 +168,6 @@ webreduce.instruments = webreduce.instruments || {};
               });
             }
           });
-          
         });
         
         // now step through the list of sources and paths and get the mtimes from the server:
