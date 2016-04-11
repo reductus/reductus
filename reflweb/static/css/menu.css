@@ -42,3 +42,11 @@
     background-color: #3e8e41;
 }
 
+#main_menu ul{
+/*    float: left;  */
+    white-space: nowrap;
+    width: auto;
+}
+#main_menu li {
+    padding-left: 2px !important;
+}
