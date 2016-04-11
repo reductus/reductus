@@ -10,12 +10,29 @@ from reflred.steps.deadtime import DeadTimeData
 
 INSTRUMENT = "ncnr.refl"
 
+class DataflowReflData(ReflData):
+    def get_plottable_JSON(self):
+        plottable = {
+            'axes': {
+                'xaxis': {'label': self.xlabel + ' (' + self.xunits + ')'},
+                'yaxis': {'label': self.vlabel + ' (' + self.vunits + ')'}
+            },
+            'data': [[x,y,{'yupper': y+dy, 'ylower':y-dy,'xupper':x,'xlower':x}] for x,y,dy in zip(self.x, self.v, self.dv)],
+            'title': self.name + ":" + self.entry
+        }
+        return plottable
+
+    def get_plottable(self):
+        return self.todict()
+    def get_metadata(self):
+        return self.todict()
+
 def define_instrument():
     # Define modules
     modules = make_modules(steps.ALL_ACTIONS, prefix=INSTRUMENT+'.')
 
     # Define data types
-    refldata = df.DataType(INSTRUMENT+".refldata", ReflData)
+    refldata = df.DataType(INSTRUMENT+".refldata", DataflowReflData)
     poldata = df.DataType(INSTRUMENT+".poldata", PolarizationData)
     deadtime = df.DataType(INSTRUMENT+".deadtime", DeadTimeData)
 

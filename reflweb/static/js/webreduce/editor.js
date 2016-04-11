@@ -76,7 +76,7 @@ webreduce.editor = webreduce.editor || {};
     var selected = target.select(".module .selected");
     var index = parseInt(d3.select(selected.node().parentNode.parentNode).attr("index"));
     var terminal_id = selected.attr("terminal_id");
-    webreduce.server_api.calc_terminal(this._active_template, {}, index, terminal_id).then(function(result) {
+    webreduce.server_api.calc_terminal(this._active_template, {}, index, terminal_id, "plottable").then(function(result) {
       webreduce.editor._active_plot = webreduce.editor.show_plots(result.values);
       webreduce.editor._active_node = index;
       webreduce.editor._active_terminal = terminal_id;
@@ -85,24 +85,36 @@ webreduce.editor = webreduce.editor || {};
   
   webreduce.editor.show_plots = function(values) {
     var instrument_id = this._instrument_id;
-    var options={series: [], axes: {xaxis: {label: "x-axis"}, yaxis: {label: "y-axis"}}};
     var new_plotdata = webreduce.instruments[instrument_id].plot(values);
-    options.series = options.series.concat(new_plotdata.series);
-    var datas = new_plotdata.data;
-    var xlabel = new_plotdata.xlabel;
-    var ylabel = new_plotdata.ylabel;
-    options.legend = {"show": true, "left": 125};
-    options.show_errorbars = true;
-    options.axes.xaxis.label = xlabel;
-    options.axes.yaxis.label = ylabel;
+    if (new_plotdata.type == '1d') {
+        webreduce.editor.show_plots_1d(new_plotdata);
+    }
+    else if (new_plotdata.type == '2d') {
+        webreduce.editor.show-plots_2d(new_plotdata);
+    }
+  }
+  
+  webreduce.editor.show_plots_1d = function(plotdata) {
+    var options = {
+      series: [],
+      legend: {show: true, left: 150},
+      axes: {xaxis: {label: "x-axis"}, yaxis: {label: "y-axis"}}
+    };
+    jQuery.extend(true, options, plotdata);
     options.xtransform = $("#xscale").val();
     options.ytransform = $("#yscale").val();
     options.show_errorbars = $("#show_errorbars").prop("checked");
     options.show_points = $("#show_points").prop("checked");
     options.show_line = $("#show_line").prop("checked");
+    
+    // create the 1d chart:
     var mychart = new xyChart(options);
     d3.selectAll("#plotdiv svg").remove();
-    d3.selectAll("#plotdiv").data([datas]).call(mychart);
+    d3.selectAll("#plotdiv").data([options.data]).call(mychart);
+    mychart.zoomRect(true);
+    webreduce.callbacks.resize_center = mychart.autofit;
+    
+    // set up handlers for buttons and options:
     d3.selectAll("#xscale, #yscale").on("change", function() {
       var axis = d3.select(this).attr("axis") + "transform",
           transform = this.value;
@@ -121,14 +133,12 @@ webreduce.editor = webreduce.editor || {};
         terminal = w._active_terminal,
         template = w._active_template;
       webreduce.server_api.calc_terminal(template, {}, node, terminal, 'export').then(function(result) {
-        //webreduce.editor._export_string = result;
+        // add the template and target node, terminal to the header of the file:
         var header = {template: template, node: node, terminal: terminal};
         webreduce.download('#' + JSON.stringify(header) + '\n' + result.values.join('\n\n'), filename);
       });       
     });
-    mychart.zoomRect(true);
-    // this has been implemented in the chart library:
-    webreduce.callbacks.resize_center = mychart.autofit;
+
     return mychart
   }
 

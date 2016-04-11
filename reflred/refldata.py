@@ -1013,11 +1013,6 @@ class ReflData(object):
         fid.seek(0)
         return fid.read()
     
-    def get_plottable(self):
-        return self.todict()
-    def get_metadata(self):
-        return self.todict()
-
 def _str(object, indent=4):
     """
     Helper function: document data object by convert attributes listed in

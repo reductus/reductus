@@ -63,15 +63,9 @@ webreduce.instruments['ncnr.refl'] = webreduce.instruments['ncnr.refl'] || {};
   function plot(refl_objs) {
     // entry_ids is list of {path: path, filename: filename, entryname: entryname} ids
     var series = new Array();
-    var options = {
-      series: series,
-      legend: {show: true, left: 150},
-      axes: {xaxis: {label: "x-axis"}, yaxis: {label: "y-axis"}}
-    };
     var datas = [], xcol;
     var ycol = "v", ylabel = "y-axis", dycol = "dv";
     var xcol = "x", xlabel = "x-axis", dxcol = "dx";
-    //var ynormcol = "monitor/counts";
     refl_objs.forEach(function(entry) {
       var intent = entry['intent'];
       var ydata = get_refl_item(entry, ycol);
@@ -80,22 +74,26 @@ webreduce.instruments['ncnr.refl'] = webreduce.instruments['ncnr.refl'] || {};
       ylabel = get_refl_item(entry, "vlabel");
       ylabel += "(" + get_refl_item(entry, "vunits") + ")";
       xlabel = get_refl_item(entry, "xlabel");
-      //var ynormdata = get_refl_item(entry, ynormcol);
+      xlabel += "(" + get_refl_item(entry, "xunits") + ")";
       var xydata = [], x, y, dy, ynorm;
       for (var i=0; i<xdata.length || i<ydata.length; i++) {
         x = (i<xdata.length) ? xdata[i] : x; // use last value
         y = (i<ydata.length) ? ydata[i] : y; // use last value
         dy = (i<dydata.length) ? dydata[i] : dy; // use last value
-        //ynorm = (i<ynormdata.length) ? ynormdata[i] : ynorm; // use last value
-        //xydata[i] = [x,y/ynorm];
         xydata[i] = [x,y,{yupper: y+dy, ylower:y-dy,xupper:x,xlower:x}];
       }
       datas.push(xydata);
       series.push({label: entry.name + ":" + entry.entry});
 
     });
+    var plottable = {
+      type: "1d",
+      series: series,
+      axes: {xaxis: {label: xlabel}, yaxis: {label: ylabel}},
+      data: datas
+    }
 
-    return {xcol: xcol, ycol: ycol, ylabel: ylabel, xlabel: xlabel, series: series, data: datas};
+    return plottable
   } 
   
   instrument.plot = plot;
