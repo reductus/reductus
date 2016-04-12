@@ -191,4 +191,20 @@
         padding-left: 10px;
         padding-right: 10px;
     }
-
+    #dirbrowser { list-style-type: none; margin: 0; padding: 0; }
+    #dirbrowser li { margin: 3px; padding: 0em 0.4em; font-size: 1.2em; }
+    .patheditor { 
+        color: blue;
+        cursor: pointer;
+    }
+    li.subdiritem { 
+        list-style-type: none; 
+        cursor: pointer;
+        color: blue;
+    }
+    li.fileitem {
+        cursor: pointer;
+        color: blue;
+        text-decoration: none;
+    }
+    
