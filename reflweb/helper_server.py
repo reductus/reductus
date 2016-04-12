@@ -144,10 +144,14 @@ if config.use_redis == True:
 
 define_instrument()
 
+def sorted_ls(path, show_hidden=False):
+    mtime = lambda f: os.stat(os.path.join(path, f)).st_mtime
+    return list(sorted(filter(lambda x: os.path.exists(os.path.join(path, x)) and not x.startswith("."), os.listdir(path)), key=mtime))
+
 def local_file_metadata(pathlist):
     # only absolute paths are supported:
     path = os.path.join(os.sep, *pathlist)
-    dirlisting = os.listdir(path)
+    dirlisting = sorted_ls(path)
     subdirs = []
     files = []
     files_metadata = {}

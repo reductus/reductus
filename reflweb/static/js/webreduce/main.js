@@ -28,8 +28,7 @@ webreduce.instruments = webreduce.instruments || {};
       var hashes = window.location.href.slice(window.location.href.indexOf('?') + 1).split('&');
       for(var i = 0; i < hashes.length; i++) {
         hash = hashes[i].split('=');
-        vars.push(hash[0]);
-        vars[hash[0]] = hash[1];
+        vars.push(hash);
       }
       return vars;
     }
@@ -42,11 +41,17 @@ webreduce.instruments = webreduce.instruments || {};
       // called by load on Safari with null state, so be sure to skip it.
       //if (e.state) {
       var start_path = $.extend(true, [], data_path),
-        url_vars = getUrlVars();
-      if (url_vars.pathlist && url_vars.pathlist.length) {
-        start_path = url_vars.pathlist.split("+");
-      }
-      webreduce.addDataSource("navigation", "ncnr", start_path);
+        url_vars = getUrlVars(),
+        source = 'ncnr';
+      url_vars.forEach(function(v, i) {
+        if (v[0] == 'pathlist' && v[1] && v[1].length) {
+          start_path = v[1].split("/");
+          webreduce.addDataSource("navigation", source, start_path);
+        }
+        else if (v[0] == 'source' && v[1]) {
+          source = v[1];
+        }
+      })
     }
 
     

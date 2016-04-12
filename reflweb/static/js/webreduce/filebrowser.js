@@ -263,7 +263,19 @@
   var getDataSource = function(target) {
     return $(target).attr("datasource");
   }
-
+  
+  function updateHistory(target) {
+    // call with id or object for nav pane
+    var pathstrings = [];
+    $(target).find(".databrowser").each(function(i,d) {
+      pathstrings.push("source=" + getDataSource(d) + "&pathlist=" + getCurrentPath(d))
+    });
+    if (pathstrings.length > 0) {
+      var urlstr = "?" + pathstrings.join("&");
+      history.pushState({}, "", urlstr);
+    }
+  }
+  
   function updateFileBrowserPane(target, datasource, pathlist, instrument_id) {
       function handler(dirdata) {
         var buttons = $("<div />", {class: "buttons"});
@@ -272,7 +284,7 @@
           .jstree("uncheck_all"); handleChecked();
         });
         var remove_datasource = $("<button />", {text: "remove"});
-        remove_datasource.click(function() {$(target).remove()});
+        remove_datasource.click(function() { var nav=$(target).parent(); $(target).empty().remove(); updateHistory(nav);});
         buttons
           //.append($("<span />", {class: "ui-icon ui-icon-circle-close"}))
           .append(clear_all)
@@ -293,10 +305,11 @@
             dirlink = document.createElement('span');
             dirlink.textContent = pathitem + "/";
             dirlink.onclick = function() {
-              history.pushState({}, "", "?pathlist=" + new_pathlist.slice(0, index+1).join("+"));
+              //history.pushState({}, "", "?pathlist=" + new_pathlist.slice(0, index+1).join("+"));
               webreduce.server_api.get_file_metadata(datasource, new_pathlist.slice(0, index+1))
-              .then( function (metadata) {
-                 updateFileBrowserPane(target, datasource, new_pathlist.slice(0, index+1), instrument_id)(metadata);
+              .then( function (metadata) {                
+                updateFileBrowserPane(target, datasource, new_pathlist.slice(0, index+1), instrument_id)(metadata);
+                updateHistory($(target).parent());
               })
             }
             patheditor.appendChild(dirlink);
@@ -314,10 +327,11 @@
           var new_pathlist = $.extend(true, [], pathlist);
           new_pathlist.push(subdir);
           subdiritem.onclick = function() {
-            history.pushState({}, "", "?pathlist=" + new_pathlist.join("+"));
+            //history.pushState({}, "", "?pathlist=" + new_pathlist.join("+"));
             webreduce.server_api.get_file_metadata(datasource, new_pathlist)
               .then( function (metadata) {
-                 updateFileBrowserPane(target, datasource, new_pathlist, instrument_id)(metadata);
+                updateFileBrowserPane(target, datasource, new_pathlist, instrument_id)(metadata);
+                updateHistory($(target).parent());
               })
           }
           dirbrowser.appendChild(subdiritem);
