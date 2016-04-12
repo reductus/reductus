@@ -267,12 +267,17 @@
   function updateFileBrowserPane(target, datasource, pathlist, instrument_id) {
       function handler(dirdata) {
         var buttons = $("<div />", {class: "buttons"});
-        var clear_all = $("<button />", {text: "clear all"});
-        clear_all.click(function() {$(target)
+        var clear_all = $("<button />", {text: "uncheck all"});
+        clear_all.click(function() {$(".remote-filebrowser", target)
           .jstree("uncheck_all"); handleChecked();
         });
+        var remove_datasource = $("<button />", {text: "remove"});
+        remove_datasource.click(function() {$(target).remove()});
         buttons
+          //.append($("<span />", {class: "ui-icon ui-icon-circle-close"}))
           .append(clear_all)
+          .append(remove_datasource)
+          .append('<span class="datasource">source: ' + datasource + '</span>');
 
         var files = dirdata.files,
             metadata = dirdata.files_metadata;
@@ -326,7 +331,8 @@
           .append(patheditor)
           //.append(deadtime_choose)
           .append(dirbrowser)
-          .append(filebrowser);
+          .append(filebrowser)
+          .append("<hr>");
 
         // instrument-specific categorizers
         // webreduce.instruments[instrument_id].categorizeFiles(files, metadata, pathlist.join("/"), target_id);

@@ -288,6 +288,9 @@ def calc_template(template_def, config):
         output.setdefault(module_key, {})
         output[module_key][terminal_id] = sanitizeForJSON(rv.todict())
     return output
+
+def list_datasources():
+    return config.data_sources.keys()
         
 if __name__ == '__main__':
     server = ThreadedJSONRPCServer((config.jsonrpc_servername, config.jsonrpc_port), encoding='utf8', requestHandler=JSONRPCRequestHandler)
@@ -298,6 +301,7 @@ if __name__ == '__main__':
     server.register_function(calc_template)
     server.register_function(get_instrument)
     server.register_function(find_calculated)
+    server.register_function(list_datasources)
     print "serving on",rpc_port
     server.serve_forever()
     print "done serving rpc forever"

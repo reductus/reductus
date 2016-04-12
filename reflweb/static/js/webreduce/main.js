@@ -89,33 +89,44 @@ webreduce.instruments = webreduce.instruments || {};
       ////////////////////////////////////////////////////////////////////
       // Make a menu
       ////////////////////////////////////////////////////////////////////
-      $("#main_menu").append($("<li />", {id: "file_menu", text: "File"})
-        .append($("<ul />")
-          .append($("<li />", {text: "Download template"})
-            .on("click", function() {
-              $("#main_menu").hide();
-              var filename = prompt("Save template as:", "template.json");
-              if (filename == null) {return} // cancelled
-              webreduce.download(JSON.stringify(webreduce.editor._active_template, null, 2), filename);
-            })
-          )
-          .append($("<li />", {text: "Upload template"})
-            .on("click", function() {$("#main_menu").hide(); upload_dialog.dialog("open")})
-          )
-          
-          .append($("<li />", {text: "Predefined templates", id: "predefined_templates"})
-            .append($("<ul />"))
-            .on("click", "ul li", function(ev) {
-              // delegated click handler, so it can get events on elements not added yet
-              // (added during instrument_load)
-                //$("#main_menu").menu("collapseAll", null, true)
+      $("#main_menu")
+        .append($("<li />", {id: "file_menu", text: "File"})
+          .append($("<ul />")
+            .append($("<li />", {text: "Download template"})
+              .on("click", function() {
                 $("#main_menu").hide();
-                webreduce.editor.load_template(webreduce.editor._instrument_def.templates[$(this).text()]);
-                console.log(this, $(this).text(), ev);
+                var filename = prompt("Save template as:", "template.json");
+                if (filename == null) {return} // cancelled
+                webreduce.download(JSON.stringify(webreduce.editor._active_template, null, 2), filename);
               })
+            )
+            .append($("<li />", {text: "Upload template"})
+              .on("click", function() {$("#main_menu").hide(); upload_dialog.dialog("open")})
+            )
+            
+            .append($("<li />", {text: "Predefined templates", id: "predefined_templates"})
+              .append($("<ul />"))
+              .on("click", "ul li", function(ev) {
+                // delegated click handler, so it can get events on elements not added yet
+                // (added during instrument_load)
+                  $("#main_menu").hide();
+                  webreduce.editor.load_template(webreduce.editor._instrument_def.templates[$(this).text()]);
+                })
+            )  
+          ))
+        .append($("<li />", {id: "data_menu", text: "Data"})
+          .append($("<ul />")
+            .append($("<li />", {id: "data_menu_sources", text: "Add source"})
+              .append($("<ul />"))
+              .on("click", "ul li", function(ev) {
+                // delegated click handler, so it can get events on elements not added yet
+                // (added during startup)
+                  $("#main_menu").hide();
+                  webreduce.addDataSource("navigation", $(this).text(), []);
+                })
+              )
+            )
           )
-          
-        ))
         .menu()
 
       $("#show_main_menu").on("click", function() {$("#main_menu").toggle()});
@@ -143,6 +154,14 @@ webreduce.instruments = webreduce.instruments || {};
           })
           var default_template = template_names[0];
           webreduce.editor.load_template(instrument_def.templates[default_template]); 
+        });
+      webreduce.server_api.list_datasources()
+        .then(function(datasources) {
+          console.log(datasources);
+          datasources.forEach(function(d, i){
+            $("#main_menu #data_menu_sources ul").append($("<li />", {text: d}));
+              $("#main_menu").menu("refresh");
+          });
         });
       
       webreduce.update_file_mtimes = function(template) {
