@@ -176,6 +176,32 @@
     });
   }
 
+  webreduce.getAllTemplateSourcePaths = function(template) {
+    // Generate a list of all sources/paths for getting needed info from server
+    var template = template || webreduce.editor._active_template;    
+    var fsp = {}; // group by source and path
+    template.modules.forEach(function(m, i) {
+      var def = webreduce.editor._module_defs[m.module];
+      var fileinfo_fields = def.fields.filter(function(f) { return f.datatype == "fileinfo" })
+        .map(function(f) {return f.id});
+      fileinfo_fields.forEach(function(fname) {
+        if (m.config && m.config[fname]) {
+          m.config[fname].forEach(function(finfo) {
+            var parsepath = finfo.path.match(/(.*)\/([^\/]+)*$/);
+            if (parsepath) {
+              var path = parsepath[1],
+                  fname = parsepath[2];
+              if (! (finfo.source in fsp)) { fsp[finfo.source] = {} }
+              if (! (path in fsp[finfo.source])) { fsp[finfo.source][path] = [] }
+              fsp[finfo.source][path].push(fname);
+            }
+          });
+        }
+      });
+    });
+    return fsp;
+  }
+  /*
   webreduce.collate_sourcepaths = function(template) {
     var sourcepaths = d3.set();
     template.modules.forEach(function(m) {
@@ -195,6 +221,7 @@
     });
     return sourcepaths;
   }
+  */
   /*
   function finfo_to_tree(finfo, path, categorizers){
       var out = [], sample_names = {};
@@ -264,14 +291,20 @@
     return $(target).attr("datasource");
   }
   
+  function getAllBrowserSourcePaths(nav_div) {
+    var nav_div = (nav_div == null) ? "#navigation" : nav_div;
+    var sourcepaths = [];
+    $(nav_div).find(".databrowser").each(function(i,d) {
+      sourcepaths.push({source: getDataSource(d), path: getCurrentPath(d)})
+    });
+    return sourcepaths
+  }
+  
   function updateHistory(target) {
     // call with id or object for nav pane
-    var pathstrings = [];
-    $(target).find(".databrowser").each(function(i,d) {
-      pathstrings.push("source=" + getDataSource(d) + "&pathlist=" + getCurrentPath(d))
-    });
-    if (pathstrings.length > 0) {
-      var urlstr = "?" + pathstrings.join("&");
+    var sourcepaths = getAllBrowserSourcePaths(target);
+    if (sourcepaths.length > 0) {
+      var urlstr = "?" + sourcepaths.map(function(s) {return "source=" + s.source + "&pathlist=" + s.path}).join("&");
       history.pushState({}, "", urlstr);
     }
   }
@@ -433,5 +466,6 @@
   webreduce.handleChecked = handleChecked;
   webreduce.getCurrentPath = getCurrentPath;
   webreduce.addDataSource = add_data_source;
+  webreduce.getAllBrowserSourcePaths = getAllBrowserSourcePaths;
 
 })();

@@ -171,28 +171,8 @@ webreduce.instruments = webreduce.instruments || {};
       
       webreduce.update_file_mtimes = function(template) {
         var template = template || webreduce.editor._active_template;
-        
         // First, generate a list of all sources/paths for getting needed info from server
-        var fsp = {}; // group by source and path
-        template.modules.forEach(function(m, i) {
-          var def = webreduce.editor._module_defs[m.module];
-          var fileinfo_fields = def.fields.filter(function(f) { return f.datatype == "fileinfo" })
-            .map(function(f) {return f.id});
-          fileinfo_fields.forEach(function(fname) {
-            if (m.config && m.config[fname]) {
-              m.config[fname].forEach(function(finfo) {
-                var parsepath = finfo.path.match(/(.*)\/([^\/]+)*$/);
-                if (parsepath) {
-                  var path = parsepath[1],
-                      fname = parsepath[2];
-                  if (! (finfo.source in fsp)) { fsp[finfo.source] = {} }
-                  if (! (path in fsp[finfo.source])) { fsp[finfo.source][path] = [] }
-                  fsp[finfo.source][path].push(fname);
-                }
-              });
-            }
-          });
-        });
+        var fsp = webreduce.getAllTemplateSourcePaths(template);
         
         // now step through the list of sources and paths and get the mtimes from the server:
         var times_promise = new Promise(function(resolve, reject) {resolve(null)});
@@ -211,7 +191,7 @@ webreduce.instruments = webreduce.instruments || {};
         }
         
         // then step through all the modules again and update the mtimes from the new list
-        times_promise.then(function() {
+        times_promise = times_promise.then(function() {
           template.modules.forEach(function(m, i) {
             var def = webreduce.editor._module_defs[m.module];
             var fileinfo_fields = def.fields.filter(function(f) { return f.datatype == "fileinfo" })
