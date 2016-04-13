@@ -1,0 +1,28 @@
+{
+  "modules": [
+    {
+      "module": "ncnr.ospec.LoadMAGIKPSD",
+      "title": "load",
+      "x": 195,
+      "y": 80
+    },
+    {
+      "module": "ncnr.ospec.coordinateOffset",
+      "title": "Coordinateoffset",
+      "x": 360,
+      "y": 80
+    }
+  ],
+  "wires": [
+    {
+      "source": [
+        0,
+        "output"
+      ],
+      "target": [
+        1,
+        "data"
+      ]
+    }
+  ]
+}

@@ -150,16 +150,8 @@ webreduce.instruments = webreduce.instruments || {};
         reader.readAsText(file);
       });
       webreduce.editor.create_instance("bottom_panel");
-      webreduce.editor.load_instrument(current_instrument)
-        .then(function(instrument_def) { 
-          var template_names = Object.keys(instrument_def.templates);
-          template_names.forEach(function (t,i) {
-            $("#main_menu #predefined_templates ul").append($("<li />", {text: t}));
-            $("#main_menu").menu("refresh");
-          })
-          var default_template = template_names[0];
-          webreduce.editor.load_template(instrument_def.templates[default_template]); 
-        });
+      webreduce.editor.switch_instrument(current_instrument);
+      
       webreduce.server_api.list_datasources()
         .then(function(datasources) {
           console.log(datasources);

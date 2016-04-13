@@ -7,12 +7,7 @@ from copy import deepcopy
 
 from FilterableMetaArray import FilterableMetaArray as MetaArray
 from he3analyzer import He3AnalyzerCollection
-from reflred.formats import load
 from reflred import rebin as reb
-import h5py
-import dateutil.parser
-import tempfile
-import subprocess
 
 DEBUG=False
 

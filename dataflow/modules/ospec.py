@@ -2,65 +2,31 @@ from dataflow import core as df
 from dataflow.automod import make_modules
 from dataflow import templates
 
-from reflred.steps import steps
-from reflred.steps import load
-from reflred.refldata import ReflData
-from reflred.steps.polarization import PolarizationData
-from reflred.steps.deadtime import DeadTimeData
+from ospecred import magik_filters_func as steps
+from ospecred import FilterableMetaArray
 
-INSTRUMENT = "ncnr.refl"
-
-class DataflowReflData(ReflData):
-    """ 
-    This doesn't work because on first load, the class is still ReflData from nexusref
-    (only becomes DataFlowReflData on cache/reload)
-    """
-    def get_plottable_JSON(self):
-        plottable = {
-            'axes': {
-                'xaxis': {'label': self.xlabel + ' (' + self.xunits + ')'},
-                'yaxis': {'label': self.vlabel + ' (' + self.vunits + ')'}
-            },
-            'data': [[x,y,{'yupper': y+dy, 'ylower':y-dy,'xupper':x,'xlower':x}] for x,y,dy in zip(self.x, self.v, self.dv)],
-            'title': self.name + ":" + self.entry
-        }
-        return plottable
-
-    def get_plottable(self):
-        return self.todict()
-    def get_metadata(self):
-        return self.todict()
+INSTRUMENT = "ncnr.ospec"
 
 def define_instrument():
     # Define modules
     modules = make_modules(steps.ALL_ACTIONS, prefix=INSTRUMENT+'.')
 
     # Define data types
-    refldata = df.DataType(INSTRUMENT+".refldata", ReflData)
-    poldata = df.DataType(INSTRUMENT+".poldata", PolarizationData)
-    deadtime = df.DataType(INSTRUMENT+".deadtime", DeadTimeData)
-
-    #import json
-    #import os
-    #from pkg_resources import resource_string, resource_listdir
-    #template_names = [fn for fn in resource_listdir('dataflow', 'templates') if fn.endswith(".json")]
-    #templates = [json.loads(resource_string('dataflow', 'templates/' + tn)) for tn in template_names]
-    #template_path = resource_path("../dataflow/templates")
-    #template_names = [fn for fn in os.listdir(template_path) if fn.endswith(".json")]
-    #templates = [json.loads(open(os.path.join(template_path, tn), 'r').read()) for tn in template_names]
+    ospec2d = df.DataType(INSTRUMENT+".ospec2d", FilterableMetaArray)
+    #offset_data = df.DataType(INSTRUMENT+".offset_data", dict)
     
     # Define instrument
-    refl1d = df.Instrument(
+    ospec = df.Instrument(
         id=INSTRUMENT,
-        name='NCNR reflectometer',
+        name='NCNR offspecular',
         menu=[('steps', modules)],
-        datatypes=[refldata, poldata, deadtime],
+        datatypes=[ospec2d],
         template_defs = templates.get_templates(INSTRUMENT),
         )
 
     # Register instrument
-    df.register_instrument(refl1d)
-    return refl1d
+    df.register_instrument(ospec)
+    return ospec
 
 
 def loader_template():

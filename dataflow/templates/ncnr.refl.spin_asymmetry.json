@@ -1,0 +1,264 @@
+{
+  "modules": [
+    {
+      "title": "load spec!",
+      "module": "ncnr.refl.super_load",
+      "y": 10,
+      "x": 30,
+      "config": {
+        "intent": "specular"
+      }
+    },
+    {
+      "y": 10,
+      "title": "mask",
+      "module": "ncnr.refl.mask_points",
+      "x": 170
+    },
+    {
+      "y": 10,
+      "title": "join",
+      "module": "ncnr.refl.join",
+      "x": 310
+    },
+    {
+      "title": "load bg+",
+      "module": "ncnr.refl.super_load",
+      "y": 50,
+      "x": 30,
+      "config": {
+        "intent": "background+"
+      }
+    },
+    {
+      "y": 50,
+      "title": "mask",
+      "module": "ncnr.refl.mask_points",
+      "x": 170
+    },
+    {
+      "title": "load bg-",
+      "module": "ncnr.refl.super_load",
+      "y": 90,
+      "x": 30,
+      "config": {
+        "intent": "background-"
+      }
+    },
+    {
+      "y": 90,
+      "title": "mask",
+      "module": "ncnr.refl.mask_points",
+      "x": 170
+    },
+    {
+      "y": 90,
+      "title": "join",
+      "module": "ncnr.refl.join",
+      "x": 310
+    },
+    {
+      "y": 50,
+      "title": "join",
+      "module": "ncnr.refl.join",
+      "x": 310
+    },
+    {
+      "title": "load slit",
+      "module": "ncnr.refl.super_load",
+      "y": 130,
+      "x": 30,
+      "config": {
+        "intent": "intensity"
+      }
+    },
+    {
+      "y": 130,
+      "title": "mask",
+      "module": "ncnr.refl.mask_points",
+      "x": 170
+    },
+    {
+      "y": 130,
+      "title": "rescale",
+      "module": "ncnr.refl.rescale",
+      "x": 310
+    },
+    {
+      "y": 130,
+      "title": "join",
+      "module": "ncnr.refl.join",
+      "x": 455
+    },
+    {
+      "y": 55,
+      "title": "divide",
+      "module": "ncnr.refl.divide_intensity",
+      "x": 600
+    },
+    {
+      "module": "ncnr.refl.spin_asymmetry",
+      "title": "Spin Asymmetry",
+      "x": 460,
+      "y": -5
+    },
+    {
+      "module": "ncnr.refl.subtract_background",
+      "title": "Subtract Background",
+      "x": 460,
+      "y": 35
+    }
+  ],
+  "wires": [
+    {
+      "source": [
+        0,
+        "output"
+      ],
+      "target": [
+        1,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        1,
+        "output"
+      ],
+      "target": [
+        2,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        3,
+        "output"
+      ],
+      "target": [
+        4,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        4,
+        "output"
+      ],
+      "target": [
+        8,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        5,
+        "output"
+      ],
+      "target": [
+        6,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        6,
+        "output"
+      ],
+      "target": [
+        7,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        9,
+        "output"
+      ],
+      "target": [
+        10,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        10,
+        "output"
+      ],
+      "target": [
+        11,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        11,
+        "output"
+      ],
+      "target": [
+        12,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        12,
+        "output"
+      ],
+      "target": [
+        13,
+        "base"
+      ]
+    },
+    {
+      "source": [
+        2,
+        "output"
+      ],
+      "target": [
+        14,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        2,
+        "output"
+      ],
+      "target": [
+        15,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        8,
+        "output"
+      ],
+      "target": [
+        15,
+        "backp"
+      ]
+    },
+    {
+      "source": [
+        7,
+        "output"
+      ],
+      "target": [
+        15,
+        "backm"
+      ]
+    },
+    {
+      "source": [
+        15,
+        "output"
+      ],
+      "target": [
+        13,
+        "data"
+      ]
+    }
+  ]
+}

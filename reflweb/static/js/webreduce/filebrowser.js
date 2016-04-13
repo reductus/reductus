@@ -18,6 +18,7 @@
   }
 
   function categorizeFiles(files, files_metadata, datasource, path, target_in, instrument_id) {
+    var instrument_id = webreduce.editor._instrument_id;
     var load_promises = [];
     var fileinfo = {};
     var file_objs = {};

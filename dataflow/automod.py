@@ -651,7 +651,7 @@ def parse_datatype(par):
     par["datatype"] = type
     par["typeattr"] = attr
 
-FIELD_TYPES = set("str bool int float opt regex range index coordinate fileinfo".split())
+FIELD_TYPES = set("str bool int float opt regex range index coordinate fileinfo offset_data".split())
 
 def check_multiplicity(par, values, bundle_length):
     """

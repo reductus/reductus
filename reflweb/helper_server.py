@@ -135,14 +135,18 @@ from dataflow.cache import use_redis
 from dataflow.calc import process_template
 import dataflow.core as df
 
-from dataflow.modules.refl import define_instrument, INSTRUMENT
+import dataflow.modules.refl
+from dataflow.modules.refl import INSTRUMENT # default
+import dataflow.modules.ospec
+
 from dataflow.modules import load
 load.DATA_SOURCES = config.data_sources
 
 if config.use_redis == True:
     use_redis()
 
-define_instrument()
+dataflow.modules.refl.define_instrument()
+dataflow.modules.ospec.define_instrument()
 
 def sorted_ls(path, show_hidden=False):
     mtime = lambda f: os.stat(os.path.join(path, f)).st_mtime

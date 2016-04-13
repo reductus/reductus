@@ -420,6 +420,21 @@ webreduce.editor = webreduce.editor || {};
       })
   }
   
+  webreduce.editor.switch_instrument = function(instrument_id) {
+    this.load_instrument(instrument_id)
+      .then(function(instrument_def) { 
+          var template_names = Object.keys(instrument_def.templates);
+          $("#main_menu #predefined_templates ul").empty();
+          template_names.forEach(function (t,i) {
+            $("#main_menu #predefined_templates ul").append($("<li />", {text: t}));
+            $("#main_menu").menu("refresh");
+          })
+          var default_template = template_names[0];
+          current_instrument = instrument_id;
+          webreduce.editor.load_template(instrument_def.templates[default_template]); 
+        });
+  }
+  
   webreduce.editor.load_template = function(template_def) {
     this._active_template = template_def;
     var target = d3.select("#" + this._target_id);

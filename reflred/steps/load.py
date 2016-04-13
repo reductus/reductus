@@ -9,6 +9,8 @@ import pytz
 from reflred.formats import nexusref
 from reflred.iso8601 import seconds_since_epoch
 
+DATA_SOURCES = {}
+
 def check_datasource(source):
     if not source in DATA_SOURCES:
         raise RuntimeError("Need to set reflred.steps.load.DATA_SOURCES['" + source + "'] first!")
@@ -22,10 +24,10 @@ def url_load(fileinfo):
     fid.close()
     return nx_entries
 
-def find_mtime(path):
-    check_datasource()
+def find_mtime(path, source="ncnr"):
+    check_datasource(source)
     try:
-        url = urllib2.urlopen(DATA_SOURCE+path)
+        url = urllib2.urlopen(DATA_SOURCES[source]+path)
         mtime = url.info().getdate('last-modified')
     except urllib2.HTTPError as exc:
         raise ValueError("Could not open %r\n%s"%(path, str(exc)))
