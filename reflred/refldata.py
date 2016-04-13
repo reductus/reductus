@@ -1012,6 +1012,11 @@ class ReflData(object):
         np.savetxt(fid, np.vstack([self.x, self.v, self.dv, self.dx]).T)
         fid.seek(0)
         return fid.read()
+        
+    def get_plottable(self):
+        return self.todict()
+    def get_metadata(self):
+        return self.todict()
     
 def _str(object, indent=4):
     """

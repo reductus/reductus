@@ -11,6 +11,10 @@ from reflred.steps.deadtime import DeadTimeData
 INSTRUMENT = "ncnr.refl"
 
 class DataflowReflData(ReflData):
+    """ 
+    This doesn't work because on first load, the class is still ReflData from nexusref
+    (only becomes DataFlowReflData on cache/reload)
+    """
     def get_plottable_JSON(self):
         plottable = {
             'axes': {
@@ -32,7 +36,7 @@ def define_instrument():
     modules = make_modules(steps.ALL_ACTIONS, prefix=INSTRUMENT+'.')
 
     # Define data types
-    refldata = df.DataType(INSTRUMENT+".refldata", DataflowReflData)
+    refldata = df.DataType(INSTRUMENT+".refldata", ReflData)
     poldata = df.DataType(INSTRUMENT+".poldata", PolarizationData)
     deadtime = df.DataType(INSTRUMENT+".deadtime", DeadTimeData)
 

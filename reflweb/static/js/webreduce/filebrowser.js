@@ -2,7 +2,7 @@
 
 (function () {
   var NEXUS_ZIP_REGEXP = /\.nxz\.[^\.\/]+$/
-  var PARALLEL_LOAD = false;
+  var PARALLEL_LOAD = true;
   
   function make_range_icon(global_min_x, global_max_x, min_x, max_x) {
     var icon_width = 75;
@@ -40,7 +40,8 @@
       datafiles.forEach(function(j, i) {
         load_promises.push(
           loader(datasource, path + "/" + j, files_metadata[j].mtime, file_objs)
-            .then(function(r) {webreduce.statusline_log("loaded " + (++numloaded) + " of " + numdatafiles + ": "+ j); return r})
+            .then(function(r) {webreduce.statusline_log("loaded " + (++numloaded) + " of " + numdatafiles + ": "+ j); return r},
+                  function(e) {console.log('failed to load: ', j, e)})
           );
       });
       var p = Promise.all(load_promises).then(function(results) {
@@ -72,7 +73,8 @@
       datafiles.forEach(function(j, i) {
         p = p.then(function() {
           return loader(datasource, path + "/" + j, files_metadata[j].mtime, file_objs)
-            .then(function(r) {webreduce.statusline_log("loaded " + (++numloaded) + " of " + numdatafiles + ": "+ j); results.push(r); return r})
+            .then(function(r) {webreduce.statusline_log("loaded " + (++numloaded) + " of " + numdatafiles + ": "+ j); results.push(r); return r},
+                  function(e) {console.log('failed to load: ', j, e)})
           });
       });
       p = p.then(function() {
