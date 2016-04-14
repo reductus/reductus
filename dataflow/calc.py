@@ -4,6 +4,7 @@ Run a reduction workflow.
 The function run_template
 """
 
+import cPickle as pickle
 import json
 import hashlib
 import contextlib
@@ -304,8 +305,9 @@ def _store(cache, fp, data):
 
     *data* is a dictionary of *{terminal: [dataset, dataset, ...]}*.
     """
-    stored = dict((k, v.todict()) for k,v in sorted(data.items()))
-    string = json.dumps(sanitizeForJSON(stored))
+    #stored = dict((k, v.todict()) for k,v in sorted(data.items()))
+    #string = json.dumps(sanitizeForJSON(stored))
+    string = pickle.dumps(data)
     cache.set(fp, string)
 
 def _retrieve(cache, fp):
@@ -321,9 +323,10 @@ def _retrieve(cache, fp):
     Returns *data* as a dictionary of *{ terminal: [dataset, dataset, ...]}*.
     """
     string = cache.get(fp)
-    stored = sanitizeFromJSON(json.loads(string))
-    data = dict((str(terminal), Bundle.fromdict(values))
-                for terminal,values in stored.items())
+    #stored = sanitizeFromJSON(json.loads(string))
+    #data = dict((str(terminal), Bundle.fromdict(values))
+    #            for terminal,values in stored.items())
+    data = pickle.loads(string)
     return data
 
 def fingerprint_template(template, config):
