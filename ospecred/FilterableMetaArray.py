@@ -5,6 +5,12 @@ import simplejson
 from cStringIO import StringIO
 
 class FilterableMetaArray(MetaArray):
+    def __new__(cls, *args, **kw):
+        obj = MetaArray.__new__(cls, *args, **kw)
+        #print "fma extra"
+        obj.extrainfo = obj._info[-1]
+        return obj
+
     def filter(self, filtername, *args, **kwargs):
         import filters
         return filters.__getattribute__(filtername)().apply(self, *args, **kwargs)
