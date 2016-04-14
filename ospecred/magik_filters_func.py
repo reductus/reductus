@@ -11,9 +11,7 @@ from reflred.formats.nexusref import h5_open_zip
 
 from posixpath import basename, join
 import StringIO
-import dateutil.parser
 import urllib2
-import datetime
 import time
 import pytz
 from reflred.iso8601 import seconds_since_epoch
@@ -232,7 +230,7 @@ def LoadMAGIKPSD(fileinfo=None, collapse_y=True, auto_PolState=False, PolState='
                             {"name": "pixels"},
                             {"name": "monitor"},
                             {"name": "count_time"}]},
-                    {"PolState": PolState, "filename": filename, "start_datetime": dateutil.parser.parse(file_obj.attrs.get('file_time')), "friendly_name": name,
+                    {"PolState": PolState, "filename": filename, "start_datetime": entry['start_time'].value[0], "friendly_name": name,
                      "path":path, "det_angle":entry['DAS_logs']['detectorAngle']['softPosition'].value}]
                 )
             data_array = zeros((xpixels, ypixels, 4))
@@ -264,7 +262,7 @@ def LoadMAGIKPSD(fileinfo=None, collapse_y=True, auto_PolState=False, PolState='
                                 {"name": "pixels"},
                                 {"name": "monitor"},
                                 {"name": "count_time"}]},
-                        {"PolState": PolState, "start_datetime": dateutil.parser.parse(file_obj.attrs.get('file_time')), "path":path, "det_angle":entry['DAS_logs']['detectorAngle']['softPosition'].value}]
+                        {"PolState": PolState, "start_datetime": entry['start_time'].value[0], "path":path, "det_angle":entry['DAS_logs']['detectorAngle']['softPosition'].value}]
                     )
                 data_array = zeros((xpixels, frames, 4))
                 mon =  entry['DAS_logs']['counter']['liveMonitor'].value
@@ -304,7 +302,7 @@ def LoadMAGIKPSD(fileinfo=None, collapse_y=True, auto_PolState=False, PolState='
                                 {"name": "pixels"},
                                 {"name": "monitor"},
                                 {"name": "count_time"}]},
-                        {"PolState": PolState, "start_datetime": entry['start_time'].value, "friendly_name": name,
+                        {"PolState": PolState, "start_datetime": entry['start_time'].value[0], "friendly_name": name,
                          "path":path, "samp_angle": samp_angle, "det_angle": det_angle}]
                     )
                     data_array = zeros((xpixels, ypixels, 4))
