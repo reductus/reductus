@@ -51,7 +51,7 @@ class FileBasedCache(object):
     """
     def __init__(self, size=1000, cachedir='~/.webreduce'):
         self.size = size
-        self.write_lock = threading.Lock()
+        self.lock = threading.Lock()
         self.cachedir = os.path.expanduser(cachedir)
         if not os.path.exists(self.cachedir):
             os.mkdir(self.cachedir)
@@ -61,10 +61,15 @@ class FileBasedCache(object):
         return os.listdir(self.cachedir)
     def delete(self, *key):
         for k in key:
-            os.remove(os.path.join(self.cachedir, k))
+            kp = os.path.join(self.cachedir, k)
+            if os.path.isdir(kp):
+                for f in os.listdir(kp):
+                    os.remove(os.path.join(kp, f))
+            else:
+                os.remove(kp)
     def set(self, key, value):
         #open(os.path.join(self.cachedir, key), "wb").write(pickle.dumps(value))
-        with self.write_lock:
+        with self.lock:
             open(os.path.join(self.cachedir, key), "wb").write(value)
     def get(self, key):
         """Note: doesn't provide default value for missing key like dict.get"""
@@ -80,13 +85,31 @@ class FileBasedCache(object):
     __getitem__ = get
     __contains__ = exists
     def rpush(self, key, value):
-        if key not in self:
-            self[key] = [value]
-        else:
-            self[key].append(value)
+        with self.lock:
+            keydir = os.path.join(self.cachedir, key)
+            if not os.path.isdir(keydir):
+                if os.path.exists(keydir):
+                    raise KeyError(key)
+                os.mkdir(keydir)
+                new_filenum = 0
+            else:
+                filenums = map(int, os.listdir(keydir))
+                if len(filenums) == 0: 
+                    new_filenum = 0
+                else:
+                    new_filenum = max(filenums) + 1
+            open(os.path.join(keydir, str(new_filenum)), "wb").write(value)
+            
     def lrange(self, key, low, high):
         """Note: returned range includes high index, not high-1 like lists"""
-        return self[key][low:(high+1 if high != -1 else None)]
+        keydir = os.path.join(self.cachedir, key)
+        if not os.path.isdir(keydir):
+            raise KeyError(key)
+        with self.lock:
+            filenums = sorted(map(int, os.listdir(keydir)))
+            lookups = filenums[low:(high+1 if high != -1 else None)]
+            return [open(os.path.join(keydir, str(n)), "rb").read() for n in lookups]
+
 
 
 def demo():
