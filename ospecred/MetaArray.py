@@ -5,9 +5,9 @@
 ## Free for any kind of use.
 
 
-from numpy import ndarray, array, empty, fromstring, arange
-import datetime
-import types, copy
+from numpy import ndarray, array, empty, fromstring, concatenate
+import types
+import copy
 
 def axis(name=None, cols=None, values=None, units=None):
   """Convenience function for generating axis descriptions when defining MetaArrays
@@ -36,6 +36,10 @@ def axis(name=None, cols=None, values=None, units=None):
         col[cNameOrder[i]] = c[i]
       ax['cols'].append(col)
   return ax
+
+def _expand(cls, data, info):
+  return cls(data=data, info=info)
+_expand.__safe_for_unpickling__ = True
 
 
 class MetaArray(ndarray):
@@ -136,20 +140,31 @@ class MetaArray(ndarray):
       subarr = subarr.view(subtype)
       subarr.shape = meta['shape']
       subarr._info = meta['info']
+    else:
+      raise TypeError("Cannot create a blank MetaArray")
     # Finally, we must return the newly created object:
     return subarr
 
+  def __reduce__(self):
+    return _expand, (self.__class__, self.view(ndarray), self._info)
+
+  def __copy__(self, order=None):
+    return self.__class__(data=self.view(ndarray).copy(order),
+                          info=self._info, copy=True)
+
+  def __deepcopy__(self, memo=None):
+    return self.__class__(data=self.view(ndarray),
+                          info=copy.deepcopy(self._info, memo), copy=True)
 
   def __array_finalize__(self, obj):
     # We use the getattr method to set a default if 'obj' doesn't have the 'info' attribute
-    self._info = getattr(obj, 'info', [{}]*(obj.ndim + 1))
+    self._info = getattr(obj, '_info', [{}]*(obj.ndim + 1))
     self._infoOwned = False  ## Do not make changes to _info until it is copied at least once
       
     # We could have checked first whether self._info was already defined:
 #    if not hasattr(self, 'info'):
 #        self._info = getattr(obj, 'info', {})
-    
-  
+
   def __getitem__(self, ind):
     nInd = self._interpretIndexes(ind)
     a = ndarray.__getitem__(self, nInd)
@@ -332,9 +347,9 @@ class MetaArray(ndarray):
       ax = self._info[i]
     return ax
     
-    def __repr__(self):
-        return "%s\n    axis info: %s" % (ndarray.__repr__(self), str(self._info))
+  def __repr__(self):
+    return "%s\n    axis info: %s" % (ndarray.__repr__(self), str(self._info))
 
-    def __str__(self):
-        return self.__repr__()
+  def __str__(self):
+    return self.__repr__()
 
