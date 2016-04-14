@@ -65,6 +65,7 @@ class FileBasedCache(object):
             if os.path.isdir(kp):
                 for f in os.listdir(kp):
                     os.remove(os.path.join(kp, f))
+                os.rmdir(kp)
             else:
                 os.remove(kp)
     def set(self, key, value):
