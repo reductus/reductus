@@ -1,22 +1,13 @@
 from MetaArray import MetaArray
-from numpy import ndarray, amin, amax, alen, array, fromstring, float, float64, float32, ones, empty, newaxis, savetxt, sqrt, mod
-import copy, simplejson, datetime
+from numpy import ndarray, array, fromstring, float, float32, ones, empty, newaxis, savetxt, sqrt, mod
+import simplejson
 #from ...dataflow.core import Data
 from cStringIO import StringIO
 
 class FilterableMetaArray(MetaArray):
-    def __new__(*args, **kwargs):
-        subarr = MetaArray.__new__(*args, **kwargs)
-        subarr.extrainfo = subarr._info[-1]
-        return subarr
-    
     def filter(self, filtername, *args, **kwargs):
         import filters
         return filters.__getattribute__(filtername)().apply(self, *args, **kwargs)
-
-    
-    def __deepcopy__(self, memo):
-        return FilterableMetaArray(self.view(ndarray).copy(), info=self.infoCopy())
 
     def dumps(self):
         meta = { 'shape': self.shape, 'type': str(self.dtype), 'info': self.infoCopy()}
@@ -36,7 +27,7 @@ class FilterableMetaArray(MetaArray):
         ans = fd.getvalue()
         fd.close()
         return ans
-    
+
     def get_extrema(self):
         extrema = {}
         for ax in self._info:
