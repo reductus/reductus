@@ -38,6 +38,11 @@ def axis(name=None, cols=None, values=None, units=None):
   return ax
 
 def _expand(cls, data, info):
+  """
+  Inverse of the MetaArray.__reduce__ method, which reconstructs a MetaArray
+  from the state returned by __reduce__.
+  """
+  #print "_expand", cls, info
   return cls(data=data, info=info)
 _expand.__safe_for_unpickling__ = True
 
@@ -88,6 +93,7 @@ class MetaArray(ndarray):
   """
   
   def __new__(subtype, data=None, file=None, info=None, dtype=None, copy=False):
+    #print "meta new"
     if data is not None:
       if type(data) is types.TupleType:
         subarr = empty(data, dtype=dtype)
@@ -115,9 +121,14 @@ class MetaArray(ndarray):
               info[i]['values'] = array(info[i]['values'])
             elif type(info[i]['values']) is not ndarray:
               raise Exception("Axis values must be specified as list or ndarray")
+        #print "setting info"
         subarr._info = info
       elif hasattr(data, '_info'):
+        #print "copying info"
         subarr._info = data._info
+      else:
+        #print "empty info"
+        subarr._info = [{}]*(subarr.ndim + 1)
 
     elif file is not None:
       fd = open(file, 'r')
@@ -145,6 +156,14 @@ class MetaArray(ndarray):
     # Finally, we must return the newly created object:
     return subarr
 
+  # Note: __array_finalize__ is useless to us because data.view(MetaArray)
+  # will not set the axis info to anything useful.  We might as well require
+  # the form MetaArray(data, info=info), in which case there is no good
+  # reason to initialize info to the empty axes descriptions.
+  #def __array_finalize__(self, obj):
+  #  subarr._info = [{}]*(subarr.ndim + 1)
+
+
   def __reduce__(self):
     return _expand, (self.__class__, self.view(ndarray), self._info)
 
@@ -156,14 +175,8 @@ class MetaArray(ndarray):
     return self.__class__(data=self.view(ndarray),
                           info=copy.deepcopy(self._info, memo), copy=True)
 
-  def __array_finalize__(self, obj):
-    # We use the getattr method to set a default if 'obj' doesn't have the 'info' attribute
-    self._info = getattr(obj, '_info', [{}]*(obj.ndim + 1))
-    self._infoOwned = False  ## Do not make changes to _info until it is copied at least once
-      
-    # We could have checked first whether self._info was already defined:
-#    if not hasattr(self, 'info'):
-#        self._info = getattr(obj, 'info', {})
+  def copy(self, order=None):
+    return self.__copy__(order=order)
 
   def __getitem__(self, ind):
     nInd = self._interpretIndexes(ind)
@@ -175,8 +188,7 @@ class MetaArray(ndarray):
           a._info.append(self._axisSlice(i, nInd[i]))
       a._info.append(self._info[-1])   ## Tack on extra data
     return a
-  
-  
+
   def __setitem__(self, ind, val):
     nInd = self._interpretIndexes(ind)
     return ndarray.__setitem__(self, nInd, val)
