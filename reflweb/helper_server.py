@@ -130,7 +130,7 @@ class ThreadedJSONRPCServer(SocketServer.ThreadingMixIn, SimpleJSONRPCServer):
 #webbrowser.open_new_tab('http://localhost:%d/index.html?rpc_port=%d' % (http_port, rpc_port))
 
 import dataflow
-from dataflow.core import Template, sanitizeForJSON, lookup_instrument
+from dataflow.core import Template, sanitizeForJSON, lookup_instrument, _instrument_registry
 from dataflow.cache import use_redis
 from dataflow.calc import process_template
 import dataflow.core as df
@@ -299,6 +299,9 @@ def calc_template(template_def, config):
 
 def list_datasources():
     return config.data_sources.keys()
+    
+def list_instruments():
+    return _instrument_registry.keys()
         
 if __name__ == '__main__':
     server = ThreadedJSONRPCServer((config.jsonrpc_servername, config.jsonrpc_port), encoding='utf8', requestHandler=JSONRPCRequestHandler)
@@ -310,6 +313,7 @@ if __name__ == '__main__':
     server.register_function(get_instrument)
     server.register_function(find_calculated)
     server.register_function(list_datasources)
+    server.register_function(list_instruments)
     print "serving on",rpc_port
     server.serve_forever()
     print "done serving rpc forever"

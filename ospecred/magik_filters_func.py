@@ -2,7 +2,7 @@ from numpy import cos, pi, cumsum, arange, ndarray, ones, zeros, array, newaxis,
 
 import numpy
 from numpy.ma import MaskedArray
-import os, simplejson, datetime, sys, types
+import os, sys, types
 from copy import deepcopy
 
 from FilterableMetaArray import FilterableMetaArray as MetaArray

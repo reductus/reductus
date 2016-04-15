@@ -19,7 +19,7 @@ webreduce.instruments['ncnr.ospec'] = webreduce.instruments['ncnr.ospec'] || {};
     var config = {"0": {"fileinfo": {"path": path, "source": datasource, "mtime": mtime}}},
         module_id = 0,
         terminal_id = "output";
-    return webreduce.server_api.calc_terminal(template, config, module_id, terminal_id).then(function(result) {
+    return webreduce.server_api.calc_terminal(template, config, module_id, terminal_id, "plottable").then(function(result) {
       result.values.forEach(function(v) {v.mtime = mtime});
       if (db) { db[path] = result.values; }
       return result.values
@@ -95,13 +95,9 @@ webreduce.instruments['ncnr.ospec'] = webreduce.instruments['ncnr.ospec'] || {};
     return plottable
   } 
   
-  instrument.plot = plot;
+  instrument.plot = function(plottable) {return plottable};
   instrument.load_file = load_ospec; 
   instrument.categorizers = [
-    function(info) { return info.sample.name },
-    function(info) { return info.intent || "unknown" },
-    function(info) { return info.name },
-    function(info) { return info.polarization || "unpolarized" }
   ];
   
   function add_range_indicators(target) {

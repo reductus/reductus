@@ -60,7 +60,7 @@ webreduce.editor = webreduce.editor || {};
     $(buttons_div).buttonset();
     
     var input_datasets_promise = (input_datasets_id == undefined) ? new Promise(function(r,j) {r(null)}) : 
-      webreduce.server_api.calc_terminal(active_template, {}, module_index, input_datasets_id);
+      webreduce.server_api.calc_terminal(active_template, {}, module_index, input_datasets_id, "plottable");
     
     input_datasets_promise.then(function(datasets_in) {
       fields.forEach(function(field) {

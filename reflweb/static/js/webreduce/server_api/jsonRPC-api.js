@@ -52,7 +52,7 @@ $.jsonRPC.setup({
     return wrapped
   }
   
-  var toWrap = ["find_calculated", "get_file_metadata", "get_instrument", "calc_terminal", "list_datasources"];
+  var toWrap = ["find_calculated", "get_file_metadata", "get_instrument", "calc_terminal", "list_datasources", "list_instruments"];
   for (var i=0; i<toWrap.length; i++) {
     var method_name = toWrap[i];
     app.server_api[method_name] = wrap_jsonRPC(method_name);

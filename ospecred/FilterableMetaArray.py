@@ -90,7 +90,6 @@ class FilterableMetaArray(MetaArray):
         colors = ['Blue', 'Red', 'Green', 'Yellow']
         cols = self._info[1]['cols']
         data_cols = [col['name'] for col in cols if not col['name'].startswith('error')]
-        print data_cols
         x = self._info[0]['values'].tolist()
         xlabel = self._info[0]['name']
         title = self._info[-1].get('friendly_name', "1d data")
@@ -119,7 +118,6 @@ class FilterableMetaArray(MetaArray):
         colors = ['Blue', 'Red', 'Green', 'Yellow']
         cols = self._info[1]['cols']
         data_cols = [col['name'] for col in cols if not col['name'].startswith('error')]
-        print data_cols
         x = self._info[0]['values'].tolist()
         xlabel = self._info[0]['name']
         plottable_data = {
