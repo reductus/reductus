@@ -132,6 +132,15 @@ webreduce.instruments = webreduce.instruments || {};
               )
             )
           )
+        .append($("<li />", {id: "instrument_menu", text: "Instrument"})
+          .append($("<ul />"))
+          .on("click", "ul li", function(ev) {
+            // delegated click handler, so it can get events on elements not added yet
+            // (added during startup)
+              $("#main_menu").hide();
+              webreduce.editor.switch_instrument($(this).text());
+            })
+          )
         .menu()
 
       $("#show_main_menu").on("click", function() {$("#main_menu").toggle()});
@@ -157,6 +166,15 @@ webreduce.instruments = webreduce.instruments || {};
           console.log(datasources);
           datasources.forEach(function(d, i){
             $("#main_menu #data_menu_sources ul").append($("<li />", {text: d}));
+              $("#main_menu").menu("refresh");
+          });
+        });
+        
+      webreduce.server_api.list_instruments()
+        .then(function(instruments) {
+          console.log(instruments);
+          instruments.forEach(function(d, i){
+            $("#main_menu #instrument_menu ul").append($("<li />", {text: d}));
               $("#main_menu").menu("refresh");
           });
         });
