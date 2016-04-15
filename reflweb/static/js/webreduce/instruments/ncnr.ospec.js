@@ -19,7 +19,7 @@ webreduce.instruments['ncnr.ospec'] = webreduce.instruments['ncnr.ospec'] || {};
     var config = {"0": {"fileinfo": {"path": path, "source": datasource, "mtime": mtime}}},
         module_id = 0,
         terminal_id = "output";
-    return webreduce.server_api.calc_terminal(template, config, module_id, terminal_id, "plottable").then(function(result) {
+    return webreduce.server_api.calc_terminal(template, config, module_id, terminal_id, "metadata").then(function(result) {
       result.values.forEach(function(v) {v.mtime = mtime});
       if (db) { db[path] = result.values; }
       return result.values
@@ -59,7 +59,7 @@ webreduce.instruments['ncnr.ospec'] = webreduce.instruments['ncnr.ospec'] || {};
     return result;
   }
   
-  function plot(refl_objs) {
+  function plot(ospec_objs) {
     // entry_ids is list of {path: path, filename: filename, entryname: entryname} ids
     var series = new Array();
     var datas = [], xcol;
@@ -95,63 +95,17 @@ webreduce.instruments['ncnr.ospec'] = webreduce.instruments['ncnr.ospec'] || {};
     return plottable
   } 
   
-  instrument.plot = function(plottable) {return plottable};
+  instrument.plot = function(objs) { 
+    return objs.slice(-1)[0].plottable[0];
+  };
   instrument.load_file = load_ospec; 
   instrument.categorizers = [
+    function(info) { return info.friendly_name },
+    function(info) { return info.path }
   ];
   
-  function add_range_indicators(target) {
-    var propagate_up_levels = 2; // levels to push up xmin and xmax.
-    var jstree = target.jstree(true);
-    var source_id = target.parent().attr("id");
-    var path = webreduce.getCurrentPath(target.parent());
-    var file_objs = webreduce.editor._file_objs[path];
-    var leaf, entry;
-    // first set min and max for entries:
-    for (fn in jstree._model.data) {
-      leaf = jstree._model.data[fn];
-      if (leaf.li_attr && 'filename' in leaf.li_attr && 'entryname' in leaf.li_attr) {
-        entry = file_objs[leaf.li_attr.filename].filter(function(f) {return f.entry == leaf.li_attr.entryname});
-        if (entry && entry[0]) {
-          var e = entry[0];
-          var xaxis = 'x'; // primary_axis[e.intent || 'specular'];
-          if (!(get_refl_item(entry[0], xaxis))) { console.log(entry[0]); throw "error: no such axis " + xaxis + " in entry for intent " + e.intent }
-          var extent = d3.extent(get_refl_item(entry[0], xaxis));
-          leaf.li_attr.xmin = extent[0];
-          leaf.li_attr.xmax = extent[1];
-          var parent = leaf;
-          for (var i=0; i<propagate_up_levels; i++) {
-            var parent_id = parent.parent;
-            parent = jstree._model.data[parent_id];
-            if (parent.li_attr.xmin != null) {
-              parent.li_attr.xmin = Math.min(extent[0], parent.li_attr.xmin);
-            }
-            else {
-              parent.li_attr.xmin = extent[0];
-            }
-            if (parent.li_attr.xmax != null) {
-              parent.li_attr.xmax = Math.max(extent[1], parent.li_attr.xmax);
-            }
-            else {
-              parent.li_attr.xmax = extent[1];
-            }
-          }
-        }
-      }
-    }
-    for (fn in jstree._model.data) {
-      leaf = jstree._model.data[fn];
-      if (leaf.parent == null) {continue}
-      var l = leaf.li_attr;
-      var p = jstree._model.data[leaf.parent].li_attr;
-      if (l.xmin != null && l.xmax != null && p.xmin != null && p.xmax != null) {
-        var range_icon = make_range_icon(parseFloat(p.xmin), parseFloat(p.xmax), parseFloat(l.xmin), parseFloat(l.xmax));
-        leaf.text += range_icon;
-      }
-    }
-  }
   
-  instrument.decorators = [add_range_indicators];
+  instrument.decorators = [];
     
 })(webreduce.instruments['ncnr.ospec']);
 

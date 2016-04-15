@@ -16,6 +16,9 @@ import time
 import pytz
 from reflred.iso8601 import seconds_since_epoch
 
+from dataflow.core import Template
+from dataflow.calc import process_template
+
 ALL_ACTIONS = []
 DATA_SOURCES = {"ncnr": "http://ncnr.nist.gov/pub/"}
 DEBUG = False
@@ -85,7 +88,7 @@ def fitPSDCalibration(calibration, minimum_peak_intensity=500.0):
     return {"pixels_per_degree": -fit[0], "qzero_pixel": fit[1]}
    
 @module
-def coordinateOffset(data, offsets=None):
+def coordinateOffset(data, axis=None, offset=0):
     """ 
     Apply an offset to one or both of the coordinate axes 
     To apply an offset to an axis, add it to the dict of offsets.
@@ -96,7 +99,9 @@ def coordinateOffset(data, offsets=None):
 
     data (ospec2d) : data in
 
-    offsets (offset_data) : to apply 0.01 offset to twotheta only make offsets = {'twotheta': 0.01}
+    axis (str): axis to apply the offset to
+    
+    offset (float): amount of offset
     
     **Returns**
 
@@ -104,15 +109,10 @@ def coordinateOffset(data, offsets=None):
 
     2016-04-01 Brian Maranville
     """
+    if axis is None: return data
     new_info = data.infoCopy()
-    if offsets is None: offsets = {}
-    for key in offsets.keys():
-        if 1:
-            axisnum = data._getAxis(key)
-            new_info[axisnum]['values'] += offsets[key]
-        #except:
-        else:
-            pass
+    axisnum = data._getAxis(axis)
+    new_info[axisnum]['values'] += offset
     new_data = MetaArray(data.view(ndarray).copy(), info=new_info)
     return new_data
     
@@ -149,7 +149,57 @@ def find_mtime(path, source="ncnr"):
 
     return { 'path': path, 'mtime': timestamp }
 
-
+@cache
+@module
+def LoadMAGIKPSDMany(fileinfo=None, collapse_y=True, auto_PolState=False, PolState='', flip=True, transpose=True):
+    """ 
+    loads a data file into a MetaArray and returns that.
+    Checks to see if data being loaded is 2D; if not, quits
+    
+    Need to rebin and regrid if the detector is moving...
+    
+    **Inputs**
+    
+    fileinfo (fileinfo[]): Files to open.
+    
+    collapse_y {Collapse along y} (bool): sum over y-axis of detector
+    
+    auto_PolState {Automatic polarization identify} (bool): automatically determine the polarization state from entry name
+    
+    PolState (str): polarization state if not automatically detected
+    
+    flip (bool): flip the data up and down
+    
+    transpose (bool): transpose the data
+    
+    **Returns**
+    
+    output (ospec2d[]): all the entries loaded.
+    
+    2016-04-01 Brian Maranville  
+    """
+    outputs = []
+    for fi in fileinfo:        
+        template_def = {
+          "name": "loader_template",
+          "description": "Offspecular remote loader",
+          "modules": [
+            {"module": "ncnr.ospec.LoadMAGIKPSD", "version": "0.1", "config": {}}
+          ],
+          "wires": [],
+          "instrument": "ncnr.magik",
+          "version": "0.0"
+        }
+        template = Template(**template_def)
+        config = {"0": {"fileinfo": {"path": fi['path'], "source": fi['source'], "mtime": fi['mtime']}}}
+        nodenum = 0
+        terminal_id = "output"
+        
+        retval = process_template(template, config, target=(nodenum, terminal_id))
+        outputs.extend(retval.values)
+    return outputs
+    
+@cache
 @module
 def LoadMAGIKPSD(fileinfo=None, collapse_y=True, auto_PolState=False, PolState='', flip=True, transpose=True):
     """ 
@@ -192,9 +242,8 @@ def LoadMAGIKPSD(fileinfo=None, collapse_y=True, auto_PolState=False, PolState='
     #    return
     for entryname, entry in file_obj.items():
         active_slice = slice(None, DETECTOR_ACTIVE[0], DETECTOR_ACTIVE[1])
-        counts_value = entry['DAS_logs']['areaDetector']['counts'].value[:, 1:DETECTOR_ACTIVE[0]+1, :DETECTOR_ACTIVE[1]]
+        counts_value = entry['DAS_logs/areaDetector/counts'].value[:, 1:DETECTOR_ACTIVE[0]+1, :DETECTOR_ACTIVE[1]]
         dims = counts_value.shape
-        print dims
         ndims = len(dims)
         if auto_PolState:
             PolState = lookup.get(entryname, "")
@@ -223,15 +272,15 @@ def LoadMAGIKPSD(fileinfo=None, collapse_y=True, auto_PolState=False, PolState='
         if ndims == 2: # one of the dimensions has been collapsed.
             info = []     
             info.append({"name": "xpixel", "units": "pixels", "values": arange(xpixels) }) # reverse order
-            info.append({"name": "theta", "units": "degrees", "values": entry['DAS_logs']['sampleAngle']['softPosition'].value })
+            info.append({"name": "theta", "units": "degrees", "values": entry['DAS_logs/sampleAngle/softPosition'].value })
             info.extend([
                     {"name": "Measurements", "cols": [
                             {"name": "counts"},
                             {"name": "pixels"},
                             {"name": "monitor"},
                             {"name": "count_time"}]},
-                    {"PolState": PolState, "filename": filename, "start_datetime": entry['start_time'].value[0], "friendly_name": name,
-                     "path":path, "det_angle":entry['DAS_logs']['detectorAngle']['softPosition'].value}]
+                    {"PolState": PolState, "filename": filename, "start_datetime": entry['start_time'].value[0], "friendly_name": entry['DAS_logs/sample/name'].value[0],
+                     "entry": entryname, "path":path, "det_angle":entry['DAS_logs/detectorAngle/softPosition'].value}]
                 )
             data_array = zeros((xpixels, ypixels, 4))
             mon =  entry['DAS_logs']['counter']['liveMonitor'].value
@@ -255,14 +304,16 @@ def LoadMAGIKPSD(fileinfo=None, collapse_y=True, auto_PolState=False, PolState='
             if collapse_y == True:
                 info = []     
                 info.append({"name": "xpixel", "units": "pixels", "values": arange(xpixels) }) # reverse order
-                info.append({"name": "theta", "units": "degrees", "values": entry['DAS_logs']['sampleAngle']['softPosition'].value })
+                info.append({"name": "theta", "units": "degrees", "values": entry['DAS_logs/sampleAngle/softPosition'].value })
                 info.extend([
                         {"name": "Measurements", "cols": [
                                 {"name": "counts"},
                                 {"name": "pixels"},
                                 {"name": "monitor"},
                                 {"name": "count_time"}]},
-                        {"PolState": PolState, "start_datetime": entry['start_time'].value[0], "path":path, "det_angle":entry['DAS_logs']['detectorAngle']['softPosition'].value}]
+                        {"PolState": PolState, "start_datetime": entry['start_time'].value[0], "path":path, 
+                         "det_angle":entry['DAS_logs/detectorAngle/softPosition'].value.tolist(), 
+                         "friendly_name": entry['DAS_logs/sample/name'].value[0], "entry": entryname}]
                     )
                 data_array = zeros((xpixels, frames, 4))
                 mon =  entry['DAS_logs']['counter']['liveMonitor'].value
@@ -302,8 +353,8 @@ def LoadMAGIKPSD(fileinfo=None, collapse_y=True, auto_PolState=False, PolState='
                                 {"name": "pixels"},
                                 {"name": "monitor"},
                                 {"name": "count_time"}]},
-                        {"PolState": PolState, "start_datetime": entry['start_time'].value[0], "friendly_name": name,
-                         "path":path, "samp_angle": samp_angle, "det_angle": det_angle}]
+                        {"PolState": PolState, "start_datetime": entry['start_time'].value[0], "friendly_name": entry['DAS_logs/sample/name'].value[0],
+                         "entry": entryname, "path":path, "samp_angle": samp_angle, "det_angle": det_angle}]
                     )
                     data_array = zeros((xpixels, ypixels, 4))
                     mon =  entry['DAS_logs']['counter']['liveMonitor'].value[i]
@@ -318,7 +369,7 @@ def LoadMAGIKPSD(fileinfo=None, collapse_y=True, auto_PolState=False, PolState='
                     subdata = MetaArray(data_array, dtype='float', info=info)
                     subdata.friendly_name = name + ("_%d" % i) # goes away on dumps/loads... just for initial object.
                     data.append(subdata)
-    return data
+    return [data]
     
 def test():
     from dataflow.modules import load

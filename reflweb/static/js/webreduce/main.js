@@ -51,6 +51,10 @@ webreduce.instruments = webreduce.instruments || {};
         else if (v[0] == 'source' && v[1]) {
           source = v[1];
         }
+        else if (v[0] == 'instrument' && v[1]) {
+          current_instrument = v[1];
+          webreduce.editor.switch_instrument(current_instrument);
+        }
       })
     }
 
@@ -159,7 +163,6 @@ webreduce.instruments = webreduce.instruments || {};
         reader.readAsText(file);
       });
       webreduce.editor.create_instance("bottom_panel");
-      webreduce.editor.switch_instrument(current_instrument);
       
       webreduce.server_api.list_datasources()
         .then(function(datasources) {
@@ -238,6 +241,7 @@ webreduce.instruments = webreduce.instruments || {};
         }
       }
       window.onpopstate();
+      webreduce.editor.switch_instrument(current_instrument);
   }
 
 })();

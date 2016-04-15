@@ -75,7 +75,10 @@ class FilterableMetaArray(MetaArray):
             return False
 
     def get_metadata(self):
-        return self.get_plottable()
+        metadata = {}
+        metadata.update(self.extrainfo)
+        metadata['plottable'] = self.get_plottable()
+        return metadata
         
     def get_plottable(self, binary_fp=None):
         if len(self.shape) == 3:
@@ -112,7 +115,7 @@ class FilterableMetaArray(MetaArray):
             plottable_data['data'].append(series_data)
             plottable_data['options']['series'].append({'label': col})
             
-        return simplejson.dumps(plottable_data,sort_keys=True, indent=2)
+        return plottable_data
         
     def get_plottable_nd(self, binary_fp=None):
         colors = ['Blue', 'Red', 'Green', 'Yellow']
@@ -153,7 +156,7 @@ class FilterableMetaArray(MetaArray):
             plottable_data['ordery'].append(ordery)
             plottable_data['series'][0]['data'][col] = series_y
             
-        return simplejson.dumps(plottable_data,sort_keys=True, indent=2)
+        return plottable_data
             
     def get_plottable_2d(self, binary_fp=None):
         # grab the first counts col:
@@ -204,8 +207,8 @@ class FilterableMetaArray(MetaArray):
             dump.update( dict(type=plot_type, z=z, title=title, dims=dims, 
                         xlabel=xlabel, ylabel=ylabel, zlabel=zlabel, 
                         transform=transform) )
-            result.append(simplejson.dumps(dump, sort_keys=True))
-        return ",".join(result)
+            result.append(dump)
+        return result
     
     def get_plottable_binary(self):
         cols = self._info[2]['cols']

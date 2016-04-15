@@ -60,7 +60,7 @@ webreduce.editor = webreduce.editor || {};
     $(buttons_div).buttonset();
     
     var input_datasets_promise = (input_datasets_id == undefined) ? new Promise(function(r,j) {r(null)}) : 
-      webreduce.server_api.calc_terminal(active_template, {}, module_index, input_datasets_id, "plottable");
+      webreduce.server_api.calc_terminal(active_template, {}, module_index, input_datasets_id, "metadata");
     
     input_datasets_promise.then(function(datasets_in) {
       fields.forEach(function(field) {
@@ -76,7 +76,7 @@ webreduce.editor = webreduce.editor || {};
     var selected = target.select(".module .selected");
     var index = parseInt(d3.select(selected.node().parentNode.parentNode).attr("index"));
     var terminal_id = selected.attr("terminal_id");
-    webreduce.server_api.calc_terminal(this._active_template, {}, index, terminal_id, "plottable").then(function(result) {
+    webreduce.server_api.calc_terminal(this._active_template, {}, index, terminal_id, "metadata").then(function(result) {
       webreduce.editor._active_plot = webreduce.editor.show_plots(result.values);
       webreduce.editor._active_node = index;
       webreduce.editor._active_terminal = terminal_id;
@@ -90,8 +90,28 @@ webreduce.editor = webreduce.editor || {};
         webreduce.editor.show_plots_1d(new_plotdata);
     }
     else if (new_plotdata.type == '2d') {
-        webreduce.editor.show-plots_2d(new_plotdata);
+        webreduce.editor.show_plots_2d(new_plotdata);
     }
+  }
+  
+  webreduce.editor.show_plots_2d = function(data) {
+    var aspect_ratio = null;
+    if ((((data.options || {}).fixedAspect || {}).fixAspect || null) == true) {
+      aspect_ratio = ((data.options || {}).fixedAspect || {}).aspectRatio || null;
+    }
+    var chart = new heatChart(data.options);
+    
+    var transform = 'log';
+    chart
+      .ztransform((transform == "log")? "log" : "linear")
+      //.colormap(cm.get_colormap(current_instr == "NGBSANS" ? "spectral" : "jet"))
+      .autoscale(true)
+      .aspect_ratio(aspect_ratio)
+      .dims(data.dims)
+      .xlabel(data.xlabel)
+      .ylabel(data.ylabel);
+    d3.selectAll("#plotdiv svg").remove();
+    d3.selectAll("#plotdiv").data(data.z).call(chart);
   }
   
   webreduce.editor.show_plots_1d = function(plotdata) {

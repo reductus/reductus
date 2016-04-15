@@ -91,7 +91,6 @@ if getattr(config, 'serve_staticfiles', True) == True:
         #queryParsed = urlparse.parse_qs(parsedParams.query)
         #docname = os.path.basename(parsedParams.path)
         docname = parsedParams.path.lstrip('/')
-        print docname
         if (docname == "" or docname == "/"):
             docname = homepage
         docpath = os.path.join(currdir, 'static',  *(docname.split("/")))
@@ -176,7 +175,6 @@ def local_file_metadata(pathlist):
 
 def get_file_metadata(source="ncnr", pathlist=None):
     if pathlist is None: pathlist = []
-    print "get file metadata", source, pathlist
     import urllib
     import urllib2
     import json

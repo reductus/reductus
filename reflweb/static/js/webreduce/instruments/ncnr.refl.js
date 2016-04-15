@@ -110,13 +110,13 @@ webreduce.instruments['ncnr.refl'] = webreduce.instruments['ncnr.refl'] || {};
     var jstree = target.jstree(true);
     var source_id = target.parent().attr("id");
     var path = webreduce.getCurrentPath(target.parent());
-    var file_objs = webreduce.editor._file_objs[path];
+    var file_metadata = webreduce.editor._file_metadata[path];
     var leaf, entry;
     // first set min and max for entries:
     for (fn in jstree._model.data) {
       leaf = jstree._model.data[fn];
       if (leaf.li_attr && 'filename' in leaf.li_attr && 'entryname' in leaf.li_attr) {
-        entry = file_objs[leaf.li_attr.filename].filter(function(f) {return f.entry == leaf.li_attr.entryname});
+        entry = file_metadata[leaf.li_attr.filename].filter(function(f) {return f.entry == leaf.li_attr.entryname});
         if (entry && entry[0]) {
           var e = entry[0];
           var xaxis = 'x'; // primary_axis[e.intent || 'specular'];

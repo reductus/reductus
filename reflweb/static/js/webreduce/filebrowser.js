@@ -17,13 +17,13 @@
     return output
   }
 
-  function categorizeFiles(files, files_metadata, datasource, path, target_in, instrument_id) {
+  function categorizeFiles(files, files_metadata, datasource, path, target_in) {
     var instrument_id = webreduce.editor._instrument_id;
     var load_promises = [];
     var fileinfo = {};
-    var file_objs = {};
-    webreduce.editor._file_objs = webreduce.editor._file_objs || {};
-    webreduce.editor._file_objs[path] = file_objs;
+    var file_metadata = {};
+    webreduce.editor._file_metadata = webreduce.editor._file_metadata || {};
+    webreduce.editor._file_metadata[path] = file_metadata;
     var datafiles = files.filter(function(x) {return (
       NEXUS_ZIP_REGEXP.test(x) &&
       (/^(fp_)/.test(x) == false) &&
@@ -40,17 +40,17 @@
       ////////////////////////////////////////////////////////////////////////////
       datafiles.forEach(function(j, i) {
         load_promises.push(
-          loader(datasource, path + "/" + j, files_metadata[j].mtime, file_objs)
+          loader(datasource, path + "/" + j, files_metadata[j].mtime, file_metadata)
             .then(function(r) {webreduce.statusline_log("loaded " + (++numloaded) + " of " + numdatafiles + ": "+ j); return r},
                   function(e) {console.log('failed to load: ', j, e)})
           );
       });
       var p = Promise.all(load_promises).then(function(results) {
         var categorizers = webreduce.instruments[instrument_id].categorizers;
-        var treeinfo = file_objs_to_tree(file_objs, categorizers);
+        var treeinfo = file_metadata_to_tree(file_metadata, categorizers);
         // add decorators etc to the tree with postprocess:
         var postprocess = webreduce.instruments[instrument_id].postprocess;
-        if (postprocess) { postprocess(treeinfo, file_objs) }
+        if (postprocess) { postprocess(treeinfo, file_metadata) }
         var target = $(target_in).find(".remote-filebrowser");
         var jstree = target.jstree({
           "plugins": ["checkbox", "changed", "sort"],
@@ -73,17 +73,17 @@
           results = [];
       datafiles.forEach(function(j, i) {
         p = p.then(function() {
-          return loader(datasource, path + "/" + j, files_metadata[j].mtime, file_objs)
+          return loader(datasource, path + "/" + j, files_metadata[j].mtime, file_metadata)
             .then(function(r) {webreduce.statusline_log("loaded " + (++numloaded) + " of " + numdatafiles + ": "+ j); results.push(r); return r},
                   function(e) {console.log('failed to load: ', j, e)})
           });
       });
       p = p.then(function() {
         var categorizers = webreduce.instruments[instrument_id].categorizers;
-        var treeinfo = file_objs_to_tree(file_objs, categorizers);
+        var treeinfo = file_metadata_to_tree(file_metadata, categorizers);
         // add decorators etc to the tree with postprocess:
         var postprocess = webreduce.instruments[instrument_id].postprocess;
-        if (postprocess) { postprocess(treeinfo, file_objs) }
+        if (postprocess) { postprocess(treeinfo, file_metadata) }
         var target = $(target_in).find(".remote-filebrowser");
         var jstree = target.jstree({
           "plugins": ["checkbox", "changed", "sort"],
@@ -138,15 +138,15 @@
   }
 
   // categorizers are callbacks that take an info object and return category string
-  function file_objs_to_tree(file_objs, categorizers) {
+  function file_metadata_to_tree(file_metadata, categorizers) {
     // file_obj should always be a list of entries
-    var out = [], categories_obj = {}, file_obj;
+    var out = [], categories_obj = {}, fm;
 
     //var out = [], categories_obj = {}, file_obj;
-    for (var p in file_objs) {
-      file_obj = file_objs[p];
-      for (var e=0; e<file_obj.length; e++) {
-        var entry = file_obj[e],
+    for (var p in file_metadata) {
+      fm = file_metadata[p];
+      for (var e=0; e<fm.length; e++) {
+        var entry = fm[e],
             entryname = entry.entry;
         var parent = "root",
             cobj = categories_obj,
@@ -175,7 +175,7 @@
     var new_div = $("<div />", {"class": "databrowser", "datasource": source});
     $("#" + target_id).append(new_div);
     webreduce.server_api.get_file_metadata(source, path).then(function(result) {
-      webreduce.updateFileBrowserPane(new_div[0], source, path, current_instrument)(result);
+      webreduce.updateFileBrowserPane(new_div[0], source, path)(result);
     });
   }
 
@@ -306,13 +306,14 @@
   function updateHistory(target) {
     // call with id or object for nav pane
     var sourcepaths = getAllBrowserSourcePaths(target);
+    var urlstr = "?instrument=" + webreduce.editor._instrument_id;
     if (sourcepaths.length > 0) {
-      var urlstr = "?" + sourcepaths.map(function(s) {return "source=" + s.source + "&pathlist=" + s.path}).join("&");
-      history.pushState({}, "", urlstr);
+      urlstr += "&" + sourcepaths.map(function(s) {return "source=" + s.source + "&pathlist=" + s.path}).join("&");
     }
+    history.pushState({}, "", urlstr);
   }
   
-  function updateFileBrowserPane(target, datasource, pathlist, instrument_id) {
+  function updateFileBrowserPane(target, datasource, pathlist) {
       function handler(dirdata) {
         var buttons = $("<div />", {class: "buttons"});
         var clear_all = $("<button />", {text: "uncheck all"});
@@ -344,7 +345,7 @@
               //history.pushState({}, "", "?pathlist=" + new_pathlist.slice(0, index+1).join("+"));
               webreduce.server_api.get_file_metadata(datasource, new_pathlist.slice(0, index+1))
               .then( function (metadata) {                
-                updateFileBrowserPane(target, datasource, new_pathlist.slice(0, index+1), instrument_id)(metadata);
+                updateFileBrowserPane(target, datasource, new_pathlist.slice(0, index+1))(metadata);
                 updateHistory($(target).parent());
               })
             }
@@ -366,7 +367,7 @@
             //history.pushState({}, "", "?pathlist=" + new_pathlist.join("+"));
             webreduce.server_api.get_file_metadata(datasource, new_pathlist)
               .then( function (metadata) {
-                updateFileBrowserPane(target, datasource, new_pathlist, instrument_id)(metadata);
+                updateFileBrowserPane(target, datasource, new_pathlist)(metadata);
                 updateHistory($(target).parent());
               })
           }
@@ -386,7 +387,7 @@
 
         // instrument-specific categorizers
         // webreduce.instruments[instrument_id].categorizeFiles(files, metadata, pathlist.join("/"), target_id);
-        categorizeFiles(files, metadata, datasource, pathlist.join("/"), target, instrument_id);
+        categorizeFiles(files, metadata, datasource, pathlist.join("/"), target);
 
         //$(dirbrowser).selectable({
         //    filter:'td',
@@ -402,28 +403,31 @@
     var xlabel, ylabel
         datas = [],
         options={series: [], axes: {xaxis: {label: "x-axis"}, yaxis: {label: "y-axis"}}},
-        fileinfo = [];
+        fileinfo = [],
+        entries = [];
     $(".remote-filebrowser").each(function() {
       var jstree = $(this).jstree(true);
       if (jstree) {
         var path = getCurrentPath(this.parentNode);
         var source = getDataSource(this.parentNode);
-        var file_objs = webreduce.editor._file_objs[path] || {};
+        var file_metadata = webreduce.editor._file_metadata[path] || {};
         //var selected_nodes = jstree.get_selected().map(function(s) {return jstree.get_node(s)});
         var checked_nodes = jstree.get_checked().map(function(s) {return jstree.get_node(s)});
         var entrynodes = checked_nodes.filter(function(n) {
           return (n.li_attr.filename != null && n.li_attr.entryname != null)
         });
         var entry_objs = entrynodes.map(function(n) {
-          var file_obj_key = n.li_attr.filename,
-              file_obj = file_objs[file_obj_key],
+          var file_key = n.li_attr.filename,
               entryname = n.li_attr.entryname,
-              entry_obj = file_obj.find(function(r) {return r.entry == entryname}),
-              filename = file_obj_key.split("/").slice(-1).join(""),
+              metadata = file_metadata[file_key],              
+              entry_obj = metadata.find(function(r) {return r.entry == entryname}),
+              //filename = file_key.split("/").slice(-1).join(""),
               mtime = n.li_attr.mtime;
-          fileinfo.push({path: file_obj_key, source: source, mtime: mtime, entries: [entryname]});
+          fileinfo.push({path: file_key, source: source, mtime: mtime, entries: [entryname]});
           return entry_obj;
         });
+        entries = entries.concat(entry_objs);
+        /*
         var new_plotdata = webreduce.instruments[instrument_id].plot(entry_objs);
         options.series = options.series.concat(new_plotdata.series);
         datas = datas.concat(new_plotdata.data);
@@ -439,12 +443,14 @@
         else {
           ylabel = new_plotdata.ylabel;
         }
+        */
       }
     });
     if (!stopPropagation) {
       $("div.fields").trigger("fileinfo.update", [fileinfo]);
     }
     //options.axes.xaxis.label = "Qz (target)";
+    /*
     options.legend = {"show": true, "left": 125};
     options.axes.xaxis.label = xlabel;
     options.axes.yaxis.label = ylabel;
@@ -463,6 +469,8 @@
           dx = 135,
           dy = 40;
     mychart.zoomRect(true);
+    */
+    webreduce.editor._active_plot = webreduce.editor.show_plots(entries);
   }
   webreduce = window.webreduce || {};
   webreduce.updateFileBrowserPane = updateFileBrowserPane;

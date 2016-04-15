@@ -1,7 +1,7 @@
 {
   "modules": [
     {
-      "module": "ncnr.ospec.LoadMAGIKPSD",
+      "module": "ncnr.ospec.LoadMAGIKPSDMany",
       "title": "load",
       "x": 195,
       "y": 80
