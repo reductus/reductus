@@ -16,6 +16,8 @@ from .core import lookup_module, lookup_datatype
 from .core import sanitizeForJSON, sanitizeFromJSON, Bundle
 from .automod import validate
 
+PICKLE_PROTOCOL = 2 # fast and small and good for Python 2.6+
+
 def find_calculated(template, config):
     """
     Returns a boolean vector indicating whether or not each node in the
@@ -307,7 +309,7 @@ def _store(cache, fp, data):
     """
     #stored = dict((k, v.todict()) for k,v in sorted(data.items()))
     #string = json.dumps(sanitizeForJSON(stored))
-    string = pickle.dumps(data)
+    string = pickle.dumps(data, protocol=PICKLE_PROTOCOL)
     cache.set(fp, string)
 
 def _retrieve(cache, fp):
