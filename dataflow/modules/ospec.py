@@ -3,7 +3,7 @@ from dataflow.automod import make_modules
 from dataflow import templates
 
 from ospecred import magik_filters_func as steps
-from ospecred import FilterableMetaArray
+from ospecred.FilterableMetaArray import FilterableMetaArray
 
 INSTRUMENT = "ncnr.ospec"
 
