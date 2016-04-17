@@ -295,13 +295,12 @@ e.svg().on('contextmenu',function (d,i) {
             
             popup.append("li").text("Edit title")
               .on("click", function() {
-                d3.select(".popup").remove(); 
+                d3.select(".popup").remove();
                 contextMenuShowing=false;
                 var new_title = prompt("New title:", module.title);
                 if (new_title != null) {
                   module.title = new_title;
-                  d3.select('g.module[module_id="' + module_id + '"]').select("g.title text")
-                    .text(new_title);
+                  d3.select(d3_target.node().parentNode).select('text').text(new_title);
                 }                  
               });
             if (fields.length > 0) {
