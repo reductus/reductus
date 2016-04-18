@@ -84,7 +84,7 @@ class FilterableMetaArray(MetaArray):
         if len(self.shape) == 3:
             return self.get_plottable_2d(binary_fp)
         elif len(self.shape) == 2:
-            return self.get_plottable_nd()
+            return self.get_plottable_1d()
         else:
             print "can only handle 1d or 2d data"
             return 
@@ -115,7 +115,7 @@ class FilterableMetaArray(MetaArray):
             plottable_data['data'].append(series_data)
             plottable_data['options']['series'].append({'label': col})
             
-        return plottable_data
+        return [plottable_data]
         
     def get_plottable_nd(self, binary_fp=None):
         colors = ['Blue', 'Red', 'Green', 'Yellow']
@@ -156,7 +156,7 @@ class FilterableMetaArray(MetaArray):
             plottable_data['ordery'].append(ordery)
             plottable_data['series'][0]['data'][col] = series_y
             
-        return plottable_data
+        return [plottable_data]
             
     def get_plottable_2d(self, binary_fp=None):
         # grab the first counts col:
