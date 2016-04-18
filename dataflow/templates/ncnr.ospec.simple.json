@@ -7,9 +7,15 @@
       "y": 80
     },
     {
-      "module": "ncnr.ospec.coordinateOffset",
-      "title": "Coordinateoffset",
+      "module": "ncnr.ospec.normalizeToMonitor",
+      "title": "normalize",
       "x": 360,
+      "y": 80
+    },
+    {
+      "module": "ncnr.ospec.coordinateOffset",
+      "title": "offset",
+      "x": 520,
       "y": 80
     }
   ],
@@ -21,6 +27,16 @@
       ],
       "target": [
         1,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        1,
+        "output"
+      ],
+      "target": [
+        2,
         "data"
       ]
     }

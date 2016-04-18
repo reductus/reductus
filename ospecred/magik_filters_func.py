@@ -59,13 +59,29 @@ def module(action):
 
     # This is a decorator, so return the original function
     return action
-    
+
+@module    
 def fitPSDCalibration(calibration, minimum_peak_intensity=500.0):
-    # takes a loaded psd calibration file, which 
-    # is direct beam measurements at a variety of detector angles with tight slits
-    #X = np.arange(data.size)
-    #x = np.sum(X*data)/np.sum(data)
-    #width = np.sqrt(np.abs(np.sum((X-x)**2*data)/np.sum(data)))
+    """
+    Takes a loaded psd calibration file, which 
+    is direct beam measurements at a variety of detector angles with tight slits
+    X = np.arange(data.size)
+    x = np.sum(X*data)/np.sum(data)
+    width = np.sqrt(np.abs(np.sum((X-x)**2*data)/np.sum(data))) 
+    
+    **Inputs**
+
+    calibration (ospec2d) : data in
+    
+    minimum_peak_intensity (float): don't fit peaks with integrated intensity smaller than this
+    
+    **Returns**
+
+    output (params) : fit results
+
+    2016-04-01 Brian Maranville
+    """
+    from dataflow.modules.ospec import Parameters
     counts = calibration['Measurements':'counts']
     twotheta = calibration.extrainfo['det_angle']
     cpixels = []
@@ -85,7 +101,7 @@ def fitPSDCalibration(calibration, minimum_peak_intensity=500.0):
     # now fitting to polynomial:
     fit = polyfit(tts, cpixels, 1)
     # returns [pixels_per_degree, qzero_pixel]
-    return {"pixels_per_degree": -fit[0], "qzero_pixel": fit[1]}
+    return Parameters({"pixels_per_degree": -fit[0], "qzero_pixel": fit[1]})
    
 @module
 def coordinateOffset(data, axis=None, offset=0):
@@ -114,6 +130,185 @@ def coordinateOffset(data, axis=None, offset=0):
     axisnum = data._getAxis(axis)
     new_info[axisnum]['values'] += offset
     new_data = MetaArray(data.view(ndarray).copy(), info=new_info)
+    return new_data
+
+@module
+def normalizeToMonitor(data):
+    """ 
+    divide all the counts columns by monitor and output as normcounts, with stat. error 
+    
+    **Inputs**
+
+    data (ospec2d) : data in
+    
+    **Returns**
+
+    output (ospec2d) : data with normalization applied
+
+    2016-04-01 Brian Maranville
+    """
+    cols = [col['name'] for col in data._info[-2]['cols']]
+    passthrough_cols = [col for col in cols if (not col.startswith('counts'))] # and not col.startswith('monitor'))]
+    counts_cols = [col for col in cols if col.startswith('counts')]
+    monitor_cols = [col for col in cols if col.startswith('monitor')]
+    info = data.infoCopy()
+    info[-2]['cols'] = []
+    output_array = zeros( data.shape[:-1] + (len(counts_cols) + len(passthrough_cols),), dtype=float) * NaN
+    expressions = []
+    for i, col in enumerate(passthrough_cols):
+        info[-2]['cols'].append({"name":col})
+        output_array[..., i] = data["Measurements":col]
+        
+    for i, col in enumerate(counts_cols):
+        j = i + len(passthrough_cols)
+        col_suffix = col[len('counts'):]
+        monitor_id = 'monitor'
+        if ('monitor'+col_suffix) in monitor_cols:
+            monitor_id += col_suffix
+        info[-2]['cols'].append({"name":"counts_norm%s" % (col_suffix,)})
+        mask = data["Measurements":monitor_id].nonzero()
+        #print mask
+        output_array[..., j][mask] = data["Measurements":col][mask] / data["Measurements":monitor_id][mask]
+        #expression = "data1_counts%s / data1_%s" % (col_suffix, monitor_id)
+        #error_expression = "sqrt(data1_counts%s) / data1_%s" % (col_suffix, monitor_id)
+        #expressions.append({"name": "counts_norm%s" % (col_suffix,), "expression":expression})
+        #expressions.append({"name": "error_counts_norm%s" % (col_suffix,), "expression":error_expression})
+    #result = Algebra().apply(data, None, expressions, passthrough_cols)
+    result = MetaArray(output_array, info=info)
+    return result
+
+@module
+def pixelsToTwotheta(data, params, pixels_per_degree=50.0, qzero_pixel=149.0, instr_resolution=1e-6, ax_name='xpixel'):
+    """ input array has axes theta and pixels:
+    output array has axes theta and twotheta.
+    
+    Pixel-to-angle conversion is arithmetic (pixels-per-degree=constant)
+    output is rebinned to fit in a rectangular array if detector angle 
+    is not fixed. 
+    
+    **Inputs**
+
+    data (ospec2d) : data in
+    
+    params (params): parameters override the field values
+    
+    pixels_per_degree {Pixels per degree} (float): slope of equation relating pixel to angle
+    
+    qzero_pixel {Q-zero pixel} (float): pixel value for Q=0
+    
+    instr_resolution {Resolution} (float): steps in angle smaller than this will be ignored/combined
+    
+    ax_name {Axis name} (str): name of the axis containing pixel data 
+    
+    **Returns**
+
+    output (ospec2d) : data with pixel axis converted to angle
+
+    2016-04-01 Brian Maranville
+    """
+   
+    if 'pixels_per_degree' in params: pixels_per_degree = params['pixels_per_degree']
+    if 'qzero_pixel' in params: qzero_pixel = params['qzero_pixel']
+    #kw = locals().keys()
+    #print kw, params
+    #for name in kw:
+    #    if name in params:
+    #        exec "print '%s', %s, params['%s']" % (name, name,name) in locals()
+    #        exec ("%s = params['%s']" % (name, name)) in locals()
+    #        exec "print %s" % (name,) in locals()
+    
+    pixels_per_degree = float(pixels_per_degree) # coerce, in case it was an integer
+    qzero_pixel = float(qzero_pixel) 
+    instr_resolution = float(instr_resolution)
+    
+    print pixels_per_degree, qzero_pixel
+    
+    new_info = data.infoCopy()
+    det_angle = new_info[-1].get('det_angle', None)
+    det_angle = array(det_angle)
+    # det_angle should be a vector of the same length as the other axis (usually theta)
+    # or else just a float, in which case the detector is not moving!
+    ndim = len(new_info) - 2 # last two entries in info are for metadata
+    pixel_axis = next((i for i in xrange(len(new_info)-2) if new_info[i]['name'] == ax_name), None)
+    if pixel_axis < 0:
+        raise ValueError("error: no %s axis in this dataset" % (ax_name,))
+        
+    if hasattr(det_angle, 'max'):
+        det_angle_max = det_angle.max()
+        det_angle_min = det_angle.min()
+    else: # we have a number
+        det_angle_max = det_angle_min = det_angle
+        
+    if ((det_angle_max - det_angle_min) < instr_resolution) or ndim == 1 or ax_name != 'xpixel':
+        #then the detector is fixed and we just change the values in 'xpixel' axis vector to twotheta
+        # or the axis to be converted is y, which doesn't move in angle.
+        print "doing the simple switch of axis values..."
+        
+        #data_slices = [slice(None, None, 1), slice(None, None, 1)]
+        #data_slices[pixel_axis] = slice(None, None, -1)
+        
+        if ax_name == 'xpixel':
+            twotheta_motor = det_angle_min
+            new_info[pixel_axis]['name'] = 'twotheta'
+        else:
+            twotheta_motor = 0.0 # we don't have a y-motor!
+            new_info[pixel_axis]['name'] = 'twotheta_y'
+            
+        pixels = new_info[pixel_axis]['values']
+        twoth = (pixels - qzero_pixel) / pixels_per_degree + twotheta_motor
+        #new_info[pixel_axis]['values'] = twoth[::-1] # reverse: twotheta increases as pixels decrease
+        new_info[pixel_axis]['values'] = twoth
+        new_info[pixel_axis]['units'] = 'degrees'
+        #new_array = (data.view(ndarray).copy())[data_slices]
+        new_array = (data.view(ndarray).copy())
+        new_data = MetaArray(new_array, info=new_info)
+    
+    else:
+        # the detector is moving - have to rebin the dataset to contain all values of twoth
+        # this is silly but have to set other axis!
+        other_axis = (1 if pixel_axis == 0 else 0)
+        #other_vector = new_info[other_axis]['values']
+        #other_spacing = other_vector[1] - other_vector[0]
+        pixels = new_info[pixel_axis]['values']
+        twoth = (pixels - qzero_pixel) / pixels_per_degree
+        #twoth = twoth[::-1] # reverse
+        twoth_min = det_angle_min + twoth.min()
+        twoth_max = det_angle_max + twoth.max()
+        twoth_max_edge = twoth_max + 1.0 / pixels_per_degree
+        dpp = 1.0 / pixels_per_degree
+        #output_twoth_bin_edges = arange(twoth_max + dpp, twoth_min - dpp, -dpp)
+        output_twoth_bin_edges = arange(twoth_min - dpp, twoth_max + dpp, dpp)
+        output_twoth = output_twoth_bin_edges[:-1]
+        #other_bin_edges = linspace(other_vector[0], other_vector[-1] + other_spacing, len(other_vector) + 1)
+        new_info[pixel_axis]['name'] = 'twotheta' # getting rid of pixel units: substitute twoth
+        new_info[pixel_axis]['values'] = output_twoth
+        new_info[pixel_axis]['units'] = 'degrees'
+        output_shape = [0,0,0]
+        output_shape[pixel_axis] = len(output_twoth)
+        output_shape[other_axis] = data.shape[other_axis] # len(other_vector)
+        output_shape[2] = data.shape[2] # number of columns is unchanged!
+        new_data = MetaArray(tuple(output_shape), info=new_info) # create the output data object!
+        
+        tth_min = twoth.min()
+        tth_max = twoth.max()
+        data_in = data.view(ndarray).copy()
+        for i, da in enumerate(det_angle):
+            twoth_min = da + tth_min
+            twoth_max = da + tth_max
+            input_twoth_bin_edges = empty(len(pixels) + 1)
+            input_twoth_bin_edges[-1] = twoth_max + 1.0 / pixels_per_degree
+            input_twoth_bin_edges[:-1] = twoth + da         
+            #data_cols = ['counts', 'pixels', 'monitor', 'count_time']
+            cols = new_info[-2]['cols']
+            
+            for col in range(len(cols)):
+                input_slice = [slice(None, None), slice(None, None), col]
+                #input_slice[pixel_axis] = slice(i, i+1)
+                input_slice[other_axis] = i
+                array_to_rebin = data_in[input_slice]
+                new_array = reb.rebin(input_twoth_bin_edges, array_to_rebin, output_twoth_bin_edges)
+                new_data.view(ndarray)[input_slice] = new_array
+            
     return new_data
     
 DETECTOR_ACTIVE = (320, 340)
@@ -149,7 +344,6 @@ def find_mtime(path, source="ncnr"):
 
     return { 'path': path, 'mtime': timestamp }
 
-@cache
 @module
 def LoadMAGIKPSDMany(fileinfo=None, collapse_y=True, auto_PolState=False, PolState='', flip=True, transpose=True):
     """ 

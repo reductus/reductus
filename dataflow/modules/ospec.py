@@ -7,12 +7,19 @@ from ospecred.FilterableMetaArray import FilterableMetaArray
 
 INSTRUMENT = "ncnr.ospec"
 
+class Parameters(dict):
+    def get_metadata(self):
+        return self
+    def get_plottable(self):
+        return self
+
 def define_instrument():
     # Define modules
     modules = make_modules(steps.ALL_ACTIONS, prefix=INSTRUMENT+'.')
 
     # Define data types
     ospec2d = df.DataType(INSTRUMENT+".ospec2d", FilterableMetaArray)
+    params = df.DataType(INSTRUMENT+".params", Parameters)
     #offset_data = df.DataType(INSTRUMENT+".offset_data", dict)
     
     # Define instrument
@@ -20,7 +27,7 @@ def define_instrument():
         id=INSTRUMENT,
         name='NCNR offspecular',
         menu=[('steps', modules)],
-        datatypes=[ospec2d],
+        datatypes=[ospec2d, params],
         template_defs = templates.get_templates(INSTRUMENT),
         )
 
