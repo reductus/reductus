@@ -1,5 +1,5 @@
 from MetaArray import MetaArray
-from numpy import ndarray, array, fromstring, float, float32, ones, empty, newaxis, savetxt, sqrt, mod
+from numpy import ndarray, array, fromstring, float, float32, ones, empty, newaxis, savetxt, sqrt, mod, isnan, ma
 import simplejson
 #from ...dataflow.core import Data
 from cStringIO import StringIO
@@ -173,7 +173,7 @@ class FilterableMetaArray(MetaArray):
                 z = [[0,0]]
                 dump['binary_fp'] = binary_fp + ":" + str(colnum)
             else: # use the old way
-                z = [array_out.T.tolist()]
+                z = [ma.masked_array(array_out.T, mask=isnan(array_out.T)).tolist(fill_value=None)]
                 
             #zbin_base64 = base64.b64encode(array_out.tostring())
             #z = [arr[:, 0].tolist() for arr in self]
@@ -271,7 +271,6 @@ class FilterableMetaArray(MetaArray):
         else:
             print "can only handle 1d or 2d data"
             return     
-        
         
 #    def get_plottable_new(self):
 #        array_out = self['Measurements':'counts']
