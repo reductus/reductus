@@ -178,6 +178,65 @@ def normalizeToMonitor(data):
     return result
 
 @module
+def sliceData(data, xmin=None, xmax=None, ymin=None, ymax=None):
+    """ 
+    Sum 2d data along both axes and return 1d datasets 
+    
+    **Inputs**
+
+    data (ospec2d) : data in
+    
+    xmin (float): lower bound of xslice region, in data coordinates
+    
+    xmax (float): upper bound of xslice region, in data coordinates
+    
+    ymin (float): lower bound of yslice region, in data coordinates
+    
+    ymax (float): upper bound of yslice region, in data coordinates
+    
+    **Returns**
+
+    xout (ospec2d) : xslice
+    
+    yout (ospec2d) : yslice
+    
+    2016-04-01 Brian Maranville
+    """
+    new_info = data.infoCopy()
+    x_axis = new_info[0]
+    y_axis = new_info[1]
+    col_info = new_info[2]
+    extra_info = new_info[3]
+    
+    x_array = data._info[0]['values']
+    y_array = data._info[1]['values']
+    
+    print xmin, xmax, ymin, ymax
+    
+    def get_index(t, x):
+        if (x == "" or x == None): 
+            return None
+        if float(x) > t.max(): 
+            return None
+        if float(x) < t.min(): 
+            return None
+        return searchsorted(t, float(x))
+        
+    xslice = slice(get_index(x_array, xmin), get_index(x_array, xmax))
+    yslice = slice(get_index(y_array, ymin), get_index(y_array, ymax))
+    dataslice = (xslice, yslice)
+    
+    x_out = nansum(data.view(ndarray)[dataslice], axis=1)
+    y_out = nansum(data.view(ndarray)[dataslice], axis=0)
+    x_axis['values'] = x_axis['values'][xslice]
+    y_axis['values'] = y_axis['values'][yslice]
+    
+    x_data_obj = MetaArray( x_out, info=[x_axis, col_info, extra_info] )
+    y_data_obj = MetaArray( y_out, info=[y_axis, col_info, extra_info] )
+    
+    return x_data_obj, y_data_obj
+
+@module
 def pixelsToTwotheta(data, params, pixels_per_degree=50.0, qzero_pixel=149.0, instr_resolution=1e-6, ax_name='xpixel'):
     """ input array has axes theta and pixels:
     output array has axes theta and twotheta.
