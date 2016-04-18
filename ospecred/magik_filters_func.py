@@ -310,7 +310,116 @@ def pixelsToTwotheta(data, params, pixels_per_degree=50.0, qzero_pixel=149.0, in
                 new_data.view(ndarray)[input_slice] = new_array
             
     return new_data
+
+@module
+def thetaTwothetaToQxQz(data, output_grid, wavelength=5.0, qxmin=-0.003, qxmax=0.003, qxbins=101, qzmin=0.0001, qzmax=0.1, qzbins=101):
+    """ Figures out the Qx, Qz values of each datapoint
+    and throws them in the correct bin.  If no grid is specified,
+    one is created that covers the whole range of Q in the dataset
     
+    If autofill_gaps is True, does reverse lookup to plug holes
+    in the output (but pixel count is still zero for these bins)
+    
+    **Inputs**
+    
+    data (ospec2d): input data
+    
+    output_grid (ospec2d): empty data object with axes defined (optional)
+    
+    wavelength (float): override wavelength in data file
+    
+    qxmin (float): lower bound of Qx range in rebinning
+    
+    qxmax (float): upper bound of Qx range in rebinning
+    
+    qxbins (int): number of bins to subdivide the range between qxmin and qxmax
+    
+    qzmin (float): lower bound of Qz range in rebinning
+    
+    qzmax (float): upper bound of Qz range in rebinning
+    
+    qzbins (int): number of bins to subdivide the range between qzmin and qzmax
+    
+    **Returns**
+    
+    output (ospec2d): output data rebinned into Qx, Qz
+    
+    2016-04-01 Brian Maranville
+    """
+    print "output grid: ", output_grid
+    if output_grid == None:
+        info = [{"name": "qx", "units": "inv. Angstroms", "values": linspace(qxmin, qxmax, qxbins) },
+            {"name": "qz", "units": "inv. Angstroms", "values": linspace(qzmin, qzmax, qzbins) },]
+        old_info = data.infoCopy()
+        info.append(old_info[2]) # column information!
+        info.append(old_info[3]) # creation story!
+        output_grid = MetaArray(zeros((qxbins, qzbins, data.shape[-1])), info=info)
+    else:
+        outgrid_info = deepcopy(output_grid._info) # take axes and creation story from emptyqxqz...
+        outgrid_info[2] = deepcopy(data._info[2]) # take column number and names from dataset
+        output_grid = MetaArray(zeros((output_grid.shape[0], output_grid.shape[1], data.shape[2])), info=outgrid_info)
+    
+    theta_axis = data._getAxis('theta')
+    twotheta_axis = data._getAxis('twotheta')
+    
+    qLength = 2.0 * pi / wavelength
+    th_array = data.axisValues('theta').copy()
+    twotheta_array = data.axisValues('twotheta').copy()
+    
+    if theta_axis < twotheta_axis: # then theta is first: add a dimension at the end
+        th_array.shape = th_array.shape + (1,)
+        twotheta_array.shape = (1,) + twotheta_array.shape
+    else:
+        twotheta_array.shape = twotheta_array.shape + (1,)
+        th_array.shape = (1,) + th_array.shape
+        
+    tilt_array = th_array - (twotheta_array / 2.0)
+    qxOut = 2.0 * qLength * sin((pi / 180.0) * (twotheta_array / 2.0)) * sin(pi * tilt_array / 180.0)
+    qzOut = 2.0 * qLength * sin((pi / 180.0) * (twotheta_array / 2.0)) * cos(pi * tilt_array / 180.0)
+    
+    # getting values from output grid:
+    outgrid_info = output_grid.infoCopy()
+    numcols = len(outgrid_info[2]['cols'])
+    qx_array = output_grid.axisValues('qx')
+    dqx = qx_array[1] - qx_array[0]
+    qz_array = output_grid.axisValues('qz')
+    dqz = qz_array[1] - qz_array[0]
+    #framed_array = zeros((qz_array.shape[0] + 2, qx_array.shape[0] + 2, numcols))
+    target_qx = ((qxOut - qx_array[0]) / dqx).astype(int)
+    #return target_qx, qxOut
+    target_qz = ((qzOut - qz_array[0]) / dqz).astype(int)
+    
+    target_mask = (target_qx >= 0) * (target_qx < qx_array.shape[0])
+    target_mask *= (target_qz >= 0) * (target_qz < qz_array.shape[0])
+    target_qx_list = target_qx[target_mask]
+    target_qz_list = target_qz[target_mask]
+    
+    for i, col in enumerate(outgrid_info[2]['cols']):
+        values_to_bin = data[:,:,col['name']].view(ndarray)[target_mask]
+        outshape = (output_grid.shape[0], output_grid.shape[1])
+        hist2d, xedges, yedges = histogram2d(target_qx_list,target_qz_list, \
+            bins = (outshape[0],outshape[1]), range=((0,outshape[0]),(0,outshape[1])), weights=values_to_bin)
+        output_grid[:,:,col['name']] += hist2d
+        #framed_array[target_qz_list, target_qx_list, i] = data[:,:,col['name']][target_mask]
+ 
+    cols = outgrid_info[2]['cols']
+    data_cols = [col['name'] for col in cols if col['name'].startswith('counts')]
+    monitor_cols = [col['name'] for col in cols if col['name'].startswith('monitor')]
+    # just take the first one...
+    if len(monitor_cols) > 0:
+        monitor_col = monitor_cols[0]
+        data_missing_mask = (output_grid[:,:,monitor_col] == 0)
+        for dc in data_cols:
+            output_grid[:,:,dc].view(ndarray)[data_missing_mask] = NaN;
+        
+    #extra_info
+    output_grid._info[-1] = data._info[-1].copy()
+    print "output shape:", output_grid.shape
+    return output_grid
+
+#################
+# Loader stuff   
+################# 
 DETECTOR_ACTIVE = (320, 340)
 
 def url_load(fileinfo):
