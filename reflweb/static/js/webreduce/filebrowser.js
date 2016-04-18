@@ -21,9 +21,9 @@
     var instrument_id = webreduce.editor._instrument_id;
     var load_promises = [];
     var fileinfo = {};
-    var file_metadata = {};
-    webreduce.editor._file_metadata = webreduce.editor._file_metadata || {};
-    webreduce.editor._file_metadata[path] = file_metadata;
+    var file_objs = {};
+    webreduce.editor._file_objs = webreduce.editor._file_objs || {};
+    webreduce.editor._file_objs[path] = file_objs;
     var datafiles = files.filter(function(x) {return (
       NEXUS_ZIP_REGEXP.test(x) &&
       (/^(fp_)/.test(x) == false) &&
@@ -40,17 +40,17 @@
       ////////////////////////////////////////////////////////////////////////////
       datafiles.forEach(function(j, i) {
         load_promises.push(
-          loader(datasource, path + "/" + j, files_metadata[j].mtime, file_metadata)
+          loader(datasource, path + "/" + j, files_metadata[j].mtime, file_objs)
             .then(function(r) {webreduce.statusline_log("loaded " + (++numloaded) + " of " + numdatafiles + ": "+ j); return r},
                   function(e) {console.log('failed to load: ', j, e)})
           );
       });
       var p = Promise.all(load_promises).then(function(results) {
         var categorizers = webreduce.instruments[instrument_id].categorizers;
-        var treeinfo = file_metadata_to_tree(file_metadata, categorizers);
+        var treeinfo = file_objs_to_tree(file_objs, categorizers);
         // add decorators etc to the tree with postprocess:
         var postprocess = webreduce.instruments[instrument_id].postprocess;
-        if (postprocess) { postprocess(treeinfo, file_metadata) }
+        if (postprocess) { postprocess(treeinfo, file_objs) }
         var target = $(target_in).find(".remote-filebrowser");
         var jstree = target.jstree({
           "plugins": ["checkbox", "changed", "sort"],
@@ -73,17 +73,17 @@
           results = [];
       datafiles.forEach(function(j, i) {
         p = p.then(function() {
-          return loader(datasource, path + "/" + j, files_metadata[j].mtime, file_metadata)
+          return loader(datasource, path + "/" + j, files_metadata[j].mtime, file_objs)
             .then(function(r) {webreduce.statusline_log("loaded " + (++numloaded) + " of " + numdatafiles + ": "+ j); results.push(r); return r},
                   function(e) {console.log('failed to load: ', j, e)})
           });
       });
       p = p.then(function() {
         var categorizers = webreduce.instruments[instrument_id].categorizers;
-        var treeinfo = file_metadata_to_tree(file_metadata, categorizers);
+        var treeinfo = file_objs_to_tree(file_objs, categorizers);
         // add decorators etc to the tree with postprocess:
         var postprocess = webreduce.instruments[instrument_id].postprocess;
-        if (postprocess) { postprocess(treeinfo, file_metadata) }
+        if (postprocess) { postprocess(treeinfo, file_objs) }
         var target = $(target_in).find(".remote-filebrowser");
         var jstree = target.jstree({
           "plugins": ["checkbox", "changed", "sort"],
@@ -138,13 +138,13 @@
   }
 
   // categorizers are callbacks that take an info object and return category string
-  function file_metadata_to_tree(file_metadata, categorizers) {
+  function file_objs_to_tree(file_objs, categorizers) {
     // file_obj should always be a list of entries
     var out = [], categories_obj = {}, fm;
 
     //var out = [], categories_obj = {}, file_obj;
-    for (var p in file_metadata) {
-      fm = file_metadata[p];
+    for (var p in file_objs) {
+      fm = file_objs[p].values;
       for (var e=0; e<fm.length; e++) {
         var entry = fm[e],
             entryname = entry.entry;
@@ -404,13 +404,14 @@
         datas = [],
         options={series: [], axes: {xaxis: {label: "x-axis"}, yaxis: {label: "y-axis"}}},
         fileinfo = [],
+        datatype = null,
         entries = [];
     $(".remote-filebrowser").each(function() {
       var jstree = $(this).jstree(true);
       if (jstree) {
         var path = getCurrentPath(this.parentNode);
         var source = getDataSource(this.parentNode);
-        var file_metadata = webreduce.editor._file_metadata[path] || {};
+        var file_objs = webreduce.editor._file_objs[path] || {};
         //var selected_nodes = jstree.get_selected().map(function(s) {return jstree.get_node(s)});
         var checked_nodes = jstree.get_checked().map(function(s) {return jstree.get_node(s)});
         var entrynodes = checked_nodes.filter(function(n) {
@@ -419,11 +420,15 @@
         var entry_objs = entrynodes.map(function(n) {
           var file_key = n.li_attr.filename,
               entryname = n.li_attr.entryname,
-              metadata = file_metadata[file_key],              
-              entry_obj = metadata.find(function(r) {return r.entry == entryname}),
+              file_obj = file_objs[file_key],              
+              entry_obj = file_obj.values.find(function(r) {return r.entry == entryname}),
               //filename = file_key.split("/").slice(-1).join(""),
               mtime = n.li_attr.mtime;
           fileinfo.push({path: file_key, source: source, mtime: mtime, entries: [entryname]});
+          if (datatype == null) { datatype = file_obj.datatype }
+          else if (datatype != file_obj.datatype) {
+            console.log("warning: datatypes do not match in loaded files"); 
+          }
           return entry_obj;
         });
         entries = entries.concat(entry_objs);
@@ -449,28 +454,8 @@
     if (!stopPropagation) {
       $("div.fields").trigger("fileinfo.update", [fileinfo]);
     }
-    //options.axes.xaxis.label = "Qz (target)";
-    /*
-    options.legend = {"show": true, "left": 125};
-    options.axes.xaxis.label = xlabel;
-    options.axes.yaxis.label = ylabel;
-    options.xtransform = $("#xscale").val();
-    options.ytransform = $("#yscale").val();
-    var mychart = new xyChart(options);
-    d3.selectAll("#plotdiv svg").remove();
-    d3.selectAll("#plotdiv").data([datas]).call(mychart);
-    d3.selectAll("#xscale, #yscale").on("change", function() {
-      var axis = d3.select(this).attr("axis") + "transform",
-          transform = this.value;
-      mychart[axis](transform);  
-    });
-      var x0 = 10,
-          y0 = 10,
-          dx = 135,
-          dy = 40;
-    mychart.zoomRect(true);
-    */
-    webreduce.editor._active_plot = webreduce.editor.show_plots(entries);
+    var result = {"datatype": datatype, "values": entries}
+    webreduce.editor._active_plot = webreduce.editor.show_plots(result);
   }
   webreduce = window.webreduce || {};
   webreduce.updateFileBrowserPane = updateFileBrowserPane;

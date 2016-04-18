@@ -22,7 +22,7 @@ webreduce.instruments['ncnr.refl'] = webreduce.instruments['ncnr.refl'] || {};
         terminal_id = "output";
     return webreduce.server_api.calc_terminal(template, config, module_id, terminal_id).then(function(result) {
       result.values.forEach(function(v) {v.mtime = mtime});
-      if (db) { db[path] = result.values; }
+      if (db) { db[path] = result; }
       return result.values
     })
   }
@@ -60,7 +60,7 @@ webreduce.instruments['ncnr.refl'] = webreduce.instruments['ncnr.refl'] || {};
     return result;
   }
   
-  function plot(refl_objs) {
+  function plot_refl(refl_objs) {
     // entry_ids is list of {path: path, filename: filename, entryname: entryname} ids
     var series = new Array();
     var datas = [], xcol;
@@ -96,7 +96,14 @@ webreduce.instruments['ncnr.refl'] = webreduce.instruments['ncnr.refl'] || {};
     return plottable
   } 
   
-  instrument.plot = plot;
+  instrument.plot = function(result) {
+    if (result.datatype == 'ncnr.refl.refldata') {
+      return plot_refl(result.values);
+    }
+    else {
+      return null;
+    }
+  };
   instrument.load_file = load_refl; 
   instrument.categorizers = [
     function(info) { return info.sample.name },
@@ -110,13 +117,13 @@ webreduce.instruments['ncnr.refl'] = webreduce.instruments['ncnr.refl'] || {};
     var jstree = target.jstree(true);
     var source_id = target.parent().attr("id");
     var path = webreduce.getCurrentPath(target.parent());
-    var file_metadata = webreduce.editor._file_metadata[path];
+    var file_objs = webreduce.editor._file_objs[path];
     var leaf, entry;
     // first set min and max for entries:
     for (fn in jstree._model.data) {
       leaf = jstree._model.data[fn];
       if (leaf.li_attr && 'filename' in leaf.li_attr && 'entryname' in leaf.li_attr) {
-        entry = file_metadata[leaf.li_attr.filename].filter(function(f) {return f.entry == leaf.li_attr.entryname});
+        entry = file_objs[leaf.li_attr.filename].values.filter(function(f) {return f.entry == leaf.li_attr.entryname});
         if (entry && entry[0]) {
           var e = entry[0];
           var xaxis = 'x'; // primary_axis[e.intent || 'specular'];

@@ -77,21 +77,37 @@ webreduce.editor = webreduce.editor || {};
     var index = parseInt(d3.select(selected.node().parentNode.parentNode).attr("index"));
     var terminal_id = selected.attr("terminal_id");
     webreduce.server_api.calc_terminal(this._active_template, {}, index, terminal_id, "metadata").then(function(result) {
-      webreduce.editor._active_plot = webreduce.editor.show_plots(result.values);
+      webreduce.editor._active_plot = webreduce.editor.show_plots(result);
       webreduce.editor._active_node = index;
       webreduce.editor._active_terminal = terminal_id;
     }); 
   }
   
-  webreduce.editor.show_plots = function(values) {
+  webreduce.editor.show_plots = function(result) {
     var instrument_id = this._instrument_id;
-    var new_plotdata = webreduce.instruments[instrument_id].plot(values);
+    var new_plotdata = webreduce.instruments[instrument_id].plot(result);
+    if (new_plotdata == null) {
+      return
+    }
     if (new_plotdata.type == '1d') {
-        webreduce.editor.show_plots_1d(new_plotdata);
+      this.show_plots_1d(new_plotdata);
     }
     else if (new_plotdata.type == '2d') {
-        webreduce.editor.show_plots_2d(new_plotdata);
+      this.show_plots_2d(new_plotdata);
     }
+    else if (new_plotdata.type == 'params') {
+      this.show_plots_params(new_plotdata);
+    }
+  }
+  
+  webreduce.editor.show_plots_params = function(data) {
+    d3.selectAll("#plotdiv").selectAll("svg, div").remove();
+    d3.select("#plotdiv")
+      .selectAll(".paramsDisplay")
+      .data(data.params).enter()
+        .append("div")
+        .classed("paramsDisplay", true)
+        .text(function(d) {return JSON.stringify(d)})
   }
   
   webreduce.editor.show_plots_2d = function(data) {
@@ -110,7 +126,7 @@ webreduce.editor = webreduce.editor || {};
       .dims(data.dims)
       .xlabel(data.xlabel)
       .ylabel(data.ylabel);
-    d3.selectAll("#plotdiv svg").remove();
+    d3.selectAll("#plotdiv").selectAll("svg, div").remove();
     d3.selectAll("#plotdiv").data(data.z).call(chart);
   }
   
@@ -129,7 +145,7 @@ webreduce.editor = webreduce.editor || {};
     
     // create the 1d chart:
     var mychart = new xyChart(options);
-    d3.selectAll("#plotdiv svg").remove();
+    d3.selectAll("#plotdiv").selectAll("svg, div").remove();
     d3.selectAll("#plotdiv").data([options.data]).call(mychart);
     mychart.zoomRect(true);
     webreduce.callbacks.resize_center = mychart.autofit;
