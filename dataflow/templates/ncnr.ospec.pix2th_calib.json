@@ -1,46 +1,86 @@
 {
   "modules": [
     {
+      "y": 100,
+      "x": 100,
       "module": "ncnr.ospec.LoadMAGIKPSDMany",
       "title": "load calib",
-      "x": 100,
-      "y": 100
+      "config": {
+        "fileinfo": [
+          {
+            "path": "ncnrdata/cgd/201603/21237/data/calib126.nxz.cgd",
+            "source": "ncnr",
+            "mtime": 1457546636,
+            "entries": [
+              "entry"
+            ]
+          }
+        ],
+        "collapse_y": true,
+        "auto_PolState": false,
+        "PolState": "",
+        "flip": true,
+        "transpose": true
+      }
     },
     {
-      "module": "ncnr.ospec.fitPSDCalibration",
-      "title": "fit calib",
+      "y": 100,
       "x": 240,
-      "y": 100
+      "module": "ncnr.ospec.fitPSDCalibration",
+      "title": "fit calib"
     },
     {
+      "y": 60,
+      "x": 100,
       "module": "ncnr.ospec.LoadMAGIKPSDMany",
       "title": "load PSD",
-      "x": 100,
-      "y": 60
+      "config": {
+        "fileinfo": [
+          {
+            "path": "ncnrdata/cgd/201603/21237/data/wp12v124.nxz.cgd",
+            "source": "ncnr",
+            "mtime": 1457480106,
+            "entries": [
+              "entry"
+            ]
+          }
+        ],
+        "collapse_y": true,
+        "auto_PolState": false,
+        "PolState": "",
+        "flip": true,
+        "transpose": true
+      }
     },
     {
-      "module": "ncnr.ospec.coordinateOffset",
-      "title": "offset",
+      "y": 60,
       "x": 240,
-      "y": 60
+      "module": "ncnr.ospec.coordinateOffset",
+      "title": "offset"
     },
     {
-      "module": "ncnr.ospec.pixelsToTwotheta",
-      "title": "pixels->2th",
+      "y": 65,
       "x": 395,
+      "module": "ncnr.ospec.pixelsToTwotheta",
+      "title": "pixels->2th"
+    },
+    {
+      "y": 60,
+      "x": 545,
+      "module": "ncnr.ospec.thetaTwothetaToQxQz",
+      "title": "th2th->QxQz"
+    },
+    {
+      "module": "ncnr.ospec.sliceData",
+      "title": "Slicedata",
+      "x": 770,
       "y": 65
     },
     {
-      "module": "ncnr.ospec.thetaTwothetaToQxQz",
-      "title": "th2th->QxQz",
-      "x": 535,
-      "y": 60
-    },
-    {
       "module": "ncnr.ospec.normalizeToMonitor",
-      "title": "normalize",
-      "x": 670,
-      "y": 60
+      "title": "Normalizetomonitor",
+      "x": 655,
+      "y": 105
     }
   ],
   "wires": [
@@ -97,6 +137,16 @@
     {
       "source": [
         5,
+        "output"
+      ],
+      "target": [
+        7,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        7,
         "output"
       ],
       "target": [
