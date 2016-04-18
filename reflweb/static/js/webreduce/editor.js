@@ -115,13 +115,14 @@ webreduce.editor = webreduce.editor || {};
     if ((((data.options || {}).fixedAspect || {}).fixAspect || null) == true) {
       aspect_ratio = ((data.options || {}).fixedAspect || {}).aspectRatio || null;
     }
-    var chart = new heatChart(data.options);
+    data.ztransform = "log";
+    var chart = new heatChart(data);
     
     var transform = 'log';
     chart
-      .ztransform((transform == "log")? "log" : "linear")
+      //.ztransform((transform == "log")? "log" : "linear")
       //.colormap(cm.get_colormap(current_instr == "NGBSANS" ? "spectral" : "jet"))
-      .autoscale(true)
+      .autoscale(false)
       .aspect_ratio(aspect_ratio)
       .dims(data.dims)
       .xlabel(data.xlabel)
