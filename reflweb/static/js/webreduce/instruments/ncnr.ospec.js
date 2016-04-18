@@ -44,6 +44,9 @@ webreduce.instruments['ncnr.ospec'] = webreduce.instruments['ncnr.ospec'] || {};
     if (result.datatype == 'ncnr.ospec.ospec2d' && result.values.length > 0) {
       plottable = result.values.slice(-1)[0].plottable[0];
     }
+    if (result.datatype == 'ncnr.ospec.ospec1d' && result.values.length > 0) {
+      plottable = result.values.slice(-1)[0].plottable[0];
+    }
     else if (result.datatype == 'ncnr.ospec.params') {
       plottable = {"type": "params", "params": result.values}
     }

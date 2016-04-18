@@ -137,7 +137,7 @@ webreduce.editor = webreduce.editor || {};
       legend: {show: true, left: 150},
       axes: {xaxis: {label: "x-axis"}, yaxis: {label: "y-axis"}}
     };
-    jQuery.extend(true, options, plotdata);
+    jQuery.extend(true, options, plotdata.options);
     options.xtransform = $("#xscale").val();
     options.ytransform = $("#yscale").val();
     options.show_errorbars = $("#show_errorbars").prop("checked");
@@ -147,7 +147,7 @@ webreduce.editor = webreduce.editor || {};
     // create the 1d chart:
     var mychart = new xyChart(options);
     d3.selectAll("#plotdiv").selectAll("svg, div").remove();
-    d3.selectAll("#plotdiv").data([options.data]).call(mychart);
+    d3.selectAll("#plotdiv").data([plotdata.data]).call(mychart);
     mychart.zoomRect(true);
     webreduce.callbacks.resize_center = mychart.autofit;
     

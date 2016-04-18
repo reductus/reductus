@@ -196,9 +196,9 @@ def sliceData(data, xmin=None, xmax=None, ymin=None, ymax=None):
     
     **Returns**
 
-    xout (ospec2d) : xslice
+    xout (ospec1d) : xslice
     
-    yout (ospec2d) : yslice
+    yout (ospec1d) : yslice
     
     2016-04-01 Brian Maranville
     """

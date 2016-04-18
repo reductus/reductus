@@ -79,6 +79,42 @@ class FilterableMetaArray(MetaArray):
         metadata.update(self.extrainfo)
         metadata['plottable'] = self.get_plottable()
         return metadata
+    
+    def export(self):
+        if len(self.shape) == 3:
+            # return gnuplottable format:
+            """ export 2d data to gnuplot format """
+            from numpy import log10
+            # grab the first counts col:
+            data = self
+            cols = data._info[2]['cols']
+            data_cols = [col['name'] for col in cols if col['name'].startswith('counts')]
+            
+            result = []
+            for colnum, col in enumerate(data_cols):      
+                array_out = data['Measurements':col].view(ndarray)
+                
+                dump = ""
+                xlist = data._info[0]['values'].tolist()
+                ylist = data._info[1]['values'].tolist()
+                for ix, x in enumerate(xlist):
+                    dump += "\n"
+                    for iy, y in enumerate(ylist):
+                        dump += "%g\t%g\t%g\n" % (x, y, array_out[ix, iy])
+                result.append(dump)
+                
+            return result[0]
+        elif len(self.shape) == 2:
+            from StringIO import StringIO
+            fid = StringIO()
+            cols = self._info[1]['cols']
+            data_cols = [col['name'] for col in cols if not col['name'].startswith('error')]
+            savetxt(fid, self, header="\t".join(data_cols))
+            fid.seek(0)
+            return fid.read()
+        else:
+            print "can only handle 1d or 2d data"
+            return 
         
     def get_plottable(self, binary_fp=None):
         if len(self.shape) == 3:

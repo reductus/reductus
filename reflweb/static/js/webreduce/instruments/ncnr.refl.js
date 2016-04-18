@@ -88,8 +88,10 @@ webreduce.instruments['ncnr.refl'] = webreduce.instruments['ncnr.refl'] || {};
     });
     var plottable = {
       type: "1d",
-      series: series,
-      axes: {xaxis: {label: xlabel}, yaxis: {label: ylabel}},
+      options: {
+        series: series,
+        axes: {xaxis: {label: xlabel}, yaxis: {label: ylabel}}
+      },
       data: datas
     }
 
