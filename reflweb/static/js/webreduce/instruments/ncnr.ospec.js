@@ -21,8 +21,8 @@ webreduce.instruments['ncnr.ospec'] = webreduce.instruments['ncnr.ospec'] || {};
         terminal_id = "output";
     return webreduce.server_api.calc_terminal(template, config, module_id, terminal_id, "metadata").then(function(result) {
       result.values.forEach(function(v) {v.mtime = mtime});
-      if (db) { db[path] = result.values; }
-      return result.values
+      if (db) { db[path] = result; }
+      return result
     })
   }
   
@@ -39,66 +39,18 @@ webreduce.instruments['ncnr.ospec'] = webreduce.instruments['ncnr.ospec'] || {};
     return output
   }
   
-  var primary_axis = {
-    "specular": "Qz_target",
-    "background+": "Qz_target",
-    "background-": "Qz_target",
-    "slit": "Qz_target",
-    "intensity": "Qz_target", // what slit scans are called in refldata
-    "rock qx": "Qx_target", // curve with fixed Qz
-    "rock sample": "sample/angle_x", // Rocking curve with fixed detector angle
-    "rock detector": "detector/angle_x" //Rocking curve with fixed sample angle
-  }
-  
-  var get_refl_item = function(obj, path) {
-    var result = obj,
-        keylist = path.split("/");
-    while (keylist.length > 0) {
-      result = result[keylist.splice(0,1)];
+  instrument.plot = function(result) { 
+    var plottable;
+    if (result.datatype == 'ncnr.ospec.ospec2d' && result.values.length > 0) {
+      plottable = result.values.slice(-1)[0].plottable[0];
     }
-    return result;
-  }
-  
-  function plot(ospec_objs) {
-    // entry_ids is list of {path: path, filename: filename, entryname: entryname} ids
-    var series = new Array();
-    var datas = [], xcol;
-    var ycol = "v", ylabel = "y-axis", dycol = "dv";
-    var xcol = "x", xlabel = "x-axis", dxcol = "dx";
-    refl_objs.forEach(function(entry) {
-      var intent = entry['intent'];
-      var ydata = get_refl_item(entry, ycol);
-      var dydata = get_refl_item(entry, dycol);
-      var xdata = get_refl_item(entry, xcol);
-      ylabel = get_refl_item(entry, "vlabel");
-      ylabel += "(" + get_refl_item(entry, "vunits") + ")";
-      xlabel = get_refl_item(entry, "xlabel");
-      xlabel += "(" + get_refl_item(entry, "xunits") + ")";
-      var xydata = [], x, y, dy, ynorm;
-      for (var i=0; i<xdata.length || i<ydata.length; i++) {
-        x = (i<xdata.length) ? xdata[i] : x; // use last value
-        y = (i<ydata.length) ? ydata[i] : y; // use last value
-        dy = (i<dydata.length) ? dydata[i] : dy; // use last value
-        xydata[i] = [x,y,{yupper: y+dy, ylower:y-dy,xupper:x,xlower:x}];
-      }
-      datas.push(xydata);
-      series.push({label: entry.name + ":" + entry.entry});
-
-    });
-    var plottable = {
-      type: "1d",
-      series: series,
-      axes: {xaxis: {label: xlabel}, yaxis: {label: ylabel}},
-      data: datas
+    else if (result.datatype == 'ncnr.ospec.params') {
+      plottable = {"type": "params", "params": result.values}
     }
-
     return plottable
-  } 
-  
-  instrument.plot = function(objs) { 
-    return objs.slice(-1)[0].plottable[0];
   };
-  instrument.load_file = load_ospec; 
+  
+  instrument.load_file = load_ospec;
   instrument.categorizers = [
     function(info) { return info.friendly_name },
     function(info) { return info.path }
