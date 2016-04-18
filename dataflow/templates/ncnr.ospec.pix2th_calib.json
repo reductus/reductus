@@ -29,6 +29,18 @@
       "title": "pixels->2th",
       "x": 395,
       "y": 65
+    },
+    {
+      "module": "ncnr.ospec.thetaTwothetaToQxQz",
+      "title": "th2th->QxQz",
+      "x": 535,
+      "y": 60
+    },
+    {
+      "module": "ncnr.ospec.normalizeToMonitor",
+      "title": "normalize",
+      "x": 670,
+      "y": 60
     }
   ],
   "wires": [
@@ -70,6 +82,26 @@
       "target": [
         4,
         "params"
+      ]
+    },
+    {
+      "source": [
+        4,
+        "output"
+      ],
+      "target": [
+        5,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        5,
+        "output"
+      ],
+      "target": [
+        6,
+        "data"
       ]
     }
   ]
