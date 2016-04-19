@@ -52,33 +52,7 @@
  
 <div id="centerpane" class="ui-layout-center">
   <div id="plotdiv"></div>
-  <div id="controls">
-<!--    <span class="axis-select-label">x-axis:</span><select id="xcol" ></select>-->
-    <label>x-axis</label>
-    <select id="xscale" axis="x">
-      <option value="linear">linear</option>
-      <option value="log">log</option>
-    </select>
-<!--    <span class="axis-select-label">y-axis:</span><select id="ycol" ></select>-->
-    <label>y-axis</label>
-    <select id="yscale" axis="y">
-      <option value="linear">linear</option>
-      <option value="log">log</option>
-    </select>
-    <label>errorbars
-        <input id="show_errorbars" type="checkbox" checked="checked">
-    </label>
-    <label>points
-        <input id="show_points" type="checkbox" checked="checked">
-    </label>
-    <label>line
-        <input id="show_line" type="checkbox" checked="checked">
-    </label>
-    <input type="button" id="export_data" value="export"></input>
-<!--    <span class="axis-select-label">divide by:</span>-->
-<!--    <select id="ynormalize">-->
-<!--    </select>-->
-  </div>
+  <div id="plot_controls"></div>
 </div>
 <div id="right" class="ui-layout-east">
   <div id="device_values"></div>

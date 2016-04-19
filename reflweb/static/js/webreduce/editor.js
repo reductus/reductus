@@ -90,13 +90,13 @@ webreduce.editor = webreduce.editor || {};
       return
     }
     if (new_plotdata.type == '1d') {
-      this.show_plots_1d(new_plotdata);
+      return this.show_plots_1d(new_plotdata);
     }
     else if (new_plotdata.type == '2d') {
-      this.show_plots_2d(new_plotdata);
+      return this.show_plots_2d(new_plotdata);
     }
     else if (new_plotdata.type == 'params') {
-      this.show_plots_params(new_plotdata);
+      return this.show_plots_params(new_plotdata);
     }
   }
   
@@ -108,6 +108,7 @@ webreduce.editor = webreduce.editor || {};
         .append("div")
         .classed("paramsDisplay", true)
         .text(function(d) {return JSON.stringify(d)})
+    return data
   }
   
   webreduce.editor.show_plots_2d = function(data) {
@@ -115,11 +116,10 @@ webreduce.editor = webreduce.editor || {};
     if ((((data.options || {}).fixedAspect || {}).fixAspect || null) == true) {
       aspect_ratio = ((data.options || {}).fixedAspect || {}).aspectRatio || null;
     }
-    data.ztransform = "log";
-    var chart = new heatChart(data);
+    data.ztransform = $("#zscale").val();
     
-    var transform = 'log';
-    chart
+    var mychart = new heatChart(data);
+    mychart
       //.ztransform((transform == "log")? "log" : "linear")
       //.colormap(cm.get_colormap(current_instr == "NGBSANS" ? "spectral" : "jet"))
       .autoscale(false)
@@ -128,7 +128,59 @@ webreduce.editor = webreduce.editor || {};
       .xlabel(data.xlabel)
       .ylabel(data.ylabel);
     d3.selectAll("#plotdiv").selectAll("svg, div").remove();
-    d3.selectAll("#plotdiv").data(data.z).call(chart);
+    d3.selectAll("#plotdiv").data(data.z).call(mychart);
+    
+    // set up plot control buttons and options:
+    if (d3.select("#plot_controls").attr("plot_type") != "2d") {
+      // then make the controls:
+      var plot_controls = d3.select("#plot_controls")
+      plot_controls.attr("plot_type", "2d")
+      plot_controls.selectAll("select,input,button,label").remove();
+      plot_controls.selectAll(".scale-select")
+        .data(["zscale"])
+        .enter().append("label")
+        .classed("scale-select", true)
+        .text(function(d) {return d})
+        .append("select")
+          .attr("id", function(d) {return d})
+          .attr("axis", function(d) {return d[0]})
+          .on("change", function() {
+            var axis = d3.select(this).attr("axis") + "transform",
+                transform = this.value;
+            webreduce.editor._active_plot[axis](transform);  
+          })
+          .selectAll("option").data(["linear", "log"])
+            .enter().append("option")
+            .attr("value", function(d) {return d})
+            .text(function(d) {return d})
+      
+      /*
+      plot_controls.selectAll(".show-boxes") // want to show/hide grids in the future...
+        .data(["errorbars", "points", "line"])
+        .enter().append("label")
+        .classed("show-boxes", true)
+        .text(function(d) {return d})
+        .append("input")
+          .attr("id", function(d) {return "show_" + d})
+          .attr("type", "checkbox")
+          .attr("checked", "checked")
+          .on("change", function() {
+            var o = mychart.options();
+            o[this.id] = this.checked;
+            mychart.options(o).update();
+          });
+       */
+          
+       plot_controls
+        .append("input")
+          .attr("type", "button")
+          .attr("id", "export_data")
+          .attr("value", "export")
+          .on("click", webreduce.editor.export_data)
+    }
+
+    mychart.autofit();
+    return mychart
   }
   
   webreduce.editor.show_plots_1d = function(plotdata) {
@@ -151,34 +203,70 @@ webreduce.editor = webreduce.editor || {};
     mychart.zoomRect(true);
     webreduce.callbacks.resize_center = mychart.autofit;
     
-    // set up handlers for buttons and options:
-    d3.selectAll("#xscale, #yscale").on("change", function() {
-      var axis = d3.select(this).attr("axis") + "transform",
-          transform = this.value;
-      mychart[axis](transform);  
-    });
-    d3.selectAll("#show_errorbars, #show_points, #show_line").on("change", function() {
-      var o = mychart.options();
-      o[this.id] = this.checked;
-      mychart.options(o).update();
-    });
-    d3.select("#export_data").on("click", function() {
-      var filename = prompt("Export data as:", "myfile.refl");
-      if (filename == null) {return} // cancelled
-      var w = webreduce.editor,
-        node = w._active_node,
-        terminal = w._active_terminal,
-        template = w._active_template;
-      webreduce.server_api.calc_terminal(template, {}, node, terminal, 'export').then(function(result) {
-        // add the template and target node, terminal to the header of the file:
-        var header = {template: template, node: node, terminal: terminal};
-        webreduce.download('#' + JSON.stringify(header) + '\n' + result.values.join('\n\n'), filename);
-      });       
-    });
-
+    // set up plot control buttons and options:
+    if (d3.select("#plot_controls").attr("plot_type") != "1d") {
+      // then make the controls:
+      var plot_controls = d3.select("#plot_controls")
+      plot_controls.attr("plot_type", "1d")
+      plot_controls.selectAll("select,input,button,label").remove();
+      plot_controls.selectAll(".scale-select")
+        .data(["xscale", "yscale"])
+        .enter().append("label")
+        .classed("scale-select", true)
+        .text(function(d) {return d})
+        .append("select")
+          .attr("id", function(d) {return d})
+          .attr("axis", function(d) {return d[0]})
+          .on("change", function() {
+            var axis = d3.select(this).attr("axis") + "transform",
+                transform = this.value;
+            webreduce.editor._active_plot[axis](transform);  
+          })
+          .selectAll("option").data(["linear", "log"])
+            .enter().append("option")
+            .attr("value", function(d) {return d})
+            .text(function(d) {return d})
+      
+      plot_controls.selectAll(".show-boxes")
+        .data(["errorbars", "points", "line"])
+        .enter().append("label")
+        .classed("show-boxes", true)
+        .text(function(d) {return d})
+        .append("input")
+          .attr("id", function(d) {return "show_" + d})
+          .attr("type", "checkbox")
+          .attr("checked", "checked")
+          .on("change", function() {
+            var o = mychart.options();
+            o[this.id] = this.checked;
+            webreduce.editor._active_plot.options(o).update();
+          });
+          
+       plot_controls
+        .append("input")
+          .attr("type", "button")
+          .attr("id", "export_data")
+          .attr("value", "export")
+          .on("click", webreduce.editor.export_data)
+    }
+    
     return mychart
   }
 
+  webreduce.editor.export_data = function() {
+    var filename = prompt("Export data as:", "myfile.refl");
+    if (filename == null) {return} // cancelled
+    var w = webreduce.editor,
+      node = w._active_node,
+      terminal = w._active_terminal,
+      template = w._active_template;
+    webreduce.server_api.calc_terminal(template, {}, node, terminal, 'export').then(function(result) {
+      // add the template and target node, terminal to the header of the file:
+      var header = {template: template, node: node, terminal: terminal};
+      webreduce.download('#' + JSON.stringify(header) + '\n' + result.values.join('\n\n'), filename);
+    });       
+  }
+  
   webreduce.editor.accept_parameters = function(target, active_module) {
     target.selectAll("div.fields")
       .each(function(data) {
