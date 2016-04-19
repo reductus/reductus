@@ -27,20 +27,24 @@ $.jsonRPC.setup({
         // array-like.
         params[i] = arguments[i];
       }
+      $.blockUI();
       var r = new Promise(function(resolve, reject) {
         $.jsonRPC.request(method_name, {
           async: true,
           params: params,
           success: function(result) {
+            $.unblockUI();
             resolve(result.result);
           },
           error: function(result) {
+            $.unblockUI();
             reject({method_name: method_name, params: params, caller: wrapped.caller, resolver: resolve, result: result});
           }
         });
       })
       .catch(function(error) {
         // hook in a custom handler
+        $.unblockUI();
         if (app.api_exception_handler) {
           app.api_exception_handler(error); 
         } else {
