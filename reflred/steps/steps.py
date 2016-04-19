@@ -872,13 +872,13 @@ def estimate_polarization(data, FRbalance=0.5, Emin=0.0, Imin=0.0, clip=False):
     """
     from .polarization import PolarizationData
 
-    poldata = PolarizationData(beam=data, FRbal=0.01*FRbalance,
+    poldata = PolarizationData(data, FRbal=0.01*FRbalance,
                                Emin=0.01*Emin, Imin=Imin, clip=clip)
 
     poldata.log("PolarizationData(beam, Imin=%.15g, Emin=%.15g%%, FRbal=%.15g%%, clip=%d)"
              %(Imin, Emin, FRbalance, 0+clip))
-    for xs in ('++','+-','-+','--'):
-        poldata.log_dependency("beam"+xs, poldata[xs])
+    #for xs in ('++','+-','-+','--'):
+    #    poldata.log_dependency("beam"+xs, data[xs])
     return poldata
 
 
@@ -889,7 +889,7 @@ def correct_polarization(data, polarization, spinflip=True):
 
     **Inputs**
 
-    data (refldata) : polarized data to be corrected
+    data (refldata[]) : polarized data to be corrected
 
     polarization (poldata) : estimated polarization efficiency
 
@@ -897,14 +897,14 @@ def correct_polarization(data, polarization, spinflip=True):
 
     **Returns**
 
-    output (refldata) : polarization corrected data
+    output (refldata[]) : polarization corrected data
 
     2015-12-17 Paul Kienzle
     """
     from .polarization import apply_polarization_correction
     data = copy(data)
-    data.log("correct_polarization(polarization, splinflip=True)")
-    data.log_dependency("polarization", polarization)
+    #data.log("correct_polarization(polarization, splinflip=True)")
+    #data.log_dependency("polarization", polarization)
     apply_polarization_correction(data, polarization, spinflip)
     return data
 

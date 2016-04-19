@@ -176,8 +176,8 @@ ALL_XS = '++','+-','-+','--'
 NSF_XS = '++','--'
 
 class PolarizationData:
-    def __init__(self, beam, Imin=0.0, Emin=0.0, FRbal=0.5, clip=True):
-        self.beam = beam
+    def __init__(self, intensity_data, Imin=0.0, Emin=0.0, FRbal=0.5, clip=True):
+        self.beam = dict([(d.polarization, d) for d in intensity_data])
         self.FRbal = FRbal
         self.Emin = Emin
         self.Imin = Imin
@@ -204,11 +204,17 @@ class PolarizationData:
         if other.warnings:
             self.messages.append(label + ":")
             self.messages.append(other.messages)
+            
+    def get_metadata(self):
+        eff = polarization_efficiency(self.beam, Imin=self.Imin, Emin=self.Emin, FRbal=self.FRbal, clip=self.clip)
+        output = dict([(k, str(v)) for k, v in eff.items()])
+        return output
 
 def apply_polarization_correction(data, polarization, spinflip=True):
     polarization.apply(data, spinflip=spinflip)
 
-def correct(data, spinflip, beam, Imin=0.0, Emin=0.0, FRbal=0.5, clip=False):
+def correct(data_in, spinflip, beam, Imin=0.0, Emin=0.0, FRbal=0.5, clip=False):
+    data = dict([(d.polarization, d) for d in data_in])
     spinflip = spinflip and '+-' in data and '-+' in data
     dtheta = data['++'].angular_resolution
     beta,fp,rp,x,y,mask =  _calc_efficiency(beam=beam, dtheta=dtheta,
@@ -381,8 +387,8 @@ def _calc_efficiency(beam, dtheta, Imin, Emin, FRbal, clip):
     return beta, fp, rp, x, y, reject
 
 def _interp_intensity(dT, data):
-    #return util.nearest(dT, data.angular_resolution, U(data.v, data.dv))
-    return util.interp(dT, data.angular_resolution, U(data.v, data.dv))
+    return util.nearest(dT, data.angular_resolution, U(data.v, data.dv))
+    #return util.interp(dT, data.angular_resolution, U(data.v, data.dv))
 
 # Different versions of clip depending on which uncertainty package is used.
 def clip_no_error(field,low,high,nanval=0.):
