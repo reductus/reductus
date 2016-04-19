@@ -34,6 +34,9 @@ webreduce.editor = webreduce.editor || {};
     var module_def = this._module_defs[active_module.module];
     var input_datasets_id = (module_def.inputs[0] || {}).id;  // undefined if no inputs
     var fields = module_def.fields || [];
+    if (fields.filter(function(d) {return d.datatype == 'fileinfo'}).length == 0) {
+        $("#navigation").block({message: null, fadeIn:0, overlayCSS: {opacity: 0.25}});
+    }
     
     webreduce.layout.open("east");
     var target = d3.select(".ui-layout-pane-east");
@@ -73,6 +76,7 @@ webreduce.editor = webreduce.editor || {};
   
   webreduce.editor.handle_terminal_clicked = function() {
     var target = d3.select("#" + this._target_id);
+    $("#navigation").block({message: null, fadeIn: 0, overlayCSS: {opacity: 0.25}});
     var selected = target.select(".module .selected");
     var index = parseInt(d3.select(selected.node().parentNode.parentNode).attr("index"));
     var terminal_id = selected.attr("terminal_id");
@@ -279,6 +283,7 @@ webreduce.editor = webreduce.editor || {};
   
   webreduce.editor.make_fieldUI.fileinfo = function(field, active_template, module_index, module_def, target) {
     // this will add the div only once, even if called twice.
+    $("#navigation").unblock();
     target.selectAll("div#fileinfo").data([0])
       .enter()
         .append("div")
@@ -317,6 +322,7 @@ webreduce.editor = webreduce.editor || {};
       });
     $("#fileinfo").buttonset();
     webreduce.callbacks.resize_center = webreduce.handleChecked;
+    $(".remote-filebrowser").trigger("fileinfo.update", d3.select("div#fileinfo input").datum());
     webreduce.handleChecked();    
   }
   
@@ -577,6 +583,18 @@ webreduce.editor = webreduce.editor || {};
       d3.select(this).select("rect.title").classed("selected", true);
       webreduce.editor.handle_module_clicked();
     });
+    
+    var autoselected = template_def.modules.findIndex(function(m) {
+      var has_fileinfo = webreduce.editor._module_defs[m.module].fields
+        .findIndex(function(f) {return f.datatype == 'fileinfo'}) > -1
+      return has_fileinfo;
+    });
+    
+    if (autoselected > -1) {
+      var toselect = target.select('.module[index="' + String(autoselected) + '"]');
+      toselect.select("rect.title").classed("selected", true);
+      webreduce.editor.handle_module_clicked();
+    }
   }
   
   
