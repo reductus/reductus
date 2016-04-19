@@ -40,7 +40,7 @@ webreduce.instruments = webreduce.instruments || {};
     window.onpopstate = function(e) {
       // called by load on Safari with null state, so be sure to skip it.
       //if (e.state) {
-      var start_path = $.extend(true, [], data_path),
+      var start_path = null,
         url_vars = getUrlVars(),
         source = 'ncnr';
       url_vars.forEach(function(v, i) {
@@ -56,6 +56,10 @@ webreduce.instruments = webreduce.instruments || {};
           webreduce.editor.switch_instrument(current_instrument);
         }
       })
+      
+      if (start_path == null) {
+        webreduce.addDataSource("navigation", source, data_path);
+      }
     }
 
     
