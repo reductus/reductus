@@ -76,6 +76,7 @@ path.wire {
 </style>
 <body>
   <script type="text/javascript" src="//ajax.googleapis.com/ajax/libs/jquery/1.10.1/jquery.min.js"></script>
+  <script type="text/javascript" src="js/jquery.blockUI.js"></script>
   <script type="text/javascript" src="js/jquery.jsonrpc.js"></script>
   <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/d3/3.5.5/d3.min.js"></script>
   <script type="text/javascript" src="//www.ncnr.nist.gov/instruments/magik/d3-science/jquery-extend.js"></script>
@@ -85,136 +86,6 @@ path.wire {
 window.onload = function() {
 
 current_instrument = 'ncnr.ospec';
-
-var x0 = 150,
-    y0 = 100, 
-    dx = 135,
-    dy = 40;
-
-var module_opts = [
-{
-      "title": "load spec",
-      "module": "ncnr.refl.super_load",
-      "config": {
-        "intent": "specular"
-      },
-      "x": 150,
-      "y": 100
-    },
-    {
-      "title": "load bg",
-      "module": "ncnr.refl.super_load",
-      "config": {
-        "intent": "background"
-      },
-      "x": 150,
-      "y": 140
-    },
-    {
-      "title": "load slit",
-      "module": "ncnr.refl.super_load",
-      "config": {
-        "intent": "slit"
-      },
-      "x": 150,
-      "y": 180
-    },
-    {
-      "title": "mask",
-      "module": "ncnr.refl.mask_points",
-      "x": 285,
-      "y": 100
-    },
-    {
-      "title": "mask",
-      "module": "ncnr.refl.mask_points",
-      "x": 285,
-      "y": 140
-    },
-    {
-      "title": "mask",
-      "module": "ncnr.refl.mask_points",
-      "x": 285,
-      "y": 180
-    },
-    {
-      "title": "join",
-      "module": "ncnr.refl.join",
-      "x": 420,
-      "y": 100
-    },
-    {
-      "title": "join",
-      "module": "ncnr.refl.join",
-      "x": 420,
-      "y": 140
-    },
-    {
-      "title": "join",
-      "module": "ncnr.refl.join",
-      "x": 421,
-      "y": 179
-    },
-    {
-      "title": "subtract",
-      "module": "ncnr.refl.subtract_background",
-      "x": 555,
-      "y": 100
-    },
-    {
-      "title": "normalize",
-      "module": "ncnr.refl.divide_intensity",
-      "x": 690,
-      "y": 140
-    }
-];
-
-example = {
-    //modules: expand_module_defs(module_opts, 'ncnr.refl'),
-    modules: module_opts,
-    wires: [
-    {
-      "source": [0, "output"],
-      "target": [3, "data"]
-    },
-    {
-      "source": [1, "output"],
-      "target": [4, "data"]
-    },
-    {
-      "source": [2, "output"],
-      "target": [5, "data"]
-    },
-    {
-      "source": [3, "output"],
-      "target": [6, "data"]
-    },
-    {
-      "source": [4, "output"],
-      "target": [7, "data"]
-    },
-    {
-      "source": [5, "output"],
-      "target": [8, "data"]
-    },
-    {
-      "source": [6, "output"],
-      "target": [9, "data"]
-    },
-    {
-      "source": [7, "output"],
-      "target": [9, "backp"]
-    },
-    {
-      "source": [8, "output"],
-      "target": [9, "backm"]
-    },
-    {
-      "source": [9, "output"],
-      "target": [10, "data"]
-    }
-    ]
-}
 
 function expand_module_defs(modules, instrument) {
   var output = [],
@@ -379,30 +250,46 @@ instruments = {};
 module_defs = {};
 var module_names;
 
-webreduce.server_api.get_instrument(current_instrument)
-      .then(function(instrument_def) {
-        instruments[current_instrument] = instrument_def;
-        if ('modules' in instrument_def) {
-          for (var i=0; i<instrument_def.modules.length; i++) {
-            var m = instrument_def.modules[i];
-            module_defs[m.id] = m;
-          }
+load_instrument = function(instrument_id, update_selector) {
+  console.log(instrument_id, update_selector);
+  console.log('#select_instrument option[value="' + instrument_id + '"]', d3.select('#select_instrument option[value="' + instrument_id + '"]'));
+  if (update_selector) {
+    d3.select('#select_instrument option[value="' + instrument_id + '"]').property("selected", true);
+  }
+  var current_instrument = instrument_id; 
+  webreduce.server_api.get_instrument(current_instrument)
+    .then(function(instrument_def) {
+      instruments[current_instrument] = instrument_def;
+      module_defs = {};
+      if ('modules' in instrument_def) {
+        for (var i=0; i<instrument_def.modules.length; i++) {
+          var m = instrument_def.modules[i];
+          module_defs[m.id] = m;
         }
-        dataflow.module_defs = module_defs;
-        // pass it through:
-        return instrument_def;
-      })
-      .then(function() {
-        module_names = (["Add new module:"]).concat(Object.keys(module_defs));
-    
-        d3.select("#new_module").selectAll("option").data(module_names)
-          .enter().append('option')
-          .attr("module", function(d) {return d}) // function(d) {return module_defs[d].module})
-          .text(function(d) {return module_defs[d].name})  
-      });
-      
-//var module_defs = instruments[current_instrument].modules;
+      }
+      dataflow.module_defs = module_defs;
+      // pass it through:
+      return instrument_def;
+    })
+    .then(function() {
+      module_names = (["Add new module:"]).concat(Object.keys(module_defs));
+      d3.selectAll("#new_module option").remove()
+      d3.select("#new_module").append("option").text("Add new module:");
+      d3.select("#new_module").selectAll("option").data(module_names)
+        .enter().append('option')
+        .attr("module", function(d) {return d}) // function(d) {return module_defs[d].module})
+        .text(function(d) {return module_defs[d].name})  
+    });
+}
 
+webreduce.server_api.list_instruments()
+  .then(function(instruments) {
+    instruments.forEach(function(d, i){
+      $("#select_instrument").append($("<option />", {text: d, value: d}));
+    });
+    return instruments;
+  })
+  .then(function() {load_instrument(window.current_instrument, true)});
   
 d3.select('#new_module').on("change", function(ev) {
     var title = this.value,
@@ -412,16 +299,18 @@ d3.select('#new_module').on("change", function(ev) {
     this.selectedIndex=0;
 });
 
+d3.select('#select_instrument').on("change", function(ev) {
+    var instrument_id = this.value;
+    load_instrument(instrument_id, false);
+    //this.selectedIndex=0;
+});
+
 d3.select("#show_value").on("click", function() { 
   var win = window.open();
   win.document.write("<pre>" + JSON.stringify(e.export(), null, 2) + "</pre>");
 });
 
-d3.select("#show_example").on("click", function() {
-  e.import(example);
-});
-
-function loadData() {
+function loadDataFromFile() {
     var file = document.getElementById('upload_template').files[0]; // only one file allowed
     datafilename = file.name;
     var result = null;
@@ -433,16 +322,18 @@ function loadData() {
     reader.readAsText(file);
 }
 
-d3.select("#upload_template").on("change", loadData);
+d3.select("#upload_template").on("change", loadDataFromFile);
 
 }
 </script>
 <div id="controls">
-    <select id="new_module">
-      <option>Add new module:</option>
-    </select>
-    <button id="show_example">Load example template</button>
-    <input id="upload_template" type="file" multiple="false" name="upload_template" />
+    <select id="new_module"></select>
+    <label>Instrument:
+      <select id="select_instrument"></select>
+    </label>
+    <label>Load template file:
+      <input id="upload_template" type="file" multiple="false" name="upload_template" />
+    </label>
     <button id="show_value">Show data</button>
 </div>
 <div id="editor_div">
