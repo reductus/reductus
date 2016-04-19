@@ -1,4 +1,4 @@
-    canvas {
+    svg, canvas {
       position: absolute;
       image-rendering: optimizeSpeed;
       image-rendering: crisp-edges;
@@ -120,6 +120,8 @@
     }
     #plotdiv {
       height: 100%;
+      display: block;
+      text-align: start;
     }
     #controls {
       position: absolute;
@@ -138,27 +140,27 @@
       display: none !important;
     }
     
-    svg g.module {
+    svg.editor g.module {
         cursor: pointer !important;
     }
     
-    svg g.module .selected {
+    svg.editor g.module .selected {
       stroke-width: 5px !important;
     }
     
-    svg g.module .terminal {
+    svg.editor g.module .terminal {
       cursor: pointer !important;
     }
     
-    svg polygon.terminal.state {
+    svg.editor polygon.terminal.state {
         fill-opacity: 0;
     }
     
-    svg polygon.terminal.state.calculated {
+    svg.editor polygon.terminal.state.calculated {
         fill-opacity: 1.0;
     }
     
-    svg polygon.terminal.state.calculating {
+    svg.editor polygon.terminal.state.calculating {
         display: inline-block !important;
         position: relative;
         -webkit-animation-name: strobe; /* Chrome, Safari, Opera */
@@ -193,6 +195,7 @@
     }
     #dirbrowser { list-style-type: none; margin: 0; padding: 0; }
     #dirbrowser li { margin: 3px; padding: 0em 0.4em; font-size: 1.2em; }
+
     .patheditor { 
         color: blue;
         cursor: pointer;
