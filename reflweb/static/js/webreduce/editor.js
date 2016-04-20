@@ -568,6 +568,16 @@ webreduce.editor = webreduce.editor || {};
   
   webreduce.editor.load_template = function(template_def) {
     this._active_template = template_def;
+    var template_sourcepaths = webreduce.getAllTemplateSourcePaths(template_def),
+        browser_sourcepaths = webreduce.getAllBrowserSourcePaths();
+    for (var source in template_sourcepaths) {
+      var paths = template_sourcepaths[source];
+      for (var path in paths) {
+        if (browser_sourcepaths.findIndex(function(sp) {return sp.source == source && sp.path == path}) < 0) {
+          webreduce.addDataSource("navigation", source, path.split("/"));
+        }
+      }
+    }
     var target = d3.select("#" + this._target_id);
     this._instance.import(template_def);
 
