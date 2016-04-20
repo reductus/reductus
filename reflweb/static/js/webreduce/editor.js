@@ -35,7 +35,8 @@ webreduce.editor = webreduce.editor || {};
     var input_datasets_id = (module_def.inputs[0] || {}).id;  // undefined if no inputs
     var fields = module_def.fields || [];
     if (fields.filter(function(d) {return d.datatype == 'fileinfo'}).length == 0) {
-        $("#navigation").block({message: null, fadeIn:0, overlayCSS: {opacity: 0.25, cursor: 'not-allowed'}});
+        var nav = $("#navigation");
+        nav.block({message: null, fadeIn:0, overlayCSS: {opacity: 0.25, cursor: 'not-allowed', height: nav.prop("scrollHeight")}});
     }
     
     webreduce.layout.open("east");
@@ -76,7 +77,8 @@ webreduce.editor = webreduce.editor || {};
   
   webreduce.editor.handle_terminal_clicked = function() {
     var target = d3.select("#" + this._target_id);
-    $("#navigation").block({message: null, fadeIn: 0, overlayCSS: {opacity: 0.25, cursor: 'not-allowed'}});
+    var nav = $("#navigation");
+    nav.block({message: null, fadeIn:0, overlayCSS: {opacity: 0.25, cursor: 'not-allowed', height: nav.prop("scrollHeight")}});
     var selected = target.select(".module .selected");
     var index = parseInt(d3.select(selected.node().parentNode.parentNode).attr("index"));
     var terminal_id = selected.attr("terminal_id");
