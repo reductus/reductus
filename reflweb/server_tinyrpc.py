@@ -44,6 +44,7 @@ if __name__ == '__main__':
         dispatcher.add_method(getattr(reflweb.api, method), method)
     if config.serve_staticfiles == True:
         from reflweb.httpserver import start_server
+        os.chdir("static")
         start_server(config.jsonrpc_servername, config.http_port, rpc_port=actual_port)
     # in the main greenlet, run our rpc_server
     print("serving")
