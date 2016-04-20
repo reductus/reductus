@@ -56,7 +56,7 @@ webreduce.server_api = webreduce.server_api || {};
   }
   
   app.server_api.__init__ = function() {
-    return $.getJSON("/rpc_config.json", function(config) {
+    return $.getJSON("rpc_config.json", function(config) {
       $.jsonRPC.setup({
         //endPoint: '//localhost:' + rpc_port + '/RPC2',
         endPoint: "http://" + config.host + ":" + config.port.toFixed() + "/RPC2",

@@ -21,7 +21,7 @@ def start_server(host='localhost', port=0, rpc_port=8001, auto_open=True):
     server_address = (host, port)
     class MyRequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
         def do_GET(self):
-            if self.path == '/rpc_config.json':
+            if self.path == 'rpc_config.json':
                 response = '{"port": %d, "host": "%s"}' % (rpc_port, host)
                 self.send_response(200)
                 self.send_header("Content-type", "application/json")
