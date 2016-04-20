@@ -27,6 +27,9 @@ if __name__ == '__main__':
     # start wsgi server as a background-greenlet
     wsgi_server = gevent.wsgi.WSGIServer((config.jsonrpc_servername, config.jsonrpc_port), transport.handle)
     gevent.spawn(wsgi_server.serve_forever)
+    wsgi_server.update_environ()
+    actual_host, actual_port = wsgi_server.address
+    print(wsgi_server.address)
 
     rpc_server = RPCServerGreenlets(
         transport,
@@ -39,6 +42,9 @@ if __name__ == '__main__':
     create_instruments()
     for method in api_methods:
         dispatcher.add_method(getattr(reflweb.api, method), method)
+    if config.serve_staticfiles == True:
+        from reflweb.httpserver import start_server
+        start_server(config.jsonrpc_servername, config.http_port, rpc_port=actual_port)
     # in the main greenlet, run our rpc_server
     print("serving")
     rpc_server.serve_forever()

@@ -10,13 +10,6 @@
 webreduce = window.webreduce || {};
 webreduce.server_api = webreduce.server_api || {};
 
-$.jsonRPC.setup({
-  //endPoint: '//localhost:' + rpc_port + '/RPC2',
-  endPoint: "http://" + window.location.hostname + ":8001/RPC2",
-  namespace: '',
-  cache: false
-});
-
 (function(app) {
   function wrap_jsonRPC(method_name) {
     function wrapped() {
@@ -60,6 +53,17 @@ $.jsonRPC.setup({
   for (var i=0; i<toWrap.length; i++) {
     var method_name = toWrap[i];
     app.server_api[method_name] = wrap_jsonRPC(method_name);
+  }
+  
+  app.server_api.__init__ = function() {
+    return $.getJSON("/rpc_config.json", function(config) {
+      $.jsonRPC.setup({
+        //endPoint: '//localhost:' + rpc_port + '/RPC2',
+        endPoint: "http://" + config.host + ":" + config.port.toFixed() + "/RPC2",
+        namespace: '',
+        cache: false
+      });
+    });
   }
 })(webreduce);
 

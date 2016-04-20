@@ -36,5 +36,5 @@ def start_server(host='localhost', port=0, rpc_port=8001, auto_open=True):
     http_process = multiprocessing.Process(target=httpd.serve_forever)
     if auto_open:
         import webbrowser
-        webbrowser.open("http://%s:%d" % (host, http_port))
+        webbrowser.open("http://%s:%d/static/web_reduction_filebrowser.html" % (host, http_port))
     http_process.start()

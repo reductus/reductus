@@ -14,6 +14,7 @@
 
 jsonrpc_servername = "localhost"
 jsonrpc_port = 8001
+http_port = 8000
 serve_staticfiles = True
 use_redis = True
 data_sources = {

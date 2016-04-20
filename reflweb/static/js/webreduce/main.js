@@ -65,6 +65,7 @@ webreduce.instruments = webreduce.instruments || {};
     
 
     window.onload = function() {
+    webreduce.server_api.__init__().then(function(api) {
       var layout = $('body').layout({
            west__size:          350
         ,  east__size:          300
@@ -79,7 +80,8 @@ webreduce.instruments = webreduce.instruments || {};
       layout.toggle('east');
       layout.allowOverflow('north');
       //$("#menu").menu({width: '200px;', position: {my: "left top", at: "left+15 bottom"}});
-		  
+	  
+	  
       webreduce.layout = layout;
       webreduce.download = (function () {
         var a = document.createElement("a");
@@ -246,6 +248,7 @@ webreduce.instruments = webreduce.instruments || {};
       }
       window.onpopstate();
       webreduce.editor.switch_instrument(current_instrument);
+  });
   }
 
 })();

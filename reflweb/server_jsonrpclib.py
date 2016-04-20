@@ -4,6 +4,7 @@ import SocketServer
 import urlparse
 from pprint import pprint
 import traceback
+import json
 
 try:
     import config
@@ -55,7 +56,8 @@ class JSONRPCRequestHandler(SimpleJSONRPCRequestHandler):
         SimpleJSONRPCRequestHandler.end_headers(self)
 
 
-if getattr(config, 'serve_staticfiles', True) == True:    
+rpc_config = {}
+if getattr(config, 'serve_staticfiles', True) == True: 
     def do_GET(self):
         """Handles the HTTP GET request.
 
@@ -65,40 +67,47 @@ if getattr(config, 'serve_staticfiles', True) == True:
         #if not self.is_rpc_path_valid():
         #    self.report_404()
         #    return
-
-        # Parse query data & params to find out what was passed
-        parsedParams = urlparse.urlparse(self.path)
-        ## don't need the parsed GET query, at least not yet.
-        #queryParsed = urlparse.parse_qs(parsedParams.query)
-        #docname = os.path.basename(parsedParams.path)
-        docname = parsedParams.path.lstrip('/')
-        if (docname == "" or docname == "/"):
-            docname = homepage
-        docpath = os.path.join(currdir, 'static',  *(docname.split("/")))
-        if (os.path.exists(docpath)):
-            response = open(docpath, 'r').read()
-        else:
-            self.report_404()
-            return
-        self.send_response(200)
-        self.send_header('Access-Control-Allow-Origin', '*')
-        if docname.endswith('.js'):
-            self.send_header("Content-type", "text/javascript")
-        elif docname.endswith('.css'):
-            self.send_header("Content-type", "text/css")
-        elif docname.endswith('.json'):
+        if self.path == '/rpc_config.json':
+            response = json.dumps(rpc_config)
+            self.send_response(200)
             self.send_header("Content-type", "application/json")
-        elif docname.endswith('.gif'):
-            self.send_header("Content-type", "image/gif")
-        elif docname.endswith('.png'):
-            self.send_header("Content-type", "image/png")
-        elif docname.endswith('.ico'):
-            self.send_header("Content-type", "image/x-icon")
+            self.send_header("Content-length", str(len(response)))
+            self.end_headers()
+            self.wfile.write(response)
         else:
-            self.send_header("Content-type", "text/html")
-        self.send_header("Content-length", str(len(response)))
-        self.end_headers()
-        self.wfile.write(response)
+            # Parse query data & params to find out what was passed
+            parsedParams = urlparse.urlparse(self.path)
+            ## don't need the parsed GET query, at least not yet.
+            #queryParsed = urlparse.parse_qs(parsedParams.query)
+            #docname = os.path.basename(parsedParams.path)
+            docname = parsedParams.path.lstrip('/')
+            if (docname == "" or docname == "/"):
+                docname = homepage
+            docpath = os.path.join(currdir, 'static',  *(docname.split("/")))
+            if (os.path.exists(docpath)):
+                response = open(docpath, 'r').read()
+            else:
+                self.report_404()
+                return
+            self.send_response(200)
+            self.send_header('Access-Control-Allow-Origin', '*')
+            if docname.endswith('.js'):
+                self.send_header("Content-type", "text/javascript")
+            elif docname.endswith('.css'):
+                self.send_header("Content-type", "text/css")
+            elif docname.endswith('.json'):
+                self.send_header("Content-type", "application/json")
+            elif docname.endswith('.gif'):
+                self.send_header("Content-type", "image/gif")
+            elif docname.endswith('.png'):
+                self.send_header("Content-type", "image/png")
+            elif docname.endswith('.ico'):
+                self.send_header("Content-type", "image/x-icon")
+            else:
+                self.send_header("Content-type", "text/html")
+            self.send_header("Content-length", str(len(response)))
+            self.end_headers()
+            self.wfile.write(response)
     
     JSONRPCRequestHandler.do_GET = do_GET
 
@@ -112,6 +121,7 @@ class ThreadedJSONRPCServer(SocketServer.ThreadingMixIn, SimpleJSONRPCServer):
 if __name__ == '__main__':
     server = ThreadedJSONRPCServer((config.jsonrpc_servername, config.jsonrpc_port), encoding='utf8', requestHandler=JSONRPCRequestHandler)
     rpc_port = server.socket.getsockname()[1]
+    rpc_config['host'], rpc_config['port'] = server.socket.getsockname()
     import reflweb.api
     from reflweb.api import api_methods, create_instruments
     create_instruments()
