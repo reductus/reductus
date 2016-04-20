@@ -1,20 +1,40 @@
 import sys
+import multiprocessing
+import SocketServer
 import BaseHTTPServer
-from SimpleHTTPServer import SimpleHTTPRequestHandler
+import SimpleHTTPServer
 
-HandlerClass = SimpleHTTPRequestHandler
-ServerClass  = BaseHTTPServer.HTTPServer
-Protocol     = "HTTP/1.0"
+class ThreadingSimpleServer(SocketServer.ThreadingMixIn, BaseHTTPServer.HTTPServer):
+    pass
+            
+HandlerClass = SimpleHTTPServer.SimpleHTTPRequestHandler
+ServerClass  = ThreadingSimpleServer
 
-if sys.argv[1:]:
-    port = int(sys.argv[1])
-else:
-    port = 8000
-server_address = ('localhost', port)
-
-HandlerClass.protocol_version = Protocol
-httpd = ServerClass(server_address, HandlerClass)
-
-sa = httpd.socket.getsockname()
-print "Serving HTTP on", sa[0], "port", sa[1], "..."
-httpd.serve_forever()
+def start_server(host='localhost', port=0, rpc_port=8001, auto_open=True):
+    """
+    Start the http server after the rpc server is already running,
+    to get the dynamic port information.
+    
+    For a static deploy using e.g. Apache, put a file "rpc_config.json" 
+    in the static folder
+    """
+    server_address = (host, port)
+    class MyRequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
+        def do_GET(self):
+            if self.path == '/rpc_config.json':
+                response = '{"port": %d, "host": "%s"}' % (rpc_port, host)
+                self.send_response(200)
+                self.send_header("Content-type", "application/json")
+                self.send_header("Content-length", str(len(response)))
+                self.end_headers()
+                self.wfile.write(response)
+            else:
+                return SimpleHTTPServer.SimpleHTTPRequestHandler.do_GET(self)
+    httpd = ServerClass(server_address, MyRequestHandler)
+    http_port = httpd.socket.getsockname()[1]
+    print("http port: %d" % (http_port,))
+    http_process = multiprocessing.Process(target=httpd.serve_forever)
+    if auto_open:
+        import webbrowser
+        webbrowser.open("http://%s:%d" % (host, http_port))
+    http_process.start()
