@@ -12,6 +12,9 @@
 #
 # if use_redis is False, server will use in-memory cache.
 
+# TODO: Convert this to JSON file in web-accesible ('static')
+# directory.  
+
 jsonrpc_servername = "localhost"
 jsonrpc_port = 8001
 http_port = 8000

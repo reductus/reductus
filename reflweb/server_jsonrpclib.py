@@ -67,7 +67,7 @@ if getattr(config, 'serve_staticfiles', True) == True:
         #if not self.is_rpc_path_valid():
         #    self.report_404()
         #    return
-        if self.path == '/rpc_config.json':
+        if self.path == 'rpc_config.json':
             response = json.dumps(rpc_config)
             self.send_response(200)
             self.send_header("Content-type", "application/json")
