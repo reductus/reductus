@@ -130,7 +130,12 @@
                             leaf.li_attr.mtime == fi.mtime)
             return isMatch;
           });
+          // turn off the handler for a moment 
+          // so it doesn't trigger for every check operation:
+          target.off("check_node.jstree", handleChecked);
           jstree.check_node(matching);
+          // then turn it back on.
+          target.on("check_node.jstree", handleChecked);
         });
         handleChecked(null, null, true);
       });
