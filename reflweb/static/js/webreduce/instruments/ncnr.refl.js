@@ -10,7 +10,7 @@ webreduce.instruments['ncnr.refl'] = webreduce.instruments['ncnr.refl'] || {};
       "name": "loader_template",
       "description": "ReflData remote loader",
       "modules": [
-        {"module": "ncnr.refl.ncnr_load", "version": "0.1", "config": {}},
+        {"module": "ncnr.refl.ncnr_load.cached", "version": "0.1", "config": {}},
         {"module": "ncnr.refl.mark_intent", "version": "0.1", "config": {}}
       ],
       "wires": [{"source": [0,"output"], "target": [1,"data"]}],

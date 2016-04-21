@@ -2,7 +2,7 @@
   "modules": [
     {
       "title": "load spec!",
-      "module": "ncnr.refl.super_load",
+      "module": "ncnr.refl.super_load.cached",
       "y": 10,
       "x": 30,
       "config": {
@@ -23,7 +23,7 @@
     },
     {
       "title": "load bg+",
-      "module": "ncnr.refl.super_load",
+      "module": "ncnr.refl.super_load.cached",
       "y": 50,
       "x": 30,
       "config": {
@@ -38,7 +38,7 @@
     },
     {
       "title": "load bg-",
-      "module": "ncnr.refl.super_load",
+      "module": "ncnr.refl.super_load.cached",
       "y": 90,
       "x": 30,
       "config": {
@@ -65,7 +65,7 @@
     },
     {
       "title": "load slit",
-      "module": "ncnr.refl.super_load",
+      "module": "ncnr.refl.super_load.cached",
       "y": 130,
       "x": 30,
       "config": {

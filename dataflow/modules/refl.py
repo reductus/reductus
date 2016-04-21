@@ -31,10 +31,74 @@ class DataflowReflData(ReflData):
     def get_metadata(self):
         return self.todict()
 
+def make_cached_subloader_module(load_action, prefix=""):
+    """
+    This assumes that the load_action can be run with a single fileinfo
+    in any of the fields of datatype 'fileinfo', 
+    and collates the results of running them one at a time.
+    """
+    from dataflow.automod import auto_module
+    from dataflow.core import Template, Module
+    from dataflow.calc import process_template
+    
+    # Read the module defintion from the docstring
+    module_description = auto_module(load_action)
+    fields = module_description['fields']
+    fileinfo_fields = [f for f in fields if f['datatype']=='fileinfo']
+
+    # Tag module ids with prefix
+    module_description['name'] += " (cached)"
+    mod_id = module_description['id'] = prefix + module_description['id']
+    template_def = {
+      "name": "loader_template",
+      "description": "cached remote loader",
+      "modules": [
+        {"module": mod_id, "version": "0.1", "config": {}}
+      ],
+      "wires": [],
+      "instrument": INSTRUMENT,
+      "version": "0.0"
+    }
+    template = Template(**template_def)
+    
+    # Tag each terminal data type with the data type prefix, if it is
+    # not already a fully qualified name
+    for v in module_description['inputs'] + module_description['outputs']:
+        if '.' not in v['datatype']:
+            v['datatype'] = prefix + v['datatype']
+
+    def new_action(**kwargs):        
+        outputs = []
+        fileinfos = {}
+        for ff in fileinfo_fields:
+            fileinfos[ff['id']] = kwargs.pop(ff['id'], [])
+            # replace fileinfos with empty lists
+            kwargs[ff['id']] = [] 
+        for field_id in fileinfos:
+            fileinfo = fileinfos[field_id]
+            for fi in fileinfo:               
+                # put a single fileinfo into the hopper
+                kwargs[field_id] = [fi]
+                config = {"0": kwargs}
+                nodenum = 0
+                terminal_id = "output"               
+                retval = process_template(template, config, target=(nodenum, terminal_id))
+                outputs.extend(retval.values)
+                # take it back out before continuing the loop(s)
+                kwargs[field_id] = [] 
+        return outputs
+    
+    new_action.cached = True
+    module_description['id'] += ".cached"
+    # Define and register the module
+    return Module(action=new_action, **module_description)    
+
 def define_instrument():
     # Define modules
     modules = make_modules(steps.ALL_ACTIONS, prefix=INSTRUMENT+'.')
-
+    modules.append(make_cached_subloader_module(steps.super_load, prefix=INSTRUMENT+'.'))
+    modules.append(make_cached_subloader_module(steps.ncnr_load, prefix=INSTRUMENT+'.'))
+    
     # Define data types
     refldata = df.DataType(INSTRUMENT+".refldata", ReflData)
     poldata = df.DataType(INSTRUMENT+".poldata", PolarizationData)
