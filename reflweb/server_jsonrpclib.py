@@ -67,7 +67,7 @@ if getattr(config, 'serve_staticfiles', True) == True:
         #if not self.is_rpc_path_valid():
         #    self.report_404()
         #    return
-        if self.path == 'rpc_config.json':
+        if self.path.endswith('rpc_config.json'):
             response = json.dumps(rpc_config)
             self.send_response(200)
             self.send_header("Content-type", "application/json")
@@ -122,11 +122,11 @@ if __name__ == '__main__':
     server = ThreadedJSONRPCServer((config.jsonrpc_servername, config.jsonrpc_port), encoding='utf8', requestHandler=JSONRPCRequestHandler)
     rpc_port = server.socket.getsockname()[1]
     rpc_config['host'], rpc_config['port'] = server.socket.getsockname()
-    import reflweb.api
-    from reflweb.api import api_methods, create_instruments
+    import api
+    from api import api_methods, create_instruments
     create_instruments()
     for method in api_methods:
-        server.register_function(getattr(reflweb.api, method), method)
+        server.register_function(getattr(api, method), method)
     print "serving on",rpc_port
     server.serve_forever()
     print "done serving rpc forever"
