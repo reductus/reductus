@@ -135,6 +135,7 @@ webreduce.editor = webreduce.editor || {};
       .ylabel(data.ylabel);
     d3.selectAll("#plotdiv").selectAll("svg, div").remove();
     d3.selectAll("#plotdiv").data(data.z).call(mychart);
+    mychart.zoomScroll(true);
     
     // set up plot control buttons and options:
     if (d3.select("#plot_controls").attr("plot_type") != "2d") {
