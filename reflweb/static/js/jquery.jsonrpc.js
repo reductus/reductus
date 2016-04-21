@@ -1,3 +1,16 @@
+/*
+Library from https://github.com/datagraph/jquery-jsonrpc
+
+Authors
+Josh Huckabee joshhuckabee@gmail.com
+Chris Petersen cpetersen@mythtv.org
+Jerry Ablan opensource@pogostick.com
+
+'License'
+
+This plugin is free and unemcumbered software released into the public domain.
+*/
+
 (function($, undefined) {
   $.extend({
     jsonRPC: {
