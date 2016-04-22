@@ -144,7 +144,7 @@
         cursor: pointer !important;
     }
     
-    svg.editor g.module .selected {
+    svg.editor g.module g.selected rect {
       stroke-width: 5px !important;
     }
     

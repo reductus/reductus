@@ -22,6 +22,63 @@ webreduce.editor = webreduce.editor || {};
     var target = d3.select("#" + target_id);
     target.call(this._instance);
   }
+  
+  webreduce.editor.handle_moduleg_clicked = function(d,i,elem) {
+    // d is data for module, i is module index, 
+    var editor = d3.select("#" + this._target_id);
+    editor.selectAll(".module .selected").classed("selected", false);
+    console.log(elem, d3.select(elem), d3.event.target);
+    d3.select(elem).select(".title").classed('selected', true);
+    var target = d3.event.target;
+    var active_template = webreduce.editor._active_template;
+    var active_module = active_template.modules[i];
+    var module_def = webreduce.editor._module_defs[active_module.module];
+    var input_datasets_id = (module_def.inputs[0] || {}).id;  // undefined if no inputs
+    var fields = module_def.fields || [];
+    if (fields.filter(function(d) {return d.datatype == 'fileinfo'}).length == 0) {
+        var nav = $("#navigation");
+        nav.block({message: null, fadeIn:0, overlayCSS: {opacity: 0.25, cursor: 'not-allowed', height: nav.prop("scrollHeight")}});
+    }
+    
+    webreduce.layout.open("east");
+    var config_target = d3.select(".ui-layout-pane-east");
+    config_target.selectAll("div").remove();
+    
+    var buttons_div = config_target.append("div")
+      .classed("control-buttons", true)
+      .style("position", "absolute")
+      .style("bottom", "10px")
+    buttons_div.append("button")
+      .text("accept")
+      .on("click", function() {
+        webreduce.editor.accept_parameters(config_target, active_module);
+        webreduce.editor.handle_moduleg_clicked(d,i,elem);
+      })
+    buttons_div.append("button")
+      .text("clear")
+      .on("click", function() {
+        console.log(config_target, active_module);
+        if (active_module.config) { delete active_module.config }
+        webreduce.editor.handle_moduleg_clicked(d,i,elem);
+      })
+      
+    $(buttons_div).buttonset();
+    
+    var input_datasets_promise = (input_datasets_id == undefined) ? new Promise(function(r,j) {r(null)}) : 
+      webreduce.server_api.calc_terminal(active_template, {}, i, input_datasets_id, "metadata");
+    
+    input_datasets_promise.then(function(datasets_in) {
+      return fields.forEach(function(field) {
+        if (webreduce.editor.make_fieldUI[field.datatype]) {
+          webreduce.editor.make_fieldUI[field.datatype](field, active_template, i, module_def, config_target, datasets_in);
+        }
+      });
+    })
+    .then(function() {
+      
+    });
+  }
+  
   webreduce.editor.handle_module_clicked = function() {
     // module group is 2 levels above module title in DOM
     webreduce.editor.dispatch.on("accept", null);
@@ -598,6 +655,7 @@ webreduce.editor = webreduce.editor || {};
 
     target.selectAll(".module").classed("draggable wireable", false);
 
+    /*
     target.selectAll(".module .terminal").on("click", function() {
       target.selectAll(".module .selected").classed("selected", false);
       d3.select(this).classed('selected', true);
@@ -607,6 +665,11 @@ webreduce.editor = webreduce.editor || {};
       target.selectAll(".module .selected").classed("selected", false);
       d3.select(this).select("rect.title").classed("selected", true);
       webreduce.editor.handle_module_clicked();
+    });
+    */
+    
+    target.selectAll("g.module").on("click", function(d,i) {
+      webreduce.editor.handle_moduleg_clicked(d,i,this);
     });
     
     var autoselected = template_def.modules.findIndex(function(m) {
