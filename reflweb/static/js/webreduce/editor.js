@@ -160,6 +160,18 @@ webreduce.editor = webreduce.editor || {};
             .enter().append("option")
             .attr("value", function(d) {return d})
             .text(function(d) {return d})
+      plot_controls.selectAll(".show-boxes")
+        .data(["grid"])
+        .enter().append("label")
+        .classed("show-boxes", true)
+        .text(function(d) {return d})
+        .append("input")
+          .attr("id", function(d) {return "show_" + d})
+          .attr("type", "checkbox")
+          .attr("checked", "checked")
+          .on("change", function() {
+            mychart[this.id](this.checked);
+          });
       
       /*
       plot_controls.selectAll(".show-boxes") // want to show/hide grids in the future...
