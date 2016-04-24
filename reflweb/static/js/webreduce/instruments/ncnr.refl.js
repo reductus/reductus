@@ -99,7 +99,7 @@ webreduce.instruments['ncnr.refl'] = webreduce.instruments['ncnr.refl'] || {};
   } 
   
   instrument.plot = function(result) {
-    if (result.datatype == 'ncnr.refl.refldata') {
+    if (result && result.datatype && result.datatype == 'ncnr.refl.refldata') {
       return plot_refl(result.values);
     }
     else {

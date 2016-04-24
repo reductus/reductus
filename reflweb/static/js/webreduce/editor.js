@@ -24,12 +24,19 @@ webreduce.editor = webreduce.editor || {};
   }
   
   webreduce.editor.handle_moduleg_clicked = function(d,i,elem) {
-    // d is data for module, i is module index, 
-    var editor = d3.select("#" + this._target_id);
+    // d module data, i is module index, elem is registered to catch event
+    //
+    // Flow: 
+    //  - if the module title is clicked, show configuration and 
+    //    data from the first input terminal.
+    //  - if input terminal is clicked, show that data and configuration
+    //  - if output terminal is clicked, show that data and configuration
+    
+    var editor = d3.select("#" + this._target_id);    
+    var clicked_elem = d3.event.target;
     editor.selectAll(".module .selected").classed("selected", false);
-    console.log(elem, d3.select(elem), d3.event.target);
-    d3.select(elem).select(".title").classed('selected', true);
-    var target = d3.event.target;
+    d3.select(clicked_elem.parentNode).classed("selected", true);
+    
     var active_template = webreduce.editor._active_template;
     var active_module = active_template.modules[i];
     var module_def = webreduce.editor._module_defs[active_module.module];
@@ -39,7 +46,7 @@ webreduce.editor = webreduce.editor || {};
         var nav = $("#navigation");
         nav.block({message: null, fadeIn:0, overlayCSS: {opacity: 0.25, cursor: 'not-allowed', height: nav.prop("scrollHeight")}});
     }
-    
+
     webreduce.layout.open("east");
     var config_target = d3.select(".ui-layout-pane-east");
     config_target.selectAll("div").remove();
@@ -68,11 +75,13 @@ webreduce.editor = webreduce.editor || {};
       webreduce.server_api.calc_terminal(active_template, {}, i, input_datasets_id, "metadata");
     
     input_datasets_promise.then(function(datasets_in) {
-      return fields.forEach(function(field) {
+      webreduce.editor.show_plots(datasets_in);
+      fields.forEach(function(field) {
         if (webreduce.editor.make_fieldUI[field.datatype]) {
           webreduce.editor.make_fieldUI[field.datatype](field, active_template, i, module_def, config_target, datasets_in);
         }
       });
+      return datasets_in;
     })
     .then(function() {
       
