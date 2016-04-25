@@ -66,6 +66,8 @@ webreduce.editor = webreduce.editor || {};
       // also mark title of module as selected:
       d3.select(elem).select("g.title").classed("selected", true);
     }
+    webreduce.editor._active_node = i;
+    webreduce.editor._active_terminal = data_to_show;
 
     webreduce.layout.open("east");
     var config_target = d3.select(".ui-layout-pane-east");
