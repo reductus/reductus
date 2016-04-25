@@ -116,18 +116,21 @@ webreduce.editor = webreduce.editor || {};
   webreduce.editor.show_plots = function(result) {
     var instrument_id = this._instrument_id;
     var new_plotdata = webreduce.instruments[instrument_id].plot(result);
+    var active_plot;
     if (new_plotdata == null) {
-      return
+      active_plot = null;
     }
-    if (new_plotdata.type == '1d') {
-      return this.show_plots_1d(new_plotdata);
+    else if (new_plotdata.type == '1d') {
+      active_plot = this.show_plots_1d(new_plotdata);
     }
     else if (new_plotdata.type == '2d') {
-      return this.show_plots_2d(new_plotdata);
+      active_plot = this.show_plots_2d(new_plotdata);
     }
     else if (new_plotdata.type == 'params') {
-      return this.show_plots_params(new_plotdata);
+      active_ploat = this.show_plots_params(new_plotdata);
     }
+    this._active_plot = active_plot;
+    return active_plot;
   }
   
   webreduce.editor.show_plots_params = function(data) {
@@ -391,7 +394,7 @@ webreduce.editor = webreduce.editor || {};
     datasets.forEach(function(d,i) {
       datum.value[i] = datum.value[i] || [];
     });
-    webreduce.editor.show_plots(datasets);
+    //webreduce.editor.show_plots(datasets);
     datum.value.forEach(function(index_list, i) {
       var series_select = d3.select(d3.selectAll("#plotdiv svg g.series")[0][i]);
       index_list.forEach(function(index, ii) {
