@@ -23,7 +23,7 @@ webreduce.editor = webreduce.editor || {};
     target.call(this._instance);
   }
   
-  webreduce.editor.handle_moduleg_clicked = function(d,i,elem) {
+  webreduce.editor.handle_module_clicked = function(d,i,elem,clicked_elem) {
     // d module data, i is module index, elem is registered to catch event
     //
     // Flow: 
@@ -33,18 +33,37 @@ webreduce.editor = webreduce.editor || {};
     //  - if output terminal is clicked, show that data and configuration
     
     var editor = d3.select("#" + this._target_id);    
-    var clicked_elem = d3.event.target;
+    var clicked_elem = clicked_elem || d3.event.target; 
+    var data_to_show;
     editor.selectAll(".module .selected").classed("selected", false);
     d3.select(clicked_elem.parentNode).classed("selected", true);
+    
+    
     
     var active_template = webreduce.editor._active_template;
     var active_module = active_template.modules[i];
     var module_def = webreduce.editor._module_defs[active_module.module];
-    var input_datasets_id = (module_def.inputs[0] || {}).id;  // undefined if no inputs
     var fields = module_def.fields || [];
     if (fields.filter(function(d) {return d.datatype == 'fileinfo'}).length == 0) {
         var nav = $("#navigation");
         nav.block({message: null, fadeIn:0, overlayCSS: {opacity: 0.25, cursor: 'not-allowed', height: nav.prop("scrollHeight")}});
+    }
+    
+    if (d3.select(clicked_elem).classed("title")) {
+      // then it's the module title clicked - 
+      // select the first input terminal to show data from (if any)
+      data_to_show = (module_def.inputs[0] || {}).id;  // second part undefined if no inputs
+      // also highlight the first input terminal, if it's there:
+      d3.select(elem).selectAll("g")
+        .filter(function(d) { return d.id == data_to_show })
+        .classed("selected", true);
+    }
+    else {
+      // it's a terminal - show the data in it with the configuration
+      //var side = d3.select(clicked_elem).classed("input") ? "input" : "output";
+      data_to_show = d3.select(clicked_elem).attr("terminal_id");
+      // also mark title of module as selected:
+      d3.select(elem).select("g.title").classed("selected", true);
     }
 
     webreduce.layout.open("east");
@@ -59,22 +78,28 @@ webreduce.editor = webreduce.editor || {};
       .text("accept")
       .on("click", function() {
         webreduce.editor.accept_parameters(config_target, active_module);
-        webreduce.editor.handle_moduleg_clicked(d,i,elem);
+        if (!(d3.select(clicked_elem).classed("output"))) {
+          console.log('move to output');
+          // find the first output and select that one...
+          var first_output = module_def.outputs[0].id;
+          clicked_elem = d3.select(elem).select('rect.terminal[terminal_id="'+first_output+'"]').node();          
+        }
+        webreduce.editor.handle_module_clicked(d,i,elem,clicked_elem);
       })
     buttons_div.append("button")
       .text("clear")
       .on("click", function() {
         console.log(config_target, active_module);
         if (active_module.config) { delete active_module.config }
-        webreduce.editor.handle_moduleg_clicked(d,i,elem);
+        webreduce.editor.handle_module_clicked(d,i,elem,clicked_elem);
       })
       
     $(buttons_div).buttonset();
     
-    var input_datasets_promise = (input_datasets_id == undefined) ? new Promise(function(r,j) {r(null)}) : 
-      webreduce.server_api.calc_terminal(active_template, {}, i, input_datasets_id, "metadata");
+    var data_show_promise = (data_to_show == undefined) ? new Promise(function(r,j) {r(null)}) : 
+      webreduce.server_api.calc_terminal(active_template, {}, i, data_to_show, "metadata");
     
-    input_datasets_promise.then(function(datasets_in) {
+    data_show_promise.then(function(datasets_in) {
       webreduce.editor.show_plots(datasets_in);
       fields.forEach(function(field) {
         if (webreduce.editor.make_fieldUI[field.datatype]) {
@@ -86,73 +111,6 @@ webreduce.editor = webreduce.editor || {};
     .then(function() {
       
     });
-  }
-  
-  webreduce.editor.handle_module_clicked = function() {
-    // module group is 2 levels above module title in DOM
-    webreduce.editor.dispatch.on("accept", null);
-    var target = d3.select("#" + this._target_id);
-    target.selectAll("div").remove();
-    var module_index = d3.select(target.select(".module .selected").node().parentNode.parentNode).attr("index");
-    var module_index = parseInt(module_index);
-    var active_template = this._active_template;
-    var active_module = this._active_template.modules[module_index];
-    var module_def = this._module_defs[active_module.module];
-    var input_datasets_id = (module_def.inputs[0] || {}).id;  // undefined if no inputs
-    var fields = module_def.fields || [];
-    if (fields.filter(function(d) {return d.datatype == 'fileinfo'}).length == 0) {
-        var nav = $("#navigation");
-        nav.block({message: null, fadeIn:0, overlayCSS: {opacity: 0.25, cursor: 'not-allowed', height: nav.prop("scrollHeight")}});
-    }
-    
-    webreduce.layout.open("east");
-    var target = d3.select(".ui-layout-pane-east");
-    target.selectAll("div").remove();
-
-    var buttons_div = target.append("div")
-      .classed("control-buttons", true)
-      .style("position", "absolute")
-      .style("bottom", "10px")
-    buttons_div.append("button")
-      .text("accept")
-      .on("click", function() {
-        webreduce.editor.accept_parameters(target, active_module);
-        webreduce.editor.handle_module_clicked();
-      })
-    buttons_div.append("button")
-      .text("clear")
-      .on("click", function() {
-        console.log(target, active_module);
-        if (active_module.config) { delete active_module.config }
-        webreduce.editor.handle_module_clicked();
-      })
-      
-    $(buttons_div).buttonset();
-    
-    var input_datasets_promise = (input_datasets_id == undefined) ? new Promise(function(r,j) {r(null)}) : 
-      webreduce.server_api.calc_terminal(active_template, {}, module_index, input_datasets_id, "metadata");
-    
-    input_datasets_promise.then(function(datasets_in) {
-      fields.forEach(function(field) {
-        if (webreduce.editor.make_fieldUI[field.datatype]) {
-          webreduce.editor.make_fieldUI[field.datatype](field, active_template, module_index, module_def, target, datasets_in);
-        }
-      });
-    });
-  }
-  
-  webreduce.editor.handle_terminal_clicked = function() {
-    var target = d3.select("#" + this._target_id);
-    var nav = $("#navigation");
-    nav.block({message: null, fadeIn:0, overlayCSS: {opacity: 0.25, cursor: 'not-allowed', height: nav.prop("scrollHeight")}});
-    var selected = target.select(".module .selected");
-    var index = parseInt(d3.select(selected.node().parentNode.parentNode).attr("index"));
-    var terminal_id = selected.attr("terminal_id");
-    webreduce.server_api.calc_terminal(this._active_template, {}, index, terminal_id, "metadata").then(function(result) {
-      webreduce.editor._active_plot = webreduce.editor.show_plots(result);
-      webreduce.editor._active_node = index;
-      webreduce.editor._active_terminal = terminal_id;
-    }); 
   }
   
   webreduce.editor.show_plots = function(result) {
@@ -663,22 +621,9 @@ webreduce.editor = webreduce.editor || {};
     this._instance.import(template_def);
 
     target.selectAll(".module").classed("draggable wireable", false);
-
-    /*
-    target.selectAll(".module .terminal").on("click", function() {
-      target.selectAll(".module .selected").classed("selected", false);
-      d3.select(this).classed('selected', true);
-      webreduce.editor.handle_terminal_clicked();
-    });
-    target.selectAll(".module g.title").on("click", function() {
-      target.selectAll(".module .selected").classed("selected", false);
-      d3.select(this).select("rect.title").classed("selected", true);
-      webreduce.editor.handle_module_clicked();
-    });
-    */
     
     target.selectAll("g.module").on("click", function(d,i) {
-      webreduce.editor.handle_moduleg_clicked(d,i,this);
+      webreduce.editor.handle_module_clicked(d,i,this);
     });
     
     var autoselected = template_def.modules.findIndex(function(m) {
