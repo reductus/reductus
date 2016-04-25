@@ -23,7 +23,7 @@ webreduce.editor = webreduce.editor || {};
     target.call(this._instance);
   }
   
-  webreduce.editor.handle_module_clicked = function(d,i,elem,clicked_elem) {
+  webreduce.editor.handle_module_clicked = function(d,i,clicked_elem) {
     // d module data, i is module index, elem is registered to catch event
     //
     // Flow: 
@@ -32,7 +32,8 @@ webreduce.editor = webreduce.editor || {};
     //  - if input terminal is clicked, show that data and configuration
     //  - if output terminal is clicked, show that data and configuration
     
-    var editor = d3.select("#" + this._target_id);    
+    var editor = d3.select("#" + webreduce.editor._target_id);
+    var elem = this; // this function is called from the context of a select.on   
     var clicked_elem = clicked_elem || d3.event.target; 
     var data_to_show;
     editor.selectAll(".module .selected").classed("selected", false);
@@ -79,19 +80,18 @@ webreduce.editor = webreduce.editor || {};
       .on("click", function() {
         webreduce.editor.accept_parameters(config_target, active_module);
         if (!(d3.select(clicked_elem).classed("output"))) {
-          console.log('move to output');
           // find the first output and select that one...
           var first_output = module_def.outputs[0].id;
           clicked_elem = d3.select(elem).select('rect.terminal[terminal_id="'+first_output+'"]').node();          
         }
-        webreduce.editor.handle_module_clicked(d,i,elem,clicked_elem);
+        webreduce.editor.handle_module_clicked.call(elem,d,i,clicked_elem);
       })
     buttons_div.append("button")
       .text("clear")
       .on("click", function() {
         console.log(config_target, active_module);
         if (active_module.config) { delete active_module.config }
-        webreduce.editor.handle_module_clicked(d,i,elem,clicked_elem);
+        webreduce.editor.handle_module_clicked.call(elem,d,i,clicked_elem);
       })
       
     $(buttons_div).buttonset();
@@ -621,10 +621,7 @@ webreduce.editor = webreduce.editor || {};
     this._instance.import(template_def);
 
     target.selectAll(".module").classed("draggable wireable", false);
-    
-    target.selectAll("g.module").on("click", function(d,i) {
-      webreduce.editor.handle_module_clicked(d,i,this);
-    });
+    target.selectAll("g.module").on("click", webreduce.editor.handle_module_clicked);
     
     var autoselected = template_def.modules.findIndex(function(m) {
       var has_fileinfo = webreduce.editor._module_defs[m.module].fields
@@ -634,8 +631,8 @@ webreduce.editor = webreduce.editor || {};
     
     if (autoselected > -1) {
       var toselect = target.select('.module[index="' + String(autoselected) + '"]');
-      toselect.select("rect.title").classed("selected", true);
-      webreduce.editor.handle_module_clicked();
+      var toselect_title = toselect.select(".title").node();
+      toselect.each(function(d,i) { webreduce.editor.handle_module_clicked.call(this, d, i, toselect_title)});
     }
   }
   
