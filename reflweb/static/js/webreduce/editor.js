@@ -121,6 +121,12 @@ webreduce.editor = webreduce.editor || {};
     var active_plot;
     if (new_plotdata == null) {
       active_plot = null;
+      d3.select("#plotdiv").select("svg, div").remove();
+      d3.select("#plotdiv").append("div")
+        .style("position", "absolute")
+        .style("top", "0px")
+        .style("text-align", "center")
+        .append("h1").html("&#8709;")
     }
     else if (new_plotdata.type == '1d') {
       active_plot = this.show_plots_1d(new_plotdata);
