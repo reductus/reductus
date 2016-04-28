@@ -1,5 +1,5 @@
 import sys
-import multiprocessing
+import threading
 import SocketServer
 import BaseHTTPServer
 import SimpleHTTPServer
@@ -33,7 +33,7 @@ def start_server(host='localhost', port=0, rpc_port=8001, auto_open=True):
     httpd = ServerClass(server_address, MyRequestHandler)
     http_port = httpd.socket.getsockname()[1]
     print("http port: %d" % (http_port,))
-    http_process = multiprocessing.Process(target=httpd.serve_forever)
+    http_process = threading.Thread(target=httpd.serve_forever)
     if auto_open:
         import webbrowser
         webbrowser.open("http://%s:%d/web_reduction_filebrowser.html" % (host, http_port))

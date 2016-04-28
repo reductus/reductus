@@ -1,6 +1,5 @@
 from MetaArray import MetaArray
 from numpy import ndarray, array, fromstring, float, float32, ones, empty, newaxis, savetxt, sqrt, mod, isnan, ma
-import simplejson
 #from ...dataflow.core import Data
 from cStringIO import StringIO
 
