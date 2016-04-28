@@ -4,24 +4,7 @@
       "y": 100,
       "x": 100,
       "module": "ncnr.ospec.LoadMAGIKPSDMany",
-      "title": "load calib",
-      "config": {
-        "fileinfo": [
-          {
-            "path": "ncnrdata/cgd/201603/21237/data/calib126.nxz.cgd",
-            "source": "ncnr",
-            "mtime": 1457546636,
-            "entries": [
-              "entry"
-            ]
-          }
-        ],
-        "collapse_y": true,
-        "auto_PolState": false,
-        "PolState": "",
-        "flip": true,
-        "transpose": true
-      }
+      "title": "load calib"
     },
     {
       "y": 100,
@@ -33,24 +16,7 @@
       "y": 60,
       "x": 100,
       "module": "ncnr.ospec.LoadMAGIKPSDMany",
-      "title": "load PSD",
-      "config": {
-        "fileinfo": [
-          {
-            "path": "ncnrdata/cgd/201603/21237/data/wp12v124.nxz.cgd",
-            "source": "ncnr",
-            "mtime": 1457480106,
-            "entries": [
-              "entry"
-            ]
-          }
-        ],
-        "collapse_y": true,
-        "auto_PolState": false,
-        "PolState": "",
-        "flip": true,
-        "transpose": true
-      }
+      "title": "load PSD"
     },
     {
       "y": 60,

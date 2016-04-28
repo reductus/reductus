@@ -121,7 +121,7 @@ webreduce.editor = webreduce.editor || {};
     var active_plot;
     if (new_plotdata == null) {
       active_plot = null;
-      d3.select("#plotdiv").select("svg, div").remove();
+      d3.select("#plotdiv").selectAll("svg, div").remove();
       d3.select("#plotdiv").append("div")
         .style("position", "absolute")
         .style("top", "0px")

@@ -513,7 +513,7 @@ def find_mtime(path, source="ncnr"):
     return { 'path': path, 'mtime': timestamp }
 
 @module
-def LoadMAGIKPSDMany(fileinfo=None, collapse_y=True, auto_PolState=False, PolState='', flip=True, transpose=True):
+def LoadMAGIKPSDMany(fileinfo=None, collapse=True, collapse_axis='y', auto_PolState=False, PolState='', flip=True, transpose=True):
     """ 
     loads a data file into a MetaArray and returns that.
     Checks to see if data being loaded is 2D; if not, quits
@@ -524,7 +524,9 @@ def LoadMAGIKPSDMany(fileinfo=None, collapse_y=True, auto_PolState=False, PolSta
     
     fileinfo (fileinfo[]): Files to open.
     
-    collapse_y {Collapse along y} (bool): sum over y-axis of detector
+    collapse {Collapse along one of the axes} (bool): sum over axis of detector
+    
+    collapse_axis {number index of axis to collapse along} (opt:x|y): axis to sum over
     
     auto_PolState {Automatic polarization identify} (bool): automatically determine the polarization state from entry name
     
@@ -541,6 +543,14 @@ def LoadMAGIKPSDMany(fileinfo=None, collapse_y=True, auto_PolState=False, PolSta
     2016-04-01 Brian Maranville  
     """
     outputs = []
+    kwconfig = {
+        "collapse": collapse,
+        "collapse_axis": collapse_axis,
+        "auto_PolState": auto_PolState,
+        "PolState": PolState,
+        "flip": flip,
+        "transpose": transpose
+    }
     for fi in fileinfo:        
         template_def = {
           "name": "loader_template",
@@ -554,6 +564,7 @@ def LoadMAGIKPSDMany(fileinfo=None, collapse_y=True, auto_PolState=False, PolSta
         }
         template = Template(**template_def)
         config = {"0": {"fileinfo": {"path": fi['path'], "source": fi['source'], "mtime": fi['mtime']}}}
+        config["0"].update(kwconfig)
         nodenum = 0
         terminal_id = "output"
         
@@ -563,7 +574,7 @@ def LoadMAGIKPSDMany(fileinfo=None, collapse_y=True, auto_PolState=False, PolSta
     
 @cache
 @module
-def LoadMAGIKPSD(fileinfo=None, collapse_y=True, auto_PolState=False, PolState='', flip=True, transpose=True):
+def LoadMAGIKPSD(fileinfo=None, collapse=True, collapse_axis='y', auto_PolState=False, PolState='', flip=True, transpose=True):
     """ 
     loads a data file into a MetaArray and returns that.
     Checks to see if data being loaded is 2D; if not, quits
@@ -574,7 +585,9 @@ def LoadMAGIKPSD(fileinfo=None, collapse_y=True, auto_PolState=False, PolState='
     
     fileinfo (fileinfo): File to open.
     
-    collapse_y {Collapse along y} (bool): sum over y-axis of detector
+    collapse {Collapse along one of the axes} (bool): sum over axis of detector
+    
+    collapse_axis {number index of axis to collapse along} (opt:x|y): axis to sum over
     
     auto_PolState {Automatic polarization identify} (bool): automatically determine the polarization state from entry name
     
@@ -637,9 +650,18 @@ def LoadMAGIKPSD(fileinfo=None, collapse_y=True, auto_PolState=False, PolState='
             samp_angle = entry['DAS_logs/sampleAngle/softPosition'].value
             det_angle = entry['DAS_logs/detectorAngle/softPosition'].value
             if samp_angle.size > 1:
-                info.append({"name": "theta", "units": "degrees", "values": samp_angle })
+                yaxis = entry['DAS_logs/sampleAngle/softPosition']
+                yaxisname = "theta"                    
+            elif det_angle.size > 1:
+                yaxis = entry['DAS_logs/detectorAngle/softPosition']
+                yaxisname = "det_angle"
             else:
-                info.append({"name": "det_angle", "units": "degrees", "values": det_angle })
+                # need to find the one that's moving...
+                yaxis = entry['data/x']
+                yaxisname = yaxis.path
+            yaxisunits = yaxis.attrs['units']
+            yaxisvalues = yaxis.value
+            info.append({"name": yaxisname, "units": yaxisunits, "values": yaxisvalues})
             info.extend([
                     {"name": "Measurements", "cols": [
                             {"name": "counts"},
@@ -669,15 +691,27 @@ def LoadMAGIKPSD(fileinfo=None, collapse_y=True, auto_PolState=False, PolState='
             data.friendly_name = name # goes away on dumps/loads... just for initial object.
         
         elif ndims == 3: # then it's an unsummed collection of detector shots.  Should be one sample and detector angle per frame
-            if collapse_y == True:
-                info = []     
-                info.append({"name": "xpixel", "units": "pixels", "values": arange(xpixels) }) # reverse order
+            if collapse == True:
+                info = []
+                xaxis = "xpixel" if collapse_axis == 'y' else "ypixel"
+                xdim = xpixels if collapse_axis == 'y' else ypixels
+                xaxisvalues = arange(xdim)
+                info.append({"name": xaxis, "units": "pixels", "values": xaxisvalues }) # reverse order
                 samp_angle = entry['DAS_logs/sampleAngle/softPosition'].value
                 det_angle = entry['DAS_logs/detectorAngle/softPosition'].value
                 if samp_angle.size > 1:
-                    info.append({"name": "theta", "units": "degrees", "values": samp_angle })
+                    yaxis = entry['DAS_logs/sampleAngle/softPosition']
+                    yaxisname = "theta"                    
+                elif det_angle.size > 1:
+                    yaxis = entry['DAS_logs/detectorAngle/softPosition']
+                    yaxisname = "det_angle"
                 else:
-                    info.append({"name": "det_angle", "units": "degrees", "values": det_angle })
+                    # need to find the one that's moving...
+                    yaxis = entry['data/x']
+                    yaxisname = yaxis.path
+                yaxisunits = yaxis.attrs['units']
+                yaxisvalues = yaxis.value
+                info.append({"name": yaxisname, "units": yaxisunits, "values": yaxisvalues})
                 info.extend([
                         {"name": "Measurements", "cols": [
                                 {"name": "counts"},
@@ -689,13 +723,14 @@ def LoadMAGIKPSD(fileinfo=None, collapse_y=True, auto_PolState=False, PolState='
                          "theta": samp_angle.tolist(), 
                          "friendly_name": entry['DAS_logs/sample/name'].value[0], "entry": entryname}]
                     )
-                data_array = zeros((xpixels, frames, 4))
+                data_array = zeros((xdim, frames, 4))
                 mon =  entry['DAS_logs']['counter']['liveMonitor'].value
                 count_time = entry['DAS_logs']['counter']['liveTime'].value
                 if ndims == 3:
                     mon.shape = (1,) + mon.shape # broadcast the monitor over the other dimension
                     count_time.shape = (1,) + count_time.shape
-                counts = numpy.sum(counts_value, axis=2)
+                axis_to_sum = 2 if collapse_axis == 'y' else 1
+                counts = numpy.sum(counts_value, axis=axis_to_sum)
                 if transpose == True: counts = counts.swapaxes(0,1)
                 if flip == True: counts = flipud(counts)
                 data_array[..., 0] = counts
