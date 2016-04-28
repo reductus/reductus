@@ -10,7 +10,7 @@ webreduce.instruments['ncnr.refl'] = webreduce.instruments['ncnr.refl'] || {};
       "name": "loader_template",
       "description": "ReflData remote loader",
       "modules": [
-        {"module": "ncnr.refl.ncnr_load", "version": "0.1", "config": {}},
+        {"module": "ncnr.refl.ncnr_load.cached", "version": "0.1", "config": {}},
         {"module": "ncnr.refl.mark_intent", "version": "0.1", "config": {}}
       ],
       "wires": [{"source": [0,"output"], "target": [1,"data"]}],
@@ -99,7 +99,7 @@ webreduce.instruments['ncnr.refl'] = webreduce.instruments['ncnr.refl'] || {};
   } 
   
   instrument.plot = function(result) {
-    if (result.datatype == 'ncnr.refl.refldata') {
+    if (result && result.datatype && result.datatype == 'ncnr.refl.refldata') {
       return plot_refl(result.values);
     }
     else {

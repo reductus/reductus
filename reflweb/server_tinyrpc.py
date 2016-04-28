@@ -37,13 +37,13 @@ if __name__ == '__main__':
         dispatcher
     )
     
-    import reflweb.api
-    from reflweb.api import api_methods, create_instruments
+    import api
+    from api import api_methods, create_instruments
     create_instruments()
     for method in api_methods:
-        dispatcher.add_method(getattr(reflweb.api, method), method)
+        dispatcher.add_method(getattr(api, method), method)
     if config.serve_staticfiles == True:
-        from reflweb.httpserver import start_server
+        from httpserver import start_server
         os.chdir("static")
         start_server(config.jsonrpc_servername, config.http_port, rpc_port=actual_port)
     # in the main greenlet, run our rpc_server

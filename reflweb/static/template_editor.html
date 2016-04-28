@@ -84,7 +84,7 @@ path.wire {
   <script type="text/javascript" src="js/webreduce/server_api/jsonRPC-api.js"></script>
 <script>
 window.onload = function() {
-
+webreduce.server_api.__init__().then(function(api) {
 current_instrument = 'ncnr.ospec';
 
 function expand_module_defs(modules, instrument) {
@@ -324,6 +324,7 @@ function loadDataFromFile() {
 
 d3.select("#upload_template").on("change", loadDataFromFile);
 
+});
 }
 </script>
 <div id="controls">

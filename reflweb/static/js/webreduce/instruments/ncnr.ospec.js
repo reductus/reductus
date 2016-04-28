@@ -41,10 +41,13 @@ webreduce.instruments['ncnr.ospec'] = webreduce.instruments['ncnr.ospec'] || {};
   
   instrument.plot = function(result) { 
     var plottable;
-    if (result.datatype == 'ncnr.ospec.ospec2d' && result.values.length > 0) {
+    if (result == null) {
+      return
+    }
+    else if (result.datatype == 'ncnr.ospec.ospec2d' && result.values.length > 0) {
       plottable = result.values.slice(-1)[0].plottable[0];
     }
-    if (result.datatype == 'ncnr.ospec.ospec1d' && result.values.length > 0) {
+    else if (result.datatype == 'ncnr.ospec.ospec1d' && result.values.length > 0) {
       plottable = result.values.slice(-1)[0].plottable[0];
     }
     else if (result.datatype == 'ncnr.ospec.params') {
