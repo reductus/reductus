@@ -477,8 +477,7 @@ def mark_intent(data, intent='auto'):
 
     data (refldata) : data file which may or may not have intent marked
 
-    intent (opt:auto|infer|specular|background+|background-|slit
-    |rock sample|rock detector|rock qx) : intent to register with the
+    intent (opt:auto|infer|specular|background+|background-|slit|rock sample|rock detector|rock qx) : intent to register with the
     datafile, or auto/infer to guess
 
     **Returns**
@@ -907,11 +906,13 @@ def estimate_polarization(data, FRbalance=0.5, Emin=0.0, Imin=0.0, clip=False):
     The minimum intensity is 1e-10.  The minimum efficiency is 0.9.
 
     The computed values are systematically related to the efficiencies:
+
       beta: intensity/2
       fp: front polarizer efficiency is F
       rp: rear polarizer efficiency is R
       ff: front flipper efficiency is (1-x)/2
       rf: rear flipper efficiency is (1-y)/2
+
     reject is the indices of points which are clipped because they
     are below the minimum efficiency or intensity.
 

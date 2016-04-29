@@ -1,4 +1,4 @@
-from ..refldata import Intent, infer_intent
+from .refldata import Intent, infer_intent
 
 INTENT_OPTIONS = 'infer|auto|'+'|'.join(Intent.intents)
 def apply_intent(data, intent):

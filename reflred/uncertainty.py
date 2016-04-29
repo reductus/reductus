@@ -1,21 +1,26 @@
 """
-
 Uncertainty propagation class
+=============================
 
 Based on scalars or numpy vectors, this class allows you to store and
 manipulate values+uncertainties, with propagation of gaussian error for
-addition, subtraction, multiplication, division, power, exp() and log()
-and trig.  Also includes mean, weighted average,
+addition, subtraction, multiplication, division, power, exp, log
+and trig.  Also includes mean, weighted average, and linear interpolation.
 
 Storage properties are determined by the numbers used to set the value
 and uncertainty.  Be sure to use floating point uncertainty vectors
 for inplace operations since numpy does not do automatic type conversion.
 Normal operations can use mixed integer and floating point.  In place
-operations (a *= b, etc.) create at most one extra copy for each operation.
-c = a*b by contrast uses four intermediate vectors, so shouldn't be used
-for huge arrays.
+operations (a*=b, etc.) create at most one extra copy for each operation.
+The copy operation c=a*b by contrast uses four intermediate vectors, so
+shouldn't be used for huge arrays.
 """
 from __future__ import division
+
+"""
+
+"""
+
 
 __all__ = ['Uncertainty']
 

@@ -38,6 +38,7 @@
 
 .. |drho| replace:: |Delta|\ |rho|
 .. |Ang| unicode:: U+212B
+.. |1/Ang| replace:: |Ang|\ :sup:`-1`
 .. |Ang^-1| replace:: |Ang|\ :sup:`-1`
 .. |Ang^2| replace:: |Ang|\ :sup:`2`
 .. |Ang^-2| replace:: |Ang|\ :sup:`-2`

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-u"""
+r"""
 Dead time correction algorithms
 ===============================
 
@@ -15,7 +15,7 @@ unresponsive.  Under this model:
 
 .. math:
 
-    m = \frac{n}{1 + n \tau_{\text NP}}`
+    m = \frac{n}{1 + n \tau_{\text NP}}
 
 where $n$ is the incident rate, $m$ is the measured rate, and
 $\tau_{\text NP}$ is the "non-paralyzed" dead time.
@@ -96,7 +96,7 @@ Available functions
 - :func:`deadtime_from_counts` is an interface to the dead time estimate
     using counts and counting times rather than rate and rate uncertainty.
 
-- :func:`peak_rate' returns the incident an observed rates at the
+- :func:`peak_rate` returns the incident an observed rates at the
     peak observed rates for the detector.  You should keep all incident
     intensity below the incident rate at the peak in order to avoid
     confusion between saturated and unsaturated detector counts.
@@ -126,8 +126,7 @@ Available functions
     fixed during the fit.  This is used by :func:`masked_curve_fit`, and
     left visible in case it is useful elsewhere.
 
-- *DEADTIME_UNITS* are the units for time constants (default 'μs').  Sorry,
-    no unicode used.
+- *DEADTIME_UNITS* are the units for time constants (default 'μs').
 
 - *DEADTIME_SCALE* is the scale factor for time constant units (default 1e-6)
 

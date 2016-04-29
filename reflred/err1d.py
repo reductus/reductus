@@ -44,7 +44,7 @@ def average(X, varX, W, varW, axis=None):
     r"""
     Return the weighted average of a dataset, with uncertainty in the weights.
 
-    Note that :function:`mean` is the average weighted by *1/varX*, with a
+    Note that :func:`mean` is the average weighted by *1/varX*, with a
     possible bias correction based on $\chi^2$.
     """
     # TODO: why is mean weighted by 1/variance instead of 1?

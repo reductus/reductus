@@ -39,7 +39,7 @@ def group_by_key(key, datasets):
     Return datasets grouped by a value that can be found in a refldata file.
     Handle dotted namespace through recursive lookup.
     Handle union with comma. (e.g. key = "polarization,sample.name" would 
-     create group where sample.name and polarization are the same for all)
+    create group where sample.name and polarization are the same for all)
     """
     groups = {}
     key_items = key.split(",")
@@ -163,7 +163,7 @@ def poisson_average(y, dy, norm='monitor'):
     Return the Poisson average of a rate vector y +/- dy.
 
     Use *norm='monitor'* When counting against monitor (the default) or
-    *norm='time' when counting against time.
+    *norm='time'* when counting against time.
 
     The count rate is expressed as the number of counts in an interval $N$
     divided by the interval $M$.  The rate for the combined interval should

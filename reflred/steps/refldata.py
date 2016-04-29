@@ -746,8 +746,8 @@ class ReflData(object):
     normbase
         The base for normalization (e.g., 'monitor' or 'time')
 
-    File details
-    ============
+    **File details**
+
     instrument (string)
         Name of a particular instrument
     geometry ('vertical' or 'horizontal')
@@ -772,8 +772,8 @@ class ReflData(object):
     warnings
         List of warnings generated when the file was loaded
 
-    Format specific fields (ignored by reduction software)
-    ======================
+    **Format specific fields (ignored by reduction software)**
+
     file (handle)
         Format specific file handle, for actions like showing the summary,
         updating the data and reading the frames.
