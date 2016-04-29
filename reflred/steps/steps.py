@@ -834,6 +834,57 @@ def smooth_slits(datasets, degree=1, span=2, dx=0.01):
 
 
 @module
+def fit_footprint(data, range, origin=False):
+   """
+   Fit a footprint using a range of data below the critical edge.
+
+   **Inputs**
+
+   data (refldata[]) : uncorrected measurement
+
+   range (range*:x) : separate Qz range for each data set
+
+   origin (bool) : True if data should go through the origin
+
+   **Returns**
+
+   fitted_footprint (footprint) : slope and intercept
+
+   2016-04-29 Paul Kienzle
+   """
+   from .footprint import fit_footprint
+
+   footprint = fit_footprint(data, range, kind='slope' if origin else 'line')
+   return footprint
+
+
+@module
+def correct_footprint(data, fitted_footprint, range):
+    """
+    Apply fitted footprint correction to each data set.
+
+    **Inputs**
+
+    data (refldata) : uncorrected measurement
+
+    fitted_footprint (footprint) : fitted footprint
+
+    range (range:x) : single Qz range to apply to all data sets
+
+    **Returns**
+
+    outputs (refldata): footprint-corrected data
+
+    2016-04-29 Paul Kienzle
+    """
+    from .footprint import apply_fitted_footprint
+    data = copy(data)
+    data.log("footprint(p=%s,dp=%s)"
+             % (str(fitted_footprint.p), str(fitted_footprint.dp)))
+    apply_fitted_footprint(data, fitted_footprint, range)
+    return data
+
+@module
 def estimate_polarization(data, FRbalance=0.5, Emin=0.0, Imin=0.0, clip=False):
     """
     Compute polarizer and flipper efficiencies from the intensity data.

@@ -3,10 +3,10 @@ from dataflow.automod import make_modules
 from dataflow import templates
 
 from reflred.steps import steps
-from reflred.steps import load
 from reflred.refldata import ReflData
 from reflred.steps.polarization import PolarizationData
 from reflred.steps.deadtime import DeadTimeData
+from reflred.steps.footprint import FootprintData
 
 INSTRUMENT = "ncnr.refl"
 
@@ -103,6 +103,7 @@ def define_instrument():
     refldata = df.DataType(INSTRUMENT+".refldata", ReflData)
     poldata = df.DataType(INSTRUMENT+".poldata", PolarizationData)
     deadtime = df.DataType(INSTRUMENT+".deadtime", DeadTimeData)
+    footprint = df.DataType(INSTRUMENT+".footprint", FootprintData)
 
     #import json
     #import os
