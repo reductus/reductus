@@ -42,7 +42,7 @@ class MemoryCache:
         """Note: returned range includes high index, not high-1 like lists"""
         return self.cache[key][low:(high+1 if high != -1 else None)]
 
-import os, pickle, threading
+import os, threading
 class FileBasedCache(object):
     """
     Disk-based cache with redis interface.
@@ -116,38 +116,38 @@ class FileBasedCache(object):
 def demo():
     class Expensive(object):
         def __del__(self):
-            print '(Deleting %d)'% self.a
+            print('(Deleting %d)' % self.a)
         def __init__(self, a):
             self.a = a
-            print '(Creating %s)'% self.a
-    print "test using get/set interface"
+            print('(Creating %s)' % self.a)
+    print("test using get/set interface")
     cache = MemoryCache(5)
     for k in range(5):
-        print "=== inserting %d"%k
+        print("=== inserting %d"%k)
         cache.set(k, Expensive(k))
     for k in range(5):
-        print "=== inserting %d, deleting %d"%(k+5,k)
+        print("=== inserting %d, deleting %d"%(k+5,k))
         cache.set(k+5, Expensive(k+5))
-    print "=== accessing oldest element, 5"
+    print("=== accessing oldest element, 5")
     a = cache.get(5)
-    print "=== inserting 10 and deleting 6"
+    print("=== inserting 10 and deleting 6")
     cache.set(10, Expensive(10))
 
-    print
-    print "test using dict-like interface"
+    print("="*50)
+    print("test using dict-like interface")
     cache2 = MemoryCache(5)
     for k in range(5):
-        print "=== inserting %d"%k
+        print("=== inserting %d"%k)
         cache2[k] = Expensive(k)
     for k in range(5):
-        print "=== inserting %d, deleting %d"%(k+5,k)
+        print("=== inserting %d, deleting %d"%(k+5,k))
         cache2[k+5] = Expensive(k+5)
-    print "=== accessing oldest element, 5"
+    print("=== accessing oldest element, 5")
     a = cache2[5]
-    print "=== inserting 10 and deleting 6"
+    print("=== inserting 10 and deleting 6")
     cache2[10] = Expensive(10)
 
-    print "=== cleanup of cache and cache2 can happen in any order"
+    print("=== cleanup of cache and cache2 can happen in any order")
 
 if __name__ == "__main__":
     demo()    

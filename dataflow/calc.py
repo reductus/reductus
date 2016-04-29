@@ -4,8 +4,11 @@ Run a reduction workflow.
 The function run_template
 """
 
-import cPickle as pickle
-import json
+try:
+    # Python 3.5 does not have cPickle
+    import cPickle as pickle
+except:
+    import pickle
 import hashlib
 import contextlib
 from inspect import getsource
@@ -13,7 +16,7 @@ from inspect import getsource
 from .anno_exc import annotate_exception
 from .cache import get_cache
 from .core import lookup_module, lookup_datatype
-from .core import sanitizeForJSON, sanitizeFromJSON, Bundle
+from .core import Bundle
 from .automod import validate
 
 PICKLE_PROTOCOL = 2 # fast and small and good for Python 2.6+
@@ -80,12 +83,14 @@ def process_template(template, config, target=(None,None)):
         if not module.cached:
             for child in template.dependents(node):
                 if cache.exists(fingerprints[child]):
-                    print "clearing cached value for node %d:"%child, fingerprints[child]
+                    print("clearing cached value for node %d: %s"
+                          %(child, fingerprints[child]))
                     _clear(cache, fingerprints[child])
 
         # Use cached value if it exists, skipping to the next loop iteration.
         if cache.exists(fingerprints[node]):
-            print "retrieving cached value for node %d:"%node, fingerprints[node]
+            print("retrieving cached value for node %d: %s"
+                  %(node, fingerprints[node]))
             bundles = _retrieve(cache, fingerprints[node])
             results.update((_key(node, k), v) for k, v in bundles.items())
             continue
@@ -95,7 +100,7 @@ def process_template(template, config, target=(None,None)):
         user_fields = config.get(str(node), {})
 
         # Evaluate the node
-        print "calculating", node, module.id
+        print("calculating %s %s"%(node, module.id))
         outputs = _eval_node(node_id, module, inputs, template_fields, user_fields)
 
         # Collect the outputs
@@ -106,7 +111,7 @@ def process_template(template, config, target=(None,None)):
         #print "caching", module.id, bundles
         #print "caching",_serialize(bundles, module.outputs)
         if module.cached:
-            print "caching", node, module.id, fingerprints[node]
+            print("caching %s %s %s"%(node, module.id, fingerprints[node]))
             _store(cache, fingerprints[node], bundles)
         results.update((_key(node, k), v) for k, v in bundles.items())
 
@@ -267,7 +272,7 @@ def _validate_par(node_id, par, value):
     try:
         #print "validating",par,value
         return validate(par, value)
-    except ValueError, exc:
+    except ValueError as exc:
         annotate_exception(" in " + node_id, exc)
         raise
 
@@ -381,13 +386,13 @@ def _format_ordered(value):
     elif isinstance(value, tuple):
         return tuple(_format_ordered(v) for v in value)
     elif callable(value):
-        print "fingerprinting function",value
+        print("fingerprinting function %s"%str(value))
         return getsource(value)
     elif hasattr(value, '__getstate__'):
-        print "fingerprinting class using getstate",value
+        print("fingerprinting class using getstate %s"%str(value))
         return [value.__class__.__name__, _format_ordered(value.__getstate__())]
     elif hasattr(value, '__dict__'):
-        print "fingerprinting class using dict",value
+        print("fingerprinting class using dict %s"%str(value))
         return [value.__class__.__name__, _format_ordered(value.__dict__)]
     else:
         return value
@@ -481,15 +486,15 @@ def run_example(template, config, seed=None, verbose=False): # pragma no cover
 
     if verbose:
         from . import wireit
-        print 'template: ', json.dumps(wireit.template_to_wireit_diagram(template),
-                                       sort_keys=True, indent=2)
-        print 'config: ', json.dumps(config, sort_keys=True, indent=2)
+        print('template: '+json.dumps(wireit.template_to_wireit_diagram(template),
+                                       sort_keys=True, indent=2))
+        print('config: '+json.dumps(config, sort_keys=True, indent=2))
 
     with push_seed(seed):
         result = process_template(template, config)
 
     if verbose:
-        print 'result: ', json.dumps(result, sort_keys=True, indent=2)
+        print('result: '+json.dumps(result, sort_keys=True, indent=2))
     for key, value in result.items():
         for output in value.get('output',[]):
             if not isinstance(output, dict):
@@ -518,5 +523,5 @@ def test_format_ordered():
 
     for u,o in pairs:
         actual = _format_ordered(u)
-        print "%s => %r =? %r"%(str(u),actual,o)
+        print("%s => %r =? %r"%(str(u),actual,o))
         assert actual == o

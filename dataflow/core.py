@@ -1,11 +1,8 @@
 """
 Core class definitions
 """
-import sys
-from collections import deque
 import inspect
 import json
-import re
 import types
 
 from numpy import NaN, inf
@@ -166,6 +163,9 @@ class Module(object):
             true if multiple inputs are accepted on input terminals,
             or if multiple outputs are produced on output terminals.
     """
+    _source = None
+    _terminal_by_id = None
+
     def __init__(self, id, version, name, description, icon=None,
                  inputs=None, outputs=None, fields=None, action=None,
                  author="", action_id="",
@@ -174,6 +174,7 @@ class Module(object):
         self.version = version
         self.name = name
         self.description = description
+        self.author = author
         self.icon = icon
         self.fields = fields if fields is not None else {}
         self.inputs = inputs
@@ -186,9 +187,7 @@ class Module(object):
         Lookup terminal by id, and return.
         Returns None if id does not exist.
         """
-        try:
-            self._terminal_by_id
-        except AttributeError:
+        if self._terminal_by_id is None:
             self._terminal_by_id = dict((t['id'], t)
                                         for t in self.inputs+self.outputs)
         return self._terminal_by_id[id]
@@ -199,9 +198,7 @@ class Module(object):
         does the actual calculation.  If no module is identified
         it returns an empty string
         """
-        try:
-            self._source
-        except AttributeError:
+        if self._source is None:
             self._source = "".join(inspect.getsourcelines(self.action)[0])
         return self._source
 

@@ -283,7 +283,7 @@ def auto_module(action):
     """
     try:
         return _parse_function(action)
-    except ValueError, exc:
+    except ValueError as exc:
         annotate_exception(" while initializing module " + action.__name__, exc)
         raise
 
@@ -446,8 +446,10 @@ def parse_parameters(lines):
         else:
             try:
                 d['length'] = int(d['length'])
-            except:
-                ValueError("bad length specifier:\n "+"  ".join(group))
+            except ValueError:
+                raise ValueError("bad length specifier:\n "+"  ".join(group))
+            if d['length'] < 0:
+                raise ValueError("length must positive:\n "+"  ".join(group))
         if d['multiple'] is None:
             d['required'] = True
             d['multiple'] = False
@@ -592,7 +594,7 @@ def parse_datatype(par):
             min, max = parse_range(attrstr, limit=1e9)
             if int(min) != min or int(max) != max:
                 raise Exception("use integers for int range")
-        except Exception, exc:
+        except Exception as exc:
             raise ValueError("invalid range for %s: %s"%(name, str(exc)))
         attr["range"] = [int(min), int(max)]
 
@@ -604,7 +606,7 @@ def parse_datatype(par):
             units, range = attrstr, ""
         try:
             min, max = parse_range(range, limit=1e300)
-        except Exception, exc:
+        except Exception as exc:
             raise ValueError("invalid range for %s: %s"%(name, str(exc)))
 
         attr["units"] = units.strip()
@@ -628,7 +630,7 @@ def parse_datatype(par):
             raise ValueError("regex is empty for " + name)
         try:
             pattern = re.compile(attrstr)
-        except Exception, exc:
+        except Exception as exc:
             raise ValueError("regex error %r for %s"%(str(exc),name))
         # if the default is given, check that it matches the pattern
         default = par.get("default", None)
@@ -682,9 +684,9 @@ def validate(par, value, as_default=False):
     if n == 1:
         return _validate_one(par, value, as_default)
     elif not isinstance(value, list):
-        raise ValueError("invalid value for %s, expected list"%(name))
+        raise ValueError("invalid value for %s, expected list"%name)
     elif n and len(value) != n:
-        raise ValueError("invalid value for %s, wrong length"%(name))
+        raise ValueError("invalid value for %s, wrong length"%name)
     else:
         return [_validate_one(par, v, as_default) for v in value]
 

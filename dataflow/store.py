@@ -29,8 +29,8 @@ def dumps(obj):
     if isinstance(obj, core.Template):
         classname = 'Template'
         version, state = obj.__getstate__()
-    elif isinstance(obj, core.Data):
-        classname = 'Data'
+    elif isinstance(obj, core.DataType):
+        classname = 'DataType'
         version, state = obj.__getstate__()
 
     return json.dumps([classname, version, state])
@@ -39,8 +39,8 @@ def loads(str):
     classname, version, state = json.loads(str)
     if classname == 'Template':
         obj = core.Template()
-    elif classname == 'Data':
-        obj = core.Data()
+    elif classname == 'DataType':
+        obj = core.DataType()
     else:
         raise TypeError('unknown object "%s"' % classname)
     obj.__setstate__((version, state))

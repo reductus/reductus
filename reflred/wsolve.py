@@ -51,6 +51,11 @@ serves only to provide relative weighting between the points.
 
 __all__ = ['wsolve', 'wpolyfit', 'LinearModel', 'PolynomialModel', 'smooth']
 
+try:
+    from typing import Optional, Union, Sequence
+except ImportError:
+    pass
+
 # FIXME: test second example
 #
 # Example 2: weighted overdetermined system  y = x1 + 2*x2 + 3*x3 + e
@@ -107,6 +112,7 @@ class LinearModel(object):
         \text{var}(w) = \sigma^2 (1 + w^T (A^TA)^{-1} w)
     """
     def __init__(self, x=None, DoF=None, SVinv=None, rnorm=None):
+        # type: (np.ndarray, int, np.ndarray, float) -> None
         # Note: SVinv should be computed from S,V where USV' = A
         #: solution to the equation $Ax = y$
         self.x = x
@@ -211,7 +217,8 @@ class LinearModel(object):
         return self._interval(np.asarray(A), p, 1)
 
 
-def wsolve(A, y, dy=1, rcond=1e-12):
+def wsolve(A, y, dy=1.0, rcond=1e-12):
+    # type: (Sequence[Sequence[float]], Sequence[float], Sequence[float], float) -> LinearModel
     r"""
     Given a linear system $y = A x + \delta y$, estimates $x$ and $\delta x$.
 
@@ -245,7 +252,7 @@ def wsolve(A, y, dy=1, rcond=1e-12):
     # Singular value decomposition: A = U S V.H
     # Since A is an array, U, S, VH are also arrays
     # The zero indicates an economy decomposition, with u nxm rathern than nxn
-    u, s, vh = np.linalg.svd(A, 0)
+    u, s, vh = np.linalg.svd(A, full_matrices=False)
 
     # FIXME what to do with ill-conditioned systems?
     #if s[-1]<rcond*s[0]: raise ValueError, "matrix is singular"
@@ -268,14 +275,16 @@ def wsolve(A, y, dy=1, rcond=1e-12):
 
 
 def _poly_matrix(x, degree, origin=False):
+    # type: (Sequence[float], int, bool) -> np.ndarray
     """
     Generate the matrix A used to fit a polynomial using a linear solver.
     """
     if origin:
-        n = np.array(range(degree, 0, -1))
+        n = np.arange(degree, 0, -1, dtype='i')
     else:
-        n = np.array(range(degree, -1, -1))
-    return np.asarray(x)[:, None] ** n[None, :]
+        n = np.arange(degree, -1, -1, dtype='i')
+    x = np.asarray(x, 'd')
+    return x[:, None] ** n[None, :]
 
 
 class PolynomialModel(object):
@@ -361,7 +370,8 @@ class PolynomialModel(object):
         return "Polynomial(%s)" % self.coeff
 
 
-def wpolyfit(x, y, dy=1, degree=None, origin=False):
+def wpolyfit(x, y, dy=1.0, degree=None, origin=False):
+    # type: (Sequence[float], Sequence[float], Union[Sequence[float],float], Optional[int], bool) -> PolynomialModel
     r"""
     Return the polynomial of degree $n$ that minimizes $\sum(p(x_i) - y_i)^2/\sigma_i^2$.
 
@@ -377,6 +387,7 @@ def wpolyfit(x, y, dy=1, degree=None, origin=False):
 
 
 def wpolyplot(poly, with_pi=False, with_ci=True):
+    # type: (PolynomialModel, bool, bool) -> None
     import pylab
     x,y,dy = poly.data
     pylab.errorbar(x, y, yerr=dy, fmt='gx')
@@ -392,6 +403,7 @@ def wpolyplot(poly, with_pi=False, with_ci=True):
 
 
 def smooth(x, xp, yp, dyp=None, degree=2, span=5):
+    # type: (Sequence[float], Sequence[float], Sequence[float], Sequence[float], int, int) -> (np.ndarray, np.ndarray)
     """
     Moving least squares smoother.
 
@@ -435,7 +447,11 @@ def smooth(x, xp, yp, dyp=None, degree=2, span=5):
             # at the midpoints between x.
             index = np.searchsorted(0.5*(xp[:-span]+xp[span:]), x)
 
-        last = -1  # save a little when densely interpolating by caching poly
+        # Save a little when densely interpolating by caching poly
+        # Since indices returned by searchsorted are always non-negative,
+        # initializing last to -1 guarantees that the first time through the
+        # loop last != start, and a new polynomial will be fit.
+        last = -1
         for i, start in enumerate(index):
             if last != start:
                 # Note that the centers are offset by -span//2 because the
@@ -453,7 +469,6 @@ def demo():
     """
     Fit a random cubic polynomial.
     """
-
     # Make fake data
     x = np.linspace(-15, 5, 15)
     th = np.polyval([.2, 3, 1, 5], x)  # polynomial
@@ -467,11 +482,10 @@ def demo():
     import pylab; pylab.show()
 
 def demo2():
-    import pylab
     x = [1,2,3]
     y = [10, 8, 6]
     dy = [1, 3, 1]
-    poly = wpolyfit(x,y,dy=dy, degree=1)
+    poly = wpolyfit(x, y, dy=dy, degree=1)
 
     wpolyplot(poly)
     import pylab; pylab.show()

@@ -47,7 +47,7 @@ def _dependencies(pairs):
 
     # Break pairs into left set and right set
     left, right = [set(s) for s in zip(*pairs)] if pairs != [] else ([], [])
-    while pairs != []:
+    while pairs:
         #print "within",pairs
         # Find which items only occur on the right
         independent = right - left
@@ -58,7 +58,7 @@ def _dependencies(pairs):
         # The possibly resolvable items are those that depend on the independents
         dependent = set([a for a, b in pairs if b in independent])
         pairs = [(a, b) for a, b in pairs if b not in independent]
-        if pairs == []:
+        if not pairs:
             resolved = dependent
         else:
             left, right = [set(s) for s in zip(*pairs)]
@@ -85,7 +85,7 @@ def _check(msg, n, pairs):
         if order.index(lo) >= order.index(hi):
             raise RuntimeError("%s expect %s before %s in %s for %s"
                                % (msg, lo, hi, order, pairs))
-    print msg, order
+    print("%s %s"%(msg, str(order)))
 
 def test():
     import numpy as np

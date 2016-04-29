@@ -5,7 +5,7 @@ import os, sys, math
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from dataflow import config
 from dataflow.calc import run_template
-from dataflow.core import Module, Datatype, Instrument, Template, register_instrument
+from dataflow.core import Module, DataType, Instrument, Template, register_instrument
 from dataflow.modules.load import load_module
 from dataflow.modules.save import save_module
 from numpy.random import random
@@ -105,7 +105,7 @@ rand = random_module(id='rowan.random', datatype=ROWAN_DATA,
 
 def load_action(files=None, intent=None):
     """Loads files for data manipulation"""
-    print "loading", files
+    print("loading %s"%str(files))
     result = [load_data(f) for f in files]
     return dict(output=result)
 load = load_module(id='rowan.load', datatype=ROWAN_DATA,
@@ -119,7 +119,7 @@ def _save_one(input, ext):
     outname = input['name']
     if ext is not None:
         outname = ".".join([os.path.splitext(outname)[0], ext])
-    print "saving", input['name'], 'as', outname
+    print("saving %s as %s"%(input['name'], outname))
     save_data(input, name=outname)
 # the 'ext'ension field; there's no use in saving fields though (hopefully there will be a need later?)
 save_ext = {
@@ -156,7 +156,7 @@ def load_data(name):
 
 # ========== Data and instrument definitions ========
 
-rowan1d = Datatype(id=ROWAN_DATA,
+rowan1d = DataType(id=ROWAN_DATA,
                   name='1-D Rowan Data',
                   plot='rowanplot')
 # it has three modules: load, save, and rand
