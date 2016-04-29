@@ -1,5 +1,7 @@
 import numpy as np
 
+from .. import err1d
+
 def indent(text, prefix="  "):
     """
     Add a prefix to every line in a string.
@@ -102,6 +104,7 @@ def plot_sa(data):
     """
     from matplotlib import pyplot as plt
     from uncertainties.unumpy import uarray as U, nominal_values, std_devs
+    from ..errutil import interp
     from ..refldata import Intent
     # TODO: interp doesn't test for matching resolution
     data = dict((d.polarization,d) for d in data)
