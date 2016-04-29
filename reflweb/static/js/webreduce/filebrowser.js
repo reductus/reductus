@@ -137,7 +137,7 @@
           // then turn it back on.
           target.on("check_node.jstree", handleChecked);
         });
-        handleChecked(null, null, true);
+        //handleChecked(null, null, true);
       });
     });
   }

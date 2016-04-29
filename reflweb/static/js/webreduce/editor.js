@@ -331,7 +331,7 @@ webreduce.editor = webreduce.editor || {};
   
   webreduce.editor.make_fieldUI = {}; // generators for field datatypes
   
-  webreduce.editor.make_fieldUI.fileinfo = function(field, active_template, module_index, module_def, target) {
+  webreduce.editor.make_fieldUI.fileinfo = function(field, active_template, module_index, module_def, target, datasets_in) {
     // this will add the div only once, even if called twice.
     $("#navigation").unblock();
     target.selectAll("div#fileinfo").data([0])
@@ -371,9 +371,9 @@ webreduce.editor = webreduce.editor || {};
         $(".remote-filebrowser").trigger("fileinfo.update", d3.select(this).datum());
       });
     $("#fileinfo").buttonset();
-    webreduce.callbacks.resize_center = webreduce.handleChecked;
     $(".remote-filebrowser").trigger("fileinfo.update", d3.select("div#fileinfo input").datum());
-    webreduce.handleChecked();    
+    // if there is data loaded, an output terminal is selected... and will be plotted instead
+    if (datasets_in == null) { webreduce.handleChecked() };    
   }
   
   webreduce.editor.make_fieldUI.index = function(field, active_template, module_index, module_def, target, datasets_in) {
