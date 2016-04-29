@@ -485,9 +485,7 @@ def run_example(template, config, seed=None, verbose=False): # pragma no cover
     import json
 
     if verbose:
-        from . import wireit
-        print('template: '+json.dumps(wireit.template_to_wireit_diagram(template),
-                                       sort_keys=True, indent=2))
+        print('template: '+json.dumps(template, sort_keys=True, indent=2))
         print('config: '+json.dumps(config, sort_keys=True, indent=2))
 
     with push_seed(seed):

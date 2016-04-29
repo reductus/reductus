@@ -204,13 +204,3 @@ template = Template(name='test rowan',
 result = run_template(template, config)
 pprint(result)
 
-# (testing, andy)
-# ========= Convert the instrument definition to WireIt language =========
-#from dataflow.wireit import instrument_to_wireit_language as wlang
-#from dataflow.wireit import template_to_wireit_diagram as wdiag
-
-#print "LANGUAGE:"
-#print wlang(ROWAN26)
-#print
-#print "DIAGRAM:"
-#print wdiag(template)

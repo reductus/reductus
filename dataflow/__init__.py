@@ -30,11 +30,6 @@ evaluated by :function:`.calc.run_template`.  The run_template function
 takes care of the order of evaluation.  The evaluation produces data
 objects of class :class:`.core.Data` which can be sent to the client
 for graphing.
-
-Templates have a natural serialization in the json format that is used
-to communicate between the server and the browser, however this format
-is tied to the wireit API.  Instead we need to serialize templates
-explicitly before storing them in the database.
 """
 
 __version__ = "0.1"
