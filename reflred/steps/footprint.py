@@ -1,7 +1,7 @@
 from copy import copy
 
 import numpy as np
-from numpy import pi, nan, sqrt, polyval, isnan
+from numpy import pi, sqrt, polyval
 
 from ..wsolve import wpolyfit
 from ..uncertainty import Uncertainty as U, interp
