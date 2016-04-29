@@ -3,7 +3,7 @@ from dataflow.automod import make_modules
 from dataflow import templates
 
 from reflred.steps import steps
-from reflred.refldata import ReflData
+from reflred.steps.refldata import ReflData
 from reflred.steps.polarization import PolarizationData
 from reflred.steps.deadtime import DeadTimeData
 from reflred.steps.footprint import FootprintData
@@ -119,7 +119,7 @@ def define_instrument():
         id=INSTRUMENT,
         name='NCNR reflectometer',
         menu=[('steps', modules)],
-        datatypes=[refldata, poldata, deadtime],
+        datatypes=[refldata, poldata, deadtime, footprint],
         template_defs = templates.get_templates(INSTRUMENT),
         )
 

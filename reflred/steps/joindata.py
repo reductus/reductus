@@ -7,7 +7,7 @@ from copy import copy
 import numpy as np
 
 from .. import unit
-from ..refldata import Intent, ReflData, Environment
+from .refldata import Intent, ReflData, Environment
 from .util import poisson_average
 
 def sort_files(datasets, key):

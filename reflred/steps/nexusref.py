@@ -11,9 +11,9 @@ import numpy as np
 import h5py as h5
 
 from .. import hzf_readonly_stripped as hzf
-from .. import refldata
 from .. import unit
 from .. import iso8601
+from . import refldata
 
 def data_as(group, fieldname, units, rep=1):
     """
@@ -148,7 +148,7 @@ class NCNRNeXusRefl(refldata.ReflData):
     """
     NeXus reflectometry entry.
 
-    See :class:`reflred.refldata.ReflData` for details.
+    See :class:`refldata.ReflData` for details.
     """
     format = "NeXus"
     trajectory_intents = {

@@ -35,6 +35,6 @@ Contributing developers:
 
 __version__ = "0.4"
 
+from reflred.refldata import *
 from .formats import *
-from .refldata import *
 from .corrections import *

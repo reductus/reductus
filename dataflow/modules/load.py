@@ -1,6 +1,5 @@
 import urllib2
 import datetime
-import time
 from posixpath import basename, join
 from dataflow.calc import _format_ordered
 from dataflow.cache import get_cache

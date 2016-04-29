@@ -5,8 +5,8 @@ from os.path import basename
 
 import pytz
 
-from reflred.formats import nexusref
-from reflred.iso8601 import seconds_since_epoch
+from ..iso8601 import seconds_since_epoch
+from . import nexusref
 
 DATA_SOURCES = {}
 

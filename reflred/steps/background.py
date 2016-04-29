@@ -8,6 +8,8 @@ import numpy as np
 
 from ..uncertainty import Uncertainty as U, interp
 
+from .refldata import ReflData
+
 def apply_specular_mask(data):
     theta_i = data.sample.angle_x
     theta_f = 0.5*data.detector.angle_x
@@ -131,7 +133,6 @@ def _check_mostly_constant(v):
 
 
 def test_alignment_guess():
-    from ..refldata import ReflData
     back = ReflData()
     #a3 = np.arange(0.005,3,0.005)
     #a3 = np.arange(0.5,3,0.5)
