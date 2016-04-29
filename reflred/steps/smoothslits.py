@@ -30,14 +30,14 @@ def apply_smoothing(slits, dx, degree, span):
 
 def find_common(x, dx):
     x = x[np.argsort(x[:,0])]
-    xo, sum, n = x[0]+0, x[0]+0, 1
+    xo, total, n = x[0]+0, x[0]+0, 1
     out = []
     for xk in x[1:]:
         if (xk[1:] - xo[1:] <= dx).all():
-            sum += xk
+            total += xk
             n += 1
             continue
-        out.append(sum/n)
-        xo, sum, n = xk+0, xk+0, 1
-    out.append(sum/n)
+        out.append(total/n)
+        xo, total, n = xk+0, xk+0, 1
+    out.append(total/n)
     return np.vstack(out)

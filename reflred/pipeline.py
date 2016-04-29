@@ -209,7 +209,7 @@ class Pipeline(Correction):
             # print "stage | pipeline"
             return Pipeline([stage_or_data] + self.stages)
         else:
-            print "data | pipeline"
+            print("data | pipeline")
             self.__call__(stage_or_data)
 
     def __ior__(self, pipeline_or_stage):
@@ -246,10 +246,10 @@ def test():
         messages = []
         def log(self, msg):
             self.messages = self.messages + [msg]
-        def __or__(self, pipeline):
-            return pipeline(self)
-        def __ior__(self, pipeline):
-            return pipeline.apply_and_log(self)
+        def __or__(self, stage):
+            return stage(self)
+        def __ior__(self, stage):
+            return stage.apply_and_log(self)
 
     a = Data()
     pipeline = Add(3)|Mul(2)|Add(4)

@@ -31,6 +31,11 @@ import time
 from datetime import datetime, timedelta, tzinfo
 import re
 
+try:
+    from typing import Union
+except ImportError:
+    pass
+
 ISO8601_RELAXED = re.compile(r"""^ # anchor to start of string
   (?P<year>[0-9]{4})               # year   YYYY
   (-(?P<month>[0-9]{1,2})          # month  -M or -MM
@@ -88,6 +93,7 @@ def now(use_microsecond=False):
     return format_date(time.time(),precision=(6 if use_microsecond else 0))
 
 def format_date(timestamp, precision=0):
+    # type: (Union[float, datetime, time_struct], int) -> str
     """
     Construct an ISO 8601 time from a timestamp.
 
@@ -154,12 +160,12 @@ class TimeZone(tzinfo):
         second = int(abs(offset)+0.5)
         if second%60 != 0:
             raise ValueError("offset must be a whole number of minutes")
-        self.__offset = timedelta(seconds=offset)
         if name is None:
             sign = '-' if offset < 0 else '+'
             hour = second//3600
             minute = (second%3600)//60
             name = "%s%02d%02d"%(sign,hour,minute)
+        self.__offset = timedelta(seconds=offset)
         self.__name = name
 
     def utcoffset(self, dt):
@@ -272,7 +278,7 @@ def _check_date(s,d,strict): # pragma: no cover
                             %(s,str(exc)))
 def _check_fail(s): # pragma: no cover
     try: parse_date(s)
-    except: return
+    except Exception: return
     raise Exception("exception not raised for %r")
 
 def _check_equal(s1,s2): # pragma: no cover

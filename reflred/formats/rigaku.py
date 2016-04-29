@@ -1,25 +1,38 @@
 #!/usr/bin/env python
 from __future__ import division
+import warnings
 
 import numpy
+
+# Copied from anno_exc so that rigaku.py is stand-alone
+def annotate_exception(msg, exc=None):
+    """
+    Add an annotation to the current exception, which can then be forwarded
+    to the caller using a bare "raise" statement to reraise the annotated
+    exception.
+    """
+    if not exc:
+        exc = sys.exc_info()[1]
+
+    args = exc.args
+    if not args:
+        arg0 = msg
+    else:
+        arg0 = " ".join((str(args[0]),msg))
+    exc.args = tuple([arg0] + list(args[1:]))
 
 def load(filename):
     with open(filename, 'rb') as fid:
         data = fid.read()
     try:
         return loads(data)
-    except Exception, exc:
-        # Annotate the exception with the filename being processed
-        msg = "while loading %r"%filename
-        args = exc.args
-        if not args: arg0 = msg
-        else: arg0 = " ".join((args[0],msg))
-        exc.args = tuple([arg0] + list(args[1:]))
+    except Exception as exc:
+        annotate_exception("while loading %r"%filename)
         raise
 
 def loads(data):
     header, values = parse(data)
-    from pprint import pprint; pprint(header); #pprint(values)
+    #from pprint import pprint; pprint(header); #pprint(values)
     R = {}
     R['data'] = numpy.array(values)
     R['target'] = header['HW_XG_TARGET_NAME']
@@ -31,21 +44,25 @@ def loads(data):
         label = header['MEAS_COND_AXIS_NAME-%d'%idx]
         unit = header['MEAS_COND_AXIS_UNIT-%d'%idx]
         name = header['MEAS_COND_AXIS_NAME_INTERNAL-%d'%idx]
-        # skip MAGICNO
         offset = header['MEAS_COND_AXIS_OFFSET-%d'%idx]
         position = header['MEAS_COND_AXIS_POSITION-%d'%idx]
-        if offset == "-": offset = None
+        # skip MAGICNO
+        if offset == "-":
+            offset = None
         try:
             if position == "None": 
                 position = None
             elif position.endswith('mm'):
                 # slits given as e.g., 0.200mm
-                position,unit=float(position[:-2]),'mm'
+                position, unit = float(position[:-2]), 'mm'
             else:
                 # Attenuator given as e.g., 1/10000
-                a,b = position.split('/')
+                a, b = position.split('/')
                 position = float(a)/float(b)
-        except: pass
+        except Exception:
+            # ignore bad position
+            warnings.warn("bad position in rigaku file %r"%position)
+            pass
         axes[name] = label, unit, position, offset
         idx += 1
     R['axes'] = axes
@@ -82,7 +99,7 @@ def parse(data):
             key, value = line.split(' ', 1)  # *KEY "value"
             assert key[0] == "*"
             assert value[0] == '"' and value[-1] == '"'
-        except:
+        except Exception:
             #print line
             #print [ord(s) for s in line]
             raise ValueError("corrupt file: line %d is not '*KEY value'"%idx)
@@ -91,12 +108,16 @@ def parse(data):
 
         # auto convert values to int or float if possible
         # for string values, try splitting "japanese?|english" to english
-        try: value = int(value)
-        except:
-            try: value = float(value)
-            except:
-                try: _, value = value.split('|')
-                except: pass 
+        try:
+            value = int(value)
+        except Exception:
+            try:
+                value = float(value)
+            except Exception:
+                try:
+                    _, value = value.split('|')
+                except Exception:
+                    pass
         # if all conversions fail, value should be an untouched string
 
         header[key] = value
@@ -109,7 +130,7 @@ def parse(data):
     for idx in range(idx+1,len(lines)-2):
         try: 
             values.append([float(v) for v in lines[idx].split()])
-        except: 
+        except Exception:
             raise ValueError("corrupt file: line %d is not a set of valeus"%idx)
 
     return header, values

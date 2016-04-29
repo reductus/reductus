@@ -209,7 +209,7 @@ def masked_curve_fit(f, x, y, p0=None, sigma=None, fixed=None, method='lm', **kw
             L = np.linalg.cholesky(H)
             Linv = np.linalg.inv(L)
             pcov = np.dot(Linv.T.conj(), Linv)
-        except Exception, exc:
+        except Exception as exc:
             print(exc)
             pcov = np.zeros((len(p0),len(p0)))
 

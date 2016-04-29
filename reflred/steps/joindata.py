@@ -136,7 +136,7 @@ def build_join_formula(group):
     if len(group) > 1:
         try:
             while all(d.formula[prefix]==head[prefix] for d in group[1:]):
-                prefix = prefix + 1
+                prefix += 1
         except IndexError:
             pass
     if prefix <= 2:

@@ -57,10 +57,13 @@ dist = setup(
     ],
     packages=packages,
     include_package_data=True,
-    ext_modules=[module_config()]
-    # needs scipy and numpy as well, but these have binary bits that don't
-    # do well with pip install
-    #install_requires=['six', 'uncertainties', 'numdifftools'],
+    ext_modules=[module_config()],
+    # numpy and scipy are requirements, but don't install them with pip
+    install_requires=['uncertainties'],
+    extras_require = {
+        'preinstalled': ['scipy', 'numpy'],
+        'masked_curve_fit': ['numdifftools'],
+    },
 )
 
 # End of file

@@ -1,8 +1,7 @@
 import urllib2
 import datetime
-import time
 import StringIO
-from posixpath import basename, join
+from os.path import basename
 
 import pytz
 

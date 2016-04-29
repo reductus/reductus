@@ -78,7 +78,7 @@ class Limits(object):
         if len(args) == 1:
             self.add(*args,**kw)
         elif len(args) > 1:
-            raise TypeError, "Limits() tokes 0 or 1 argument"
+            raise TypeError("Limits() tokes 0 or 1 argument")
 
     def add(self, v, dv=0):
         v = np.asarray(v)
@@ -97,10 +97,13 @@ class Limits(object):
         if max > self._max: self._max = max
 
     def __ior__(self, L):
-        if L._ceiling > self._ceiling: self._ceiling = L._ceiling
-        if L._floor < self.floor: self._floor = L._floor
-        if L._max > self._max: self._max = L._max
-        if L._min < self._min: self._min = L._min
+        if isinstance(L, Limits):
+            if L._ceiling > self._ceiling: self._ceiling = L._ceiling
+            if L._floor < self.floor: self._floor = L._floor
+            if L._max > self._max: self._max = L._max
+            if L._min < self._min: self._min = L._min
+        else:
+            raise TypeError("Expected Limits object")
 
     def __or__(self, L):
         retval = copy(self)

@@ -15,6 +15,7 @@ def apply_intensity_norm(data, base):
     data.v, data.dv = I, np.sqrt(varI)
 
 def estimate_attenuation(datasets):
+    raise NotImplementedError()
     index = np.sort([d.angular_resolution[0] for d in datasets])
 
 

@@ -1,3 +1,5 @@
+from copy import copy
+
 import numpy as np
 from numpy import pi, nan, sqrt, polyval, isnan
 
@@ -73,12 +75,28 @@ def apply_fitted_footprint(data, fitted_footprint, range):
 def apply_measured_footprint(data, measured_footprint):
     x = measured_footprint.Qz
     y = U(measured_footprint.v, measured_footprint.dv**2)
-    footprint = _interpolate_footprint(data.Qz, x, y)
+    footprint  = interp(data.Qz, x, y, left=U(1.0,0.0), right=U(1.0,0.0))
+    _apply_footprint(data, footprint)
+
+
+def apply_abinitio_footprint(data, A, B, Io, length, offset):
+    if A > B:
+        raise ValueError("A must be less than B")
+    y = _abinitio_footprint(data.slit.x, data.Qz, data.detector.wavelength,
+                            A, B, Io, length, offset)
+    footprint = U(y, 0.0)
     _apply_footprint(data, footprint)
 
 
 def _apply_footprint(data, footprint):
     refl = U(data.v, data.dv**2)
+    # Ignore footprint <= 0
+    bad_correction = (footprint.x <= 0.)  # type: np.ndarray
+    if bad_correction.any():
+        footprint = copy(footprint)
+        footprint.x = copy(footprint.x)
+        footprint.x[bad_correction] = 1.0
+        footprint.variance[bad_correction] = 0.0
     corrected_refl = refl/footprint
     data.v, data.dv = corrected_refl.x, corrected_refl.dx
 
@@ -135,28 +153,6 @@ def _generate_footprint_curve(p, dp, x, xmin, xmax):
     return U(y, var_y)
 
 
-def _interpolate_footprint(x, fp_x, fp_y):
-    """
-    Interpolate into the measured footprint curve.
-    """
-    y = interp(x, fp_x, U(fp_y, fp_dy**2), left=U(1.0,0.0), right=U(1.0,0.0))
-    return y
-
-
-class AbinitioFootprint(object):
-    A = 1.0
-    B = 2.0
-    Io = 1.0
-    length = 100.
-    offset = 0.
-    thickness = 10.
-    detector_width = 100.
-    detector_distance = 9000.
-
-    def calc(self):
-        y = calc(self.A, self.B, self.Io, self.length, self.thickness, self.offset)
-
-
 def apply(fp, R):
     """
     Scale refl by footprint, ignoring zeros
@@ -169,24 +165,9 @@ def apply(fp, R):
     return corrected_y, corrected_dy
 
 
-def calc(A, B, Io, length, thickness, offset):
-    if A > B:
-        raise ValueError("A must be less than B")
-    wavelength = data.wavelength
+def _abinitio_footprint(slit, Qz, wavelength, A, B, Io, length, offset):
     L1 = length/2. + offset
     L2 = length/2. - offset
-
-    if len(spec_m) > 0:
-        slit = spec_m
-        Qz = spec_x
-    elif len(spec_mA) > 0:
-        slit = spec_mA
-        Qz = spec_xA
-    elif len(spec_mD) > 0:
-        slit = spec_mD
-        Qz = spec_xD
-    else:
-        raise ValueError("nothing to calculate")
 
     wA = slit * A/2.
     wB = slit * B/2.
@@ -205,16 +186,16 @@ def calc(A, B, Io, length, thickness, offset):
     #          => d = L wavelength Qz/(4 pi)
 
     #: low edge of the sample
-    lo = L2*wavelength * Qz / (4 * pi)  # low edge of the sample
-    hi = L1*wavelength * Qz / (4 * pi)  # high edge of the sample
-    Alo = integrate(wA, wB, lo)
-    Ahi = integrate(wA, wB, hi)
+    low = L2*wavelength * Qz / (4 * pi)  # low edge of the sample
+    high = L1*wavelength * Qz / (4 * pi)  # high edge of the sample
+    Alow = integrate(wA, wB, low)
+    Ahigh = integrate(wA, wB, high)
 
     # Total area of intersection is the sum of the areas of the regions
     # Normalize that by the total area of the beam (A+B)/2 and scale by
     # the incident intensity.  Note that the factor of 2 is already
     # incorporated into wA and wB.
-    abfoot_y = Io * (Alo + Ahi) / (wA+wB)
+    abfoot_y = Io * (Alow + Ahigh) / (wA+wB)
     return abfoot_y
 
 def integrate(wA, wB, edge):
@@ -227,14 +208,15 @@ def integrate(wA, wB, edge):
     # Length of intersection in triangular region
     B = (edge-wA)*((edge>wA) & (edge<wB)) + (wB-wA)*(edge>=wB)
     # Area of intersection in triangular region;
-    B = B * (1 - B/(2*(wB-wA)+1e-16))
+    B *= (1 - B/(2*(wB-wA)+1e-16))
     # Area of intersection in rectangular region
     area = edge*(edge<=wA) + wA*(edge>wA) + B
 
     return area
 
 
-def spill():
+def spill(slit, Qz, wavelength, detector_distance, detector_width, thickness,
+          A, B, Io, length, offset):
     """
     The primary beam on the detector is the beam reflected from the
     sample. Beam spill is the portion of the beam which is not
@@ -249,15 +231,20 @@ def spill():
     safely ignore it.  The final effect is the width of the back
     slits which cuts down the transmitted beam.
     """
-    raise NotImplementedError()
+    if True:
+        raise NotImplementedError()
 
     # It is too difficult to compute beam spill for now.  Leave this
     # pseudo code around in case we decide to implement it later.
+    L1 = length/2. + offset
+    L2 = length/2. - offset
+    wA = slit * A/2.
+    wB = slit * B/2.
 
-    # lo: low edge of the sample
-    # hi: high edge of the sample
-    # lo2: low edge of the sample bottom
-    # hi2: max(sample,detector)
+    # low: low edge of the sample
+    # high: high edge of the sample
+    # low2: low edge of the sample bottom
+    # high2: max(sample,detector)
     # det: low edge of the detector
     # refl: area of intersection
     # spill_lo: area of spill below
@@ -275,9 +262,9 @@ def spill():
     # Length of intersection d = L sin (alpha)
     #          => d = L sin (asin (wavelength Qz / 4 pi))
     #          => d = L wavelength Qz/(4 pi)
-    lo = -L2*wavelength * Qz / (4 * pi)
-    hi = L1*wavelength * Qz / (4 * pi)
-    area = integrate(wA, wB, lo, hi)
+    low = -L2*wavelength * Qz / (4 * pi)
+    high = L1*wavelength * Qz / (4 * pi)
+    area = integrate(wA, wB, low, high)
 
     # From trig, the bottom of the detector is located at
     #    d sin T - D/2 cos T
@@ -291,22 +278,13 @@ def spill():
     # the beam is
     #    thickness/cos(theta) = thickness/sqrt(1-(wavelength Qz/4 pi)^2)
     # since cos(asin(x)) = sqrt(1-x^2).
-    lo2 = lo - thickness / sqrt(1 - (wavelength*Qz/(4*pi))**2)
-    hi2 = det*(det>=hi) + hi*(det<hi)
-    spill_lo = integrate(wA, wB, det, lo2)
-    spill_hi = integrate(wA, wB, hi2  wB)
+    low2 = low - thickness / sqrt(1 - (wavelength*Qz/(4*pi))**2)
+    high2 = det*(det>=high) + high*(det<high)
+    spill_low = integrate(wA, wB, det, low2)
+    spill_high = integrate(wA, wB, high2, wB)
 
     # Total area of intersection is the sum of the areas of the regions
     # Normalize that by the total area of the beam (A+B)/2
-    abfoot_y = 2 * Io * (refl + spill_lo + spill_hi) / (wA+wB)
+    abfoot_y = 2 * Io * (area + spill_low + spill_high) / (wA+wB)
     return abfoot_y
 
-
-def demo():
-    refl_x = np.arange(1, 10, 0.1)
-    refl_y = refl_x*10.0
-    refl_dy = sqrt(refl_y)
-    spec_m = refl_x/10.
-    div_x, div_y, div_dy = refl_x, refl_y, refl_dy
-
-    abfoot::dialog

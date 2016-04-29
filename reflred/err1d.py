@@ -22,6 +22,7 @@ from __future__ import division  # Get true division
 import numpy as np
 
 def mean(X, varX, biased=True):
+    # type: (np.ndarray, np.ndarray, bool) -> (float, float)
     r"""
     Return the mean and variance of a dataset.
 
@@ -39,6 +40,7 @@ def mean(X, varX, biased=True):
 
 
 def average(X, varX, W, varW, axis=None):
+    # type: (np.ndarray, np.ndarray, np.ndarray, np.ndarray, int) -> (float, float)
     r"""
     Return the weighted average of a dataset, with uncertainty in the weights.
 
@@ -55,6 +57,7 @@ def average(X, varX, W, varW, axis=None):
 
 
 def interp(X, Xp, Fp, varFp, left=None, right=None):
+    # type: (np.ndarray, np.ndarray, np.ndarray, np.ndarray, int) -> (np.ndarray, np.ndarray)
     """
     Linear interpolation of x points into points (xk,fk +/- dfk).
 
@@ -160,7 +163,7 @@ def cos(X, varX):
 
 
 def tan(X, varX):
-    return np.tan(X), varX*np.sec(X)**2
+    return np.tan(X), varX/np.cos(X)**2
 
 
 def arcsin(X, varX):
@@ -289,7 +292,7 @@ def pow_inplace(X, varX, n):
 
 
 def pow2_inplace(X, varX, Y, varY):
-    """X**Y with error propagation"""
+    """In-place X**Y with error propagation"""
     # Direct algorithm
     #   Z = X**Y
     #   varZ = Z**2 * ((Y*varX/X)**2 + (log(X)*varY)**2)

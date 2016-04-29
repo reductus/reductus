@@ -67,6 +67,7 @@ def apply_detector_dead_time(data, tau_NP=0.0, tau_P=0.0):
 
 
 def saturation_correction(counts, time, saturation):
+    # type: (np.ndarray, np.ndarray, np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray]
     rate = counts / time
     # TODO: assert that saturation is sorted by the first value
     if saturation is None:

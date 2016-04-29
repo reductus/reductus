@@ -272,7 +272,6 @@ def _correction_matrix(beta, fp, rp, x, y, spinflip):
     return [UM(H[:,:,k]*Bk).I for k,Bk in enumerate(beta)]
 
 def plot_efficiency(beam, Imin=0.0, Emin=0.0, FRbal=0.5, clip=False):
-    from ..corrections import normalize
     eff = polarization_efficiency(beam, Imin=Imin, Emin=Emin, FRbal=FRbal, clip=clip)
     from matplotlib import pyplot as plt
     ax1 = plt.subplot(211)
@@ -282,7 +281,7 @@ def plot_efficiency(beam, Imin=0.0, Emin=0.0, FRbal=0.5, clip=False):
     plt.setp(ax1.get_xticklabels(), visible=False)
     plt.xlabel('')
 
-    ax2 = plt.subplot(212, sharex=ax1)
+    plt.subplot(212, sharex=ax1)
     for part in ('ff', 'rf', 'fp', 'rp'):
         _ploteff(eff, part)
     plt.grid(True)
@@ -408,7 +407,6 @@ def clip_pypi_uncertainties(field,low,high,nanval=0.):
     # This is probably wrong, but it is less wrong than other straight forward
     # options, such setting x to the limit with zero uncertainty.  At least
     # the clipped points will be flagged.
-    from uncertainties import unumpy as unp
     idx=np.isnan(nominal_values(field)); field[idx]=[v+(nanval-v.n) for v in field[idx]]; reject=idx
     idx=field<low;  field[idx]=[v+(low-v.n)  for v in field[idx]]; reject |= idx
     idx=field>high; field[idx]=[v-(v.n-high) for v in field[idx]]; reject |= idx
@@ -424,54 +422,3 @@ _clip_data.__doc__ =  """
     which were clipped.  Note that this modifies field in place. NaN
     values are clipped to the nanval default.
     """
-
-def demo():
-    import pylab
-    from ..examples import ng1p as group
-    #from ..examples import ng1pnxs as group
-    from ..corrections import join, smooth_slits
-    from .util import plot_sa
-
-    raw_slit,spec,back = [d|join(tolerance=0.01)
-                          for d in group.slit(), group.spec(), group.back()]
-    slit = raw_slit | smooth_slits(degree=2,span=45,dx=0.001)
-    corrected = (spec+slit) | PolarizationCorrection()
-
-    #pylab.subplot(211); [d.plot() for d in raw_slit]
-    #pylab.subplot(212); [d.plot() for d in slit]
-    #pylab.suptitle('slit intensities')
-
-    pylab.figure()
-    plot_efficiency(dict((d.polarization,d) for d in raw_slit),clip=False)
-    pylab.suptitle("raw polarization correction")
-
-
-    pylab.figure()
-    plot_efficiency(dict((d.polarization,d) for d in slit),clip=False)
-    pylab.suptitle("smoothed polarization correction")
-
-    pylab.figure()
-    pylab.subplot(211)
-    for d in spec: d.plot()
-    #plot_sa(spec)
-    pylab.legend()
-    pylab.title("Before polarization correction")
-    pylab.subplot(212)
-    for d in corrected: d.plot()
-    #plot_sa(data)
-    pylab.legend()
-    pylab.title("After polarization correction")
-    pylab.show()
-
-def wiring_demo():
-    from ..examples import ng1p as group
-
-    from ..nodes import Align
-
-
-    alignment = Align(data=group.spec())
-
-
-
-if __name__ == "__main__":
-    demo()

@@ -5,14 +5,13 @@ Load a NeXus file into a reflectometry data structure.
 """
 import os
 import tempfile
-from zipfile import ZipFile, is_zipfile, _EndRecData
+from zipfile import ZipFile, _EndRecData
 
 import numpy as np
 import h5py as h5
 
 from .. import hzf_readonly_stripped as hzf
 from .. import refldata
-from .. import corrections as cor
 from .. import unit
 from .. import iso8601
 

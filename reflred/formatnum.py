@@ -42,6 +42,11 @@ import math
 
 from numpy import isinf, isnan, inf, NaN
 
+try:
+    from typing import Optional
+except ImportError:
+    pass
+
 __all__ = ['format_value', 'format_uncertainty',
            'format_uncertainty_compact', 'format_uncertainty_pm',
            ]
@@ -102,6 +107,7 @@ def format_uncertainty(value, uncertainty):
 format_uncertainty.compact = True
 
 def _format_uncertainty(value, uncertainty, compact):
+    # type: (float, Optional[float], Optional[bool]) -> str
     """
     Implementation of both the compact and the +/- formats.
     """
@@ -173,7 +179,6 @@ def _format_uncertainty(value, uncertainty, compact):
 
 
 def test_compact():
-    # Oops... renamed function after writing tests
     value_str = format_uncertainty_compact
 
     # val_place > err_place
@@ -305,7 +310,6 @@ def test_compact():
 
 
 def test_pm():
-    # Oops... renamed function after writing tests
     value_str = format_uncertainty_pm
 
     # val_place > err_place

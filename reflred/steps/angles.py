@@ -6,7 +6,7 @@ def apply_theta_offset(data, offset):
 
 
 def apply_absolute_angle(data):
-    index = (data.sample.angle_x < 0)
+    index = (data.sample.angle_x < 0)  # type: np.ndarray
     if np.any(index):
         data.sample.angle_x[index] *= -1.0
         data.detector.angle_x[index] *= -1.0
@@ -28,6 +28,7 @@ def apply_divergence(data):
 
 
 def divergence(theta=None, slits=None, distance=None, sample_width=1e10):
+    # type: (np.ndarray, (float, float), (float, float), float) -> np.ndarray
     r"""
     Calculate divergence due to slit and sample geometry.
 
@@ -92,19 +93,19 @@ def divergence(theta=None, slits=None, distance=None, sample_width=1e10):
     s1, s2 = slits
 
     # Compute FWHM angular divergence dtheta from the slits in degrees
-    dtheta = np.degrees(0.5*(s1+s2)/(d1-d2))
+    dtheta = 0.5*(s1+s2)/(d1-d2)
 
     # For small samples, use the sample projection instead.
     if np.isfinite(sample_width):
         sample_s = sample_width * np.sin(np.radians(theta))
         if np.isscalar(sample_s):
             if sample_s < s2:
-                dtheta = np.degrees(0.5*(s1+sample_s)/d1)
+                dtheta = 0.5*(s1+sample_s)/d1
         else:
             #print s1,s2,d1,d2,theta,dtheta,sample_s
             s1 = np.ones_like(sample_s)*s1
             dtheta = np.ones_like(sample_s)*dtheta
             idx = sample_s < s2
-            dtheta[idx] = np.degrees(0.5*(s1[idx] + sample_s[idx])/d1)
+            dtheta[idx] = 0.5*(s1[idx] + sample_s[idx])/d1
 
-    return dtheta
+    return np.degrees(dtheta)

@@ -13,7 +13,7 @@ attributes.
 
 # Make all top level h5py objects available
 from h5py import *
-import new
+from types import MethodType
 
 # Define method calls for __dir__ and __getattr__
 # group objects are different from dataset objects
@@ -31,11 +31,11 @@ def __getattr__(self, key):
         raise AttributeError('%r object has not attribute %r'
                              %(self.__class__.__name__,key))
 
-Group.__dir__ = new.instancemethod(__dir__, None, Group)
-Group.__getattr__ = new.instancemethod(__getattr__, None, Group)
-Dataset.__dir__ = new.instancemethod(__dir__, None, Dataset)
-Dataset.__getattr__ = new.instancemethod(__getattr__, None, Dataset)
+Group.__dir__ = MethodType(__dir__, None, Group)
+Group.__getattr__ = MethodType(__getattr__, None, Group)
+Dataset.__dir__ = MethodType(__dir__, None, Dataset)
+Dataset.__getattr__ = MethodType(__getattr__, None, Dataset)
 
 # clean up namespace
-del new, __dir__, __getattr__
+del MethodType, __dir__, __getattr__
 

@@ -72,41 +72,41 @@ class _Data(object):
 
     Note: for reflectivity the natural dimensions are x='Qz',y='Qx',z='Qy'
     """
-    x,dx = None,None
-    y,dy = None,None
-    z,dz = None,None
-    v,variance = None,None
-    xlabel,xunits='x',None
-    ylabel,yunits='y',None
-    zlabel,zunits='z',None
-    vlabel,vunits='v',None
+    x,dx = None,None  # type: np.ndarray, np.ndarray
+    y,dy = None,None  # type: np.ndarray, np.ndarray
+    z,dz = None,None  # type: np.ndarray, np.ndarray
+    v,variance = None,None  # type: np.ndarray, np.ndarray
+    xlabel,xunits='x',None  # type: str, str
+    ylabel,yunits='y',None  # type: str, str
+    zlabel,zunits='z',None  # type: str, str
+    vlabel,vunits='v',None  # type: str, str
 
     # Store variance but allow 1-sigma uncertainty interface
     def _getdv(self): return np.sqrt(self.variance)
     def _setdv(self,dv): self.variance = dv**2
-    dv = property(_getdv,_setdv,'1-sigma uncertainty')
+    dv = property(_getdv,_setdv,doc='1-sigma uncertainty')
 
     # Store edges and retrieve centers
     def _getxedges(self):
         return edges_from_centers(self.x)
     def _setxedges(self,t):
         self.x = centers_from_edges(t)
-    xedges = property(_getxedges,_setxedges,'x edges')
+    xedges = property(_getxedges,_setxedges,doc='x edges')
     def _getyedges(self):
         return edges_from_centers(self.y)
     def _setyedges(self,t):
         self.y = centers_from_edges(t)
-    yedges = property(_getyedges,_setyedges,'y edges')
+    yedges = property(_getyedges,_setyedges,doc='y edges')
     def _getzedges(self):
         return edges_from_centers(self.z)
     def _setzedges(self,t):
         self.z = centers_from_edges(t)
-    zedges = property(_getzedges,_setzedges,'z edges')
+    zedges = property(_getzedges,_setzedges,doc='z edges')
 
     # Set attributes on initialization
     def __init__(self,**kw):
         self.messages = []
-        for k,v in kw.iteritems(): setattr(self,k,v)
+        for k,v in kw.items(): setattr(self,k,v)
 
     def log(self,msg):
         """Record corrections that have been applied to the data"""
@@ -139,7 +139,7 @@ class _PolarizedData(object):
 
     def set(self,**kw):
         """Set a number of attributes simultaneously"""
-        for k,v in kw.iteritems():
+        for k,v in kw.items():
             if hasattr(self,k):
                 setattr(self,k,v)
             else:

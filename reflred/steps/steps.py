@@ -1,7 +1,6 @@
 # This program is public domain
 import os
 from copy import copy
-from warnings import warn
 
 # TODO: maybe bring back formula to show the math of each step
 # TODO: what about polarized data?
@@ -168,7 +167,7 @@ def monitor_dead_time(data, dead_time, nonparalyzing=0.0, paralyzing=0.0):
     elif data.monitor.deadtime is not None and isfinite(data.monitor.deadtime):
         try:
             tau_NP, tau_P = data.monitor.deadtime
-        except:
+        except Exception:
             tau_NP, tau_P = data.monitor.deadtime, 0.0
         data.log('monitor_dead_time()')
         apply_monitor_dead_time(data, tau_NP=tau_NP, tau_P=tau_P)
@@ -204,7 +203,6 @@ def detector_dead_time(data, dead_time, nonparalyzing=0.0, paralyzing=0.0):
 
     2016-03-21 Paul Kienzle
     """
-    from numpy import isfinite
     from .deadtime import apply_detector_dead_time
 
     #data = copy(data)
@@ -223,7 +221,7 @@ def detector_dead_time(data, dead_time, nonparalyzing=0.0, paralyzing=0.0):
     elif data.detector.deadtime is not None:
         try:
             tau_NP, tau_P = data.detector.deadtime
-        except:
+        except Exception:
             tau_NP, tau_P = data.detector.deadtime, 0.0
         tau_NP *= 1.0e6 # convert to microseconds
         tau_P *= 1.0e6
@@ -279,7 +277,7 @@ def detector_saturation(data):
     from .deadtime import apply_detector_saturation
     data = copy(data)
     if getattr(data.detector, 'saturation', None) is not None:
-        print "detector",data.detector.__dict__
+        print("detector "+str(data.detector.__dict__))
         data.detector = copy(data.detector)
         data.log('detector_saturation()')
         apply_detector_saturation(data)
@@ -532,7 +530,7 @@ def group_by_intent(data):
         groups[intent] = []
     groups['other'] = []
     for d in data:
-        print "intent",d.intent, d.path
+        print("intent %s %s"%(d.intent, d.path))
         groups[map_intent.get(d.intent, 'other')].append(d)
 
     return [groups[intent]
@@ -1081,7 +1079,7 @@ def demo():
     from reflred.steps import steps as cor
     from reflred.refldata import Intent
 
-    print "="*20
+    print("="*20)
 
     spec, back, slits = group.spec(), group.back(), group.slits()
 

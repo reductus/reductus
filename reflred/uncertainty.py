@@ -99,7 +99,7 @@ class Uncertainty(object):
     def __rtruediv__(self, other):
         return Uncertainty(other/self.x,self.variance*other**2/self.x**4)
     def __rpow__(self, other):
-        return self.exp(np.log(other)*self)
+        return exp(np.log(other)*self)
 
     # In-place operations: may be of mixed type
     def __iadd__(self, other):
@@ -169,7 +169,6 @@ class Uncertainty(object):
     def __floordiv__(self, other): return NotImplemented
     def __mod__(self, other): return NotImplemented
     def __divmod__(self, other): return NotImplemented
-    def __mod__(self, other): return NotImplemented
     def __lshift__(self, other): return NotImplemented
     def __rshift__(self, other): return NotImplemented
     def __and__(self, other): return NotImplemented
@@ -179,7 +178,6 @@ class Uncertainty(object):
     def __rfloordiv__(self, other): return NotImplemented
     def __rmod__(self, other): return NotImplemented
     def __rdivmod__(self, other): return NotImplemented
-    def __rmod__(self, other): return NotImplemented
     def __rlshift__(self, other): return NotImplemented
     def __rrshift__(self, other): return NotImplemented
     def __rand__(self, other): return NotImplemented
@@ -187,8 +185,6 @@ class Uncertainty(object):
     def __ror__(self, other): return NotImplemented
 
     def __ifloordiv__(self, other): return NotImplemented
-    def __imod__(self, other): return NotImplemented
-    def __idivmod__(self, other): return NotImplemented
     def __imod__(self, other): return NotImplemented
     def __ilshift__(self, other): return NotImplemented
     def __irshift__(self, other): return NotImplemented
@@ -264,14 +260,11 @@ def interp(x,xp,fp,left=None,right=None):
     left = (left.x, left.variance)
     right = (right.x, right.variance)
 
-    if isinstance(x, (float, int, np.number)):
-        F, varF = err1d.interp([x], xp, fp.x, fp.variance, left, right)
-        F, varF = F.item(), varF.item()
-    elif isinstance(x, np.ndarray) and x.ndim == 0:
-        F, varF = err1d.interp([x], xp, fp.x, fp.variance, left, right)
-        F, varF = F.item(), varF.item()
-    else:
+    if isinstance(x, np.ndarray) and x.ndim > 0:
         F, varF = err1d.interp(x, xp, fp.x, fp.variance, left, right)
+    else:
+        F, varF = err1d.interp([x], xp, fp.x, fp.variance, left, right)
+        F, varF = F.item(), varF.item()
     return Uncertainty(F, varF)
 
 

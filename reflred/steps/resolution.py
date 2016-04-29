@@ -1,11 +1,16 @@
 r"""
 Resolution calculations
-
 """
 
+import numpy as np
 from numpy import pi, sqrt, log, degrees, radians, cos, sin, tan
 from numpy import arcsin as asin, ceil
 from numpy import ones_like, arange, isscalar, asarray, hstack
+
+try:
+    from typing import Tuple
+except ImportError:
+    pass
 
 def QL2T(Q=None,L=None):
     r"""
@@ -93,7 +98,7 @@ def dQdL2dT(Q, dQ, L, dL):
 
 
 Plancks_constant=6.62618e-27 # Planck constant (erg*sec)
-neutron_mass=1.67495e-24;    # neutron mass (g)
+neutron_mass=1.67495e-24     # neutron mass (g)
 def TOF2L(d_moderator, TOF):
     r"""
     Convert neutron time-of-flight to wavelength.
@@ -120,7 +125,7 @@ def bins(low, high, dLoL):
     *dLoL* is the desired resolution FWHM $\Delta\lambda/\lambda$ for the bins.
     """
 
-    step = 1 + dLoL;
+    step = 1 + dLoL
     n = ceil(log(high/low)/log(step))
     edges = low*step**arange(n+1)
     L = (edges[:-1]+edges[1:])/2
@@ -150,6 +155,7 @@ def binwidths(L):
     return dL
 
 def binedges(L):
+    # type: (np.ndarray) -> np.ndarray
     r"""
     Construct bin edges *E* from bin centers *L*.
 
@@ -194,16 +200,17 @@ def binedges(L):
                           = \frac{E_i(1+\omega)}{E_i} = 1 + \omega
     """
     if L[1] > L[0]:
-        dLoL = L[1]/L[0] - 1
-        last = (1+dLoL)
+        dLoL = L[1]/L[0] - 1.
+        last = (1.+dLoL)
     else:
-        dLoL = L[0]/L[1] - 1
-        last = 1./(1+dLoL)
-    E = L*2/(2+dLoL)
+        dLoL = L[0]/L[1] - 1.
+        last = 1./(1.+dLoL)
+    E = L*(2./(2.+dLoL))
     return hstack((E,E[-1]*last))
 
 def divergence(T=None, slits=None, distance=None,
                sample_width=1e10, sample_broadening=0):
+    # type: (np.ndarray, Tuple[float, float], Tuple[float, float], float, float) -> np.ndarray
     r"""
     Calculate divergence due to slit and sample geometry.
 
@@ -273,20 +280,20 @@ def divergence(T=None, slits=None, distance=None,
         s1=s2 = slits
 
     # Compute FWHM angular divergence dT from the slits in degrees
-    dT = degrees(0.5*(s1+s2)/(d1-d2))
+    dT = 0.5*(s1+s2)/(d1-d2)
 
     # For small samples, use the sample projection instead.
     sample_s = sample_width * sin(radians(T))
     if isscalar(sample_s):
-        if sample_s < s2: dT = degrees(0.5*(s1+sample_s)/d1)
+        if sample_s < s2: dT = 0.5*(s1+sample_s)/d1
     else:
         idx = sample_s < s2
         #print s1,s2,d1,d2,T,dT,sample_s
         s1 = ones_like(sample_s)*s1
         dT = ones_like(sample_s)*dT
-        dT[idx] = degrees(0.5*(s1[idx] + sample_s[idx])/d1)
+        dT[idx] = 0.5*(s1[idx] + sample_s[idx])/d1
 
-    return dT + sample_broadening
+    return degrees(dT) + sample_broadening
 
 def slit_widths(T=None,slits_at_Tlo=None,Tlo=90,Thi=90,
                   slits_below=None, slits_above=None):

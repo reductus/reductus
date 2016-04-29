@@ -142,7 +142,7 @@ class DatedValues(object):
         Recover the configuration values for a specific date.
         """
         instance = DatedValuesInstance()
-        for name,values in self._table.iteritems():
+        for name,values in self._table.items():
             for v, d in values:
                 if d <= date:
                     setattr(instance, name, v)

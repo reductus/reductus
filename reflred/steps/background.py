@@ -43,6 +43,7 @@ def set_background_alignment(back, offset):
 
 # TODO: should only subtract items with the same angular resolution
 def subtract_background(spec, backp, backm):
+    # type: (ReflData, ReflData, ReflData) -> (np.ndarray, np.ndarray)
     """
     Subtract back+ and back- from spec.
 
