@@ -832,9 +832,13 @@ def smooth_slits(datasets, degree=1, span=2, dx=0.01):
 
 
 @module
-def fit_footprint(data, range, origin=False):
+def fit_footprint(data, range=None, origin=False):
    """
    Fit a footprint using a range of data below the critical edge.
+
+   If a range is not provided, then no footprint is fitted and instead the
+   footprint slope and intercept from the *correct_footprint* component are
+   used.
 
    **Inputs**
 
@@ -846,7 +850,7 @@ def fit_footprint(data, range, origin=False):
 
    **Returns**
 
-   fitted_footprint (footprint) : slope and intercept
+   fitted_footprint (footprint?) : slope and intercept
 
    2016-04-29 Paul Kienzle
    """
@@ -857,17 +861,24 @@ def fit_footprint(data, range, origin=False):
 
 
 @module
-def correct_footprint(data, fitted_footprint, range):
+def correct_footprint(data, fitted_footprint, range=[0., 0.], slope=[0.,0.], intercept=[1.,0.]):
     """
     Apply fitted footprint correction to each data set.
+
+    If not footprint is fitted, then values must be entered for *slope* and
+    *intercept*.
 
     **Inputs**
 
     data (refldata) : uncorrected measurement
 
-    fitted_footprint (footprint) : fitted footprint
+    fitted_footprint (footprint?) : fitted footprint
 
     range (range:x) : single Qz range to apply to all data sets
+
+    slope (float[2]) : footprint slope and uncertainty
+
+    intercept (float[2]) : footprint intercept and uncertainty
 
     **Returns**
 
@@ -875,10 +886,15 @@ def correct_footprint(data, fitted_footprint, range):
 
     2016-04-29 Paul Kienzle
     """
-    from .footprint import apply_fitted_footprint
+    import numpy as np
+    from .footprint import apply_fitted_footprint, FootprintData
     data = copy(data)
     data.log("footprint(p=%s,dp=%s)"
              % (str(fitted_footprint.p), str(fitted_footprint.dp)))
+    if fitted_footprint is None:
+        p = np.array([slope[0], intercept[0]])
+        dp = np.array([slope[1], intercept[1]])
+        fitted_footprint = FootprintData(p, dp)
     apply_fitted_footprint(data, fitted_footprint, range)
     return data
 

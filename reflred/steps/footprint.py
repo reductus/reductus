@@ -30,8 +30,11 @@ def fit_footprint(data, range, kind='line'):
     x = np.hstack(x)
     y = np.hstack(y)
     dy = np.hstack(dy)
-    p, dp = _fit_footprint_data(x, y, dy, kind)
-    return FootprintData(p, dp)
+    if len(x):
+        p, dp = _fit_footprint_data(x, y, dy, kind)
+        return FootprintData(p, dp)
+    else:
+        return None
 
 
 def fit_footprint_shared_range(data, low, high, kind='line'):
