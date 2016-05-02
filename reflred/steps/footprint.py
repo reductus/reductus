@@ -29,7 +29,11 @@ def fit_footprint(data, low, high, kind='line'):
     # Join the ranges from the individual data sets
     x, y, dy = [], [], []
     for data_k in data:
-        idx = (data_k.Qz >= low) & (data_k.Qz <= high)
+        idx = np.ones_like(data_k.Qz, dtype='bool')
+        if low is not None:
+            idx = idx & (data_k.Qz >= low) 
+        if high is not None:
+            idx = idx & (data_k.Qz <= high)
         x.append(data_k.Qz[idx])
         y.append(data_k.v[idx])
         dy.append(data_k.dv[idx])
@@ -78,6 +82,10 @@ def fit_footprint_shared_range(data, low, high, kind='line'):
 def apply_fitted_footprint(data, fitted_footprint, range):
     p, dp = fitted_footprint.p, fitted_footprint.dp
     Qmin, Qmax = range
+    if Qmax is None:
+        Qmax = data.Qz.max()
+    if Qmin is None:
+        Qmin = data.Qz.min()
     footprint = _generate_footprint_curve(p, dp, data.Qz, Qmin, Qmax)
     _apply_footprint(data, footprint)
 

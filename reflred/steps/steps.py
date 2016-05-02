@@ -831,7 +831,7 @@ def smooth_slits(datasets, degree=1, span=2, dx=0.01):
 
 
 @module
-def fit_footprint(data, qz_min=0, qz_max=None, origin=False):
+def fit_footprint(data, qz_min=None, qz_max=None, origin=False):
     """
     Fit a footprint using a range of data below the critical edge.
 
@@ -862,7 +862,7 @@ def fit_footprint(data, qz_min=0, qz_max=None, origin=False):
 
 
 @module
-def correct_footprint(data, fitted_footprint, qz_min=0, qz_max=None, slope=1., slope_error=0., intercept=0., intercept_error=0.):
+def correct_footprint(data, fitted_footprint, qz_min=None, qz_max=None, slope=1., slope_error=0., intercept=0., intercept_error=0.):
     """
     Apply fitted footprint correction to each data set.
 
