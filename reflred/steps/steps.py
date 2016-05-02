@@ -831,36 +831,38 @@ def smooth_slits(datasets, degree=1, span=2, dx=0.01):
 
 
 @module
-def fit_footprint(data, range=None, origin=False):
-   """
-   Fit a footprint using a range of data below the critical edge.
+def fit_footprint(data, qz_min=0, qz_max=None, origin=False):
+    """
+    Fit a footprint using a range of data below the critical edge.
 
-   If a range is not provided, then no footprint is fitted and instead the
-   footprint slope and intercept from the *correct_footprint* component are
-   used.
+    If a range is not provided, then no footprint is fitted and instead the
+    footprint slope and intercept from the *correct_footprint* component are
+    used.
 
-   **Inputs**
+    **Inputs**
 
-   data (refldata[]) : uncorrected measurement
+    data (refldata[]) : uncorrected measurement
 
-   range (range*:x) : separate Qz range for each data set
+    qz_min {fit range min} (float): lower bound of range to fit
 
-   origin (bool) : True if data should go through the origin
+    qz_max {fit range max} (float): upper bound of range to fit
 
-   **Returns**
+    origin (bool) : True if data should go through the origin
 
-   fitted_footprint (footprint?) : slope and intercept
+    **Returns**
 
-   2016-04-29 Paul Kienzle
-   """
-   from .footprint import fit_footprint
+    fitted_footprint (footprint?) : slope and intercept
 
-   footprint = fit_footprint(data, range, kind='slope' if origin else 'line')
-   return footprint
+    2016-04-29 Paul Kienzle
+    """
+    from .footprint import fit_footprint
+    r = [qz_min, qz_max]
+    footprint = fit_footprint(data, qz_min, qz_max, kind='slope' if origin else 'line')
+    return footprint
 
 
 @module
-def correct_footprint(data, fitted_footprint, range=[0., 0.], slope=[0.,0.], intercept=[1.,0.]):
+def correct_footprint(data, fitted_footprint, qz_min=0, qz_max=None, slope=1., slope_error=0., intercept=0., intercept_error=0.):
     """
     Apply fitted footprint correction to each data set.
 
@@ -873,11 +875,17 @@ def correct_footprint(data, fitted_footprint, range=[0., 0.], slope=[0.,0.], int
 
     fitted_footprint (footprint?) : fitted footprint
 
-    range (range:x) : single Qz range to apply to all data sets
+    qz_min {Qz min} (float) : Lower bound of region to apply footprint correction
+    
+    qz_max {Qz max} (float) : Upper bound of footprint correction region
 
-    slope (float[2]) : footprint slope and uncertainty
+    slope (float) : footprint slope 
+    
+    slope_error {Error on slope} (float): and uncertainty
 
-    intercept (float[2]) : footprint intercept and uncertainty
+    intercept (float) : footprint intercept 
+    
+    intercept_error {Error on intercept} (float): and uncertainty
 
     **Returns**
 
@@ -891,10 +899,10 @@ def correct_footprint(data, fitted_footprint, range=[0., 0.], slope=[0.,0.], int
     data.log("footprint(p=%s,dp=%s)"
              % (str(fitted_footprint.p), str(fitted_footprint.dp)))
     if fitted_footprint is None:
-        p = np.array([slope[0], intercept[0]])
-        dp = np.array([slope[1], intercept[1]])
+        p = np.array([slope, intercept])
+        dp = np.array([slope_error, intercept_error])
         fitted_footprint = FootprintData(p, dp)
-    apply_fitted_footprint(data, fitted_footprint, range)
+    apply_fitted_footprint(data, fitted_footprint, [qz_min, qz_max])
     return data
 
 @module

@@ -99,12 +99,17 @@ webreduce.instruments['ncnr.refl'] = webreduce.instruments['ncnr.refl'] || {};
   } 
   
   instrument.plot = function(result) {
-    if (result && result.datatype && result.datatype == 'ncnr.refl.refldata') {
-      return plot_refl(result.values);
+		var plottable;
+		if (result == null) {
+      return
     }
-    else {
-      return null;
+    else if (result.datatype == 'ncnr.refl.refldata') {
+      plottable = plot_refl(result.values);
     }
+    else if (result.datatype == 'ncnr.refl.footprint') {
+      plottable = {"type": "params", "params": result.values}
+    }
+    return plottable;
   };
   instrument.load_file = load_refl; 
   instrument.categorizers = [
