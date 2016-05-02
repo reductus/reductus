@@ -146,9 +146,9 @@ webreduce.editor = webreduce.editor || {};
     d3.select("#plotdiv")
       .selectAll(".paramsDisplay")
       .data(data.params).enter()
-        .append("div")
+        .append("pre")
         .classed("paramsDisplay", true)
-        .text(function(d) {return JSON.stringify(d)})
+        .text(function(d) {return JSON.stringify(d, null, 2)})
     return data
   }
   
