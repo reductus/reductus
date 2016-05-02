@@ -536,6 +536,29 @@ def group_by_intent(data):
             for intent in 'specular backp backm intensity rock other'.split()]
 
 @module
+def extract_xs(data, xs=None):
+    """
+    Get a polarization cross-section from a bundle
+    
+    **Inputs**
+    
+    data (refldata[]): data files in of all cross sections
+    
+    xs {Cross-section} (opt:++|--|+-|-+|unpolarized): cross-section to extract
+    
+    **Returns**
+    
+    output (refldata[]): data matching just that cross-section
+
+    2016-05-02 Brian Maranville
+    """
+    data = copy(data)
+    if xs == 'unpolarized':
+        xs = ''
+    output = [d for d in data if d.polarization == xs]
+    return output
+
+@module
 def normalize(data, base='auto'):
     """
     Estimate the detector count rate.
