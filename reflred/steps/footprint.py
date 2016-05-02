@@ -10,9 +10,16 @@ class FootprintData(object):
     def __init__(self, p, dp):
         self.p = p
         self.dp = dp
+    def get_metadata(self):
+        #return {"p": self.p.tolist(), "dp": self.dp.tolist()}
+        return {
+            "slope": self.p[0],
+            "intercept": self.p[1],
+            "slope_error": self.dp[0],
+            "intercept_error": self.dp[1]
+        }
 
-
-def fit_footprint(data, range, kind='line'):
+def fit_footprint(data, low, high, kind='line'):
     """
     Fit the footprint using data points over a range.
 
@@ -21,8 +28,7 @@ def fit_footprint(data, range, kind='line'):
     """
     # Join the ranges from the individual data sets
     x, y, dy = [], [], []
-    for data_k, range_k in zip(data, range):
-        low, high = range_k
+    for data_k in data:
         idx = (data_k.Qz >= low) & (data_k.Qz <= high)
         x.append(data_k.Qz[idx])
         y.append(data_k.v[idx])
@@ -59,6 +65,7 @@ def fit_footprint_shared_range(data, low, high, kind='line'):
     x = np.hstack(x)
     y = np.hstack(y)
     dy = np.hstack(dy)
+    
 
     if low > high:
         low, high = high, low
