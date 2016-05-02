@@ -641,9 +641,10 @@ webreduce.editor = webreduce.editor || {};
     });
     
     if (autoselected > -1) {
-      var toselect = target.select('.module[index="' + String(autoselected) + '"]');
+      var toselect = target.selectAll('.module')
+        .filter(function(d,i) { return i == autoselected })
       var toselect_title = toselect.select(".title").node();
-      toselect.each(function(d,i) { webreduce.editor.handle_module_clicked.call(this, d, i, toselect_title)});
+      webreduce.editor.handle_module_clicked.call(toselect.node(), toselect.datum(), autoselected, toselect_title); 
     }
   }
   
