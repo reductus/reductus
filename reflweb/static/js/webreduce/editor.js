@@ -98,21 +98,33 @@ webreduce.editor = webreduce.editor || {};
       
     $(buttons_div).buttonset();
     
-    var data_show_promise = (data_to_show == undefined) ? new Promise(function(r,j) {r(null)}) : 
-      webreduce.server_api.calc_terminal(active_template, {}, i, data_to_show, "metadata");
-    
-    data_show_promise.then(function(datasets_in) {
+    var terminals_to_calculate = module_def.inputs.map(function(inp) {return inp.id});
+    if (data_to_show != null && terminals_to_calculate.indexOf(data_to_show) < 0) {
+      terminals_to_calculate.push(data_to_show);
+    }
+    Promise.all(terminals_to_calculate.map(function(terminal_id) {
+       return webreduce.server_api.calc_terminal(active_template, {}, i, terminal_id, "metadata");
+      })
+    ).then(function(results) {
+      var inputs_map = {};
+      var id;
+      results.forEach(function(r, ii) {
+        id = terminals_to_calculate[ii];
+        inputs_map[id] = r;
+      })
+      return inputs_map
+    }).then(function(im) {
+      var datasets_in = im[data_to_show];
+      var field_inputs = module_def.inputs.filter(function(d) {return /\.params$/.test(d.datatype)});
+      console.log(field_inputs);
       webreduce.editor.show_plots(datasets_in);
       fields.forEach(function(field) {
         if (webreduce.editor.make_fieldUI[field.datatype]) {
           webreduce.editor.make_fieldUI[field.datatype](field, active_template, i, module_def, config_target, datasets_in);
         }
       });
-      return datasets_in;
-    })
-    .then(function() {
-      
     });
+
   }
   
   webreduce.editor.show_plots = function(result) {
@@ -146,7 +158,7 @@ webreduce.editor = webreduce.editor || {};
     d3.select("#plotdiv")
       .selectAll(".paramsDisplay")
       .data(data.params).enter()
-        .append("pre")
+        .append("div").append("pre")
         .classed("paramsDisplay", true)
         .text(function(d) {return JSON.stringify(d, null, 2)})
     return data
