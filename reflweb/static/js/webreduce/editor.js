@@ -99,6 +99,7 @@ webreduce.editor = webreduce.editor || {};
     $(buttons_div).buttonset();
     
     var terminals_to_calculate = module_def.inputs.map(function(inp) {return inp.id});
+    var fields_in = {};
     if (data_to_show != null && terminals_to_calculate.indexOf(data_to_show) < 0) {
       terminals_to_calculate.push(data_to_show);
     }
@@ -115,12 +116,19 @@ webreduce.editor = webreduce.editor || {};
       return inputs_map
     }).then(function(im) {
       var datasets_in = im[data_to_show];
-      var field_inputs = module_def.inputs.filter(function(d) {return /\.params$/.test(d.datatype)});
-      console.log(field_inputs);
+      var field_inputs = module_def.inputs
+        .filter(function(d) {return /\.params$/.test(d.datatype)})
+        .map(function(d) {return im[d.id]})
+      field_inputs.forEach(function(d) {
+        d.values.forEach(function(v) {
+          $.extend(true, fields_in, v);
+        });
+      });
+      console.log(field_inputs, fields_in);
       webreduce.editor.show_plots(datasets_in);
       fields.forEach(function(field) {
         if (webreduce.editor.make_fieldUI[field.datatype]) {
-          webreduce.editor.make_fieldUI[field.datatype](field, active_template, i, module_def, config_target, datasets_in);
+          webreduce.editor.make_fieldUI[field.datatype](field, active_template, i, module_def, config_target, datasets_in, fields_in);
         }
       });
     });
@@ -454,10 +462,22 @@ webreduce.editor = webreduce.editor || {};
       });
     });
   }
-  
-  webreduce.editor.make_fieldUI.str = function(field, active_template, module_index, module_def, target) {
+
+  webreduce.editor.make_fieldUI.str = function(field, active_template, module_index, module_def, target, datasets_in, fields_in) {
     var active_module = active_template.modules[module_index];
-    var value = (active_module.config && field.id in active_module.config) ? active_module.config[field.id] : field.default;
+    var value,
+        disabled = false;
+    if (field.id in fields_in) {
+      value = fields_in[field.id];
+      disabled = true;
+    }
+    else if (active_module.config && field.id in active_module.config) {
+      value = active_module.config[field.id];
+    }
+    else {
+      value = field.default;
+    } 
+    //var value = (active_module.config && field.id in active_module.config) ? active_module.config[field.id] : field.default;
     var datum = {"id": field.id, "value": value};
     target.append("div")
       .classed("fields", true)
@@ -471,9 +491,21 @@ webreduce.editor = webreduce.editor || {};
           .on("change", function(d) { datum.value = this.value });
   }
   
-  webreduce.editor.make_fieldUI.opt = function(field, active_template, module_index, module_def, target) {
+  webreduce.editor.make_fieldUI.opt = function(field, active_template, module_index, module_def, target, datasets_in, fields_in) {
     var active_module = active_template.modules[module_index];
-    var value = (active_module.config && field.id in active_module.config) ? active_module.config[field.id] : field.default;
+    var value,
+        disabled = false;
+    if (field.id in fields_in) {
+      value = fields_in[field.id];
+      disabled = true;
+    }
+    else if (active_module.config && field.id in active_module.config) {
+      value = active_module.config[field.id];
+    }
+    else {
+      value = field.default;
+    } 
+    //var value = (active_module.config && field.id in active_module.config) ? active_module.config[field.id] : field.default;
     var datum = {"id": field.id, "value": value};
     target.append("div")
       .classed("fields", true)
@@ -491,9 +523,21 @@ webreduce.editor = webreduce.editor || {};
             .text(function(d) {return d[0]});
   }
   
-  webreduce.editor.make_fieldUI.float = function(field, active_template, module_index, module_def, target, datasets_in) {
+  webreduce.editor.make_fieldUI.float = function(field, active_template, module_index, module_def, target, datasets_in, fields_in) {
     var active_module = active_template.modules[module_index];
-    var value = (active_module.config && field.id in active_module.config) ? active_module.config[field.id] : field.default;
+    var value,
+        disabled = false;
+    if (field.id in fields_in) {
+      value = fields_in[field.id];
+      disabled = true;
+    }
+    else if (active_module.config && field.id in active_module.config) {
+      value = active_module.config[field.id];
+    }
+    else {
+      value = field.default;
+    } 
+    //var value = (active_module.config && field.id in active_module.config) ? active_module.config[field.id] : field.default;
     var datum = {id: field.id, value: value};
     if (field.multiple) { 
       //datum.value = [datum.value]; 
