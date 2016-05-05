@@ -129,10 +129,10 @@ webreduce.editor = webreduce.editor || {};
       fields.forEach(function(field) {
         if (webreduce.editor.make_fieldUI[field.datatype]) {
           var value;
-          var disabled = false;
+          var passthrough = false;
           if (field.id in fields_in) {
             value = fields_in[field.id];
-            disabled = true;
+            passthrough = true;
           }
           else if (active_module.config && field.id in active_module.config) {
             value = active_module.config[field.id];
@@ -140,9 +140,9 @@ webreduce.editor = webreduce.editor || {};
           else {
             value = field.default;
           }
-          var datum = {"id": field.id, "value": value, "disabled": disabled};
+          var datum = {"id": field.id, "value": value, "passthrough": passthrough};
           var fieldUI = webreduce.editor.make_fieldUI[field.datatype](field, active_template, datum, module_def, config_target, datasets_in);
-          if (disabled) {fieldUI.property("disabled", disabled)};
+          if (passthrough) {fieldUI.property("disabled", true)};
         }
       });
     });
@@ -358,7 +358,7 @@ webreduce.editor = webreduce.editor || {};
   webreduce.editor.accept_parameters = function(target, active_module) {
     target.selectAll("div.fields")
       .each(function(data) {
-        if (!data.disabled) {
+        if (!data.passthrough) {
           if (!active_module.config) {active_module.config = {}};
           active_module.config[data.id] = data.value;
         }
@@ -501,7 +501,6 @@ webreduce.editor = webreduce.editor || {};
             .property("selected", function(d) {return d[1] == datum.value})
             .text(function(d) {return d[0]})
     return input;
-            //.property("disabled", disabled);
   }
   
   webreduce.editor.make_fieldUI.float = function(field, active_template, datum, module_def, target, datasets_in) {
