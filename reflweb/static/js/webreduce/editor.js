@@ -128,7 +128,21 @@ webreduce.editor = webreduce.editor || {};
       webreduce.editor.show_plots(datasets_in);
       fields.forEach(function(field) {
         if (webreduce.editor.make_fieldUI[field.datatype]) {
-          webreduce.editor.make_fieldUI[field.datatype](field, active_template, i, module_def, config_target, datasets_in, fields_in);
+          var value;
+          var disabled = false;
+          if (field.id in fields_in) {
+            value = fields_in[field.id];
+            disabled = true;
+          }
+          else if (active_module.config && field.id in active_module.config) {
+            value = active_module.config[field.id];
+          }
+          else {
+            value = field.default;
+          }
+          var datum = {"id": field.id, "value": value, "disabled": disabled};
+          var fieldUI = webreduce.editor.make_fieldUI[field.datatype](field, active_template, datum, module_def, config_target, datasets_in);
+          if (disabled) {fieldUI.property("disabled", disabled)};
         }
       });
     });
@@ -353,7 +367,7 @@ webreduce.editor = webreduce.editor || {};
   
   webreduce.editor.make_fieldUI = {}; // generators for field datatypes
   
-  webreduce.editor.make_fieldUI.fileinfo = function(field, active_template, module_index, module_def, target, datasets_in) {
+  webreduce.editor.make_fieldUI.fileinfo = function(field, active_template, datum, module_def, target, datasets_in) {
     // this will add the div only once, even if called twice.
     $("#navigation").unblock();
     target.selectAll("div#fileinfo").data([0])
@@ -361,13 +375,8 @@ webreduce.editor = webreduce.editor || {};
         .append("div")
         .attr("id", "fileinfo")
     
-    var active_module = active_template.modules[module_index];
-    var datum = {"id": field.id, value: []},
-        existing_count = 0;
-    if (active_module.config && active_module.config[field.id] ) {
-      existing_count = active_module.config[field.id].length;
-      datum.value = active_module.config[field.id];
-    }
+    datum.value = datum.value || []; // insert empty list if value is null or missing
+    var existing_count = datum.value.length;
     var radio = target.select("div#fileinfo").append("div")
       .classed("fields", true)
       .datum(datum)
@@ -395,21 +404,16 @@ webreduce.editor = webreduce.editor || {};
     $("#fileinfo").buttonset();
     $(".remote-filebrowser").trigger("fileinfo.update", d3.select("div#fileinfo input").datum());
     // if there is data loaded, an output terminal is selected... and will be plotted instead
-    if (datasets_in == null) { webreduce.handleChecked() };    
+    if (datasets_in == null) { webreduce.handleChecked() };
+    return radio    
   }
   
-  webreduce.editor.make_fieldUI.index = function(field, active_template, module_index, module_def, target, datasets_in) {
+  webreduce.editor.make_fieldUI.index = function(field, active_template, datum, module_def, target, datasets_in) {
     target.selectAll("div#indexlist").data([0])
       .enter()
         .append("div")
         .attr("id", "indexlist")
     
-    var active_module = active_template.modules[module_index];
-
-    var datum = {"id": field.id, value: []};
-    if (active_module.config && active_module.config[field.id] ) {
-      datum.value = active_module.config[field.id];
-    }
     var index_div = target.select("div#indexlist").append("div")
       .classed("fields", true)
       .datum(datum)
@@ -463,25 +467,11 @@ webreduce.editor = webreduce.editor || {};
         display.text(JSON.stringify(datum.value));
       });
     });
+    return display;
   }
 
-  webreduce.editor.make_fieldUI.str = function(field, active_template, module_index, module_def, target, datasets_in, fields_in) {
-    var active_module = active_template.modules[module_index];
-    var value,
-        disabled = false;
-    if (field.id in fields_in) {
-      value = fields_in[field.id];
-      disabled = true;
-    }
-    else if (active_module.config && field.id in active_module.config) {
-      value = active_module.config[field.id];
-    }
-    else {
-      value = field.default;
-    } 
-    //var value = (active_module.config && field.id in active_module.config) ? active_module.config[field.id] : field.default;
-    var datum = {"id": field.id, "value": value, "disabled": disabled};
-    target.append("div")
+  webreduce.editor.make_fieldUI.str = function(field, active_template, datum, module_def, target, datasets_in) {
+    var input = target.append("div")
       .classed("fields", true)
       .datum(datum)
       .append("label")
@@ -489,63 +479,36 @@ webreduce.editor = webreduce.editor || {};
         .append("input")
           .attr("type", "text")
           .attr("field_id", field.id)
-          .attr("value", value)
-          .property("disabled", disabled)
+          .attr("value", datum.value)
           .on("change", function(d) { datum.value = this.value });
+    return input;
   }
   
-  webreduce.editor.make_fieldUI.opt = function(field, active_template, module_index, module_def, target, datasets_in, fields_in) {
-    var active_module = active_template.modules[module_index];
-    var value,
-        disabled = false;
-    if (field.id in fields_in) {
-      value = fields_in[field.id];
-      disabled = true;
-    }
-    else if (active_module.config && field.id in active_module.config) {
-      value = active_module.config[field.id];
-    }
-    else {
-      value = field.default;
-    } 
-    //var value = (active_module.config && field.id in active_module.config) ? active_module.config[field.id] : field.default;
-    var datum = {"id": field.id, "value": value, "disabled": disabled};
-    target.append("div")
+  webreduce.editor.make_fieldUI.opt = function(field, active_template, datum, module_def, target, datasets_in) {
+    var input = target.append("div")
       .classed("fields", true)
       .datum(datum)
       .append("label")
         .text(field.label)
         .append("select")
           .attr("field_id", field.id)
-          .attr("value", value)
+          .attr("value", datum.value)
           .on("change", function(d) { datum.value = this.value })
+    input
           .selectAll("option").data(field.typeattr.choices)
             .enter().append("option")
             .attr("value", function(d) {return d[1]})
-            .property("selected", function(d) {return d[1] == value})
+            .property("selected", function(d) {return d[1] == datum.value})
             .text(function(d) {return d[0]})
-            .property("disabled", disabled);
+    return input;
+            //.property("disabled", disabled);
   }
   
-  webreduce.editor.make_fieldUI.float = function(field, active_template, module_index, module_def, target, datasets_in, fields_in) {
-    var active_module = active_template.modules[module_index];
-    var value,
-        disabled = false;
-    if (field.id in fields_in) {
-      value = fields_in[field.id];
-      disabled = true;
-    }
-    else if (active_module.config && field.id in active_module.config) {
-      value = active_module.config[field.id];
-    }
-    else {
-      value = field.default;
-    } 
-    //var value = (active_module.config && field.id in active_module.config) ? active_module.config[field.id] : field.default;
-    var datum = {"id": field.id, "value": value, "disabled": disabled};
+  webreduce.editor.make_fieldUI.float = function(field, active_template, datum, module_def, target, datasets_in) {
+    var input;
     if (field.multiple) { 
       //datum.value = [datum.value]; 
-      target.append("div")
+      input = target.append("div")
         .classed("fields", true)
         .datum(datum)
         .append("label")           
@@ -554,10 +517,9 @@ webreduce.editor = webreduce.editor || {};
             .attr("type", "text")
             .attr("field_id", field.id)
             .attr("value", JSON.stringify(datum.value))
-            .property("disabled", disabled)
             .on("change", function(d) { datum.value = JSON.parse(this.value) });
     } else {
-      target.append("div")
+      input = target.append("div")
         .classed("fields", true)
         .datum(datum)
         .append("label")
@@ -565,13 +527,13 @@ webreduce.editor = webreduce.editor || {};
           .append("input")
             .attr("type", "number")
             .attr("field_id", field.id)
-            .attr("value", value)
-            .property("disabled", disabled)
+            .attr("value", datum.value)
             .on("change", function(d) { datum.value = parseFloat(this.value) });
     }
+    return input;
   }
 
-  webreduce.editor.make_fieldUI.float_expand = function(field, active_template, module_index, module_def, target, datasets_in) {
+  webreduce.editor.make_fieldUI.float_expand = function(field, active_template, value, module_def, target, datasets_in) {
     var active_module = active_template.modules[module_index];
     var value = (active_module.config && field.id in active_module.config) ? active_module.config[field.id] : field.default;
     var datum = {id: field.id, value: value};
@@ -607,11 +569,8 @@ webreduce.editor = webreduce.editor || {};
     }
   }
   
-  webreduce.editor.make_fieldUI.int = function(field, active_template, module_index, module_def, target) {
-    var active_module = active_template.modules[module_index];
-    var value = (active_module.config && field.id in active_module.config) ? active_module.config[field.id] : field.default;
-    var datum = {"id": field.id, "value": value};
-    target.append("div")
+  webreduce.editor.make_fieldUI.int = function(field, active_template, datum, module_def, target) {
+    var input = target.append("div")
       .classed("fields", true)
       .datum(datum)
       .append("label")
@@ -619,15 +578,13 @@ webreduce.editor = webreduce.editor || {};
         .append("input")
           .attr("type", "number")
           .attr("field_id", field.id)
-          .attr("value", value)
+          .attr("value", datum.value)
           .on("change", function(d) { datum.value = parseInt(this.value) });
+    return input;
   }
   
-  webreduce.editor.make_fieldUI.bool = function(field, active_template, module_index, module_def, target) {
-    var active_module = active_template.modules[module_index];
-    var value = (active_module.config && field.id in active_module.config) ? active_module.config[field.id] : field.default;   
-    var datum = {"id": field.id, "value": value};
-    target.append("div")
+  webreduce.editor.make_fieldUI.bool = function(field, active_template, datum, module_def, target) {
+    var input = target.append("div")
       .classed("fields", true)
       .datum(datum)
       .append("label")
@@ -635,8 +592,9 @@ webreduce.editor = webreduce.editor || {};
         .append("input")
           .attr("type", "checkbox")
           .attr("field_id", field.id)
-          .property("checked", value)
+          .property("checked", datum.value)
           .on("change", function(d) { datum.value = this.checked });
+    return input;
   }
   
   webreduce.editor.fileinfo_update = function(fileinfo) {
