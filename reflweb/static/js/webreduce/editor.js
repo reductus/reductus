@@ -344,8 +344,10 @@ webreduce.editor = webreduce.editor || {};
   webreduce.editor.accept_parameters = function(target, active_module) {
     target.selectAll("div.fields")
       .each(function(data) {
-        if (!active_module.config) {active_module.config = {}};
+        if (!data.disabled) {
+          if (!active_module.config) {active_module.config = {}};
           active_module.config[data.id] = data.value;
+        }
       });
   }
   
@@ -478,7 +480,7 @@ webreduce.editor = webreduce.editor || {};
       value = field.default;
     } 
     //var value = (active_module.config && field.id in active_module.config) ? active_module.config[field.id] : field.default;
-    var datum = {"id": field.id, "value": value};
+    var datum = {"id": field.id, "value": value, "disabled": disabled};
     target.append("div")
       .classed("fields", true)
       .datum(datum)
@@ -488,6 +490,7 @@ webreduce.editor = webreduce.editor || {};
           .attr("type", "text")
           .attr("field_id", field.id)
           .attr("value", value)
+          .property("disabled", disabled)
           .on("change", function(d) { datum.value = this.value });
   }
   
@@ -506,7 +509,7 @@ webreduce.editor = webreduce.editor || {};
       value = field.default;
     } 
     //var value = (active_module.config && field.id in active_module.config) ? active_module.config[field.id] : field.default;
-    var datum = {"id": field.id, "value": value};
+    var datum = {"id": field.id, "value": value, "disabled": disabled};
     target.append("div")
       .classed("fields", true)
       .datum(datum)
@@ -520,7 +523,8 @@ webreduce.editor = webreduce.editor || {};
             .enter().append("option")
             .attr("value", function(d) {return d[1]})
             .property("selected", function(d) {return d[1] == value})
-            .text(function(d) {return d[0]});
+            .text(function(d) {return d[0]})
+            .property("disabled", disabled);
   }
   
   webreduce.editor.make_fieldUI.float = function(field, active_template, module_index, module_def, target, datasets_in, fields_in) {
@@ -538,7 +542,7 @@ webreduce.editor = webreduce.editor || {};
       value = field.default;
     } 
     //var value = (active_module.config && field.id in active_module.config) ? active_module.config[field.id] : field.default;
-    var datum = {id: field.id, value: value};
+    var datum = {"id": field.id, "value": value, "disabled": disabled};
     if (field.multiple) { 
       //datum.value = [datum.value]; 
       target.append("div")
@@ -550,6 +554,7 @@ webreduce.editor = webreduce.editor || {};
             .attr("type", "text")
             .attr("field_id", field.id)
             .attr("value", JSON.stringify(datum.value))
+            .property("disabled", disabled)
             .on("change", function(d) { datum.value = JSON.parse(this.value) });
     } else {
       target.append("div")
@@ -561,6 +566,7 @@ webreduce.editor = webreduce.editor || {};
             .attr("type", "number")
             .attr("field_id", field.id)
             .attr("value", value)
+            .property("disabled", disabled)
             .on("change", function(d) { datum.value = parseFloat(this.value) });
     }
   }
