@@ -11,7 +11,7 @@ webreduce = window.webreduce || {};
 webreduce.server_api = webreduce.server_api || {};
 
 (function(app) {
-  function wrap_jsonRPC(method_name) {
+  function wrap_jsonRPC(method_name, cache) {
     function wrapped() {
       // pass every argument to the wrapped function as a list:
       var params = [];
@@ -25,6 +25,7 @@ webreduce.server_api = webreduce.server_api || {};
         $.jsonRPC.request(method_name, {
           async: true,
           params: params,
+          cache: cache,
           success: function(result) {
             $.unblockUI();
             resolve(result.result);
@@ -49,11 +50,14 @@ webreduce.server_api = webreduce.server_api || {};
     return wrapped
   }
   
-  var toWrap = ["find_calculated", "get_file_metadata", "get_instrument", "calc_terminal", "list_datasources", "list_instruments"];
-  for (var i=0; i<toWrap.length; i++) {
-    var method_name = toWrap[i];
-    app.server_api[method_name] = wrap_jsonRPC(method_name);
-  }
+  var toWrap_cached = ["find_calculated", "get_instrument", "calc_terminal", "list_datasources", "list_instruments"];
+  var toWrap_uncached = ["get_file_metadata"];
+  toWrap_cached.forEach(function(method_name) {
+    app.server_api[method_name] = wrap_jsonRPC(method_name, true);
+  });
+  toWrap_uncached.forEach(function(method_name) {
+    app.server_api[method_name] = wrap_jsonRPC(method_name, false);
+  });
   
   app.server_api.__init__ = function() {
     return $.getJSON("rpc_config.json", function(config) {
@@ -61,6 +65,7 @@ webreduce.server_api = webreduce.server_api || {};
         //endPoint: '//localhost:' + rpc_port + '/RPC2',
         endPoint: "http://" + config.host + ":" + config.port.toFixed() + "/RPC2",
         namespace: '',
+        // this gets explicitly set for each call, but by default make it true:
         cache: true
       });
     });
