@@ -15,8 +15,11 @@ class FootprintData(object):
         return {
             "slope": self.p[0],
             "intercept": self.p[1],
-            "slope_error": self.dp[0],
-            "intercept_error": self.dp[1]
+            # these next are intentionally different from the names of 
+            # the inputs fields in the footprint module, so that
+            # they don't populate those fields when running manually.
+            "slope_fit_error_": self.dp[0],
+            "intercept_fit_error": self.dp[1]
         }
 
 def fit_footprint(data, low, high, kind='line'):
@@ -37,6 +40,7 @@ def fit_footprint(data, low, high, kind='line'):
         x.append(data_k.Qz[idx])
         y.append(data_k.v[idx])
         dy.append(data_k.dv[idx])
+    
     x = np.hstack(x)
     y = np.hstack(y)
     dy = np.hstack(dy)

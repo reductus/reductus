@@ -103,7 +103,7 @@ def define_instrument():
     refldata = df.DataType(INSTRUMENT+".refldata", ReflData)
     poldata = df.DataType(INSTRUMENT+".poldata", PolarizationData)
     deadtime = df.DataType(INSTRUMENT+".deadtime", DeadTimeData)
-    footprint = df.DataType(INSTRUMENT+".footprint", FootprintData)
+    footprint = df.DataType(INSTRUMENT+".footprint.params", FootprintData)
 
     #import json
     #import os

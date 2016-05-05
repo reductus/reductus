@@ -106,7 +106,7 @@ webreduce.instruments['ncnr.refl'] = webreduce.instruments['ncnr.refl'] || {};
     else if (result.datatype == 'ncnr.refl.refldata') {
       plottable = plot_refl(result.values);
     }
-    else if (result.datatype == 'ncnr.refl.footprint') {
+    else if (result.datatype == 'ncnr.refl.footprint.params') {
       plottable = {"type": "params", "params": result.values}
     }
     return plottable;

@@ -536,7 +536,7 @@ def group_by_intent(data):
             for intent in 'specular backp backm intensity rock other'.split()]
 
 @module
-def extract_xs(data, xs=None):
+def extract_xs(data, xs="++"):
     """
     Get a polarization cross-section from a bundle
     
@@ -550,7 +550,7 @@ def extract_xs(data, xs=None):
     
     output (refldata[]): data matching just that cross-section
 
-    2016-05-02 Brian Maranville
+    2016-05-05 Brian Maranville
     """
     data = copy(data)
     if xs == 'unpolarized':
@@ -874,7 +874,7 @@ def fit_footprint(data, qz_min=None, qz_max=None, origin=False):
 
     **Returns**
 
-    fitted_footprint (footprint?) : slope and intercept
+    fitted_footprint (ncnr.refl.footprint.params?) : slope and intercept
 
     2016-04-29 Paul Kienzle
     """
@@ -883,9 +883,8 @@ def fit_footprint(data, qz_min=None, qz_max=None, origin=False):
     footprint = fit_footprint(data, qz_min, qz_max, kind='slope' if origin else 'line')
     return footprint
 
-
 @module
-def correct_footprint(data, fitted_footprint, qz_min=None, qz_max=None, slope=1., slope_error=0., intercept=0., intercept_error=0.):
+def correct_footprint(data, fitted_footprint, qz_min=None, qz_max=None, slope=1.0, slope_error=0.0, intercept=0.0, intercept_error=0.0):
     """
     Apply fitted footprint correction to each data set.
 
@@ -896,7 +895,7 @@ def correct_footprint(data, fitted_footprint, qz_min=None, qz_max=None, slope=1.
 
     data (refldata) : uncorrected measurement
 
-    fitted_footprint (footprint?) : fitted footprint
+    fitted_footprint (ncnr.refl.footprint.params?) : fitted footprint
 
     qz_min {Qz min} (float) : Lower bound of region to apply footprint correction
     
@@ -909,7 +908,7 @@ def correct_footprint(data, fitted_footprint, qz_min=None, qz_max=None, slope=1.
     intercept (float) : footprint intercept 
     
     intercept_error {Error on intercept} (float): and uncertainty
-
+    
     **Returns**
 
     outputs (refldata): footprint-corrected data
@@ -919,12 +918,17 @@ def correct_footprint(data, fitted_footprint, qz_min=None, qz_max=None, slope=1.
     import numpy as np
     from .footprint import apply_fitted_footprint, FootprintData
     data = copy(data)
+    # always use manually-provided error on slope and intercept (not fitted)
+    dp = np.array([slope_error, intercept_error])    
+    if fitted_footprint is None:
+        # make empty footprint data object
+        p = np.array([slope, intercept])
+        fitted_footprint = FootprintData(p, None)
+    # in all cases, overwrite the error in fitted_footprint with specified 
+    # values:
+    fitted_footprint.dp = dp
     data.log("footprint(p=%s,dp=%s)"
              % (str(fitted_footprint.p), str(fitted_footprint.dp)))
-    if fitted_footprint is None:
-        p = np.array([slope, intercept])
-        dp = np.array([slope_error, intercept_error])
-        fitted_footprint = FootprintData(p, dp)
     apply_fitted_footprint(data, fitted_footprint, [qz_min, qz_max])
     return data
 
