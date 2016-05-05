@@ -61,7 +61,7 @@ webreduce.server_api = webreduce.server_api || {};
         //endPoint: '//localhost:' + rpc_port + '/RPC2',
         endPoint: "http://" + config.host + ":" + config.port.toFixed() + "/RPC2",
         namespace: '',
-        cache: false
+        cache: true
       });
     });
   }
