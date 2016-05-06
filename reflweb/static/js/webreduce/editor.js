@@ -635,6 +635,26 @@ webreduce.editor = webreduce.editor || {};
         });
   }
   
+  webreduce.editor.edit_template = function(template_def, instrument_id) {
+    var template_def = template_def || this._active_template;
+    var instrument_id = instrument_id || this._instrument_id;
+    var post_load = function() {
+      var te = webreduce.editor._active_template_editor;
+      te.load_instrument(instrument_id)
+          .then(function(){
+            te.e.import(template_def);
+          })
+      d3.select(te.document.getElementById("apply_changes")).on('click', function() {
+        webreduce.editor.load_template(te.e.export());
+      });
+    }
+    if (this._active_template_editor == null || this._active_template_editor.closed) {
+      var te = window.open("/template_editor_live.html");
+      this._active_template_editor = te;
+      te.addEventListener('editor_ready', post_load, false);
+    }
+  }
+  
   webreduce.editor.load_template = function(template_def) {
     this._active_template = template_def;
     var template_sourcepaths = webreduce.getAllTemplateSourcePaths(template_def),

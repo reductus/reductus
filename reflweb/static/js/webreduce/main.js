@@ -105,9 +105,18 @@ webreduce.instruments = webreduce.instruments || {};
       // Make a menu
       ////////////////////////////////////////////////////////////////////
       $("#main_menu")
-        .append($("<li />", {id: "file_menu", text: "File"})
+        .append($("<li />", {id: "file_menu", text: "Template"})
           .append($("<ul />")
-            .append($("<li />", {text: "Download template"})
+            .append($("<li />", {text: "New"})
+              .on("click", function() {
+                $("#main_menu").hide(); 
+                var empty_template = {modules: [], wires: []};
+                webreduce.editor.edit_template(empty_template)})
+            )
+            .append($("<li />", {text: "Edit"})
+              .on("click", function() {$("#main_menu").hide(); webreduce.editor.edit_template()})
+            )
+            .append($("<li />", {text: "Download"})
               .on("click", function() {
                 $("#main_menu").hide();
                 var filename = prompt("Save template as:", "template.json");
@@ -115,11 +124,10 @@ webreduce.instruments = webreduce.instruments || {};
                 webreduce.download(JSON.stringify(webreduce.editor._active_template, null, 2), filename);
               })
             )
-            .append($("<li />", {text: "Upload template"})
+            .append($("<li />", {text: "Upload"})
               .on("click", function() {$("#main_menu").hide(); upload_dialog.dialog("open")})
             )
-            
-            .append($("<li />", {text: "Predefined templates", id: "predefined_templates"})
+            .append($("<li />", {text: "Predefined", id: "predefined_templates"})
               .append($("<ul />"))
               .on("click", "ul li", function(ev) {
                 // delegated click handler, so it can get events on elements not added yet

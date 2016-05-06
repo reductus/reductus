@@ -83,6 +83,9 @@ path.wire {
   <script type="text/javascript" src="//www.ncnr.nist.gov/instruments/magik/d3-science/dataflow-editor-streamline-new.js"></script>
   <script type="text/javascript" src="js/webreduce/server_api/jsonRPC-api.js"></script>
 <script>
+//  var event = new Event('editor_ready');
+</script>
+<script>
 window.onload = function() {
 webreduce.server_api.__init__().then(function(api) {
 current_instrument = 'ncnr.ospec';
@@ -257,7 +260,7 @@ load_instrument = function(instrument_id, update_selector) {
     d3.select('#select_instrument option[value="' + instrument_id + '"]').property("selected", true);
   }
   var current_instrument = instrument_id; 
-  webreduce.server_api.get_instrument(current_instrument)
+  return webreduce.server_api.get_instrument(current_instrument)
     .then(function(instrument_def) {
       instruments[current_instrument] = instrument_def;
       module_defs = {};
@@ -281,15 +284,6 @@ load_instrument = function(instrument_id, update_selector) {
         .text(function(d) {return module_defs[d].name})  
     });
 }
-
-webreduce.server_api.list_instruments()
-  .then(function(instruments) {
-    instruments.forEach(function(d, i){
-      $("#select_instrument").append($("<option />", {text: d, value: d}));
-    });
-    return instruments;
-  })
-  .then(function() {load_instrument(window.current_instrument, true)});
   
 d3.select('#new_module').on("change", function(ev) {
     var title = this.value,
@@ -324,7 +318,21 @@ function loadDataFromFile() {
 
 d3.select("#upload_template").on("change", loadDataFromFile);
 
+webreduce.server_api.list_instruments()
+  .then(function(instruments) {
+    instruments.forEach(function(d, i){
+      $("#select_instrument").append($("<option />", {text: d, value: d}));
+    });
+    return instruments;
+  })
+  .then(function() {load_instrument(window.current_instrument, true)})
+  .then(function() {
+    var event = new Event('editor_ready');
+    window.dispatchEvent(event);
+  })
+
 });
+
 }
 </script>
 <div id="controls">
