@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+html, body {
+  height: 100%;
+  overflow: hidden;
+}
+svg {
+  width: 100%;
+  height: 100%;
+  float: left;
+  border-bottom: solid 1px #ccc;
+  border-right: solid 1px #ccc;
+  margin-right: -1px;
+  margin-bottom: -1px;
+}
+
+#editor_div { 
+  width: 100%;
+  height: 100%;
+}
+
+#field_editor_div {
+  width: 100%;
+  position: absolute;
+  padding: 10px;
+  bottom: 0;
+  left: 0;
+}
+
+path.wire {
+    stroke-width: 5px !important;
+}
+
+.highlight {
+  fill-opacity: 0.6 !important;
+}
+.popup {
+    position: absolute;
+    background-color: #fff;
+    /*width: 200px;*/
+    border: 1px #ccc solid;
+    border-radius: 6px;
+    box-shadow: #333 2px 2px 4px;
+    font-family: arial, helvetica, sans-serif;
+    margin: 5px 5px 2px 2px;
+}
+.popup ul, .popup ul ul {
+    padding: 5px;
+    list-style-type: none;
+    margin: 0;
+}
+
+.popup ul ul li {
+    padding-left: 5px;
+}
+
+.popup ul li {
+    margin-top: 2px;
+    margin-bottom: 2px;
+    margin-right: 0px;
+    margin-left: 0px;
+    cursor: pointer;
+}
+.popup ul li:hover {
+    background-color: LightGray;
+}
+
+.popup hr {
+    margin: 0;
+}
+
+.input.label, .output.label {
+    display: none;
+}
+</style>
+<body>
+  <script type="text/javascript" src="//ajax.googleapis.com/ajax/libs/jquery/1.10.1/jquery.min.js"></script>
+  <script type="text/javascript" src="js/jquery.blockUI.js"></script>
+  <script type="text/javascript" src="js/jquery.jsonrpc.js"></script>
+  <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/d3/3.5.5/d3.min.js"></script>
+  <script type="text/javascript" src="//www.ncnr.nist.gov/instruments/magik/d3-science/jquery-extend.js"></script>
+  <script type="text/javascript" src="//www.ncnr.nist.gov/instruments/magik/d3-science/dataflow-editor-streamline-new.js"></script>
+  <script type="text/javascript" src="js/webreduce/server_api/jsonRPC-api.js"></script>
+<script>
+//  var event = new Event('editor_ready');
+</script>
+<script>
+window.onload = function() {
+webreduce.server_api.__init__().then(function(api) {
+current_instrument = 'ncnr.ospec';
+
+function expand_module_defs(modules, instrument) {
+  var output = [],
+      module_defs = instruments[instrument].modules;
+  for (var i=0; i<modules.length; i++) {
+    var m = modules[i];
+    output[i] = m;
+    output[i].terminals = module_defs[m.module].terminals;
+    output[i].fields = module_defs[m.module].fields;
+  }
+  return output
+}
+
+//dataflow.module_defs = instruments[current_instrument].modules;
+e = new dataflow.editor();
+e.data([{modules: [], wires: []}]);
+d3.select("#editor_div").call(e);
+
+
+var contextMenuShowing = false;
+
+e.svg().on('contextmenu',function (d,i) {
+    if (contextMenuShowing) {
+        d3.event.preventDefault();
+        d3.select(".popup").remove();
+        contextMenuShowing = false;
+    } else {
+        d3_target = d3.select(d3.event.target);
+        var popup;
+        if (d3_target.classed("wire")) {
+            d3.event.preventDefault();
+            contextMenuShowing = true;
+
+            // Build the popup            
+            popup = d3.select("#editor_div")
+            .append("div")
+            .attr("class", "popup")
+            .style("left", d3.event.x + "px")
+            .style("top", d3.event.y + "px")
+            .append("ul")
+            
+            popup.append("li").text("delete").on("click", function() {
+                var active_data = d3_target.datum();
+                var parentNode = d3_target.node().parentNode;
+                var wires = d3.select(parentNode).datum().wires;
+                for (var i=0; i<wires.length; i++) {
+                    var w = wires[i]; 
+                    if (w.source == active_data.source && w.target == active_data.target) {
+                        wires.splice(i,1);
+                        break;
+                    }
+                };
+                e.update();
+                d3.select(".popup").remove(); 
+                contextMenuShowing=false;
+                
+            });
+            console.log(popup);
+        }
+        else if (d3_target.classed("title")) {
+            d3.event.preventDefault();
+            contextMenuShowing = true;
+
+            // Build the popup
+            var module_id = d3_target.datum().module_id;
+            var module = e.svg().datum().modules.find(function(m) {return m.module_id == module_id});
+            var fields = [];
+            if (module && module_defs[module.module] && module_defs[module.module].fields) {
+                fields = module_defs[module.module].fields;
+            } 
+            
+            popup = d3.select("#editor_div")
+            .append("div")
+            .attr("class", "popup")
+            .style("left", d3.event.x + "px")
+            .style("top", d3.event.y + "px")
+            .append("ul")
+            
+            popup.append("li").text("Edit title")
+              .on("click", function() {
+                d3.select(".popup").remove();
+                contextMenuShowing=false;
+                var new_title = prompt("New title:", module.title);
+                if (new_title != null) {
+                  module.title = new_title;
+                  d3.select(d3_target.node().parentNode).select('text').text(new_title);
+                }                  
+              });
+            if (fields.length > 0) {
+              popup.append("ul").text("Configure:").selectAll('li').data(fields)
+                  .enter()
+                  .append("li")
+                      .text(function(d) {return d.id})
+                      .on("click", edit_field(module))
+            }
+                    
+                    
+            popup.append("hr")
+            popup.append("li").text("delete").on("click", function() {
+                console.log(d3_target.datum().module_id);               
+                e.svg().datum().modules = e.svg().datum().modules.filter(function(d) { return d.module_id != module_id});
+                d3.select(".popup").remove(); 
+                e.update();
+                contextMenuShowing=false;
+            });
+        }
+                     
+    }
+})
+
+function edit_field(module) {
+    var field_editor = function(d,i) {
+      // first, clean up the contextmenu that brought us here:
+      d3.select(".popup").remove(); 
+      contextMenuShowing=false;
+      
+      var field_id = d.id,
+          field_default = d.default;
+      var config = (module.config || {})[field_id];
+      if (config == null) {
+        config = field_default;
+      }        
+      var fe = d3.select("#field_editor_div")
+      fe.selectAll("div").remove();
+      fe.append("div")
+        .text("Editing: " + d.id);
+      var input = fe.append("div")
+        .append("textarea")
+        .attr("rows", "10")
+        .style("width", "95%")
+        .text(JSON.stringify(config))
+      var feb = fe.append("div")
+      
+      feb.append("button")
+        .attr("value", "submit")
+        .text("submit")
+        .on("click", function() {
+          
+          var value = input.text();
+          try {
+            var parsed_val = JSON.parse(value);
+            if (!module.config) {module.config = {}};
+            module.config[field_id] = parsed_val;
+            d3.selectAll("#field_editor_div div").remove();
+          }
+          catch (error) {
+            alert("invalid JSON value: " + value);
+          }
+        });
+      feb.append("button")
+        .attr("value", "cancel")
+        .text("cancel")
+        .on("click", function() {
+          d3.selectAll("#field_editor_div div").remove();
+        });
+          
+    }
+    return field_editor;
+}
+
+instruments = {};
+module_defs = {};
+var module_names;
+
+load_instrument = function(instrument_id, update_selector) {
+  console.log(instrument_id, update_selector);
+  console.log('#select_instrument option[value="' + instrument_id + '"]', d3.select('#select_instrument option[value="' + instrument_id + '"]'));
+  if (update_selector) {
+    d3.select('#select_instrument option[value="' + instrument_id + '"]').property("selected", true);
+  }
+  var current_instrument = instrument_id; 
+  return webreduce.server_api.get_instrument(current_instrument)
+    .then(function(instrument_def) {
+      instruments[current_instrument] = instrument_def;
+      module_defs = {};
+      if ('modules' in instrument_def) {
+        for (var i=0; i<instrument_def.modules.length; i++) {
+          var m = instrument_def.modules[i];
+          module_defs[m.id] = m;
+        }
+      }
+      dataflow.module_defs = module_defs;
+      // pass it through:
+      return instrument_def;
+    })
+    .then(function() {
+      module_names = (["Add new module:"]).concat(Object.keys(module_defs));
+      d3.selectAll("#new_module option").remove()
+      d3.select("#new_module").append("option").text("Add new module:");
+      d3.select("#new_module").selectAll("option").data(module_names)
+        .enter().append('option')
+        .attr("module", function(d) {return d}) // function(d) {return module_defs[d].module})
+        .text(function(d) {return module_defs[d].name})  
+    });
+}
+  
+d3.select('#new_module').on("change", function(ev) {
+    var title = this.value,
+        module = module_names[this.selectedIndex];
+    e.svg().datum().modules.push({module: module, title: title});
+    e.update();
+    this.selectedIndex=0;
+});
+
+
+d3.select("#show_value").on("click", function() { 
+  var win = window.open();
+  win.document.write("<pre>" + JSON.stringify(e.export(), null, 2) + "</pre>");
+});
+
+function loadDataFromFile() {
+    var file = document.getElementById('upload_template').files[0]; // only one file allowed
+    datafilename = file.name;
+    var result = null;
+    var reader = new FileReader();
+    reader.onload = function(ev) {
+        var template = JSON.parse(this.result);
+        e.import(template);
+    }
+    reader.readAsText(file);
+}
+
+webreduce.server_api.list_instruments()
+  .then(function(instruments) {
+    instruments.forEach(function(d, i){
+      $("#select_instrument").append($("<option />", {text: d, value: d}));
+    });
+    return instruments;
+  })
+  //.then(function() {load_instrument(window.current_instrument, true)});
+  .then(function() {
+    var event = new Event('editor_ready');
+    window.dispatchEvent(event);
+  })
+
+});
+
+}
+</script>
+<div id="controls">
+    <select id="new_module"></select>
+    <button id="show_value">Show data</button>
+    <button id="apply_changes">Apply changes</button>
+</div>
+<div id="editor_div">
+</div>
+<div id="field_editor_div"></div>
+</body>
