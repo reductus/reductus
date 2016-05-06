@@ -649,7 +649,7 @@ webreduce.editor = webreduce.editor || {};
       });
     }
     if (this._active_template_editor == null || this._active_template_editor.closed) {
-      var te = window.open("/template_editor_live.html");
+      var te = window.open("/template_editor_live.html", "template_editor", "width=960,height=480");
       this._active_template_editor = te;
       te.addEventListener('editor_ready', post_load, false);
     }
