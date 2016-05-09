@@ -28,11 +28,12 @@ def set_background_alignment(back, offset):
     Guess whether background is offset from sample angle or from detector angle.
     """
     if offset is None or offset=='auto':
-        if back.Qz_target and not np.isnan(back.Qz_target):  # for auto, if Qz_target is set then use it
-            back.Qz_basis = offset
+        # for auto, if Qz_target is set by the trajectory then use it
+        if back.Qz_target is not None and not np.isnan(back.Qz_target).any():
+            back.Qz_basis = 'target'
             return
         offset = guess_background_offset(back)
-    
+
     A, B, L = back.sample.angle_x, back.detector.angle_x, back.detector.wavelength
     if offset == 'sample':
         back.Qz_target = 4*np.pi/L * np.sin(np.radians(A))

@@ -155,6 +155,7 @@ for the theory?
 
 [1] C.F. Majkrzak (1996). Physica B 221, 342-356.
 """
+from __future__ import print_function
 
 import numpy as np
 
@@ -217,17 +218,18 @@ def apply_polarization_correction(data, polarization, spinflip=True):
     polarization.apply(data, spinflip=spinflip)
 
 def correct(data_in, spinflip, beam, Imin=0.0, Emin=0.0, FRbal=0.5, clip=False):
-    data = dict([(d.polarization, d) for d in data_in])
-    use_pm = spinflip and '+-' in data
-    use_mp = spinflip and '-+' in data
-    dtheta = data['++'].angular_resolution
+    dtheta = beam['++'].angular_resolution
     beta,fp,rp,x,y,mask =  _calc_efficiency(beam=beam, dtheta=dtheta,
             Imin=Imin, Emin=Emin, FRbal=FRbal, clip=clip)
 
-    Hinv = _correction_matrix(beta, fp, rp, x, y, use_pm, use_mp)
-    _apply_correction(dtheta, Hinv, data, use_pm, use_mp)
+    data = dict([(d.polarization, d) for d in data_in])
+    use_pm = spinflip and '+-' in data
+    use_mp = spinflip and '-+' in data
 
-def _apply_correction(dtheta, Hinv, data, use_pm, use_mp):
+    Hinv = _correction_matrix(beta, fp, rp, x, y, use_pm, use_mp)
+    _apply_correction(data, dtheta, Hinv, use_pm, use_mp)
+
+def _apply_correction(data, dtheta, Hinv, use_pm, use_mp):
     """Apply the efficiency correction in eff to the data."""
 
     # Identify active cross sections
@@ -247,7 +249,7 @@ def _apply_correction(dtheta, Hinv, data, use_pm, use_mp):
     assert parts[0] == '++'
     x = data['++'].Qz
     y = [U(data['++'].v, data['++'].dv)]
-    for p in parts[1]:
+    for p in parts[1:]:
         px = data[p].Qz
         py = U(data[p].v, data[p].dv)
         y.append(interp(x, px, py))
