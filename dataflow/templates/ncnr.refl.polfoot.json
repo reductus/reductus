@@ -1,0 +1,322 @@
+{
+  "modules": [
+    {
+      "y": 10,
+      "x": 30,
+      "config": {
+        "intent": "specular"
+      },
+      "module": "ncnr.refl.super_load.cached",
+      "title": "load spec!"
+    },
+    {
+      "y": 10,
+      "x": 170,
+      "module": "ncnr.refl.mask_points",
+      "title": "mask"
+    },
+    {
+      "y": 10,
+      "x": 310,
+      "module": "ncnr.refl.join",
+      "title": "join"
+    },
+    {
+      "y": 50,
+      "x": 30,
+      "config": {
+        "intent": "background+"
+      },
+      "module": "ncnr.refl.super_load.cached",
+      "title": "load bg+"
+    },
+    {
+      "y": 50,
+      "x": 170,
+      "module": "ncnr.refl.mask_points",
+      "title": "mask"
+    },
+    {
+      "y": 90,
+      "x": 30,
+      "config": {
+        "intent": "background-"
+      },
+      "module": "ncnr.refl.super_load.cached",
+      "title": "load bg-"
+    },
+    {
+      "y": 90,
+      "x": 170,
+      "module": "ncnr.refl.mask_points",
+      "title": "mask"
+    },
+    {
+      "y": 90,
+      "x": 310,
+      "module": "ncnr.refl.join",
+      "title": "join"
+    },
+    {
+      "y": 50,
+      "x": 310,
+      "module": "ncnr.refl.join",
+      "title": "join"
+    },
+    {
+      "y": 130,
+      "x": 30,
+      "config": {
+        "intent": "intensity"
+      },
+      "module": "ncnr.refl.super_load.cached",
+      "title": "load slit"
+    },
+    {
+      "y": 130,
+      "x": 170,
+      "module": "ncnr.refl.mask_points",
+      "title": "mask"
+    },
+    {
+      "y": 130,
+      "x": 310,
+      "module": "ncnr.refl.rescale",
+      "title": "rescale"
+    },
+    {
+      "y": 100,
+      "x": 460,
+      "module": "ncnr.refl.join",
+      "title": "join"
+    },
+    {
+      "y": 130,
+      "x": 460,
+      "module": "ncnr.refl.spin_asymmetry",
+      "title": "Spin asymm"
+    },
+    {
+      "y": 10,
+      "x": 460,
+      "module": "ncnr.refl.subtract_background",
+      "title": "Sub bkg"
+    },
+    {
+      "y": 70,
+      "x": 540,
+      "module": "ncnr.refl.estimate_polarization",
+      "title": "Estim. Pol"
+    },
+    {
+      "y": 10,
+      "x": 615,
+      "module": "ncnr.refl.correct_polarization",
+      "title": "Correct Polarization"
+    },
+    {
+      "module": "ncnr.refl.fit_footprint",
+      "title": "Fit Footprint",
+      "x": 700,
+      "y": 70
+    },
+    {
+      "module": "ncnr.refl.correct_footprint",
+      "title": "Correct Footprint",
+      "x": 775,
+      "y": 10
+    }
+  ],
+  "wires": [
+    {
+      "source": [
+        0,
+        "output"
+      ],
+      "target": [
+        1,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        1,
+        "output"
+      ],
+      "target": [
+        2,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        3,
+        "output"
+      ],
+      "target": [
+        4,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        4,
+        "output"
+      ],
+      "target": [
+        8,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        5,
+        "output"
+      ],
+      "target": [
+        6,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        6,
+        "output"
+      ],
+      "target": [
+        7,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        9,
+        "output"
+      ],
+      "target": [
+        10,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        10,
+        "output"
+      ],
+      "target": [
+        11,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        11,
+        "output"
+      ],
+      "target": [
+        12,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        2,
+        "output"
+      ],
+      "target": [
+        13,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        2,
+        "output"
+      ],
+      "target": [
+        14,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        8,
+        "output"
+      ],
+      "target": [
+        14,
+        "backp"
+      ]
+    },
+    {
+      "source": [
+        7,
+        "output"
+      ],
+      "target": [
+        14,
+        "backm"
+      ]
+    },
+    {
+      "source": [
+        12,
+        "output"
+      ],
+      "target": [
+        15,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        14,
+        "output"
+      ],
+      "target": [
+        16,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        15,
+        "polarization"
+      ],
+      "target": [
+        16,
+        "polarization"
+      ]
+    },
+    {
+      "source": [
+        16,
+        "output"
+      ],
+      "target": [
+        17,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        17,
+        "fitted_footprint"
+      ],
+      "target": [
+        18,
+        "fitted_footprint"
+      ]
+    },
+    {
+      "source": [
+        16,
+        "output"
+      ],
+      "target": [
+        18,
+        "data"
+      ]
+    }
+  ]
+}
