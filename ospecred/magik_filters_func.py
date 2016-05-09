@@ -7,7 +7,7 @@ from copy import deepcopy
 
 from FilterableMetaArray import FilterableMetaArray as MetaArray
 from reflred import rebin as reb
-from reflred.formats.nexusref import h5_open_zip
+from reflred.steps.nexusref import h5_open_zip
 
 from posixpath import basename, join
 import StringIO
