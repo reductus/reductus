@@ -169,10 +169,13 @@ import numpy as np
 #def std_devs(u): return u.dx
 from uncertainties.unumpy import uarray as U, matrix as UM, nominal_values, std_devs
 
+from ..errutil import interp
 from . import util
 
 
 ALL_XS = '++','+-','-+','--'
+PM_XS = '++','+-','--'
+MP_XS = '++','-+','--'
 NSF_XS = '++','--'
 
 class PolarizationData:
@@ -215,22 +218,40 @@ def apply_polarization_correction(data, polarization, spinflip=True):
 
 def correct(data_in, spinflip, beam, Imin=0.0, Emin=0.0, FRbal=0.5, clip=False):
     data = dict([(d.polarization, d) for d in data_in])
-    spinflip = spinflip and '+-' in data and '-+' in data
+    use_pm = spinflip and '+-' in data
+    use_mp = spinflip and '-+' in data
     dtheta = data['++'].angular_resolution
     beta,fp,rp,x,y,mask =  _calc_efficiency(beam=beam, dtheta=dtheta,
             Imin=Imin, Emin=Emin, FRbal=FRbal, clip=clip)
 
-    Hinv = _correction_matrix(beta, fp, rp, x, y, spinflip)
-    _apply_correction(dtheta, Hinv, data, spinflip)
+    Hinv = _correction_matrix(beta, fp, rp, x, y, use_pm, use_mp)
+    _apply_correction(dtheta, Hinv, data, use_pm, use_mp)
 
-def _apply_correction(dtheta, Hinv, data, spinflip=True):
+def _apply_correction(dtheta, Hinv, data, use_pm, use_mp):
     """Apply the efficiency correction in eff to the data."""
 
-    # Get the intensities from the datasets
-    # TODO: need to interpolate data so that it aligns with ++
-    # If smoothing is desired, apply the smoothing before calling polcor
-    parts = (ALL_XS if spinflip else NSF_XS)
-    Y = np.vstack([U(data[xs].v, data[xs].dv) for xs in parts])
+    # Identify active cross sections
+    if use_pm and use_mp:
+        parts = ALL_XS
+    elif use_mp:
+        parts = MP_XS
+    elif use_pm:
+        parts = PM_XS
+    else:
+        parts = NSF_XS
+
+    # TODO: interpolation with mixed resolution
+    # Interpolate data so that it aligns with ++.  If smoothing is
+    # desired, apply the interpolated smoothing before calling polcor,
+    # in which case the interpolation does nothing.
+    assert parts[0] == '++'
+    x = data['++'].Qz
+    y = [U(data['++'].v, data['++'].dv)]
+    for p in parts[1]:
+        px = data[p].Qz
+        py = U(data[p].v, data[p].dv)
+        y.append(interp(x, px, py))
+    Y = np.vstack(y)
 
     # Look up correction matrix for each point using the ++ cross section
     index = util.nearest(data['++'].angular_resolution, dtheta)
@@ -248,7 +269,7 @@ def _apply_correction(dtheta, Hinv, data, spinflip=True):
         data[xs].vunits = None
 
 
-def _correction_matrix(beta, fp, rp, x, y, spinflip):
+def _correction_matrix(beta, fp, rp, x, y, use_pm, use_mp):
     """
     Generate polarization correction matrices for each slit configuration *dT*.
     """
@@ -257,13 +278,25 @@ def _correction_matrix(beta, fp, rp, x, y, spinflip):
     Fp_x,Fm_x = 1+fp*x, 1-fp*x
     Rp_y,Rm_y = 1+rp*y, 1-rp*y
 
-    if spinflip:
+    if use_pm and use_mp:
         H = np.array([
             [Fp * Rp, Fp_x * Rp, Fp * Rp_y, Fp_x * Rp_y],
             [Fm * Rp, Fm_x * Rp, Fm * Rp_y, Fm_x * Rp_y],
             [Fp * Rm, Fp_x * Rm, Fp * Rm_y, Fp_x * Rm_y],
             [Fm * Rm, Fm_x * Rm, Fm * Rm_y, Fm_x * Rm_y],
             ])
+    elif use_pm:
+        H = np.array([
+            [Fp * Rp, Fp * Rp_y, Fp_x * Rp_y],
+            [Fp * Rm, Fp * Rm_y, Fp_x * Rm_y],
+            [Fm * Rm, Fm * Rm_y, Fm_x * Rm_y],
+        ])
+    elif use_mp:
+        H = np.array([
+            [Fp * Rp, Fp_x * Rp, Fp_x * Rp_y],
+            [Fm * Rp, Fm_x * Rp, Fm_x * Rp_y],
+            [Fm * Rm, Fm_x * Rm, Fm_x * Rm_y],
+        ])
     else:
         H = np.array([
             [Fp * Rp, Fp_x*Rp_y],
