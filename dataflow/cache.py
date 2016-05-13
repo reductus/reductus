@@ -1,6 +1,8 @@
 import warnings
 import sys
 import os
+import subprocess
+import time
 
 def memory_cache():
     import fakeredis
@@ -19,8 +21,8 @@ def redis_connect(host="localhost", port=6379, maxmemory=4.0, **kwargs):
 
     # ensure redis is running, at least if we are not on a windows box
     if host == "localhost" and not sys.platform=='win32':
-        os.system("nohup redis-server --maxmemory 4gb --maxmemory-policy allkeys-lru --port %d  > /dev/null 2>&1 &"
-                  % port)
+        subprocess.Popen(["redis-server"], stdout=open(os.devnull, "w"), stderr=subprocess.STDOUT)
+        time.sleep(2)
 
     cache = redis.Redis(host=host, port=port, **kwargs)
     # set the memory settings for already-running Redis:
