@@ -350,8 +350,8 @@ webreduce.editor = webreduce.editor || {};
       template = w._active_template;
     webreduce.server_api.calc_terminal(template, {}, node, terminal, 'export').then(function(result) {
       // add the template and target node, terminal to the header of the file:
-      var header = {template: template, node: node, terminal: terminal};
-      webreduce.download('#' + JSON.stringify(header) + '\n' + result.values.join('\n\n'), filename);
+      var header = {template_data: {template: template, node: node, terminal: terminal}};
+      webreduce.download('# ' + JSON.stringify(header).slice(1,-1) + '\n' + result.values.join('\n\n'), filename);
     });       
   }
   

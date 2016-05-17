@@ -996,17 +996,14 @@ class ReflData(object):
             fid.write(self.export())
     
     def export(self):
-        import StringIO
+        import StringIO, json
         fid = StringIO.StringIO()
-        fid.write("# ")
-        fid.write("%s(%s)"%(self.xlabel, self.xunits) if self.xunits else self.xlabel)
-        fid.write(" ")
-        fid.write("%s(%s)"%(self.vlabel, self.vunits) if self.vunits else self.vlabel)
-        fid.write(" ")
-        fid.write("error")
-        fid.write(" ")
-        fid.write("resolution")
-        fid.write("\n")
+        for n in ['name', 'entry', 'polarization']:
+            fid.write("# %s\n" % (json.dumps({n: getattr(self, n)}).strip("{}"),))
+        columns = {"columns": [self.xlabel, self.vlabel, "uncertainty", "resolution"]}
+        units = {"units": [self.xunits, self.vunits, self.vunits, self.xunits]}
+        fid.write("# %s\n" % (json.dumps(columns).strip("{}"),))
+        fid.write("# %s\n" % (json.dumps(units).strip("{}"),))
         np.savetxt(fid, np.vstack([self.x, self.v, self.dv, self.dx]).T)
         fid.seek(0)
         return fid.read()
