@@ -1116,6 +1116,7 @@ def spin_asymmetry(data):
     mm = [d for d in data if d.polarization == '--'][0]
     pp = [d for d in data if d.polarization == '++'][0]
     output = copy(mm)
+    output.vscale = "linear"
     output.vlabel = "Spin asymmetry (pp-mm)/(pp+mm) "
     output.vunits = "unitless"
     denom = (mm.v + pp.v)

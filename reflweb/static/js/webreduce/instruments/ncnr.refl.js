@@ -64,8 +64,8 @@ webreduce.instruments['ncnr.refl'] = webreduce.instruments['ncnr.refl'] || {};
     // entry_ids is list of {path: path, filename: filename, entryname: entryname} ids
     var series = new Array();
     var datas = [], xcol;
-    var ycol = "v", ylabel = "y-axis", dycol = "dv";
-    var xcol = "x", xlabel = "x-axis", dxcol = "dx";
+    var ycol = "v", ylabel = "y-axis", dycol = "dv", yscale;
+    var xcol = "x", xlabel = "x-axis", dxcol = "dx", xscale;
     refl_objs.forEach(function(entry) {
       var intent = entry['intent'];
       var ydata = get_refl_item(entry, ycol);
@@ -73,8 +73,10 @@ webreduce.instruments['ncnr.refl'] = webreduce.instruments['ncnr.refl'] || {};
       var xdata = get_refl_item(entry, xcol);
       ylabel = get_refl_item(entry, "vlabel");
       ylabel += "(" + get_refl_item(entry, "vunits") + ")";
+      yscale = get_refl_item(entry, "vscale");
       xlabel = get_refl_item(entry, "xlabel");
       xlabel += "(" + get_refl_item(entry, "xunits") + ")";
+      xscale = get_refl_item(entry, "xscale");
       var xydata = [], x, y, dy, ynorm;
       for (var i=0; i<xdata.length || i<ydata.length; i++) {
         x = (i<xdata.length) ? xdata[i] : x; // use last value
@@ -90,7 +92,9 @@ webreduce.instruments['ncnr.refl'] = webreduce.instruments['ncnr.refl'] || {};
       type: "1d",
       options: {
         series: series,
-        axes: {xaxis: {label: xlabel}, yaxis: {label: ylabel}}
+        axes: {xaxis: {label: xlabel}, yaxis: {label: ylabel}},
+        ytransform: yscale,
+        xtransform: xscale
       },
       data: datas
     }

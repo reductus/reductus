@@ -782,7 +782,7 @@ class ReflData(object):
                   'name','entry','description','date','duration','attenuator',
                   'polarization','path','formula',
                   'intent', 'Qz_target', 'angular_resolution',
-                  'vlabel', 'vunits', 'xlabel', 'xunits',
+                  'vlabel', 'vunits', 'xlabel', 'xunits', 'vscale', 'xscale',
                   'normbase', 'mask',
                   'warnings', 'messages', "_v", "_dv"
                   ]
@@ -809,8 +809,10 @@ class ReflData(object):
     messages = None
     vlabel = 'Intensity'
     vunits = 'counts'
+    vscale = None
     xlabel = 'unknown intent'
     xunits = ''
+    xscale = None
     mask = None
     _intent = Intent.none
     _v = None

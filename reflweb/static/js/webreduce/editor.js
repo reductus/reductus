@@ -278,8 +278,16 @@ webreduce.editor = webreduce.editor || {};
       axes: {xaxis: {label: "x-axis"}, yaxis: {label: "y-axis"}}
     };
     jQuery.extend(true, options, plotdata.options);
-    options.xtransform = $("#xscale").val();
-    options.ytransform = $("#yscale").val();
+    if (options.xtransform) {
+      $("#xscale").val(options.xtransform);
+    } else {
+      options.xtransform = $("#xscale").val();
+    }
+    if (options.ytransform) {
+      $("#yscale").val(options.ytransform);
+    } else {
+      options.ytransform = $("#yscale").val();
+    }
     options.show_errorbars = $("#show_errorbars").prop("checked");
     options.show_points = $("#show_points").prop("checked");
     options.show_line = $("#show_line").prop("checked");
