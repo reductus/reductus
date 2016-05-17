@@ -1119,10 +1119,15 @@ def spin_asymmetry(data):
     output.vscale = "linear"
     output.vlabel = "Spin asymmetry (pp-mm)/(pp+mm) "
     output.vunits = "unitless"
-    denom = (mm.v + pp.v)
-    output.v = (pp.v - mm.v) / denom
+    shortest = min(mm.v.shape[0], pp.v.shape[0])
+    mmv = mm.v[:shortest]
+    mmdv = mm.dv[:shortest]
+    ppv = pp.v[:shortest]
+    ppdv = pp.dv[:shortest]
+    denom = (mmv + ppv)
+    output.v = (ppv - mmv) / denom
     # d(sa)/d(x) = 2*x/(x+y)**2, d(sa)/d(y) = -2*y/(x+y)**2
-    output.dv = sqrt( ((2.0*mm.v*mm.dv)/(denom**2))**2 + ((2.0*pp.v*pp.dv)/(denom**2))**2 )
+    output.dv = sqrt( ((2.0*mmv*mmdv)/(denom**2))**2 + ((2.0*ppv*ppdv)/(denom**2))**2 )
     return output
 
 # ==================
