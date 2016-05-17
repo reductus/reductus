@@ -72,6 +72,22 @@ webreduce.editor = webreduce.editor || {};
     webreduce.layout.open("east");
     var config_target = d3.select(".ui-layout-pane-east");
     config_target.selectAll("div").remove();
+    var header = config_target
+      .append("div")
+      .style("display", "block");
+    header
+      .append("h3")
+      .style("margin", "5px")
+      .style("display", "inline-block")
+      .text(module_def.name);
+    header
+      .append("button")
+      .text("help")
+      .on("click", function() {
+        var helpwindow = window.open("", "help", "location=0,toolbar=no,menubar=no,scrollbars=yes,resizable=yes,width=960,height=480");
+        helpwindow.document.title = "Web reduction help";
+        helpwindow.document.body.innerHTML = module_def.description;
+      });
     
     var buttons_div = config_target.append("div")
       .classed("control-buttons", true)
@@ -124,7 +140,6 @@ webreduce.editor = webreduce.editor || {};
           $.extend(true, fields_in, v);
         });
       });
-      console.log(field_inputs, fields_in);
       webreduce.editor.show_plots(datasets_in);
       fields.forEach(function(field) {
         if (webreduce.editor.make_fieldUI[field.datatype]) {
