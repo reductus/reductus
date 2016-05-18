@@ -9,13 +9,29 @@ import re
 from docutils.core import publish_parts
 
 
-def rst2html(rst):
+def rst2html(rst, part='html_body'):
     """
     Convert restructured text into simple html.
+
+    The following parts are available:
+
+        whole: the entire html document
+
+        html_body: document division with title and contents and footer
+
+        body: contents only
+
+    There are other parts, but they don't make sense alone:
+
+        subtitle, version, encoding, html_prolog, header, meta,
+        html_title, title, stylesheet, html_subtitle, html_body,
+        body, head, body_suffix, fragment, docinfo, html_head,
+        head_prefix, body_prefix, footer, body_pre_docinfo, whole
+
     """
     rst = replace_dollar(rst)
     parts = publish_parts(source=rst, writer_name='html')
-    return parts['body']
+    return parts[part]
 
 
 _dollar = re.compile(r"(?:^|(?<=\s|[(]))[$]([^\n]*?)(?<![\\])[$](?:$|(?=\s|[.,;)\\]))")
