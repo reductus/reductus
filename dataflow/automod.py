@@ -14,6 +14,7 @@ from numpy import inf
 
 from .anno_exc import annotate_exception
 from .core import Module, Template
+from .rst2html import rst2html
 
 def make_template(name, description, diagram, instrument, version):
     """
@@ -302,7 +303,7 @@ def _parse_function(action):
     # Grab the docstring from the function
     # Note: inspect.getdoc() cleans the docstring, removing the indentation and
     # the leading and trailing carriage returns
-    lines = inspect.getdoc(action).split('\n')
+    docstr = inspect.getdoc(action)
 
     # Default values for docstring portions
     description_lines = []
@@ -312,7 +313,7 @@ def _parse_function(action):
 
     # Split docstring into sections
     state = 0 # processing description
-    for line in lines:
+    for line in docstr.split('\n'):
         match = timestamp.match(line)
         stripped = line.strip()
         if match is not None:
@@ -335,7 +336,10 @@ def _parse_function(action):
             raise RuntimeError("Unknown state %s"%state)
 
     # parse the sections
-    description = "".join(description_lines).strip()
+    name = _unsplit_name(action.__name__)
+    heading = "\n".join(("="*len(name),name,"="*len(name),""))
+    #description = "".join(description_lines)
+    description = rst2html(heading + docstr)
     inputs = parse_parameters(input_lines)
     output_terminals = parse_parameters(output_lines)
 
@@ -379,7 +383,7 @@ def _parse_function(action):
     # Collect all the node info
     result = {
         'id': action.__name__,
-        'name': _unsplit_name(action.__name__),
+        'name': name,
         'description': description,
         'inputs': input_terminals,
         'outputs': output_terminals,
@@ -400,7 +404,7 @@ def _unsplit_name(name):
 
 
 # parameter definition regular expression
-parameter_re = re.compile("""\A
+parameter_re = re.compile(r"""\A
     \s*(?P<id>\w+)                           # name
     \s*([{]\s*(?P<label>.*?)\s*[}])?         # { label }    (optional)
     \s*([(]                                  # (

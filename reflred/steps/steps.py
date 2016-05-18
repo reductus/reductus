@@ -623,7 +623,7 @@ def rescale(data, scale=1.0, dscale=0.0):
 #@nocache
 @module
 def join(data, tolerance=0.05, order='file', group_by = "polarization"):
-    """
+    r"""
     Join operates on a list of datasets, returning a list with one dataset,
     or one dataset per polarization state.  When operating on a single
     dataset, it joins repeated points into single points.
