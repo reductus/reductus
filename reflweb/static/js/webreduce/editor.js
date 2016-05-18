@@ -561,6 +561,7 @@ webreduce.editor = webreduce.editor || {};
         .on("dragstart", function() { d3.event.sourceEvent.stopPropagation(); });
       var series_select = d3.select(this);
       series_select.selectAll(".dot")
+        .attr("r", 5) // bigger for easier drag...
         .call(drag_point)
     });
     return input;
