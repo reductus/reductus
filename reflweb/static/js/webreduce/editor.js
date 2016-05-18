@@ -86,7 +86,11 @@ webreduce.editor = webreduce.editor || {};
       .on("click", function() {
         var helpwindow = window.open("", "help", "location=0,toolbar=no,menubar=no,scrollbars=yes,resizable=yes,width=960,height=480");
         helpwindow.document.title = "Web reduction help";
-        helpwindow.document.body.innerHTML = module_def.description;
+        helpwindow.document.write(module_def.description);
+        helpwindow.document.close();
+        if (helpwindow.MathJax) {
+          helpwindow.MathJax.Hub.Queue(["Typeset", MathJax.Hub]);
+        }
       });
     
     var buttons_div = config_target.append("div")

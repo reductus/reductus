@@ -9,9 +9,14 @@ import re
 from docutils.core import publish_parts
 
 
-def rst2html(rst, part='html_body'):
+def rst2html(rst, part='html_body', math_output="html"):
     """
     Convert restructured text into simple html.
+    
+    Valid output formats for formulas include
+    - html
+    - mathml
+    - mathjax
 
     The following parts are available:
 
@@ -30,7 +35,8 @@ def rst2html(rst, part='html_body'):
 
     """
     rst = replace_dollar(rst)
-    parts = publish_parts(source=rst, writer_name='html')
+    overrides = {"math_input": "latex", "math_output": math_output}
+    parts = publish_parts(source=rst, writer_name='html', settings_overrides=overrides)
     return parts[part]
 
 

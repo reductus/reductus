@@ -339,7 +339,7 @@ def _parse_function(action):
     name = _unsplit_name(action.__name__)
     heading = "\n".join(("="*len(name),name,"="*len(name),""))
     #description = "".join(description_lines)
-    description = rst2html(heading + docstr)
+    description = rst2html(heading + docstr, part="whole", math_output="mathjax")
     inputs = parse_parameters(input_lines)
     output_terminals = parse_parameters(output_lines)
 
