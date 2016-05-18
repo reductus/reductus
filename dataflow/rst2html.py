@@ -10,14 +10,9 @@ import re
 from contextlib import contextmanager
 
 from docutils.core import publish_parts
-from docutils.utils.math.math2html import FormulaConfig
 from docutils.writers.html4css1 import HTMLTranslator
 from docutils.nodes import SkipNode
 
-
-# CRUFT: docutils html math doesn't support amstex tfrac, use frac instead
-if u'\\tfrac' not in FormulaConfig.hybridfunctions:
-    FormulaConfig.hybridfunctions[u'\\tfrac'] = FormulaConfig.hybridfunctions[u'\\frac']
 
 def rst2html(rst, part="whole", math_output="html"):
     r"""
@@ -52,8 +47,8 @@ def rst2html(rst, part="whole", math_output="html"):
     # math2html and mathml do not support \frac12
     rst = replace_compact_fraction(rst)
 
-    # mathml does not support \tfrac
-    if math_output == "mathml":
+    # mathml, html do not support \tfrac
+    if math_output in ("mathml", "html"):
         rst = rst.replace(r'\tfrac', r'\frac')
 
     rst = replace_dollar(rst)
