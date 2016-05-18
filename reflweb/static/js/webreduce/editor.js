@@ -111,7 +111,7 @@ webreduce.editor = webreduce.editor || {};
     buttons_div.append("button")
       .text("clear")
       .on("click", function() {
-        console.log(config_target, active_module);
+        //console.log(config_target, active_module);
         if (active_module.config) { delete active_module.config }
         webreduce.editor.handle_module_clicked.call(elem,d,i,clicked_elem);
       })
@@ -157,7 +157,9 @@ webreduce.editor = webreduce.editor || {};
             value = active_module.config[field.id];
           }
           else {
-            value = field.default;
+            // make a copy - if field.default is an object, it will be modified!
+            var field_copy =  $.extend(true, {}, field);
+            value = field_copy.default;
           }
           var datum = {"id": field.id, "value": value, "passthrough": passthrough};
           var fieldUI = webreduce.editor.make_fieldUI[field.datatype](field, active_template, datum, module_def, config_target, datasets_in);
@@ -436,11 +438,11 @@ webreduce.editor = webreduce.editor || {};
   }
   
   webreduce.editor.make_fieldUI.index = function(field, active_template, datum, module_def, target, datasets_in) {
-    target.selectAll("div#indexlist").data([0])
-      .enter()
-        .append("div")
+    if (target.select("div#indexlist").empty()) {
+      target.append("div")
         .attr("id", "indexlist")
-    
+    }
+
     var index_div = target.select("div#indexlist").append("div")
       .classed("fields", true)
       .datum(datum)
@@ -495,6 +497,73 @@ webreduce.editor = webreduce.editor || {};
       });
     });
     return display;
+  }
+  
+  webreduce.editor.make_fieldUI.scale = function(field, active_template, datum, module_def, target, datasets_in) {
+    target.selectAll("div#scalelist").data([0])
+      .enter()
+        .append("div")
+        .attr("id", "scalelist")
+    
+    var datasets = datasets_in.values;
+    original_datum = [];
+    // now have a list of datasets.
+    datum.value = datum.value.slice(0,datasets.length);
+    datasets.forEach(function(d,i) {
+      datum.value[i] = (datum.value[i] == null) ? 1 : datum.value[i];
+      original_datum[i] = datum.value[i];
+    });
+    var scale_div = target.select("div#scalelist").append("div")
+      .classed("fields", true)
+      .datum(datum)
+    var scale_label = scale_div.append("label")
+      .text(field.id);
+    var input = scale_label.append("textarea")
+      //.attr("type", "text")
+      .attr("rows", datum.value.length + 2)
+      .attr("field_id", field.id)
+      .style("vertical-align", "middle")
+      .text(JSON.stringify(datum.value, null, 2))
+      .on("change", function(d) { datum.value = JSON.parse(this.value) });
+    
+    unscaled_data = [];
+    d3.selectAll("#plotdiv .dot").on("click", null); // clear previous handlers
+    d3.selectAll("#plotdiv svg g.series").each(function(d,i) {
+      // i is index of dataset
+      // make a copy of the data:
+      unscaled_data[i] = $.extend(true, [], d);
+      var dragmove_point = function(dd,ii) {
+        var chart = webreduce.editor._active_plot;
+        var y = chart.y(),
+            x = chart.x();
+        var new_x = x.invert(d3.event.x),
+          new_y = chart.y().invert(d3.event.y),
+          old_point = unscaled_data[i][ii],
+          old_x = old_point[0],
+          old_y = old_point[1],
+          new_scale = new_y / old_y;
+        d.forEach(function(ddd, iii) {
+          var old_point = unscaled_data[i][iii];
+          ddd[1] = new_scale * old_point[1];
+          if (ddd[2] && ddd[2].yupper != null) {
+            ddd[2].yupper = new_scale * old_point[2].yupper;
+          }
+          if (ddd[2] && ddd[2].ylower != null) {
+            ddd[2].ylower = new_scale * old_point[2].ylower;
+          }
+        })
+        datum.value[i] = new_scale * original_datum[i];
+        input.text(JSON.stringify(datum.value, null, 2));
+        chart.update();
+      }
+      var drag_point = d3.behavior.drag()
+        .on("drag", dragmove_point)
+        .on("dragstart", function() { d3.event.sourceEvent.stopPropagation(); });
+      var series_select = d3.select(this);
+      series_select.selectAll(".dot")
+        .call(drag_point)
+    });
+    return input;
   }
 
   webreduce.editor.make_fieldUI.str = function(field, active_template, datum, module_def, target, datasets_in) {

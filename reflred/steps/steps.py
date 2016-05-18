@@ -604,7 +604,7 @@ def rescale(data, scale=1.0, dscale=0.0):
 
     data (refldata) : data to scale
 
-    scale (float*:<0,inf>) : amount to scale, one for each dataset
+    scale (scale*) : amount to scale, one for each dataset
 
     dscale {Scale err} (float*:<0,inf>) : scale uncertainty for gaussian error propagation
 

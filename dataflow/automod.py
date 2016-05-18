@@ -657,7 +657,7 @@ def parse_datatype(par):
     par["datatype"] = type
     par["typeattr"] = attr
 
-FIELD_TYPES = set("str bool int float opt regex range index coordinate fileinfo".split())
+FIELD_TYPES = set("str bool int float opt regex range index coordinate fileinfo scale".split())
 
 def check_multiplicity(par, values, bundle_length):
     """
@@ -748,6 +748,9 @@ def _validate_one(par, value, as_default):
 
     elif datatype == "fileinfo":
         value = _finfo_check(name, value)
+    
+    elif datatype == "scale":
+        value = _type_check(name, value, float)
 
     else:
         raise ValueError("no %s type check for %s"%(datatype, name))
