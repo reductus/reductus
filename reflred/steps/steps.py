@@ -225,7 +225,8 @@ def detector_dead_time(data, dead_time, nonparalyzing=0.0, paralyzing=0.0):
             tau_NP, tau_P = data.detector.deadtime, 0.0
         tau_NP *= 1.0e6 # convert to microseconds
         tau_P *= 1.0e6
-        data.log('detector_dead_time()')
+        data.log('detector_dead_time(nonparalyzing=%.15g, paralyzing=%.15g)'
+                 % (tau_NP, tau_P))
         apply_detector_dead_time(data, tau_NP=tau_NP, tau_P=tau_P)
     else:
         pass  # no deadtime correction parameters available.

@@ -53,7 +53,7 @@ def apply_monitor_dead_time(data, tau_NP=0.0, tau_P=0.0):
                  if data.monitor.counts_variance else data.monitor.counts)
     I, dI = estimate_incident((m/t, dm/t),
                               tau_NP=tau_NP, tau_P=tau_P)
-    data.monitor.counts, data.monitor.counts_variance = I, dI**2
+    data.monitor.counts, data.monitor.counts_variance = (I*t), (dI*t)**2
 
 
 def apply_detector_dead_time(data, tau_NP=0.0, tau_P=0.0):
@@ -63,7 +63,7 @@ def apply_detector_dead_time(data, tau_NP=0.0, tau_P=0.0):
                  if data.detector.counts_variance is not None else data.detector.counts)
     I, dI = estimate_incident((m/t, dm/t),
                               tau_NP=[tau_NP,0], tau_P=[tau_P,0])
-    data.detector.counts, data.detector.counts_variance = I, dI**2
+    data.detector.counts, data.detector.counts_variance = (I*t), (dI*t)**2
 
 
 def saturation_correction(counts, time, saturation):
