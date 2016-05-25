@@ -1046,7 +1046,8 @@ def save(data, name='auto', ext='auto', path='auto'):
 def super_load(filelist=None,
                detector_correction=False,
                monitor_correction=False,
-               intent='auto'):
+               intent='auto',
+               base='auto'):
     """
     Load a list of nexus files from the NCNR data server.
 
@@ -1062,6 +1063,9 @@ def super_load(filelist=None,
 
     intent (str) : Measurement intent (specular, background+, background-,
     slit, rock), auto or infer.
+    
+    base {Normalize by} (opt:auto|monitor|time|power|none)
+    : how to convert from counts to count rates
 
     **Returns**
 
@@ -1092,7 +1096,7 @@ def super_load(filelist=None,
         if monitor_correction:
             data = monitor_dead_time(data, None)
         data.intent = intent
-        data = normalize(data)
+        data = normalize(data, base=base)
         #print "data loaded and normalized"
         datasets.append(data)
 
