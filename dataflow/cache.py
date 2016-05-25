@@ -21,10 +21,14 @@ def redis_connect(host="localhost", port=6379, maxmemory=4.0, **kwargs):
 
     # ensure redis is running, at least if we are not on a windows box
     if host == "localhost" and not sys.platform=='win32':
-        subprocess.Popen(["redis-server"], stdout=open(os.devnull, "w"), stderr=subprocess.STDOUT)
-        time.sleep(2)
+        try:
+            cache = redis.Redis(host=host, port=port, **kwargs)
+            cache.ping()
+        except (redis.exceptions.ConnectionError, redis.exceptions.BusyLoadingError): 
+            subprocess.Popen(["redis-server"], stdout=open(os.devnull, "w"), stderr=subprocess.STDOUT)
+            time.sleep(10)
+            cache = redis.Redis(host=host, port=port, **kwargs)
 
-    cache = redis.Redis(host=host, port=port, **kwargs)
     # set the memory settings for already-running Redis:
     cache.config_set("maxmemory", "%d" % (int(maxmemory*2**30),))
     cache.config_set("maxmemory-policy", "allkeys-lru")
