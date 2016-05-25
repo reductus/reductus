@@ -20,27 +20,33 @@ def redis_connect(host="localhost", port=6379, maxmemory=4.0, **kwargs):
     import redis  # lazy import so that redis need not be available
 
     # ensure redis is running, at least if we are not on a windows box
-    if host == "localhost" and not sys.platform=='win32':
-        try:
-            cache = redis.Redis(host=host, port=port, **kwargs)
-            cache.ping()
-        except (redis.exceptions.ConnectionError, redis.exceptions.BusyLoadingError): 
+    redis_connected = False
+    try:
+        cache = redis.Redis(host=host, port=port, **kwargs)
+        # first, check to see if it is already running:
+        cache.ping()
+        redis_connected = True
+    except redis.exceptions.ConnectionError:
+        # if it's not running, and this is a platform on which we can start it:
+        if host == "localhost" and not sys.platform=='win32':
             subprocess.Popen(["redis-server"], stdout=open(os.devnull, "w"), stderr=subprocess.STDOUT)
             time.sleep(10)
             cache = redis.Redis(host=host, port=port, **kwargs)
-
-    # set the memory settings for already-running Redis:
-    cache.config_set("maxmemory", "%d" % (int(maxmemory*2**30),))
-    cache.config_set("maxmemory-policy", "allkeys-lru")
-
-    try:
-        cache.info()
-    except redis.ConnectionError as exc:
-        warnings.warn("""\
-Redis connection failed with:
-    %s
-Falling back to in-memory cache."""%str(exc))
-        cache = memory_cache()
+            try:
+                cache.ping()
+                redis_connected = True
+            except redis.exceptions.ConnectionError as exc: 
+                # if it's still not running, bail out and run the memory cache
+                warning = "Redis connection failed with:\n\t"
+                warning += str(exc)
+                warning += "\nFalling back to in-memory cache."
+                warnings.warn(warning)
+                cache = memory_cache()
+    
+    if redis_connected:
+        # set the memory settings for already-running Redis:
+        cache.config_set("maxmemory", "%d" % (int(maxmemory*2**30),))
+        cache.config_set("maxmemory-policy", "allkeys-lru")
 
     return cache
 
