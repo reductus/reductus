@@ -93,6 +93,7 @@ webreduce.instruments = webreduce.instruments || {};
             url = window.URL.createObjectURL(blob);
           a.href = url;
           a.download = fileName;
+          a.target = "_blank";
           //window.open(url, '_blank', fileName);
           a.click();
           setTimeout(function() { window.URL.revokeObjectURL(url) }, 1000);
