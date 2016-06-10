@@ -219,7 +219,8 @@ function edit_field(module) {
         .append("textarea")
         .attr("rows", "10")
         .style("width", "95%")
-        .text(JSON.stringify(config))
+        .property("value", JSON.stringify(config))
+        //.text(JSON.stringify(config))
       var feb = fe.append("div")
       
       feb.append("button")
@@ -227,7 +228,7 @@ function edit_field(module) {
         .text("submit")
         .on("click", function() {
           
-          var value = input.text();
+          var value = input.property("value");
           try {
             var parsed_val = JSON.parse(value);
             if (!module.config) {module.config = {}};
