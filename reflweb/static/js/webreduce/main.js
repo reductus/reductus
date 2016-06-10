@@ -101,6 +101,7 @@ webreduce.instruments = webreduce.instruments || {};
       }());
       
       var upload_dialog = $("#upload_template").dialog({autoOpen: false});
+      var reload_exported_dialog = $("#reload_exported").dialog({autoOpen: false});
       
       ////////////////////////////////////////////////////////////////////
       // Make a menu
@@ -140,6 +141,9 @@ webreduce.instruments = webreduce.instruments || {};
           ))
         .append($("<li />", {id: "data_menu", text: "Data"})
           .append($("<ul />")
+            .append($("<li />", {text: "Reload Exported"})
+              .on("click", function() {$("#main_menu").hide(); reload_exported_dialog.dialog("open")})
+            )
             .append($("<li />", {id: "data_menu_sources", text: "Add source"})
               .append($("<ul />"))
               .on("click", "ul li", function(ev) {
@@ -174,6 +178,21 @@ webreduce.instruments = webreduce.instruments || {};
             //console.log(this.result);
             var template_def = JSON.parse(this.result);
             webreduce.editor.load_template(template_def);
+        }
+        reader.readAsText(file);
+      });
+      $("input#exported_file").change(function() {
+        var file = this.files[0]; // only one file allowed
+        datafilename = file.name;
+        this.value = "";
+        reload_exported_dialog.dialog("close");
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            //console.log(this.result);
+            var first_line = this.result.slice(0, this.result.indexOf('\n'));
+            first_line = '{' + first_line.replace(/^#/, '') + '}';
+            var template_header = JSON.parse(first_line);
+            webreduce.editor.load_template(template_header.template_data.template, template_header.template_data.node, template_header.template_data.terminal);
         }
         reader.readAsText(file);
       });
