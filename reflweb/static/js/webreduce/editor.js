@@ -752,7 +752,7 @@ webreduce.editor = webreduce.editor || {};
     }
   }
   
-  webreduce.editor.load_template = function(template_def) {
+  webreduce.editor.load_template = function(template_def, selected_module, selected_terminal) {
     this._active_template = template_def;
     var template_sourcepaths = webreduce.getAllTemplateSourcePaths(template_def),
         browser_sourcepaths = webreduce.getAllBrowserSourcePaths();
@@ -770,16 +770,24 @@ webreduce.editor = webreduce.editor || {};
     target.selectAll(".module").classed("draggable wireable", false);
     target.selectAll("g.module").on("click", webreduce.editor.handle_module_clicked);
     
-    var autoselected = template_def.modules.findIndex(function(m) {
+    autoselected = template_def.modules.findIndex(function(m) {
       var has_fileinfo = webreduce.editor._module_defs[m.module].fields
         .findIndex(function(f) {return f.datatype == 'fileinfo'}) > -1
       return has_fileinfo;
     });
     
+    if (selected_module != null) {
+      autoselected = selected_module;
+    }
+    
     if (autoselected > -1) {
       var toselect = target.selectAll('.module')
         .filter(function(d,i) { return i == autoselected })
       var toselect_title = toselect.select(".title").node();
+      if (selected_terminal != null) {
+        var term = toselect.select('rect.terminal[terminal_id="'+selected_terminal+'"]')
+        if (term != null) {toselect = term} // override the selection with terminal
+      }
       webreduce.editor.handle_module_clicked.call(toselect.node(), toselect.datum(), autoselected, toselect_title); 
     }
   }
