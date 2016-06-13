@@ -783,12 +783,14 @@ webreduce.editor = webreduce.editor || {};
     if (autoselected > -1) {
       var toselect = target.selectAll('.module')
         .filter(function(d,i) { return i == autoselected })
-      var toselect_title = toselect.select(".title").node();
+      // choose the module directly by default
+      var toselect_target = toselect.select(".title").node();
+      // but if a terminal is specified, use that as target instead.
       if (selected_terminal != null) {
-        var term = toselect.select('rect.terminal[terminal_id="'+selected_terminal+'"]')
-        if (term != null) {toselect = term} // override the selection with terminal
+        var term = toselect.select('rect.terminal[terminal_id="'+selected_terminal+'"]').node();
+        if (term != null) {toselect_target = term} // override the selection with terminal
       }
-      webreduce.editor.handle_module_clicked.call(toselect.node(), toselect.datum(), autoselected, toselect_title); 
+      webreduce.editor.handle_module_clicked.call(toselect.node(), toselect.datum(), autoselected, toselect_target); 
     }
   }
   
