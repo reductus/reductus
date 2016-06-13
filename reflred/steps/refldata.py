@@ -1004,6 +1004,12 @@ class ReflData(object):
             fid.write("# %s\n" % (json.dumps({n: getattr(self, n)}).strip("{}"),))
         columns = {"columns": [self.xlabel, self.vlabel, "uncertainty", "resolution"]}
         units = {"units": [self.xunits, self.vunits, self.vunits, self.xunits]}
+        wavelength = getattr(self.detector, "wavelength", None)
+        if wavelength is not None:
+            fid.write("# %s\n" % (json.dumps({"wavelength": float(wavelength[0])}).strip("{}"),))
+        wavelength_resolution = getattr(self.detector, "wavelength_resolution", None)
+        if wavelength_resolution is not None:
+            fid.write("# %s\n" % (json.dumps({"wavelength_resolution": float(wavelength_resolution[0])}).strip("{}"),))
         fid.write("# %s\n" % (json.dumps(columns).strip("{}"),))
         fid.write("# %s\n" % (json.dumps(units).strip("{}"),))
         np.savetxt(fid, np.vstack([self.x, self.v, self.dv, self.dx]).T)
