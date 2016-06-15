@@ -397,7 +397,7 @@ def divergence(data, sample_width=None, sample_broadening=0):
     from .angles import apply_divergence
     #data = copy(data)
     data.log('divergence()')
-    apply_divergence(data)
+    apply_divergence(data, sample_width, sample_broadening)
     return data
 
 
