@@ -24,7 +24,7 @@ def apply_divergence(data, sample_width, sample_broadening):
     theta = data.sample.angle_x
     if sample_width is None:
         sample_width = data.sample.width
-    dtheta = divergence(theta=theta, slits=slits, distance=distance,
+    dtheta = divergence(T=theta, slits=slits, distance=distance,
                         sample_width=sample_width,
                         sample_broadening=sample_broadening)
     data.angular_resolution = dtheta
