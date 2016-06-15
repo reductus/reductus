@@ -380,7 +380,7 @@ def divergence(data, sample_width=None, sample_broadening=0):
 
     data (refldata): data without resolution estimate
 
-    sample_width (float?:<0,inf>) : width of the sample if it acts like a slit.
+    sample_width (float?:<0,inf>) : width of the sample in mm if it acts like a slit.
     By default, this uses the value in the file.
 
     sample_broadening (float) : amount of increased divergence in degrees, using
@@ -1055,6 +1055,7 @@ def super_load(filelist=None,
                detector_correction=False,
                monitor_correction=False,
                intent='auto',
+               sample_width=None,
                base='auto'):
     """
     Load a list of nexus files from the NCNR data server.
@@ -1071,6 +1072,10 @@ def super_load(filelist=None,
 
     intent (str) : Measurement intent (specular, background+, background-,
     slit, rock), auto or infer.
+    
+    sample_width {Sample width (mm)} (float): Width of the sample along the beam direction in mm,
+    used for calculating the effective resolution when the sample is smaller 
+    than the beam.  Leave blank to use value from data file.
     
     base {Normalize by} (opt:auto|monitor|time|power|none)
     : how to convert from counts to count rates
@@ -1098,7 +1103,7 @@ def super_load(filelist=None,
     datasets = []
     for data in url_load_list(filelist):
         if auto_divergence:
-            data = divergence(data)
+            data = divergence(data, sample_width)
         if detector_correction:
             data = detector_dead_time(data, None)
         if monitor_correction:
