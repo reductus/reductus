@@ -12,9 +12,10 @@ try:
 except ImportError:
     pass
 
+
 def QL2T(Q=None,L=None):
     r"""
-    Compute angle from $Q$ and wavelength.
+    Compute angle from $Q$ (|1/Ang|) and wavelength (|Ang|).
 
     .. math::
 
@@ -25,9 +26,10 @@ def QL2T(Q=None,L=None):
     Q,L = asarray(Q,'d'), asarray(L,'d')
     return degrees(asin(abs(Q) * L / (4*pi)))
 
+
 def TL2Q(T=None,L=None):
     r"""
-    Compute $Q$ from angle and wavelength.
+    Compute $Q$ from angle (|deg|) and wavelength $L$ (|Ang|).
 
     .. math::
 
@@ -38,9 +40,12 @@ def TL2Q(T=None,L=None):
     T,L = radians(asarray(T,'d')), asarray(L,'d')
     return 4 * pi * sin(T) / L
 
+
 _FWHM_scale = sqrt(log(256))
 def FWHM2sigma(s):
     return s/_FWHM_scale
+
+
 def sigma2FWHM(s):
     return s*_FWHM_scale
 
@@ -49,8 +54,8 @@ def dTdL2dQ(T=None, dT=None, L=None, dL=None):
     r"""
     Convert wavelength dispersion and angular divergence to $Q$ resolution.
 
-    *T*, *dT*  (degrees) angle and FWHM angular divergence
-    *L*, *dL*  (Angstroms) wavelength and FWHM wavelength dispersion
+    *T*, *dT*  (|deg|) angle and 1-\ $\sigma$ angular divergence
+    *L*, *dL*  (|Ang|) wavelength and 1-\ $\sigma$ wavelength dispersion
 
     Returns 1-\ $\sigma$ $\Delta Q$
     """
@@ -62,22 +67,21 @@ def dTdL2dQ(T=None, dT=None, L=None, dL=None):
     dQ = (4*pi/L) * sqrt( (sin(T)*dL/L)**2 + (cos(T)*dT)**2 )
 
     #sqrt((dL/L)**2+(radians(dT)/tan(radians(T)))**2)*probe.Q
-    return FWHM2sigma(dQ)
+    return dQ
 
 def dQdT2dLoL(Q, dQ, T, dT):
     r"""
     Convert a calculated Q resolution and angular divergence to a
     wavelength dispersion.
 
-    *Q*, *dQ* |1/Ang|  $Q$ and 1-\ $\sigma$ $Q$ resolution
-    *T*, *dT* |deg| angle and FWHM angular divergence
+    *Q*, *dQ* |1/Ang|, with 1-\ $\sigma$ $Q$ resolution
+    *T*, *dT* |deg|, with 1-\ $\sigma$ angular divergence
 
-    Returns FWHM $\Delta\lambda/\lambda$
+    Returns 1-\ $\sigma$ $\Delta\lambda/\lambda$
     """
     T,dT = radians(asarray(T,'d')), radians(asarray(dT,'d'))
     Q,dQ = asarray(Q,'d'),asarray(dQ,'d')
-    return sqrt( (sigma2FWHM(dQ)/Q)**2 - (dT/tan(T))**2 )
-
+    return sqrt( (dQ/Q)**2 - (dT/tan(T))**2 )
 
 
 def dQdL2dT(Q, dQ, L, dL):
@@ -85,16 +89,16 @@ def dQdL2dT(Q, dQ, L, dL):
     Convert a calculated Q resolution and wavelength dispersion to
     angular divergence.
 
-    *Q*, *dQ* |1/Ang|  $Q$ and 1-\ $\sigma$ $Q$ resolution
-    *L*, *dL* |deg| angle and FWHM angular divergence
+    *Q*, *dQ* |1/Ang|, with 1-\ $\sigma$ $Q$ resolution
+    *L*, *dL* |deg|, with 1-\ $\sigma$ angular divergence
 
     Returns FWHM $\theta, \Delta\theta$
     """
     L,dL = asarray(L,'d'),asarray(dL,'d')
     Q,dQ = asarray(Q,'d'),asarray(dQ,'d')
     T = QL2T(Q,L)
-    dT = degrees( sqrt( (sigma2FWHM(dQ)/Q)**2 - (dL/L)**2) * tan(radians(T)) )
-    return T,dT
+    dT = degrees( sqrt( (dQ/Q)**2 - (dL/L)**2) * tan(radians(T)) )
+    return dT
 
 
 Plancks_constant=6.62618e-27 # Planck constant (erg*sec)
@@ -215,7 +219,7 @@ def divergence(T=None, slits=None, distance=None,
     Calculate divergence due to slit and sample geometry.
 
     :Parameters:
-        *T*         : float OR [float] | degrees
+        *T*         : float OR [float] | |deg|
             incident angles
         *slits*     : float OR (float,float) | mm
             s1,s2 slit openings for slit 1 and slit 2
@@ -223,11 +227,11 @@ def divergence(T=None, slits=None, distance=None,
             d1,d2 distance from sample to slit 1 and slit 2
         *sample_width*      : float | mm
             w, width of the sample
-        *sample_broadening* : float | degrees FWHM
+        *sample_broadening* : float | |deg| 1-\ $\sigma$
             additional divergence caused by sample
 
     :Returns:
-        *dT*  : float OR [float] | degrees FWHM
+        *dT*  : float OR [float] | |deg| 1-\ $\sigma$
             calculated angular divergence
 
     **Algorithm:**
@@ -275,9 +279,9 @@ def divergence(T=None, slits=None, distance=None,
     # TODO: add sample_offset and compute full footprint
     d1,d2 = distance
     try:
-        s1,s2 = slits
+        s1, s2 = slits
     except TypeError:
-        s1=s2 = slits
+        s1 = s2 = slits
 
     # Compute FWHM angular divergence dT from the slits in degrees
     dT = 0.5*(s1+s2)/(d1-d2)
@@ -285,7 +289,8 @@ def divergence(T=None, slits=None, distance=None,
     # For small samples, use the sample projection instead.
     sample_s = sample_width * sin(radians(T))
     if isscalar(sample_s):
-        if sample_s < s2: dT = 0.5*(s1+sample_s)/d1
+        if sample_s < s2:
+            dT = 0.5*(s1+sample_s)/d1
     else:
         idx = sample_s < s2
         #print s1,s2,d1,d2,T,dT,sample_s
@@ -293,18 +298,19 @@ def divergence(T=None, slits=None, distance=None,
         dT = ones_like(sample_s)*dT
         dT[idx] = 0.5*(s1[idx] + sample_s[idx])/d1
 
-    return degrees(dT) + sample_broadening
+    return FWHM2sigma(degrees(dT)) + sample_broadening
 
-def slit_widths(T=None,slits_at_Tlo=None,Tlo=90,Thi=90,
+
+def slit_widths(T=None, slits_at_Tlo=None, Tlo=90, Thi=90,
                   slits_below=None, slits_above=None):
     """
     Compute the slit widths for the standard scanning reflectometer
     fixed-opening-fixed geometry.
 
     :Parameters:
-        *T* : [float] | degrees
+        *T* : [float] | |deg|
             Specular measurement angles.
-        *Tlo*, *Thi* : float | degrees
+        *Tlo*, *Thi* : float | |deg|
             Start and end of the opening region.  The default if *Tlo* is
             not specified is to use fixed slits at *slits_below* for all
             angles.

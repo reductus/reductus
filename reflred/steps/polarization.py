@@ -322,7 +322,7 @@ def plot_efficiency(beam, Imin=0.0, Emin=0.0, FRbal=0.5, clip=False):
     plt.grid(True)
     plt.legend()
     plt.ylabel("efficiency (%)")
-    #plt.xlabel('angular resolution (degrees FWHM)')
+    #plt.xlabel('angular resolution (degrees 1-sigma)')
     plt.xlabel('slit 1 opening (mm)')
 
 

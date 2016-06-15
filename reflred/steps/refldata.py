@@ -843,7 +843,7 @@ class ReflData(object):
         elif Intent.isrock(v):
             self.xlabel, self.xunits = "Qx", "1/Ang"
         elif Intent.isslit(v):
-            #self.xlabel, self.xunits = "angular resolution", "degress FWHM"
+            #self.xlabel, self.xunits = "angular resolution", "degrees 1-sigma"
             self.xlabel, self.xunits = "slit 1 opening", "mm"
         else:
             self.xlabel, self.xunits = "point", ""

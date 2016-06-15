@@ -205,8 +205,8 @@ class NCNRNeXusRefl(refldata.ReflData):
             self.warn("Wavelength is missing; using 4.75 A")
             self.detector.wavelength = 4.75
         if np.isnan(self.detector.wavelength_resolution):
-            self.warn("Wavelength resolution is missing; using 2% dL/L FWHM")
-            self.detector.wavelength_resolution = 0.02*self.detector.wavelength
+            self.warn("Wavelength resolution is missing; using 1.5% dL/L FWHM")
+            self.detector.wavelength_resolution = 0.015/2.35*self.detector.wavelength
 
     def load(self, entry):
         das = entry['DAS_logs']

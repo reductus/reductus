@@ -372,19 +372,27 @@ def absolute_angle(data):
 
 
 @module
-def divergence(data):
-    """
+def divergence(data, sample_width=None, sample_broadening=0):
+    r"""
     Estimate divergence from slit openings.
 
     **Inputs**
 
     data (refldata): data without resolution estimate
 
+    sample_width (float?:<0,inf>) : width of the sample if it acts like a slit.
+    By default, this uses the value in the file.
+
+    sample_broadening (float) : amount of increased divergence in degrees, using
+    1-\ $\sigma$ change in width.  This can be estimated from the FWHM of the
+    rocking curve relative to the expected value with no broadening, divided
+    by 2.35 to convert FWHM to 1-\ $\sigma$.
+
     **Returns**
 
     output (refldata): data with resolution estimate
 
-    2015-12-17 Paul Kienzle
+    2016-06-15 Paul Kienzle
     """
     from .angles import apply_divergence
     #data = copy(data)
