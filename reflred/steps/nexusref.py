@@ -220,8 +220,14 @@ class NCNRNeXusRefl(refldata.ReflData):
         self.slit2.x = data_as(das,'slitAperture2/softPosition','mm',rep=n)
         self.slit3.x = data_as(das,'slitAperture3/softPosition','mm',rep=n)
         self.slit4.x = data_as(das,'slitAperture4/softPosition','mm',rep=n)
-        self.sample.angle_x = data_as(das,'sampleAngle/softPosition','degree',rep=n)
-        self.detector.angle_x = data_as(das,'detectorAngle/softPosition','degree',rep=n)
+        if 'sampleAngle' in das:
+            self.sample.angle_x = data_as(das,'sampleAngle/softPosition','degree',rep=n)
+            self.detector.angle_x = data_as(das,'detectorAngle/softPosition','degree',rep=n)
+        elif 'q' in das:
+            self.sample.angle_x = data_as(das, 'q/thetaIncident','degree',rep=n)
+            self.detector.angle_x = 2.0*data_as(das,'q/thetaIncident','degree',rep=n)
+        else:
+            raise ValueError("Unknown sample angle in file")
         self.Qz_target = data_as(das, 'trajectoryData/_q', 'invAng', rep=n)
         #TODO: temperature, field
         if '_theta_offset' in das['trajectoryData']:
