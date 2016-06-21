@@ -177,7 +177,32 @@ webreduce.instruments['ncnr.refl'] = webreduce.instruments['ncnr.refl'] || {};
     }
   }
   
-  instrument.decorators = [add_range_indicators];
+  function add_sample_description(target) {
+    var jstree = target.jstree(true);
+    var source_id = target.parent().attr("id");
+    var path = webreduce.getCurrentPath(target.parent());
+    var file_objs = webreduce.editor._file_objs[path];
+    var leaf, entry;
+    // first set min and max for entries:
+    for (fn in jstree._model.data) {
+      leaf = jstree._model.data[fn];
+      if (leaf.li_attr && 'filename' in leaf.li_attr && 'entryname' in leaf.li_attr) {
+        entry = file_objs[leaf.li_attr.filename].values.filter(function(f) {return f.entry == leaf.li_attr.entryname});
+        if (entry && entry[0]) {
+          var e = entry[0];
+          console.log(e.sample);
+          if ('sample' in e && 'description' in e.sample) {
+            leaf.li_attr.title = e.sample.description;
+            var parent_id = leaf.parent;
+            parent = jstree._model.data[parent_id];
+            parent.li_attr.title = e.sample.description;
+          }
+        }
+      }
+    }
+  }
+  
+  instrument.decorators = [add_range_indicators, add_sample_description];
     
 })(webreduce.instruments['ncnr.refl']);
 
