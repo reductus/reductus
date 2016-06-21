@@ -727,6 +727,13 @@ webreduce.editor = webreduce.editor || {};
             $("#main_menu").menu("refresh");
           })
           var default_template = template_names[0];
+          if (localStorage) {
+            var lookup_id = "webreduce.instruments." + instrument_id + ".last_used_template";
+            var test_template_name = localStorage.getItem(lookup_id);
+            if (test_template_name != null && test_template_name in instrument_def.templates) {
+              default_template = test_template_name;
+            }
+          }
           current_instrument = instrument_id;
           webreduce.editor.load_template(instrument_def.templates[default_template]); 
         });
@@ -792,6 +799,7 @@ webreduce.editor = webreduce.editor || {};
       }
       webreduce.editor.handle_module_clicked.call(toselect.node(), toselect.datum(), autoselected, toselect_target); 
     }
+    
   }
   
   

@@ -135,7 +135,13 @@ webreduce.instruments = webreduce.instruments || {};
                 // delegated click handler, so it can get events on elements not added yet
                 // (added during instrument_load)
                   $("#main_menu").hide();
-                  webreduce.editor.load_template(webreduce.editor._instrument_def.templates[$(this).text()]);
+                  var template_id = $(this).text();
+                  webreduce.editor.load_template(webreduce.editor._instrument_def.templates[template_id]);
+                  if (localStorage && localStorage.setItem) {
+                    var instrument_id = webreduce.editor._instrument_id;
+                    var lookup_id = "webreduce.instruments." + instrument_id + ".last_used_template";
+                    localStorage.setItem(lookup_id, template_id);
+                  }
                 })
             )  
           ))
@@ -258,7 +264,7 @@ webreduce.instruments = webreduce.instruments || {};
         })
         return times_promise;
       }
-        
+      
       webreduce.api_exception_handler = function(exc) {
         console.log("api exception: ", exc);
         // catch the error that comes from stale timestamps for files
