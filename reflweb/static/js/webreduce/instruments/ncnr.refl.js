@@ -183,7 +183,6 @@ webreduce.instruments['ncnr.refl'] = webreduce.instruments['ncnr.refl'] || {};
     var path = webreduce.getCurrentPath(target.parent());
     var file_objs = webreduce.editor._file_objs[path];
     var leaf, entry;
-    // first set min and max for entries:
     for (fn in jstree._model.data) {
       leaf = jstree._model.data[fn];
       if (leaf.li_attr && 'filename' in leaf.li_attr && 'entryname' in leaf.li_attr) {
@@ -202,7 +201,32 @@ webreduce.instruments['ncnr.refl'] = webreduce.instruments['ncnr.refl'] || {};
     }
   }
   
-  instrument.decorators = [add_range_indicators, add_sample_description];
+  function add_viewer_link(target) {
+    var jstree = target.jstree(true);
+    var source_id = target.parent().attr("id");
+    var path = webreduce.getCurrentPath(target.parent());
+    var file_objs = webreduce.editor._file_objs[path];
+    var leaf, first_child, entry;
+    for (fn in jstree._model.data) {
+      leaf = jstree._model.data[fn];
+      if (leaf.children.length > 0) {
+        first_child = jstree._model.data[leaf.children[0]];
+        if (first_child.li_attr && 'filename' in first_child.li_attr && 'entryname' in first_child.li_attr) {
+          var fullpath = first_child.li_attr.filename;
+          var pathsegments = fullpath.split("/");
+          var pathlist = pathsegments.slice(0, pathsegments.length-1).join("+");
+          var filename = pathsegments.slice(-1);
+          var link = "<a href=\"http://ncnr.nist.gov/ipeek/nexus-zip-viewer.html";
+          link += "?pathlist=" + pathlist;
+          link += "&filename=" + filename;
+          link += "\" style=\"text-decoration:none;\">&#9432;</a>";
+          leaf.text += link;
+        }
+      }
+    }
+  }
+  
+  instrument.decorators = [add_range_indicators, add_sample_description, add_viewer_link];
     
 })(webreduce.instruments['ncnr.refl']);
 

@@ -111,8 +111,14 @@
       target
         .on("check_node.jstree", handleChecked)
         .on("uncheck_node.jstree", handleChecked);
-      target.on("click", "a", function(e) {
+      target.on("click", "a:not(.jstree-anchor)", function(e) {
+        window.open(e.target.href, "_blank");
+        e.preventDefault();
+        e.stopPropagation();
+      });
+      target.on("click", "a.jstree-anchor", function(e) {
         if (!(e.target.classList.contains("jstree-checkbox"))) {
+          //console.log(e.target, e.target.tagName.toLowerCase());
           target.jstree().toggle_node(e.currentTarget.id);
         }
       });
