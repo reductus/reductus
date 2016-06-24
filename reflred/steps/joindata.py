@@ -51,6 +51,7 @@ def join_datasets(group, tolerance):
     columns.update(env_columns)
     columns = vectorize_columns(group, columns)
     columns = apply_mask(group, columns)
+    isslit = Intent.isslit(group[0].intent)
 
     # Sort the columns so that nearly identical points are together
     # Column keys are:
@@ -62,15 +63,15 @@ def join_datasets(group, tolerance):
         # Sort detector rocking curves so that small deviations in sample
         # angle don't throw off the order in detector angle.
         keys = ('Td', 'Ti', 'dT', 'L')
-    elif Intent.isslit(group[0].intent):
-        keys = ('dT', 'L', 'Ti', 'Td')
+    elif isslit:
+        keys = ('dT', 'L')
     else:
         keys = ('Ti', 'Td', 'dT', 'L')
     columns = sort_columns(columns, keys)
     #for k,v in sorted(columns.items()): print k,v
 
     # Join the data points in the individual columns
-    columns = join_columns(columns, tolerance)
+    columns = join_columns(columns, tolerance, isslit)
     #print "==after join=="
     #for k,v in sorted(columns.items()): print k,v
 
@@ -257,7 +258,7 @@ def sort_columns(columns, names):
     return dict((k, v[index]) for k, v in columns.items())
 
 
-def join_columns(columns, tolerance):
+def join_columns(columns, tolerance, isslit):
     # Weight each point in the average by monitor.
     weight = columns['monitor']
 
@@ -274,14 +275,20 @@ def join_columns(columns, tolerance):
         L_width = tolerance*columns['dL'][current]
         # use <= in condition so that identical points are combined when
         # tolerance is zero
-        if (i < maximum
-                and abs(columns['Ti'][i] - columns['Ti'][current]) <= T_width
+        if (i < maximum and not isslit):
+            if (abs(columns['Ti'][i] - columns['Ti'][current]) <= T_width
                 and abs(columns['Td'][i] - columns['Td'][current]) <= T_width
                 and abs(columns['dT'][i] - columns['dT'][current]) <= T_width
                 and abs(columns['dL'][i] - columns['dL'][current]) <= L_width
                 and abs(columns['L'][i] - columns['L'][current]) <= L_width):
-            #print "combining",current,i,T_width,L_width,[(k,columns[k][current],columns[k][i]) for k in 'Ti Td dT dL L'.split()]
-            continue
+                #print "combining",current,i,T_width,L_width,[(k,columns[k][current],columns[k][i]) for k in 'Ti Td dT dL L'.split()]
+                continue
+        elif (i < maximum and isslit):
+            if (abs(columns['dT'][i] - columns['dT'][current]) <= T_width
+                and abs(columns['dL'][i] - columns['dL'][current]) <= L_width
+                and abs(columns['L'][i] - columns['L'][current]) <= L_width):
+                #print "combining",current,i,T_width,L_width,[(k,columns[k][current],columns[k][i]) for k in 'Ti Td dT dL L'.split()]
+                continue
         if i == current+1:
             #print "adding point",current
             for k, v in columns.items():

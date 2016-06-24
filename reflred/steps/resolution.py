@@ -213,7 +213,7 @@ def binedges(L):
     return hstack((E,E[-1]*last))
 
 def divergence(T=None, slits=None, distance=None,
-               sample_width=1e10, sample_broadening=0):
+               use_sample=True, sample_width=1e10, sample_broadening=0):
     # type: (np.ndarray, Tuple[float, float], Tuple[float, float], float, float) -> np.ndarray
     r"""
     Calculate divergence due to slit and sample geometry.
@@ -287,12 +287,14 @@ def divergence(T=None, slits=None, distance=None,
 
     # Compute FWHM angular divergence dT from the slits in degrees
     dT_s1_s2 = 0.5*(s1+s2)/abs(d1-d2)
-    dT_s1_sample = 0.5*(s1+sample)/abs(d1)
-    dT_s2_sample = 0.5*(s2+sample)/abs(d2)
-    dT = np.minimum(dT_s1_s2, np.minimum(dT_s1_sample, dT_s2_sample))
-
-    return FWHM2sigma(degrees(dT)) + sample_broadening
-
+    if use_sample:
+        dT_s1_sample = 0.5*(s1+sample)/abs(d1)
+        dT_s2_sample = 0.5*(s2+sample)/abs(d2)
+        dT = np.minimum(dT_s1_s2, np.minimum(dT_s1_sample, dT_s2_sample))
+        return FWHM2sigma(degrees(dT)) + sample_broadening
+    else:
+        return FWHM2sigma(degrees(dT_s1_s2))
+        
 
 def slit_widths(T=None, slits_at_Tlo=None, Tlo=90, Thi=90,
                   slits_below=None, slits_above=None):
