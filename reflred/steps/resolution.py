@@ -282,21 +282,14 @@ def divergence(T=None, slits=None, distance=None,
         s1, s2 = slits
     except TypeError:
         s1 = s2 = slits
+    # Sample can act as a slit according to the projection of its width
+    sample = sample_width * abs(sin(radians(T)))
 
     # Compute FWHM angular divergence dT from the slits in degrees
-    dT = 0.5*(s1+s2)/(d1-d2)
-
-    # For small samples, use the sample projection instead.
-    sample_s = sample_width * sin(radians(T))
-    if isscalar(sample_s):
-        if sample_s < s2:
-            dT = 0.5*(s1+sample_s)/d1
-    else:
-        idx = sample_s < s2
-        #print s1,s2,d1,d2,T,dT,sample_s
-        s1 = ones_like(sample_s)*s1
-        dT = ones_like(sample_s)*dT
-        dT[idx] = 0.5*(s1[idx] + sample_s[idx])/d1
+    dT_s1_s2 = 0.5*(s1+s2)/abs(d1-d2)
+    dT_s1_sample = 0.5*(s1+sample)/abs(d1)
+    dT_s2_sample = 0.5*(s2+sample)/abs(d2)
+    dT = np.minimum(dT_s1_s2, np.minimum(dT_s1_sample, dT_s2_sample))
 
     return FWHM2sigma(degrees(dT)) + sample_broadening
 
