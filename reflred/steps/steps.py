@@ -74,7 +74,7 @@ def ncnr_load(filelist=None):
 
     output (refldata[]): All entries of all files in the list.
 
-    2015-12-17 Brian Maranville
+    2016-06-29 Brian Maranville
     """
     # NB: Fileinfo is a structure with
     #     { path: "location/on/server", mtime: timestamp }

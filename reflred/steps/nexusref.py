@@ -153,7 +153,7 @@ class NCNRNeXusRefl(refldata.ReflData):
     format = "NeXus"
     trajectory_intents = {
         'SPEC': 'specular',
-        'SLIT': 'slit',
+        'SLIT': 'intensity',
         'BGP': 'background+',
         'BGM': 'background-',
         'ROCK': 'rock sample'
