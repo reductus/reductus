@@ -1084,7 +1084,7 @@ def super_load(filelist=None,
 
     output (refldata[]): All entries of all files in the list.
 
-    2016-06-25 Brian Maranville
+    2016-06-29 Brian Maranville
     """
     from .load import url_load_list
     #from .intent import apply_intent
@@ -1102,7 +1102,8 @@ def super_load(filelist=None,
 
     datasets = []
     for data in url_load_list(filelist):
-        data.intent = intent
+        if intent not in [None, 'auto']:
+            data.intent = intent
         if auto_divergence:
             data = divergence(data, sample_width)
         if detector_correction:
