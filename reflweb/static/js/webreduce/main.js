@@ -267,6 +267,7 @@ webreduce.instruments = webreduce.instruments || {};
       
       webreduce.api_exception_handler = function(exc) {
         console.log("api exception: ", exc);
+        alert("exception - error message: \n" + exc.result.error.message);
         // catch the error that comes from stale timestamps for files
         if (exc.result.error.message.indexOf("ValueError: Requested mtime is") > -1) {
           setTimeout(function() { 
