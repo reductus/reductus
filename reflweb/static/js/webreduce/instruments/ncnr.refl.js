@@ -10,15 +10,14 @@ webreduce.instruments['ncnr.refl'] = webreduce.instruments['ncnr.refl'] || {};
       "name": "loader_template",
       "description": "ReflData remote loader",
       "modules": [
-        {"module": "ncnr.refl.ncnr_load.cached", "version": "0.1", "config": {}},
-        {"module": "ncnr.refl.mark_intent", "version": "0.1", "config": {}}
+        {"module": "ncnr.refl.ncnr_load.cached", "version": "0.1", "config": {}}
       ],
-      "wires": [{"source": [0,"output"], "target": [1,"data"]}],
+      "wires": [],
       "instrument": "ncnr.magik",
       "version": "0.0"
     }
-    var config = {"0": {"filelist": [{"path": path, "source": datasource, "mtime": mtime}]}, "1": {"intent": "auto"}},
-        module_id = 1,
+    var config = {"0": {"filelist": [{"path": path, "source": datasource, "mtime": mtime}]}},
+        module_id = 0,
         terminal_id = "output";
     return webreduce.server_api.calc_terminal(template, config, module_id, terminal_id).then(function(result) {
       result.values.forEach(function(v) {v.mtime = mtime});
