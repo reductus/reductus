@@ -12,6 +12,7 @@ import dataflow.core as df
 import dataflow.modules.refl
 from dataflow.modules.refl import INSTRUMENT # default
 import dataflow.modules.ospec
+import dataflow.modules.sans
 
 try:
     import config
@@ -195,6 +196,7 @@ def create_instruments():
 
     dataflow.modules.refl.define_instrument()
     dataflow.modules.ospec.define_instrument()
+    dataflow.modules.sans.define_instrument()
     
 if __name__ == '__main__':
     create_instruments()
