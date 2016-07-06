@@ -41,9 +41,10 @@ webreduce.instruments['ncnr.sans'] = webreduce.instruments['ncnr.sans'] || {};
   
   instrument.load_file = load_sans;
   instrument.categorizers = [
-    function(info) { return info['sample.name'] },
-    function(info) { return info['analysis.filepurpose'] },
+    function(info) { return info['analysis.groupid'] },
     function(info) { return info['analysis.intent'] },
+    function(info) { return info['run.configuration'] },
+    //function(info) { return info['analysis.filepurpose'] },
     function(info) { return info['run.filename'] }
   ];
   
@@ -71,7 +72,29 @@ webreduce.instruments['ncnr.sans'] = webreduce.instruments['ncnr.sans'] || {};
     }
   }
   
-  instrument.decorators = [add_sample_description];
+  function add_viewer_link(target) {
+    var jstree = target.jstree(true);
+    var source_id = target.parent().attr("id");
+    var path = webreduce.getCurrentPath(target.parent());
+    var file_objs = webreduce.editor._file_objs[path];
+    var leaf, first_child, entry;
+    for (fn in jstree._model.data) {
+      leaf = jstree._model.data[fn];
+      if (leaf.li_attr && 'filename' in leaf.li_attr && 'entryname' in leaf.li_attr) {
+        var fullpath = leaf.li_attr.filename;
+        var pathsegments = fullpath.split("/");
+        var pathlist = pathsegments.slice(0, pathsegments.length-1).join("+");
+        var filename = pathsegments.slice(-1);
+        var link = "<a href=\"http://ncnr.nist.gov/ipeek/nexus-zip-viewer.html";
+        link += "?pathlist=" + pathlist;
+        link += "&filename=" + filename;
+        link += "\" style=\"text-decoration:none;\">&#9432;</a>";
+        leaf.text += link;
+      }
+    }
+  }
+  
+  instrument.decorators = [add_viewer_link, add_sample_description];
     
 })(webreduce.instruments['ncnr.sans']);
 

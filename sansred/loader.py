@@ -13,7 +13,9 @@ metadata_lookup = {
     "sample.labl": "sample/description", # compatibility
     "polarization.front": "frontPolarization/direction",
     "polarization.back": "backPolarization/direction",
-    "run.filename": "trajectoryData/fileName"
+    "run.filename": "trajectoryData/fileName",
+    "analysis.groupid": "trajectoryData/groupid",
+    "run.configuration": "configuration/key"
 }
 
 def readSANSNexuz(input_file, file_obj=None):
