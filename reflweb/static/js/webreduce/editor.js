@@ -442,28 +442,46 @@ webreduce.editor = webreduce.editor || {};
       target.append("div")
         .attr("id", "indexlist")
     }
-
-    var index_div = target.select("div#indexlist").append("div")
-      .classed("fields", true)
-      .datum(datum)
-    var index_label = index_div.append("label")
-      .text(field.id);
-    var display = index_label.append("div")
-      .classed("value-display", true)
-    display.text(JSON.stringify(datum.value));
     
     var datasets = datasets_in.values;
     // now have a list of datasets.
     datasets.forEach(function(d,i) {
       datum.value[i] = datum.value[i] || [];
     });
-    //webreduce.editor.show_plots(datasets);
-    datum.value.forEach(function(index_list, i) {
-      var series_select = d3.select(d3.selectAll("#plotdiv svg g.series")[0][i]);
-      index_list.forEach(function(index, ii) {
-        series_select.select(".dot:nth-of-type(" + (index+1).toFixed() + ")").classed("masked", true);
+    
+    function prettyJSON(d) {
+      return "[\n  " + d.map(JSON.stringify).join(",\n  ") + "\n]"
+    }
+    
+    var index_div = target.select("div#indexlist").append("div")
+      .classed("fields", true)
+      .datum(datum)
+    var index_label = index_div.append("label")
+      .text(field.id);
+    var input = index_label.append("textarea")
+      //.attr("type", "text")
+      .attr("rows", datum.value.length + 2)
+      .attr("field_id", field.id)
+      .style("vertical-align", "middle")
+      //.text(JSON.stringify(datum.value, null, 2))
+      .text(prettyJSON(datum.value))
+      .on("change", function(d) {
+        console.log("changing:", this, d);
+        datum.value = JSON.parse(this.value);
+        update_plot();
       });
-    });
+    
+    //webreduce.editor.show_plots(datasets);
+    function update_plot() {
+      datum.value.forEach(function(index_list, i) {
+        var series_select = d3.select(d3.selectAll("#plotdiv svg g.series")[0][i]);
+        index_list.forEach(function(index, ii) {
+          series_select.select(".dot:nth-of-type(" + (index+1).toFixed() + ")").classed("masked", true);
+        });
+      });
+    }
+    update_plot();
+    
     d3.selectAll("#plotdiv .dot").on("click", null); // clear previous handlers
     d3.selectAll("#plotdiv svg g.series").each(function(d,i) {
       // i is index of dataset
@@ -493,10 +511,10 @@ webreduce.editor = webreduce.editor || {};
         series_select.selectAll(".dot").each(function(ddd, iii) {if (d3.select(this).classed("masked")) {datum.value[i].push(iii)}});
         */
         index_div.datum(datum);
-        display.text(JSON.stringify(datum.value));
+        input.text(prettyJSON(datum.value));
       });
     });
-    return display;
+    return input;
   }
   
   webreduce.editor.make_fieldUI.scale = function(field, active_template, datum, module_def, target, datasets_in) {
