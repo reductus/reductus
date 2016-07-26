@@ -73,7 +73,7 @@ def LoadSANS(filelist=None, flip=True, transpose=True):
     
     output (sans2d[]): all the entries loaded.
     
-    2016-04-08 Brian Maranville    
+    2016-04-09 Brian Maranville    
     """
     from dataflow.modules.load import url_get
     from .loader import readSANSNexuz

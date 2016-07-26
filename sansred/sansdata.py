@@ -69,7 +69,7 @@ class SansData(object):
                 zmax = data.max()
         plottable_data = {
             'type': '2d',
-            'z':  [data.tolist()],
+            'z':  [data.T.tolist()],
             'title': self.metadata['run.filename']+': ' + self.metadata['sample.labl'],
             #'metadata': self.metadata,
             'options': {
