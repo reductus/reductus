@@ -631,7 +631,7 @@ def rescale(data, scale=1.0, dscale=0.0):
 
 #@nocache
 @module
-def join(data, tolerance=0.05, order='file', group_by = "polarization"):
+def join(data, tolerance=0.15, order='file', group_by = "polarization"):
     r"""
     Join operates on a list of datasets, returning a list with one dataset,
     or one dataset per polarization state.  When operating on a single
@@ -675,7 +675,7 @@ def join(data, tolerance=0.05, order='file', group_by = "polarization"):
 
     output (refldata[]) : joined data
 
-    2016-03-02 Paul Kienzle
+    2016-08-02 Paul Kienzle
     """
     from .joindata import sort_files, join_datasets
     from .util import group_by_key
