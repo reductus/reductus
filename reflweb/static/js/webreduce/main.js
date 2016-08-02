@@ -136,7 +136,8 @@ webreduce.instruments = webreduce.instruments || {};
                 // (added during instrument_load)
                   $("#main_menu").hide();
                   var template_id = $(this).text();
-                  webreduce.editor.load_template(webreduce.editor._instrument_def.templates[template_id]);
+                  var template_copy = jQuery.extend(true, {}, webreduce.editor._instrument_def.templates[template_id]);
+                  webreduce.editor.load_template(template_copy);
                   if (localStorage && localStorage.setItem) {
                     var instrument_id = webreduce.editor._instrument_id;
                     var lookup_id = "webreduce.instruments." + instrument_id + ".last_used_template";

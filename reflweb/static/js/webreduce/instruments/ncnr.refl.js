@@ -62,38 +62,62 @@ webreduce.instruments['ncnr.refl'] = webreduce.instruments['ncnr.refl'] || {};
   function plot_refl(refl_objs) {
     // entry_ids is list of {path: path, filename: filename, entryname: entryname} ids
     var series = new Array();
+    var column_sets = refl_objs.map(function(ro) {return ro.columns || {} });
     var datas = [], xcol;
-    var ycol = "v", ylabel = "y-axis", dycol = "dv", yscale;
-    var xcol = "x", xlabel = "x-axis", dxcol = "dx", xscale;
+    var ycol = "v";
+    var xcol = "x";
+    var all_columns = column_sets[0];
+    column_sets.forEach(function(new_cols) {
+      for (var c in all_columns) {
+        if (all_columns.hasOwnProperty(c) && !(c in new_cols)) {
+          delete all_columns[c];
+        }
+      }
+    });
+    /*
+    var all_columns = d3.set(column_names[0]); // start with the first set
+    column_names.forEach(function(new_cols) {
+      // if this has columns names that the previous do not, ignore;
+      // likewise, if it does not have column names that did exist, throw those out.
+      all_columns.forEach(function(cn) {
+        if (new_cols.indexOf(cn) < 0) {
+          this.remove(cn);
+        }
+      });
+    });
+    // ... then convert back to an array.
+    all_columns = all_columns.values();
+    */
     refl_objs.forEach(function(entry) {
       var intent = entry['intent'];
-      var ydata = get_refl_item(entry, ycol);
-      var dydata = get_refl_item(entry, dycol);
-      var xdata = get_refl_item(entry, xcol);
-      ylabel = get_refl_item(entry, "vlabel");
-      ylabel += "(" + get_refl_item(entry, "vunits") + ")";
-      yscale = get_refl_item(entry, "vscale");
-      xlabel = get_refl_item(entry, "xlabel");
-      xlabel += "(" + get_refl_item(entry, "xunits") + ")";
-      xscale = get_refl_item(entry, "xscale");
-      var xydata = [], x, y, dy, ynorm;
-      for (var i=0; i<xdata.length || i<ydata.length; i++) {
-        x = (i<xdata.length) ? xdata[i] : x; // use last value
-        y = (i<ydata.length) ? ydata[i] : y; // use last value
-        dy = (i<dydata.length) ? dydata[i] : dy; // use last value
-        xydata[i] = [x,y,{yupper: y+dy, ylower:y-dy,xupper:x,xlower:x}];
+      var colset = {}
+      for (var col in all_columns) {
+        if (all_columns.hasOwnProperty(col)) {
+          colset[col] = {"values": get_refl_item(entry, col)};
+          var errorbars_lookup = all_columns[col].errorbars;
+          if (errorbars_lookup != null) {
+            colset[col]["errorbars"] = get_refl_item(entry, errorbars_lookup);
+          }
+        }
       }
-      datas.push(xydata);
+      var xydata = [], x, y;
+      datas.push(colset);
       series.push({label: entry.name + ":" + entry.entry});
 
     });
     var plottable = {
-      type: "1d",
+      type: "nd",
+      columns: all_columns,
+      
       options: {
         series: series,
-        axes: {xaxis: {label: xlabel}, yaxis: {label: ylabel}},
-        ytransform: yscale,
-        xtransform: xscale
+        axes: {
+          xaxis: {label: all_columns[xcol].label + "(" + all_columns[xcol].units + ")"}, 
+          yaxis: {label: all_columns[ycol].label + "(" + all_columns[ycol].units + ")"}},
+        xcol: xcol, 
+        ycol: ycol,
+        ytransform: all_columns[ycol].scale,
+        xtransform: all_columns[xcol].scale
       },
       data: datas
     }
@@ -188,7 +212,7 @@ webreduce.instruments['ncnr.refl'] = webreduce.instruments['ncnr.refl'] || {};
         entry = file_objs[leaf.li_attr.filename].values.filter(function(f) {return f.entry == leaf.li_attr.entryname});
         if (entry && entry[0]) {
           var e = entry[0];
-          console.log(e.sample);
+          //console.log(e.sample);
           if ('sample' in e && 'description' in e.sample) {
             leaf.li_attr.title = e.sample.description;
             var parent_id = leaf.parent;

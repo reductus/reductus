@@ -119,6 +119,7 @@ class Slit(object):
         (fixed slits) or of length n for the number of measurements.
     """
     properties = ['distance','offset','x','y','shape']
+    columns = {"x": {"units": "mm"}}
     distance = inf
     offset = [0.]*4
     x = inf
@@ -176,6 +177,7 @@ class Sample(object):
                   'broadening', 'incident_sld', 'substrate_sld']
     name = ''
     description = ''
+    columns = {"angle_x": {"units": "degrees"}}
     width = inf  # mm
     length = inf  # mm
     thickness = inf # mm
@@ -395,6 +397,10 @@ class Detector(object):
     time_of_flight = None  # ms
     counts = None
     deadtime = None
+    columns = {
+        "counts": {"units": "counts"}, 
+        "angle_x": {"units": "degrees"}
+    }
 
     @property
     def solid_angle(self):
@@ -543,6 +549,10 @@ class Monitor(object):
     source_power_units = "MW"
     source_power_variance = 0
     saturation = None
+    columns = {
+        "counts": {"units": "counts"}, 
+        "count_time": {"units": "seconds"}
+    }
 
     def __init__(self, **kw): 
         _set(self,kw)
@@ -786,7 +796,7 @@ class ReflData(object):
                   'normbase', 'mask',
                   'warnings', 'messages', "_v", "_dv"
                   ]
-    readonly_properties = ['v', 'dv', 'x', 'Qz', 'Qx']
+    readonly_properties = ['v', 'dv', 'x', 'Qz', 'Qx', 'columns']
     instrument = "unknown"
     geometry = "vertical"
     probe = "unknown"
@@ -901,7 +911,31 @@ class ReflData(object):
         T, dT = self.sample.angle_x, self.angular_resolution+self.sample.broadening
         L, dL = self.detector.wavelength, self.detector.wavelength_resolution
         return resolution.dTdL2dQ(T,dT,L,dL)
-
+    
+    @property
+    def columns(self):
+        data_columns = {
+            'x': {'label': self.xlabel, 'units': self.xunits, 'errorbars': 'dx', "scale": "linear"},
+            'v': {'label': self.vlabel, 'units': self.vunits, 'errorbars': 'dv', "scale": "log"},
+            'Qz': {'label': 'Qz', 'units': "1/Ang"},
+            'Qx': {'label': 'Qx', 'units': "1/Ang"}
+        }
+        for subclsnm in ['sample', 'detector', 'monitor', 'slit1', 'slit2', 'slit3', 'slit4']:
+            subcls = getattr(self, subclsnm, {})
+            sub_cols = getattr(subcls, 'columns', {})
+            new_cols = {}
+            for col in sub_cols.keys():
+                # units are defined for the subcolumns, but nothing else... do that here:
+                sub_col = sub_cols[col]
+                label = "%s/%s" % (subclsnm, col)
+                sub_col['label'] = label
+                new_cols[label] = sub_col
+                print label, new_cols
+                
+            data_columns.update(new_cols)
+        print data_columns
+        return data_columns
+    
     def __init__(self, **kw):
         # Note: because _set is ahead of the following, the caller will not
         # be able to specify sample, slit, detector or monitor on creation,

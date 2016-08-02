@@ -186,6 +186,9 @@ webreduce.editor = webreduce.editor || {};
     else if (new_plotdata.type == '1d') {
       active_plot = this.show_plots_1d(new_plotdata);
     }
+    else if (new_plotdata.type == 'nd') {
+      active_plot = this.show_plots_nd(new_plotdata);
+    }
     else if (new_plotdata.type == '2d') {
       active_plot = this.show_plots_2d(new_plotdata);
     }
@@ -289,6 +292,193 @@ webreduce.editor = webreduce.editor || {};
     }
 
     mychart.autofit();
+    return mychart
+  }
+  
+  function zip() {
+    var args = [].slice.call(arguments);
+    var shortest = args.length==0 ? [] : args.reduce(function(a,b){
+        return a.length<b.length ? a : b
+    });
+
+    return shortest.map(function(_,i){
+        return args.map(function(array){return array[i]})
+    });
+  }
+  
+  webreduce.editor.show_plots_nd = function(plotdata) {
+    var options = {
+      series: [],
+      legend: {show: true, left: 150},
+      axes: {xaxis: {label: "x-axis"}, yaxis: {label: "y-axis"}}
+    };
+    var cols = plotdata.columns || [];
+    jQuery.extend(true, options, plotdata.options);
+    
+    
+    
+    var make_chartdata = function(xcol, ycol) { 
+      var chartdata = plotdata.data.map(function(colset) {
+        var x = colset[xcol].values,
+            y = colset[ycol].values,
+            dx = colset[xcol].errorbars,
+            dy = colset[ycol].errorbars, 
+            dataset = [];
+        if (dx != null || dy != null) {
+          for (var i=0; i < x.length && i < y.length; i++) {
+            var errorbar = {};
+            if (dx && dx[i] != null) { errorbar.xlower = x[i] - dx[i]; errorbar.xupper = x[i] + dx[i] }
+            else { errorbar.xlower = errorbar.xupper = x[i]; }
+            
+            if (dy && dy[i] != null) { errorbar.ylower = y[i] - dy[i]; errorbar.yupper = y[i] + dy[i] }
+            else { errorbar.ylower = errorbar.yupper = y[i]; }
+            
+            dataset[i] = [x[i], y[i], errorbar];
+          }
+          //return zip(x, y, errorbars);
+        }
+        else {
+          dataset = zip(x,y);
+        }
+        return dataset;
+      })
+      return chartdata;
+    }
+    
+    // set up plot control buttons and options:
+    if (d3.select("#plot_controls").attr("plot_type") != "nd") {
+      // then make the controls:
+      var plot_controls = d3.select("#plot_controls")
+      plot_controls.attr("plot_type", "nd")
+      plot_controls.selectAll("select,input,button,label").remove();
+      var axis_controls = plot_controls.selectAll(".axis-controls")
+        .data(["x", "y"])
+        .enter().append("label")
+        .classed("axis-controls", true)
+        .text(function(d) {return d})
+      axis_controls
+        .append("select")
+          .classed("column-select", true)
+          .attr("id", function(d) {return d + "col"})
+          .attr("axis", function(d) {return d[0]})
+          .selectAll("option").data(Object.keys(plotdata.columns).sort())
+            .enter().append("option")
+            .attr("value", function(d) {return d})
+            .text(function(d) {return d});
+            
+      axis_controls
+        .append("select")
+          .classed("scale-select", true)
+          .attr("id", function(d) {return d + "scale"})
+          .attr("axis", function(d) {return d[0]})
+          .on("change", function() {
+            var axis = d3.select(this).attr("axis") + "transform",
+                transform = this.value;
+            webreduce.editor._active_plot[axis](transform);  
+          })
+          .selectAll("option").data(["linear", "log"])
+            .enter().append("option")
+            .attr("value", function(d) {return d})
+            .text(function(d) {return d})
+      
+      plot_controls.selectAll(".show-boxes")
+        .data(["errorbars", "points", "line"])
+        .enter().append("label")
+        .classed("show-boxes", true)
+        .text(function(d) {return d})
+        .append("input")
+          .attr("id", function(d) {return "show_" + d})
+          .attr("type", "checkbox")
+          .attr("checked", "checked")
+          .on("change", function() {
+            var o = mychart.options();
+            o[this.id] = this.checked;
+            webreduce.editor._active_plot.options(o).update();
+          });
+          
+      plot_controls
+        .append("input")
+          .attr("type", "button")
+          .attr("id", "export_data")
+          .attr("value", "export")
+          .on("click", webreduce.editor.export_data)
+      
+      /*
+      plot_controls
+        .append("input")
+          .attr("type", "button")
+          .attr("id", "print_view")
+          .attr("value", "print view")
+          .on("click", function() {webreduce.editor._active_plot.print_plot()})
+      */
+      
+      plot_controls
+        .append("input")
+          .attr("type", "button")
+          .attr("id", "download_svg")
+          .attr("value", "\u2B63 svg")
+          .on("click", function() {
+            var chart = webreduce.editor._active_plot;
+            var svg = chart.export_svg();
+            var serializer = new XMLSerializer();
+            var output = serializer.serializeToString(svg);
+            var filename = prompt("Save svg as:", "plot.svg");
+            if (filename == null) {return} // cancelled
+            webreduce.download(output, filename);
+          });
+    }
+    
+    
+    if (options.xcol) {
+      $("#xcol").val(options.xcol);
+    } else {
+      options.xcol = $("#xcol").val();
+    }
+    if (options.ycol) {
+      $("#ycol").val(options.ycol);
+    } else {
+      options.ycol = $("#ycol").val();
+    }
+    
+    if (options.xtransform) {
+      $("#xscale").val(options.xtransform);
+    } else {
+      options.xtransform = $("#xscale").val();
+    }
+    if (options.ytransform) {
+      $("#yscale").val(options.ytransform);
+    } else {
+      options.ytransform = $("#yscale").val();
+    }
+    
+    options.show_errorbars = $("#show_errorbars").prop("checked");
+    options.show_points = $("#show_points").prop("checked");
+    options.show_line = $("#show_line").prop("checked");
+    
+    var xcol = options.xcol || "x";
+    var ycol = options.ycol || "y";
+    
+    var chartdata = make_chartdata(xcol, ycol);
+    // create the nd chart:
+    var mychart = new xyChart(options);
+    d3.selectAll("#plotdiv").selectAll("svg, div").remove();
+    d3.selectAll("#plotdiv").data([chartdata]).call(mychart);
+    mychart.zoomRect(true);
+    webreduce.callbacks.resize_center = mychart.autofit;
+    
+    d3.selectAll("#plot_controls .axis-controls .column-select").on("change", function() {
+      var parent = d3.select("#plot_controls");
+      var xcol = parent.select("#xcol").node().value;
+      var ycol = parent.select("#ycol").node().value;
+      var new_data = make_chartdata(xcol, ycol);
+      var xlabel = plotdata.columns[xcol].label +  " (" + plotdata.columns[xcol].units + ")";
+      var ylabel = plotdata.columns[ycol].label +  " (" + plotdata.columns[ycol].units + ")";
+      var new_options = webreduce.editor._active_plot.options();
+      new_options.axes.xaxis.label = xlabel;
+      new_options.axes.yaxis.label = ylabel;
+      webreduce.editor._active_plot.options(new_options).source_data(new_data);  
+    })
+    
     return mychart
   }
   
@@ -753,7 +943,8 @@ webreduce.editor = webreduce.editor || {};
             }
           }
           current_instrument = instrument_id;
-          webreduce.editor.load_template(instrument_def.templates[default_template]); 
+          var template_copy = jQuery.extend(true, {}, instrument_def.templates[default_template]);
+          webreduce.editor.load_template(template_copy); 
         });
   }
   
