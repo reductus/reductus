@@ -359,12 +359,27 @@ webreduce.editor = webreduce.editor || {};
             webreduce.editor._active_plot.options(o).update();
           });
           
-       plot_controls
+      plot_controls
         .append("input")
           .attr("type", "button")
           .attr("id", "export_data")
           .attr("value", "export")
           .on("click", webreduce.editor.export_data)
+      
+      plot_controls
+        .append("input")
+          .attr("type", "button")
+          .attr("id", "download_svg")
+          .attr("value", "\u2B63 svg")
+          .on("click", function() {
+            var chart = webreduce.editor._active_plot;
+            var svg = chart.export_svg();
+            var serializer = new XMLSerializer();
+            var output = serializer.serializeToString(svg);
+            var filename = prompt("Save svg as:", "plot.svg");
+            if (filename == null) {return} // cancelled
+            webreduce.download(output, filename);
+          }); 
     }
     
     return mychart
