@@ -753,7 +753,8 @@ webreduce.editor = webreduce.editor || {};
             }
           }
           current_instrument = instrument_id;
-          webreduce.editor.load_template(instrument_def.templates[default_template]); 
+          var template_copy = jQuery.extend(true, {}, instrument_def.templates[default_template]);
+          webreduce.editor.load_template(template_copy);
         });
   }
   
