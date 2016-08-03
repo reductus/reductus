@@ -675,7 +675,7 @@ def join(data, tolerance=0.15, order='file', group_by = "polarization"):
 
     output (refldata[]) : joined data
 
-    2016-08-02 Paul Kienzle
+    2016-08-03 Paul Kienzle
     """
     from .joindata import sort_files, join_datasets
     from .util import group_by_key
