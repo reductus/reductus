@@ -1,5 +1,6 @@
 import numpy as np
 from uncertainty import Measurement
+import datetime
 
 IGNORE_CORNER_PIXELS = True
 
@@ -56,6 +57,8 @@ class SansData(object):
         #return self.__str__()
     def get_plottable(self): 
         data = self.data.x.astype("int")
+        xdim = data.shape[0]
+        ydim = data.shape[1]
         if not (np.abs(data) > 1e-10).any():
             zmin = 0.0
             zmax = 1.0
@@ -67,9 +70,23 @@ class SansData(object):
                 zmax = data[mask].max()
             else:
                 zmax = data.max()
+        if self.qx is None or self.qy is None:
+            xmin = 0
+            xmax = 128
+            ymin = 0
+            ymax = 128
+            xlabel = "X"
+            ylabel = "Y"
+        else:
+            xmin = self.qx.min()
+            xmax = self.qx.max()
+            ymin = self.qy.min()
+            ymax = self.qy.max()
+            xlabel = "Qx (inv. Angstroms)"
+            ylabel = "Qy (inv. Angstroms)"
         plottable_data = {
             'type': '2d',
-            'z':  [data.tolist()],
+            'z':  [data.T.tolist()],
             'title': self.metadata['run.filename']+': ' + self.metadata['sample.labl'],
             #'metadata': self.metadata,
             'options': {
@@ -79,17 +96,17 @@ class SansData(object):
                 }
             },
             'dims': {
-                'xmax': 128,
-                'xmin': 0.0, 
-                'ymin': 0.0, 
-                'ymax': 128,
-                'xdim': 128,
-                'ydim': 128,
+                'xmax': xmax,
+                'xmin': xmin, 
+                'ymin': ymin, 
+                'ymax': ymax,
+                'xdim': xdim,
+                'ydim': ydim,
                 'zmin': zmin,
                 'zmax': zmax,
                 },
-            'xlabel': 'X',
-            'ylabel': 'Y',
+            'xlabel': xlabel,
+            'ylabel': ylabel,
             'zlabel': 'Intensity (I)',
             };
         return plottable_data
@@ -105,3 +122,40 @@ class SansData(object):
     @classmethod
     def loads(cls, str): 
         return pickle.loads(str)
+
+class Sans1dData(object):
+    properties = ['x', 'v', 'dx', 'dv', 'xlabel', 'vlabel', 'xunits', 'vunits', 'metadata']
+    
+    def __init__(self, x, v, dx=0, dv=0, xlabel="", vlabel="", xunits="", vunits="", metadata=None):
+        self.x=x
+        self.v=v
+        self.dx=dx
+        self.dv=dv
+        self.xlabel=xlabel
+        self.vlabel=vlabel
+        self.xunits=xunits
+        self.vunits=vunits
+        self.metadata = metadata if metadata is not None else {}
+
+    def todict(self):
+        obj = self
+        props = {}
+        properties = self.properties
+        for a in properties:
+            attr = getattr(obj, a)
+            if isinstance(attr, np.integer):
+                obj = int(attr)
+            elif isinstance(attr, np.floating):
+                attr = float(attr)
+            elif isinstance(attr, np.ndarray):
+                attr = attr.tolist()
+            elif isinstance(attr, datetime.datetime):
+                attr =  [attr.year, attr.month, attr.day,
+                         attr.hour, attr.minute, attr.second]
+            props[a] = attr
+        return props
+        
+    def get_plottable(self):
+        return self.todict()
+    def get_metadata(self):
+        return self.todict()

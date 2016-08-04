@@ -2,20 +2,27 @@ from reflred import hzf_readonly_stripped as hzf
 from sansdata import SansData
 
 metadata_lookup = {
-    "det.dis": "detectorPosition/softPosition",
-    "resolution.lmda" : "wavelength/wavelength",
-    "det.beamx": "areaDetector/beamCenterX",
-    "det.beamy": "areaDetector/beamCenterY",
-    "analysis.intent": "trajectoryData/intent",
-    "analysis.filepurpose": "trajectoryData/filepurpose",
-    "sample.name": "sample/name",
-    "sample.description": "sample/description",
-    "sample.labl": "sample/description", # compatibility
-    "polarization.front": "frontPolarization/direction",
-    "polarization.back": "backPolarization/direction",
-    "run.filename": "trajectoryData/fileName",
-    "analysis.groupid": "trajectoryData/groupid",
-    "run.configuration": "configuration/key"
+    "det.dis": "DAS_logs/detectorPosition/softPosition",
+    "resolution.lmda" : "DAS_logs/wavelength/wavelength",
+    "det.beamx": "DAS_logs/areaDetector/beamCenterX",
+    "det.beamy": "DAS_logs/areaDetector/beamCenterY",
+    "det.pixelsizex": "instrument/detector/x_pixel_size",
+    "det.pixelsizey": "instrument/detector/y_pixel_size",
+    "analysis.intent": "DAS_logs/trajectoryData/intent",
+    "analysis.filepurpose": "DAS_logs/trajectoryData/filepurpose",
+    "sample.name": "DAS_logs/sample/name",
+    "sample.description": "DAS_logs/sample/description",
+    "sample.labl": "DAS_logs/sample/description", # compatibility
+    "polarization.front": "DAS_logs/frontPolarization/direction",
+    "polarization.back": "DAS_logs/backPolarization/direction",
+    "run.filename": "DAS_logs/trajectoryData/fileName",
+    "run.filePrefix": "DAS_logs/trajectoryData/filePrefix",
+    "run.experimentScanID": "DAS_logs/trajectory/experimentScanID",
+    "run.detcnt": "control/detector_counts",
+    "run.rtime": "control/count_time",
+    "run.moncnt": "control/monitor_counts",
+    "analysis.groupid": "DAS_logs/trajectoryData/groupid",
+    "run.configuration": "DAS_logs/configuration/key"
 }
 
 def readSANSNexuz(input_file, file_obj=None):
@@ -24,12 +31,11 @@ def readSANSNexuz(input_file, file_obj=None):
     for entryname, entry in file.items():
         metadata = {}
         reals = {}
-        das = entry['DAS_logs']
-    
+            
         detdata = entry['data/areaDetector'].value.reshape(128,128)
 
         for mkey in metadata_lookup:
-            field = das.get(metadata_lookup[mkey], None)
+            field = entry.get(metadata_lookup[mkey], None)
             if field is not None:
                 field = field.value[0]
                 if field.dtype.kind == 'f':
