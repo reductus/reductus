@@ -795,6 +795,7 @@ webreduce.editor = webreduce.editor || {};
 
     target.selectAll(".module").classed("draggable wireable", false);
     target.selectAll("g.module").on("click", webreduce.editor.handle_module_clicked);
+    target.selectAll("g.module").on("contextmenu", webreduce.editor.handle_module_contextmenu);
     
     autoselected = template_def.modules.findIndex(function(m) {
       var has_fileinfo = webreduce.editor._module_defs[m.module].fields

@@ -31,12 +31,22 @@
   <script type="text/javascript" src="js/webreduce/instruments/ncnr.refl.js"></script>
   <script type="text/javascript" src="js/webreduce/instruments/ncnr.ospec.js"></script>
   <script type="text/javascript" src="js/webreduce/editor.js"></script>
+  <script type="text/javascript" src="js/webreduce/editor.handle_module_contextmenu.js"></script>  
   <script type="text/javascript" src="js/webreduce/filebrowser.js"></script>
   <script type="text/javascript" src="js/webreduce/main.js"></script>
 </head>
 
 <body>
-<div id="navigation" class="ui-layout-wrapper ui-layout-west"></div>
+<div id="west_panel" class="ui-layout-wrapper ui-layout-west">
+  <UL>
+		<LI><A href="#tabs-west-1">raw data</A></LI>
+		<LI><A href="#tabs-west-2">stashed</A></LI>
+	</UL>
+  <div id="tabs-west-1"><div id="navigation"></div></div>
+  <div id="tabs-west-2">Hello</div>
+
+
+</div>
 <div id="bottom_panel" class="ui-layout-south"></div>
 <div id="top_panel" class="ui-layout-north">
     <div id="main_menu_div" style="display:inline-block;">

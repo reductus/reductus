@@ -80,7 +80,9 @@ webreduce.instruments = webreduce.instruments || {};
       layout.toggle('east');
       layout.allowOverflow('north');
       //$("#menu").menu({width: '200px;', position: {my: "left top", at: "left+15 bottom"}});
-	  
+      $(".ui-layout-west")
+				.tabs()
+
 	  
       webreduce.layout = layout;
       webreduce.download = (function () {
