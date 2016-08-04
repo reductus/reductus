@@ -28,7 +28,7 @@ def define_instrument():
         id=INSTRUMENT,
         name='NCNR SANS',
         menu=[('steps', modules)],
-        datatypes=[sans2d, sans1d], # params],
+        datatypes=[sans2d, sans1d, params],
         template_defs = templates.get_templates(INSTRUMENT),
         )
 
