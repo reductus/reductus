@@ -379,7 +379,7 @@ webreduce.editor = webreduce.editor || {};
             var filename = prompt("Save svg as:", "plot.svg");
             if (filename == null) {return} // cancelled
             webreduce.download(output, filename);
-          }); 
+          });
     }
     
     return mychart
