@@ -12,6 +12,7 @@ import dataflow.core as df
 import dataflow.modules.refl
 from dataflow.modules.refl import INSTRUMENT # default
 import dataflow.modules.ospec
+import dataflow.modules.sans
 
 try:
     import config
@@ -197,6 +198,7 @@ def create_instruments():
     instruments = getattr(config, 'instruments', ['refl']) 
     for instrument_id in instruments:
         getattr(dataflow.modules, instrument_id).define_instrument()
+
     
 if __name__ == '__main__':
     create_instruments()
