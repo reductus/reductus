@@ -56,7 +56,7 @@ class SansData(object):
     #def __repr__(self):
         #return self.__str__()
     def get_plottable(self): 
-        data = self.data.x.astype("int")
+        data = self.data.x.astype("float")
         xdim = data.shape[0]
         ydim = data.shape[1]
         if not (np.abs(data) > 1e-10).any():
@@ -159,3 +159,10 @@ class Sans1dData(object):
         return self.todict()
     def get_metadata(self):
         return self.todict()
+
+class Parameters(dict):
+    def get_metadata(self):
+        return self
+    def get_plottable(self):
+        return self
+

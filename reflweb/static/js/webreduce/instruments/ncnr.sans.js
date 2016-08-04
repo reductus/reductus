@@ -79,6 +79,9 @@ webreduce.instruments['ncnr.sans'] = webreduce.instruments['ncnr.sans'] || {};
     else if (result.datatype == 'ncnr.sans.sans2d' && result.values.length > 0) {
       plottable = result.values.slice(-1)[0].plottable;
     }
+    else if (result.datatype == 'ncnr.sans.params' && result.values.length > 0) {
+      plottable = {"type": "params", "params": result.values}
+    }
     return plottable
   };
   

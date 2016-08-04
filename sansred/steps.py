@@ -1,6 +1,7 @@
 from posixpath import basename, join
 from copy import copy, deepcopy
 import numpy as np
+from sansdata import SansData, Sans1dData, Parameters
 import StringIO
 
 ALL_ACTIONS = []
@@ -135,7 +136,7 @@ def PixelsToQ(data, correct_solid_angle=True):
     qx=q*np.cos(alpha)
     qy=q*np.sin(alpha)
     if correct_solid_angle:
-        data.data.x *= (np.cos(theta)**3)
+        data.data.x = data.data.x * (np.cos(theta)**3)
     res=SansData()
     res.data=copy.copy(data.data)
     res.metadata=copy.deepcopy(data.metadata)
@@ -233,8 +234,8 @@ def correct_detector_efficiency(sansdata):
     shape=sansdata.data.x.shape
     (x0,y0) = np.shape(sansdata.data.x)
     x,y = np.indices(shape)
-    X = data.metadata['det.pixelsizex']/10.0*(x-x0/2)
-    Y = data.metadata['det.pixelsizey']/10.0*(y-y0/2)
+    X = sansdata.metadata['det.pixelsizex']/10.0*(x-x0/2)
+    Y = sansdata.metadata['det.pixelsizey']/10.0*(y-y0/2)
     r=np.sqrt(X**2+Y**2)
     theta_det=np.arctan2(r,L2*100)/2
     
@@ -345,7 +346,7 @@ def generate_transmission(in_beam,empty_beam,xmin=55,xmax=74,ymin=53,ymax=72):
     
     output (params): calculated transmission for the integration area
     
-    2016-08-03 Brian Maranville    
+    2016-08-04 Brian Maranville    
     """
     #I_in_beam=0.0
     #I_empty_beam=0.0
@@ -360,7 +361,7 @@ def generate_transmission(in_beam,empty_beam,xmin=55,xmax=74,ymin=53,ymax=72):
     #        I_in_beam=I_in_beam+in_beam.data.x[x,y]
     #        I_empty_beam=I_empty_beam+empty_beam.data.x[x,y]
     I_in_beam = np.sum(in_beam.data.x[xmin:xmax+1, ymin:ymax+1])
-    I_empty_beam = np.sum(in_beam.data.x[xmin:xmax+1, ymin:ymax+1])
+    I_empty_beam = np.sum(empty_beam.data.x[xmin:xmax+1, ymin:ymax+1])
     result=Parameters(transmission=I_in_beam/I_empty_beam)
     
     return result

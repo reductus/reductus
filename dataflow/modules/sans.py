@@ -3,15 +3,9 @@ from dataflow.automod import make_modules
 from dataflow import templates
 
 from sansred import steps
-from sansred.sansdata import SansData, Sans1dData
+from sansred.sansdata import SansData, Sans1dData, Parameters
 
 INSTRUMENT = "ncnr.sans"
-
-class Parameters(dict):
-    def get_metadata(self):
-        return self
-    def get_plottable(self):
-        return self
 
 def define_instrument():
     # Define modules
