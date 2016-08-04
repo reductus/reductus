@@ -192,9 +192,11 @@ def create_instruments():
 
     if config.use_redis == True:
         use_redis()
-
-    dataflow.modules.refl.define_instrument()
-    dataflow.modules.ospec.define_instrument()
+    
+    # load refl instrument if nothing specified in config
+    instruments = getattr(config, 'instruments', ['refl']) 
+    for instrument_id in instruments:
+        getattr(dataflow.modules, instrument_id).define_instrument()
     
 if __name__ == '__main__':
     create_instruments()
