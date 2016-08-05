@@ -522,7 +522,7 @@ webreduce.editor = webreduce.editor || {};
     }
     
     selector.callbacks(onselect);
-
+    
     var select_select = target.append("div")
       .style("background-color", "LightYellow")
       .classed("zoom-select-select", true)
@@ -557,7 +557,7 @@ webreduce.editor = webreduce.editor || {};
       .attr("type", "radio")
       .attr("value", "deselect")
 
-    var onselect = function(ev) {
+    var selectorchange = function(ev) {
       if (this.value == 'zoom') {
         webreduce.editor._active_plot.zoomRect(true);
         selector.selectRect(false);
@@ -574,7 +574,7 @@ webreduce.editor = webreduce.editor || {};
       }
     }
     
-    select_select.selectAll("input").on("change", onselect);
+    select_select.selectAll("input").on("change", selectorchange);
     
     //webreduce.editor.show_plots(datasets);
     function update_plot() {
