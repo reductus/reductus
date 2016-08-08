@@ -47,7 +47,6 @@ def module(action):
 #################
 # Loader stuff   
 ################# 
-DETECTOR_ACTIVE = (320, 340)
 
 def url_load(fileinfo):
     from dataflow.modules.load import url_get
@@ -60,7 +59,7 @@ def url_load(fileinfo):
 
 @cache
 @module
-def LoadSANS(filelist=None, flip=True, transpose=True):
+def LoadSANS(filelist=None, flip=False, transpose=False):
     """ 
     loads a data file into a SansData obj and returns that.
     Checks to see if data being loaded is 2D; if not, quits
@@ -89,6 +88,11 @@ def LoadSANS(filelist=None, flip=True, transpose=True):
         name = basename(path)
         fid = StringIO.StringIO(url_get(fileinfo))
         entries = readSANSNexuz(name, fid)
+        for entry in entries:
+            if flip:
+                entry.data.x = np.fliplr(entry.data.x)
+            if transpose:
+                entry.data.x = entry.data.x.T
         data.extend(entries)
     
     return data
@@ -423,6 +427,50 @@ def correct_solid_angle(sansdata):
     
     sansdata.data.x = sansdata.data.x*(np.cos(sansdata.theta)**3)
     return sansdata
+
+@cache
+@module
+def SuperLoadSANS(filelist=None, do_solid_angle=True, do_det_eff=True, do_deadtime=True, deadtime=3.4e-6, do_mon_norm=True, mon0=1e8):
+    """ 
+    loads a data file into a SansData obj, and performs common reduction steps
+    Checks to see if data being loaded is 2D; if not, quits
+    
+        
+    **Inputs**
+    
+    filelist (fileinfo[]): Files to open.
+    
+    do_solid_angle {Solid angle corr.} (bool): correct for mapping of Ewald sphere to flat detector
+        
+    do_det_eff {Detector efficiency corr.} (bool): correct detector efficiency
+    
+    do_deadtime {Dead time corr.} (bool): correct for detector efficiency drop due to detector dead time
+    
+    deadtime {Dead time value} (float): value of the dead time in the calculation above
+    
+    do_mon_norm {Monitor normalization} (bool): normalize data to a provided monitor value
+    
+    mon0 (float): provided monitor
+        
+    **Returns**
+    
+    output (sans2d[]): all the entries loaded.
+    
+    2016-04-17 Brian Maranville    
+    """
+    data = LoadSANS(filelist, flip=False, transpose=False)
+    
+    data = [PixelsToQ(d, correct_solid_angle=do_solid_angle) for d in data]
+    
+    if do_det_eff:
+        data = [correct_detector_efficiency(d) for d in data]
+    if do_deadtime:
+        data = [correct_dead_time(d, deadtime=deadtime) for d in data]
+    if do_mon_norm:
+        data = [monitor_normalize(d, mon0=mon0) for d in data]
+        
+    return data
+
         
 def getPoissonUncertainty(y):
     """ for a poisson-distributed observable, get the range of 
