@@ -1116,6 +1116,67 @@ def super_load(filelist=None,
 
     return datasets
 
+@cache
+@module
+def super_load_sorted(filelist=None,
+               detector_correction=False,
+               monitor_correction=False,
+               sample_width=None,
+               base='monitor'):
+    """
+    Load a list of nexus files from the NCNR data server, to be sorted by
+    the intent stored in the file.  If intent does not match 
+    'specular', 'background+', 'background-' or 'intensity', it is not returned.
+
+    **Inputs**
+
+    filelist (fileinfo[]): List of files to open.
+
+    detector_correction {Apply detector deadtime correction} (bool)
+    : Which deadtime constant to use for detector deadtime.
+
+    monitor_correction {Apply monitor deadtime correction} (bool)
+    : Which deadtime constant to use for monitor deadtime.
+    
+    sample_width {Sample width (mm)} (float): Width of the sample along the beam direction in mm,
+    used for calculating the effective resolution when the sample is smaller 
+    than the beam.  Leave blank to use value from data file.
+    
+    base {Normalize by} (opt:auto|monitor|time|power|none)
+    : how to convert from counts to count rates
+
+    **Returns**
+
+    spec (refldata[]): All entries of all spec files in the list.
+    
+    bgp (refldata[]): All entries of all bg+ files in the list.
+    
+    bgm (refldata[]): All entries of all bg- files in the list.
+    
+    slit (refldata[]): All entries of all slit files in the list.
+
+    2016-06-30 Brian Maranville
+    """
+    from .load import url_load_list
+    auto_divergence = True
+    sorting_key = "intent"
+    sort_values = ["specular", "background+", "background-", "intensity"]
+    outputs = dict([(key, []) for key in sort_values])
+
+    for data in url_load_list(filelist):
+        if auto_divergence:
+            data = divergence(data, sample_width)
+        if detector_correction:
+            data = detector_dead_time(data, None)
+        if monitor_correction:
+            data = monitor_dead_time(data, None)
+        data = normalize(data, base=base)
+        intent = getattr(data, sorting_key, None)
+        if intent in outputs:
+            outputs[intent].append(data)
+
+    return tuple([outputs[k] for k in sort_values])
+
 @module
 def spin_asymmetry(data):
     """
