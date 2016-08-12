@@ -1,6 +1,7 @@
 import numpy as np
 from uncertainty import Measurement
 import datetime
+from copy import copy, deepcopy
 
 IGNORE_CORNER_PIXELS = True
 
