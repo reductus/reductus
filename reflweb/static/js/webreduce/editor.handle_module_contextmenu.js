@@ -12,38 +12,7 @@ webreduce.editor = webreduce.editor || {};
     } else {
         d3_target = d3.select(d3.event.target);
         var popup;
-        /* no wire interaction yet...
-        if (d3_target.classed("wire")) {
-            d3.event.preventDefault();
-            contextMenuShowing = true;
-
-            // Build the popup            
-            popup = d3.select("#editor_div")
-            .append("div")
-            .attr("class", "popup")
-            .style("left", d3.event.x + "px")
-            .style("top", d3.event.y + "px")
-            .append("ul")
-            
-            popup.append("li").text("delete").on("click", function() {
-                var active_data = d3_target.datum();
-                var parentNode = d3_target.node().parentNode;
-                var wires = d3.select(parentNode).datum().wires;
-                for (var i=0; i<wires.length; i++) {
-                    var w = wires[i]; 
-                    if (w.source == active_data.source && w.target == active_data.target) {
-                        wires.splice(i,1);
-                        break;
-                    }
-                };
-                e.update();
-                d3.select(".popup").remove(); 
-                contextMenuShowing=false;
-                
-            });
-            console.log(popup);
-        }
-        */
+        
         if (d3_target.classed("title")) {
             d3.event.preventDefault();
             contextMenuShowing = true;
