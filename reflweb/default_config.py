@@ -27,3 +27,4 @@ data_sources = {
 file_helper_url = {
     "ncnr": "http://ncnr.nist.gov/ipeek/listftpfiles.php"
 }
+instruments = ["refl"]

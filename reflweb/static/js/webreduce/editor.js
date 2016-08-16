@@ -359,12 +359,27 @@ webreduce.editor = webreduce.editor || {};
             webreduce.editor._active_plot.options(o).update();
           });
           
-       plot_controls
+      plot_controls
         .append("input")
           .attr("type", "button")
           .attr("id", "export_data")
           .attr("value", "export")
           .on("click", webreduce.editor.export_data)
+      
+      plot_controls
+        .append("input")
+          .attr("type", "button")
+          .attr("id", "download_svg")
+          .attr("value", "\u2B63 svg")
+          .on("click", function() {
+            var chart = webreduce.editor._active_plot;
+            var svg = chart.export_svg();
+            var serializer = new XMLSerializer();
+            var output = serializer.serializeToString(svg);
+            var filename = prompt("Save svg as:", "plot.svg");
+            if (filename == null) {return} // cancelled
+            webreduce.download(output, filename);
+          });
     }
     
     return mychart
@@ -570,10 +585,100 @@ webreduce.editor = webreduce.editor || {};
       //.text(JSON.stringify(datum.value, null, 2))
       .text(prettyJSON(datum.value))
       .on("change", function(d) {
-        console.log("changing:", this, d);
+        //console.log("changing:", this, d);
         datum.value = JSON.parse(this.value);
         update_plot();
       });
+      
+    var drag_instance = webreduce.editor._active_plot.drag;
+    var selector = new rectangleSelect(drag_instance);
+    webreduce.editor._active_plot.interactors(selector);
+    var select_active = true;
+    
+    var onselect = function(xmin, xmax, ymin, ymax) {
+      d3.selectAll("#plotdiv svg g.series").each(function(d,i) {
+        // i is index of dataset
+        var series_select = d3.select(this);
+        var index_list = datum.value[i];
+        series_select.selectAll(".dot").each(function(dd, ii) {
+          // ii is the index of the point in that dataset.
+          var x = dd[0], 
+              y = dd[1];
+          if (x >= xmin && x <= xmax && y >= ymin && y <= ymax) {
+            var dot = d3.select(this);
+            dot.classed("masked", select_active);
+            // manipulate data list directly:
+            var index_index = index_list.indexOf(ii);
+            if (index_index > -1 && !select_active) { 
+              // then the index exists, but we're deselecting:
+              index_list.splice(index_index, 1); 
+            }
+            else if (index_index < 0 && select_active) {
+              // then the index doesn't exist and we're selecting
+              index_list.push(ii); 
+            }
+          }
+        });
+        index_list.sort();
+      });
+      index_div.datum(datum);
+      input.text(prettyJSON(datum.value));
+    }
+    
+    selector.callbacks(onselect);
+    
+    var select_select = target.append("div")
+      .style("background-color", "LightYellow")
+      .classed("zoom-select-select", true)
+      .append("form")
+    
+    select_select.append("span")
+      .text("left-click mouse:")
+      .append("br")
+    
+    select_select
+      .append("label")
+      .text("zoom")
+      .append("input")
+      .attr("name", "select_select")
+      .attr("type", "radio")
+      .attr("value", "zoom")
+      .property("checked", true)
+    
+    select_select
+      .append("label")
+      .text("select")
+      .append("input")
+      .attr("name", "select_select")
+      .attr("type", "radio")
+      .attr("value", "select")
+      
+    select_select
+      .append("label")
+      .text("deselect")
+      .append("input")
+      .attr("name", "select_select")
+      .attr("type", "radio")
+      .attr("value", "deselect")
+
+    var selectorchange = function(ev) {
+      if (this.value == 'zoom') {
+        webreduce.editor._active_plot.zoomRect(true);
+        selector.selectRect(false);
+      }
+      else if (this.value == 'select') {
+        select_active = true;
+        webreduce.editor._active_plot.zoomRect(false);
+        selector.selectRect(true);
+      }
+      else if (this.value == 'deselect') {
+        select_active = false;
+        webreduce.editor._active_plot.zoomRect(false);
+        selector.selectRect(true);
+      }
+    }
+    
+    select_select.selectAll("input").on("change", selectorchange);
     
     //webreduce.editor.show_plots(datasets);
     function update_plot() {

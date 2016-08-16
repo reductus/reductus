@@ -1,0 +1,11 @@
+{
+  "modules": [
+    {
+      "module": "ncnr.sans.LoadSANS",
+      "title": "Loadsans",
+      "x": 100,
+      "y": 100
+    }
+  ],
+  "wires": []
+}

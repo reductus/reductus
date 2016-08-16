@@ -188,7 +188,6 @@ webreduce.instruments['ncnr.refl'] = webreduce.instruments['ncnr.refl'] || {};
         entry = file_objs[leaf.li_attr.filename].values.filter(function(f) {return f.entry == leaf.li_attr.entryname});
         if (entry && entry[0]) {
           var e = entry[0];
-          console.log(e.sample);
           if ('sample' in e && 'description' in e.sample) {
             leaf.li_attr.title = e.sample.description;
             var parent_id = leaf.parent;

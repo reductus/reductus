@@ -275,7 +275,14 @@ def poisson_average(y, dy, norm='monitor'):
     combined_monitors, combined_counts = np.sum(monitors), np.sum(counts)
     bar_y = combined_counts/combined_monitors
     if norm == "monitor":
-        bar_dy = bar_y * np.sqrt(1./combined_counts + 1./combined_monitors)
+        if bar_y == 0:
+            # then the simplification: sqrt(1/N + 1/M) is invalid,
+            # use |dy| = 1/M*sqrt((dN)^2 + 1/M)
+            # but dN in this case is 1.
+            bar_dy = 1./combined_monitors * np.sqrt(1. + 1./combined_monitors)
+        else:
+            # the simplification will work in this case, sort of
+            bar_dy = bar_y * np.sqrt(1./combined_counts + 1./combined_monitors)
     else:
         bar_dy = bar_y * np.sqrt(1./combined_monitors)
 
