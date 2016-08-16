@@ -370,8 +370,112 @@ webreduce.editor = webreduce.editor || {};
     return mychart
   }
 
-  webreduce.editor.export_data = function() {
-    var filename = prompt("Export data as:", "myfile.refl");
+  webreduce.editor.stash_data = function(suggested_name) {
+    // embed the active template in a subroutine, exposing the
+    // currently active output.  Store the structure in the 
+    // browser.
+    if (!window.localStorage) {alert("localStorage not supported in your browser"); return }
+    
+    var suggested_name = (suggested_name == null) ?  "processed" : suggested_name;
+    var stashname = prompt("stash data as:", suggested_name);
+    if (stashname == null) {return} // cancelled
+    
+    var existing_stashes = JSON.parse(localStorage['webreduce.editor.stashes'] || "{}");
+    //var existing_stashnames = Object.keys(existing_stashes);
+    
+    if (existing_stashes.hasOwnProperty(stashname)) {
+      var overwrite = confirm("stash named " + stashname + " already exists.  Overwrite?");
+      if (!overwrite) {return}
+    }
+    
+    var w = webreduce.editor,
+      node = w._active_node,
+      terminal = w._active_terminal,
+      template = w._active_template;
+    var template_copy = jQuery.extend(true, {}, template);
+    var subroutine = {};
+    subroutine.module = "user.stashed"
+    subroutine.title = stashname;
+    subroutine.module_def = {
+      "template": template_copy,
+      "inputs": [],
+      "fields": [],
+      "outputs": [{"source_module": node, "source_terminal": terminal, "terminal_id": "stashed"}],
+      "action_id": "subroutine",
+      "description": "previously processed data"
+    }
+    existing_stashes[stashname] = subroutine;
+    localStorage['webreduce.editor.stashes'] = JSON.stringify(existing_stashes);
+    webreduce.editor.load_stashes(existing_stashes);
+  }
+  
+  webreduce.editor.load_stashes = function(stashes) {
+    var existing_stashes = stashes || JSON.parse(localStorage['webreduce.editor.stashes'] || "{}");
+    var stashnames = Object.keys(existing_stashes);
+    d3.select("div#stashedlist").selectAll("ul").remove();
+    var stashedlist = d3.select("div#stashedlist")
+      .style("padding-left", "10px")
+      .append("ul")
+      .style("list-style", "none")
+      .style("padding", "0px")
+      
+    var sn = stashedlist.selectAll("li").data(stashnames)
+      .enter().append("li");
+      
+    sn.each(function() {
+      var li = d3.select(this);
+      li.append("input")
+        .attr("type", "checkbox")
+      li.append("span")
+        .text(function(d) {return d})
+      li.append("span")
+        .classed("stash-reload", true)
+        .style("text-decoration", "underline")
+        .style("color", "blue")
+        .style("font-style", "italic")
+        .style("padding-left", "10px")
+        .style("cursor", "pointer")
+        .text("reload")
+        .on('click', function(d) {reload_stash(d)});
+      li.append("span")
+        .classed("stash-remove", true)
+        .style("text-decoration", "underline")
+        .style("color", "red")
+        .style("font-style", "italic")
+        .style("padding-left", "10px")
+        .style("cursor", "pointer")
+        .text("remove")
+        .on('click', function(d) {remove_stash(d)});
+      });
+      
+    //console.log(JSON.stringify(subroutine, null, 2));    
+  }
+  
+  function remove_stash(stashname) {
+    var existing_stashes = JSON.parse(localStorage['webreduce.editor.stashes'] || "{}");
+    if (stashname in existing_stashes) {
+      delete existing_stashes[stashname];
+      localStorage['webreduce.editor.stashes'] = JSON.stringify(existing_stashes);
+      webreduce.editor.load_stashes();
+    }
+  }
+  
+  function reload_stash(stashname) {
+    var overwrite = confirm("discard active template to load stashed?");
+    if (!overwrite) {return}
+    var existing_stashes = JSON.parse(localStorage['webreduce.editor.stashes'] || "{}");
+    if (stashname in existing_stashes) {
+      var stashed = existing_stashes[stashname];
+      var template = stashed.module_def.template;
+      var node = stashed.module_def.outputs[0].source_module;
+      var terminal = stashed.module_def.outputs[0].source_terminal;
+      webreduce.editor.load_template(template, node, terminal);
+    }
+  }
+
+  webreduce.editor.export_data = function(suggested_name) {
+    var suggested_name = (suggested_name == null) ?  "myfile.refl" : suggested_name;
+    var filename = prompt("Export data as:", suggested_name);
     if (filename == null) {return} // cancelled
     var w = webreduce.editor,
       node = w._active_node,

@@ -57,6 +57,8 @@ webreduce.instruments = webreduce.instruments || {};
         }
       })
       
+      webreduce.editor.load_stashes();
+      
       if (start_path == null) {
         webreduce.addDataSource("navigation", source, data_path);
       }
@@ -150,6 +152,12 @@ webreduce.instruments = webreduce.instruments || {};
           ))
         .append($("<li />", {id: "data_menu", text: "Data"})
           .append($("<ul />")
+            .append($("<li />", {text: "Stash"})
+              .on("click", function() {$("#main_menu").hide(); webreduce.editor.stash_data()})
+            )
+            .append($("<li />", {text: "Export"})
+              .on("click", function() {$("#main_menu").hide(); webreduce.editor.export_data()})
+            )
             .append($("<li />", {text: "Reload Exported"})
               .on("click", function() {$("#main_menu").hide(); reload_exported_dialog.dialog("open")})
             )
