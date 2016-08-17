@@ -682,14 +682,22 @@ webreduce.editor = webreduce.editor || {};
     select_select.selectAll("input").on("change", selectorchange);
     
     //webreduce.editor.show_plots(datasets);
+    
     function update_plot() {
-      datum.value.forEach(function(index_list, i) {
-        var series_select = d3.select(d3.selectAll("#plotdiv svg g.series")[0][i]);
-        index_list.forEach(function(index, ii) {
-          series_select.select(".dot:nth-of-type(" + (index+1).toFixed() + ")").classed("masked", true);
-        });
-      });
+      d3.selectAll("#plotdiv svg g.series").each(function(d,i) {
+        // i is index of dataset
+        var series_select = d3.select(this);
+        var index_list = datum.value[i];
+        //d.forEach(function(dd, ii) {
+        series_select.selectAll("circle.dot").each(function(dd, ii) {
+          if (index_list.indexOf(ii) > -1) {
+            var dot = d3.select(this);
+            dot.classed("masked", select_active);
+          }
+        })
+      })
     }
+    
     update_plot();
     
     d3.selectAll("#plotdiv .dot").on("click", null); // clear previous handlers
@@ -1005,7 +1013,7 @@ webreduce.editor = webreduce.editor || {};
 
     target.selectAll(".module").classed("draggable wireable", false);
     target.selectAll("g.module").on("click", webreduce.editor.handle_module_clicked);
-    target.selectAll("g.module").on("contextmenu", webreduce.editor.handle_module_contextmenu);
+    //target.selectAll("g.module").on("contextmenu", webreduce.editor.handle_module_contextmenu);
     
     autoselected = template_def.modules.findIndex(function(m) {
       var has_fileinfo = webreduce.editor._module_defs[m.module].fields
