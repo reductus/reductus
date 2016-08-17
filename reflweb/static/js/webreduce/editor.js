@@ -556,7 +556,7 @@ webreduce.editor = webreduce.editor || {};
     return radio    
   }
   
-  webreduce.editor.make_fieldUI.index = function(field, active_template, datum, module_def, target, datasets_in) {
+  webreduce.editor.make_fieldUI.index = function(field, active_template, datum_in, module_def, target, datasets_in) {
     if (target.select("div#indexlist").empty()) {
       target.append("div")
         .attr("id", "indexlist")
@@ -564,6 +564,7 @@ webreduce.editor = webreduce.editor || {};
     
     var datasets = datasets_in.values;
     // now have a list of datasets.
+    var datum = jQuery.extend(true, {}, datum_in);
     datasets.forEach(function(d,i) {
       datum.value[i] = datum.value[i] || [];
     });
