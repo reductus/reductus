@@ -47,7 +47,7 @@ def _dependencies(pairs):
 
     # Break pairs into left set and right set
     left, right = [set(s) for s in zip(*pairs)] if pairs != [] else ([], [])
-    while pairs:
+    while pairs != []:
         #print "within",pairs
         # Find which items only occur on the right
         independent = right - left
@@ -73,12 +73,12 @@ def _dependencies(pairs):
 
 
 # ========= Test code ========
-def _check(msg, n, pairs):
+def _check(msg, pairs, n):
     """
     Verify that the list n contains the given items, and that the list
     satisfies the partial ordering given by the pairs in partial order.
     """
-    order = processing_order(n, pairs)
+    order = processing_order(pairs, n=n)
     if len(set(order)) != n:
         raise RuntimeError("%s is missing items" % msg)
     for lo, hi in pairs:
@@ -91,34 +91,34 @@ def test():
     import numpy as np
 
     # No dependencies
-    _check("test empty", 9, [])
+    _check("test empty", [], 9)
 
     # No chain dependencies
-    _check("test2", 9, [(4, 1), (3, 2), (7, 6)])
+    _check("test2", [(4, 1), (3, 2), (7, 6)], 9)
 
     # Some chain dependencies
     pairs = [(4, 0), (0, 1), (1, 2), (7, 0), (3, 5)]
-    _check("test1", 9, pairs)
-    _check("test1 numpy", 9, np.array(pairs))
+    _check("test1", pairs, 9)
+    _check("test1 numpy", np.array(pairs), 9)
 
     # Cycle test
     pairs = [(1, 4), (4, 3), (4, 5), (5, 1)]
-    try: _ = processing_order(9, pairs)
+    try: _ = processing_order(pairs, n=9)
     except ValueError: pass
     else: raise Exception("test3 expect ValueError exception for %s" % (pairs,))
 
     # large test for gross speed check
     A = np.random.randint(4000, size=(1000, 2))
     A[:, 1] += 4000  # Avoid cycles
-    _check("test-large", 8000, A)
+    _check("test-large", A, 8000)
 
     # depth tests
     k = 200
     A = np.array([range(0, k), range(1, k + 1)]).T
-    _check("depth-1", 201, A)
+    _check("depth-1", A, 201)
 
     A = np.array([range(1, k + 1), range(0, k)]).T
-    _check("depth-2", 201, A)
+    _check("depth-2", A, 201)
 
 if __name__ == "__main__":
     test()

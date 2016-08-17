@@ -912,12 +912,6 @@ def test_parse_parameters():
     """
 
     p = dict((pk['id'], pk) for pk in parse_parameters(all_good.split('\n')))
-    for pk in p:
-        # Note: parse_datatype is not part of parse_parameters because we
-        # want to be able to check the default value for each type, and we
-        # only want the t
-        parse_datatype(pk)
-
     #import pprint; pprint.pprint(p)
 
     assert p['s1']['description'] == 'p1 description'
