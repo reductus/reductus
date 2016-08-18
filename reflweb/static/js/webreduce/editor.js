@@ -441,27 +441,35 @@ webreduce.editor = webreduce.editor || {};
       var li = d3.select(this);
       li.append("input")
         .attr("type", "checkbox")
+        .classed("compare", true)
       li.append("span")
         .text(function(d) {return d})
       li.append("span")
         .classed("stash-reload", true)
-        .style("text-decoration", "underline")
         .style("color", "blue")
-        .style("font-style", "italic")
-        .style("padding-left", "10px")
-        .style("cursor", "pointer")
         .text("reload")
         .on('click', function(d) {reload_stash(d)});
       li.append("span")
         .classed("stash-remove", true)
-        .style("text-decoration", "underline")
         .style("color", "red")
-        .style("font-style", "italic")
-        .style("padding-left", "10px")
-        .style("cursor", "pointer")
         .text("remove")
         .on('click', function(d) {remove_stash(d)});
       });
+      
+      stashedlist.selectAll("span.stash-remove, span.stash-reload")
+        .style("text-decoration", "underline")
+        .style("font-style", "italic")
+        .style("cursor", "pointer")
+        .style("padding-left", "10px")
+        
+      stashedlist.selectAll("input.compare")
+        .on("change", function(d,i) {
+          var checked = stashedlist.selectAll("input.compare:checked");
+          var comparelist = [];
+          checked.each(function(dd,ii) {comparelist.push(dd)});
+          compare_stashed(comparelist);
+        })
+        
       
     //console.log(JSON.stringify(subroutine, null, 2));    
   }
@@ -486,6 +494,12 @@ webreduce.editor = webreduce.editor || {};
       var terminal = stashed.module_def.outputs[0].source_terminal;
       webreduce.editor.load_template(template, node, terminal);
     }
+  }
+  
+  function compare_stashed(stashnames) {
+    // stashnames is a list of stashed data ids
+    console.log("comparing: ", JSON.stringify(stashnames));
+    
   }
 
   webreduce.editor.export_data = function(suggested_name) {
@@ -688,13 +702,9 @@ webreduce.editor = webreduce.editor || {};
         // i is index of dataset
         var series_select = d3.select(this);
         var index_list = datum.value[i];
-        //d.forEach(function(dd, ii) {
-        series_select.selectAll("circle.dot").each(function(dd, ii) {
-          if (index_list.indexOf(ii) > -1) {
-            var dot = d3.select(this);
-            dot.classed("masked", select_active);
-          }
-        })
+        series_select.selectAll("circle.dot")
+          .filter(function(dd,ii) {return (index_list.indexOf(ii) > -1)})
+          .classed("masked", true);
       })
     }
     
