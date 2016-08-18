@@ -694,7 +694,7 @@ def join(data, tolerance=0.15, order='file', group_by = "polarization"):
         output.append(result)
     return output
 
-@module
+#@module
 def align_background(data, offset='auto'):
     """
     Determine the Qz value associated with the background measurement.
@@ -739,7 +739,7 @@ def align_background(data, offset='auto'):
 
 
 @module
-def subtract_background(data, backp, backm, align="auto"):
+def subtract_background(data, backp, backm, align="none"):
     """
     Subtract the background datasets from the specular dataset.
 
@@ -1055,6 +1055,7 @@ def super_load(filelist=None,
                detector_correction=False,
                monitor_correction=False,
                intent='auto',
+               Qz_basis = 'actual',
                sample_width=None,
                base='auto'):
     """
@@ -1073,6 +1074,13 @@ def super_load(filelist=None,
     intent (str) : Measurement intent (specular, background+, background-,
     slit, rock), auto or infer.
     
+    Qz_basis (opt:actual|detector|sample|target) : How to calculate Qz from instrument angles:
+    **'actual'** calculates Qx and Qz as (x,z)-components of $(\\vec k_{\\text{out}} - \\vec k_\\text{in})$ 
+    in sample coordinates, 
+    **'detector'** ignores the sample angle and calculates Qz as $(4\pi/\\lambda \\sin(\\theta_\\text{detector}/2))$, 
+    **'sample'** ignores the detector angle and calculates Qz as $(4\pi/\\lambda \\sin(\\theta_\\text{sample}))$
+    **'target'** uses the user-supplied Qz_target values
+    
     sample_width {Sample width (mm)} (float): Width of the sample along the beam direction in mm,
     used for calculating the effective resolution when the sample is smaller 
     than the beam.  Leave blank to use value from data file.
@@ -1084,7 +1092,7 @@ def super_load(filelist=None,
 
     output (refldata[]): All entries of all files in the list.
 
-    2016-06-29 Brian Maranville
+    2016-08-18 Brian Maranville
     """
     from .load import url_load_list
     #from .intent import apply_intent
@@ -1102,6 +1110,7 @@ def super_load(filelist=None,
 
     datasets = []
     for data in url_load_list(filelist):
+        data.Qz_basis = Qz_basis
         if intent not in [None, 'auto']:
             data.intent = intent
         if auto_divergence:

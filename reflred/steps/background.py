@@ -34,13 +34,13 @@ def set_background_alignment(back, offset):
             return
         offset = guess_background_offset(back)
 
-    A, B, L = back.sample.angle_x, back.detector.angle_x, back.detector.wavelength
-    if offset == 'sample':
-        back.Qz_target = 4*np.pi/L * np.sin(np.radians(A))
-    elif offset == 'detector':
-        back.Qz_target = 4*np.pi/L * np.sin(np.radians(B)/2)
-    else:
-        raise KeyError('unknown offset: must be sample|detector')
+    #A, B, L = back.sample.angle_x, back.detector.angle_x, back.detector.wavelength
+    #if offset == 'sample':
+        #back.Qz_target = 4*np.pi/L * np.sin(np.radians(A))
+    #elif offset == 'detector':
+        #back.Qz_target = 4*np.pi/L * np.sin(np.radians(B)/2)
+    #else:
+        #raise KeyError('unknown offset: must be sample|detector')
     back.Qz_basis = offset
     
 
@@ -67,8 +67,8 @@ def subtract_background(spec, backp, backm):
     #if backp: print "back+",backp_v,backp.v,backp.dv
     #if backm: print "back-",backm_v,backm.v,backm.dv
 
-    backp_v = interp(spec.Qz, backp.Qz_target, backp_v) if backp else None
-    backm_v = interp(spec.Qz, backm.Qz_target, backm_v) if backm else None
+    backp_v = interp(spec.Qz, backp.Qz, backp_v) if backp else None
+    backm_v = interp(spec.Qz, backm.Qz, backm_v) if backm else None
 
     if backp and backm:
         spec_v -= (backp_v + backm_v)/2
