@@ -34,140 +34,184 @@ webreduce.editor = webreduce.editor || {};
     
     var editor = d3.select("#" + webreduce.editor._target_id);
     var elem = this; // this function is called from the context of a select.on   
-    var clicked_elem = clicked_elem || d3.event.target; 
+    var clicked_elem = clicked_elem || d3.event.target;
+    var multiple_select = (d3.event && (d3.event.shiftKey || d3.event.ctrlKey));
     var data_to_show;
-    editor.selectAll(".module .selected").classed("selected", false);
-    d3.select(clicked_elem.parentNode).classed("selected", true);
+    
+    // clear all selections
+    // then select the clicked item
     
     
-    
-    var active_template = webreduce.editor._active_template;
-    var active_module = active_template.modules[i];
-    var module_def = webreduce.editor._module_defs[active_module.module];
-    var fields = module_def.fields || [];
-    if (fields.filter(function(d) {return d.datatype == 'fileinfo'}).length == 0) {
-        var nav = $("#navigation");
-        nav.block({message: null, fadeIn:0, overlayCSS: {opacity: 0.25, cursor: 'not-allowed', height: nav.prop("scrollHeight")}});
-    }
-    
-    if (d3.select(clicked_elem).classed("title")) {
-      // then it's the module title clicked - 
-      // select the first input terminal to show data from (if any)
-      data_to_show = (module_def.inputs[0] || {}).id;  // second part undefined if no inputs
-      // also highlight the first input terminal, if it's there:
-      d3.select(elem).selectAll("g")
-        .filter(function(d) { return d.id == data_to_show })
-        .classed("selected", true);
-    }
-    else {
-      // it's a terminal - show the data in it with the configuration
-      //var side = d3.select(clicked_elem).classed("input") ? "input" : "output";
-      data_to_show = d3.select(clicked_elem).attr("terminal_id");
-      // also mark title of module as selected:
-      d3.select(elem).select("g.title").classed("selected", true);
-    }
-    webreduce.editor._active_node = i;
-    webreduce.editor._active_terminal = data_to_show;
-
-    webreduce.layout.open("east");
-    var config_target = d3.select(".ui-layout-pane-east");
-    config_target.selectAll("div").remove();
-    var header = config_target
-      .append("div")
-      .style("display", "block");
-    header
-      .append("h3")
-      .style("margin", "5px")
-      .style("display", "inline-block")
-      .text(module_def.name);
-    header
-      .append("button")
-      .text("help")
-      .on("click", function() {
-        var helpwindow = window.open("", "help", "location=0,toolbar=no,menubar=no,scrollbars=yes,resizable=yes,width=960,height=480");
-        helpwindow.document.title = "Web reduction help";
-        helpwindow.document.write(module_def.description);
-        helpwindow.document.close();
-        if (helpwindow.MathJax) {
-          helpwindow.MathJax.Hub.Queue(["Typeset", MathJax.Hub]);
-        }
-      });
-    
-    var buttons_div = config_target.append("div")
-      .classed("control-buttons", true)
-      .style("position", "absolute")
-      .style("bottom", "10px")
-    buttons_div.append("button")
-      .text("accept")
-      .on("click", function() {
-        webreduce.editor.accept_parameters(config_target, active_module);
-        if (!(d3.select(clicked_elem).classed("output"))) {
-          // find the first output and select that one...
-          var first_output = module_def.outputs[0].id;
-          clicked_elem = d3.select(elem).select('rect.terminal[terminal_id="'+first_output+'"]').node();          
-        }
-        webreduce.editor.handle_module_clicked.call(elem,d,i,clicked_elem);
-      })
-    buttons_div.append("button")
-      .text("clear")
-      .on("click", function() {
-        //console.log(config_target, active_module);
-        if (active_module.config) { delete active_module.config }
-        webreduce.editor.handle_module_clicked.call(elem,d,i,clicked_elem);
-      })
-      
-    $(buttons_div).buttonset();
-    
-    var terminals_to_calculate = module_def.inputs.map(function(inp) {return inp.id});
-    var fields_in = {};
-    if (data_to_show != null && terminals_to_calculate.indexOf(data_to_show) < 0) {
-      terminals_to_calculate.push(data_to_show);
-    }
-    Promise.all(terminals_to_calculate.map(function(terminal_id) {
-       return webreduce.server_api.calc_terminal(active_template, {}, i, terminal_id, "metadata");
-      })
-    ).then(function(results) {
-      var inputs_map = {};
-      var id;
-      results.forEach(function(r, ii) {
-        id = terminals_to_calculate[ii];
-        inputs_map[id] = r;
-      })
-      return inputs_map
-    }).then(function(im) {
-      var datasets_in = im[data_to_show];
-      var field_inputs = module_def.inputs
-        .filter(function(d) {return /\.params$/.test(d.datatype)})
-        .map(function(d) {return im[d.id]})
-      field_inputs.forEach(function(d) {
-        d.values.forEach(function(v) {
-          $.extend(true, fields_in, v);
+    if (multiple_select) {
+      var active_node = i,
+          active_terminal = d3.select(clicked_elem).attr("terminal_id");
+      if (!d3.select(clicked_elem).classed("terminal")) {
+        console.log("can't select multiple module configs, just inputs and outputs");
+        return
+      }
+      var parent = d3.select(clicked_elem.parentNode);
+      parent.classed("selected", !(parent.classed("selected")));
+      editor.selectAll("g.module, g.module g.title").classed("selected", false);
+      webreduce.layout.close("east");
+      var config_target = d3.select(".ui-layout-pane-east");
+      config_target.selectAll("div").remove();
+      var to_compare = [];
+      editor.selectAll("g.module").each(function(dd, ii) {
+        d3.select(this).selectAll("g.selected rect.terminal").each(function(ddd,iii) {
+          var tid = d3.select(this).attr("terminal_id");
+          to_compare.push({"node": ii, "terminal": tid})
         });
       });
-      webreduce.editor.show_plots(datasets_in);
-      fields.forEach(function(field) {
-        if (webreduce.editor.make_fieldUI[field.datatype]) {
-          var value;
-          var passthrough = false;
-          if (field.id in fields_in) {
-            value = fields_in[field.id];
-            passthrough = true;
-          }
-          else if (active_module.config && field.id in active_module.config) {
-            value = active_module.config[field.id];
-          }
-          else {
-            // make a copy - if field.default is an object, it will be modified!
-            var field_copy =  $.extend(true, {}, field);
-            value = field_copy.default;
-          }
-          var datum = {"id": field.id, "value": value, "passthrough": passthrough};
-          var fieldUI = webreduce.editor.make_fieldUI[field.datatype](field, active_template, datum, module_def, config_target, datasets_in);
-          if (passthrough) {fieldUI.property("disabled", true)};
-        }
-      });
-    });
+      compare_in_template(to_compare, active_template);
+    }
+    else {
+      editor.selectAll(".module .selected").classed("selected", false);
+      d3.select(clicked_elem.parentNode).classed("selected", true);
+      
+      var active_template = webreduce.editor._active_template;
+      var active_module = active_template.modules[i];
+      var module_def = webreduce.editor._module_defs[active_module.module];
+      var fields = module_def.fields || [];
+      if (fields.filter(function(d) {return d.datatype == 'fileinfo'}).length == 0) {
+          var nav = $("#navigation");
+          nav.block({message: null, fadeIn:0, overlayCSS: {opacity: 0.25, cursor: 'not-allowed', height: nav.prop("scrollHeight")}});
+      }
+      
+      if (d3.select(clicked_elem).classed("title")) {
+        // then it's the module title clicked - 
+        // select the first input terminal to show data from (if any)
+        data_to_show = (module_def.inputs[0] || {}).id;  // second part undefined if no inputs
+        // also highlight the first input terminal, if it's there:
+        d3.select(elem).selectAll("g")
+          .filter(function(d) { return d.id == data_to_show })
+          .classed("selected", true);
+      }
+      else {
+        // it's a terminal - show the data in it with the configuration
+        //var side = d3.select(clicked_elem).classed("input") ? "input" : "output";
+        data_to_show = d3.select(clicked_elem).attr("terminal_id");
+        // also mark title of module as selected:
+        d3.select(elem).select("g.title").classed("selected", true);
+      }
+      webreduce.editor._active_node = i;
+      webreduce.editor._active_terminal = data_to_show;
 
+      webreduce.layout.open("east");
+      var config_target = d3.select(".ui-layout-pane-east");
+      config_target.selectAll("div").remove();
+      var header = config_target
+        .append("div")
+        .style("display", "block");
+      header
+        .append("h3")
+        .style("margin", "5px")
+        .style("display", "inline-block")
+        .text(module_def.name);
+      header
+        .append("button")
+        .text("help")
+        .on("click", function() {
+          var helpwindow = window.open("", "help", "location=0,toolbar=no,menubar=no,scrollbars=yes,resizable=yes,width=960,height=480");
+          helpwindow.document.title = "Web reduction help";
+          helpwindow.document.write(module_def.description);
+          helpwindow.document.close();
+          if (helpwindow.MathJax) {
+            helpwindow.MathJax.Hub.Queue(["Typeset", helpwindow.MathJax.Hub]);
+          }
+        });
+      
+      var buttons_div = config_target.append("div")
+        .classed("control-buttons", true)
+        .style("position", "absolute")
+        .style("bottom", "10px")
+      buttons_div.append("button")
+        .text("accept")
+        .on("click", function() {
+          webreduce.editor.accept_parameters(config_target, active_module);
+          if (!(d3.select(clicked_elem).classed("output"))) {
+            // find the first output and select that one...
+            var first_output = module_def.outputs[0].id;
+            clicked_elem = d3.select(elem).select('rect.terminal[terminal_id="'+first_output+'"]').node();          
+          }
+          webreduce.editor.handle_module_clicked.call(elem,d,i,clicked_elem);
+        })
+      buttons_div.append("button")
+        .text("clear")
+        .on("click", function() {
+          //console.log(config_target, active_module);
+          if (active_module.config) { delete active_module.config }
+          webreduce.editor.handle_module_clicked.call(elem,d,i,clicked_elem);
+        })
+        
+      $(buttons_div).buttonset();
+      
+      var terminals_to_calculate = module_def.inputs.map(function(inp) {return inp.id});
+      var fields_in = {};
+      if (data_to_show != null && terminals_to_calculate.indexOf(data_to_show) < 0) {
+        terminals_to_calculate.push(data_to_show);
+      }
+      Promise.all(terminals_to_calculate.map(function(terminal_id) {
+         return webreduce.server_api.calc_terminal(active_template, {}, i, terminal_id, "metadata");
+        })
+      ).then(function(results) {
+        var inputs_map = {};
+        var id;
+        results.forEach(function(r, ii) {
+          id = terminals_to_calculate[ii];
+          inputs_map[id] = r;
+        })
+        return inputs_map
+      }).then(function(im) {
+        var datasets_in = im[data_to_show];
+        var field_inputs = module_def.inputs
+          .filter(function(d) {return /\.params$/.test(d.datatype)})
+          .map(function(d) {return im[d.id]})
+        field_inputs.forEach(function(d) {
+          d.values.forEach(function(v) {
+            $.extend(true, fields_in, v);
+          });
+        });
+        webreduce.editor.show_plots(datasets_in);
+        fields.forEach(function(field) {
+          if (webreduce.editor.make_fieldUI[field.datatype]) {
+            var value;
+            var passthrough = false;
+            if (field.id in fields_in) {
+              value = fields_in[field.id];
+              passthrough = true;
+            }
+            else if (active_module.config && field.id in active_module.config) {
+              value = active_module.config[field.id];
+            }
+            else {
+              // make a copy - if field.default is an object, it will be modified!
+              var field_copy =  $.extend(true, {}, field);
+              value = field_copy.default;
+            }
+            var datum = {"id": field.id, "value": value, "passthrough": passthrough};
+            var fieldUI = webreduce.editor.make_fieldUI[field.datatype](field, active_template, datum, module_def, config_target, datasets_in);
+            if (passthrough) {fieldUI.property("disabled", true)};
+          }
+        });
+      });
+    }
+  }
+  
+  function compare_in_template(to_compare, template) {
+    var template = template || webreduce.editor._active_template;
+    Promise.all(to_compare.map(function(a) {
+         return webreduce.server_api.calc_terminal(template, {}, a.node, a.terminal, "metadata");
+        })
+      ).then(function(results) {
+        if (results.length < 1) { return }
+        var first = results[0];
+        for (var i=1; i<results.length; i++) {
+          if (results[i].datatype == first.datatype) {
+            first.values = first.values.concat(results[i].values);
+          }
+        }
+        webreduce.editor.show_plots(first);
+      });
   }
   
   webreduce.editor.show_plots = function(result) {
