@@ -148,6 +148,11 @@
       stroke-width: 5px !important;
     }
     
+    svg.editor g.module g.extra-selected rect {
+      stroke-width: 5px !important;
+      stroke: BlueViolet !important;
+    }
+    
     svg.editor g.module .terminal {
       cursor: pointer !important;
     }
