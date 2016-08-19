@@ -38,9 +38,8 @@ webreduce.editor = webreduce.editor || {};
     var multiple_select = (d3.event && (d3.event.shiftKey || d3.event.ctrlKey));
     var data_to_show;
     
-    // clear all selections
-    // then select the clicked item
-    
+    // clear all the stashed items, since we are plotting from the template again
+    d3.selectAll("#stashedlist input.compare").property("checked", false);
     
     if (multiple_select) {
       var active_node = i,
@@ -203,14 +202,19 @@ webreduce.editor = webreduce.editor || {};
          return webreduce.server_api.calc_terminal(template, {}, a.node, a.terminal, "metadata");
         })
       ).then(function(results) {
-        if (results.length < 1) { return }
-        var first = results[0];
-        for (var i=1; i<results.length; i++) {
-          if (results[i].datatype == first.datatype) {
-            first.values = first.values.concat(results[i].values);
+        var output;
+        if (results.length < 1) { 
+          output = {"datatype": "none", "values": []} 
+        }
+        else { 
+          output = results[0];
+          for (var i=1; i<results.length; i++) {
+            if (results[i].datatype == output.datatype) {
+              output.values = output.values.concat(results[i].values);
+            }
           }
         }
-        webreduce.editor.show_plots(first);
+        webreduce.editor.show_plots(output);
       });
   }
   
@@ -542,8 +546,28 @@ webreduce.editor = webreduce.editor || {};
   
   function compare_stashed(stashnames) {
     // stashnames is a list of stashed data ids
-    console.log("comparing: ", JSON.stringify(stashnames));
-    
+    // eventually send these as-is to server, but for now since the server
+    // doesn't handle subroutines...
+    d3.selectAll("g.module .selected").classed("selected", false);
+    var existing_stashes = JSON.parse(localStorage['webreduce.editor.stashes'] || "{}");
+    var stashnames = stashnames.filter(function(s) {return (s in existing_stashes)});
+    Promise.all(stashnames.map(function(stashname) {
+        var stashed = existing_stashes[stashname];
+        var template = stashed.module_def.template;
+        var node = stashed.module_def.outputs[0].source_module;
+        var terminal = stashed.module_def.outputs[0].source_terminal;
+        return webreduce.server_api.calc_terminal(template, {}, node, terminal, "metadata");
+      })
+    ).then(function(results) {
+      if (results.length < 1) { return }
+      var first = results[0];
+      for (var i=1; i<results.length; i++) {
+        if (results[i].datatype == first.datatype) {
+          first.values = first.values.concat(results[i].values);
+        }
+      }
+      webreduce.editor.show_plots(first);
+    });
   }
 
   webreduce.editor.export_data = function(suggested_name) {
