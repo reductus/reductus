@@ -31,7 +31,10 @@ Setup using Anaconda
 --------------------
 
 Anaconda python from continuum.io provides packages for many of the numerical
-libraries needed by the reduction backend.  Simple setup is as follows::
+libraries needed by the reduction backend.  The program should run on python
+2.7, 3.4 and 3.5.
+
+Simple setup is as follows::
 
     conda create -n dataflow numpy scipy gevent nose docutils h5py pytz werkzeug
     source activate dataflow

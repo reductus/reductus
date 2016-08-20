@@ -631,7 +631,7 @@ def rescale(data, scale=1.0, dscale=0.0):
 
 #@nocache
 @module
-def join(data, tolerance=0.15, order='file', group_by = "polarization"):
+def join(data, tolerance=1.0, order='file', group_by = "polarization"):
     r"""
     Join operates on a list of datasets, returning a list with one dataset,
     or one dataset per polarization state.  When operating on a single
@@ -662,7 +662,7 @@ def join(data, tolerance=0.15, order='file', group_by = "polarization"):
 
     data (refldata[]) : data to join
 
-    tolerance (float:<0,inf>) : allowed separation between points while
+    tolerance (float:1-sigma<0,inf>) : allowed separation between points while
     still joining them to a single point; this is relative to the angular
     resolution of the each point
 
