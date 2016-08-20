@@ -39,6 +39,7 @@ Simple setup is as follows::
     conda create -n dataflow numpy scipy gevent nose docutils h5py pytz werkzeug
     source activate dataflow
     pip install uncertainties tinyrpc
+    conda install sphinx  # if you need to build the docs
 
 Download the repository::
 

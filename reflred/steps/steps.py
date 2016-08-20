@@ -467,7 +467,7 @@ def mask_points(data, mask_indices=None):
 
 @module
 def mark_intent(data, intent='auto'):
-    """
+    r"""
     Mark the file type based on the contents of the file, or override.
 
     *intent* can be 'infer', to guess the intent from the measurement geometry,
@@ -486,7 +486,8 @@ def mark_intent(data, intent='auto'):
 
     data (refldata) : data file which may or may not have intent marked
 
-    intent (opt:auto|infer|specular|background+|background-|slit|rock sample|rock detector|rock qx) : intent to register with the
+    intent (opt:auto|infer|specular|background+\|background-\|slit
+    \|rock sample|rock detector|rock qx) : intent to register with the
     datafile, or auto/infer to guess
 
     **Returns**
@@ -546,14 +547,14 @@ def group_by_intent(data):
 
 @module
 def extract_xs(data, xs="++"):
-    """
+    r"""
     Get a polarization cross-section from a bundle
     
     **Inputs**
     
     data (refldata[]): data files in of all cross sections
     
-    xs {Cross-section} (opt:++|--|+-|-+|unpolarized): cross-section to extract
+    xs {Cross-section} (opt:++\|--\|+-\|-+\|unpolarized): cross-section to extract
     
     **Returns**
     
@@ -675,7 +676,7 @@ def join(data, tolerance=1.0, order='file', group_by = "polarization"):
 
     output (refldata[]) : joined data
 
-    2016-08-03 Paul Kienzle
+    2016-08-19 Paul Kienzle: updated tolerance
     """
     from .joindata import sort_files, join_datasets
     from .util import group_by_key
@@ -766,8 +767,8 @@ def subtract_background(data, backp, backm, align="none"):
 
     backm {Background-} (refldata?) : minus-offset background data
     
-    align (opt:none|sample|detector|auto) : apply align_background to background inputs 
-    with offset='auto'
+    align (opt:none|sample|detector|auto) : apply align_background to
+    background inputs with offset='auto'
 
     **Returns**
 
@@ -1058,7 +1059,7 @@ def super_load(filelist=None,
                Qz_basis = 'actual',
                sample_width=None,
                base='auto'):
-    """
+    r"""
     Load a list of nexus files from the NCNR data server.
 
     **Inputs**
@@ -1071,18 +1072,27 @@ def super_load(filelist=None,
     monitor_correction {Apply monitor deadtime correction} (bool)
     : Which deadtime constant to use for monitor deadtime.
 
-    intent (str) : Measurement intent (specular, background+, background-,
-    slit, rock), auto or infer.
+    intent (str)
+    : Measurement intent (specular, background+, background-, slit, rock),
+    auto or infer.
     
-    Qz_basis (opt:actual|detector|sample|target) : How to calculate Qz from instrument angles:
-    **'actual'** calculates Qx and Qz as (x,z)-components of $(\\vec k_{\\text{out}} - \\vec k_\\text{in})$ 
-    in sample coordinates, 
-    **'detector'** ignores the sample angle and calculates Qz as $(4\pi/\\lambda \\sin(\\theta_\\text{detector}/2))$, 
-    **'sample'** ignores the detector angle and calculates Qz as $(4\pi/\\lambda \\sin(\\theta_\\text{sample}))$
-    **'target'** uses the user-supplied Qz_target values
+    Qz_basis (opt:actual|detector|sample|target)
+    : How to calculate Qz from instrument angles.
+        **actual**
+          calculates Qx and Qz as (x,z)-components of
+          $(\vec k_{\text{out}} - \vec k_\text{in})$ in sample coordinates,
+        **detector**
+          ignores the sample angle and calculates Qz
+          as $(4\pi/\lambda \sin(\theta_\text{detector}/2))$,
+        **sample**
+          ignores the detector angle and calculates Qz
+          as $(4\pi/\lambda \sin(\theta_\text{sample}))$
+        **target**
+          uses the user-supplied Qz_target values
     
-    sample_width {Sample width (mm)} (float): Width of the sample along the beam direction in mm,
-    used for calculating the effective resolution when the sample is smaller 
+    sample_width {Sample width (mm)} (float)
+    : Width of the sample along the beam direction in mm, used for
+    calculating the effective resolution when the sample is smaller
     than the beam.  Leave blank to use value from data file.
     
     base {Normalize by} (opt:auto|monitor|time|power|none)
@@ -1189,11 +1199,12 @@ def super_load_sorted(filelist=None,
 @module
 def spin_asymmetry(data):
     """
-    Do the calculation (++ - --) / (++ + --) and return a single dataset.
+    Do the calculation (up-up - down-down) / (up-up + down-down) and
+    return a single dataset.
 
     **Inputs**
 
-    data (refldata[]): input data;  must contain ++ and -- polarizations
+    data (refldata[]): input data; must contain up-up and down-down polarizations
 
     **Returns**
 

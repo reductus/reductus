@@ -22,7 +22,7 @@ def rst2html(rst, part="whole", math_output="html"):
     - html
     - mathml
     - mathjax
-    See `http://docutils.sourceforge.net/docs/user/config.html#math-output`_
+    See the `docutils documentation <http://docutils.sourceforge.net/docs/user/config.html#math-output>`_
     for details.
 
     The following *part* choices are available:
