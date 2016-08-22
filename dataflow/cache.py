@@ -1,3 +1,17 @@
+"""
+Cache manager
+=============
+
+Calculations can be cached, either using a redis server or using a local
+in-memory cache.  The redis server is useful when serving calculations
+over the net via CGI since it can be used by different processes.
+
+A singleton :class:`CacheManager` is available for programs that only
+need a single shared cache.  Call *cache.use_redis(redis args)* during
+program configuration to set up redis, otherwise the default is to use
+an in-memory cache.   The calculation library will call *cache.get_cache()*
+to retrieve the cache connection, allowing calculations to be memoized.
+"""
 import warnings
 import sys
 import os
@@ -51,14 +65,28 @@ def redis_connect(host="localhost", port=6379, maxmemory=4.0, **kwargs):
     return cache
 
 class CacheManager:
+    """
+    Manage the connection to the key-value cache.
+    """
     def __init__(self):
         self._cache = None
         self._redis_kwargs = None
     def use_redis(self, **kwargs):
+        """
+        Use redis for managing the cache.
+
+        The arguments given to use_redis will be used to connect to the
+        redis server when get_cache() is called.   See *redis.Redis()* for
+        details.  If use_redis() is not called, then get_cache() will use
+        an in-memory cache instead.
+        """
         if self._cache is not None:
             raise RuntimeError("call use_redis() before cache is first used")
         self._redis_kwargs = kwargs
     def get_cache(self):
+        """
+        Connect to the key-value cache.
+        """
         if self._cache is None:
             if self._redis_kwargs is not None:
                 self._cache = redis_connect(**self._redis_kwargs)

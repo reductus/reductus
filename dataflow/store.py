@@ -32,6 +32,8 @@ def dumps(obj):
     elif isinstance(obj, core.DataType):
         classname = 'DataType'
         version, state = obj.__getstate__()
+    else:
+        raise TypeError('unknown object "%s"' % str(type(obj)))
 
     return json.dumps([classname, version, state])
 

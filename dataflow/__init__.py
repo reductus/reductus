@@ -5,31 +5,27 @@ The dataflow architecture provides reduction and analysis routines for
 a variety neutron scattering instruments.
 
 Operations are organized by instruments, each with its own data formats
-and transformations.  These are defined by :class:`.core.Instrument`,
+and transformations.  These are defined as :class:`.core.Instrument`,
 :class:`.core.Datatype` and :class:`.core.Module` respectively.  Modules
 have an icon to display on the screen, fields for defining the parameters
 for the computation, terminals for defining the data types that can flow
-in and out of the module.  A basic set of modules is defined in the
-subpackage :package:`.modules`, such as join, load, save and scale.  These
-are module definition factories primarily intended for sharing the icon
-and the terminals so that different instruments have the same look.  The
-instrument scientist needs to supply the action, though likely they will
-be able to use the methods for other instruments of the same class
-directly, perhaps only supplying a file reader.
+in and out of the module.
 
-Instruments are registered with the server, and appear in the order in
-which they are registered.
-
-Each instrument will have a standard set of templates 
-(defined in :class:`.core.Template`) which control the order of operations
+Each instrument will have a standard set of templates (defined as
+:class:`.core.Template`) which control the order of operations
 in the data flow.  A template is a list of modules, the connections
 between them, and a configuration set which gives initial values to each
 of the fields.   When templates are instantiated by the user, and values
 are given for all the configuration parameters, the template is
-evaluated by :function:`.calc.run_template`.  The run_template function
-takes care of the order of evaluation.  The evaluation produces data
-objects of class :class:`.core.Data` which can be sent to the client
-for graphing.
+evaluated by :function:`.calc.process_template`.  The *proccess_template*
+function takes care of the order of evaluation, computing only what is needed
+for the desired output.  The evaluation produces data objects of the
+instrument-defined data types which are shared between components or sent to
+the client for display.
+
+Instruments, Modules and Datatypes are registered with :module:`core`.  They
+are then available to our web-based reduction software, which allows users
+to define and fill templates and display the raw and reduced data.
 """
 
-__version__ = "0.1"
+__version__ = "0.2"

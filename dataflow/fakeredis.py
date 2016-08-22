@@ -1,3 +1,10 @@
+"""
+Redis-like interface to an in-memory cache
+
+:class:`MemoryCache` provides a minimal redis-like interface to an in memory
+cache.  If the *pylru* package is available, then this provides a least
+recently used cache, otherwise the cache grows without bound.
+"""
 import warnings
 
 def lrucache(size):
@@ -15,6 +22,9 @@ class MemoryCache:
     In memory cache with redis interface.
 
     Use this for running tests without having to start up the redis server.
+
+    *size* is the number of elements to cache (ignored if the pylru package
+    is not available).
     """
     def __init__(self, size=1000):
         self.cache = lrucache(size)

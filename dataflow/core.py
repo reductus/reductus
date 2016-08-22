@@ -24,8 +24,13 @@ def register_instrument(instrument):
     for d in instrument.datatypes:
         register_datatype(d)
 
+
 def lookup_instrument(id):
+    """
+    Find a predfined instrument given its id.
+    """
     return _instrument_registry[id]
+
 
 def register_module(module):
     """

@@ -1,11 +1,17 @@
 """
 Run a reduction workflow.
 
-The function run_template
+:func:`process_template` evaluates a template for the given input values.
+
+:func:`find_calculated` returns the list the template nodes that have already
+been calculated and cached for the given input values.
+
+:func:`fingerprint_template` returns the unique fingerprint for each node
+in the template given its input values.
 """
 
 try:
-    # Python 3.5 does not have cPickle
+    # CRUFT: use cPickle for python 2.7
     import cPickle as pickle
 except:
     import pickle
