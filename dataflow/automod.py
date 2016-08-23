@@ -402,7 +402,7 @@ def _parse_function(action):
         'fields': input_fields,
         'version': version,
         'author': author,
-        'changelog': changelog,
+        #'changelog': changelog,
         'action_id': action.__module__ + "." + action.__name__
         }
 
