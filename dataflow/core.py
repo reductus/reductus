@@ -78,6 +78,9 @@ class Module(object):
         affect the calculation results, the version number should be
         incremented.  This includes bug fixes.
 
+    *author* : string
+        Author of the module
+
     *name* : string
         The display name of the module. This may appear in the user interface
         in addition to any pictorial representation of the module. Usually it
