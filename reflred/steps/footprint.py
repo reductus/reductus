@@ -1,7 +1,7 @@
 from copy import copy
 
 import numpy as np
-from numpy import pi, sqrt, polyval
+from numpy import pi, sqrt, polyval, radians, tan, arctan, inf, sqrt, sin
 
 from ..wsolve import wpolyfit
 from ..uncertainty import Uncertainty as U, interp
@@ -101,12 +101,18 @@ def apply_measured_footprint(data, measured_footprint):
     _apply_footprint(data, footprint)
 
 
-def apply_abinitio_footprint(data, A, B, Io, length, offset):
-    if A > B:
-        raise ValueError("A must be less than B")
-    y = _abinitio_footprint(data.slit.x, data.Qz, data.detector.wavelength,
-                            A, B, Io, length, offset)
-    footprint = U(y, 0.0)
+def apply_abinitio_footprint(data, Io, width, offset):
+    slit1 = (data.slit1.distance, data.slit1.x, data.slit1.y)
+    slit2 = (data.slit2.distance, data.slit2.x, data.slit2.y)
+    theta = data.sample.angle_x
+    if width is None:
+        width = data.sample.width
+    if offset is None:
+        offset = 0.
+    if Io is None:
+        Io = 1.
+    y = Io * _abinitio_footprint(slit1, slit2, theta, width, offset)
+    footprint = U(y, 0.0*y)
     _apply_footprint(data, footprint)
 
 
@@ -187,54 +193,76 @@ def apply(fp, R):
     return corrected_y, corrected_dy
 
 
-def _abinitio_footprint(slit, Qz, wavelength, A, B, Io, length, offset):
-    L1 = length/2. + offset
-    L2 = length/2. - offset
+def _abinitio_footprint(slit1, slit2, theta, width, offset=0.):
+    """
+    Ab-initio footprint calculation from slits, angles and sample size.
 
-    wA = slit * A/2.
-    wB = slit * B/2.
+    *slit1*, *slit2* are *(d, x, y)* tuples for the distance between the
+    slit and the sample, the width of the slit in the beam direction, and
+    the width of the slit perpendicular to the beam. The center of slit 2
+    must lie on the line between the center of slit 1 and the center of
+    rotation of the sample.  All measurements are in mm, though any unit
+    will work so long as all measurements are in the same unit.
 
-    # Algorithm for converting Qx-Qz to alpha-beta:
-    #   beta = 2 asin(wavelength/(2 pi) sqrt(Qx^2+Qz^2)/2) * 180/pi
-    #        = asin(wavelength sqrt(Qx^2+Qz^2) /(4 pi)) / (pi/360)
-    #   theta = atan2(Qx,Qz) * 180/pi
-    #   alpha = theta + beta/2
-    # Since we are in the specular condition, Qx = 0
-    #   Qx = 0 => theta => 0 => alpha = beta/2
-    #          => alpha = 2 asin(wavelength sqrt(Qz^2)/(4 pi)) / 2
-    #          => alpha = asin (wavelength Qz / 4 pi) in radians
-    # Length of intersection d = L sin (alpha)
-    #          => d = L sin (asin (wavelength Qz / 4 pi))
-    #          => d = L wavelength Qz/(4 pi)
+    *theta* in degrees is the set of angles at which to compute the footprint.
 
-    #: low edge of the sample
-    low = L2*wavelength * Qz / (4 * pi)  # low edge of the sample
-    high = L1*wavelength * Qz / (4 * pi)  # high edge of the sample
-    Alow = integrate(wA, wB, low)
-    Ahigh = integrate(wA, wB, high)
+    *width* is the width of the sample. *offset* is a shift in the center of
+    rotation of the sample away from the beam center.  These are in the same
+    units as the slits (mm).
+    """
+    # TODO: implement footprint for circular samples
+    # TODO: implement vertical footprint if slit y is not inf
 
-    # Total area of intersection is the sum of the areas of the regions
-    # Normalize that by the total area of the beam (A+B)/2 and scale by
-    # the incident intensity.  Note that the factor of 2 is already
-    # incorporated into wA and wB.
-    abfoot_y = Io * (Alow + Ahigh) / (wA+wB)
-    return abfoot_y
+    d1, s1x, s1y = slit1
+    d2, s2x, s2y = slit2
 
-def integrate(wA, wB, edge):
-    # if wB==wA then we have 0 * (1-0/(2*0)) which is zero.  To avoid
-    # numerical problems, we force the minimum possible step.
-    if wA == wB:
-        wB = wA*(1.+1e-16)
+    # use radians internally
+    theta = radians(theta)
 
-    # Compute B as area under triangular region
-    # Length of intersection in triangular region
-    B = (edge-wA)*((edge>wA) & (edge<wB)) + (wB-wA)*(edge>=wB)
-    # Area of intersection in triangular region;
-    B *= (1 - B/(2*(wB-wA)+1e-16))
-    # Area of intersection in rectangular region
-    area = edge*(edge<=wA) + wA*(edge>wA) + B
+    #use_y = np.all(np.isfinite(s1y) & np.isfinite(s2y))
 
-    return area
+    # Projection of the sample to the center of rotation
+    p_near = (-width / 2 + offset) * sin(theta)
+    p_far = (+width / 2 + offset) * sin(theta)
+
+    # beam profile is a trapezoid, 0 where a neutron entering at -s1/2 just
+    # misses s2/2, and 1 where a neutron entering at s1/2 just misses s2/2.
+    # With tiny front slits, the projection h2 may land on the other side
+    # of the beam center.  In this case the overall instensity is lower, but
+    # the trapezoid happens to have the same shape, with the flat region
+    # extending from -abs(w2) to abs(w2).  Since we only care about intensity
+    # relative to the beam for footprint correction, the scale factor cancels.
+    w1 = abs(d1/(d1-d2))*(s1x + s2x) / 2 - s1x / 2
+    w2 = abs(-abs(d1/(d1-d2)) * (s1x - s2x) / 2 + s1x / 2)
+    w_intensity = w1 + w2
+    #if use_y:
+    #    h1 = abs(d1/(d1-d2))*(s1y+s2y)/2 - s1y/2
+    #    h2 = abs(-abs(d1/(d1-d2))*(s1y-s2y)/2 + s1y/2)
+    #    h_intensity = h1 + h2
+
+    # Rectangular distribution
+    # Three sections of the trapezoid.  Compute the portion of each section
+    # that is to the right of p_near and to the right of p_far.  Total is
+    # sum the near minus the sum of the far.
+    fp = (_trapezoid_sum_right(p_near, w1, w2)
+          - _trapezoid_sum_right(p_far, w1, w2))/w_intensity
+    return fp
+
+def _trapezoid_sum_right(p, w1, w2):
+    """
+    Find the integral from p to inf of the trapezoid defined by w1 and w2.
+    """
+    slope = 1.0/(w1-w2)
+    a = np.maximum(p, -w1) + w1
+    b = np.maximum(p, -w2) + w1
+    A = 0.5*slope*(b**2-a**2)*(b>a)
+    a = np.maximum(p, -w2) + w2
+    b = np.maximum(p, w2) + w2
+    A += (b-a)*(b>a)
+    a = w1 - np.maximum(p, w1)
+    b = w1 - np.maximum(p, w2)
+    A += 0.5*slope*(b**2-a**2)*(b>a)
+    return A
 
 
 def spill(slit, Qz, wavelength, detector_distance, detector_width, thickness,

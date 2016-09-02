@@ -864,6 +864,42 @@ def smooth_slits(datasets, degree=1, span=2, dx=0.01):
 
 
 @module
+def abinitio_footprint(data, Io=1., width=None, offset=0.):
+    """
+    Apply an *ab initio* footprint correction to the data.
+
+    Footprint is computed from the slits and the sample angle so those must
+    be available in the data.  If the data has been stitched to common Q
+    from different theta, lambda combinations, then footprint will no
+    longer be available.
+
+    **Inputs**
+
+    data (refldata) : uncorrected measurement
+
+    Io (float:): scale factorto account for vertical beam spill
+
+    width (float:mm) : sample width along the beam.  If not provided, use the
+    value stored in the file.
+
+    offset (float:mm) : offset of the center of rotation of the sample in
+    the direction of the beam, toward the detector.
+
+    **Returns**
+
+    outputs (refldata): footprint-corrected data
+
+    2016-09-02 Paul Kienzle
+    """
+    from .footprint import apply_abinitio_footprint
+
+    data = copy(data)
+    data.log("abinitio_footprint(Io=%s,width=%s,offset=%s)"
+             % (str(Io), str(width), str(offset)))
+    apply_abinitio_footprint(data, Io, width, offset)
+    return data
+
+@module
 def fit_footprint(data, qz_min=None, qz_max=None, origin=False):
     """
     Fit a footprint using a range of data below the critical edge.

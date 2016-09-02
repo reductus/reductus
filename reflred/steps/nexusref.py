@@ -216,10 +216,13 @@ class NCNRNeXusRefl(refldata.ReflData):
         self.monitor.counts = np.asarray(data_as(das,'counter/liveMonitor','',rep=n), 'd')
         self.monitor.counts_variance = np.asarray(data_as(das,'counter/liveMonitor','',rep=n), 'd')
         self.monitor.count_time = data_as(das,'counter/liveTime','s',rep=n)
-        self.slit1.x = data_as(das,'slitAperture1/softPosition','mm',rep=n)
-        self.slit2.x = data_as(das,'slitAperture2/softPosition','mm',rep=n)
-        self.slit3.x = data_as(das,'slitAperture3/softPosition','mm',rep=n)
-        self.slit4.x = data_as(das,'slitAperture4/softPosition','mm',rep=n)
+        for k,s in enumerate([self.slit1, self.slit2, self.slit3, self.slit4]):
+            x = 'slitAperture%d/softPosition'%(k+1)
+            y = 'vertSlitAperture%d/softPosition'%(k+1)
+            if x in das:
+                s.x = data_as(das, x, 'mm', rep=n)
+            if y in das:
+                s.y = data_as(das, y, 'mm', rep=n)
         if 'sampleAngle' in das:
             self.sample.angle_x = data_as(das,'sampleAngle/softPosition','degree',rep=n)
             self.detector.angle_x = data_as(das,'detectorAngle/softPosition','degree',rep=n)
