@@ -526,6 +526,121 @@ def thetaTwothetaToQxQz(data, output_grid, wavelength=5.0, qxmin=-0.003, qxmax=0
     print "output shape:", output_grid.shape
     return output_grid
 
+@module
+def thetaTwothetaToAlphaIAlphaF(data):
+    """ Figures out the angle in, angle out values of each datapoint
+    and throws them in the correct bin.  If no grid is specified,
+    one is created that covers the whole range of the dataset
+    
+    **Inputs**
+    
+    data (ospec2d): input data
+    
+    **Returns**
+    
+    output (ospec2d): output data rebinned into alpha_i, alpha_f
+    
+    2016-04-01 Brian Maranville
+    """
+    
+    theta_axis = data._getAxis('theta')
+    twotheta_axis = data._getAxis('twotheta')
+ 
+    th_array = data.axisValues('theta').copy()
+    twotheta_array = data.axisValues('twotheta').copy()
+    
+    two_theta_step = twotheta_array[1] - twotheta_array[0]
+    theta_step = th_array[1] - th_array[0]
+    
+    af_max = (twotheta_array.max() - th_array.min())
+    af_min = (twotheta_array.min() - th_array.max())
+    alpha_i = th_array.copy()
+    alpha_f = arange(af_min, af_max, two_theta_step)
+    
+    info = [{"name": "alpha_i", "units": "degrees", "values": th_array.copy() },
+            {"name": "alpha_f", "units": "degrees", "values": alpha_f.copy() },]
+    old_info = data.infoCopy()
+    info.append(old_info[2]) # column information!
+    info.append(old_info[3]) # creation story!
+    output_grid = MetaArray(zeros((th_array.shape[0], alpha_f.shape[0], data.shape[-1])), info=info)
+    
+    if theta_axis < twotheta_axis: # then theta is first: add a dimension at the end
+        alpha_i.shape = alpha_i.shape + (1,)
+        ai_out = indices((th_array.shape[0], twotheta_array.shape[0]))[0]
+        twotheta_array.shape = (1,) + twotheta_array.shape
+    else:       
+        alpha_i.shape = (1,) + alpha_i.shape
+        ai_out = indices((twotheta_array.shape[0], th_array.shape[0]))[1]
+        twotheta_array.shape = twotheta_array.shape + (1,)
+    
+    af_out = twotheta_array - alpha_i
+    
+    # getting values from output grid:
+    outgrid_info = output_grid.infoCopy()
+    numcols = len(outgrid_info[2]['cols'])
+    #target_ai = ((ai_out - th_array[0]) / theta_step).flatten().astype(int).tolist()
+    target_ai = ai_out.flatten().astype(int).tolist()
+    #return target_qx, qxOut
+    target_af = ((af_out - af_min) / two_theta_step).flatten().astype(int).tolist()
+    
+    for i, col in enumerate(outgrid_info[2]['cols']):
+        values_to_bin = data[:,:,col['name']].view(ndarray).flatten().tolist()
+        print len(target_ai), len(target_af), len(values_to_bin)
+        outshape = (output_grid.shape[0], output_grid.shape[1])
+        hist2d, xedges, yedges = histogram2d(target_ai, target_af, bins = (outshape[0],outshape[1]), range=((0,outshape[0]),(0,outshape[1])), weights=values_to_bin)
+        output_grid[:,:,col['name']] += hist2d
+ 
+    cols = outgrid_info[2]['cols']
+    data_cols = [col['name'] for col in cols if col['name'].startswith('counts')]
+    monitor_cols = [col['name'] for col in cols if col['name'].startswith('monitor')]
+    # just take the first one...
+    if len(monitor_cols) > 0:
+        monitor_col = monitor_cols[0]
+        data_missing_mask = (output_grid[:,:,monitor_col] == 0)
+        for dc in data_cols:
+            output_grid[:,:,dc].view(ndarray)[data_missing_mask] = NaN;            
+    
+    #extra info changed
+    output_grid._info[-1] = data._info[-1].copy()
+    return output_grid
+
+@module
+def alphaFtoQz(data, wavelength=5.0):
+    """ Figures out the Qz values of each datapoint
+    and throws them in the correct bin.  
+    
+    **Inputs**
+    
+    data (ospec2d): input data
+    
+    wavelength (float): override wavelength in data file
+    
+    **Returns**
+    
+    qzdata (ospec2d) : output data rebinned into Qz
+    
+    2016-04-03 Brian Maranville
+    """
+   
+    new_info = data.infoCopy()
+    # det_angle should be a vector of the same length as the other axis (usually theta)
+    # or else just a float, in which case the detector is not moving!
+    ndim = len(new_info) - 2 # last two entries in info are for metadata
+    ax_name = "alpha_f"
+    af_axis = next((i for i in xrange(len(new_info)-2) if new_info[i]['name'] == ax_name), None)
+    if af_axis < 0:
+        raise ValueError("error: no %s axis in this dataset" % (ax_name,))
+
+    new_info[af_axis]['name'] = 'Qz'
+    af = new_info[af_axis]['values']
+    qz = 4.0*pi/wavelength * numpy.sin(numpy.radians(af))
+    new_info[af_axis]['values'] = qz
+    new_info[af_axis]['units'] = 'inv. Angstroms'
+    new_array = (data.view(ndarray).copy())
+    new_data = MetaArray(new_array, info=new_info)
+    return new_data
+
+
 #################
 # Loader stuff   
 ################# 
