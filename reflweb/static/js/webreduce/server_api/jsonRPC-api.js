@@ -63,7 +63,7 @@ webreduce.server_api = webreduce.server_api || {};
     return $.getJSON("rpc_config.json", function(config) {
       $.jsonRPC.setup({
         //endPoint: '//localhost:' + rpc_port + '/RPC2',
-        endPoint: "http://" + config.host + ":" + config.port.toFixed() + "/RPC2",
+        endPoint: "//" + config.host + ":" + config.port.toFixed() + "/RPC2",
         namespace: '',
         // this gets explicitly set for each call, but by default make it true:
         cache: true
