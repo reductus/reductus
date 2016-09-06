@@ -255,11 +255,18 @@ def auto_module(action):
     associated with the wires and have enough information that they can
     be plotted.
 
+    Every module should have a date stamp and author, with date as
+    yyyy-mm-dd so that it sorts correctly.  A change notice can be
+    included, separated from author by ':'.  If there are multiple
+    updates to the module, precede each with '| ' so that line breaks
+    are preserved in the formatted documentation.
+
     The resulting doc string should look okay in sphinx. For example,
 
-    ``
+    ::
+
         def rescale(data, scale=1.0, dscale=0.0):
-            \"""
+            r\"""
             Rescale the count rate by some scale and uncertainty.
 
             **Inputs**
@@ -274,13 +281,16 @@ def auto_module(action):
 
             output (refldata) : scaled data
 
-            2015-12-17 Paul Kienzle
+            | 2015-12-17 Paul Kienzle: first release
+            | 2016-02-04 Paul Kienzle: change parameter name
             \"""
-    ``
 
-    The 'float:' type indicates that it is a floating point value with no
-    units, as opposed to a floating point value for which we haven't thought
-    about the units that are needed.
+    The 'float:' type indicates that it is a unitless floating point value
+    rather than a floating point value for which we forgot to specify units.
+
+    The 'r' preceding the docstring allows us to put backslashes in the
+    documentation, which is convenient when we have latex markup in between
+    dollar signs or in a \\:math\\: environment.
     """
     try:
         return _parse_function(action)
@@ -290,7 +300,7 @@ def auto_module(action):
 
 
 
-timestamp = re.compile(r"^(?P<date>[0-9]{4}-[0-9]{2}-[0-9]{2})\s+(?P<author>.*?)\s*$")
+timestamp = re.compile(r"^([|] )?(?P<date>[0-9]{4}-[0-9]{2}-[0-9]{2})\s+(?P<author>.*?)\s*(:\s*(?P<change>.*?)\s*)?$")
 def _parse_function(action):
     # grab arguments and defaults from the function definition
     argspec = inspect.getargspec(action)
@@ -310,6 +320,7 @@ def _parse_function(action):
     input_lines = []
     output_lines = []
     version, author = "", ""
+    changelog = []
 
     # Split docstring into sections
     state = 0 # processing description
@@ -320,6 +331,7 @@ def _parse_function(action):
             state = 3
             version = match.group('date')
             author = match.group('author')
+            changelog.append((version, author, match.group('change')))
         elif stripped == "**Inputs**":
             state = 1
         elif line.strip() == "**Returns**":
@@ -390,6 +402,7 @@ def _parse_function(action):
         'fields': input_fields,
         'version': version,
         'author': author,
+        #'changelog': changelog,
         'action_id': action.__module__ + "." + action.__name__
         }
 
@@ -619,6 +632,7 @@ def parse_datatype(par):
     elif type == "opt":
         if "|" not in attrstr:
             raise ValueError("options not specified for " + name)
+        attrstr = attrstr.replace('\\', '')  # allow escaped backslashes for rst
         choices = [v.split('=', 2) for v in attrstr.split("|")]
         choices = [(v*2 if len(v) == 1 else v) for v in choices]
         choices = [[v[0].strip(), v[1].strip()] for v in choices]

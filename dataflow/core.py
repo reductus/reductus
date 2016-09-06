@@ -24,8 +24,13 @@ def register_instrument(instrument):
     for d in instrument.datatypes:
         register_datatype(d)
 
+
 def lookup_instrument(id):
+    """
+    Find a predfined instrument given its id.
+    """
     return _instrument_registry[id]
+
 
 def register_module(module):
     """
@@ -72,6 +77,9 @@ class Module(object):
         If any code in the supporting libraries changes in a way that will
         affect the calculation results, the version number should be
         incremented.  This includes bug fixes.
+
+    *author* : string
+        Author of the module
 
     *name* : string
         The display name of the module. This may appear in the user interface

@@ -1,7 +1,7 @@
 # This program is public domain
 # Author: Paul Kienzle
 """
-Functions for manipulating dependencies.
+Dependency calculator.
 """
 
 def processing_order(pairs, n=0):
@@ -40,6 +40,7 @@ def processing_order(pairs, n=0):
     #print "order",order,"from",pairs
     return order + list(rest)
 
+
 def _dependencies(pairs):
     #print "order_dependencies",pairs
     emptyset = set()
@@ -70,8 +71,6 @@ def _dependencies(pairs):
     return order
 
 
-
-
 # ========= Test code ========
 def _check(msg, pairs, n):
     """
@@ -86,6 +85,7 @@ def _check(msg, pairs, n):
             raise RuntimeError("%s expect %s before %s in %s for %s"
                                % (msg, lo, hi, order, pairs))
     print("%s %s"%(msg, str(order)))
+
 
 def test():
     import numpy as np
@@ -119,6 +119,7 @@ def test():
 
     A = np.array([range(1, k + 1), range(0, k)]).T
     _check("depth-2", A, 201)
+
 
 if __name__ == "__main__":
     test()

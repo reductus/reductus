@@ -57,11 +57,13 @@ def genfiles(package, package_name, modules, dir='api'):
 def dataflow():
     modules=[
         ('anno_exc', 'annotate exceptions'),
+        ('automod', 'generate module definition from function declarations'),
         ('cache', 'redis/memory cache manager'),
         ('calc', 'template calculator'),
         ('core', 'instrument definition'),
         ('deps', 'graph dependeny resolution'),
         ('fakeredis', 'memory-based cache manager with redis interface'),
+        ('rst2html', 'convert restructured text document to html'),
         ('store', 'template serializer'),
     ]
     package = 'dataflow'
