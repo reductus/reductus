@@ -17,6 +17,8 @@
 
 jsonrpc_servername = "localhost"
 jsonrpc_port = 8001
+# ssl_args for https serving the rpc
+ssl_args = {"keyfile": None, "certfile": None}
 http_port = 8000
 serve_staticfiles = True
 use_redis = True

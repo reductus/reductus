@@ -25,7 +25,8 @@ if __name__ == '__main__':
     transport = WsgiServerTransport(queue_class=gevent.queue.Queue)
 
     # start wsgi server as a background-greenlet
-    wsgi_server = gevent.wsgi.WSGIServer((config.jsonrpc_servername, config.jsonrpc_port), transport.handle)
+    ssl_args = getattr(config, 'ssl_args', {})
+    wsgi_server = gevent.wsgi.WSGIServer((config.jsonrpc_servername, config.jsonrpc_port), transport.handle, **ssl_args)
     gevent.spawn(wsgi_server.serve_forever)
     wsgi_server.update_environ()
     actual_host, actual_port = wsgi_server.address
