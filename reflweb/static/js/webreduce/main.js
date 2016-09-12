@@ -217,7 +217,6 @@ webreduce.instruments = webreduce.instruments || {};
       
       webreduce.server_api.list_datasources()
         .then(function(datasources) {
-          console.log(datasources);
           datasources.forEach(function(d, i){
             $("#main_menu #data_menu_sources ul").append($("<li />", {text: d}));
               $("#main_menu").menu("refresh");
@@ -226,7 +225,6 @@ webreduce.instruments = webreduce.instruments || {};
         
       webreduce.server_api.list_instruments()
         .then(function(instruments) {
-          console.log(instruments);
           instruments.forEach(function(d, i){
             $("#main_menu #instrument_menu ul").append($("<li />", {text: d}));
               $("#main_menu").menu("refresh");
