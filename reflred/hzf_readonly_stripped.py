@@ -221,6 +221,7 @@ class FieldFile(object):
                 dtype = str(attrs['format'])
                 # CRUFT: <l4, <d8 are not sensible dtypes
                 if dtype == '<l4': dtype = '<i4'
+                if dtype == '<l8': dtype = '<i8'
                 if dtype == '<d8': dtype = '<f8'
                 dtype=numpy.dtype(dtype)
                 if attrs.get('binary', False) == True:
