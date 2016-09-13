@@ -191,7 +191,7 @@ webreduce.instruments['ncnr.refl'] = webreduce.instruments['ncnr.refl'] || {};
           if ('sample' in e && 'description' in e.sample) {
             leaf.li_attr.title = e.sample.description;
             var parent_id = leaf.parent;
-            parent = jstree._model.data[parent_id];
+            var parent = jstree._model.data[parent_id];
             parent.li_attr.title = e.sample.description;
           }
         }
