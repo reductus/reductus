@@ -192,7 +192,8 @@ def create_instruments():
     load.DATA_SOURCES = config.data_sources
 
     if config.use_redis == True:
-        use_redis()
+        redis_params = getattr(config, "redis_params", {})
+        use_redis(**redis_params)
     
     # load refl instrument if nothing specified in config
     instruments = getattr(config, 'instruments', ['refl']) 
