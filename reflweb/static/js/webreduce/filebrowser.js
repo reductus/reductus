@@ -34,7 +34,7 @@
     var numloaded = 0;
     var numdatafiles = datafiles.length;
     
-    if (PARALLEL_LOAD) {
+    if (webreduce.server_api._load_parallel) {
       ////////////////////////////////////////////////////////////////////////////
       // Sends a flotilla of rpc requests to the server
       ////////////////////////////////////////////////////////////////////////////

@@ -61,6 +61,8 @@ webreduce.server_api = webreduce.server_api || {};
   
   app.server_api.__init__ = function() {
     return $.getJSON("rpc_config.json", function(config) {
+      // get the "parallel_load" suggestion from the rpc_config:
+      app.server_api._load_parallel = (config.load_parallel == null) ? false : config.load_parallel;
       var endPoint;
       if (config.host != null) {
         endPoint = "//" + config.host + ((config.port == null) ? "" : (":" + config.port.toFixed())) + "/RPC2";
