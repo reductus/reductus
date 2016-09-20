@@ -115,30 +115,30 @@ webreduce.instruments = webreduce.instruments || {};
           .append($("<ul />")
             .append($("<li />", {text: "New"})
               .on("click", function() {
-                $("#main_menu").hide(); 
+                hide_menu();
                 var empty_template = {modules: [], wires: []};
                 webreduce.editor.edit_template(empty_template)})
             )
             .append($("<li />", {text: "Edit"})
-              .on("click", function() {$("#main_menu").hide(); webreduce.editor.edit_template()})
+              .on("click", function() {hide_menu(); webreduce.editor.edit_template()})
             )
             .append($("<li />", {text: "Download"})
               .on("click", function() {
-                $("#main_menu").hide();
+                hide_menu();
                 var filename = prompt("Save template as:", "template.json");
                 if (filename == null) {return} // cancelled
                 webreduce.download(JSON.stringify(webreduce.editor._active_template, null, 2), filename);
               })
             )
             .append($("<li />", {text: "Upload"})
-              .on("click", function() {$("#main_menu").hide(); upload_dialog.dialog("open")})
+              .on("click", function() {hide_menu(); upload_dialog.dialog("open")})
             )
             .append($("<li />", {text: "Predefined", id: "predefined_templates"})
               .append($("<ul />"))
               .on("click", "ul li", function(ev) {
                 // delegated click handler, so it can get events on elements not added yet
                 // (added during instrument_load)
-                  $("#main_menu").hide();
+                  hide_menu();
                   var template_id = $(this).text();
                   var template_copy = jQuery.extend(true, {}, webreduce.editor._instrument_def.templates[template_id]);
                   webreduce.editor.load_template(template_copy);
@@ -153,20 +153,26 @@ webreduce.instruments = webreduce.instruments || {};
         .append($("<li />", {id: "data_menu", text: "Data"})
           .append($("<ul />")
             .append($("<li />", {text: "Stash"})
-              .on("click", function() {$("#main_menu").hide(); webreduce.editor.stash_data()})
+              .on("click", function() {hide_menu(); webreduce.editor.stash_data()})
             )
             .append($("<li />", {text: "Export"})
-              .on("click", function() {$("#main_menu").hide(); webreduce.editor.export_data()})
+              .on("click", function() {hide_menu(); webreduce.editor.export_data()})
             )
             .append($("<li />", {text: "Reload Exported"})
-              .on("click", function() {$("#main_menu").hide(); reload_exported_dialog.dialog("open")})
+              .on("click", function() {hide_menu(); reload_exported_dialog.dialog("open")})
+            )
+            .append($("<li />", {class: "ui-state-disabled"})
+              .append($("<label />", {text: "Auto-reload mtimes"})
+                .append($("<input>", {type: "checkbox", checked: false, disabled: true}))
+                .on("change", function() {hide_menu();})
+              )
             )
             .append($("<li />", {id: "data_menu_sources", text: "Add source"})
               .append($("<ul />"))
-              .on("click", "ul li", function(ev) {
+              .on("click", "ul li", function() {
                 // delegated click handler, so it can get events on elements not added yet
                 // (added during startup)
-                  $("#main_menu").hide();
+                  hide_menu();
                   webreduce.addDataSource("navigation", $(this).text(), []);
                 })
               )
@@ -177,13 +183,34 @@ webreduce.instruments = webreduce.instruments || {};
           .on("click", "ul li", function(ev) {
             // delegated click handler, so it can get events on elements not added yet
             // (added during startup)
-              $("#main_menu").hide();
+              hide_menu();
               webreduce.editor.switch_instrument($(this).text());
             })
           )
         .menu()
+        
+      function hide_menu() {
+        $("#main_menu").menu("collapseAll", null, true).hide();
+        $("body").off("click.not-menu");
+        return false;
+      }
 
-      $("#show_main_menu").on("click", function() {$("#main_menu").toggle()});
+      $("#show_main_menu").on("click", function(ev) {
+        ev.stopPropagation();
+        if ($("#main_menu").is(":visible")) {
+          hide_menu();
+        } else {
+          $("#main_menu").menu("collapseAll", null, true).show();
+          $("body").on("click.not-menu", function(ev) {
+            if (!$(ev.target).is("#main_menu_div *")) {
+              hide_menu();
+            }
+            return false;
+          });
+        }
+        //$("#main_menu").toggle()
+        return false;
+      });
    
       $("input#template_file").change(function() {
         var file = this.files[0]; // only one file allowed
