@@ -524,6 +524,8 @@ def group_by_intent(data):
     rock {Rocking curve} (refldata[]) : rocking curve measurements
 
     other (refldata[]) : everything else
+    
+    2016-07-20 Brian Maranville
     """
     map_intent = {
         'specular': 'specular',
