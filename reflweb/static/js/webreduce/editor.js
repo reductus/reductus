@@ -604,6 +604,7 @@ webreduce.editor = webreduce.editor || {};
             method: "calculate",
             template: versioned,
             config: config,
+            node: node,
             terminal: terminal,
             return_type: return_type }))
       r = r.then(function() { 
