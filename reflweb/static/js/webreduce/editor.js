@@ -13,6 +13,8 @@ webreduce.editor = webreduce.editor || {};
     return uuid;
   }
 
+  webreduce.editor._cache = new PouchDB("calculations");
+
   webreduce.editor.create_instance = function(target_id) {
     // create an instance of the dataflow editor in
     // the html element referenced by target_id
@@ -575,16 +577,49 @@ webreduce.editor = webreduce.editor || {};
       webreduce.editor.show_plots(first);
     });
   }
+  
+  webreduce.editor.get_versioned_template = function(template) {
+    var versioned = jQuery.extend(true, {}, template),
+        editor = this,
+        module_list = versioned.modules;
+    module_list.forEach(function(m) {
+      if (m.module && m.module in editor._module_defs) {
+        m.version = editor._module_defs[m.module].version;
+      }
+    });
+    return versioned
+  }
 
   webreduce.editor.calculate = function(template, config, node, terminal, return_type, recalc_mtimes) {
     //var recalc_mtimes = $("#auto_reload_mtimes").prop("checked");
-    if (recalc_mtimes) { 
-      return webreduce.update_file_mtimes().then(function() {
-        return webreduce.server_api.calc_terminal(template, config, node, terminal, return_type)
+    var caching = $("#cache_calculations").prop("checked");
+    var editor = this;
+    var r = new Promise(function(resolve, reject) {resolve()});
+    if (recalc_mtimes) {
+      r = r.then(function() { return webreduce.update_file_mtimes()})
+    }
+    if (caching) {
+      var versioned = webreduce.editor.get_versioned_template(template), 
+          sig = Sha1.hash(JSON.stringify({
+            method: "calculate",
+            template: versioned,
+            config: config,
+            terminal: terminal,
+            return_type: return_type }))
+      r = r.then(function() { 
+        return webreduce.editor._cache.get(sig).catch(function() { 
+          return webreduce.server_api.calc_terminal(versioned, config, node, terminal, return_type)
+            .then(function(result) { 
+              var doc = jQuery.extend(true, {_id: sig}, result);
+              webreduce.editor._cache.put(doc);
+              return result
+            })
+        })
       })
     } else {
-      return webreduce.server_api.calc_terminal(template, config, node, terminal, return_type)
+      r = r.then(function() { return webreduce.server_api.calc_terminal(template, config, node, terminal, return_type) })
     }
+    return r;
   }
   
   webreduce.editor.export_data = function(suggested_name) {
