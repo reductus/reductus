@@ -149,8 +149,12 @@ webreduce.editor = webreduce.editor || {};
       if (data_to_show != null && terminals_to_calculate.indexOf(data_to_show) < 0) {
         terminals_to_calculate.push(data_to_show);
       }
+      var recalc_mtimes = $("#auto_reload_mtimes").prop("checked");
       Promise.all(terminals_to_calculate.map(function(terminal_id) {
-         return webreduce.server_api.calc_terminal(active_template, {}, i, terminal_id, "metadata");
+          // possible inconsistency here... if new mtime on file appears between calculations of 
+          // terminals, results will have a mixture of different source data files.
+          // Solution is to implement calculate_all, which will return all the results in the template.
+          return webreduce.editor.calculate(active_template, {}, i, terminal_id, "metadata", recalc_mtimes);
         })
       ).then(function(results) {
         var inputs_map = {};
@@ -197,9 +201,10 @@ webreduce.editor = webreduce.editor || {};
   }
   
   function compare_in_template(to_compare, template) {
-    var template = template || webreduce.editor._active_template;
+    var template = template || webreduce.editor._active_template,
+        recalc_mtimes = $("#auto_reload_mtimes").prop("checked");
     Promise.all(to_compare.map(function(a) {
-         return webreduce.server_api.calc_terminal(template, {}, a.node, a.terminal, "metadata");
+         return webreduce.editor.calculate(template, {}, a.node, a.terminal, "metadata", recalc_mtimes);
         })
       ).then(function(results) {
         var output;
@@ -551,12 +556,13 @@ webreduce.editor = webreduce.editor || {};
     d3.selectAll("g.module .selected").classed("selected", false);
     var existing_stashes = JSON.parse(localStorage['webreduce.editor.stashes'] || "{}");
     var stashnames = stashnames.filter(function(s) {return (s in existing_stashes)});
+    var recalc_mtimes = $("#auto_reload_mtimes").prop("checked");
     Promise.all(stashnames.map(function(stashname) {
         var stashed = existing_stashes[stashname];
         var template = stashed.module_def.template;
         var node = stashed.module_def.outputs[0].source_module;
         var terminal = stashed.module_def.outputs[0].source_terminal;
-        return webreduce.server_api.calc_terminal(template, {}, node, terminal, "metadata");
+        return webreduce.editor.calculate(template, {}, node, terminal, "metadata", recalc_mtimes);
       })
     ).then(function(results) {
       if (results.length < 1) { return }
@@ -570,6 +576,17 @@ webreduce.editor = webreduce.editor || {};
     });
   }
 
+  webreduce.editor.calculate = function(template, config, node, terminal, return_type, recalc_mtimes) {
+    //var recalc_mtimes = $("#auto_reload_mtimes").prop("checked");
+    if (recalc_mtimes) { 
+      return webreduce.update_file_mtimes().then(function() {
+        return webreduce.server_api.calc_terminal(template, config, node, terminal, return_type)
+      })
+    } else {
+      return webreduce.server_api.calc_terminal(template, config, node, terminal, return_type)
+    }
+  }
+  
   webreduce.editor.export_data = function(suggested_name) {
     var suggested_name = (suggested_name == null) ?  "myfile.refl" : suggested_name;
     var filename = prompt("Export data as:", suggested_name);
@@ -577,8 +594,9 @@ webreduce.editor = webreduce.editor || {};
     var w = webreduce.editor,
       node = w._active_node,
       terminal = w._active_terminal,
-      template = w._active_template;
-    webreduce.server_api.calc_terminal(template, {}, node, terminal, 'export').then(function(result) {
+      template = w._active_template,
+      recalc_mtimes = $("#auto_reload_mtimes").prop("checked");
+    webreduce.editor.calculate(template, {}, node, terminal, 'export', recalc_mtimes).then(function(result) {
       // add the template and target node, terminal to the header of the file:
       var header = {template_data: {template: template, node: node, terminal: terminal}};
       webreduce.download('# ' + JSON.stringify(header).slice(1,-1) + '\n' + result.values.join('\n\n'), filename);

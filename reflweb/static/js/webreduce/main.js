@@ -161,9 +161,9 @@ webreduce.instruments = webreduce.instruments || {};
             .append($("<li />", {text: "Reload Exported"})
               .on("click", function() {hide_menu(); reload_exported_dialog.dialog("open")})
             )
-            .append($("<li />", {class: "ui-state-disabled"})
+            .append($("<li />")
               .append($("<label />", {text: "Auto-reload mtimes"})
-                .append($("<input>", {type: "checkbox", checked: false, disabled: true}))
+                .append($("<input />", {type: "checkbox", id: "auto_reload_mtimes", checked: false}))
                 .on("change", function() {hide_menu();})
               )
             )
@@ -196,7 +196,6 @@ webreduce.instruments = webreduce.instruments || {};
       }
 
       $("#show_main_menu").on("click", function(ev) {
-        ev.stopPropagation();
         if ($("#main_menu").is(":visible")) {
           hide_menu();
         } else {
@@ -205,11 +204,9 @@ webreduce.instruments = webreduce.instruments || {};
             if (!$(ev.target).is("#main_menu_div *")) {
               hide_menu();
             }
-            return false;
           });
         }
         //$("#main_menu").toggle()
-        return false;
       });
    
       $("input#template_file").change(function() {

@@ -19,7 +19,7 @@ webreduce.instruments['ncnr.ospec'] = webreduce.instruments['ncnr.ospec'] || {};
     var config = {"0": {"fileinfo": {"path": path, "source": datasource, "mtime": mtime}}},
         module_id = 0,
         terminal_id = "output";
-    return webreduce.server_api.calc_terminal(template, config, module_id, terminal_id, "metadata").then(function(result) {
+    return webreduce.editor.calculate(template, config, module_id, terminal_id, "metadata", false).then(function(result) {
       result.values.forEach(function(v) {v.mtime = mtime});
       if (db) { db[path] = result; }
       return result
