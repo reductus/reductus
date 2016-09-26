@@ -93,14 +93,21 @@ webreduce.instruments = webreduce.instruments || {};
         a.style = "display: none";
         a.id = "savedata";
         return function (data, fileName) {
-          var blob = new Blob([data], {type: "text/plain"}),
-            url = window.URL.createObjectURL(blob);
-          a.href = url;
-          a.download = fileName;
-          a.target = "_blank";
-          //window.open(url, '_blank', fileName);
-          a.click();
-          setTimeout(function() { window.URL.revokeObjectURL(url) }, 1000);
+          var blob = new Blob([data], {type: "text/plain"});
+          // IE 10 / 11 
+          if (window.navigator.msSaveOrOpenBlob) { 
+            window.navigator.msSaveOrOpenBlob(blob, fileName); 
+          } else {
+            var url = window.URL.createObjectURL(blob);
+            a.href = url;
+            a.download = fileName;
+            a.target = "_blank";
+            //window.open(url, '_blank', fileName);
+            a.click();
+            setTimeout(function() { window.URL.revokeObjectURL(url) }, 1000);
+          }
+          // cleanup
+          document.body.removeChild(a);
         };
       }());
       
