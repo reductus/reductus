@@ -19,7 +19,7 @@ webreduce.instruments['ncnr.refl'] = webreduce.instruments['ncnr.refl'] || {};
     var config = {"0": {"filelist": [{"path": path, "source": datasource, "mtime": mtime}]}},
         module_id = 0,
         terminal_id = "output";
-    return webreduce.editor.calculate(template, config, module_id, terminal_id, "metadata", false).then(function(result) {
+    return webreduce.editor.calculate(template, config, module_id, terminal_id, "metadata", false, true).then(function(result) {
       result.values.forEach(function(v) {v.mtime = mtime});
       if (db) { db[path] = result; }
       return result.values

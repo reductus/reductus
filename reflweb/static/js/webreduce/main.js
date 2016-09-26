@@ -313,9 +313,10 @@ webreduce.instruments = webreduce.instruments || {};
       
       webreduce.api_exception_handler = function(exc) {
         console.log("api exception: ", exc);
-        alert("exception - error message: \n" + exc.result.error.message);
+        var message = ((exc.result || {}).error || {}).message || "no error message";
+        alert("exception - error message: \n" + message);
         // catch the error that comes from stale timestamps for files
-        if (exc.result.error.message.indexOf("ValueError: Requested mtime is") > -1) {
+        if (message.indexOf("ValueError: Requested mtime is") > -1) {
           setTimeout(function() { 
             alert("Newer version of data file(s) found in source...\n\n" + 
                   "updating template with new file-modified times\n\n" + 
@@ -327,8 +328,9 @@ webreduce.instruments = webreduce.instruments || {};
           throw(exc);
         }
       }
-      window.onpopstate();
-      webreduce.editor.switch_instrument(current_instrument);
+
+      webreduce.editor.switch_instrument(current_instrument)
+        .then(function() { window.onpopstate() });
   });
   }
 
