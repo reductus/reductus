@@ -38,6 +38,7 @@
       ////////////////////////////////////////////////////////////////////////////
       // Sends a flotilla of rpc requests to the server
       ////////////////////////////////////////////////////////////////////////////
+      $.blockUI();
       datafiles.forEach(function(j, i) {
         load_promises.push(
           loader(datasource, path + "/" + j, files_metadata[j].mtime, file_objs)
@@ -46,6 +47,7 @@
           );
       });
       var p = Promise.all(load_promises).then(function(results) {
+        $.unblockUI();
         var categorizers = webreduce.instruments[instrument_id].categorizers;
         var treeinfo = file_objs_to_tree(file_objs, categorizers);
         // add decorators etc to the tree with postprocess:
@@ -69,7 +71,7 @@
       ////////////////////////////////////////////////////////////////////////////
       // Sends rpc requests one after the other to the server
       ////////////////////////////////////////////////////////////////////////////
-      var p = new Promise(function(resolve, reject) {resolve()}),
+      var p = new Promise(function(resolve, reject) {$.blockUI(); resolve()}),
           results = [];
       datafiles.forEach(function(j, i) {
         p = p.then(function() {
@@ -79,6 +81,7 @@
           });
       });
       p = p.then(function() {
+        $.unblockUI();
         var categorizers = webreduce.instruments[instrument_id].categorizers;
         var treeinfo = file_objs_to_tree(file_objs, categorizers);
         // add decorators etc to the tree with postprocess:

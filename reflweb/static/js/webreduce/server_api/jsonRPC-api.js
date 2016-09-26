@@ -20,25 +20,25 @@ webreduce.server_api = webreduce.server_api || {};
         // array-like.
         params[i] = arguments[i];
       }
-      $.blockUI();
+      //$.blockUI();
       var r = new Promise(function(resolve, reject) {
         $.jsonRPC.request(method_name, {
           async: true,
           params: params,
           cache: cache,
           success: function(result) {
-            $.unblockUI();
+            //$.unblockUI();
             resolve(result.result);
           },
           error: function(result) {
-            $.unblockUI();
+            //$.unblockUI();
             reject({method_name: method_name, params: params, caller: wrapped.caller, resolver: resolve, result: result});
           }
         });
       })
       .catch(function(error) {
         // hook in a custom handler
-        $.unblockUI();
+        //$.unblockUI();
         if (app.api_exception_handler) {
           app.api_exception_handler(error); 
         } else {

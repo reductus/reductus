@@ -590,11 +590,14 @@ webreduce.editor = webreduce.editor || {};
     return versioned
   }
 
-  webreduce.editor.calculate = function(template, config, node, terminal, return_type, recalc_mtimes) {
+  webreduce.editor.calculate = function(template, config, node, terminal, return_type, recalc_mtimes, noblock) {
     //var recalc_mtimes = $("#auto_reload_mtimes").prop("checked");
     var caching = $("#cache_calculations").prop("checked");
     var editor = this;
     var r = new Promise(function(resolve, reject) {resolve()});
+    if (!noblock) {
+      r = r.then(function() { $.blockUI() })
+    }
     if (recalc_mtimes) {
       r = r.then(function() { return webreduce.update_file_mtimes()})
     }
@@ -608,10 +611,15 @@ webreduce.editor = webreduce.editor || {};
             terminal: terminal,
             return_type: return_type }))
       r = r.then(function() { 
-        return webreduce.editor._cache.get(sig).catch(function() { 
+        return webreduce.editor._cache.get(sig).then(function(cached) {return cached.value})
+        .catch(function() { 
           return webreduce.server_api.calc_terminal(versioned, config, node, terminal, return_type)
-            .then(function(result) { 
-              var doc = jQuery.extend(true, {_id: sig}, result);
+            .then(function(result) {
+              var doc = {
+                _id: sig, 
+                created_at: Date.now(),
+                value: result 
+              }
               webreduce.editor._cache.put(doc);
               return result
             })
@@ -619,6 +627,9 @@ webreduce.editor = webreduce.editor || {};
       })
     } else {
       r = r.then(function() { return webreduce.server_api.calc_terminal(template, config, node, terminal, return_type) })
+    }
+    if (!noblock) {
+      r = r.then(function(result) { $.unblockUI(); return result; })
     }
     return r;
   }
@@ -1086,7 +1097,7 @@ webreduce.editor = webreduce.editor || {};
   }
   
   webreduce.editor.switch_instrument = function(instrument_id) {
-    this.load_instrument(instrument_id)
+    return this.load_instrument(instrument_id)
       .then(function(instrument_def) { 
           var template_names = Object.keys(instrument_def.templates);
           $("#main_menu #predefined_templates ul").empty();
