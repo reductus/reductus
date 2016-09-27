@@ -648,17 +648,17 @@ webreduce.editor = webreduce.editor || {};
     // call result_callback on each result individually (this function will return all results
     // if you want to act on the aggregate after)
     var caching = $("#cache_calculations").prop("checked");
-    if (this._calc_status_message == null) {
+    if (webreduce.editor._calc_status_message == null) {
       var status_message = $("<div />");
       status_message.append($("<h1 />", {text: "Processing..."}));
       status_message.append($("<progress />"));
       status_message.append($("<span />"));
       status_message.append($("<button />", {text: "cancel", class: "cancel"}));
-      this._calc_status_message = status_message;
+      webreduce.editor._calc_status_message = status_message;
     }
-    this._calculation_cancelled = false;
+    webreduce.editor._calculation_cancelled = false;
     var calc
-    var status_message = this._calc_status_message;
+    var status_message = webreduce.editor._calc_status_message;
     var r = new Promise(function(resolve, reject) {resolve()});
     var cancel_promise = new Promise(function(resolve, reject) { 
       status_message.find("button").on("click", function() {
