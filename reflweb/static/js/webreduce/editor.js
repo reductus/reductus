@@ -151,14 +151,12 @@ webreduce.editor = webreduce.editor || {};
       if (data_to_show != null && terminals_to_calculate.indexOf(data_to_show) < 0) {
         terminals_to_calculate.push(data_to_show);
       }
-      var recalc_mtimes = $("#auto_reload_mtimes").prop("checked");
-      Promise.all(terminals_to_calculate.map(function(terminal_id) {
-          // possible inconsistency here... if new mtime on file appears between calculations of 
-          // terminals, results will have a mixture of different source data files.
-          // Solution is to implement calculate_all, which will return all the results in the template.
-          return webreduce.editor.calculate(active_template, {}, i, terminal_id, "metadata", recalc_mtimes);
-        })
-      ).then(function(results) {
+      var recalc_mtimes = $("#auto_reload_mtimes").prop("checked"),
+          params_to_calc = terminals_to_calculate.map(function(terminal_id) {
+            return {template: active_template, config: {}, node: i, terminal: terminal_id, return_type: "metadata"}
+          })
+      webreduce.editor.calculate(params_to_calc, recalc_mtimes)
+        .then(function(results) {
         var inputs_map = {};
         var id;
         results.forEach(function(r, ii) {
@@ -205,10 +203,11 @@ webreduce.editor = webreduce.editor || {};
   function compare_in_template(to_compare, template) {
     var template = template || webreduce.editor._active_template,
         recalc_mtimes = $("#auto_reload_mtimes").prop("checked");
-    Promise.all(to_compare.map(function(a) {
-         return webreduce.editor.calculate(template, {}, a.node, a.terminal, "metadata", recalc_mtimes);
-        })
-      ).then(function(results) {
+        params_to_calc = to_compare.map(function(a) {
+          return {template: template, config: {}, node: a.node, terminal: a.terminal, return_type: "metadata"}
+        });
+    return webreduce.editor.calculate(params_to_calc, recalc_mtimes)
+      .then(function(results) {
         var output;
         if (results.length < 1) { 
           output = {"datatype": "none", "values": []} 
@@ -559,23 +558,27 @@ webreduce.editor = webreduce.editor || {};
     var existing_stashes = JSON.parse(localStorage['webreduce.editor.stashes'] || "{}");
     var stashnames = stashnames.filter(function(s) {return (s in existing_stashes)});
     var recalc_mtimes = $("#auto_reload_mtimes").prop("checked");
-    Promise.all(stashnames.map(function(stashname) {
-        var stashed = existing_stashes[stashname];
-        var template = stashed.module_def.template;
-        var node = stashed.module_def.outputs[0].source_module;
-        var terminal = stashed.module_def.outputs[0].source_terminal;
-        return webreduce.editor.calculate(template, {}, node, terminal, "metadata", recalc_mtimes);
-      })
-    ).then(function(results) {
-      if (results.length < 1) { return }
-      var first = results[0];
-      for (var i=1; i<results.length; i++) {
-        if (results[i].datatype == first.datatype) {
-          first.values = first.values.concat(results[i].values);
-        }
+    var params_to_calc = stashnames.map(function(stashname) {
+      var stashed = existing_stashes[stashname];
+      return {
+        template: stashed.module_def.template,
+        config: {},
+        node: stashed.module_def.outputs[0].source_module,
+        terminal: stashed.module_def.outputs[0].source_terminal,
+        return_type: "metadata"
       }
-      webreduce.editor.show_plots(first);
     });
+    return webreduce.editor.calculate(params_to_calc, recalc_mtimes)
+      .then(function(results) {
+        if (results.length < 1) { return }
+        var first = results[0];
+        for (var i=1; i<results.length; i++) {
+          if (results[i].datatype == first.datatype) {
+            first.values = first.values.concat(results[i].values);
+          }
+        }
+        webreduce.editor.show_plots(first);
+      });
   }
   
   webreduce.editor.get_versioned_template = function(template) {
@@ -590,17 +593,22 @@ webreduce.editor = webreduce.editor || {};
     return versioned
   }
 
-  webreduce.editor.calculate = function(template, config, node, terminal, return_type, recalc_mtimes, noblock) {
-    //var recalc_mtimes = $("#auto_reload_mtimes").prop("checked");
-    var caching = $("#cache_calculations").prop("checked");
-    var editor = this;
+  webreduce.editor.get_cached_timestamps = function() {
+    var cache = this._cache;
+    return this._cache.allDocs({"include_docs": true})
+      .then(function(res) {
+        return res.rows.map(function(r) {return [r.doc.created_at, r.doc._id]})
+      })
+  }
+
+  function calculate_one(params, caching) {
     var r = new Promise(function(resolve, reject) {resolve()});
-    if (!noblock) {
-      r = r.then(function() { $.blockUI() })
-    }
-    if (recalc_mtimes) {
-      r = r.then(function() { return webreduce.update_file_mtimes()})
-    }
+    var template = params.template,
+        config = params.config || {},
+        node = params.node,
+        terminal = params.terminal,
+        return_type = params.return_type || 'metadata';
+        
     if (caching) {
       var versioned = webreduce.editor.get_versioned_template(template), 
           sig = Sha1.hash(JSON.stringify({
@@ -612,7 +620,8 @@ webreduce.editor = webreduce.editor || {};
             return_type: return_type }))
       r = r.then(function() { 
         return webreduce.editor._cache.get(sig).then(function(cached) {return cached.value})
-        .catch(function() { 
+        .catch(function(e) {
+          console.log("not found in cache:", versioned);
           return webreduce.server_api.calc_terminal(versioned, config, node, terminal, return_type)
             .then(function(result) {
               var doc = {
@@ -623,13 +632,74 @@ webreduce.editor = webreduce.editor || {};
               webreduce.editor._cache.put(doc);
               return result
             })
+            .catch(function(e) {
+              console.log("error", e)
+            })
         })
       })
     } else {
       r = r.then(function() { return webreduce.server_api.calc_terminal(template, config, node, terminal, return_type) })
     }
+    return r
+  }
+  
+  webreduce.editor.calculate = function(params, recalc_mtimes, noblock, result_callback) {
+    //var recalc_mtimes = $("#auto_reload_mtimes").prop("checked");
+    // call result_callback on each result individually (this function will return all results
+    // if you want to act on the aggregate after)
+    var caching = $("#cache_calculations").prop("checked");
+    if (this._calc_status_message == null) {
+      var status_message = $("<div />");
+      status_message.append($("<h1 />", {text: "Processing..."}));
+      status_message.append($("<progress />"));
+      status_message.append($("<span />"));
+      status_message.append($("<button />", {text: "cancel", class: "cancel"}));
+      this._calc_status_message = status_message;
+    }
+    this._calculation_cancelled = false;
+    var calc
+    var status_message = this._calc_status_message;
+    var r = new Promise(function(resolve, reject) {resolve()});
+    var cancel_promise = new Promise(function(resolve, reject) { 
+      status_message.find("button").on("click", function() {
+        webreduce.editor._calculation_cancelled = true;
+        resolve({"cancelled": true})
+      });
+    });
+    if (!noblock) {
+      r = r.then(function() { $.blockUI({message: status_message}) })
+    }
+    if (recalc_mtimes) {
+      r = r.then(function() { return webreduce.update_file_mtimes()})
+    }
+    if (params instanceof Array) {
+      var results = [],
+          numcalcs = params.length;
+      status_message.find("progress").attr("max", numcalcs.toFixed());
+      params.forEach(function(p,i) {
+        r = r.then(function() {
+          if (webreduce.editor._calculation_cancelled) {
+            return {"cancelled": true}
+          }
+          return Promise.race(
+            [cancel_promise, calculate_one(p, caching).then(function(result) {
+              if (result_callback) {result_callback(r, p, i);}
+              status_message.find("span").text((i+1).toFixed() + " of " + numcalcs.toFixed());
+              status_message.find("progress").val(i+1);
+              console.log(i, numcalcs);
+              results.push(result);
+            })]
+          )
+        })
+      });
+      r = r.then(function() { return results })
+    }
+    else {
+      r = r.then(function() {return Promise.race([cancel_promise, calculate_one(params, caching)])})
+    }
     if (!noblock) {
       r = r.then(function(result) { $.unblockUI(); return result; })
+       .catch(function(err) { $.unblockUI(); throw err });
     }
     return r;
   }
@@ -639,14 +709,18 @@ webreduce.editor = webreduce.editor || {};
     var filename = prompt("Export data as:", suggested_name);
     if (filename == null) {return} // cancelled
     var w = webreduce.editor,
-      node = w._active_node,
-      terminal = w._active_terminal,
-      template = w._active_template,
-      recalc_mtimes = $("#auto_reload_mtimes").prop("checked");
-    webreduce.editor.calculate(template, {}, node, terminal, 'export', recalc_mtimes).then(function(result) {
+      params = {
+        config: {},
+        node: w._active_node,
+        terminal: w._active_terminal,
+        template: w._active_template,
+        return_type: "export",
+        recalc_mtimes: $("#auto_reload_mtimes").prop("checked")
+      }
+    webreduce.editor.calculate([params], recalc_mtimes).then(function(result) {
       // add the template and target node, terminal to the header of the file:
       var header = {template_data: {template: template, node: node, terminal: terminal}};
-      webreduce.download('# ' + JSON.stringify(header).slice(1,-1) + '\n' + result.values.join('\n\n'), filename);
+      webreduce.download('# ' + JSON.stringify(header).slice(1,-1) + '\n' + result[0].values.join('\n\n'), filename);
     });       
   }
   

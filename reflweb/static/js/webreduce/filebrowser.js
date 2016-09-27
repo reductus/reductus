@@ -33,21 +33,19 @@
     var loader = webreduce.instruments[instrument_id].load_file;
     var numloaded = 0;
     var numdatafiles = datafiles.length;
-    
-    if (webreduce.server_api._load_parallel) {
-      ////////////////////////////////////////////////////////////////////////////
-      // Sends a flotilla of rpc requests to the server
-      ////////////////////////////////////////////////////////////////////////////
-      $.blockUI();
-      datafiles.forEach(function(j, i) {
-        load_promises.push(
-          loader(datasource, path + "/" + j, files_metadata[j].mtime, file_objs)
-            .then(function(r) {webreduce.statusline_log("loaded " + (++numloaded) + " of " + numdatafiles + ": "+ j); return r},
-                  function(e) {console.log('failed to load: ', j, e)})
-          );
-      });
-      var p = Promise.all(load_promises).then(function(results) {
-        $.unblockUI();
+
+    ////////////////////////////////////////////////////////////////////////////
+    // Send rpc requests one after the other to the server
+    ////////////////////////////////////////////////////////////////////////////
+    var load_params = datafiles.map(function(j) {
+      return {
+        "datasource": datasource, 
+        "path": path + "/" + j,
+        "mtime": files_metadata[j].mtime 
+      }
+    });
+    var p = loader(load_params, file_objs)
+      .then(function(results) {
         var categorizers = webreduce.instruments[instrument_id].categorizers;
         var treeinfo = file_objs_to_tree(file_objs, categorizers);
         // add decorators etc to the tree with postprocess:
@@ -66,41 +64,6 @@
         });
         return target
       });
-    }
-    else {
-      ////////////////////////////////////////////////////////////////////////////
-      // Sends rpc requests one after the other to the server
-      ////////////////////////////////////////////////////////////////////////////
-      var p = new Promise(function(resolve, reject) {$.blockUI(); resolve()}),
-          results = [];
-      datafiles.forEach(function(j, i) {
-        p = p.then(function() {
-          return loader(datasource, path + "/" + j, files_metadata[j].mtime, file_objs)
-            .then(function(r) {webreduce.statusline_log("loaded " + (++numloaded) + " of " + numdatafiles + ": "+ j); results.push(r); return r},
-                  function(e) {console.log('failed to load: ', j, e)})
-          });
-      });
-      p = p.then(function() {
-        $.unblockUI();
-        var categorizers = webreduce.instruments[instrument_id].categorizers;
-        var treeinfo = file_objs_to_tree(file_objs, categorizers);
-        // add decorators etc to the tree with postprocess:
-        var postprocess = webreduce.instruments[instrument_id].postprocess;
-        if (postprocess) { postprocess(treeinfo, file_objs) }
-        var target = $(target_in).find(".remote-filebrowser");
-        var jstree = target.jstree({
-          "plugins": ["checkbox", "changed", "sort"],
-          "checkbox" : {
-            "three_state": true,
-            //"cascade": "down",
-            "tie_selection": false,
-            "whole_node": false
-          },
-          "core": {"data": treeinfo}
-        });
-        return target
-      });
-    }
 
     p.then(function(target) {
       target.on("ready.jstree", function() {
@@ -158,6 +121,7 @@
 
     //var out = [], categories_obj = {}, file_obj;
     for (var p in file_objs) {
+      //if (!p) { continue }
       fm = file_objs[p].values;
       for (var e=0; e<fm.length; e++) {
         var entry = fm[e],

@@ -5,24 +5,37 @@ webreduce.instruments['ncnr.refl'] = webreduce.instruments['ncnr.refl'] || {};
 
 // define the loader and categorizers for ncnr.refl instrument
 (function(instrument) {
-  function load_refl(datasource, path, mtime, db){
-    var template = {
-      "name": "loader_template",
-      "description": "ReflData remote loader",
-      "modules": [
-        {"module": "ncnr.refl.ncnr_load.cached", "version": "0.1", "config": {}}
-      ],
-      "wires": [],
-      "instrument": "ncnr.magik",
-      "version": "0.0"
-    }
-    var config = {"0": {"filelist": [{"path": path, "source": datasource, "mtime": mtime}]}},
-        module_id = 0,
-        terminal_id = "output";
-    return webreduce.editor.calculate(template, config, module_id, terminal_id, "metadata", false, true).then(function(result) {
-      result.values.forEach(function(v) {v.mtime = mtime});
-      if (db) { db[path] = result; }
-      return result.values
+  //function load_refl(datasource, path, mtime, db){
+  function load_refl(load_params, db) {
+    // load params is a list of: 
+    // {datasource: "ncnr", path: "ncnrdata/cgd/...", mtime: 12319123109}
+    var calc_params = load_params.map(function(lp) {
+      return {
+        template: {
+          "name": "loader_template",
+          "description": "ReflData remote loader",
+          "modules": [
+            {"module": "ncnr.refl.ncnr_load.cached", "version": "0.1", "config": {}}
+          ],
+          "wires": [],
+          "instrument": "ncnr.magik",
+          "version": "0.0"
+        }, 
+        config: {"0": {"filelist": [{"path": lp.path, "source": lp.datasource, "mtime": lp.mtime}]}},
+        node: 0,
+        terminal:  "output",
+        return_type: "metadata"
+      }
+    });
+    return webreduce.editor.calculate(calc_params, false, false).then(function(results) {
+      return results.map(function(result, i) {
+        var lp = load_params[i];
+        if (result && result.values) {
+          result.values.forEach(function(v) {v.mtime = lp.mtime});
+          if (db) { db[lp.path] = result; }
+          return result.values;
+        }
+      })
     })
   }
   
