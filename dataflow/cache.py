@@ -20,6 +20,10 @@ import time
 
 def memory_cache():
     import fakeredis
+    return fakeredis.MemoryCache()
+    
+def file_cache():
+    import fakeredis
     return fakeredis.FileBasedCache()
 
 # port 6379 is the default port value for the python redis connection
