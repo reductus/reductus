@@ -5,24 +5,36 @@ webreduce.instruments['ncnr.ospec'] = webreduce.instruments['ncnr.ospec'] || {};
 
 // define the loader and categorizers for ncnr.refl instrument
 (function(instrument) {
-  function load_ospec(datasource, path, mtime, db){
-    var template = {
-      "name": "loader_template",
-      "description": "Offspecular remote loader",
-      "modules": [
-        {"module": "ncnr.ospec.LoadMAGIKPSD", "version": "0.1", "config": {}}
-      ],
-      "wires": [],
-      "instrument": "ncnr.magik",
-      "version": "0.0"
-    }
-    var config = {"0": {"fileinfo": {"path": path, "source": datasource, "mtime": mtime}}},
-        module_id = 0,
-        terminal_id = "output";
-    return webreduce.editor.calculate(template, config, module_id, terminal_id, "metadata", false).then(function(result) {
-      result.values.forEach(function(v) {v.mtime = mtime});
-      if (db) { db[path] = result; }
-      return result
+  function load_ospec(load_params, db) {
+    // load params is a list of: 
+    // {datasource: "ncnr", path: "ncnrdata/cgd/...", mtime: 12319123109}
+    var calc_params = load_params.map(function(lp) {
+      return {
+        template: {
+          "name": "loader_template",
+          "description": "Offspecular remote loader",
+          "modules": [
+            {"module": "ncnr.ospec.LoadMAGIKPSD", "version": "0.1", "config": {}}
+          ],
+          "wires": [],
+          "instrument": "ncnr.magik",
+          "version": "0.0"
+        }, 
+        config: {"0": {"fileinfo": {"path": lp.path, "source": lp.datasource, "mtime": lp.mtime}}},
+        node: 0,
+        terminal:  "output",
+        return_type: "metadata"
+      }
+    });
+    return webreduce.editor.calculate(calc_params, false, false).then(function(results) {
+      return results.map(function(result, i) {
+        var lp = load_params[i];
+        if (result && result.values) {
+          result.values.forEach(function(v) {v.mtime = lp.mtime});
+          if (db) { db[lp.path] = result; }
+          return result.values;
+        }
+      })
     })
   }
   

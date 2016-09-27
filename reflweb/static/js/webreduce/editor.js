@@ -710,17 +710,17 @@ webreduce.editor = webreduce.editor || {};
     if (filename == null) {return} // cancelled
     var w = webreduce.editor,
       params = {
+		template: w._active_template,
         config: {},
         node: w._active_node,
         terminal: w._active_terminal,
-        template: w._active_template,
-        return_type: "export",
-        recalc_mtimes: $("#auto_reload_mtimes").prop("checked")
-      }
-    webreduce.editor.calculate([params], recalc_mtimes).then(function(result) {
+        return_type: "export"
+      },
+      recalc_mtimes = $("#auto_reload_mtimes").prop("checked");
+    webreduce.editor.calculate(params, recalc_mtimes).then(function(result) {
       // add the template and target node, terminal to the header of the file:
-      var header = {template_data: {template: template, node: node, terminal: terminal}};
-      webreduce.download('# ' + JSON.stringify(header).slice(1,-1) + '\n' + result[0].values.join('\n\n'), filename);
+      var header = {template_data: {template: params.template, node: params.node, terminal: params.terminal}};
+      webreduce.download('# ' + JSON.stringify(header).slice(1,-1) + '\n' + result.values.join('\n\n'), filename);
     });       
   }
   
