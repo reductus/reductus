@@ -670,7 +670,7 @@ webreduce.editor = webreduce.editor || {};
       r = r.then(function() { $.blockUI({message: status_message}) })
     }
     if (recalc_mtimes) {
-      r = r.then(function() { return webreduce.update_file_mtimes()})
+      r = r.then(function() { return Promise.race([cancel_promise, webreduce.update_file_mtimes()])})
     }
     if (params instanceof Array) {
       var results = [],
