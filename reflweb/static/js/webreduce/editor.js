@@ -621,7 +621,6 @@ webreduce.editor = webreduce.editor || {};
       r = r.then(function() { 
         return webreduce.editor._cache.get(sig).then(function(cached) {return cached.value})
         .catch(function(e) {
-          console.log("not found in cache:", versioned);
           return webreduce.server_api.calc_terminal(versioned, config, node, terminal, return_type)
             .then(function(result) {
               var doc = {
@@ -686,7 +685,6 @@ webreduce.editor = webreduce.editor || {};
               if (result_callback) {result_callback(r, p, i);}
               status_message.find("span").text((i+1).toFixed() + " of " + numcalcs.toFixed());
               status_message.find("progress").val(i+1);
-              console.log(i, numcalcs);
               results.push(result);
             })]
           )
@@ -1189,7 +1187,7 @@ webreduce.editor = webreduce.editor || {};
           }
           current_instrument = instrument_id;
           var template_copy = jQuery.extend(true, {}, instrument_def.templates[default_template]);
-          webreduce.editor.load_template(template_copy);
+          return webreduce.editor.load_template(template_copy);
         });
   }
   

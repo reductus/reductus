@@ -2,71 +2,71 @@ webreduce = window.webreduce || {};
 webreduce.instruments = webreduce.instruments || {};
 
 (function webreduction() {
-     //"use strict";
-     // add a comment
+   //"use strict";
+   // add a comment
 
-    active_reduction = {
-      "config": {},
-      "template": {}
+  active_reduction = {
+    "config": {},
+    "template": {}
+  }
+  current_instrument = "ncnr.refl";
+
+  var NEXUS_ZIP_REGEXP = /\.nxz\.[^\.\/]+$/
+  var dirHelper = "listftpfiles.php";
+  var data_path = ["ncnrdata"];
+  var statusline_log = function(message) {
+    var statusline = $("#statusline");
+    if (statusline && statusline.html) {
+      statusline.html(message);
     }
-    current_instrument = "ncnr.refl";
+  }
 
-    var NEXUS_ZIP_REGEXP = /\.nxz\.[^\.\/]+$/
-    var dirHelper = "listftpfiles.php";
-    var data_path = ["ncnrdata"];
-    var statusline_log = function(message) {
-      var statusline = $("#statusline");
-      if (statusline && statusline.html) {
-        statusline.html(message);
+  webreduce.statusline_log = statusline_log;
+
+  function getUrlVars() {
+    var vars = [], hash;
+    var hashes = window.location.href.slice(window.location.href.indexOf('?') + 1).split('&');
+    for(var i = 0; i < hashes.length; i++) {
+      hash = hashes[i].split('=');
+      vars.push(hash);
+    }
+    return vars;
+  }
+
+  webreduce.callbacks = {};
+  webreduce.callbacks.resize_center = function() {};
+  
+
+  window.onpopstate = function(e) {
+    // called by load on Safari with null state, so be sure to skip it.
+    //if (e.state) {
+    var start_path = null,
+      url_vars = getUrlVars(),
+      source = 'ncnr';
+    url_vars.forEach(function(v, i) {
+      if (v[0] == 'pathlist' && v[1] && v[1].length) {
+        start_path = v[1].split("/");
+        webreduce.addDataSource("navigation", source, start_path);
       }
-    }
-
-    webreduce.statusline_log = statusline_log;
-
-    function getUrlVars() {
-      var vars = [], hash;
-      var hashes = window.location.href.slice(window.location.href.indexOf('?') + 1).split('&');
-      for(var i = 0; i < hashes.length; i++) {
-        hash = hashes[i].split('=');
-        vars.push(hash);
+      else if (v[0] == 'source' && v[1]) {
+        source = v[1];
       }
-      return vars;
+      else if (v[0] == 'instrument' && v[1]) {
+        current_instrument = v[1];
+        webreduce.editor.switch_instrument(current_instrument);
+      }
+    })
+    
+    webreduce.editor.load_stashes();
+    
+    if (start_path == null) {
+      webreduce.addDataSource("navigation", source, data_path);
     }
+  }
 
-    webreduce.callbacks = {};
-    webreduce.callbacks.resize_center = function() {};
     
 
-    window.onpopstate = function(e) {
-      // called by load on Safari with null state, so be sure to skip it.
-      //if (e.state) {
-      var start_path = null,
-        url_vars = getUrlVars(),
-        source = 'ncnr';
-      url_vars.forEach(function(v, i) {
-        if (v[0] == 'pathlist' && v[1] && v[1].length) {
-          start_path = v[1].split("/");
-          webreduce.addDataSource("navigation", source, start_path);
-        }
-        else if (v[0] == 'source' && v[1]) {
-          source = v[1];
-        }
-        else if (v[0] == 'instrument' && v[1]) {
-          current_instrument = v[1];
-          webreduce.editor.switch_instrument(current_instrument);
-        }
-      })
-      
-      webreduce.editor.load_stashes();
-      
-      if (start_path == null) {
-        webreduce.addDataSource("navigation", source, data_path);
-      }
-    }
-
-    
-
-    window.onload = function() {
+  window.onload = function() {
     webreduce.server_api.__init__().then(function(api) {
       var layout = $('body').layout({
            west__size:          350
@@ -330,8 +330,9 @@ webreduce.instruments = webreduce.instruments || {};
       }
 
       webreduce.editor.switch_instrument(current_instrument)
-        .then(function() { window.onpopstate() });
-  });
+        .then(function() { window.onpopstate() })
+        .catch(function(e) { console.log(e) });
+    });
   }
 
 })();
