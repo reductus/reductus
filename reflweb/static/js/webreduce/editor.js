@@ -23,6 +23,15 @@ webreduce.editor = webreduce.editor || {};
     this._instance.data([{modules:[],wires: []}]);
     var target = d3.select("#" + target_id);
     target.call(this._instance);
+    d3.select("body").on("keydown.accept", null);
+    d3.select("body").on("keydown.accept", function() {
+      var key = d3.event.key;
+      if (key.toLowerCase && key.toLowerCase() == "enter") {
+        var accept_fn = d3.select("button.accept.config").on("click");
+        if (accept_fn) { accept_fn(); }
+        return false
+      }
+    }) 
   }
   
   webreduce.editor.handle_module_clicked = function(d,i,clicked_elem) {
@@ -127,6 +136,7 @@ webreduce.editor = webreduce.editor || {};
         .style("bottom", "10px")
       buttons_div.append("button")
         .text("accept")
+        .classed("accept config", true)
         .on("click", function() {
           webreduce.editor.accept_parameters(config_target, active_module);
           if (!(d3.select(clicked_elem).classed("output"))) {
@@ -138,6 +148,7 @@ webreduce.editor = webreduce.editor || {};
         })
       buttons_div.append("button")
         .text("clear")
+        .classed("clear config", true)
         .on("click", function() {
           //console.log(config_target, active_module);
           if (active_module.config) { delete active_module.config }
