@@ -910,6 +910,7 @@ webreduce.editor = webreduce.editor || {};
     }
     
     select_select.selectAll("input").on("change", selectorchange);
+    selectorchange.call({value: "zoom"});
     
     //webreduce.editor.show_plots(datasets);
     
