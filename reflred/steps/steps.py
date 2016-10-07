@@ -278,7 +278,7 @@ def detector_saturation(data):
     from .deadtime import apply_detector_saturation
     data = copy(data)
     if getattr(data.detector, 'saturation', None) is not None:
-        print("detector "+str(data.detector.__dict__))
+        #print("detector "+str(data.detector.__dict__))
         data.detector = copy(data.detector)
         data.log('detector_saturation()')
         apply_detector_saturation(data)
@@ -541,7 +541,7 @@ def group_by_intent(data):
         groups[intent] = []
     groups['other'] = []
     for d in data:
-        print("intent %s %s"%(d.intent, d.path))
+        #print("intent %s %s"%(d.intent, d.path))
         groups[map_intent.get(d.intent, 'other')].append(d)
 
     return [groups[intent]

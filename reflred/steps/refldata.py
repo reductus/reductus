@@ -978,7 +978,7 @@ class ReflData(object):
 
     def log(self, msg):
         """Record corrections that have been applied to the data"""
-        print "log:",msg
+        #print "log:",msg
         self.messages.append(msg)
 
     def log_dependency(self, label, other):
