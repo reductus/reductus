@@ -677,7 +677,7 @@ webreduce.editor = webreduce.editor || {};
       });
     });
     if (!noblock) {
-      r = r.then(function() { $.blockUI({message: status_message}) })
+      r = r.then(function() { $.blockUI({message: status_message, fadeIn: 100, fadeOut: 100}) })
     }
     if (recalc_mtimes) {
       r = r.then(function() { return Promise.race([cancel_promise, webreduce.update_file_mtimes()])})
