@@ -43,7 +43,8 @@ def join_datasets(group, tolerance):
     functions.
     """
     # Make sure all datasets are normalized by the same factor.
-    assert all(data.normbase == group[0].normbase for data in group)
+    normbase = group[0].normbase
+    assert all(data.normbase == normbase for data in group)
 
     # Gather the columns
     columns = get_columns(group)
@@ -71,7 +72,7 @@ def join_datasets(group, tolerance):
     #for k,v in sorted(columns.items()): print k,v
 
     # Join the data points in the individual columns
-    columns = join_columns(columns, tolerance, isslit)
+    columns = join_columns(columns, tolerance, isslit, normbase)
     #print "==after join=="
     #for k,v in sorted(columns.items()): print k,v
 
@@ -258,9 +259,9 @@ def sort_columns(columns, names):
     return dict((k, v[index]) for k, v in columns.items())
 
 
-def join_columns(columns, tolerance, isslit):
+def join_columns(columns, tolerance, isslit, normbase):
     # Weight each point in the average by monitor.
-    weight = columns['monitor']
+    weight = columns[normbase]
 
     # build a structure to hold the results
     results = dict((k, []) for k in columns.keys())
