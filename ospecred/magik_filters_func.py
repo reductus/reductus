@@ -768,12 +768,19 @@ def LoadMAGIKPSD(fileinfo=None, collapse=True, collapse_axis='y', auto_PolState=
     
     2016-04-01 Brian Maranville    
     """
-    lookup = {"DOWN_DOWN":"_down_down", "UP_DOWN":"_up_down", "DOWN_UP":"_down_up", "UP_UP":"_up_up", "entry": ""}
+    
     from dataflow.modules.load import url_get
     path, mtime, entries = fileinfo['path'], fileinfo['mtime'], fileinfo['entries']
     name = basename(path)
     fid = StringIO.StringIO(url_get(fileinfo))
     file_obj = h5_open_zip(name, fid)
+    return loadMAGIKPSD_helper(file_obj, name, path, collapse=collapse, collapse_axis=collapse_axis, auto_PolState=auto_PolState, PolState=PolState, flip=flip, transpose=transpose)
+    
+def LoadMAGIKPSDFile(path, **kw):
+    return loadMAGIKPSD_helper(h5_open_zip(path), path, path, **kw)
+    
+def loadMAGIKPSD_helper(file_obj, name, path, collapse=True, collapse_axis='y', auto_PolState=False, PolState='', flip=True, transpose=True):
+    lookup = {"DOWN_DOWN":"_down_down", "UP_DOWN":"_up_down", "DOWN_UP":"_down_up", "UP_UP":"_up_up", "entry": ""}
     #nx_entries = LoadMAGIKPSD.load_entries(name, fid, entries=entries)
     #fid.close()
     
