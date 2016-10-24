@@ -106,8 +106,8 @@ webreduce.instruments = webreduce.instruments || {};
             a.click();
             setTimeout(function() { window.URL.revokeObjectURL(url) }, 1000);
           }
-          // cleanup
-          document.body.removeChild(a);
+          // cleanup: this seems to break things!
+          //document.body.removeChild(a);
         };
       }());
       
