@@ -107,7 +107,7 @@ webreduce.instruments = webreduce.instruments || {};
             setTimeout(function() { window.URL.revokeObjectURL(url) }, 1000);
           }
           // cleanup
-          document.body.removeChild(a);
+          //document.body.removeChild(a);
         };
       }());
       

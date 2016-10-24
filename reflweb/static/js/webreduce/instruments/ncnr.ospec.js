@@ -57,7 +57,11 @@ webreduce.instruments['ncnr.ospec'] = webreduce.instruments['ncnr.ospec'] || {};
       return
     }
     else if (result.datatype == 'ncnr.ospec.ospec2d' && result.values.length > 0) {
-      plottable = result.values.slice(-1)[0].plottable[0];
+      //plottable = result.values.slice(-1)[0].plottable[0];
+      plottable = {
+        "type": "2d", 
+        "datas": result.values.map(function(v) { return v.plottable[0] })
+      }
     }
     else if (result.datatype == 'ncnr.ospec.ospec1d' && result.values.length > 0) {
       plottable = result.values.slice(-1)[0].plottable[0];
