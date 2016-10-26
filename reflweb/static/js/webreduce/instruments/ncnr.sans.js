@@ -5,24 +5,36 @@ webreduce.instruments['ncnr.sans'] = webreduce.instruments['ncnr.sans'] || {};
 
 // define the loader and categorizers for ncnr.sans instrument
 (function(instrument) {
-  function load_sans(datasource, path, mtime, db){
-    var template = {
-      "name": "loader_template",
-      "description": "SANS remote loader",
-      "modules": [
-        {"module": "ncnr.sans.LoadSANS", "version": "0.1", "config": {}}
-      ],
-      "wires": [],
-      "instrument": "ncnr.sans",
-      "version": "0.0"
-    }
-    var config = {"0": {"filelist": [{"path": path, "source": datasource, "mtime": mtime, "entries": ["entry"]}]}},
-        module_id = 0,
-        terminal_id = "output";
-    return webreduce.editor.calculate(template, config, module_id, terminal_id, "metadata", false).then(function(result) {
-      result.values.forEach(function(v) {v.mtime = mtime});
-      if (db) { db[path] = result; }
-      return result
+  function load_sans(load_params, db) {
+    // load params is a list of: 
+    // {datasource: "ncnr", path: "ncnrdata/cgd/...", mtime: 12319123109}
+    var calc_params = load_params.map(function(lp) {
+      return {
+        template: {
+          "name": "loader_template",
+          "description": "SANS remote loader",
+          "modules": [
+            {"module": "ncnr.sans.LoadSANS", "version": "0.1", "config": {}}
+          ],
+          "wires": [],
+          "instrument": "ncnr.sans",
+          "version": "0.0"
+        },
+        config: {"0": {"filelist": [{"path": lp.path, "source": lp.datasource, "mtime": lp.mtime}]}},
+        node: 0,
+        terminal:  "output",
+        return_type: "metadata"
+      }
+    });
+    return webreduce.editor.calculate(calc_params, false, false).then(function(results) {
+      return results.map(function(result, i) {
+        var lp = load_params[i];
+        if (result && result.values) {
+          result.values.forEach(function(v) {v.mtime = lp.mtime});
+          if (db) { db[lp.path] = result; }
+          return result.values;
+        }
+      })
     })
   }
   
@@ -77,7 +89,11 @@ webreduce.instruments['ncnr.sans'] = webreduce.instruments['ncnr.sans'] || {};
       plottable = plot_1d(result.values);
     }
     else if (result.datatype == 'ncnr.sans.sans2d' && result.values.length > 0) {
-      plottable = result.values.slice(-1)[0].plottable;
+      //plottable = result.values.slice(-1)[0].plottable;
+      plottable = {
+        "type": "2d", 
+        "datas": result.values.map(function(v) { return v.plottable })
+      }
     }
     else if (result.datatype == 'ncnr.sans.params' && result.values.length > 0) {
       plottable = {"type": "params", "params": result.values}
