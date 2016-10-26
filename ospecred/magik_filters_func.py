@@ -766,7 +766,7 @@ def LoadMAGIKPSD(fileinfo=None, collapse=True, collapse_axis='y', auto_PolState=
     
     output (ospec2d[]): all the entries loaded.
     
-    2016-04-01 Brian Maranville    
+    2016-04-02 Brian Maranville    
     """
     
     from dataflow.modules.load import url_get
@@ -861,6 +861,7 @@ def loadMAGIKPSD_helper(file_obj, name, path, collapse=True, collapse_axis='y', 
             # data_array[:,:,4]... I wish!!!  Have to do by hand.
             data = MetaArray(data_array, dtype='float', info=info)
             data.friendly_name = name # goes away on dumps/loads... just for initial object.
+            ouput = [data]
         
         elif ndims == 3: # then it's an unsummed collection of detector shots.  Should be one sample and detector angle per frame
             if collapse == True:
@@ -913,18 +914,23 @@ def loadMAGIKPSD_helper(file_obj, name, path, collapse=True, collapse_axis='y', 
                 # data_array[:,:,4]... I wish!!!  Have to do by hand.
                 data = MetaArray(data_array, dtype='float', info=info)
                 data.friendly_name = name # goes away on dumps/loads... just for initial object.
+                output = [data]
             else: # make separate frames           
                 infos = []
                 data = []
-                samp_angle =  entry['DAS_logs']['sampleAngle']['softPosition'].value
+                samp_angle =  entry['DAS_logs/sampleAngle/softPosition'].value.astype('float')
                 if samp_angle.shape[0] == 1:
                     samp_angle = numpy.ones((frames,)) * samp_angle
-                det_angle = entry['DAS_logs']['detectorAngle']['softPosition'].value
+                det_angle = entry['DAS_logs/detectorAngle/softPosition'].value.astype('float')
                 if det_angle.shape[0] == 1:
                     det_angle = numpy.ones((frames,)) * det_angle
+                count_time = entry['DAS_logs/counter/liveTime'].value
+                if count_time.shape[0] == 1:
+                    count_time = numpy.ones((frames,)) * count_time
+                mon =  entry['DAS_logs/counter/liveMonitor'].value
+                if mon.shape[0] == 1:
+                    mon = numpy.ones((frames,)) * mon                
                 for i in range(frames):
-                    samp_angle =  entry['DAS_logs']['sampleAngle']['softPosition'].value[i]
-                    det_angle = entry['DAS_logs']['detectorAngle']['softPosition'].value[i]
                     info = []
                     info.append({"name": "xpixel", "units": "pixels", "values": range(xpixels) })
                     info.append({"name": "ypixel", "units": "pixels", "values": range(ypixels) })
@@ -935,22 +941,21 @@ def loadMAGIKPSD_helper(file_obj, name, path, collapse=True, collapse_axis='y', 
                                 {"name": "monitor"},
                                 {"name": "count_time"}]},
                         {"PolState": PolState, "start_datetime": entry['start_time'].value[0], "friendly_name": entry['DAS_logs/sample/name'].value[0],
-                         "entry": entryname, "path":path, "samp_angle": samp_angle, "det_angle": det_angle}]
+                         "entry": entryname, "path":path, "samp_angle": samp_angle[i], "det_angle": det_angle[i]}]
                     )
                     data_array = zeros((xpixels, ypixels, 4))
-                    mon =  entry['DAS_logs']['counter']['liveMonitor'].value[i]
-                    count_time = entry['DAS_logs']['counter']['liveTime'].value[i]
                     counts = counts_value[i]
                     if flip == True: counts = flipud(counts) 
                     data_array[..., 0] = counts
                     data_array[..., 1] = 1
-                    data_array[..., 2] = mon
-                    data_array[..., 3] = count_time
+                    data_array[..., 2] = mon[i]
+                    data_array[..., 3] = count_time[i]
                     # data_array[:,:,4]... I wish!!!  Have to do by hand.
                     subdata = MetaArray(data_array, dtype='float', info=info)
                     subdata.friendly_name = name + ("_%d" % i) # goes away on dumps/loads... just for initial object.
                     data.append(subdata)
-    return [data]
+                    output = data
+    return output
     
 def test():
     from dataflow.modules import load
