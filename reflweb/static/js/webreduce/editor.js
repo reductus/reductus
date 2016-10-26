@@ -276,50 +276,9 @@ webreduce.editor = webreduce.editor || {};
     var aspect_ratio = null,
         datas = plotdata.datas,
         mychart = webreduce.editor._active_plot;
-    
-    
-    //var mychart = new heatChart(data[0]);
-    //mychart
-      ////.ztransform((transform == "log")? "log" : "linear")
-      ////.colormap(cm.get_colormap(current_instr == "NGBSANS" ? "spectral" : "jet"))
-      //.autoscale(false)
-      //.aspect_ratio(aspect_ratio)
-      //.dims(data.dims)
-      //.xlabel(data.xlabel)
-      //.ylabel(data.ylabel);
-    //d3.selectAll("#plotdiv").selectAll("svg, div").remove();
-    //d3.selectAll("#plotdiv").data(data.z).call(mychart);
-    //mychart.zoomScroll(true);
-    
-    var update_plotselect = function() {
-      //d3.select(this).datum(parseInt(this.value));
-      //console.log(d3.select(this), d3.select(this).datum(), this.value);
-      var plotnum = (this.value != null) ? parseInt(this.value) : 0,
-          data = datas[plotnum];
-      data.ztransform = $("#zscale").val();
-      if ((((data.options || {}).fixedAspect || {}).fixAspect || null) == true) {
-        aspect_ratio = ((data.options || {}).fixedAspect || {}).aspectRatio || null;
-      }
-      
-      //mychart = new heatChart();
-      mychart
-        //.ztransform((transform == "log")? "log" : "linear")
-        //.colormap(cm.get_colormap(current_instr == "NGBSANS" ? "spectral" : "jet"))
-        .autoscale(false)
-        .aspect_ratio(aspect_ratio)
-        .dims(data.dims)
-        .xlabel(data.xlabel)
-        .ylabel(data.ylabel);
-      d3.selectAll("#plotdiv").selectAll("svg, div").remove();
-      d3.selectAll("#plotdiv").data(data.z).call(mychart);
-      mychart.zoomScroll(true);
-    }
-    
-    
-    
+        
     // set up plot control buttons and options:
     if (d3.select("#plot_controls").attr("plot_type") != "2d") {
-      mychart = new heatChart();
       // then make the controls:
       var plot_controls = d3.select("#plot_controls")
       plot_controls.attr("plot_type", "2d")
@@ -335,9 +294,7 @@ webreduce.editor = webreduce.editor || {};
           .attr("min", "0")
           .style("width", "4em")
           .attr("value", 0)
-          .on("change", update_plotselect)
-          .on("click", update_plotselect)
-          .on("input", update_plotselect)
+          
           
       plot_controls.selectAll(".scale-select")
         .data(["zscale"])
@@ -347,7 +304,7 @@ webreduce.editor = webreduce.editor || {};
         .append("select")
           .attr("id", function(d) {return d})
           .attr("axis", function(d) {return d[0]})
-          .on("change, click", function() {
+          .on("change", function() {
             var axis = d3.select(this).attr("axis") + "transform",
                 transform = this.value;
             webreduce.editor._active_plot[axis](transform);  
@@ -369,23 +326,6 @@ webreduce.editor = webreduce.editor || {};
             mychart[this.id](this.checked);
           });
       
-      /*
-      plot_controls.selectAll(".show-boxes") // want to show/hide grids in the future...
-        .data(["errorbars", "points", "line"])
-        .enter().append("label")
-        .classed("show-boxes", true)
-        .text(function(d) {return d})
-        .append("input")
-          .attr("id", function(d) {return "show_" + d})
-          .attr("type", "checkbox")
-          .attr("checked", "checked")
-          .on("change", function() {
-            var o = mychart.options();
-            o[this.id] = this.checked;
-            mychart.options(o).update();
-          });
-       */
-          
        plot_controls
         .append("input")
           .attr("type", "button")
@@ -393,7 +333,44 @@ webreduce.editor = webreduce.editor || {};
           .attr("value", "export")
           .on("click", webreduce.editor.export_data)
     }
-    d3.select("#plot_controls .plot-select input").attr("max", datas.length-1)
+    
+    if (!(mychart && mychart.type && mychart.type == "heatmap_2d")) {
+      d3.selectAll("#plotdiv").selectAll("svg, div").remove();
+      mychart = new heatChart();
+      d3.selectAll("#plotdiv").data(datas[0].z).call(mychart);
+    }
+    
+    var update_plotselect = function() {
+      //d3.select(this).datum(parseInt(this.value));
+      //console.log(d3.select(this), d3.select(this).datum(), this.value);
+      var plotnum = (this.value != null) ? parseInt(this.value) : 0,
+          data = datas[plotnum];
+      data.ztransform = $("#zscale").val();
+      if ((((data.options || {}).fixedAspect || {}).fixAspect || null) == true) {
+        aspect_ratio = ((data.options || {}).fixedAspect || {}).aspectRatio || null;
+      }
+      
+      //mychart = new heatChart();
+      mychart
+        //.ztransform($("#zscale").val())
+        //.colormap(cm.get_colormap(current_instr == "NGBSANS" ? "spectral" : "jet"))
+        .autoscale(true)
+        .aspect_ratio(aspect_ratio)
+        .dims(data.dims)
+        .xlabel(data.xlabel)
+        .ylabel(data.ylabel);
+      //d3.selectAll("#plotdiv").selectAll("svg, div").remove();
+      //d3.selectAll("#plotdiv").data(data.z).call(mychart);
+      mychart.source_data(data.z[0]);
+      mychart.zoomScroll(true);
+      mychart.ztransform($("#zscale").val())
+    }
+    
+    d3.select("#plot_controls .plot-select input")
+      .attr("max", datas.length-1)
+      .on("change", update_plotselect)
+      .on("click", update_plotselect)
+      .on("input", update_plotselect)
     
     update_plotselect();
     mychart.autofit();
