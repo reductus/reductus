@@ -21,7 +21,6 @@ except ImportError:
 
 api_methods = []
 
-import msgpack, base64
 from functools import wraps
 def expose(action):
     """
@@ -32,6 +31,7 @@ def expose(action):
     @wraps(action)
     def wrapper(*args, **kwds):
         if use_msgpack:
+            import msgpack, base64
             retval = {"serialization": "msgpack", "encoding": "base64"}
             retval['value'] = base64.b64encode(msgpack.dumps(action(*args, **kwds)))
         else:
