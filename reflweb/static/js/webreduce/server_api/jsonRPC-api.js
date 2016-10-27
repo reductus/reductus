@@ -25,11 +25,20 @@ webreduce.server_api = webreduce.server_api || {};
           async: true,
           params: params,
           cache: cache,
-          success: function(result) {
-            resolve(result.result);
+          success: function(reply) {
+            // defaults are: encoding='string', serialization='json';
+            var value = reply.result.value;
+            // overrides:
+            if (reply.result.encoding == 'base64') {
+              value = b64ToBinary(value);
+            }
+            if (reply.result.serialization == 'msgpack') {
+              value = msgpack.decode(value);
+            }
+            resolve(value);
           },
-          error: function(result) {
-            reject({method_name: method_name, params: params, caller: wrapped.caller, resolver: resolve, result: result});
+          error: function(reply) {
+            reject({method_name: method_name, params: params, caller: wrapped.caller, resolver: resolve, result: reply});
           }
         });
       })
@@ -66,6 +75,17 @@ webreduce.server_api = webreduce.server_api || {};
         cache: false
       });
     });
+  }
+    
+  function b64ToBinary(base64) {
+    var raw = window.atob(base64);
+    var rawLength = raw.length;
+    var array = new Uint8Array(new ArrayBuffer(rawLength));
+
+    for(i = 0; i < rawLength; i++) {
+      array[i] = raw.charCodeAt(i);
+    }
+    return array;
   }
 })(webreduce);
 

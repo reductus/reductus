@@ -21,12 +21,24 @@ except ImportError:
 
 api_methods = []
 
+import msgpack, base64
+from functools import wraps
 def expose(action):
     """
     Decorator which adds function to the list of methods to expose in the api.
     """
     api_methods.append(action.__name__)
-    return action
+    use_msgpack = getattr(config, 'use_msgpack', False)
+    @wraps(action)
+    def wrapper(*args, **kwds):
+        if use_msgpack:
+            retval = {"serialization": "msgpack", "encoding": "base64"}
+            retval['value'] = base64.b64encode(msgpack.dumps(action(*args, **kwds)))
+        else:
+            retval = {"serialization": "json", "encoding": "string"}
+            retval['value'] = sanitizeForJSON(action(*args, **kwds))
+        return retval
+    return wrapper
 
 def sorted_ls(path, show_hidden=False):
     mtime = lambda f: os.stat(os.path.join(path, f)).st_mtime
@@ -93,7 +105,7 @@ def refl_load(file_descriptors):
     modules = [{"module": "ncnr.refl.load", "version": "0.1", "config": {}}]
     template = Template("test", "test template", modules, [], "ncnr.magik", version='0.0')
     retval = process_template(template, {0: {"files": file_descriptors}}, target=(0, "output"))
-    return sanitizeForJSON(retval.todict())
+    return retval.todict()
 
 @expose
 def find_calculated(template_def, config):
@@ -148,11 +160,11 @@ def calc_terminal(template_def, config, nodenum, terminal_id, return_type='full'
         traceback.print_exc()
         raise
     if return_type == 'full':
-        return sanitizeForJSON(retval.todict())
+        return retval.todict()
     elif return_type == 'plottable':
-        return sanitizeForJSON(retval.get_plottable())
+        return retval.get_plottable()
     elif return_type == 'metadata':
-        return sanitizeForJSON(retval.get_metadata())
+        return retval.get_metadata()
     elif return_type == 'export':
         return retval.get_export()
     else:
@@ -175,7 +187,7 @@ def calc_template(template_def, config):
         module_id, terminal_id = rkey
         module_key = str(module_id)
         output.setdefault(module_key, {})
-        output[module_key][terminal_id] = sanitizeForJSON(rv.todict())
+        output[module_key][terminal_id] = rv.todict()
     return output
 
 @expose
