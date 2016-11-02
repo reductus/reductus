@@ -31,6 +31,7 @@ def apply_norm(data, base='auto'):
     if base == 'monitor':
         M = data.monitor.counts
         varM = data.monitor.counts_variance
+        varM += (varM == 0)  # variance on zero counts is +/- 1
         units = 'monitor'
     elif base == 'time':
         M = data.monitor.count_time
@@ -48,7 +49,7 @@ def apply_norm(data, base='auto'):
     else:
         raise ValueError("Expected %r in %s" % (base, NORMALIZE_OPTIONS))
     #print "norm",C,varC,M,varM
-    value, variance = err1d.div(C, varC+(varC==0), M, varM+(varM==0))
+    value, variance = err1d.div(C, varC+(varC==0), M, varM)
     data.v = value
     data.dv = np.sqrt(variance)
     data.vunits = 'counts per '+units if units else 'counts'
