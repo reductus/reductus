@@ -237,8 +237,7 @@ def div_inplace(X, varX, Y, varY):
     T *= varY  # T now has varY * Z**2
     varX += T  # varX now has varX + varY*Z**2
     del T   # may want to use T[:] = Y for vectors
-    T = Y   # reuse T for Y
-    T **=2     # T now has Y**2
+    T = Y**2   # reuse T for Y**2
     varX /= T  # varX now has varZ
     return X, varX
 
@@ -250,11 +249,10 @@ def mul_inplace(X, varX, Y, varY):
     T = Y**2   # create T with Y**2
     varX *= T  # varX now has Y**2 * varX
     del T   # may want to use T[:] = X for vectors
-    T = X   # reuse T for X**2 * varY
-    T **=2     # T now has X**2
+    T = X**2   # reuse T for X**2 * varY
     T *= varY  # T now has X**2 * varY
-    varX += T  # varX now has varZ
-    X *= Y     # X now has Z
+    varX += T  # varX now has varZ = X**2*varY + Y**2*varX
+    X *= Y     # X now has Z = X*Y
     return X, varX
 
 
