@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <iomanip>
+#include <stdint.h>
 #include <Python.h>
 #include <rebin.h>
 #include <rebin2D.h>
@@ -102,34 +103,44 @@ static PyMethodDef methods[] = {
      "str2imat(str,data): convert string to integer matrix, returning shape"
     },
     {"rebin_uint8",
-     &Prebin<unsigned char>,
+     &Prebin<uint8_t>,
      METH_VARARGS,
      "rebin_uint8(xi,Ii,xo,Io): rebin from bin edges xi to bin edges xo"
     },
     {"rebin2d_uint8",
-     &Prebin2d<unsigned char>,
+     &Prebin2d<uint8_t>,
      METH_VARARGS,
      "rebin2d_uint8(xi,yi,Ii,xo,yo,Io): 2-D rebin from (xi,yi) to (xo,yo)"
     },
     {"rebin_uint16",
-     &Prebin<unsigned short>,
+     &Prebin<uint16_t>,
      METH_VARARGS,
      "rebin_uint16(xi,Ii,xo,Io): rebin from bin edges xi to bin edges xo"
     },
     {"rebin2d_uint16",
-     &Prebin2d<unsigned short>,
+     &Prebin2d<uint16_t>,
      METH_VARARGS,
      "rebin2d_uint16(xi,yi,Ii,xo,yo,Io): 2-D rebin from (xi,yi) to (xo,yo)"
     },
     {"rebin_uint32",
-     &Prebin<unsigned long>,
+     &Prebin<uint32_t>,
      METH_VARARGS,
      "rebin_uint32(xi,Ii,xo,Io): rebin from bin edges xi to bin edges xo"
     },
     {"rebin2d_uint32",
-     &Prebin2d<unsigned long>,
+     &Prebin2d<uint32_t>,
      METH_VARARGS,
      "rebin2d_uint32(xi,yi,Ii,xo,yo,Io): 2-D rebin from (xi,yi) to (xo,yo)"
+    },
+    {"rebin_uint64",
+     &Prebin<uint64_t>,
+     METH_VARARGS,
+     "rebin_uint64(xi,Ii,xo,Io): rebin from bin edges xi to bin edges xo"
+    },
+    {"rebin2d_uint64",
+     &Prebin2d<uint64_t>,
+     METH_VARARGS,
+     "rebin2d_uint64(xi,yi,Ii,xo,yo,Io): 2-D rebin from (xi,yi) to (xo,yo)"
     },
     {"rebin_float32",
      &Prebin<float>,
