@@ -21,6 +21,14 @@ class DeadTimeData:
 
     def plot(self):
         raise NotImplementedError("see deadtime_fit for plots we want")
+    
+    def get_metadata(self):
+        metadata =  {
+            "tau_P": self.tau_P,
+            "tau_NP": self.tau_NP,
+            "attenuators": self.attenuators
+        }
+        return metadata
 
     def log(self, msg):
         self.messages.append(msg)
