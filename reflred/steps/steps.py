@@ -114,9 +114,9 @@ def fit_dead_time(data, source='detector', mode='auto'):
 
     data.log("fit_dead_time(attenuated, unattenuated, source=%r, mode=%r)"
              % (source, mode))
-    for k, d in enumerate(data):
-        data.log("data %d:"%k)
-        data.log(d.messages)
+    #for k, d in enumerate(data):
+    #    data.log("data %d:"%k)
+    #    data.log(d.messages)
     return data
 
 
