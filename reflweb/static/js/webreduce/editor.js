@@ -4,7 +4,7 @@
 webreduce.editor = webreduce.editor || {};
 
 (function () {
-	webreduce.editor.dispatch = d3.dispatch("accept");
+	webreduce.editor.dispatch = d3.dispatch("accept", "field_update");
 
   webreduce.guid = function() {
     var uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
@@ -203,8 +203,14 @@ webreduce.editor = webreduce.editor || {};
               value = field_copy.default;
             }
             var datum = {"id": field.id, "value": value, "passthrough": passthrough};
-            var fieldUI = webreduce.editor.make_fieldUI[field.datatype](field, active_template, datum, module_def, config_target, datasets_in);
+            var fieldUImaker = webreduce.editor.make_fieldUI[field.datatype];
+            fieldUImaker.__init__(field, active_template, datum, module_def, config_target, datasets_in, active_module);
+            var fieldUI = fieldUImaker.render();
             if (passthrough) {fieldUI.property("disabled", true)};
+            fieldUI.on("change.auto_accept", function() {
+              //console.log(this, d3.select(this).datum(), 'changing!');
+              webreduce.editor.accept_parameters(config_target, active_module);
+            });
           }
         });
       });
@@ -239,6 +245,7 @@ webreduce.editor = webreduce.editor || {};
     var instrument_id = this._instrument_id;
     var new_plotdata = webreduce.instruments[instrument_id].plot(result);
     var active_plot;
+    d3.select("#plot_title").text("");
     if (new_plotdata == null) {
       active_plot = null;
       d3.select("#plotdiv").selectAll("svg, div").remove();
@@ -338,6 +345,7 @@ webreduce.editor = webreduce.editor || {};
       d3.selectAll("#plotdiv").selectAll("svg, div").remove();
       mychart = new heatChart();
       d3.selectAll("#plotdiv").data(datas[0].z).call(mychart);
+      webreduce.callbacks.resize_center = function() {mychart.autofit()};
     }
     
     var update_plotselect = function() {
@@ -345,6 +353,8 @@ webreduce.editor = webreduce.editor || {};
       //console.log(d3.select(this), d3.select(this).datum(), this.value);
       var plotnum = (this.value != null) ? parseInt(this.value) : 0,
           data = datas[plotnum];
+      var title = data.title || "";
+      d3.select("#plot_title").text(title);
       data.ztransform = $("#zscale").val();
       if ((((data.options || {}).fixedAspect || {}).fixAspect || null) == true) {
         aspect_ratio = ((data.options || {}).fixedAspect || {}).aspectRatio || null;
@@ -764,8 +774,83 @@ webreduce.editor = webreduce.editor || {};
   }
   
   webreduce.editor.make_fieldUI = {}; // generators for field datatypes
+  var make_fieldUI = {};
   
-  webreduce.editor.make_fieldUI.fileinfo = function(field, active_template, datum, module_def, target, datasets_in) {
+  var fieldUI = function() {};
+  fieldUI.prototype.constructor = fieldUI;
+  fieldUI.prototype.__init__ = function(field, active_template, datum, module_def, target, datasets_in, active_module) {
+    this.field = field;
+    this.active_template = active_template;
+    this.datum = datum;
+    this.module_def = module_def;
+    this.target = target;
+    this.datasets_in = datasets_in;
+    this.active_module = active_module;
+    
+  }
+  fieldUI.prototype.render = function() { throw "not implemented" /* must override */ }
+  fieldUI.prototype.accept = function() { d3.select(this).datum().value = this.value };
+  
+  var fileinfoUI = new fieldUI();
+  fileinfoUI.render = function() {
+    var datum = this.datum,
+        field = this.field,
+        target = this.target,
+        datasets_in = this.datasets_in,
+        module = this.active_module;
+
+    $("#navigation").unblock();
+    if (target.select("div#fileinfo").empty()) {
+      target.append("div")
+        .attr("id", "fileinfo")
+    }
+
+    datum.value = datum.value || []; // insert empty list if value is null or missing
+    var existing_count = datum.value.length;
+    var radio = target.select("div#fileinfo").append("div")
+      .classed("fields", true)
+      .datum(datum)
+    radio.append("input")
+      .attr("id", field.id)
+      .attr("type", "radio")
+      .attr("name", "fileinfo");
+    radio.append("label")
+      .attr("for", field.id)
+      .text(field.id + "(" + existing_count + ")");
+    
+    // jquery events handler for communications  
+    $(radio.node()).on("fileinfo.update", function(ev, info) {
+      if (radio.select("input").property("checked")) {
+          radio.datum({id: field.id, value: info});
+          radio.select("label span").text(field.id + "(" + info.length + ")");
+          // auto-accept fileinfo clicks.
+          webreduce.editor.accept_parameters(target, module);
+      }
+    });
+
+    target.select("#fileinfo input").property("checked", true); // first one
+    target.selectAll("div#fileinfo input")
+      .on("click", null)
+      .on("click", function() {
+        $(".remote-filebrowser").trigger("fileinfo.update", d3.select(this).datum());
+      });
+    $("#fileinfo").buttonset();
+    $(".remote-filebrowser").trigger("fileinfo.update", d3.select("div#fileinfo input").datum());
+    // if there is data loaded, an output terminal is selected... and will be plotted instead
+    if (datasets_in == null) { webreduce.handleChecked() };
+    return radio
+  }
+    
+  webreduce.editor.make_fieldUI.fileinfo = fileinfoUI;
+  // function(field, active_template, datum, module_def, target, datasets_in) {
+    //var UI = new fileinfoUI();
+    //var UI = fileinfoUI;
+    //var module = webreduce.editor._active_template.modules[webreduce.editor._active_node];
+    //UI.__init__(field, active_template, datum, module_def, target, datasets_in, module);
+    //return UI.render();
+  //}
+  
+  webreduce.editor.make_fieldUI.fileinfo_old = function(field, active_template, datum, module_def, target, datasets_in) {
     // this will add the div only once, even if called twice.
     $("#navigation").unblock();
     target.selectAll("div#fileinfo").data([0])
@@ -790,7 +875,11 @@ webreduce.editor = webreduce.editor || {};
     $(radio.node()).on("fileinfo.update", function(ev, info) {
       if (radio.select("input").property("checked")) {
           radio.datum({id: field.id, value: info});
-      } 
+          radio.select("label span").text(field.id + "(" + info.length + ")");
+          // auto-accept fileinfo clicks.
+          var we = webreduce.editor;
+          we.accept_parameters(target, we._active_template.modules[we._active_node]);
+      }
     });
 
     target.select("#fileinfo input").property("checked", true); // first one
@@ -806,7 +895,14 @@ webreduce.editor = webreduce.editor || {};
     return radio    
   }
   
-  webreduce.editor.make_fieldUI.index = function(field, active_template, datum_in, module_def, target, datasets_in) {
+  var indexUI = new fieldUI();
+  indexUI.render = function() {
+    var datum_in = this.datum,
+        field = this.field,
+        target = this.target,
+        datasets_in = this.datasets_in,
+        module = this.active_module;
+  
     if (target.select("div#indexlist").empty()) {
       target.append("div")
         .attr("id", "indexlist")
@@ -982,7 +1078,23 @@ webreduce.editor = webreduce.editor || {};
     return input;
   }
   
-  webreduce.editor.make_fieldUI.scale = function(field, active_template, datum, module_def, target, datasets_in) {
+  webreduce.editor.make_fieldUI.index = indexUI;
+  // function(field, active_template, datum_in, module_def, target, datasets_in) {
+  //  var UI = new fileindexUI();
+  //  var module = webreduce.editor._active_template.modules[webreduce.editor._active_node];
+  //  UI.__init__(field, active_template, datum_in, module_def, target, datasets_in, module);
+  //  return UI.render();
+  //}
+  
+  var scaleUI = new fieldUI();
+  scaleUI.render = function() {
+    var datum_in = this.datum,
+        field = this.field,
+        target = this.target,
+        datasets_in = this.datasets_in,
+        module = this.active_module;
+        
+  
     target.selectAll("div#scalelist").data([0])
       .enter()
         .append("div")
@@ -1049,8 +1161,19 @@ webreduce.editor = webreduce.editor || {};
     });
     return input;
   }
+  
+  webreduce.editor.make_fieldUI.scale = scaleUI;
+  //function(field, active_template, datum, module_def, target, datasets_in) {
 
-  webreduce.editor.make_fieldUI.str = function(field, active_template, datum, module_def, target, datasets_in) {
+  var strUI = new fieldUI();
+  webreduce.editor.make_fieldUI.str = strUI;
+  strUI.render = function() {
+    var datum = this.datum,
+        field = this.field,
+        target = this.target,
+        datasets_in = this.datasets_in,
+        module = this.active_module;
+  
     var input = target.append("div")
       .classed("fields", true)
       .datum(datum)
@@ -1064,7 +1187,15 @@ webreduce.editor = webreduce.editor || {};
     return input;
   }
   
-  webreduce.editor.make_fieldUI.opt = function(field, active_template, datum, module_def, target, datasets_in) {
+  var optUI = new fieldUI();
+  webreduce.editor.make_fieldUI.opt = optUI;
+  optUI.render = function() {
+    var datum = this.datum,
+        field = this.field,
+        target = this.target,
+        datasets_in = this.datasets_in,
+        module = this.active_module;
+
     var input = target.append("div")
       .classed("fields", true)
       .datum(datum)
@@ -1073,7 +1204,7 @@ webreduce.editor = webreduce.editor || {};
         .append("select")
           .attr("field_id", field.id)
           .attr("value", datum.value)
-          .on("change", function(d) { datum.value = this.value })
+          .on("change", function(d) { console.log(this, datum); datum.value = this.value })
     input
           .selectAll("option").data(field.typeattr.choices)
             .enter().append("option")
@@ -1083,7 +1214,14 @@ webreduce.editor = webreduce.editor || {};
     return input;
   }
   
-  webreduce.editor.make_fieldUI.float = function(field, active_template, datum, module_def, target, datasets_in) {
+  var floatUI = new fieldUI();
+  webreduce.editor.make_fieldUI.float = floatUI;
+  floatUI.render = function() {
+    var datum = this.datum,
+        field = this.field,
+        target = this.target,
+        datasets_in = this.datasets_in,
+        module = this.active_module;
     var input;
     if (field.multiple) { 
       //datum.value = [datum.value]; 
@@ -1112,6 +1250,7 @@ webreduce.editor = webreduce.editor || {};
     return input;
   }
 
+  
   webreduce.editor.make_fieldUI.float_expand = function(field, active_template, value, module_def, target, datasets_in) {
     var active_module = active_template.modules[module_index];
     var value = (active_module.config && field.id in active_module.config) ? active_module.config[field.id] : field.default;
@@ -1148,7 +1287,14 @@ webreduce.editor = webreduce.editor || {};
     }
   }
   
-  webreduce.editor.make_fieldUI.int = function(field, active_template, datum, module_def, target) {
+  var intUI = new fieldUI();
+  webreduce.editor.make_fieldUI.int = intUI;
+  intUI.render = function() {
+    var datum = this.datum,
+        field = this.field,
+        target = this.target,
+        datasets_in = this.datasets_in,
+        module = this.active_module;
     var input = target.append("div")
       .classed("fields", true)
       .datum(datum)
@@ -1162,7 +1308,14 @@ webreduce.editor = webreduce.editor || {};
     return input;
   }
   
-  webreduce.editor.make_fieldUI.bool = function(field, active_template, datum, module_def, target) {
+  var boolUI = new fieldUI();
+  webreduce.editor.make_fieldUI.bool = boolUI;
+  boolUI.render = function() {
+    var datum = this.datum,
+        field = this.field,
+        target = this.target,
+        datasets_in = this.datasets_in,
+        module = this.active_module;
     var input = target.append("div")
       .classed("fields", true)
       .datum(datum)
