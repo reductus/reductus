@@ -204,8 +204,16 @@ webreduce.editor = webreduce.editor || {};
             }
             var datum = {"id": field.id, "value": value, "passthrough": passthrough};
             var fieldUImaker = webreduce.editor.make_fieldUI[field.datatype];
-            fieldUImaker.__init__(field, active_template, datum, module_def, config_target, datasets_in, active_module);
-            var fieldUI = fieldUImaker.render();
+            var context = {
+              field: field,
+              active_template: active_template,
+              datum: datum,
+              module_def: module_def,
+              target: config_target,
+              datasets_in: datasets_in,
+              active_module: active_module
+            }
+            var fieldUI = fieldUImaker.call(context);
             if (passthrough) {fieldUI.property("disabled", true)};
             fieldUI.on("change.auto_accept", function() {
               //console.log(this, d3.select(this).datum(), 'changing!');
@@ -774,25 +782,9 @@ webreduce.editor = webreduce.editor || {};
   }
   
   webreduce.editor.make_fieldUI = {}; // generators for field datatypes
-  var make_fieldUI = {};
-  
-  var fieldUI = function() {};
-  fieldUI.prototype.constructor = fieldUI;
-  fieldUI.prototype.__init__ = function(field, active_template, datum, module_def, target, datasets_in, active_module) {
-    this.field = field;
-    this.active_template = active_template;
-    this.datum = datum;
-    this.module_def = module_def;
-    this.target = target;
-    this.datasets_in = datasets_in;
-    this.active_module = active_module;
     
-  }
-  fieldUI.prototype.render = function() { throw "not implemented" /* must override */ }
-  fieldUI.prototype.accept = function() { d3.select(this).datum().value = this.value };
-  
-  var fileinfoUI = new fieldUI();
-  fileinfoUI.render = function() {
+  var fileinfoUI = function() {
+    // call with context defined:
     var datum = this.datum,
         field = this.field,
         target = this.target,
@@ -840,63 +832,9 @@ webreduce.editor = webreduce.editor || {};
     if (datasets_in == null) { webreduce.handleChecked() };
     return radio
   }
-    
   webreduce.editor.make_fieldUI.fileinfo = fileinfoUI;
-  // function(field, active_template, datum, module_def, target, datasets_in) {
-    //var UI = new fileinfoUI();
-    //var UI = fileinfoUI;
-    //var module = webreduce.editor._active_template.modules[webreduce.editor._active_node];
-    //UI.__init__(field, active_template, datum, module_def, target, datasets_in, module);
-    //return UI.render();
-  //}
   
-  webreduce.editor.make_fieldUI.fileinfo_old = function(field, active_template, datum, module_def, target, datasets_in) {
-    // this will add the div only once, even if called twice.
-    $("#navigation").unblock();
-    target.selectAll("div#fileinfo").data([0])
-      .enter()
-        .append("div")
-        .attr("id", "fileinfo")
-    
-    datum.value = datum.value || []; // insert empty list if value is null or missing
-    var existing_count = datum.value.length;
-    var radio = target.select("div#fileinfo").append("div")
-      .classed("fields", true)
-      .datum(datum)
-    radio.append("input")
-      .attr("id", field.id)
-      .attr("type", "radio")
-      .attr("name", "fileinfo");
-    radio.append("label")
-      .attr("for", field.id)
-      .text(field.id + "(" + existing_count + ")");
-    
-    // jquery events handler for communications  
-    $(radio.node()).on("fileinfo.update", function(ev, info) {
-      if (radio.select("input").property("checked")) {
-          radio.datum({id: field.id, value: info});
-          radio.select("label span").text(field.id + "(" + info.length + ")");
-          // auto-accept fileinfo clicks.
-          var we = webreduce.editor;
-          we.accept_parameters(target, we._active_template.modules[we._active_node]);
-      }
-    });
-
-    target.select("#fileinfo input").property("checked", true); // first one
-    target.selectAll("div#fileinfo input")
-      .on("click", null)
-      .on("click", function() {
-        $(".remote-filebrowser").trigger("fileinfo.update", d3.select(this).datum());
-      });
-    $("#fileinfo").buttonset();
-    $(".remote-filebrowser").trigger("fileinfo.update", d3.select("div#fileinfo input").datum());
-    // if there is data loaded, an output terminal is selected... and will be plotted instead
-    if (datasets_in == null) { webreduce.handleChecked() };
-    return radio    
-  }
-  
-  var indexUI = new fieldUI();
-  indexUI.render = function() {
+  var indexUI = function() {
     var datum_in = this.datum,
         field = this.field,
         target = this.target,
@@ -1077,17 +1015,9 @@ webreduce.editor = webreduce.editor || {};
     });
     return input;
   }
-  
   webreduce.editor.make_fieldUI.index = indexUI;
-  // function(field, active_template, datum_in, module_def, target, datasets_in) {
-  //  var UI = new fileindexUI();
-  //  var module = webreduce.editor._active_template.modules[webreduce.editor._active_node];
-  //  UI.__init__(field, active_template, datum_in, module_def, target, datasets_in, module);
-  //  return UI.render();
-  //}
   
-  var scaleUI = new fieldUI();
-  scaleUI.render = function() {
+  var scaleUI = function() {
     var datum_in = this.datum,
         field = this.field,
         target = this.target,
@@ -1165,9 +1095,7 @@ webreduce.editor = webreduce.editor || {};
   webreduce.editor.make_fieldUI.scale = scaleUI;
   //function(field, active_template, datum, module_def, target, datasets_in) {
 
-  var strUI = new fieldUI();
-  webreduce.editor.make_fieldUI.str = strUI;
-  strUI.render = function() {
+  var strUI = function() {
     var datum = this.datum,
         field = this.field,
         target = this.target,
@@ -1186,10 +1114,9 @@ webreduce.editor = webreduce.editor || {};
           .on("change", function(d) { datum.value = this.value });
     return input;
   }
+  webreduce.editor.make_fieldUI.str = strUI;
   
-  var optUI = new fieldUI();
-  webreduce.editor.make_fieldUI.opt = optUI;
-  optUI.render = function() {
+  var optUI = function() {
     var datum = this.datum,
         field = this.field,
         target = this.target,
@@ -1213,10 +1140,9 @@ webreduce.editor = webreduce.editor || {};
             .text(function(d) {return d[0]})
     return input;
   }
+  webreduce.editor.make_fieldUI.opt = optUI;
   
-  var floatUI = new fieldUI();
-  webreduce.editor.make_fieldUI.float = floatUI;
-  floatUI.render = function() {
+  var floatUI = function() {
     var datum = this.datum,
         field = this.field,
         target = this.target,
@@ -1249,47 +1175,9 @@ webreduce.editor = webreduce.editor || {};
     }
     return input;
   }
-
+  webreduce.editor.make_fieldUI.float = floatUI;
   
-  webreduce.editor.make_fieldUI.float_expand = function(field, active_template, value, module_def, target, datasets_in) {
-    var active_module = active_template.modules[module_index];
-    var value = (active_module.config && field.id in active_module.config) ? active_module.config[field.id] : field.default;
-    var datum = {id: field.id, value: value};
-    if (field.multiple) { 
-      //datum.value = [datum.value]; 
-      target.append("div")
-        .classed("fields", true)
-        .datum(datum)
-        .append("label")           
-          .text(field.label)
-          .append("input")
-            .attr("type", "text")
-            .attr("field_id", field.id)
-            .attr("value", JSON.stringify(datum.value))
-            .on("change", function(d) { datum.value = JSON.parse(this.value) });
-    } else {
-      target.append("div")
-        .classed("fields", true)
-        .datum(datum)
-        .selectAll("label").data(d3.range(datasets_in.values.length))
-          .enter().append("label")
-          .text(field.label)
-          .append("input")
-            .attr("type", "number")
-            .attr("value", function(d,i) {return (value instanceof Array)? value[i] : value})
-            .on("change", function(d,i) { 
-              if (!(datum.value instanceof Array)) {
-                var new_value = d3.range(datasets_in.values.length).map(function() {return datum.value})
-                datum.value = new_value;
-              }
-              datum.value[i] = parseFloat(this.value);
-            });
-    }
-  }
-  
-  var intUI = new fieldUI();
-  webreduce.editor.make_fieldUI.int = intUI;
-  intUI.render = function() {
+  var intUI = function() {
     var datum = this.datum,
         field = this.field,
         target = this.target,
@@ -1307,10 +1195,9 @@ webreduce.editor = webreduce.editor || {};
           .on("change", function(d) { datum.value = parseInt(this.value) });
     return input;
   }
+  webreduce.editor.make_fieldUI.int = intUI;
   
-  var boolUI = new fieldUI();
-  webreduce.editor.make_fieldUI.bool = boolUI;
-  boolUI.render = function() {
+  var boolUI = function() {
     var datum = this.datum,
         field = this.field,
         target = this.target,
@@ -1328,6 +1215,7 @@ webreduce.editor = webreduce.editor || {};
           .on("change", function(d) { datum.value = this.checked });
     return input;
   }
+  webreduce.editor.make_fieldUI.bool = boolUI;
   
   webreduce.editor.fileinfo_update = function(fileinfo) {
     $(".remote_filebrowser").trigger("fileinfo.update", [fileinfo]);
