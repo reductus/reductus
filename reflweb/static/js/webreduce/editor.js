@@ -135,7 +135,7 @@ webreduce.editor = webreduce.editor || {};
         .style("position", "absolute")
         .style("bottom", "10px")
       buttons_div.append("button")
-        .text("accept")
+        .text( $("#auto_accept_changes").prop("checked") ? "replot": "accept")
         .classed("accept config", true)
         .on("click", function() {
           webreduce.editor.accept_parameters(config_target, active_module);
@@ -217,7 +217,9 @@ webreduce.editor = webreduce.editor || {};
             if (passthrough) {fieldUI.property("disabled", true)};
             fieldUI.on("change.auto_accept", function() {
               //console.log(this, d3.select(this).datum(), 'changing!');
-              webreduce.editor.accept_parameters(config_target, active_module);
+              if ($("#auto_accept_changes").prop("checked")) {
+                webreduce.editor.accept_parameters(config_target, active_module);
+              }
             });
           }
         });
