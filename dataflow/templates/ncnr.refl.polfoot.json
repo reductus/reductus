@@ -88,7 +88,12 @@
       "y": 100,
       "x": 460,
       "module": "ncnr.refl.join",
-      "title": "join"
+      "title": "join",
+      "config": {
+        "tolerance": 0.001,
+        "order": "file",
+        "group_by": "polarization"
+      }
     },
     {
       "y": 130,
