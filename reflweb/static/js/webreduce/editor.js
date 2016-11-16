@@ -910,6 +910,9 @@ webreduce.editor = webreduce.editor || {};
       });
       index_div.datum(datum);
       input.text(prettyJSON(datum.value));
+      var event = document.createEvent('Event');
+      event.initEvent('change', true, true);
+      input.node().dispatchEvent(event);
     }
     
     selector.callbacks(onselect);
@@ -1020,7 +1023,7 @@ webreduce.editor = webreduce.editor || {};
   webreduce.editor.make_fieldUI.index = indexUI;
   
   var scaleUI = function() {
-    var datum_in = this.datum,
+    var datum = this.datum,
         field = this.field,
         target = this.target,
         datasets_in = this.datasets_in,
@@ -1081,6 +1084,9 @@ webreduce.editor = webreduce.editor || {};
         })
         datum.value[i] = new_scale * original_datum[i];
         input.text(JSON.stringify(datum.value, null, 2));
+        var event = document.createEvent('Event');
+		event.initEvent('change', true, true);
+		input.node().dispatchEvent(event);
         chart.update();
       }
       var drag_point = d3.behavior.drag()
