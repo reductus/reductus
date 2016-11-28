@@ -981,7 +981,7 @@ def correct_footprint(data, fitted_footprint, qz_min=None, qz_max=None, slope=1.
     return data
 
 @module
-def estimate_polarization(data, FRbalance=0.5, Emin=0.0, Imin=0.0, clip=False):
+def estimate_polarization(data, FRbalance=50.0, Emin=0.0, Imin=0.0, clip=False):
     """
     Compute polarizer and flipper efficiencies from the intensity data.
 
