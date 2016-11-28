@@ -980,6 +980,7 @@ def correct_footprint(data, fitted_footprint, qz_min=None, qz_max=None, slope=1.
     apply_fitted_footprint(data, fitted_footprint, [qz_min, qz_max])
     return data
 
+@nocache
 @module
 def estimate_polarization(data, FRbalance=50.0, Emin=0.0, Imin=0.0, clip=False):
     """
@@ -1017,7 +1018,7 @@ def estimate_polarization(data, FRbalance=50.0, Emin=0.0, Imin=0.0, clip=False):
 
     polarization (poldata) : estimated polarization correction factors
 
-    2015-12-17 Paul Kienzle
+    2015-12-18 Paul Kienzle
     """
     from .polarization import PolarizationData
 
@@ -1031,6 +1032,7 @@ def estimate_polarization(data, FRbalance=50.0, Emin=0.0, Imin=0.0, clip=False):
     return poldata
 
 
+@nocache
 @module
 def correct_polarization(data, polarization, spinflip=True):
     """
@@ -1048,7 +1050,7 @@ def correct_polarization(data, polarization, spinflip=True):
 
     output (refldata[]) : polarization corrected data
 
-    2015-12-17 Paul Kienzle
+    2015-12-18 Paul Kienzle
     """
     from .polarization import apply_polarization_correction
     data = copy(data)
