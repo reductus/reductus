@@ -19,6 +19,15 @@ try:
 except ImportError:
     import default_config as config
 
+import pkg_resources
+if pkg_resources.resource_exists("reflweb", "ORIG_HEAD"):
+    server_git_hash = pkg_resources.resource_string("reflweb", "ORIG_HEAD").strip()
+    # this seems to work just fine even when it points to a symlink...
+    server_mtime = os.stat(pkg_resources.resource_filename("reflweb", "ORIG_HEAD")).st_mtime
+else:
+    server_git_hash = "unknown"
+    server_mtime = 0
+
 api_methods = []
 
 from functools import wraps
@@ -166,7 +175,11 @@ def calc_terminal(template_def, config, nodenum, terminal_id, return_type='full'
     elif return_type == 'metadata':
         return retval.get_metadata()
     elif return_type == 'export':
-        return retval.get_export()
+        # inject git version hash into export data:
+        to_export = retval.get_export()
+        to_export["server_git_hash"] = server_git_hash
+        to_export["server_mtime"] = server_mtime
+        return to_export
     else:
         raise KeyError(return_type + " not a valid return_type (should be one of ['full', 'plottable', 'metadata', 'export'])")
 
