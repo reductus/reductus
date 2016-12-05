@@ -1,2 +1,2 @@
 recursive-include dataflow *.json
-recursive-include reflweb *.js
+recursive-include reflweb *.js *.html *.css
