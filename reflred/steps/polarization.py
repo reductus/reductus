@@ -282,28 +282,29 @@ def _correction_matrix(beta, fp, rp, x, y, use_pm, use_mp):
 
     if use_pm and use_mp:
         H = np.array([
-            [Fp * Rp, Fp_x * Rp, Fp * Rp_y, Fp_x * Rp_y],
-            [Fm * Rp, Fm_x * Rp, Fm * Rp_y, Fm_x * Rp_y],
-            [Fp * Rm, Fp_x * Rm, Fp * Rm_y, Fp_x * Rm_y],
-            [Fm * Rm, Fm_x * Rm, Fm * Rm_y, Fm_x * Rm_y],
+            [Fm_x * Rm_y, Fm_x * Rp_y, Fp_x * Rm_y, Fp_x * Rp_y],
+            [Fm_x * Rm  , Fm_x * Rp  , Fp_x * Rm  , Fp_x * Rp  ],
+            [Fm   * Rm_y, Fm   * Rp_y, Fp   * Rm_y, Fp   * Rp_y],
+            [Fm   * Rm  , Fm   * Rp  , Fp   * Rm  , Fp   * Rp  ]
             ])
     elif use_pm:
         H = np.array([
-            [Fp * Rp, Fp * Rp_y, Fp_x * Rp_y],
-            [Fp * Rm, Fp * Rm_y, Fp_x * Rm_y],
-            [Fm * Rm, Fm * Rm_y, Fm_x * Rm_y],
+            [Fm_x * Rm_y,(Fm_x * Rp_y+ Fp_x * Rm_y), Fp_x * Rp_y],
+            [Fm_x * Rm  ,(Fm_x * Rp  + Fp_x * Rm  ), Fp_x * Rp  ],
+            [Fm   * Rm  ,(Fm   * Rp  + Fp   * Rm  ), Fp   * Rp  ]
         ])
     elif use_mp:
         H = np.array([
-            [Fp * Rp, Fp_x * Rp, Fp_x * Rp_y],
-            [Fm * Rp, Fm_x * Rp, Fm_x * Rp_y],
-            [Fm * Rm, Fm_x * Rm, Fm_x * Rm_y],
+            [Fm_x * Rm_y,(Fm_x * Rp_y+ Fp_x * Rm_y), Fp_x * Rp_y],
+            [Fm   * Rm_y,(Fm   * Rp_y+ Fp   * Rm_y), Fp   * Rp_y],
+            [Fm   * Rm  ,(Fm   * Rp  + Fp   * Rm  ), Fp   * Rp  ]
         ])
     else:
         H = np.array([
-            [Fp * Rp, Fp_x*Rp_y],
-            [Fm * Rm, Fm_x*Rm_y],
+            [Fm_x * Rm_y, Fp_x * Rp_y  ],
+            [Fm   * Rm  , Fp   * Rp    ]
             ])
+    print("H:", UM(H[:,:,0]), UM(H[:,:,0]).I)
     return [UM(H[:,:,k]*Bk).I for k,Bk in enumerate(beta)]
 
 def plot_efficiency(beam, Imin=0.0, Emin=0.0, FRbal=0.5, clip=False):

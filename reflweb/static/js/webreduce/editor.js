@@ -4,7 +4,7 @@
 webreduce.editor = webreduce.editor || {};
 
 (function () {
-	webreduce.editor.dispatch = d3.dispatch("accept");
+	webreduce.editor.dispatch = d3.dispatch("accept", "field_update");
 
   webreduce.guid = function() {
     var uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
@@ -135,7 +135,7 @@ webreduce.editor = webreduce.editor || {};
         .style("position", "absolute")
         .style("bottom", "10px")
       buttons_div.append("button")
-        .text("accept")
+        .text( $("#auto_accept_changes").prop("checked") ? "replot": "accept")
         .classed("accept config", true)
         .on("click", function() {
           webreduce.editor.accept_parameters(config_target, active_module);
@@ -203,8 +203,24 @@ webreduce.editor = webreduce.editor || {};
               value = field_copy.default;
             }
             var datum = {"id": field.id, "value": value, "passthrough": passthrough};
-            var fieldUI = webreduce.editor.make_fieldUI[field.datatype](field, active_template, datum, module_def, config_target, datasets_in);
+            var fieldUImaker = webreduce.editor.make_fieldUI[field.datatype];
+            var context = {
+              field: field,
+              active_template: active_template,
+              datum: datum,
+              module_def: module_def,
+              target: config_target,
+              datasets_in: datasets_in,
+              active_module: active_module
+            }
+            var fieldUI = fieldUImaker.call(context);
             if (passthrough) {fieldUI.property("disabled", true)};
+            fieldUI.on("change.auto_accept", function() {
+              //console.log(this, d3.select(this).datum(), 'changing!');
+              if ($("#auto_accept_changes").prop("checked")) {
+                webreduce.editor.accept_parameters(config_target, active_module);
+              }
+            });
           }
         });
       });
@@ -239,6 +255,7 @@ webreduce.editor = webreduce.editor || {};
     var instrument_id = this._instrument_id;
     var new_plotdata = webreduce.instruments[instrument_id].plot(result);
     var active_plot;
+    d3.select("#plot_title").text("");
     if (new_plotdata == null) {
       active_plot = null;
       d3.select("#plotdiv").selectAll("svg, div").remove();
@@ -338,6 +355,7 @@ webreduce.editor = webreduce.editor || {};
       d3.selectAll("#plotdiv").selectAll("svg, div").remove();
       mychart = new heatChart();
       d3.selectAll("#plotdiv").data(datas[0].z).call(mychart);
+      webreduce.callbacks.resize_center = function() {mychart.autofit()};
     }
     
     var update_plotselect = function() {
@@ -345,6 +363,8 @@ webreduce.editor = webreduce.editor || {};
       //console.log(d3.select(this), d3.select(this).datum(), this.value);
       var plotnum = (this.value != null) ? parseInt(this.value) : 0,
           data = datas[plotnum];
+      var title = data.title || "";
+      d3.select("#plot_title").text(title);
       data.ztransform = $("#zscale").val();
       if ((((data.options || {}).fixedAspect || {}).fixAspect || null) == true) {
         aspect_ratio = ((data.options || {}).fixedAspect || {}).aspectRatio || null;
@@ -687,17 +707,23 @@ webreduce.editor = webreduce.editor || {};
       webreduce.editor._calc_status_message = status_message;
     }
     webreduce.editor._calculation_cancelled = false;
-    var calc
+    var calculation_finished = false;
     var status_message = webreduce.editor._calc_status_message;
     var r = new Promise(function(resolve, reject) {resolve()});
     var cancel_promise = new Promise(function(resolve, reject) { 
       status_message.find("button").on("click", function() {
         webreduce.editor._calculation_cancelled = true;
+        calculation_finished = true;
         resolve({"cancelled": true})
       });
     });
+    
     if (!noblock) {
-      r = r.then(function() { $.blockUI({message: status_message, fadeIn: 100, fadeOut: 100}) })
+      r = r.then(function() { 
+        window.setTimeout(function() {
+          if (!calculation_finished) {$.blockUI({message: status_message, fadeIn: 100, fadeOut: 100})}
+          }, 200)
+      })
     }
     if (recalc_mtimes) {
       r = r.then(function() { return Promise.race([cancel_promise, webreduce.update_file_mtimes()])})
@@ -727,8 +753,8 @@ webreduce.editor = webreduce.editor || {};
       r = r.then(function() {return Promise.race([cancel_promise, calculate_one(params, caching)])})
     }
     if (!noblock) {
-      r = r.then(function(result) { $.unblockUI(); return result; })
-       .catch(function(err) { $.unblockUI(); throw err });
+      r = r.then(function(result) { calculation_finished = true; $.unblockUI(); return result; })
+       .catch(function(err) { calculation_finished = true; $.unblockUI(); throw err });
     }
     return r;
   }
@@ -764,15 +790,21 @@ webreduce.editor = webreduce.editor || {};
   }
   
   webreduce.editor.make_fieldUI = {}; // generators for field datatypes
-  
-  webreduce.editor.make_fieldUI.fileinfo = function(field, active_template, datum, module_def, target, datasets_in) {
-    // this will add the div only once, even if called twice.
-    $("#navigation").unblock();
-    target.selectAll("div#fileinfo").data([0])
-      .enter()
-        .append("div")
-        .attr("id", "fileinfo")
     
+  var fileinfoUI = function() {
+    // call with context defined:
+    var datum = this.datum,
+        field = this.field,
+        target = this.target,
+        datasets_in = this.datasets_in,
+        module = this.active_module;
+
+    $("#navigation").unblock();
+    if (target.select("div#fileinfo").empty()) {
+      target.append("div")
+        .attr("id", "fileinfo")
+    }
+
     datum.value = datum.value || []; // insert empty list if value is null or missing
     var existing_count = datum.value.length;
     var radio = target.select("div#fileinfo").append("div")
@@ -790,7 +822,10 @@ webreduce.editor = webreduce.editor || {};
     $(radio.node()).on("fileinfo.update", function(ev, info) {
       if (radio.select("input").property("checked")) {
           radio.datum({id: field.id, value: info});
-      } 
+          radio.select("label span").text(field.id + "(" + info.length + ")");
+          // auto-accept fileinfo clicks.
+          webreduce.editor.accept_parameters(target, module);
+      }
     });
 
     target.select("#fileinfo input").property("checked", true); // first one
@@ -803,10 +838,17 @@ webreduce.editor = webreduce.editor || {};
     $(".remote-filebrowser").trigger("fileinfo.update", d3.select("div#fileinfo input").datum());
     // if there is data loaded, an output terminal is selected... and will be plotted instead
     if (datasets_in == null) { webreduce.handleChecked() };
-    return radio    
+    return radio
   }
+  webreduce.editor.make_fieldUI.fileinfo = fileinfoUI;
   
-  webreduce.editor.make_fieldUI.index = function(field, active_template, datum_in, module_def, target, datasets_in) {
+  var indexUI = function() {
+    var datum_in = this.datum,
+        field = this.field,
+        target = this.target,
+        datasets_in = this.datasets_in,
+        module = this.active_module;
+  
     if (target.select("div#indexlist").empty()) {
       target.append("div")
         .attr("id", "indexlist")
@@ -874,6 +916,9 @@ webreduce.editor = webreduce.editor || {};
       });
       index_div.datum(datum);
       input.text(prettyJSON(datum.value));
+      var event = document.createEvent('Event');
+      event.initEvent('change', true, true);
+      input.node().dispatchEvent(event);
     }
     
     selector.callbacks(onselect);
@@ -981,8 +1026,16 @@ webreduce.editor = webreduce.editor || {};
     });
     return input;
   }
+  webreduce.editor.make_fieldUI.index = indexUI;
   
-  webreduce.editor.make_fieldUI.scale = function(field, active_template, datum, module_def, target, datasets_in) {
+  var scaleUI = function() {
+    var datum = this.datum,
+        field = this.field,
+        target = this.target,
+        datasets_in = this.datasets_in,
+        module = this.active_module;
+        
+  
     target.selectAll("div#scalelist").data([0])
       .enter()
         .append("div")
@@ -1037,6 +1090,9 @@ webreduce.editor = webreduce.editor || {};
         })
         datum.value[i] = new_scale * original_datum[i];
         input.text(JSON.stringify(datum.value, null, 2));
+        var event = document.createEvent('Event');
+		event.initEvent('change', true, true);
+		input.node().dispatchEvent(event);
         chart.update();
       }
       var drag_point = d3.behavior.drag()
@@ -1049,8 +1105,17 @@ webreduce.editor = webreduce.editor || {};
     });
     return input;
   }
+  
+  webreduce.editor.make_fieldUI.scale = scaleUI;
+  //function(field, active_template, datum, module_def, target, datasets_in) {
 
-  webreduce.editor.make_fieldUI.str = function(field, active_template, datum, module_def, target, datasets_in) {
+  var strUI = function() {
+    var datum = this.datum,
+        field = this.field,
+        target = this.target,
+        datasets_in = this.datasets_in,
+        module = this.active_module;
+  
     var input = target.append("div")
       .classed("fields", true)
       .datum(datum)
@@ -1063,8 +1128,15 @@ webreduce.editor = webreduce.editor || {};
           .on("change", function(d) { datum.value = this.value });
     return input;
   }
+  webreduce.editor.make_fieldUI.str = strUI;
   
-  webreduce.editor.make_fieldUI.opt = function(field, active_template, datum, module_def, target, datasets_in) {
+  var optUI = function() {
+    var datum = this.datum,
+        field = this.field,
+        target = this.target,
+        datasets_in = this.datasets_in,
+        module = this.active_module;
+
     var input = target.append("div")
       .classed("fields", true)
       .datum(datum)
@@ -1073,7 +1145,7 @@ webreduce.editor = webreduce.editor || {};
         .append("select")
           .attr("field_id", field.id)
           .attr("value", datum.value)
-          .on("change", function(d) { datum.value = this.value })
+          .on("change", function(d) { console.log(this, datum); datum.value = this.value })
     input
           .selectAll("option").data(field.typeattr.choices)
             .enter().append("option")
@@ -1082,8 +1154,14 @@ webreduce.editor = webreduce.editor || {};
             .text(function(d) {return d[0]})
     return input;
   }
+  webreduce.editor.make_fieldUI.opt = optUI;
   
-  webreduce.editor.make_fieldUI.float = function(field, active_template, datum, module_def, target, datasets_in) {
+  var floatUI = function() {
+    var datum = this.datum,
+        field = this.field,
+        target = this.target,
+        datasets_in = this.datasets_in,
+        module = this.active_module;
     var input;
     if (field.multiple) { 
       //datum.value = [datum.value]; 
@@ -1111,44 +1189,14 @@ webreduce.editor = webreduce.editor || {};
     }
     return input;
   }
-
-  webreduce.editor.make_fieldUI.float_expand = function(field, active_template, value, module_def, target, datasets_in) {
-    var active_module = active_template.modules[module_index];
-    var value = (active_module.config && field.id in active_module.config) ? active_module.config[field.id] : field.default;
-    var datum = {id: field.id, value: value};
-    if (field.multiple) { 
-      //datum.value = [datum.value]; 
-      target.append("div")
-        .classed("fields", true)
-        .datum(datum)
-        .append("label")           
-          .text(field.label)
-          .append("input")
-            .attr("type", "text")
-            .attr("field_id", field.id)
-            .attr("value", JSON.stringify(datum.value))
-            .on("change", function(d) { datum.value = JSON.parse(this.value) });
-    } else {
-      target.append("div")
-        .classed("fields", true)
-        .datum(datum)
-        .selectAll("label").data(d3.range(datasets_in.values.length))
-          .enter().append("label")
-          .text(field.label)
-          .append("input")
-            .attr("type", "number")
-            .attr("value", function(d,i) {return (value instanceof Array)? value[i] : value})
-            .on("change", function(d,i) { 
-              if (!(datum.value instanceof Array)) {
-                var new_value = d3.range(datasets_in.values.length).map(function() {return datum.value})
-                datum.value = new_value;
-              }
-              datum.value[i] = parseFloat(this.value);
-            });
-    }
-  }
+  webreduce.editor.make_fieldUI.float = floatUI;
   
-  webreduce.editor.make_fieldUI.int = function(field, active_template, datum, module_def, target) {
+  var intUI = function() {
+    var datum = this.datum,
+        field = this.field,
+        target = this.target,
+        datasets_in = this.datasets_in,
+        module = this.active_module;
     var input = target.append("div")
       .classed("fields", true)
       .datum(datum)
@@ -1161,8 +1209,14 @@ webreduce.editor = webreduce.editor || {};
           .on("change", function(d) { datum.value = parseInt(this.value) });
     return input;
   }
+  webreduce.editor.make_fieldUI.int = intUI;
   
-  webreduce.editor.make_fieldUI.bool = function(field, active_template, datum, module_def, target) {
+  var boolUI = function() {
+    var datum = this.datum,
+        field = this.field,
+        target = this.target,
+        datasets_in = this.datasets_in,
+        module = this.active_module;
     var input = target.append("div")
       .classed("fields", true)
       .datum(datum)
@@ -1175,6 +1229,7 @@ webreduce.editor = webreduce.editor || {};
           .on("change", function(d) { datum.value = this.checked });
     return input;
   }
+  webreduce.editor.make_fieldUI.bool = boolUI;
   
   webreduce.editor.fileinfo_update = function(fileinfo) {
     $(".remote_filebrowser").trigger("fileinfo.update", [fileinfo]);

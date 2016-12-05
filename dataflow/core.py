@@ -455,6 +455,16 @@ class Instrument(object):
         for m in self.modules:
             if m.name == name: return m.id
         raise KeyError(name + ' does not exist in instrument ' + self.name)
+    
+    def get_git_hash(self):
+        # assumes that this is part of a git repository, located in the parent
+        # directory of the directory this file is in.
+        import pkg_resources
+        if pkg_resources.resource_exists("reflweb", "ORIG_HEAD"):
+            git_hash = pkg_resources.resource_string("reflweb", "ORIG_HEAD").strip()
+        else:
+            git_hash = "unknown"
+        return git_hash
         
     def get_definition(self):
         keys = ['id', 'name', 'archive']
@@ -462,6 +472,7 @@ class Instrument(object):
         definition['modules'] = [m.get_definition() for m in self.modules]
         definition['datatypes'] = [d.get_definition() for d in self.datatypes]
         definition['templates'] = self.template_defs
+        definition['server_git_hash'] = self.get_git_hash()
         return definition
 
         

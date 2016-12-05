@@ -14,13 +14,13 @@ if sys.argv[1] == 'test':
 #sys.dont_write_bytecode = True
 
 from setuptools import setup, Extension, find_packages
-
+    
 version = None
 for line in open(joinpath("reflred","__init__.py")):
     if "__version__" in line:
         version = line.split('"')[1]
 
-packages = find_packages(exclude=['reflbin', 'reflweb'])
+packages = find_packages(exclude=['reflbin'])
 
 def module_config():
     S = ("reduction.cc","str2imat.c")
@@ -57,6 +57,7 @@ dist = setup(
     ],
     packages=packages,
     include_package_data=True,
+    data_files=[('reflweb', ['.git/ORIG_HEAD'])],
     ext_modules=[module_config()],
     # numpy and scipy are requirements, but don't install them with pip
     install_requires=['uncertainties', 'docutils'],

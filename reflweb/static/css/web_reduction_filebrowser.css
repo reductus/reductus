@@ -120,8 +120,15 @@
     }
     #plotdiv {
       height: 100%;
-      display: block;
+      display: flex;
       text-align: start;
+      
+    }
+    #plot_title {
+      /*height: 1em;*/
+    }
+    #plot_controls {
+      min-height: 1em;
     }
     #controls {
       position: absolute;
@@ -131,8 +138,13 @@
       right: 0;
     }
     .ui-layout-center {
-      /* adding padding to hold controls */
-      padding-bottom: 30px;
+      /* adding padding to hold controls, title */
+      /*padding-bottom: 80px;*/
+      height: 100%;
+      display: -webkit-flex !important;
+      display: flex !important;
+      -webkit-flex-direction: column;
+      flex-direction: column;
       text-align: center;
     }
 

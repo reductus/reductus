@@ -140,6 +140,12 @@ webreduce.instruments = webreduce.instruments || {};
             .append($("<li />", {text: "Upload"})
               .on("click", function() {hide_menu(); upload_dialog.dialog("open")})
             )
+            .append($("<li />")
+              .append($("<label />", {text: "Auto-accept changes"})
+                .append($("<input />", {type: "checkbox", id: "auto_accept_changes", checked: true}))
+                .on("change", function() {hide_menu();})
+              )
+            )
             .append($("<li />", {text: "Predefined", id: "predefined_templates"})
               .append($("<ul />"))
               .on("click", "ul li", function(ev) {
