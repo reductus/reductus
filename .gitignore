@@ -7,3 +7,4 @@
 /doc/reflred/
 /reflred.egg-info/
 /reflweb/config.py
+/reflweb/git_version_*

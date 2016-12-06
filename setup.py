@@ -22,16 +22,10 @@ for line in open(joinpath("reflred","__init__.py")):
 
 import subprocess
 git_version_hash = subprocess.Popen(["git", "rev-parse", "HEAD"], stdout=subprocess.PIPE).stdout.read()
-open("reflweb/git_version_hash", "w").write(git_version_hash)
+open("reflweb/git_version_hash", "w").write(git_version_hash) 
+server_mtime = subprocess.Popen(["git", "log", "-1", "--pretty=format:%ct"], stdout=subprocess.PIPE).stdout.read()
+open("reflweb/git_version_mtime", "w").write(server_mtime) 
 
-hook_path = os.path.join(".git", "hooks", "post-merge")
-if not os.path.exists(hook_path):
-    print("creating hook for updating version")
-    import stat
-    open(hook_path, "w").write("#!/bin/sh\n\ngit rev-parse HEAD > reflweb/git_version_hash\necho 'updated hash'")
-    st = os.stat(hook_path)
-    os.chmod(hook_path, st.st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
- 
 
 packages = find_packages(exclude=['reflbin'])
 
