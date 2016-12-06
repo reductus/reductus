@@ -20,10 +20,9 @@ except ImportError:
     import default_config as config
 
 import pkg_resources
-if pkg_resources.resource_exists("reflweb", "ORIG_HEAD"):
-    server_git_hash = pkg_resources.resource_string("reflweb", "ORIG_HEAD").strip()
-    # this seems to work just fine even when it points to a symlink...
-    server_mtime = os.stat(pkg_resources.resource_filename("reflweb", "ORIG_HEAD")).st_mtime
+if pkg_resources.resource_exists("reflweb", "git_version_hash"):
+    server_git_hash = pkg_resources.resource_string("reflweb", "git_version_hash").strip()
+    server_mtime = os.stat(pkg_resources.resource_filename("reflweb", "git_version_hash")).st_mtime
 else:
     server_git_hash = "unknown"
     server_mtime = 0

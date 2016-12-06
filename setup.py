@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import sys
+import sys, os
 from os.path import join as joinpath, dirname
 import re
 
@@ -19,6 +19,19 @@ version = None
 for line in open(joinpath("reflred","__init__.py")):
     if "__version__" in line:
         version = line.split('"')[1]
+
+import subprocess
+git_version_hash = subprocess.Popen(["git", "rev-parse", "HEAD"], stdout=subprocess.PIPE).stdout.read()
+open("reflweb/git_version_hash", "w").write(git_version_hash)
+
+hook_path = os.path.join(".git", "hooks", "post-merge")
+if not os.path.exists(hook_path):
+    print("creating hook for updating version")
+    import stat
+    open(hook_path, "w").write("#!/bin/sh\n\ngit rev-parse HEAD > reflweb/git_version_hash\necho 'updated hash'")
+    st = os.stat(hook_path)
+    os.chmod(hook_path, st.st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+ 
 
 packages = find_packages(exclude=['reflbin'])
 
@@ -57,7 +70,7 @@ dist = setup(
     ],
     packages=packages,
     include_package_data=True,
-    data_files=[('reflweb', ['.git/ORIG_HEAD'])],
+    #data_files=[('reflweb', ['reflweb/git_version_hash'])],
     ext_modules=[module_config()],
     # numpy and scipy are requirements, but don't install them with pip
     install_requires=['uncertainties', 'docutils'],
