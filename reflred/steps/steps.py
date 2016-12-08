@@ -634,13 +634,13 @@ def rescale(data, scale=1.0, dscale=0.0):
 
 #@nocache
 @module
-def join(data, tolerance=1.0, order='file', group_by = "polarization"):
+def join(data, tolerance=0.3, order='file', group_by = "polarization"):
     r"""
     Join operates on a list of datasets, returning a list with one dataset,
     or one dataset per polarization state.  When operating on a single
     dataset, it joins repeated points into single points.
 
-    *tolerance* (default=0.05) is a scale factor on $\Delta \theta$ used to
+    *tolerance* (default=0.3) is a scale factor on $\Delta \theta$ used to
     determine whether two angles are equivalent.  For a given tolerance
     $\epsilon$, a point at incident angle $\theta_1$ can be joined
     with one with incident angle $\theta_2$ when
