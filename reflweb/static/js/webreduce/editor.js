@@ -22,6 +22,7 @@ webreduce.editor = webreduce.editor || {};
       $.unblockUI();
     }).catch(function (err) {
       // error occurred
+      $.unblockUI();
       alert(err + "could not destroy cache");
     });
   }
