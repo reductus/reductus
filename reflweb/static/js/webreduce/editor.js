@@ -14,6 +14,17 @@ webreduce.editor = webreduce.editor || {};
   }
 
   webreduce.editor._cache = new PouchDB("calculations");
+  webreduce.editor.clear_cache = function() {
+    $.blockUI({message: "clearing cache", fadeIn: 100, fadeOut: 100});
+    new PouchDB('calculations').destroy().then(function () {
+      // database destroyed      
+      webreduce.editor._cache = new PouchDB("calculations");
+      $.unblockUI();
+    }).catch(function (err) {
+      // error occurred
+      alert(err + "could not destroy cache");
+    });
+  }
 
   webreduce.editor.create_instance = function(target_id) {
     // create an instance of the dataflow editor in

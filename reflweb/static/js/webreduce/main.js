@@ -186,6 +186,9 @@ webreduce.instruments = webreduce.instruments || {};
                 .on("change", function() {hide_menu();})
               )
             )
+            .append($("<li />", {text: "Clear Cache"})
+              .on("click", function() {hide_menu(); webreduce.editor.clear_cache()})
+            )
             .append($("<li />", {id: "data_menu_sources", text: "Add source"})
               .append($("<ul />"))
               .on("click", "ul li", function() {
