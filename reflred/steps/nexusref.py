@@ -235,9 +235,24 @@ class NCNRNeXusRefl(refldata.ReflData):
         else:
             raise ValueError("Unknown sample angle in file")
         self.Qz_target = data_as(das, 'trajectoryData/_q', 'invAng', rep=n)
-        #TODO: temperature, field
         if '_theta_offset' in das['trajectoryData']:
             self.background_offset = 'theta'
+        # temperature/field scan
+        SCANNED_VARIABLES = 'trajectory/scannedVariables'
+        if SCANNED_VARIABLES in das:
+            scanned = das[SCANNED_VARIABLES].value
+            if len(scanned) > 0:
+                try:
+                    path = scanned[0].replace('.', '/')
+                    field = das[path]
+                    self.scan_value = data_as(das, path, '', rep=n)
+                    self.scan_units = field.attrs.get('units', '')
+                    self.scan_label = field.attrs.get('label', scanned[0])
+                except KeyError:
+                    print("could not scanned %s for %s"
+                          % (scanned[0], os.path.basename(self.filename)))
+                    pass
+        #TODO: temperature, field
 
     def _load_slits(self, instrument):
         """
@@ -304,7 +319,7 @@ def demo():
         entries = load_entries(f)
         for f in entries:
             f.load()
-            print f
+            print(f)
             f.plot()
     pylab.legend()
     pylab.show()

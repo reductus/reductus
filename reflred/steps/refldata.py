@@ -642,6 +642,7 @@ class Intent:
     deff = 'detector efficiency'
     time = 'time'
     other = 'other'
+    scan = 'scan'
 
     intents = [slit,spec,backp,backm,rockQ,rock3,rock4,deff,time,other,none]
 
@@ -664,6 +665,10 @@ class Intent:
     @staticmethod
     def isnone(intent):
         return intent == Intent.none
+
+    @staticmethod
+    def isscan(intent):
+        return intent == Intent.scan
 
 def infer_intent(data):
     """
@@ -703,7 +708,7 @@ def infer_intent(data):
         intent = Intent.rock4
     else:
         # never gets here
-        intent = Intent.none
+        intent = Intent.scan
 
     return intent
 
@@ -820,6 +825,9 @@ class ReflData(object):
     angular_resolution = None
     Qz_target = None
     Qz_basis = 'actual'
+    scan_value = None
+    scan_label = ''
+    scan_units = ''
 
     ## Data representation for generic plotter as (x,y,z,v) -> (qz,qx,qy,Iq)
     ## TODO: subclass Data so we get pixel edges calculations
@@ -846,6 +854,8 @@ class ReflData(object):
         elif Intent.isslit(v):
             #self.xlabel, self.xunits = "angular resolution", "degrees 1-sigma"
             self.xlabel, self.xunits = "slit 1 opening", "mm"
+        elif Intent.isscan(v):
+            self.xlabel, self.xunits = self.scan_label, self.scan_units
         else:
             self.xlabel, self.xunits = "point", ""
 
@@ -860,6 +870,8 @@ class ReflData(object):
         elif Intent.isslit(intent):
             return self.slit1.x
             #return self.angular_resolution
+        elif Intent.isscan(intent):
+            return self.scan_value
         else:
             return np.arange(1, len(self.v)+1)
 

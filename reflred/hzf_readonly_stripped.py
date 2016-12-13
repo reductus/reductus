@@ -234,7 +234,7 @@ class FieldFile(object):
                         d = numpy.array([''], dtype=dtype)
                     else:
                         d = numpy.loadtxt(infile, dtype=dtype, delimiter='\t')
-                        if dtype.kind == 'S':
+                        if dtype.kind == 'S' and d.size > 0:
                             d = numpy.char.replace(d, r'\t', '\t')
                             d = numpy.char.replace(d, r'\r', '\r')
                             d = numpy.char.replace(d, r'\n', '\n')

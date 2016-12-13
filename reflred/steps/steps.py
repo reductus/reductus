@@ -1114,7 +1114,7 @@ def super_load(filelist=None,
 
     intent (str)
     : Measurement intent (specular, background+, background-, slit, rock),
-    auto or infer.
+    auto or infer.  If intent is 'scan', then use the first scanned variable.
     
     Qz_basis (opt:actual|detector|sample|target)
     : How to calculate Qz from instrument angles.
