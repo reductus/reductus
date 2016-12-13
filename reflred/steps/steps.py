@@ -634,7 +634,7 @@ def rescale(data, scale=1.0, dscale=0.0):
 
 #@nocache
 @module
-def join(data, Q_tolerance=0.5, dQ_tolerance=0.001, order='file',
+def join(data, Q_tolerance=0.5, dQ_tolerance=0.002, order='file',
          group_by = "polarization", tolerance=-1.0):
     r"""
     Join operates on a list of datasets, returning a list with one dataset,
