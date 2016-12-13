@@ -224,11 +224,14 @@ class NCNRNeXusRefl(refldata.ReflData):
             if y in das:
                 s.y = data_as(das, y, 'mm', rep=n)
         if 'sampleAngle' in das:
+            # selects MAGIK or PBR, which have sample and detector angle
             self.sample.angle_x = data_as(das,'sampleAngle/softPosition','degree',rep=n)
             self.detector.angle_x = data_as(das,'detectorAngle/softPosition','degree',rep=n)
         elif 'q' in das:
-            self.sample.angle_x = data_as(das, 'q/thetaIncident','degree',rep=n)
-            self.detector.angle_x = 2.0*data_as(das,'q/thetaIncident','degree',rep=n)
+            # selects NG7R which has only q device (qz) and sampleTilt
+            tilt = data_as(das, 'sampleTilt/softPosition','degree',rep=n)
+            self.sample.angle_x = data_as(das, 'q/thetaIncident','degree',rep=n) + tilt
+            self.detector.angle_x = 2.0*data_as(das,'q/thetaIncident','degree',rep=n) - tilt
         else:
             raise ValueError("Unknown sample angle in file")
         self.Qz_target = data_as(das, 'trajectoryData/_q', 'invAng', rep=n)

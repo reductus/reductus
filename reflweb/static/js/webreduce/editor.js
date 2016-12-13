@@ -14,6 +14,18 @@ webreduce.editor = webreduce.editor || {};
   }
 
   webreduce.editor._cache = new PouchDB("calculations");
+  webreduce.editor.clear_cache = function() {
+    $.blockUI({message: "clearing cache", fadeIn: 100, fadeOut: 100});
+    new PouchDB('calculations').destroy().then(function () {
+      // database destroyed      
+      webreduce.editor._cache = new PouchDB("calculations");
+      $.unblockUI();
+    }).catch(function (err) {
+      // error occurred
+      $.unblockUI();
+      alert(err + "could not destroy cache");
+    });
+  }
 
   webreduce.editor.create_instance = function(target_id) {
     // create an instance of the dataflow editor in
@@ -707,17 +719,23 @@ webreduce.editor = webreduce.editor || {};
       webreduce.editor._calc_status_message = status_message;
     }
     webreduce.editor._calculation_cancelled = false;
-    var calc
+    var calculation_finished = false;
     var status_message = webreduce.editor._calc_status_message;
     var r = new Promise(function(resolve, reject) {resolve()});
     var cancel_promise = new Promise(function(resolve, reject) { 
       status_message.find("button").on("click", function() {
         webreduce.editor._calculation_cancelled = true;
+        calculation_finished = true;
         resolve({"cancelled": true})
       });
     });
+    
     if (!noblock) {
-      r = r.then(function() { $.blockUI({message: status_message, fadeIn: 100, fadeOut: 100}) })
+      r = r.then(function() { 
+        window.setTimeout(function() {
+          if (!calculation_finished) {$.blockUI({message: status_message, fadeIn: 100, fadeOut: 100})}
+          }, 200)
+      })
     }
     if (recalc_mtimes) {
       r = r.then(function() { return Promise.race([cancel_promise, webreduce.update_file_mtimes()])})
@@ -747,8 +765,8 @@ webreduce.editor = webreduce.editor || {};
       r = r.then(function() {return Promise.race([cancel_promise, calculate_one(params, caching)])})
     }
     if (!noblock) {
-      r = r.then(function(result) { $.unblockUI(); return result; })
-       .catch(function(err) { $.unblockUI(); throw err });
+      r = r.then(function(result) { calculation_finished = true; $.unblockUI(); return result; })
+       .catch(function(err) { calculation_finished = true; $.unblockUI(); throw err });
     }
     return r;
   }
@@ -768,7 +786,15 @@ webreduce.editor = webreduce.editor || {};
       recalc_mtimes = $("#auto_reload_mtimes").prop("checked");
     webreduce.editor.calculate(params, recalc_mtimes).then(function(result) {
       // add the template and target node, terminal to the header of the file:
-      var header = {template_data: {template: params.template, node: params.node, terminal: params.terminal}};
+      var header = {
+        template_data: {
+          template: params.template,
+          node: params.node,
+          terminal: params.terminal,
+          server_git_hash: result.server_git_hash,
+          server_mtime: new Date((result.server_mtime || 0.0) * 1000).toISOString()
+        }
+      };
       webreduce.download('# ' + JSON.stringify(header).slice(1,-1) + '\n' + result.values.join('\n\n'), filename);
     });       
   }

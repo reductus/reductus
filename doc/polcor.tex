@@ -1,0 +1,222 @@
+\documentclass[12pt,letterpaper]{article}
+\author{Brian B. Maranville}
+\title{Polarization correction for neutron reflectometry with transmission spin filters}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=1.0in]{geometry}
+\usepackage{amsmath}
+\usepackage{hyperref}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{mathtools}
+\begin{document}
+\maketitle
+
+\section{Adaptation from source}
+Adaptation of polarization efficiency corrections from 
+``Neutron scattering studies of magnetic thin films and multilayers''
+
+C.F. Majkrzak (1996). Physica B 221, 342-356
+
+\url{http://dx.doi.org/10.1016/0921-4526(95)00948-5}
+\subsection{flipper efficiency}
+For any neutron-polarizing optical system, a spin-filter is chosen which selects a particular spin
+state which we will call the dominant state.
+
+The transmitted intensity of the dominant spin state through the polarizing optics (at the sample)
+is proportional to $(1 + F)$ when the front flipper is off and $(1 - F(1 - 2f))$ when the flipper is on; 
+the transmitted intensity of the other (leakage) spin state is $(1 - F)$ for flipper off and $(1 + F(1 - 2f))$
+for flipper on, where $F, f$ are the efficiencies of the polarizer device and the flipper, respectively.
+$F$ and $f$ are defined such that $0 \leq F \leq 1$ and $0 \leq f \leq 1$, so that in the above
+equations, for a perfect polarized and flipper the transmission would be 1 for the dominant spin state
+with the flipper off, with 0 leakage, and vice-versa with the flipper off.  The same set of equations holds
+for the transmission through the spin-analyzer optics after the beam interacts with the sample: the analyzer
+efficiency and rear flipper efficiency will be written as $R, r$.
+
+In the reference above, the math is defined for a supermirror polarizer and analyzer in the reflection geometry.
+This corresponds to a dominant transmitted neutron spin state of $(+)$ when a flipper is 
+off and $(-)$ when a flipper is on.
+
+\subsection{spin-filter geometry: transmit or reflect}
+To apply the equations in Table 2 of that reference to a system in which the supermirrors are
+operated in a transmission geometry, we have to reverse the sign of all the spin-dependent cross-sections described,
+(all the subscripts on the $\sigma$) while keeping the relationship of transmission efficiencies to the flipper state
+(off vs. on) the same, e.g.
+\begin{equation}
+\begin{array}{rll}
+	I^{\textrm{off off}}_\textrm{reflect} / \beta =& {} & \sigma_{++} (1 + F)(1 + R) \\
+	 {} & + & \sigma_{-+} (1 - F)(1 + R) \\
+	 {} & + & \sigma_{--} (1 - F)(1 - R) \\
+	 {} & + & \sigma_{+-} (1 + F)(1 - R) \\
+	 {} & {} & {} \\
+	 I^{\textrm{off on}}_\textrm{reflect} / \beta =& {} & \sigma_{++} (1 + F)[1 + R(1-2r)] \\
+	 {} & + & \sigma_{-+} (1 - F)[1 + R(1-2r)] \\
+	 {} & + & \sigma_{--} (1 - F)[1 - R(1-2r)] \\
+	 {} & + & \sigma_{+-} (1 + F)[1 - R(1-2r)] \\
+\end{array}
+\end{equation}
+for a reflection polarizer/analyzer in the reference becomes
+\begin{equation}
+\begin{array}{rll}
+	I^{\textrm{off off}}_\textrm{transmit} / \beta =& {} & \sigma_{--} (1 + F)(1 + R) \\
+	 {} & + & \sigma_{+-} (1 - F)(1 + R) \\
+	 {} & + & \sigma_{++} (1 - F)(1 - R) \\
+	 {} & + & \sigma_{-+} (1 + F)(1 - R) \\
+	 {} & {} & {} \\
+	 I^{\textrm{off on}}_\textrm{transmit} / \beta =& {} & \sigma_{--} (1 + F)[1 + R(1-2r)] \\
+	 {} & + & \sigma_{+-} (1 - F)[1 + R(1-2r)] \\
+	 {} & + & \sigma_{++} (1 - F)[1 - R(1-2r)] \\
+	 {} & + & \sigma_{-+} (1 + F)[1 - R(1-2r)] \\
+\end{array}
+\end{equation}
+and similarly for the other two flipper states...
+\begin{equation}
+\begin{array}{rll}
+	I^{\textrm{on off}}_\textrm{transmit} / \beta =& {} & \sigma_{--} [1 + F(1-2f)](1 + R) \\
+	 {} & + & \sigma_{+-} [1 - F(1-2f)](1 + R) \\
+	 {} & + & \sigma_{++} [1 - F(1-2f)](1 - R) \\
+	 {} & + & \sigma_{-+} [1 + F(1-2f)](1 - R) \\
+	 {} & {} & {} \\
+	 I^{\textrm{on on}}_\textrm{transmit} / \beta =& {} & \sigma_{--} [1 + F(1-2f)][1 + R(1-2r)] \\
+	 {} & + & \sigma_{+-} [1 - F(1-2f)][1 + R(1-2r)] \\
+	 {} & + & \sigma_{++} [1 - F(1-2f)][1 - R(1-2r)] \\
+	 {} & + & \sigma_{-+} [1 + F(1-2f)][1 - R(1-2r)] \\
+\end{array}
+\end{equation}
+For a transmitting polarizer/analyzer, we will identify the measured cross-sections as 
+\begin{equation}
+	\mathbf{I} = 
+	\begin{pmatrix}
+		I^{++} \\
+		I^{-+} \\
+		I^{+-} \\
+		I^{--} 
+	\end{pmatrix}
+	= 
+	\begin{pmatrix}
+		I^\textrm{on on} \\
+		I^\textrm{off on} \\
+		I^\textrm{on off} \\
+		I^\textrm{off off} 
+	\end{pmatrix}_\textrm{transmit}
+\end{equation}
+
+\subsection{matrix for transmission spin-filters}
+Then re-arranging the cross-sections from the reference into 
+$\{(++), (+-), (-+), (--)\}$ (our preferred order) 
+we can write the equations as a matrix:
+\begin{equation}
+\begin{array}{c}
+	 A \cdot \boldsymbol{\sigma} = \mathbf{I} \\[1em]
+
+  A = 
+  \begin{pmatrix*}[l]
+	(1-Fx)(1-Ry) &\!\!\! (1-Fx)(1+Ry) &\!\!\! (1+Fx)(1-Ry) &\!\!\! (1+Fx)(1+Ry) \\
+	(1-Fx)(1-R) &\!\!\! (1-Fx)(1+R) &\!\!\! (1+Fx)(1-R) &\!\!\! (1+Fx)(1+R) \\
+	(1-F)(1-Ry) &\!\!\! (1-F)(1+Ry) &\!\!\! (1+F)(1-Ry) &\!\!\! (1+F)(1+Ry) \\
+	(1-F)(1-R) &\!\!\! (1-F)(1+R) &\!\!\! (1+F)(1-R) &\!\!\! (1+F)(1+R) 
+  \end{pmatrix*}
+\end{array}
+\end{equation}
+where $x = (1 - 2f), y = (1-2r)$.  From here, we can invert $A$ to get back the intrinsic
+scattering cross-sections $\boldsymbol{\sigma}$ by
+\begin{equation}
+	\boldsymbol{\sigma} = A^{-1} \cdot \mathbf{I}
+\end{equation}
+
+\subsection{reduced matrices}
+At times, when measuring some assumptions are made about the samples in question which can
+simplify the equations and reduce the measurement time
+\subsubsection{spin-flip cross-sections equal, nonzero}
+
+In this case, $\sigma_\textrm{SF} \equiv \sigma_{+-} = \sigma_{-+}$ and there are only three
+unknowns to solve for.  We can then measure just one spin-flip (SF) cross-section and solve for
+the reflectivity $\boldsymbol{\sigma}$
+\begin{equation}
+\begin{array}{c}
+	A^{+-} \cdot 
+	\begin{pmatrix}
+	 	\sigma_{++} \\
+	 	\sigma_\textrm{SF} \\
+	 	\sigma_{--} 
+	 \end{pmatrix}	 
+	 = 
+	 \begin{pmatrix}
+		I^{++} \\
+		I^{+-} \\
+		I^{--} 
+	\end{pmatrix}  \\[2em]
+
+  A^{+-} = 
+  \begin{pmatrix*}[l]
+	(1-Fx)(1-Ry) &\!\!\! [(1-Fx)(1+Ry) + (1+Fx)(1-Ry)] &\!\!\! (1+Fx)(1+Ry) \\
+	(1-Fx)(1-R) &\!\!\! [(1-Fx)(1+R) + (1+Fx)(1-R)] &\!\!\! (1+Fx)(1+R) \\
+	(1-F)(1-R) &\!\!\! [(1-F)(1+R) + (1+F)(1-R)] &\!\!\! (1+F)(1+R) 
+  \end{pmatrix*}
+\end{array}
+\end{equation}
+or similarly
+\begin{equation}
+\begin{array}{c}
+	A^{-+} \cdot 
+	\begin{pmatrix}
+	 	\sigma_{++} \\
+	 	\sigma_\textrm{SF} \\
+	 	\sigma_{--} 
+	 \end{pmatrix}	 
+	 = 
+	 \begin{pmatrix}
+		I^{++} \\
+		I^{-+} \\
+		I^{--} 
+	\end{pmatrix}  \\[2em]
+
+  A^{-+} = 
+  \begin{pmatrix*}[l]
+	(1-Fx)(1-Ry) &\!\!\! [(1-Fx)(1+Ry) + (1+Fx)(1-Ry)] &\!\!\! (1+Fx)(1+Ry) \\
+	(1-F)(1-Ry) &\!\!\! [(1-F)(1+Ry) + (1+F)(1-Ry)] &\!\!\! (1+F)(1+Ry) \\
+	(1-F)(1-R) &\!\!\! [(1-F)(1+R) + (1+F)(1-R)] &\!\!\! (1+F)(1+R) 
+  \end{pmatrix*}
+\end{array}
+\end{equation}
+
+\subsubsection{spin-flip cross-sections zero}
+
+If the spin-flip cross-sections are expected to be vanishingly small 
+(which occurs when the in-plane magnetization is strictly parallel or antiparallel to
+the field quantization axis) then a further simplification is possible:
+\begin{equation}
+\begin{array}{c}
+	A^\textrm{NSF} \cdot 
+	\begin{pmatrix}
+	 	\sigma_{++} \\
+	 	\sigma_{--} 
+	 \end{pmatrix}	 
+	 = 
+	 \begin{pmatrix}
+		I^{++} \\
+		I^{--} 
+	\end{pmatrix}  \\[2em]
+
+  A^\textrm{NSF} = 
+  \begin{pmatrix*}[l]
+	(1-Fx)(1-Ry) &\!\!\!  (1+Fx)(1+Ry) \\
+	(1-F)(1-R) &\!\!\! (1+F)(1+R) 
+  \end{pmatrix*}
+\end{array}
+\end{equation}
+
+\subsection{Calibration}
+In order to do the polarization correction as described, one has to first determine the parameters
+$F,R,f,r$.  These are done exactly as described in the reference; the only thing to note is the 
+identification of the measured cross-sections for transmission spin-filters:  
+\begin{equation}
+I^{--} \equiv I^\textrm{off off}_\textrm{NS,transmit} = \alpha[FR + 1]
+\end{equation}
+\begin{equation}
+I^{+-} \equiv I^\textrm{on off}_\textrm{NS,transmit} = \alpha[FR(1-2f) + 1]
+\end{equation}
+\begin{equation}
+I^{-+} \equiv I^\textrm{off on}_\textrm{NS,transmit} = \alpha[FR(1-2r) + 1]
+\end{equation}
+
+\end{document}

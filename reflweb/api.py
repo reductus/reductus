@@ -19,14 +19,43 @@ try:
 except ImportError:
     import default_config as config
 
+# for local and development installs of the server, the .git folder 
+# will exist in parent (reduction) folder...
+if os.path.exists(os.path.join(os.path.dirname(__file__), "..", ".git")):
+    import time, subprocess
+    server_git_hash = subprocess.Popen(["git", "rev-parse", "HEAD"], stdout=subprocess.PIPE).stdout.read().strip()
+    server_mtime = int(subprocess.Popen(["git", "log", "-1", "--pretty=format:%ct"], stdout=subprocess.PIPE).stdout.read().strip())
+    print("running git rev-parse HEAD", server_git_hash, server_mtime)
+else:
+    # otherwise for prebuilt systems use the packaged file that was created in setup.py
+    import pkg_resources
+    if pkg_resources.resource_exists("reflweb", "git_version_hash"):
+        server_git_hash = pkg_resources.resource_string("reflweb", "git_version_hash").strip()
+        server_mtime = int(pkg_resources.resource_string("reflweb", "git_version_mtime").strip())
+    else:
+        server_git_hash = "unknown"
+        server_mtime = 0
+
 api_methods = []
 
+from functools import wraps
 def expose(action):
     """
     Decorator which adds function to the list of methods to expose in the api.
     """
     api_methods.append(action.__name__)
-    return action
+    use_msgpack = getattr(config, 'use_msgpack', False)
+    @wraps(action)
+    def wrapper(*args, **kwds):
+        if use_msgpack:
+            import msgpack, base64
+            retval = {"serialization": "msgpack", "encoding": "base64"}
+            retval['value'] = base64.b64encode(msgpack.dumps(action(*args, **kwds)))
+        else:
+            retval = {"serialization": "json", "encoding": "string"}
+            retval['value'] = sanitizeForJSON(action(*args, **kwds))
+        return retval
+    return wrapper
 
 def sorted_ls(path, show_hidden=False):
     mtime = lambda f: os.stat(os.path.join(path, f)).st_mtime
@@ -93,7 +122,7 @@ def refl_load(file_descriptors):
     modules = [{"module": "ncnr.refl.load", "version": "0.1", "config": {}}]
     template = Template("test", "test template", modules, [], "ncnr.magik", version='0.0')
     retval = process_template(template, {0: {"files": file_descriptors}}, target=(0, "output"))
-    return sanitizeForJSON(retval.todict())
+    return retval.todict()
 
 @expose
 def find_calculated(template_def, config):
@@ -148,13 +177,17 @@ def calc_terminal(template_def, config, nodenum, terminal_id, return_type='full'
         traceback.print_exc()
         raise
     if return_type == 'full':
-        return sanitizeForJSON(retval.todict())
+        return retval.todict()
     elif return_type == 'plottable':
-        return sanitizeForJSON(retval.get_plottable())
+        return retval.get_plottable()
     elif return_type == 'metadata':
-        return sanitizeForJSON(retval.get_metadata())
+        return retval.get_metadata()
     elif return_type == 'export':
-        return retval.get_export()
+        # inject git version hash into export data:
+        to_export = retval.get_export()
+        to_export["server_git_hash"] = server_git_hash
+        to_export["server_mtime"] = server_mtime
+        return to_export
     else:
         raise KeyError(return_type + " not a valid return_type (should be one of ['full', 'plottable', 'metadata', 'export'])")
 
@@ -175,7 +208,7 @@ def calc_template(template_def, config):
         module_id, terminal_id = rkey
         module_key = str(module_id)
         output.setdefault(module_key, {})
-        output[module_key][terminal_id] = sanitizeForJSON(rv.todict())
+        output[module_key][terminal_id] = rv.todict()
     return output
 
 @expose

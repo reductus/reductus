@@ -33,7 +33,7 @@ def find_mtime(path, source="ncnr"):
     mtime_obj = datetime.datetime(*mtime[:7], tzinfo=pytz.utc)
     timestamp = seconds_since_epoch(mtime_obj)
 
-    return { 'path': path, 'mtime': timestamp }
+    return { 'path': path, 'mtime': timestamp, 'source': source, 'entries': None }
 
 
 def url_load_list(files=None):
