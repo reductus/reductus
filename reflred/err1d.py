@@ -179,11 +179,11 @@ def arctan(X, varX):
 
 
 def arctan2(Y, varY, X, varX):
-    # df/dX = (X-Y)/(X**2 + Y**2)
+    # df/dX = Y/(X**2 + Y**2)
     # df/dY = X/(X**2 + Y**2)
     # varZ = (df/dX)**2 * varX + (df/dY)**2 * varY
     Z = np.arctan2(Y, X)
-    varZ = ((X-Y)**2 * varX + X**2 * varY) / (X**2 + Y**2)**2
+    varZ = (Y**2 * varX + X**2 * varY) / (X**2 + Y**2)**2
     return Z, varZ
 
 
@@ -306,3 +306,66 @@ def pow2_inplace(X, varX, Y, varY):
     varX *= X
     varX *= X # varX now has varZ
     return X, varX
+
+def test():
+    X, varX = 2, 0.04
+    Y, varY = 3, 0.09
+    N = 3
+    def _check(op, result, variance):
+        if op is pow:
+            Z, varZ = op(X, varX, N)
+        else:
+            Z, varZ = op(X, varX, Y, varY)
+        assert abs(Z-result)/result < 1e-13 and (varZ-variance)/variance < 1e-13, \
+            "expected (%g,%g) got (%g,%g)"%(result,variance,Z,varZ)
+
+    _check(add, X+Y, varX + varY)
+    _check(sub, X-Y, varX + varY)
+    _check(mul, X*Y, Y**2*varX + X**2*varY)
+    _check(div, X/Y, (Y**2*varX + X**2*varY)/Y**4)
+    _check(pow, X**N, varX/X**2 * X**(2*N) * N**2)
+    _check(pow2, X**Y, X**(2*Y) * ((Y*varX/X)**2 + (np.log(X)*varY)**2))
+
+def test_against_uncertainties_package():
+    try:
+        from uncertainties import ufloat
+        from uncertainties import umath
+        from math import sqrt as math_sqrt
+    except ImportError:
+        return
+    X, varX = 0.5, 0.04
+    Y, varY = 3, 0.09
+    N = 3
+    ux = ufloat(X, math_sqrt(varX))
+    uy = ufloat(Y, math_sqrt(varY))
+
+    def _compare(result, u):
+        Z, varZ = result
+        assert abs(Z-u.n)/u.n < 1e-13 and (varZ-u.s**2)/u.s**2 < 1e-13, \
+            "expected (%g,%g) got (%g,%g)"%(u.n,u.s**2,Z,varZ)
+
+    def _check_pow(u):
+        _compare(pow(X, varX, N), u)
+
+    def _check_unary(op, u):
+        _compare(op(X, varX), u)
+
+    def _check_binary(op, u):
+        _compare(op(X, varX, Y, varY), u)
+
+    _check_pow(ux**N)
+    _check_binary(add, ux+uy)
+    _check_binary(sub, ux-uy)
+    _check_binary(mul, ux*uy)
+    _check_binary(div, ux/uy)
+    _check_binary(pow2, ux**uy)
+
+    _check_unary(exp, umath.exp(ux))
+    _check_unary(log, umath.log(ux))
+    _check_unary(sin, umath.sin(ux))
+    _check_unary(cos, umath.cos(ux))
+    _check_unary(tan, umath.tan(ux))
+    _check_unary(arcsin, umath.asin(ux))
+    _check_unary(arccos, umath.acos(ux))
+    _check_unary(arctan, umath.atan(ux))
+    _check_binary(arctan2, umath.atan2(ux, uy))
