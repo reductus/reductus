@@ -218,7 +218,6 @@ def _eval_node(node_id, module, inputs, template_fields, user_fields):
         values = fields[name]
         if not par['multiple']:
             values = [values] if values is not None else []
-        #print "fields", node_id, name, values
         values = [_validate_par(node_id, par, value) for value in values]
         if len(values) == 0:
             del fields[name]
@@ -229,6 +228,7 @@ def _eval_node(node_id, module, inputs, template_fields, user_fields):
         else:
             raise ValueError("Need one value of %s for each dataset in %s"
                              % (name, node_id))
+        #print "fields", node_id, name, values
 
     # validate input terminals
     for par in module.inputs:

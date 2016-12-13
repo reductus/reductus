@@ -108,10 +108,7 @@
       "module_id": 13,
       "x": 455,
       "module": "ncnr.refl.join",
-      "title": "join",
-      "config": {
-        "tolerance": 0.05
-      }
+      "title": "join"
     },
     {
       "y": 55,

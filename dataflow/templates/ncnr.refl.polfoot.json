@@ -90,7 +90,6 @@
       "module": "ncnr.refl.join",
       "title": "join",
       "config": {
-        "tolerance": 0.001,
         "order": "file",
         "group_by": "polarization"
       }
