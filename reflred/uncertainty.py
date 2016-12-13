@@ -269,7 +269,7 @@ def interp(x,xp,fp,left=None,right=None):
         F, varF = err1d.interp(x, xp, fp.x, fp.variance, left, right)
     else:
         F, varF = err1d.interp([x], xp, fp.x, fp.variance, left, right)
-        F, varF = F.item(), varF.item()
+        F, varF = F[0], varF[0]
     return Uncertainty(F, varF)
 
 
@@ -404,7 +404,6 @@ def test():
     xp = np.array([2.,3.,3.,4.])
     fp = Uncertainty(np.array([3.,1.,3.,1.]),np.array([0.04,0.16,0.04,0.16]))
     z = interp([2.5,3.,3.5], xp, fp)
-    print z
     assert np.linalg.norm(z.x - [2,3,2]) < 2e-15
     assert np.linalg.norm(z.variance - [0.05,0.04,0.05]) < 2e-15
 
