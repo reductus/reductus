@@ -31,4 +31,5 @@ def apply_divergence(data, sample_width, sample_broadening):
                         use_sample=use_sample,
                         sample_width=sample_width,
                         sample_broadening=sample_broadening)
+    #print "divergence",theta,slits,distance,sample_width,sample_broadening,dtheta
     data.angular_resolution = dtheta

@@ -634,13 +634,14 @@ def rescale(data, scale=1.0, dscale=0.0):
 
 #@nocache
 @module
-def join(data, tolerance=0.3, order='file', group_by = "polarization"):
+def join(data, Q_tolerance=0.5, dQ_tolerance=0.001, order='file',
+         group_by = "polarization", tolerance=-1.0):
     r"""
     Join operates on a list of datasets, returning a list with one dataset,
     or one dataset per polarization state.  When operating on a single
     dataset, it joins repeated points into single points.
 
-    *tolerance* (default=0.3) is a scale factor on $\Delta \theta$ used to
+    *Qtol* (default=0.3) is a scale factor on $\Delta \theta$ used to
     determine whether two angles are equivalent.  For a given tolerance
     $\epsilon$, a point at incident angle $\theta_1$ can be joined
     with one with incident angle $\theta_2$ when
@@ -665,30 +666,39 @@ def join(data, tolerance=0.3, order='file', group_by = "polarization"):
 
     data (refldata[]) : data to join
 
-    tolerance (float:1-sigma<0,inf>) : allowed separation between points while
-    still joining them to a single point; this is relative to the angular
-    resolution of the each point
+    Q_tolerance (float:1-sigma<0,inf>) : allowed separation between points
+    while still joining them to a single point; this is relative to the angular
+    resolution and wavelength dispersion of each point
+
+    dQ_tolerance (float:1-sigma<0,inf>) : allowed difference in resolution
+    between combined points; this is relative to the angular resolution and
+    wavelength dispersion of each point
 
     order (opt:file|time|theta|slit|none) : order determines which file is the
     base file, supplying the metadata for the joined set
     
-    group_by (str) : key by which the files are grouped prior to join.
+    group_by (str) : key by which the files are grouped prior to join
+
+    tolerance(float:1-sigma<-1,inf>) : **deprecated** value for Qtol and dQtol;
+    ignored if the value is less than 0.
 
     **Returns**
 
     output (refldata[]) : joined data
 
-    2016-08-19 Paul Kienzle: updated tolerance
+    2016-12-13 Paul Kienzle: split tolerance into Qtol and dQtol
     """
     from .joindata import sort_files, join_datasets
     from .util import group_by_key
     # No copy necessary; join is never in-place.
 
+    if tolerance >= 0:
+        Q_tolerance = dQ_tolerance = tolerance
     datasets = group_by_key(group_by, data).values()
     output = []
     for group in datasets:
         group = sort_files(group, order)
-        result = join_datasets(group, tolerance)
+        result = join_datasets(group, Q_tolerance, dQ_tolerance)
 
         result.log("join(*data)")
         for i, d in enumerate(group):

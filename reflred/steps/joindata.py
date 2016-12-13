@@ -35,7 +35,7 @@ def sort_files(datasets, key):
     return datasets
 
 
-def join_datasets(group, tolerance):
+def join_datasets(group, Qtol, dQtol):
     """
     Create a new dataset which joins the results of all datasets in the group.
 
@@ -59,20 +59,21 @@ def join_datasets(group, tolerance):
     #    Td: detector theta
     #    Ti: incident (sample) theta
     #    dT: angular divergence
-    #    L: wavelength
+    #    L : wavelength
+    #    dL: wavelength dispersion
     if group[0].intent == Intent.rock4:
         # Sort detector rocking curves so that small deviations in sample
         # angle don't throw off the order in detector angle.
-        keys = ('Td', 'Ti', 'dT', 'L')
+        keys = ('dT', 'dL', 'Td', 'Ti', 'L')
     elif isslit:
-        keys = ('dT', 'L')
+        keys = ('dT', 'dL', 'L')
     else:
-        keys = ('Ti', 'Td', 'dT', 'L')
+        keys = ('dT', 'dL', 'Ti', 'Td', 'L')
     columns = sort_columns(columns, keys)
     #for k,v in sorted(columns.items()): print k,v
 
     # Join the data points in the individual columns
-    columns = join_columns(columns, tolerance, isslit, normbase)
+    columns = join_columns(columns, Qtol, dQtol, isslit, normbase)
     #print "==after join=="
     #for k,v in sorted(columns.items()): print k,v
 
@@ -238,6 +239,7 @@ def apply_mask(group, columns):
     return columns
 
 
+#QCOL = 'Ti Td dT L dL'.split()
 def sort_columns(columns, names):
     """
     Returns the set of columns by a ordered by a list of keys.
@@ -246,20 +248,28 @@ def sort_columns(columns, names):
 
     *names* is the list of keys that the columns should be sorted by.
     """
+    A = [columns[name] for name in reversed(names)]
+    #np.set_printoptions(linewidth=100000)
+    #A = np.array(A)
+    #print("before sort");print(A.T[:,35:50])
+    index = np.lexsort(A)
+    #print("after sort");print(A.T[:,index[35:50]])
+    '''
     #print "order",names
-    #print "before sort",columns['dT']
     index = np.arange(len(columns[names[0]]), dtype='i')
+    A = np.array([columns[name][index] for name in QCOL]).T
+    #print "before sort"; print(A[35:50])
     for k in reversed(names):
-        # TODO: L,dL wrong length
-        if k == 'L':
-            continue
         order = np.argsort(columns[k][index], kind='heapsort')
         index = index[order]
-    #print "after sort",columns['dT'][index]
+        A = np.array([columns[name][index] for name in QCOL]).T
+        #print "after sort",k; print(A[35:50])
+    '''
+
     return dict((k, v[index]) for k, v in columns.items())
 
 
-def join_columns(columns, tolerance, isslit, normbase):
+def join_columns(columns, Qtol, dQtol, isslit, normbase):
     # Weight each point in the average by monitor.
     weight = columns[normbase]
 
@@ -272,29 +282,36 @@ def join_columns(columns, tolerance, isslit, normbase):
     # one beyond the end so that the last group gets accumulated.
     current, maximum = 0, len(columns['Ti'])
     for i in range(1, maximum+1):
-        T_width = tolerance*columns['dT'][current]
-        L_width = tolerance*columns['dL'][current]
+        T_width = Qtol*columns['dT'][current]
+        L_width = Qtol*columns['dL'][current]
+        dT_width = dQtol*columns['dT'][current]
+        dL_width = dQtol*columns['dL'][current]
         # use <= in condition so that identical points are combined when
         # tolerance is zero
         if (i < maximum and not isslit):
             if (abs(columns['Ti'][i] - columns['Ti'][current]) <= T_width
+                and abs(columns['L'][i] - columns['L'][current]) <= L_width
                 and abs(columns['Td'][i] - columns['Td'][current]) <= T_width
-                and abs(columns['dT'][i] - columns['dT'][current]) <= T_width
-                and abs(columns['dL'][i] - columns['dL'][current]) <= L_width
-                and abs(columns['L'][i] - columns['L'][current]) <= L_width):
+                and abs(columns['dT'][i] - columns['dT'][current]) <= dT_width
+                and abs(columns['dL'][i] - columns['dL'][current]) <= dL_width
+                ):
                 #print "combining",current,i,T_width,L_width,[(k,columns[k][current],columns[k][i]) for k in 'Ti Td dT dL L'.split()]
                 continue
         elif (i < maximum and isslit):
-            if (abs(columns['dT'][i] - columns['dT'][current]) <= T_width
-                and abs(columns['dL'][i] - columns['dL'][current]) <= L_width
-                and abs(columns['L'][i] - columns['L'][current]) <= L_width):
+            if (abs(columns['dT'][i] - columns['dT'][current]) <= dT_width
+                and abs(columns['dL'][i] - columns['dL'][current]) <= dL_width
+                and abs(columns['L'][i] - columns['L'][current]) <= L_width
+                ):
                 #print "combining",current,i,T_width,L_width,[(k,columns[k][current],columns[k][i]) for k in 'Ti Td dT dL L'.split()]
                 continue
+        #A = np.array([columns[name][current:i] for name in QCOL]).T
+        #np.set_printoptions(linewidth=100000)
         if i == current+1:
-            #print "adding point",current
+            #print(A); print
             for k, v in columns.items():
                 results[k].append(v[current])
         else:
+            #print(A); print
             v, dv = poisson_average(columns['v'][current:i],
                                     columns['dv'][current:i])
             results['v'].append(v)
