@@ -1,8 +1,8 @@
 import posixpath
 import zipfile
 import numpy, json
-import __builtin__
 
+builtin_open = open
 
 __version__ = "0.0.1"
 
@@ -98,7 +98,7 @@ class File(Node):
         self.readonly = True
         Node.__init__(self, parent_node=None, path="/")
         if file_obj is None:
-            file_obj = __builtin__.open(filename, mode='r')
+            file_obj = builtin_open(filename, mode='r')
         self.zipfile = zipfile.ZipFile(file_obj) 
         self.attrs = self.makeAttrs()
         self.filename = filename
