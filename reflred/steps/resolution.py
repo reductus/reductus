@@ -50,7 +50,15 @@ def sigma2FWHM(s):
     return s*_FWHM_scale
 
 
+def TiTdL2Qxz(Ti, Td, L):
+    # type: (np.ndarray, np.ndarray, np.ndarray) -> (np.ndarray, np.ndarray)
+    Qx = 2*pi/L * (cos(radians(Td - Ti)) - cos(radians(Ti)))
+    Qz = 2*pi/L * (sin(radians(Td - Ti)) + sin(radians(Ti)))
+    return Qx, Qz
+
+
 def dTdL2dQ(T=None, dT=None, L=None, dL=None):
+    # type: (np.ndarray, np.ndarray, np.ndarray, np.ndarray) -> np.ndarray
     r"""
     Convert wavelength dispersion and angular divergence to $Q$ resolution.
 
@@ -212,23 +220,28 @@ def binedges(L):
     E = L*(2./(2.+dLoL))
     return hstack((E,E[-1]*last))
 
-def divergence(T=None, slits=None, distance=None,
-               use_sample=True, sample_width=1e10, sample_broadening=0):
-    # type: (np.ndarray, Tuple[float, float], Tuple[float, float], float, float) -> np.ndarray
+def divergence(slits=None, distance=None, T=None,
+               sample_width=1e10, sample_broadening=0.,
+               use_sample=True):
+    # type: (Tuple[np.ndarray, np.ndarray], Tuple[float, float], np.ndarray, float, float) -> np.ndarray
     r"""
     Calculate divergence due to slit and sample geometry.
 
     :Parameters:
-        *T*         : float OR [float] | |deg|
-            incident angles
         *slits*     : float OR (float,float) | mm
             s1,s2 slit openings for slit 1 and slit 2
         *distance*  : (float,float) | mm
             d1,d2 distance from sample to slit 1 and slit 2
+        *T*         : float OR [float] | |deg|
+            incident angles
         *sample_width*      : float | mm
             w, width of the sample
         *sample_broadening* : float | |deg| 1-\ $\sigma$
             additional divergence caused by sample
+        *use_sample* : bool
+            True if sample profile should be treated as a slit.  If false,
+            then incident angle, sample width and sample broadening are not
+            used.
 
     :Returns:
         *dT*  : float OR [float] | |deg| 1-\ $\sigma$
@@ -277,17 +290,17 @@ def divergence(T=None, slits=None, distance=None,
     """
     # TODO: check that the formula is correct for T=0 => dT = s1 / d1
     # TODO: add sample_offset and compute full footprint
-    d1,d2 = distance
+    d1, d2 = distance
     try:
         s1, s2 = slits
     except TypeError:
         s1 = s2 = slits
-    # Sample can act as a slit according to the projection of its width
-    sample = sample_width * abs(sin(radians(T)))
 
     # Compute FWHM angular divergence dT from the slits in degrees
     dT_s1_s2 = 0.5*(s1+s2)/abs(d1-d2)
+    # Sample can act as a slit according to the projection of its width
     if use_sample:
+        sample = sample_width * abs(sin(radians(T)))
         dT_s1_sample = 0.5*(s1+sample)/abs(d1)
         dT_s2_sample = 0.5*(s2+sample)/abs(d2)
         dT = np.minimum(dT_s1_s2, np.minimum(dT_s1_sample, dT_s2_sample))
@@ -384,7 +397,7 @@ def resolution(Q=None,s=None,d=None,L=None,dLoL=None,Tlo=None,Thi=None,
     """
     T = QL2T(Q=Q,L=L)
     slits = slit_widths(T=T, s=s, Tlo=Tlo, Thi=Thi)
-    dT = divergence(T=T,slits=slits, sample_width=sample_width,
+    dT = divergence(T=T, slits=slits, sample_width=sample_width,
                     sample_distance=sample_distance) + broadening
     Q,dQ = Qresolution(L, dLoL*L, T, dT)
     return FWHM2sigma(dQ)
