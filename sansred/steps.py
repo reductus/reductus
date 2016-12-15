@@ -117,10 +117,6 @@ def PixelsToQ(data, correct_solid_angle=True):
     
     2016-04-06 Brian Maranville  
     """
-    from sansdata import SansData
-    import numpy as np
-    import copy
-    
     L2=data.metadata['det.dis']
     x0=data.metadata['det.beamx'] #should be close to 64
     y0=data.metadata['det.beamy'] #should be close to 64
@@ -142,8 +138,8 @@ def PixelsToQ(data, correct_solid_angle=True):
     if correct_solid_angle:
         data.data.x = data.data.x * (np.cos(theta)**3)
     res=SansData()
-    res.data=copy.copy(data.data)
-    res.metadata=copy.deepcopy(data.metadata)
+    res.data=copy(data.data)
+    res.metadata=deepcopy(data.metadata)
     #Adding res.q
     res.q = q
     res.qx=qx
@@ -169,10 +165,7 @@ def annular_av(data):
     2016-04-08 Brian Maranville    
     """
     """ """
-    from sansdata import Sans1dData
     from draw_annulus_aa import annular_mask_antialiased
-    import numpy as np
-    import copy
     
     #annular_mask_antialiased(shape, center, inner_radius, outer_radius, background_value=0.0, mask_value=1.0, oversampling=8)
     # calculate the change in q that corresponds to a change in pixel of 1
@@ -214,7 +207,7 @@ def annular_av(data):
         I_error.append(error)
     
     output = Sans1dData(Q, I, dx=0, dv=I_error, xlabel="Q", vlabel="I", xunits="inv. A", vunits="neutrons")
-    output.metadata=copy.deepcopy(data.metadata) 
+    output.metadata=deepcopy(data.metadata) 
     return output
 
 @module
@@ -528,7 +521,6 @@ def getPoissonUncertainty(y):
     8 5.627719 11.372281 0.682607
     9 6.458619 12.541381 0.682624
     """
-    import numpy as np
     hi =  0.5+np.sqrt(y+0.25);
     lo = -0.5+np.sqrt(y+0.25);
     #return {"yupper": y+hi, "ylower": y-lo, "hi": hi, "lo": lo}
