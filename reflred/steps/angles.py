@@ -19,17 +19,18 @@ def apply_back_reflection(data):
 
 
 def apply_divergence(data, sample_width, sample_broadening):
-    slits = data.slit1.x, data.slit2.x
     distance = abs(data.slit1.distance), abs(data.slit2.distance)
-    theta = data.sample.angle_x
     # for slit scans, the sample size and angle are irrelevant and
     # need to be excluded from the calculation of divergence:
     use_sample = data.intent != "intensity"
     if sample_width is None:
         sample_width = data.sample.width
-    dtheta = divergence(T=theta, slits=slits, distance=distance,
-                        use_sample=use_sample,
+
+    slits = data.slit1.x, data.slit2.x
+    theta = data.sample.angle_x
+    dtheta = divergence(slits=slits, distance=distance, T=theta,
                         sample_width=sample_width,
-                        sample_broadening=sample_broadening)
+                        sample_broadening=sample_broadening,
+                        use_sample=use_sample)
     #print "divergence",theta,slits,distance,sample_width,sample_broadening,dtheta
     data.angular_resolution = dtheta
