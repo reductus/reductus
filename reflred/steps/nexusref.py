@@ -254,7 +254,12 @@ class NCNRNeXusRefl(refldata.ReflData):
         self.scan_label= []
         SCANNED_VARIABLES = 'trajectory/scannedVariables'
         if SCANNED_VARIABLES in das:
-            for node_id in das[SCANNED_VARIABLES].value:
+            scanned_variables = das[SCANNED_VARIABLES].value
+            # Just in case the scanned variables is a string with
+            # elements separated by new lines...
+            if len(scanned_variables) == 1:
+                scanned_variables = str(scanned_variables[0]).split('\n')
+            for node_id in scanned_variables:
                 try:
                     path = node_id.replace('.', '/')
                     field = das[path]
@@ -326,7 +331,7 @@ def demo():
     import sys
     import pylab
     if len(sys.argv) == 1:
-        print("usage: python -m reflred.formats.nexusref file...")
+        print("usage: python -m reflred.steps.nexusref file...")
         sys.exit(1)
     for f in sys.argv[1:]:
         entries = load_entries(f)

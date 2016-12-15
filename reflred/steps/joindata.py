@@ -9,8 +9,18 @@ import numpy as np
 from .. import unit
 from .refldata import Intent, ReflData, Environment
 from .util import poisson_average
+from .resolution import divergence, dTdL2dQ, TiTdL2Qxz
+
+try:
+    from typing import List, Dict, Union, Sequence
+    Columns = Dict[str, List[np.ndarray]]
+    StackedColumns = Dict[str, np.ndarray]
+    IndexSet = List[int]
+except ImportError:
+    pass
 
 def sort_files(datasets, key):
+    # type: (List[ReflData], str) -> List[ReflData]
     """
     Order files by key.
 
@@ -36,6 +46,7 @@ def sort_files(datasets, key):
 
 
 def join_datasets(group, Qtol, dQtol):
+    # type: (List[ReflData], float, float) -> ReflData
     """
     Create a new dataset which joins the results of all datasets in the group.
 
@@ -47,35 +58,44 @@ def join_datasets(group, Qtol, dQtol):
     assert all(data.normbase == normbase for data in group)
 
     # Gather the columns
-    columns = get_columns(group)
-    env_columns = get_env(group)
-    columns.update(env_columns)
-    columns = vectorize_columns(group, columns)
-    columns = apply_mask(group, columns)
-    isslit = Intent.isslit(group[0].intent)
+    fields = get_fields(group)
+    env = get_env(group)
+    fields.update(env)
+    columns = stack_columns(group, fields)
 
-    # Sort the columns so that nearly identical points are together
+    # TODO: may want to join points with same Q but different Ti,Td,L
+    if Qtol == 0. and dQtol == 0.:
+        targets = get_target_values(group)
+        targets = stack_columns(group, targets)
+        targets = apply_mask(group, targets)
+        groups = group_by_target(targets)
+    else:
+        groups = group_by_actual(columns, Qtol=Qtol, dQtol=dQtol)
+
+    # Join the data points in the individual columns
+    columns = merge_points(groups, columns, normbase)
+
+    # Sort so that points are in display order
     # Column keys are:
     #    Td: detector theta
     #    Ti: incident (sample) theta
     #    dT: angular divergence
     #    L : wavelength
     #    dL: wavelength dispersion
+    isslit = Intent.isslit(group[0].intent)
     if group[0].intent == Intent.rock4:
         # Sort detector rocking curves so that small deviations in sample
         # angle don't throw off the order in detector angle.
-        keys = ('dT', 'dL', 'Td', 'Ti', 'L')
+        keys = ('Td', 'Ti', 'L', 'dT', 'dL')
     elif isslit:
-        keys = ('dT', 'dL', 'L')
+        keys = ('dT', 'L', 'dL')
     else:
-        keys = ('dT', 'dL', 'Ti', 'Td', 'L')
-    columns = sort_columns(columns, keys)
-    #for k,v in sorted(columns.items()): print k,v
+        keys = ('Ti', 'Td', 'L', 'dT', 'dL')
 
-    # Join the data points in the individual columns
-    columns = join_columns(columns, Qtol, dQtol, isslit, normbase)
     #print "==after join=="
     #for k,v in sorted(columns.items()): print k,v
+
+    columns = sort_columns(columns, keys)
 
     data = build_dataset(group, columns)
     #print "joined",data.intent
@@ -83,6 +103,7 @@ def join_datasets(group, Qtol, dQtol):
 
 
 def build_dataset(group, columns):
+    # type: (List[ReflData], StackedColumns) -> ReflData
     """
     Build a new dataset from a set of columns.
 
@@ -98,7 +119,6 @@ def build_dataset(group, columns):
     data = ReflData()
     for p in data.properties:
         setattr(data, p, getattr(head, p))
-    #data.formula = build_join_formula(group)
     data.name = head.name
     data.v = columns['v']
     data.dv = columns['dv']
@@ -133,30 +153,16 @@ def build_dataset(group, columns):
     return data
 
 
-def build_join_formula(group):
-    head = group[0].formula
-    prefix = 0
-    if len(group) > 1:
-        try:
-            while all(d.formula[prefix]==head[prefix] for d in group[1:]):
-                prefix += 1
-        except IndexError:
-            pass
-    if prefix <= 2:
-        prefix = 0
-    return head[:prefix]+"<"+",".join(d.formula[prefix:] for d in group)+">"
-
-
-def get_columns(group):
+def get_fields(group):
+    # type: (List[ReflData]) -> Columns
     """
-    Extract the data we care about into separate columns.
+    Extract geometry and counts from all files in group into separate fields.
 
     Returns a map of columns: list of vectors, with one vector for each
     dataset in the group.
     """
     columns = dict(
-        # only need to force one value to double
-        s1=[data.slit1.x.astype('d') for data in group],
+        s1=[data.slit1.x for data in group],
         s2=[data.slit2.x for data in group],
         dT=[data.angular_resolution for data in group],
         Ti=[data.sample.angle_x for data in group],
@@ -168,13 +174,14 @@ def get_columns(group):
         # using v,dv since poisson average wants rates
         v=[data.v for data in group],
         dv=[data.dv for data in group],
-        )
+    )
     return columns
 
 
 def get_env(group):
+    # type: (List[ReflData]) -> Columns
     """
-    Extract the sample environment columns.
+    Extract sample environment from all fields in group into separate fields.
     """
     head = group[0]
     # Gather environment variables such as temperature and field.
@@ -197,79 +204,195 @@ def get_env(group):
     return columns
 
 
-def vectorize_columns(group, columns):
+def stack_columns(group, columns):
+    # type: (List[ReflData], Columns) -> StackedColumns
     """
-    Make sure we are working with vectors, not scalars
+    Join individual datasets into only long vector for each field in columns.
     """
-    columns = dict((k, [_vectorize(part, data, k)
-                       for part, data in zip(v, group)])
-                   for k, v in columns.items())
+    columns = dict((field, [_scalar_to_vector(part, data, field)
+                            for part, data in zip(values, group)])
+                   for field, values in columns.items())
 
     # Turn the data into arrays, masking out the points we are ignoring
     columns = dict((k, np.hstack(v)) for k, v in columns.items())
     return columns
 
 
-def _vectorize(v, data, field):
+def _scalar_to_vector(value, data, field):
+    # type: (Union[np.ndarray, float], ReflData, str) -> np.ndarray
     """
     Make v a vector of length n if v is a scalar, or leave it alone.
     """
     n = len(data.v)
-    if np.isscalar(v):
-        return [v]*n
-    elif len(v) == 1:
-        return [v[0]]*n
-    elif len(v) == n:
-        return v
+    if np.isscalar(value):
+        return np.ones(n)*value
+    elif len(value) == 1:
+        return np.ones(n)*value[0]
+    elif len(value) == n:
+        return value
     else:
         raise ValueError("%s length does not match data length in %s%s"
                          % (field, data.name, data.polarization))
 
 
 def apply_mask(group, columns):
+    # type: (List[ReflData], StackedColumns) -> StackedColumns
     """
     Mask out selected points from the joined dataset.
+
+    Note: could instead return the non-masked points as the initial index set.
     """
     masks = [data.mask for data in group]
     if any(mask is not None for mask in masks):
-        masks = [(data.mask if data.mask is not None else np.isfinite(data.v))
+        masks = [(data.mask&np.isfinite(data.v) if data.mask is not None else np.isfinite(data.v))
                  for data in group]
         idx = np.hstack(masks)
         columns = dict((k, v[idx]) for k, v in columns.items())
     return columns
 
 
-#QCOL = 'Ti Td dT L dL'.split()
-def sort_columns(columns, names):
+def get_target_values(group):
+    # type: (List[ReflData]) -> Columns
     """
-    Returns the set of columns by a ordered by a list of keys.
-
-    *columns* is a dictionary of vectors of the same length.
-
-    *names* is the list of keys that the columns should be sorted by.
+    Get the target values for the instrument geometry.
     """
-    A = [columns[name] for name in reversed(names)]
-    #np.set_printoptions(linewidth=100000)
-    #A = np.array(A)
-    #print("before sort");print(A.T[:,35:50])
-    index = np.lexsort(A)
-    #print("after sort");print(A.T[:,index[35:50]])
-    '''
-    #print "order",names
-    index = np.arange(len(columns[names[0]]), dtype='i')
-    A = np.array([columns[name][index] for name in QCOL]).T
-    #print "before sort"; print(A[35:50])
-    for k in reversed(names):
-        order = np.argsort(columns[k][index], kind='heapsort')
-        index = index[order]
-        A = np.array([columns[name][index] for name in QCOL]).T
-        #print "after sort",k; print(A[35:50])
-    '''
+    columns = dict(
+        Ti=[data.sample.angle_x_target for data in group],
+        Td=[data.detector.angle_x_target for data in group],
+        dT=[_target_dT(data) for data in group],
+        L=[data.detector.wavelength for data in group],
+        dL=[data.detector.wavelength_resolution for data in group],
+    )
+    return columns
 
-    return dict((k, v[index]) for k, v in columns.items())
+def _target_dT(data):
+    # type: (ReflData) -> np.ndarray
+    """
+    Idealized resolution based on the resolution of the target slits.
+    """
+    distance = abs(data.slit1.distance), abs(data.slit2.distance)
+    slits = data.slit1.x_target, data.slit2.x_target
+    return divergence(slits=slits, distance=distance, use_sample=False)
+
+def group_by_target(columns):
+    # type: (StackedColumns) -> List[IndexSet]
+    """
+    Given columns of target values, group together exactly matching points.
+    """
+    Ti, Td, dT = columns['Ti'], columns['Td'], columns['dT']
+    L, dL = columns['L'], columns['dL']
+    points = {}
+    for index, point in enumerate(zip(Ti, Td, dT, L, dL)):
+        points.setdefault(point, []).append(index)
+    return list(points.values())
 
 
-def join_columns(columns, Qtol, dQtol, isslit, normbase):
+def group_by_actual(columns, Qtol, dQtol):
+    # type: (StackedColumns, float, float) -> List[IndexSet]
+    """
+    Given instrument geometry columns group points by angles and wavelength.
+    """
+    Ti, Td, dT = columns['Ti'], columns['Td'], columns['dT']
+    L, dL = columns['L'], columns['dL']
+    groups = [list(range(len(Ti)))]
+    groups = _group_by_dim(groups, dL, dQtol*dL)
+    groups = _group_by_dim(groups, dT, dQtol*dT)
+    groups = _group_by_dim(groups, L, Qtol*dL)
+    groups = _group_by_dim(groups, Ti, Qtol*dT)
+    groups = _group_by_dim(groups, Td, Qtol*dT)
+    return groups
+
+def group_by_Q(columns, Qtol, dQtol):
+    # type: (StackedColumns, float, float) -> List[IndexSet]
+    """
+    Given instrument geometry columns group points by Q and resolution.
+    """
+    Ti, Td, dT = columns['Ti'], columns['Td'], columns['dT']
+    L, dL = columns['L'], columns['dL']
+    Qx, Qz = TiTdL2Qxz(Ti, Td, L)
+    # TODO: is dQx == dQz ?
+    dQ = dTdL2dQ(Td-Ti, dT, L, dL)
+    groups = [list(range(len(Qz)))]
+    groups = _group_by_dim(groups, dQ, dQtol*dQ)
+    groups = _group_by_dim(groups, Qz, Qtol*dQ)
+    groups = _group_by_dim(groups, Qx, Qtol*dQ)
+    return groups
+
+
+def _group_by_dim(index_sets, data, width):
+    # type: (List[IndexSet], np.ndarray, np.ndarray) -> List[IndexSet]
+    """
+    Given a list of index groups, split each subgroup according to the
+    dimension given in data, making sure points in the group lie within
+    width of each other.
+
+    Note that the resolution dimensions must be split before the angle
+    and wavelength dimensions, otherwise there can be weirdness. When points
+    with widely different resolution are joined, there will be a new output
+    group triggered every time a point with tight resolution is encountered,
+    splitting up a series of points with loose resolution that would otherwise
+    be joined.
+    """
+    refinement = []
+    for subgroup in index_sets:
+        refinement.extend(_split_subgroup(subgroup, data, width))
+    return refinement
+
+
+def _split_subgroup(indices, data, width):
+    # type: (IndexSet, np.ndarray, np.ndarray) -> List[IndexSet]
+    """
+    Split an index group according to data, returning a list of subgroups.
+    """
+
+    # If there is only one point then there is nothing to split
+    if len(indices) <= 1:
+        return [indices]
+
+    # Grab the data/width subset according to indices
+    data = data[indices]
+    width = width[indices]
+    order = np.argsort(data)  # type: Sequence[int]
+
+    # Initialize the returned group list and the current group; set start
+    # and end points so that a new group is triggered on the first point
+    groups = []  # type: List[IndexSet]
+    current_group = []  # type: IndexSet
+    start_point = end_point = -np.inf
+    for k in order:
+        # Check if next point falls out of bounds, either because it is
+        # beyond the range of existing points (data[k] > end_point), or
+        # because the first point is outside of the range the next
+        # point (data[k]-width[k] > start_point).
+        if data[k] > end_point or data[k] - width[k] > start_point:
+            # next point is outside the range; close the current group and
+            # start a new one.  The first time through the loop the current
+            # group will be empty but still a new group will be triggered.
+            if current_group:
+                groups.append(current_group)
+            current_group = [indices[k]]
+            start_point = data[k]
+            end_point = data[k] + width[k]
+        else:
+            # next point is in the range; add it to the current group and
+            # limit the end point of the group to its range
+            current_group.append(indices[k])
+            end_point = min(end_point, data[k]+width[k])
+    groups.append(current_group)
+    return groups
+
+
+def merge_points(index_sets, columns, normbase):
+    # type: (List[IndexSet], StackedColumns, str) -> StackedColumns
+    """
+    Join points together according to groups.
+
+    Points are weighted according to normbase, which could be 'monitor'
+    or 'time'.
+
+    Note: we do not yet increase divergence when points with slightly
+    different incident angles are mixed.
+    """
     # Weight each point in the average by monitor.
     weight = columns[normbase]
 
@@ -277,63 +400,64 @@ def join_columns(columns, Qtol, dQtol, isslit, normbase):
     results = dict((k, []) for k in columns.keys())
 
     #for k,v in columns.items(): print k, len(v), v
-    # Merge points with nearly identical geometry by looping over the sorted
-    # list, joining those within epsilon*delta of each other. The loop goes
-    # one beyond the end so that the last group gets accumulated.
-    current, maximum = 0, len(columns['Ti'])
-    for i in range(1, maximum+1):
-        T_width = Qtol*columns['dT'][current]
-        L_width = Qtol*columns['dL'][current]
-        dT_width = dQtol*columns['dT'][current]
-        dL_width = dQtol*columns['dL'][current]
-        # use <= in condition so that identical points are combined when
-        # tolerance is zero
-        if (i < maximum and not isslit):
-            if (abs(columns['Ti'][i] - columns['Ti'][current]) <= T_width
-                and abs(columns['L'][i] - columns['L'][current]) <= L_width
-                and abs(columns['Td'][i] - columns['Td'][current]) <= T_width
-                and abs(columns['dT'][i] - columns['dT'][current]) <= dT_width
-                and abs(columns['dL'][i] - columns['dL'][current]) <= dL_width
-                ):
-                #print "combining",current,i,T_width,L_width,[(k,columns[k][current],columns[k][i]) for k in 'Ti Td dT dL L'.split()]
-                continue
-        elif (i < maximum and isslit):
-            if (abs(columns['dT'][i] - columns['dT'][current]) <= dT_width
-                and abs(columns['dL'][i] - columns['dL'][current]) <= dL_width
-                and abs(columns['L'][i] - columns['L'][current]) <= L_width
-                ):
-                #print "combining",current,i,T_width,L_width,[(k,columns[k][current],columns[k][i]) for k in 'Ti Td dT dL L'.split()]
-                continue
-        #A = np.array([columns[name][current:i] for name in QCOL]).T
-        #np.set_printoptions(linewidth=100000)
-        if i == current+1:
-            #print(A); print
-            for k, v in columns.items():
-                results[k].append(v[current])
+    for group in index_sets:
+        if len(group) == 1:
+            index = group[0]
+            for key, value in columns.items():
+                results[key].append(value[index])
         else:
-            #print(A); print
-            v, dv = poisson_average(columns['v'][current:i],
-                                    columns['dv'][current:i])
+            v, dv = poisson_average(columns['v'][group],
+                                    columns['dv'][group])
             results['v'].append(v)
             results['dv'].append(dv)
-            results['time'].append(np.sum(columns['time'][current:i]))
-            results['monitor'].append(np.sum(columns['monitor'][current:i]))
-            w = weight[current:i]
-            #print "adding range",current,i,[columns[k][current:i] for k in "v dv time monitor".split()]
-            #print "yields",[results[k][-1] for k in "v dv time monitor".split()]
-            #print "join", current, i, w, tolerance
-            for k, v in columns.items():
-                if k not in ['v', 'dv', 'time', 'monitor']:
-                    #print "averaging", k, current, i
-                    #print columns[k][current:i]
-                    #print "weights", w
-                    results[k].append(np.average(columns[k][current:i],
-                                                 weights=w))
-        current = i
-    #print "done", current, i, maximum
+            results['time'].append(np.sum(columns['time'][group]))
+            results['monitor'].append(np.sum(columns['monitor'][group]))
+            # TODO: dQ should increase when points are mixed
+            w = weight[group]
+            for key, value in columns.items():
+                if key not in ['v', 'dv', 'time', 'monitor']:
+                    results[key].append(np.average(value[group], weights=w))
 
     # Turn lists into arrays
     results = dict((k, np.array(v)) for k, v in results.items())
     return results
 
 
+def sort_columns(columns, keys):
+    # type: (StackedColumns, Sequence[str]) -> StackedColumns
+    """
+    Returns the set of columns by a ordered by a list of keys.
+
+    *columns* is a dictionary of vectors of the same length.
+
+    *keys* is the list of columns in the order they should be sorted.
+    """
+    A = [columns[name] for name in reversed(keys)]
+    A = np.array(A)
+    index = np.lexsort(A)
+
+    return dict((k, v[index]) for k, v in columns.items())
+
+
+def demo():
+    import sys
+    import pylab
+    from . import steps
+    from .nexusref import load_entries
+    if len(sys.argv) == 1:
+        print("usage: python -m reflred.steps.joindata file...")
+        sys.exit(1)
+    pylab.hold(True)
+    group = []
+    for f in sys.argv[1:]:
+        for f in load_entries(f):
+            f = steps.normalize(steps.divergence(f))
+            f.plot()
+            group.append(f)
+    joined = join_datasets(group, Qtol=0.5, dQtol=0.002)
+    joined.plot()
+    pylab.legend()
+    pylab.show()
+
+if __name__ == "__main__":
+    demo()
