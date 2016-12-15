@@ -162,7 +162,7 @@ class NCNRNeXusRefl(refldata.ReflData):
     def __init__(self, entry, entryname, filename):
         super(NCNRNeXusRefl,self).__init__()
         self.entry = entryname
-        self.filename = os.path.abspath(filename)
+        self.path = os.path.abspath(filename)
         self.name = os.path.basename(filename).split('.')[0]
         self._set_metadata(entry)
 
@@ -219,38 +219,51 @@ class NCNRNeXusRefl(refldata.ReflData):
         for k,s in enumerate([self.slit1, self.slit2, self.slit3, self.slit4]):
             x = 'slitAperture%d/softPosition'%(k+1)
             y = 'vertSlitAperture%d/softPosition'%(k+1)
+            x_target = 'slitAperture%d/desiredSoftPosition'%(k+1)
+            y_target = 'vertSlitAperture%d/desiredSoftPosition'%(k+1)
             if x in das:
                 s.x = data_as(das, x, 'mm', rep=n)
             if y in das:
                 s.y = data_as(das, y, 'mm', rep=n)
+            s.x_target = data_as(das, x_target, 'mm', rep=n)
+            s.y_target = data_as(das, y_target, 'mm', rep=n)
         if 'sampleAngle' in das:
             # selects MAGIK or PBR, which have sample and detector angle
             self.sample.angle_x = data_as(das,'sampleAngle/softPosition','degree',rep=n)
             self.detector.angle_x = data_as(das,'detectorAngle/softPosition','degree',rep=n)
+            self.sample.angle_x_target = data_as(das,'sampleAngle/desiredSoftPosition','degree',rep=n)
+            self.detector.angle_x_target = data_as(das,'detectorAngle/desiredSoftPosition','degree',rep=n)
         elif 'q' in das:
             # selects NG7R which has only q device (qz) and sampleTilt
             tilt = data_as(das, 'sampleTilt/softPosition','degree',rep=n)
-            self.sample.angle_x = data_as(das, 'q/thetaIncident','degree',rep=n) + tilt
-            self.detector.angle_x = 2.0*data_as(das,'q/thetaIncident','degree',rep=n) - tilt
+            theta = data_as(das, 'q/thetaIncident', 'degree', rep=n)
+            self.sample.angle_x = theta + tilt
+            self.detector.angle_x = 2*theta - tilt
+            # NaN if not defined
+            tilt_target = data_as(das, 'sampleTilt/desiredSoftPosition','degree',rep=n)
+            theta_target = data_as(das, 'q/desiredThetaInident', 'degree', rep=n)
+            self.sample.angle_x_target = theta_target + tilt_target
+            self.detector.angle_x_target = 2*theta_target - tilt_target
         else:
             raise ValueError("Unknown sample angle in file")
         self.Qz_target = data_as(das, 'trajectoryData/_q', 'invAng', rep=n)
         if '_theta_offset' in das['trajectoryData']:
             self.background_offset = 'theta'
-        # temperature/field scan
+        self.scan_value = []
+        self.scan_units = []
+        self.scan_label= []
         SCANNED_VARIABLES = 'trajectory/scannedVariables'
         if SCANNED_VARIABLES in das:
-            scanned = das[SCANNED_VARIABLES].value
-            if len(scanned) > 0:
+            for node_id in das[SCANNED_VARIABLES].value:
                 try:
-                    path = scanned[0].replace('.', '/')
+                    path = node_id.replace('.', '/')
                     field = das[path]
-                    self.scan_value = data_as(das, path, '', rep=n)
-                    self.scan_units = field.attrs.get('units', '')
-                    self.scan_label = field.attrs.get('label', scanned[0])
+                    self.scan_value.append(data_as(das, path, '', rep=n))
+                    self.scan_units.append(field.attrs.get('units', ''))
+                    self.scan_label.append(field.attrs.get('label', node_id))
                 except KeyError:
-                    print("could not scanned %s for %s"
-                          % (scanned[0], os.path.basename(self.filename)))
+                    print("could not read scanned %s for %s"
+                          % (node_id, os.path.basename(self.path)))
                     pass
         #TODO: temperature, field
 
@@ -318,7 +331,6 @@ def demo():
     for f in sys.argv[1:]:
         entries = load_entries(f)
         for f in entries:
-            f.load()
             print(f)
             f.plot()
     pylab.legend()
