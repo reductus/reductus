@@ -208,13 +208,30 @@ class NCNRNeXusRefl(refldata.ReflData):
             self.warn("Wavelength resolution is missing; using 1.5% dL/L FWHM")
             self.detector.wavelength_resolution = 0.015/2.35*self.detector.wavelength
 
+        # TODO: stop trying to guess DOI
+        if 'DOI' in entry:
+            URI = entry['DOI']
+        else:
+            #NCNR_DOI = "10.18434/T4201B"
+            NCNR_DOI = "https://ncnr.nist.gov/pub/ncnrdata"
+            LOCATION = {'pbr':'ngd', 'magik':'cgd', 'ng7r':'ng7'}
+            nice_instrument = str(das['experiment/instrument'].value[0]).lower()
+            instrument = LOCATION.get(nice_instrument, nice_instrument)
+            year, month = self.date.year, self.date.month
+            cycle = "%4d%02d"%(year,month)
+            experiment = str(entry['experiment_identifier'].value[0])
+            filename = os.path.basename(self.path)
+            URI = "/".join((NCNR_DOI,instrument,cycle,experiment,"data",filename))
+        self.uri = URI
+
     def load(self, entry):
         das = entry['DAS_logs']
         self.detector.counts = np.asarray(das['pointDetector/counts'][:,0], 'd')
+        self.detector.counts_variance = self.detector.counts
         self.detector.dims = self.detector.counts.shape
         n = self.detector.dims[0]
         self.monitor.counts = np.asarray(data_as(das,'counter/liveMonitor','',rep=n), 'd')
-        self.monitor.counts_variance = np.asarray(data_as(das,'counter/liveMonitor','',rep=n), 'd')
+        self.monitor.counts_variance = self.monitor.counts
         self.monitor.count_time = data_as(das,'counter/liveTime','s',rep=n)
         for k,s in enumerate([self.slit1, self.slit2, self.slit3, self.slit4]):
             x = 'slitAperture%d/softPosition'%(k+1)
@@ -329,17 +346,26 @@ def _get_pol(das, pol):
 
 def demo():
     import sys
-    import pylab
     if len(sys.argv) == 1:
         print("usage: python -m reflred.steps.nexusref file...")
         sys.exit(1)
-    for f in sys.argv[1:]:
-        entries = load_entries(f)
-        for f in entries:
-            print(f)
-            f.plot()
-    pylab.legend()
-    pylab.show()
+    for filename in sys.argv[1:]:
+        try:
+            entries = load_entries(filename)
+        except Exception as exc:
+            print("**** "+str(exc)+" **** while reading "+filename)
+            continue
+
+        # print the first entry
+        print(entries[0])
+
+        # plot all the entries
+        import pylab
+        pylab.figure()
+        for entry in entries:
+            entry.plot()
+        pylab.legend()
+        pylab.show()
 
 if __name__ == "__main__":
     demo()
