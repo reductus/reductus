@@ -651,7 +651,12 @@ def join(data, Q_tolerance=0.5, dQ_tolerance=0.002, order='file',
     individual separation less than $\epsilon\cdot\Delta\theta$ but total
     spread greater than $\epsilon\cdot\Delta\theta$, they will be joined
     into multiple points with the final with the final point having worse
-    statistics than the prior points.
+    statistics than the prior points.  Join operates on one dimension at
+    a time, first grouping points with common $\Delta\theta$, then joining
+    points within each $\Delta\theta$ by common $\theta_\text{incident}$,
+    then by common $\theta_\text{detector}$.  This algorithm should work
+    well enough on the common reflectometry scans, but it may fail for example
+    if applied to a set of $Q_x$ scans with different $Q_z$ values.
 
     *order* is the sort order of the files that are joined.  The first
     file in the sorted list determines the metadata such as the base
@@ -686,7 +691,7 @@ def join(data, Q_tolerance=0.5, dQ_tolerance=0.002, order='file',
 
     output (refldata[]) : joined data
 
-    2016-12-13 Paul Kienzle: split tolerance into Qtol and dQtol
+    2016-12-16 Paul Kienzle: split tolerance into Qtol and dQtol
     """
     from .joindata import sort_files, join_datasets
     from .util import group_by_key
