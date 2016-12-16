@@ -45,7 +45,7 @@ def sort_files(datasets, key):
     return datasets
 
 
-def join_datasets(group, Qtol, dQtol):
+def join_datasets(group, Qtol, dQtol, by_Q=False):
     # type: (List[ReflData], float, float) -> ReflData
     """
     Create a new dataset which joins the results of all datasets in the group.
@@ -62,21 +62,29 @@ def join_datasets(group, Qtol, dQtol):
     env = get_env(group)
     fields.update(env)
     columns = stack_columns(group, fields)
+    columns = set_QdQ(columns)
 
-    # TODO: may want to join points with same Q but different Ti,Td,L
+    # Group points together, either by target angles, by actual angles or by Q
+    # TODO: maybe include target Q
+    # TODO: check background subtraction based on trajectoryData._q
+    # ----- it can't be right since Qz_target is not properly propagated
+    # ----- through the join...
     if Qtol == 0. and dQtol == 0.:
         targets = get_target_values(group)
         targets = stack_columns(group, targets)
         targets = apply_mask(group, targets)
-        groups = group_by_target(targets)
+        groups = group_by_target_angles(targets)
+    elif by_Q:
+        groups = group_by_Q(columns, Qtol=Qtol, dQtol=dQtol)
     else:
-        groups = group_by_actual(columns, Qtol=Qtol, dQtol=dQtol)
+        groups = group_by_actual_angles(columns, Qtol=Qtol, dQtol=dQtol)
 
     # Join the data points in the individual columns
     columns = merge_points(groups, columns, normbase)
 
     # Sort so that points are in display order
     # Column keys are:
+    #    Qx, Qz, dQ: Q and resolution
     #    Td: detector theta
     #    Ti: incident (sample) theta
     #    dT: angular divergence
@@ -86,15 +94,13 @@ def join_datasets(group, Qtol, dQtol):
     if group[0].intent == Intent.rock4:
         # Sort detector rocking curves so that small deviations in sample
         # angle don't throw off the order in detector angle.
-        keys = ('Td', 'Ti', 'L', 'dT', 'dL')
+        keys = ('Qx', 'Qz', 'dQ')
+        #keys = ('Td', 'Ti', 'L', 'dT', 'dL')
     elif isslit:
         keys = ('dT', 'L', 'dL')
     else:
-        keys = ('Ti', 'Td', 'L', 'dT', 'dL')
-
-    #print "==after join=="
-    #for k,v in sorted(columns.items()): print k,v
-
+        keys = ('Qz', 'dQ', 'Qx')
+        #keys = ('Ti', 'Td', 'L', 'dT', 'dL')
     columns = sort_columns(columns, keys)
 
     data = build_dataset(group, columns)
@@ -251,6 +257,20 @@ def apply_mask(group, columns):
     return columns
 
 
+def set_QdQ(columns):
+    # type: (StackedColumns) -> StackedColumns
+    """
+    Generate Q and dQ fields from angles and geometry
+    """
+    Ti, Td, dT = columns['Ti'], columns['Td'], columns['dT']
+    L, dL = columns['L'], columns['dL']
+    Qx, Qz = TiTdL2Qxz(Ti, Td, L)
+    # TODO: is dQx == dQz ?
+    dQ = dTdL2dQ(Td-Ti, dT, L, dL)
+    columns['Qx'], columns['Qz'], columns['dQ'] = Qx, Qz, dQ
+    return columns
+
+
 def get_target_values(group):
     # type: (List[ReflData]) -> Columns
     """
@@ -265,6 +285,7 @@ def get_target_values(group):
     )
     return columns
 
+
 def _target_dT(data):
     # type: (ReflData) -> np.ndarray
     """
@@ -274,7 +295,8 @@ def _target_dT(data):
     slits = data.slit1.x_target, data.slit2.x_target
     return divergence(slits=slits, distance=distance, use_sample=False)
 
-def group_by_target(columns):
+
+def group_by_target_angles(columns):
     # type: (StackedColumns) -> List[IndexSet]
     """
     Given columns of target values, group together exactly matching points.
@@ -287,7 +309,7 @@ def group_by_target(columns):
     return list(points.values())
 
 
-def group_by_actual(columns, Qtol, dQtol):
+def group_by_actual_angles(columns, Qtol, dQtol):
     # type: (StackedColumns, float, float) -> List[IndexSet]
     """
     Given instrument geometry columns group points by angles and wavelength.
@@ -302,16 +324,13 @@ def group_by_actual(columns, Qtol, dQtol):
     groups = _group_by_dim(groups, Td, Qtol*dT)
     return groups
 
+
 def group_by_Q(columns, Qtol, dQtol):
     # type: (StackedColumns, float, float) -> List[IndexSet]
     """
     Given instrument geometry columns group points by Q and resolution.
     """
-    Ti, Td, dT = columns['Ti'], columns['Td'], columns['dT']
-    L, dL = columns['L'], columns['dL']
-    Qx, Qz = TiTdL2Qxz(Ti, Td, L)
-    # TODO: is dQx == dQz ?
-    dQ = dTdL2dQ(Td-Ti, dT, L, dL)
+    Qx, Qz, dQ = columns['Qx'], columns['Qz'], columns['dQ']
     groups = [list(range(len(Qz)))]
     groups = _group_by_dim(groups, dQ, dQtol*dQ)
     groups = _group_by_dim(groups, Qz, Qtol*dQ)
