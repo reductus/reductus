@@ -121,40 +121,96 @@ def build_dataset(group, columns):
     head = group[0]
 
     # Copy details of first file as metadata for the returned dataset, and
-    # populate it with the result vectors.
+    # populate it with the result vectors.  Note that this is copy by reference;
+    # if an array in head gets updated later, then this modification will
+    # also appear in the returned data.  Not sure if this is problem...
     data = ReflData()
-    for p in data.properties:
+    for p in data._fields:
         setattr(data, p, getattr(head, p))
-    data.name = head.name
+    for group_name, _ in data._groups:
+        head_group, data_group = getattr(head, group_name), getattr(data, group_name)
+        for p in data_group._fields:
+            setattr(data_group, p, getattr(head_group, p))
+
+    # Clear the fields that are no longer defined
+    data.sample.angle_x_target = None
+    data.sample.angle_y = None
+    data.sample.rotation = None
+    data.detector.angle_x_target = None
+    data.detector.angle_y = None
+    data.detector.rotation = None
+    data.detector.counts = None
+    data.detector.counts_variance = None
+    data.monitor.counts_variance = None
+    for k in range(1,5):
+        slit = getattr(data, 'slit%d'%k)
+        slit.x = slit.y = slit.x_target = slit.y_target = None
+
+    # summary data derived from group, or copied from head if commented
+    #data.instrument
+    #data.geometry
+    #data.probe
+    data.path = None  # no longer refers to head file
+    data.uri = None  # TODO: does a reduction have a DOI?
+    data.points = len(columns['v'])
+    #data.channels  # unused
+    data.scale = 1.0  # TODO: not sure if scale is used
+    #data.name
+    #data.entry
+    #data.description
+    data.date = min(d.date for d in group)  # set date to earliest date
+    data.duration = sum(d.duration for d in group)  # cumulative duration
+    data.polarization = (head.polarization
+                         if all(d.polarization == head.polarization for d in group)
+                         else '')
+    #data.normbase
+    data.warnings = []  # initialize per-file history
+    data.messages = []  # initialize per-file history
+    #data.vlabel
+    #data.vunits
+    #data.vscale
+    #data.xlabel
+    #data.xunits
+    #data.xscale
+    data.mask = None  # all points are active after join
+    #data.angular_resolution # averaged
+    data.Qz_basis = 'actual'  # TODO: may want to preserve Qz_basis
+    data.Qz_target = None  # TODO: average the Qz_target?
+    data.scan_value = []  # TODO: may want Td, Ti as alternate scan axes
+    data.scan_label = []
+    data.scan_units = []
+    data.intent = head.intent  # preserve intent
+    #data.x  # read-only
+    #data.dx # read-only
+    #data.v  # averaged
+    #data.dv # averaged
+    #data.Qz # read-only  # TODO: if join by Q then Qx,Qz,dQ need to be set
+    #data.Qx # read-only
+    #data.dQ # read-only
+
+    # Fill in the fields we have averaged
     data.v = columns['v']
     data.dv = columns['dv']
     data.angular_resolution = columns['dT']
-    data.sample = copy(head.sample)
     data.sample.angle_x = columns['Ti']
-    data.sample.environment = {}
-    data.slit1 = copy(head.slit1)
+    data.detector.angle_x = columns['Td']
     data.slit1.x = columns['s1']
-    data.slit2 = copy(head.slit2)
     data.slit2.x = columns['s2']
-    # not copying detector or monitor
-    data.detector.counts = []
     data.detector.wavelength = columns['L']
     data.detector.wavelength_resolution = columns['dL']
-    data.detector.angle_x = columns['Td']
     data.monitor.count_time = columns['time']
     data.monitor.counts = columns['monitor']
-    data.monitor.start_time = None
-    # record per-file history
-    data.warnings = []
-    data.messages = []
 
     # Add in any sample environment fields
+    data.sample.environment = {}
     for k,v in head.sample.environment.items():
         if k in columns:
             env = Environment()
             env.units = v.units
             env.average = columns[k]
             data.sample.enviroment[k] = env
+            # TODO: could maybe join the environment logs
+            # ----- this would require setting them all to a common start time
 
     return data
 
@@ -425,8 +481,7 @@ def merge_points(index_sets, columns, normbase):
             for key, value in columns.items():
                 results[key].append(value[index])
         else:
-            v, dv = poisson_average(columns['v'][group],
-                                    columns['dv'][group])
+            v, dv = poisson_average(columns['v'][group], columns['dv'][group])
             results['v'].append(v)
             results['dv'].append(dv)
             results['time'].append(np.sum(columns['time'][group]))
@@ -461,20 +516,35 @@ def sort_columns(columns, keys):
 def demo():
     import sys
     import pylab
+    import numpy; numpy.set_printoptions(linewidth=10000)
     from . import steps
     from .nexusref import load_entries
+    from .util import group_by_key
+    from .refldata import Intent
     if len(sys.argv) == 1:
         print("usage: python -m reflred.steps.joindata file...")
         sys.exit(1)
     pylab.hold(True)
-    group = []
-    for f in sys.argv[1:]:
-        for f in load_entries(f):
-            f = steps.normalize(steps.divergence(f))
-            f.plot()
-            group.append(f)
-    joined = join_datasets(group, Qtol=0.5, dQtol=0.002)
-    joined.plot()
+    data = []
+    for filename in sys.argv[1:]:
+        try:
+            entries = load_entries(filename)
+        except Exception as exc:
+            print(str(exc) + " while loading " + filename)
+            continue
+        for entry in entries:
+            entry = steps.mark_intent(steps.normalize(steps.divergence(entry)))
+            if not Intent.isspec(entry.intent):
+                continue
+            #entry.plot()
+            data.append(entry)
+    groups = group_by_key('polarization', data).values()
+    output = []
+    for group in groups:
+        group = sort_files(group, 'file')
+        result = join_datasets(group, Qtol=0.5, dQtol=0.002)
+        result.plot()
+        output.append(result)
     pylab.legend()
     pylab.show()
 

@@ -88,10 +88,45 @@ from . import resolution
 QZ_FROM_SAMPLE = 'sample angle'
 QZ_FROM_DETECTOR = 'detector angle'
 
+class Group(object):
+    def __setattr__(self, key, value):
+        # Check for class attr when setting; this is because hasattr on
+        # a property will return False if getattr on that property raises
+        # an exception.  This means if you really want to sneak an
+        # attribute into the group from your data loader, you will have
+        # to populate it from the
+        if not key.startswith('_') and not hasattr(self.__class__, key):
+            raise AttributeError("Cannot add attribute %s to class %s"
+                                 % (key, self.__class__.__name__))
+        object.__setattr__(self, key, value)
+    def __init__(self, **kw):
+        _set(self,kw)
+    def __str__(self):
+        return _str(self)
+    def _toDict(self):
+        return _toDict(self)
+
+
+def set_fields(cls):
+    groups = set(name for name,type in getattr(cls, '_groups', ()))
+    properties = []
+    fields = []
+    for k, v in sorted((k, v) for k, v in cls.__dict__.items()):
+        if k.startswith('_') or k in groups:
+            pass
+        elif isinstance(v, property):
+            properties.append(k)
+        elif not callable(v):
+            fields.append(k)
+    cls._fields = tuple(fields)
+    cls._props = tuple(properties)
+    return cls
+
 # TODO: attribute documentation and units should be integrated with the
 # TODO: definition of the attributes.  Value attributes should support
 # TODO: unit conversion
-class Slit(object):
+@set_fields
+class Slit(Group):
     """
     Define a slit for the instrument.  This is needed for correct resolution
     calculations and for ab initio footprint calculations.
@@ -118,18 +153,56 @@ class Slit(object):
         Slit opening in the secondary direction.  This may be a constant
         (fixed slits) or of length n for the number of measurements.
     """
-    properties = ['distance','offset','x','y','shape']
     distance = inf
-    offset = [0.]*4
-    x = inf
-    y = inf
+    offset = (0., 0., 0., 0.)
+    x = inf  # type: np.ndarray
+    x_target = None  # type: np.ndarray
+    y = inf  # type: np.ndarray
+    y_target = None  # type: np.ndarray
     shape = "rectangular" # rectangular or circular
 
-    def __init__(self, **kw): _set(self,kw)
-    def __str__(self): return _str(self)
-    def _toDict(self): return _toDict(self)
 
-class Sample(object):
+@set_fields
+class Environment(Group):
+    """
+    Define sample environment data for the measurements such as
+        temperature (kelvin)
+        pressure (pascal)
+        relative_humidity (%)
+        electric_field (V/m)
+        magnetic_field (tesla)
+        stress_field (pascal)
+
+    The data may be a constant, a series of values equal to
+    the number of scan points, or a series of values and times.
+    The average, max and min over all scan points, and the
+    value, max and min for a particular scan point may be
+    available.
+
+    Some measurements are directional, and will have a polar
+    and azimuthal angle associated with them.  This may be
+    constant for the entire scan, or stored separately with
+    each magnitude measurement.
+    """
+
+    #: Name of environment variable
+    name = ""
+    #: Units to report on graphs
+    units = ""
+    #: Statistics on all measurements
+    average = None  # type: np.ndarray
+    minimum = None  # type: np.ndarray
+    maximum = None  # type: np.ndarray
+    #: Magnitude of the measurement
+    value = None  # type: np.ndarray
+    #: Start time for log (seconds)
+    start = None  # type: np.ndarray
+    #: Measurement time relative to start (seconds)
+    time = None  # type: np.ndarray
+
+
+@set_fields
+class Sample(Group):
     """
     Define the sample geometry.  Size and shape areneeded for correct
     resolution calculations and for ab initio footprint calculations.
@@ -156,6 +229,9 @@ class Sample(object):
         Angle between neutron beam and sample surface in the primary
         direction.  This may be constant or an array of length n for
         the number of measurements.
+    angle_x_target (n x 0 degree)
+        Desired angle_x, used by join to select the points that are
+        nominally the same in the joined data set.
     angle_y (n x 0 degree)
         Angle between the neutron beam and sample surface in the
         secondary direction.  This may be constant or an array of
@@ -171,79 +247,28 @@ class Sample(object):
         Sample environment data.  See Environment class for a list of
         common environment data.
     """
-    properties = ['name', 'description','width','length','thickness','shape',
-                  'angle_x','angle_y','rotation',
-                  'broadening', 'incident_sld', 'substrate_sld']
     name = ''
     description = ''
     width = inf  # mm
     length = inf  # mm
     thickness = inf # mm
     shape = 'rectangular' # rectangular or circular or irregular
-    angle_x = 0 # degree
-    angle_y = 0 # degree
-    rotation = 0 # degree
+    angle_x = 0. # degree
+    angle_x_target = None  # degree
+    angle_y = 0. # degree
+    rotation = 0. # degree
     substrate_sld = 2.07 # inv A  (silicon substrate for neutrons)
-    incident_sld = 0 # inv A (air)
-    broadening = 0
+    incident_sld = 0. # inv A (air)
+    broadening = 0.
+    environment = None  # type: Dict[str, Environment]
 
     def __init__(self, **kw):
         self.environment = {}
-        _set(self,kw)
-    def __str__(self): return _str(self)
-    def _toDict(self): return _toDict(self)
+        Group.__init__(self, **kw)
 
 
-class Environment(object):
-    """
-    Define sample environment data for the measurements such as
-        temperature (kelvin)
-        pressure (pascal)
-        relative_humidity (%)
-        electric_field (V/m)
-        magnetic_field (tesla)
-        stress_field (pascal)
-
-    The data may be a constant, a series of values equal to
-    the number of scan points, or a series of values and times.
-    The average, max and min over all scan points, and the
-    value, max and min for a particular scan point may be
-    available.
-
-    Some measurements are directional, and will have a polar
-    and azimuthal angle associated with them.  This may be
-    constant for the entire scan, or stored separately with
-    each magnitude measurement.
-
-    name
-        Name of environment variable
-    units
-        Units to report on graphs
-    average, minimum, maximum
-        Statistics on all measurements
-    value
-        Magnitude of the measurement
-    start
-        Start time for log
-    time (seconds)
-        Measurement time relative to start
-    polar_angle (degree)
-    azimuthal_angle (degree)
-        Provide orientation relative to the sample surface for
-        directional parameters:
-        * x is polar 0, azimuthal 0
-        * y is polar 90, azimuthal 0
-        * z is azimuthal 90
-    """
-    properties = ['name', 'units', 'value', 'start', 'time',
-                  'average','minimum', 'maximum']
-
-    def __init__(self, **kw): _set(self,kw)
-    def __str__(self): return _str(self)
-    def _toDict(self): return _toDict(self)
-
-
-class Beamstop(object):
+@set_fields
+class Beamstop(Group):
     """
     Define the geometry of the beamstop.  This is used by the
     detector class to compute the shadow of the beamstop on the
@@ -266,21 +291,16 @@ class Beamstop(object):
     ispresent (False)
         True if beamstop is present in the experiment.
     """
-    properties = ['distance','width','length','shape',
-                  'x_offset','y_offset','ispresent']
-    distance = 0 # mm
-    width = 0 # mm
-    length = 0 # mm
+    distance = 0. # mm
+    width = 0. # mm
+    length = 0. # mm
     shape = 'rectangular' # rectangular or circular
-    offset = [0,0] # mm
+    offset = (0., 0.) # mm
     ispresent = False
 
-    def __init__(self, **kw): _set(self,kw)
-    def __str__(self): return _str(self)
-    def _toDict(self): return _toDict(self)
 
-
-class Detector(object):
+@set_fields
+class Detector(Group):
     """
     Define the detector properties.  Note that this defines a virtual
     detector.  The real detector may have e.g., multiple beam paths
@@ -364,37 +384,26 @@ class Detector(object):
         nx x ny detector pixels
         n number of measurements
         k time/wavelength channels
-
-    Runtime Facilities
-    ==================
-    loadcounts (function returning counts)
-        Counts can be assigned using
-            data.detector.counts = weakref.ref(counts)
-        When the counts field is accessed, the reference will be resolved.
-        If it yields None, then loadcounts will be called and assigned to
-        counts as a weak reference.  In this way large datasets can be
-        removed from memory when not in active use.
     """
-    properties=["dims",'distance','size','center','widths_x','widths_y',
-                'angle_x','angle_y','rotation','efficiency','saturation',
-                'wavelength','wavelength_resolution','time_of_flight',
-                'counts','counts_variance', 'deadtime']
-    dims = [1,1] # i,j
+    dims = (1, 1) # i,j
     distance = None # mm
-    size = [1,1]  # mm
-    center = [0,0] # mm
-    widths_x = 1 # mm
-    widths_y = 1 # mm
-    angle_x = 0  # degree
-    angle_y = 0  # degree
-    rotation = 0 # degree
-    efficiency = 1 # proportion
+    size = (1., 1.)  # mm
+    center = (0., 0.) # mm
+    widths_x = 1. # mm
+    widths_y = 1. # mm
+    angle_x = 0.  # degree
+    angle_y = 0.  # degree
+    angle_x_target = 0.  # degree
+    rotation = 0. # degree
+    efficiency = 1. # proportion
     saturation = inf # counts/sec
-    wavelength = 1 # angstrom
-    wavelength_resolution = 0 # angstrom
+    wavelength = 1. # angstrom
+    wavelength_resolution = 0. # angstrom
     time_of_flight = None  # ms
     counts = None
+    counts_variance = None
     deadtime = None
+    deadtime_error = None
 
     @property
     def solid_angle(self):
@@ -402,29 +411,8 @@ class Detector(object):
         return 2*arctan2(np.asarray(self.size)/2.,self.distance)
 
 
-    # Raw counts are cached in memory and loaded on demand.
-    # Rebinned and integrated counts for the region of interest
-    # are stored in memory.
-    #_pcounts = lambda:None
-    def loadcounts(self):
-        """Load the data"""
-        raise NotImplementedError(
-           "Data format must set detector.counts or detector.loadcounts")
-
-    _variance = None
-    @property
-    def counts_variance(self):
-        return self._variance if self._variance is not None else self.counts
-    @counts_variance.setter
-    def counts_variance(self, v):
-        self._variance = v
-
-    def __init__(self, **kw): _set(self,kw)
-    def __str__(self): return _str(self)
-    def _toDict(self): return _toDict(self)
-
-
-class ROI(object):
+@set_fields
+class ROI(Group):
     """
     Detector region of interest.
 
@@ -437,17 +425,13 @@ class ROI(object):
     xlo, xhi (pixels)
     ylo, yhi (pixels)
     """
-    properties = ['xlo','xhi','ylo','yhi']
     xlo = None
     xhi = None
     ylo = None
     yhi = None
 
-    def __init__(self, **kw): _set(self,kw)
-    def __str__(self): return _str(self)
-    def _toDict(self): return _toDict(self)
-
-class Monitor(object):
+@set_fields
+class Monitor(Group):
     """
     Define the monitor properties.
 
@@ -526,10 +510,6 @@ class Monitor(object):
     the corrected monitor counts could be set by multiplying time by
     the monitor rate.
     """
-    properties = ['distance','sampled_fraction','counts','start_time',
-                  'count_time','time_step','time_of_flight','base',
-                  'saturation', 'source_power','source_power_units',
-                  'counts_variance']
     distance = None
     sampled_fraction = None
     counts = None
@@ -543,73 +523,8 @@ class Monitor(object):
     source_power_units = "MW"
     source_power_variance = 0
     saturation = None
-
-    def __init__(self, **kw): 
-        _set(self,kw)
-        #if self.counts_variance is None and self.counts is not None:
-        #    self.counts_variance = self.counts
-    _variance = None
-    @property
-    def counts_variance(self):
-        return self._variance if self._variance is not None else self.counts
-    @counts_variance.setter
-    def counts_variance(self, v):
-        self._variance = v
-    def __str__(self): return _str(self)
-    def _toDict(self): return _toDict(self)
-
-class Moderator(object):
-    """
-    Time of flight calculations require information about the moderator.
-    Primarily this is the length of the flight path from moderator to
-    monitor or detector required to compute wavelength.
-
-    Moderator temperature is also recorded.  The user should probably
-    be warned when working with datasets with different moderator
-    temperatures since this is likely to affect the wavelength
-    spectrum of the beam.
-
-    distance (metre)
-        Distance from moderator to sample.  This is negative since the
-        monitor is certainly before the sample.
-    temperature (kelvin)
-        Temperature of the moderator
-    type (string)
-        For information only at this point.
-    """
-    properties = ['distance','temperature','type']
-    distance = None
-    temperature = None
-    type = 'Unknown'
-
-    def __init__(self, **kw): _set(self, kw)
-    def __str__(self): return _str(self)
-    def _toDict(self): return _toDict(self)
-
-class Warning(object):
-    """
-    A warning is an information message and a possible set of actions to
-    take in response to the warning.
-
-    The user interface can query the message and the action list, generate
-    a dialog on the basis of the information.  Actions may have associated
-    attributes that need to be set for the action to complete.
-    """
-    pass
-
-class WarningWavelength(Warning):
-    """
-    Unexpected wavelength warning.
-
-    This warning is attached to any dataset which has an unexpected
-    wavelength stored in the file (more than 1% different from the
-    default wavelength for the instrument).
-
-    Various actions can be done in response to the warning, including
-    always taking the default value for this instrument, overriding for
-    every value in the dataset
-    """
-    pass
+    deadtime = None
+    deadtime_error = None
 
 class Intent:
     """
@@ -644,7 +559,8 @@ class Intent:
     other = 'other'
     scan = 'scan'
 
-    intents = [slit,spec,backp,backm,rockQ,rock3,rock4,deff,time,other,none]
+    intents = (slit, spec, backp, backm, rockQ, rock3, rock4,
+               deff, time, other, scan, none)
 
     @staticmethod
     def isback(intent):
@@ -713,121 +629,123 @@ def infer_intent(data):
     return intent
 
 
-class ReflData(object):
+@set_fields
+class ReflData(Group):
     """
-    slit1,slit2 (Slit)
-        Presample slits
-    slit3,slit4 (Slit)
-        Post sample slits
-    sample
-        Sample geometry
-    detector
-        Detector geometry, efficiency and counts
-    monitor
-        Counts and/or durations
-    polarization
-        '' unpolarized
-        '+' spin up
-        '-' spin down
-        '++','--'  non-spin-flip
-        '-+','+-'  spin flip
-    points
-        For scanning instruments, the number of measurements.
-    channels
-        For time of flight, the number of time channels.  For white
-        beam instruments, the number of analysers.
-    roi
-        Region of interest on the detector.
-    intent (one of the Intent strings)
-        Purpose of the measurement.
-    background_offset ('theta', '2theta' or 'qz')
-        For background scans, align the background points with the specular
-        points according to theta (sample angle), 2theta (detector angle)
-        or qz (Qz value of background computed from sample and detector angle)
-    mask
-        points excluded from reduction
-    scale
-        The desired scale factor for displaying the data.
-    normbase
-        The base for normalization (e.g., 'monitor' or 'time')
-
-    **File details**
-
-    instrument (string)
-        Name of a particular instrument
-    geometry ('vertical' or 'horizontal')
-        Whether the scattering plane is horizontal or vertical.  The x-y
-        values of the slits, detector, etc. should be relative to the
-        scattering plane, not the lab frame.
-    probe ('neutron' or 'xray')
-        Type of radiation used to probe the sample.
-    path (string)
-        Location of the datafile
-    entry (string)
-        Entry identifier if more than one entry per file
-    name (string)
-        Name of the dataset.  This may be a combination of filename and
-        entry number.
-    description (string)
-        Description of the entry.
-    date (timestamp)
-        Starting date and time of the measurement.
-    duration (second)
-        Duration of the measurement.
-    warnings
-        List of warnings generated when the file was loaded
-
-    **Format specific fields (ignored by reduction software)**
-
-    file (handle)
-        Format specific file handle, for actions like showing the summary,
-        updating the data and reading the frames.
+    Reflectometry data structure, giving a predictable name space for the
+    reduction steps regardless of input file format.
     """
-    properties = ['instrument', 'geometry', 'probe', 'points', 'channels',
-                  'name','entry','description','date','duration','attenuator',
-                  'polarization','path','formula',
-                  'intent', 'Qz_target', 'Qz_basis', 'angular_resolution',
-                  'vlabel', 'vunits', 'xlabel', 'xunits', 'vscale', 'xscale',
-                  'normbase', 'mask',
-                  'warnings', 'messages', "_v", "_dv"
-                  ]
-    readonly_properties = ['v', 'dv', 'x', 'Qz', 'Qx']
+    _groups = (
+        ("slit1", Slit), ("slit2", Slit), ("slit3", Slit), ("slit4", Slit),
+        ("detector", Detector),
+        ("sample", Sample),
+        ("monitor", Monitor),
+        ("roi", ROI),
+    )
+
+    #: Sample geometry
+    sample = None     # type: Sample
+    #: Presample slits
+    slit1 = None      # type: Slit
+    #: Presample slits
+    slit2 = None      # type: Slit
+    #: Post sample slits
+    slit3 = None      # type: Slit
+    #: Post sample slits
+    slit4 = None      # type: Slit
+    #: Detector geometry, efficiency and counts
+    detector = None   # type: Detector
+    #: Counts and/or durations
+    monitor = None    # type: Monitor
+    #: Region of interest on the detector.
+    roi = None        # type: ROI
+
+    #: Name of a particular instrument
     instrument = "unknown"
+    #: Whether the scattering plane is horizontal or vertical.  The x-y
+    #: values of the slits, detector, etc. should be relative to the
+    #: scattering plane, not the lab frame.
     geometry = "vertical"
+    #: Type of radiation (neutron or xray) used to probe the sample.
     probe = "unknown"
+    #: Location of the datafile
     path = "unknown"
+    #: Download location for the file, if available
+    uri = "unknown"
+    #: For scanning instruments, the number of measurements.
     points = 1
+    #: For time of flight, the number of time channels.  For white
+    #: beam instruments, the number of analysers.
     channels = 1
+    #: The desired scale factor for displaying the data.
     scale = 1.0
+    #: Name of the dataset.  This may be a combination of filename and
+    #: entry number.
     name = ""
+    #: Entry identifier if more than one entry per file
     entry = ""
+    #: Description of the entry.
     description = ""
+    #: Starting date and time of the measurement.
     date = datetime.datetime(1970,1,1)
+    #: Duration of the measurement.
     duration = 0
-    file = None
-    attenuator = 1.
+    #: '' unpolarized
+    #: '+' spin up
+    #: '-' spin down
+    #: '++','--'  non-spin-flip
+    #: '-+','+-'  spin flip
     polarization = ""
-    formula = ""
+    #: The base for normalization (e.g., 'monitor' or 'time')
     normbase = None
-    reversed = False
+    #: List of warnings generated when the file was loaded
     warnings = None
+    #: List of corrections that have been applied to the data
     messages = None
+    #: Value label for y-axis on 1-D or colorbar on 2-D plots.
+    #: Label will change when the value is normalized.
     vlabel = 'Intensity'
+    #: Value units
     vunits = 'counts'
-    vscale = None
+    #: Value scale ('linear', 'log' or '' for auto)
+    #: Units will change when the value is normalized.
+    vscale = '' # type: str
+    #: X axis label
     xlabel = 'unknown intent'
+    #: X axis units
     xunits = ''
-    xscale = None
+    #: Value scale ('linear', 'log' or '' for auto)
+    xscale = ''
+    #: points excluded from reduction
     mask = None
+    #: Computed angular resolution
+    angular_resolution = None  # type: np.ndarray
+    #: For background scans, the choice of Qz for the
+    #: points according to theta (sample angle), 2theta (detector angle)
+    #: or qz (Qz value of background computed from sample and detector angle)
+    #: How to calculate Qz from instrument angles.
+    #:
+    #: **actual**
+    #:     calculates Qx and Qz as (x,z)-components of
+    #:     $(\vec k_{\text{out}} - \vec k_\text{in})$ in sample coordinates,
+    #: **detector**
+    #:     ignores the sample angle and calculates Qz
+    #:     as $(4\pi/\lambda \sin(\theta_\text{detector}/2))$,
+    #: **sample**
+    #:     ignores the detector angle and calculates Qz
+    #:     as $(4\pi/\lambda \sin(\theta_\text{sample}))$
+    #: **target**
+    #:     uses the user-supplied Qz_target values
+    Qz_basis = 'actual'
+    #: The target Qz value given in the data file; or NaN if not available
+    Qz_target = None  # type: np.ndarray
+    scan_value = None  # type: List[np.ndarray]
+    scan_label = None  # type: List[str]
+    scan_units = None  # type: List[str]
+
     _intent = Intent.none
     _v = None
     _dv = None
-    angular_resolution = None
-    Qz_target = None
-    Qz_basis = 'actual'
-    scan_value = None
-    scan_label = ''
-    scan_units = ''
 
     ## Data representation for generic plotter as (x,y,z,v) -> (qz,qx,qy,Iq)
     ## TODO: subclass Data so we get pixel edges calculations
@@ -839,6 +757,7 @@ class ReflData(object):
     #z,zlabel,zunits = property(_getz),"Qz","inv A"
     @property
     def intent(self):
+        """Purpose of the measurement."""
         return self._intent
 
     @intent.setter
@@ -855,7 +774,7 @@ class ReflData(object):
             #self.xlabel, self.xunits = "angular resolution", "degrees 1-sigma"
             self.xlabel, self.xunits = "slit 1 opening", "mm"
         elif Intent.isscan(v):
-            self.xlabel, self.xunits = self.scan_label, self.scan_units
+            self.xlabel, self.xunits = self.scan_label[0], self.scan_units[0]
         else:
             self.xlabel, self.xunits = "point", ""
 
@@ -871,7 +790,7 @@ class ReflData(object):
             return self.slit1.x
             #return self.angular_resolution
         elif Intent.isscan(intent):
-            return self.scan_value
+            return self.scan_value[0]
         else:
             return np.arange(1, len(self.v)+1)
 
@@ -894,9 +813,7 @@ class ReflData(object):
     @dv.setter
     def dv(self, dv):
         self._dv = dv
-    # vlabel and vunits depend on monitor normalization
 
-    # TODO: retrieving properties should not do significant calculation
     @property
     def Qz(self):
         A, B, L = self.sample.angle_x, self.detector.angle_x, self.detector.wavelength
@@ -916,7 +833,7 @@ class ReflData(object):
     def Qx(self):
         A, B, L = self.sample.angle_x, self.detector.angle_x, self.detector.wavelength
         if self.Qz_basis == 'actual':
-            return 2*pi/L * ( cos(radians(B - A)) - cos(radians(A)))
+            return 2*pi/L * (cos(radians(B - A)) - cos(radians(A)))
         else:
             return np.zeros_like(A)
 
@@ -929,51 +846,31 @@ class ReflData(object):
         return resolution.dTdL2dQ(T,dT,L,dL)
 
     def __init__(self, **kw):
-        # Note: because _set is ahead of the following, the caller will not
-        # be able to specify sample, slit, detector or monitor on creation,
-        # but will instead have to use those items provided by the class.
-        _set(self,kw)
-        self.sample = Sample()
-        self.slit1 = Slit()
-        self.slit2 = Slit()
-        self.slit3 = Slit()
-        self.slit4 = Slit()
-        self.detector = Detector()
-        self.monitor = Monitor()
-        self.moderator = Moderator()
-        self.roi = ROI()
+        for attr, cls in ReflData._groups:
+            setattr(self, attr, cls())
         self.warnings = []
         self.messages = []
+        Group.__init__(self, **kw)
 
     def __str__(self):
-        base = [_str(self,indent=2)]
+        base = [_str(self, indent=2)]
         others = ["".join(("  ", s, "\n", str(getattr(self,s))))
-                  for s in ("slit1", "slit2", "slit3", "slit4",
-                            "sample", "detector", "monitor", "roi")
-                  ]
+                  for s, _ in ReflData._groups]
         return "\n".join(base+others+self.messages)
 
     def todict(self):
         state = _toDict(self)
-        others = dict([[s, _toDict(getattr(self,s))]
-                  for s in ("slit1", "slit2", "slit3", "slit4",
-                            "sample", "detector", "monitor", "roi")
-                  ])
-        state.update(others)
+        groups = dict((s, _toDict(getattr(self,s)))
+                      for s, _ in ReflData._groups)
+        state.update(groups)
         return state
 
     def fromdict(self, state):
-        props = dict((k,v) for k,v in state.items() if k in self.properties)
+        props = dict((k,v) for k,v in state.items() if k in self._fields)
         props = _fromDict(props)
         for k, v in props.items():
             setattr(self, k, v)
-        for attr, cls in [
-            ("slit1",Slit), ("slit2", Slit), ("slit3", Slit), ("slit4", Slit),
-            ("detector", Detector),
-            ("sample", Sample),
-            ("monitor", Monitor),
-            ("roi", ROI),
-            ]:
+        for attr, cls in ReflData._groups:
             props = _fromDict(state[attr])
             setattr(self, attr, cls(**props))
 
@@ -1000,14 +897,6 @@ class ReflData(object):
         if other.warnings:
             self.warnings.append(label + ":")
             self.warnings.extend("  "+s for s in other.warnings)
-
-    def resetQ(self):
-        """Recompute Qx,Qz from geometry and wavelength"""
-        raise RuntimeError("No longer need resetQ")
-        A, B = self.sample.angle_x, self.detector.angle_x
-        L = self.detector.wavelength
-        Qx,Qz = ABL_to_QxQz(A,B,L)
-        self.Qx,self.Qz = Qx,Qz
 
     def plot(self, label=None):
         from matplotlib import pyplot as plt
@@ -1052,14 +941,14 @@ def _str(object, indent=4):
     Helper function: document data object by convert attributes listed in
     properties into a string.
     """
-    props = [a+"="+str(getattr(object,a)) for a in object.properties]
+    props = [a+"="+str(getattr(object,a)) for a in object._fields]
     prefix = " "*indent
     return prefix+("\n"+prefix).join(props)
 
 def _toDict(obj):
     props = {}
-    properties = list(getattr(obj, 'properties', [])) # make a copy
-    properties += getattr(obj, 'readonly_properties', [])
+    properties = list(getattr(obj, '_fields', ()))
+    properties += list(getattr(obj, '_props', ()))
     for a in properties:
         attr = getattr(obj, a)
         if isinstance(attr, np.integer):
@@ -1085,7 +974,7 @@ def _fromDict(props):
     return props
 
 
-def _set(object,kw):
+def _set(object, kw):
     """
     Helper function: distribute the __init__ keyword parameters to
     individual attributes of an object, raising AttributeError if
@@ -1095,8 +984,7 @@ def _set(object,kw):
 
         def __init__(self, **kw): _set(self,kw)
     """
-    for k,v in kw.iteritems():
+    for k,v in kw.items():
         # this will fail with an attribute error for incorrect keys
-        getattr(object,k)       
-        setattr(object,k,v)
-
+        getattr(object, k)
+        setattr(object, k, v)
