@@ -17,11 +17,9 @@ def check_datasource(source):
 def url_load(fileinfo):
     from dataflow.modules.load import url_get
     path, mtime, entries = fileinfo['path'], fileinfo['mtime'], fileinfo['entries']
-    name = basename(path)
-    fid = StringIO.StringIO(url_get(fileinfo))
-    nx_entries = nexusref.load_entries(name, fid, entries=entries)
-    fid.close()
-    return nx_entries
+    filename = basename(path)
+    content = url_get(fileinfo)
+    return nexusref.load_from_string(filename, content, entries=entries)
 
 def find_mtime(path, source="ncnr"):
     check_datasource(source)

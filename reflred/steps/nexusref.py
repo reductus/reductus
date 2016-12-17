@@ -14,6 +14,7 @@ from .. import hzf_readonly_stripped as hzf
 from .. import unit
 from .. import iso8601
 from . import refldata
+from .util import fetch_url
 
 def data_as(group, fieldname, units, rep=1):
     """
@@ -43,6 +44,36 @@ def nxfind(group, nxclass):
         if nxclass == entry.attrs.get('NX_class', None):
             yield entry
 
+
+def load_from_string(filename, data, entries=None):
+    """
+    Load a nexus file from a string, e.g., as returned from url.read().
+    """
+    from StringIO import StringIO
+    fd = StringIO(data)
+    entries = load_entries(filename, fd, entries=entries)
+    fd.close()
+    return entries
+
+
+def load_from_uri(uri, entries=None, url_cache="/tmp"):
+    """
+    Load a nexus file from disk or from http://, https:// or file://.
+
+    Remote files are cached in *url_cache*.  Use None to fetch without caching.
+    """
+    import os
+
+    if uri.startswith('file://'):
+        return load_entries(uri[7:], entries=entries)
+    elif uri.startswith('http://') or uri.startswith('https://'):
+        filename = os.path.basename(uri)
+        data = fetch_url(uri, url_cache=url_cache)
+        return load_from_string(filename, data, entries=entries)
+    else:
+        return load_entries(uri, entries=entries)
+
+
 def load_metadata(filename, file_obj=None):
     """
     Load the summary info for all entries in a NeXus file.
@@ -58,6 +89,7 @@ def load_metadata(filename, file_obj=None):
         file.close()
     return measurements
 
+
 def load_entries(filename, file_obj=None, entries=None):
     """
     Load the summary info for all entries in a NeXus file.
@@ -65,7 +97,7 @@ def load_entries(filename, file_obj=None, entries=None):
     #file = h5.File(filename)
     file = h5_open_zip(filename, file_obj)
     measurements = []
-    for name,entry in file.items():
+    for name, entry in file.items():
         if entries is not None and name not in entries:
             continue
         if entry.attrs.get('NX_class', None) == 'NXentry':
@@ -75,7 +107,6 @@ def load_entries(filename, file_obj=None, entries=None):
     if file_obj is None:
         file.close()
     return measurements
-
 
 def h5_open_zip(filename, file_obj=None, mode='r', **kw):
     """
@@ -277,16 +308,24 @@ class NCNRNeXusRefl(refldata.ReflData):
             if len(scanned_variables) == 1:
                 scanned_variables = str(scanned_variables[0]).split('\n')
             for node_id in scanned_variables:
+                path = node_id.replace('.', '/')
                 try:
-                    path = node_id.replace('.', '/')
                     field = das[path]
-                    self.scan_value.append(data_as(das, path, '', rep=n))
-                    self.scan_units.append(field.attrs.get('units', ''))
-                    self.scan_label.append(field.attrs.get('label', node_id))
                 except KeyError:
-                    print("could not read scanned %s for %s"
+                    print(">>> could not read scanned %s for %s"
                           % (node_id, os.path.basename(self.path)))
-                    pass
+                    continue
+                try:
+                    scan_value = data_as(das, path, '', rep=n)
+                    scan_units = field.attrs.get('units', '')
+                    scan_label = field.attrs.get('label', node_id)
+                except Exception:
+                    print(">>> unexpected error reading %s for %s"
+                          % (node_id, os.path.basename(self.path)))
+                    continue
+                self.scan_value.append(scan_value)
+                self.scan_units.append(scan_units)
+                self.scan_label.append(scan_label)
         #TODO: temperature, field
 
     def _load_slits(self, instrument):
@@ -351,7 +390,7 @@ def demo():
         sys.exit(1)
     for filename in sys.argv[1:]:
         try:
-            entries = load_entries(filename)
+            entries = load_from_uri(filename)
         except Exception as exc:
             print("**** "+str(exc)+" **** while reading "+filename)
             continue

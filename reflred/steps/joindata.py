@@ -53,6 +53,7 @@ def join_datasets(group, Qtol, dQtol, by_Q=False):
     This is a multistep operation with the various parts broken into separate
     functions.
     """
+    #print "joining files in",group[0].path,group[0].name,group[0].entry
     # Make sure all datasets are normalized by the same factor.
     normbase = group[0].normbase
     assert all(data.normbase == normbase for data in group)
@@ -372,12 +373,18 @@ def group_by_actual_angles(columns, Qtol, dQtol):
     """
     Ti, Td, dT = columns['Ti'], columns['Td'], columns['dT']
     L, dL = columns['L'], columns['dL']
+    #print "joining", Qtol, dQtol, Ti, Td, dT
     groups = [list(range(len(Ti)))]
     groups = _group_by_dim(groups, dL, dQtol*dL)
+    #print "dL groups", groups
     groups = _group_by_dim(groups, dT, dQtol*dT)
+    #print "dT groups", groups
     groups = _group_by_dim(groups, L, Qtol*dL)
+    #print "L groups", groups
     groups = _group_by_dim(groups, Ti, Qtol*dT)
+    #print "Ti groups", groups
     groups = _group_by_dim(groups, Td, Qtol*dT)
+    #print "Td groups", groups
     return groups
 
 
@@ -518,7 +525,7 @@ def demo():
     import pylab
     import numpy; numpy.set_printoptions(linewidth=10000)
     from . import steps
-    from .nexusref import load_entries
+    from . import nexusref
     from .util import group_by_key
     from .refldata import Intent
     if len(sys.argv) == 1:
@@ -528,7 +535,7 @@ def demo():
     data = []
     for filename in sys.argv[1:]:
         try:
-            entries = load_entries(filename)
+            entries = nexusref.load_from_uri(filename)
         except Exception as exc:
             print(str(exc) + " while loading " + filename)
             continue
