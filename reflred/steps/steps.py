@@ -641,11 +641,16 @@ def join(data, Q_tolerance=0.5, dQ_tolerance=0.002, order='file',
     or one dataset per polarization state.  When operating on a single
     dataset, it joins repeated points into single points.
 
-    *Qtol* (default=0.3) is a scale factor on $\Delta \theta$ used to
+    *Qtol* and *dQtol* are scale factors on $\Delta \theta$ used to
     determine whether two angles are equivalent.  For a given tolerance
-    $\epsilon$, a point at incident angle $\theta_1$ can be joined
-    with one with incident angle $\theta_2$ when
-    $|\theta_1 - \theta_2| < \epsilon \cdot \Delta\theta$.
+    $\epsilon_Q, \epsilon_{\Delta Q}$, a point at incident angle
+    $\theta_1$ can be joined with one with incident angle $\theta_2$ when
+    $|\theta_1 - \theta_2| < \epsilon_Q \cdot \Delta\theta$ and
+    $|\Delta\theta_1 - \Delta\theta_2| < \epsilon_{\Delta Q} \cdot \Delta\theta$.
+    Values of $\epsilon_Q=0.5$ and $\epsilon_{\Delta Q}=0.002$ work well in
+    practice. If the tolerances are both 0 then join is performed against
+    the desired positions rather than the actual positions; this more
+    closely corresponds with user intent.
 
     The join algorithm is greedy, so if you have a sequence of points with
     individual separation less than $\epsilon\cdot\Delta\theta$ but total
