@@ -47,13 +47,20 @@ def expose(action):
     use_msgpack = getattr(config, 'use_msgpack', False)
     @wraps(action)
     def wrapper(*args, **kwds):
-        if use_msgpack:
-            import msgpack, base64
-            retval = {"serialization": "msgpack", "encoding": "base64"}
-            retval['value'] = base64.b64encode(msgpack.dumps(action(*args, **kwds)))
-        else:
-            retval = {"serialization": "json", "encoding": "string"}
-            retval['value'] = sanitizeForJSON(action(*args, **kwds))
+        print ":::reflweb.api."+action.__name__
+        try:
+            if use_msgpack:
+                import msgpack, base64
+                retval = {"serialization": "msgpack", "encoding": "base64"}
+                retval['value'] = base64.b64encode(msgpack.dumps(action(*args, **kwds)))
+            else:
+                retval = {"serialization": "json", "encoding": "string"}
+                retval['value'] = sanitizeForJSON(action(*args, **kwds))
+        except Exception as exc:
+            traceback.print_exc()
+            print ">>> :::refweb.api."+action.__name__
+            raise
+        #print "leaving :::reflweb.api."+action.__name__
         return retval
     return wrapper
 
@@ -171,10 +178,10 @@ def calc_terminal(template_def, config, nodenum, terminal_id, return_type='full'
     #print "modules","\n".join(m for m in df._module_registry.keys())
     try:
         retval = process_template(template, config, target=(nodenum, terminal_id))
-    except:
+    except Exception:
         print "==== template ===="; pprint(template_def)
         print "==== config ===="; pprint(config)
-        traceback.print_exc()
+        #traceback.print_exc()
         raise
     if return_type == 'full':
         return retval.todict()
@@ -188,8 +195,8 @@ def calc_terminal(template_def, config, nodenum, terminal_id, return_type='full'
         to_export["server_git_hash"] = server_git_hash
         to_export["server_mtime"] = server_mtime
         return to_export
-    else:
-        raise KeyError(return_type + " not a valid return_type (should be one of ['full', 'plottable', 'metadata', 'export'])")
+
+    raise KeyError(return_type + " not a valid return_type (should be one of ['full', 'plottable', 'metadata', 'export'])")
 
 @expose
 def calc_template(template_def, config):
@@ -198,10 +205,10 @@ def calc_template(template_def, config):
     #print "template_def:", template_def, "config:", config
     try:
         retvals = process_template(template, config, target=(None,None))
-    except:
+    except Exception:
         print "==== template ===="; pprint(template_def)
         print "==== config ===="; pprint(config)
-        traceback.print_exc()
+        #traceback.print_exc()
         raise
     output = {}
     for rkey, rv in retvals.items():
