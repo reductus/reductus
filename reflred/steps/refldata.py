@@ -408,7 +408,10 @@ class Detector(Group):
     @property
     def solid_angle(self):
         """Detector solid angle [x,y] (radians)"""
-        return 2*arctan2(np.asarray(self.size)/2.,self.distance)
+        #return 2*arctan2(np.asarray(self.size)/2., self.distance)
+        return (2*arctan2(np.asarray(self.size)/2., self.distance)
+                if self.distance is not None
+                else np.array([0., 0.]))
 
 
 @set_fields
@@ -950,18 +953,21 @@ def _toDict(obj):
     properties = list(getattr(obj, '_fields', ()))
     properties += list(getattr(obj, '_props', ()))
     for a in properties:
-        attr = getattr(obj, a)
-        if isinstance(attr, np.integer):
-            obj = int(attr)
-        elif isinstance(attr, np.floating):
-            attr = float(attr)
-        elif isinstance(attr, np.ndarray):
-            attr = attr.tolist()
-        elif isinstance(attr, datetime.datetime):
-            attr =  [attr.year, attr.month, attr.day,
-                     attr.hour, attr.minute, attr.second]
-        props[a] = attr
+        props[a] = _toDictItem(getattr(obj, a))
     return props
+
+def _toDictItem(obj):
+    if isinstance(obj, np.integer):
+        obj = int(obj)
+    elif isinstance(obj, np.floating):
+        obj = float(obj)
+    elif isinstance(obj, np.ndarray):
+        obj = obj.tolist()
+    elif isinstance(obj, datetime.datetime):
+        obj = [obj.year, obj.month, obj.day, obj.hour, obj.minute, obj.second]
+    elif isinstance(obj, list):
+        obj = [_toDictItem(a) for a in obj]
+    return obj
 
 def _fromDict(props):
     # Note: timestamps must have the property named "date"
