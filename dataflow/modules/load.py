@@ -63,7 +63,7 @@ def url_get(fileinfo):
 def find_mtime(path):
     check_datasource()
     try:
-        url = urllib2.urlopen(DATA_SOURCE+path)
+        url = urllib2.urlopen(DEFAULT_DATA_SOURCE+path)
         mtime = url.info().getdate('last-modified')
     except urllib2.HTTPError as exc:
         raise ValueError("Could not open %r\n%s"%(path, str(exc)))
