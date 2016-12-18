@@ -71,6 +71,11 @@ def suppress_html_errors():
     HTMLTranslator.visit_system_message = visit_system_message
 
 def _skip_node(self, node):
+    try:
+        doc = node.document.nameids.keys()[0]
+        print("error while processing line %s of %s rst" % (node.line+1, doc))
+    except Exception:
+        pass
     raise SkipNode
 
 
