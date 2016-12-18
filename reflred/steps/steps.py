@@ -1122,6 +1122,20 @@ def super_load(filelist=None,
     r"""
     Load a list of nexus files from the NCNR data server.
 
+    *Qz_basis* uses one of the following values:
+
+        **actual**
+            calculates Qx and Qz as (x,z)-components of
+            $(\vec k_{\text{out}} - \vec k_\text{in})$ in sample coordinates,
+        **detector**
+            ignores the sample angle and calculates Qz
+            as $(4\pi/\lambda \sin(\theta_\text{detector}/2))$,
+        **sample**
+            ignores the detector angle and calculates Qz
+            as $(4\pi/\lambda \sin(\theta_\text{sample}))$
+        **target**
+            uses the user-supplied Qz_target values
+
     **Inputs**
 
     filelist (fileinfo[]): List of files to open.
@@ -1138,18 +1152,7 @@ def super_load(filelist=None,
     
     Qz_basis (opt:actual|detector|sample|target)
     : How to calculate Qz from instrument angles.
-        **actual**
-          calculates Qx and Qz as (x,z)-components of
-          $(\vec k_{\text{out}} - \vec k_\text{in})$ in sample coordinates,
-        **detector**
-          ignores the sample angle and calculates Qz
-          as $(4\pi/\lambda \sin(\theta_\text{detector}/2))$,
-        **sample**
-          ignores the detector angle and calculates Qz
-          as $(4\pi/\lambda \sin(\theta_\text{sample}))$
-        **target**
-          uses the user-supplied Qz_target values
-    
+
     sample_width {Sample width (mm)} (float)
     : Width of the sample along the beam direction in mm, used for
     calculating the effective resolution when the sample is smaller
@@ -1217,9 +1220,9 @@ def super_load_sorted(filelist=None,
     monitor_correction {Apply monitor deadtime correction} (bool)
     : Which deadtime constant to use for monitor deadtime.
     
-    sample_width {Sample width (mm)} (float): Width of the sample along the beam direction in mm,
-    used for calculating the effective resolution when the sample is smaller 
-    than the beam.  Leave blank to use value from data file.
+    sample_width {Sample width (mm)} (float): Width of the sample along the
+    beam direction in mm, used for calculating the effective resolution when
+    the sample is smaller than the beam.  Leave blank to use value from data file.
     
     base {Normalize by} (opt:auto|monitor|time|power|none)
     : how to convert from counts to count rates
