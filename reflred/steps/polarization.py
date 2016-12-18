@@ -21,7 +21,7 @@ Q, either due to increased divergence or wavelength dependence.
 
 
 1.  Prepare the intensity data
-===============================
+==============================
 
 To perform a polarization data reduction you must first have measured
 beam data under different polarization conditions::
@@ -251,6 +251,8 @@ def _apply_correction(data, dtheta, Hinv, use_pm, use_mp):
     y = [U(data['++'].v, data['++'].dv)]
     for p in parts[1:]:
         px = data[p].Qz
+        if len(px) != len(x):
+            raise ValueError("All cross sections must have the same length for polarization correction")
         py = U(data[p].v, data[p].dv)
         y.append(interp(x, px, py))
     Y = np.vstack(y)
@@ -260,13 +262,13 @@ def _apply_correction(data, dtheta, Hinv, use_pm, use_mp):
 
     # Apply the correction at each point
     X, dX = np.zeros(Y.shape), np.zeros(Y.shape)
-    for i,idx in enumerate(index):
+    for i, idx in enumerate(index):
         x = Hinv[idx] * UM(Y[:,i]).T
-        X[:,i], dX[:,i] = nominal_values(x).flat, std_devs(x).flat
+        X[:, i], dX[:, i] = nominal_values(x).flat, std_devs(x).flat
 
     # Put the corrected intensities back into the datasets
-    for i, xs in enumerate(parts):
-        data[xs].v, data[xs].dv = X[i,:], dX[i,:]
+    for k, xs in enumerate(parts):
+        data[xs].v, data[xs].dv = X[k,:], dX[k,:]
         data[xs].vlabel = 'counts per incident count'
         data[xs].vunits = None
 
@@ -304,7 +306,7 @@ def _correction_matrix(beta, fp, rp, x, y, use_pm, use_mp):
             [Fm_x * Rm_y, Fp_x * Rp_y  ],
             [Fm   * Rm  , Fp   * Rp    ]
             ])
-    print("H:", UM(H[:,:,0]), UM(H[:,:,0]).I)
+    #print("H:", UM(H[:,:,0]), UM(H[:,:,0]).I)
     return [UM(H[:,:,k]*Bk).I for k,Bk in enumerate(beta)]
 
 def plot_efficiency(beam, Imin=0.0, Emin=0.0, FRbal=0.5, clip=False):
