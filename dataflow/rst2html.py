@@ -5,7 +5,9 @@ Inline math markup can uses the *math* directive, or it can use latex
 style *\$expression\$*.  Math is rendered using simple html and unicode,
 not mathjax.
 """
+from __future__ import print_function
 
+import sys
 import re
 from contextlib import contextmanager
 
@@ -73,7 +75,8 @@ def suppress_html_errors():
 def _skip_node(self, node):
     try:
         doc = node.document.nameids.keys()[0]
-        print("error while processing line %s of %s rst" % (node.line+1, doc))
+        print("error while processing line %s of %s rst" % (node.line+1, doc),
+              file=sys.stderr)
     except Exception:
         pass
     raise SkipNode
