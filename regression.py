@@ -12,6 +12,10 @@ that the regression test can be quickly updated if the change is a valid
 change (e.g., if there is a bug fix in the monitor normalization for example).
 
 The location of the data sources is read from reflweb.config.
+
+Note: if the filename ends with .json, then assume it is a template file
+and run the reduction, saving the output to *replay.dat*.  This may make it
+easier to debug template errors than cycling them through reductus web client.
 """
 from __future__ import print_function
 
@@ -21,11 +25,12 @@ import json
 import re
 import importlib
 import difflib
+import traceback
 
 # Set the data sources
 from reflweb import config
 from dataflow.cache import set_test_cache
-from dataflow.core import Template
+from dataflow.core import Template, lookup_module
 from dataflow.calc import process_template
 from dataflow.modules import load
 
@@ -120,7 +125,7 @@ def replay_file(filename):
     export = retval.get_export()
     new_content = '\n\n'.join(export['values'])
 
-    has_diff = show_diff(old_content, new_content, "old", "new")
+    has_diff = show_diff(old_content, new_content)
     if has_diff:
         # Save the new output into athe temp directory so we can easily update
         # the regression tests
@@ -130,6 +135,49 @@ def replay_file(filename):
             fid.write(new_content)
         raise RuntimeError("File replay for %r differs; new file stored in %r"
                            % (filename, new_path))
+
+
+def find_leaves(template):
+    ids = set(range(len(template['modules'])))
+    sources = set(wire['source'][0] for wire in template['wires'])
+    return ids - sources
+
+def play_file(filename):
+    with open(filename) as fid:
+        template_json = json.loads(fid.read())
+
+    # Make sure instrument is available
+    template_module = template_json['modules'][0]['module']
+    instrument_id = template_module.split('.')[1]
+    load_instrument(instrument_id)
+
+    node = max(*find_leaves(template_json))
+    node_module = lookup_module(template_json['modules'][node]['module'])
+    terminal = node_module.outputs[0]['id']
+
+    #print(json.dumps(template_json, indent=2))
+
+    template = Template(**template_json)
+    template_config = {}
+    target = node, terminal
+    retval = process_template(template, template_config, target=target)
+    export = retval.get_export()
+
+    template_data = {
+        'template': template_json,
+        'node': node,
+        'terminal': terminal,
+        'server_git_hash': None,
+        'server_mtime': None,
+        #server_git_hash: result.server_git_hash,
+        #server_mtime: new Date((result.server_mtime || 0.0) * 1000).toISOString()
+    }
+    first_line = '# ' + json.dumps({'template_data': template_data})[1:-1]
+    with open('replay.dat', 'wb') as file:
+        print(first_line, file=file)
+        for section in export['values']:
+            print(section, file=file)
+            print(file=file)
 
 
 def main():
@@ -144,10 +192,13 @@ def main():
         print("usage: python -m dataflow.show datafile")
         sys.exit()
     try:
-        replay_file(sys.argv[1])
+        if sys.argv[1].endswith('.json'):
+            play_file(sys.argv[1], )
+        else:
+            replay_file(sys.argv[1])
         sys.exit(0)
     except Exception as exc:
-        print(str(exc), file=sys.stderr)
+        traceback.print_exc()
         sys.exit(1)
 
 
