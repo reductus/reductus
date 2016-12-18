@@ -63,6 +63,7 @@ def join_datasets(group, Qtol, dQtol, by_Q=False):
     env = get_env(group)
     fields.update(env)
     columns = stack_columns(group, fields)
+    columns = apply_mask(group, columns)
     columns = set_QdQ(columns)
 
     # Group points together, either by target angles, by actual angles or by Q
