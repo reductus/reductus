@@ -59,7 +59,7 @@ class FileBasedCache(object):
 
     Use this for running tests without having to start up the redis server.
     """
-    def __init__(self, size=1000, cachedir='~/.webreduce'):
+    def __init__(self, size=1000, cachedir='~/.reductus/cache'):
         self.size = size
         self.lock = threading.Lock()
         self.cachedir = os.path.expanduser(cachedir)

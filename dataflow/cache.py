@@ -17,14 +17,15 @@ import sys
 import os
 import subprocess
 import time
+import tempfile
 
 def memory_cache():
     import fakeredis
     return fakeredis.MemoryCache()
     
-def file_cache():
+def file_cache(cachedir="~/.reductus/cache"):
     import fakeredis
-    return fakeredis.FileBasedCache()
+    return fakeredis.FileBasedCache(cachedir=cachedir)
 
 # port 6379 is the default port value for the python redis connection
 def redis_connect(host="localhost", port=6379, maxmemory=4.0, **kwargs):
@@ -74,7 +75,20 @@ class CacheManager:
     """
     def __init__(self):
         self._cache = None
+        self._file_cache = None
         self._redis_kwargs = None
+    def _connect(self):
+        if self._cache is None:
+            if self._redis_kwargs is not None:
+                self._cache = redis_connect(**self._redis_kwargs)
+            else:
+                self._cache = memory_cache()
+
+    def set_test_cache(self):
+        self._cache = memory_cache()
+        cachedir = os.path.join(tempfile.gettempdir(), "reductus_test")
+        self._file_cache = file_cache(cachedir=cachedir)
+
     def use_redis(self, **kwargs):
         """
         Use redis for managing the cache.
@@ -91,12 +105,11 @@ class CacheManager:
         """
         Connect to the key-value cache.
         """
-        if self._cache is None:
-            if self._redis_kwargs is not None:
-                self._cache = redis_connect(**self._redis_kwargs)
-            else:
-                self._cache = memory_cache()
+        self._connect()
         return self._cache
+    def get_file_cache(self):
+        self._connect()
+        return self._file_cache if self._file_cache else self._cache
 
 # Singleton cache manager if you only need one cache
 CACHE_MANAGER = CacheManager()
@@ -104,3 +117,5 @@ CACHE_MANAGER = CacheManager()
 # direct access to singleton methods
 use_redis = CACHE_MANAGER.use_redis
 get_cache = CACHE_MANAGER.get_cache
+get_file_cache = CACHE_MANAGER.get_file_cache
+set_test_cache = CACHE_MANAGER.set_test_cache

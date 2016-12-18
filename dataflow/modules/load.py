@@ -2,7 +2,7 @@ import urllib2
 import datetime
 from posixpath import basename, join
 from dataflow.calc import _format_ordered
-from dataflow.cache import get_cache
+from dataflow.cache import get_file_cache
 import hashlib
 #
 
@@ -22,7 +22,7 @@ def check_datasource(source):
 def url_get(fileinfo):
     path, mtime, entries = fileinfo['path'], fileinfo['mtime'], fileinfo['entries']
     # fingerprint the get, leaving off entries information:
-    cache = get_cache()
+    cache = get_file_cache()
     fileinfo_minimal = {'path': path, 'mtime': mtime}
     config_str = str(_format_ordered(fileinfo_minimal))
     parts = ["url_get", config_str]
