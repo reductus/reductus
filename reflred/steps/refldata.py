@@ -821,16 +821,16 @@ class ReflData(Group):
     def Qz(self):
         A, B, L = self.sample.angle_x, self.detector.angle_x, self.detector.wavelength
         if self.Qz_basis == 'actual':
-            return 2*pi/L * (sin(radians(B - A)) + sin(radians(A)))
+            retval = 2*pi/L * (sin(radians(B - A)) + sin(radians(A)))
         elif self.Qz_basis == 'detector':
-            return 4*pi/L * (sin(radians(B)/2.0))
+            retval = 4*pi/L * (sin(radians(B)/2.0))
         elif self.Qz_basis == 'sample':
-            return 4*pi/L * (sin(radians(A)))
+            retval = 4*pi/L * (sin(radians(A)))
         elif self.Qz_basis == 'target':
-            return self.Qz_target
+            retval = self.Qz_target
         else:
             raise KeyError("Qz basis must be one of [actual, detector, sample, target]")
-            
+        return retval
 
     @property
     def Qx(self):
