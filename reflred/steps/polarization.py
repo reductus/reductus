@@ -155,7 +155,7 @@ for the theory?
 
 [1] C.F. Majkrzak (1996). Physica B 221, 342-356.
 """
-from __future__ import print_function
+from __future__ import print_function, division
 
 import numpy as np
 
@@ -391,7 +391,7 @@ def _calc_efficiency(beam, dtheta, Imin, Emin, FRbal, clip):
     pp,pm,mp,mm = [_interp_intensity(dtheta, beam[xs]) for xs in ALL_XS]
 
     Ic = ((mm*pp) - (pm*mp)) / ((mm+pp) - (pm+mp))
-    reject = (Ic!=Ic)  # Reject nothing initially
+    reject = np.zeros_like(Ic, dtype='bool')  # Reject nothing initially
     if clip:
         reject |= _clip_data(Ic, Imin, np.inf)
     beta = Ic/2
