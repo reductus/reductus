@@ -930,7 +930,7 @@ class ReflData(Group):
             fid.write("# %s\n" % (json.dumps({"wavelength_resolution": float(wavelength_resolution[0])}).strip("{}"),))
         fid.write("# %s\n" % (json.dumps(columns).strip("{}"),))
         fid.write("# %s\n" % (json.dumps(units).strip("{}"),))
-        np.savetxt(fid, np.vstack([self.x, self.v, self.dv, self.dx]).T)
+        np.savetxt(fid, np.vstack([self.x, self.v, self.dv, self.dx]).T, fmt="%.10e")
         fid.seek(0)
         return fid.read()
         
