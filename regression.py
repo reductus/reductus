@@ -52,6 +52,7 @@ def load_instrument(instrument_id):
         instrument_module_name = 'dataflow.modules.'+instrument_id
         instrument_module = importlib.import_module(instrument_module_name)
         instrument_module.define_instrument()
+        LOADED_INSTRUMENTS.add(instrument_id)
 
 
 def show_diff(old, new, show_diff=True):
