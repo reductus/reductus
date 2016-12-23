@@ -24,14 +24,18 @@ serve_staticfiles = True
 use_redis = True
 data_sources = {
     "ncnr": {
-        "url": "http://charlotte.ncnr.nist.gov/pub/",
+        "url": "http://ncnr.nist.gov/pub/",
         "start_path": "ncnrdata"
+    },
+    "ncnr_DOI": {
+        "DOI": "10.18434/T4201B"
     },
     # set start_path for local files to usr/local/nice/server_data/experiments
     # for instrument installs
     "local": {"url": "file:///"}
 }
 file_helper_url = {
-    "ncnr": "http://ncnr.nist.gov/ipeek/listftpfiles.php"
+    "ncnr": "http://ncnr.nist.gov/ipeek/listftpfiles.php",
+    "ncnr_DOI": "http://ncnr.nist.gov/ipeek/listncnrdatafiles.php"
 }
 instruments = ["refl"]

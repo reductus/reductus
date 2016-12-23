@@ -1,6 +1,6 @@
 import urllib2
 import datetime
-from posixpath import basename, join
+from posixpath import basename, join, sep
 from dataflow.calc import _format_ordered
 from dataflow.cache import get_file_cache
 import hashlib
@@ -16,8 +16,22 @@ DATA_SOURCES = {}
 DEFAULT_DATA_SOURCE = "ncnr"
 
 def check_datasource(source):
-    if not source in DATA_SOURCES:
-        raise RuntimeError("Need to set reflred.steps.load.DATA_SOURCES['" + source + "'] first!")
+    try:
+        datasource = DATA_SOURCES[source]
+    except KeyError:
+        raise RuntimeError("Need to set dataflow.modules.load.DATA_SOURCES['" + source + "'] first!")
+    if "url" in datasource:
+        source_url = datasource["url"]
+    elif "DOI" in datasource:
+        from dataflow.modules.doi_resolve import get_target
+        source_url = get_target(datasource["DOI"])
+        print("resolving DOI %s to url %s" % (datasource["DOI"], source_url))
+        datasource["url"] = source_url # cache for next access
+    else:
+        source_url = ""
+        raise RuntimeError("Must have url specified for data source: " + source + " in config.")
+    return source_url
+        
 
 def url_get(fileinfo):
     path, mtime, entries = fileinfo['path'], fileinfo['mtime'], fileinfo['entries']
@@ -29,14 +43,14 @@ def url_get(fileinfo):
     fp = hashlib.sha1(":".join(parts)).hexdigest()
     if cache.exists(fp):
         ret = cache.get(fp)
-        print "getting " + path + " from cache!"
+        print("getting " + path + " from cache!")
     else:
         source = fileinfo.get("source", DEFAULT_DATA_SOURCE)
         name = basename(path)
-        check_datasource(source)
-        full_url = join(DATA_SOURCES[source], path)
+        source_url = check_datasource(source)
+        full_url = join(source_url, path.strip(sep))
         url = None
-        print "loading", full_url
+        print("loading", full_url, name)
         try:
             url = urllib2.urlopen(full_url)
             url_time_struct = url.info().getdate('last-modified')
