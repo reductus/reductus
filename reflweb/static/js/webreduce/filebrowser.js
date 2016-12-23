@@ -23,7 +23,8 @@
     var fileinfo = {};
     var file_objs = {};
     webreduce.editor._file_objs = webreduce.editor._file_objs || {};
-    webreduce.editor._file_objs[path] = file_objs;
+    webreduce.editor._file_objs[datasource] = webreduce.editor._file_objs[datasource] || {};
+    webreduce.editor._file_objs[datasource][path] = file_objs;
     var datafiles = files.filter(function(x) {return (
       NEXUS_ZIP_REGEXP.test(x) &&
       (/^(fp_)/.test(x) == false) &&
@@ -47,7 +48,7 @@
     var p = loader(load_params, file_objs)
       .then(function(results) {
         var categorizers = webreduce.instruments[instrument_id].categorizers;
-        var treeinfo = file_objs_to_tree(file_objs, categorizers);
+        var treeinfo = file_objs_to_tree(file_objs, categorizers, datasource);
         // add decorators etc to the tree with postprocess:
         var postprocess = webreduce.instruments[instrument_id].postprocess;
         if (postprocess) { postprocess(treeinfo, file_objs) }
@@ -115,7 +116,7 @@
   }
 
   // categorizers are callbacks that take an info object and return category string
-  function file_objs_to_tree(file_objs, categorizers) {
+  function file_objs_to_tree(file_objs, categorizers, datasource) {
     // file_obj should always be a list of entries
     var out = [], categories_obj = {}, fm;
 
@@ -141,7 +142,7 @@
           cobj = cobj[category]; // walk the tree...
         }
         // modify the last entry to include key of file_obj
-        leaf['li_attr'] = {"filename": p, "entryname": entryname, "mtime": entry.mtime};
+        leaf['li_attr'] = {"filename": p, "entryname": entryname, "mtime": entry.mtime, "datasource": datasource};
       }
     }
     // if not empty, push in the root node:
@@ -152,8 +153,8 @@
   var add_data_source = function(target_id, source, pathlist) {
     var new_div = $("<div />", {"class": "databrowser", "datasource": source});
     $("#" + target_id).append(new_div);
-    webreduce.server_api.get_file_metadata(source, path).then(function(result) {
-      webreduce.updateFileBrowserPane(new_div[0], source, path)(result);
+    webreduce.server_api.get_file_metadata(source, pathlist).then(function(result) {
+      webreduce.updateFileBrowserPane(new_div[0], source, pathlist)(result);
     });
   }
 
@@ -389,7 +390,7 @@
       if (jstree) {
         var path = getCurrentPath(this.parentNode);
         var source = getDataSource(this.parentNode);
-        var file_objs = webreduce.editor._file_objs[path] || {};
+        var file_objs = (webreduce.editor._file_objs[source] || {})[path] || {};
         //var selected_nodes = jstree.get_selected().map(function(s) {return jstree.get_node(s)});
         var checked_nodes = jstree.get_checked().map(function(s) {return jstree.get_node(s)});
         var entrynodes = checked_nodes.filter(function(n) {

@@ -146,12 +146,12 @@ webreduce.instruments['ncnr.refl'] = webreduce.instruments['ncnr.refl'] || {};
     var jstree = target.jstree(true);
     var source_id = target.parent().attr("id");
     var path = webreduce.getCurrentPath(target.parent());
-    var file_objs = webreduce.editor._file_objs[path];
     var leaf, entry;
     // first set min and max for entries:
     for (fn in jstree._model.data) {
       leaf = jstree._model.data[fn];
-      if (leaf.li_attr && 'filename' in leaf.li_attr && 'entryname' in leaf.li_attr) {
+      if (leaf.li_attr && 'filename' in leaf.li_attr && 'entryname' in leaf.li_attr && 'datasource' in leaf.li_attr) {
+        var file_objs = webreduce.editor._file_objs[leaf.li_attr.datasource][path];
         entry = file_objs[leaf.li_attr.filename].values.filter(function(f) {return f.entry == leaf.li_attr.entryname});
         if (entry && entry[0]) {
           var e = entry[0];
@@ -196,11 +196,11 @@ webreduce.instruments['ncnr.refl'] = webreduce.instruments['ncnr.refl'] || {};
     var jstree = target.jstree(true);
     var source_id = target.parent().attr("id");
     var path = webreduce.getCurrentPath(target.parent());
-    var file_objs = webreduce.editor._file_objs[path];
     var leaf, entry;
     for (fn in jstree._model.data) {
       leaf = jstree._model.data[fn];
-      if (leaf.li_attr && 'filename' in leaf.li_attr && 'entryname' in leaf.li_attr) {
+      if (leaf.li_attr && 'filename' in leaf.li_attr && 'entryname' in leaf.li_attr && 'datasource' in leaf.li_attr) {
+        var file_objs = webreduce.editor._file_objs[leaf.li_attr.datasource][path];
         entry = file_objs[leaf.li_attr.filename].values.filter(function(f) {return f.entry == leaf.li_attr.entryname});
         if (entry && entry[0]) {
           var e = entry[0];
@@ -225,8 +225,11 @@ webreduce.instruments['ncnr.refl'] = webreduce.instruments['ncnr.refl'] || {};
       leaf = jstree._model.data[fn];
       if (leaf.children.length > 0) {
         first_child = jstree._model.data[leaf.children[0]];
-        if (first_child.li_attr && 'filename' in first_child.li_attr && 'entryname' in first_child.li_attr) {
+        if (first_child.li_attr && 'filename' in first_child.li_attr && 'entryname' in first_child.li_attr && 'datasource' in first_child.li_attr) {
           var fullpath = first_child.li_attr.filename;
+          var datasource = first_child.li_attr.datasource;
+          if (["ncnr", "ncnr_DOI"].indexOf(datasource) < 0) { continue }
+          if (datasource == "ncnr_DOI") { fullpath = "ncnrdata" + fullpath; }
           var pathsegments = fullpath.split("/");
           var pathlist = pathsegments.slice(0, pathsegments.length-1).join("+");
           var filename = pathsegments.slice(-1);
