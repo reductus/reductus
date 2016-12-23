@@ -191,15 +191,9 @@ webreduce.instruments = webreduce.instruments || {};
             )
             .append($("<li />", {id: "data_menu_sources", text: "Add source"})
               .append($("<ul />"))
-              .on("click", "ul li", function() {
-                // delegated click handler, so it can get events on elements not added yet
-                // (added during startup)
-                  hide_menu();
-                  webreduce.addDataSource("navigation", $(this).text(), []);
-                })
-              )
             )
           )
+        )
         .append($("<li />", {id: "instrument_menu", text: "Instrument"})
           .append($("<ul />"))
           .on("click", "ul li", function(ev) {
@@ -263,9 +257,20 @@ webreduce.instruments = webreduce.instruments || {};
       
       webreduce.server_api.list_datasources()
         .then(function(datasources) {
-          datasources.forEach(function(d, i){
-            $("#main_menu #data_menu_sources ul").append($("<li />", {text: d}));
-              $("#main_menu").menu("refresh");
+          webreduce._datasources = datasources;
+          var dkeys = Object.keys(datasources);
+          dkeys.forEach(function(d, i){
+            var dsource = datasources[d];
+            var pathlist = (dsource.start_path || "").split("/");
+            $("#main_menu #data_menu_sources ul").append($("<li />", {
+              text: d,
+              start_path: dsource.start_path || "",
+              click: function() {
+                hide_menu();
+                webreduce.addDataSource("navigation", d, pathlist);
+              }
+            }));
+            $("#main_menu").menu("refresh");
           });
         });
         

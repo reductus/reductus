@@ -18,13 +18,18 @@
 jsonrpc_servername = "localhost"
 jsonrpc_port = 8001
 # ssl_args for https serving the rpc
-ssl_args = {"keyfile": None, "certfile": None}
+# ssl_args = {"keyfile": None, "certfile": None}
 http_port = 8000
 serve_staticfiles = True
 use_redis = True
 data_sources = {
-    "ncnr": "http://ncnr.nist.gov/pub/",
-    "local": "file:///"
+    "ncnr": {
+        "url": "http://charlotte.ncnr.nist.gov/pub/",
+        "start_path": "ncnrdata"
+    },
+    # set start_path for local files to usr/local/nice/server_data/experiments
+    # for instrument installs
+    "local": {"url": "file:///"}
 }
 file_helper_url = {
     "ncnr": "http://ncnr.nist.gov/ipeek/listftpfiles.php"

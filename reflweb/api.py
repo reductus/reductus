@@ -220,7 +220,7 @@ def calc_template(template_def, config):
 
 @expose
 def list_datasources():
-    return config.data_sources.keys()
+    return config.data_sources
 
 @expose    
 def list_instruments():

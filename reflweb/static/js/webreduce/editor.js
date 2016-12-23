@@ -791,6 +791,7 @@ webreduce.editor = webreduce.editor || {};
           template: params.template,
           node: params.node,
           terminal: params.terminal,
+          datasources: webreduce._datasources,
           server_git_hash: result.server_git_hash,
           server_mtime: new Date((result.server_mtime || 0.0) * 1000).toISOString()
         }
