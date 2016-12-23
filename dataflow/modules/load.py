@@ -20,9 +20,11 @@ def check_datasource(source):
         datasource = DATA_SOURCES[source]
     except KeyError:
         raise RuntimeError("Need to set dataflow.modules.load.DATA_SOURCES['" + source + "'] first!")
-    if "url" in datasource:
+    if isinstance(datasource, str):
+        source_url = datasource
+    elif isinstance(datasource, dict) and "url" in datasource:
         source_url = datasource["url"]
-    elif "DOI" in datasource:
+    elif isinstance(datasource, dict) and "DOI" in datasource:
         from dataflow.modules.doi_resolve import get_target
         source_url = get_target(datasource["DOI"])
         print("resolving DOI %s to url %s" % (datasource["DOI"], source_url))
