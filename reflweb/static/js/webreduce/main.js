@@ -36,6 +36,18 @@ webreduce.instruments = webreduce.instruments || {};
   webreduce.callbacks = {};
   webreduce.callbacks.resize_center = function() {};
   
+  window.onbeforeunload = function (e) {
+    var e = e || window.event;
+    var msg = "Do you really want to leave this page?"
+
+    // For IE and Firefox
+    if (e) {
+        e.returnValue = msg;
+    }
+
+    // For Safari / chrome
+    return msg;
+  };
 
   window.onpopstate = function(e) {
     // called by load on Safari with null state, so be sure to skip it.

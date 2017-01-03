@@ -184,80 +184,6 @@
     });
     return fsp;
   }
-  /*
-  webreduce.collate_sourcepaths = function(template) {
-    var sourcepaths = d3.set();
-    template.modules.forEach(function(m) {
-      var module_def = webreduce.editor._module_defs[m.module];
-      var file_fields = module_def.fields.filter(function(f) {return f.datatype == 'fileinfo'});
-      file_fields.forEach(function(ff) {
-        if (m.config && ff.id in m.config) {
-          var fileinfos = m.config[ff.id];
-          if (fileinfos instanceof Array) {
-            fileinfos.forEach(function(fi) {
-              var path = fi.path.split("/").slice(0,-1).join("/");
-              sourcepaths.add(path);
-            });
-          }
-        }
-      });
-    });
-    return sourcepaths;
-  }
-  */
-  /*
-  function finfo_to_tree(finfo, path, categorizers){
-      var out = [], sample_names = {};
-      console.log(Object.keys(finfo));
-      for (var fn in finfo) {
-        var fn_info = finfo[fn];
-        var short_fn = fn.split("/").slice(-1)[0];
-        for (var entry in fn_info) {
-          var info = fn_info[entry];
-          var samplename = info.samplename,
-              scantype = info.scantype || "unknown";
-          if (!info.samplename) {
-            samplename = short_fn.split(".").slice(0)[0];
-          }
-          sample_names[samplename] = sample_names[samplename] || {};
-          sample_names[samplename][scantype] = sample_names[samplename][scantype] || {};
-          // min_x and max_x for a file are grabbed from the first entry that pops up:
-          sample_names[samplename][scantype][short_fn] = sample_names[samplename][scantype][short_fn] || {min_x: info.min_x, max_x: info.max_x};
-          out.push({
-            "id": short_fn+":"+entry,
-            "parent": short_fn,
-            //"text": fn + ":" + entry,
-            "text": entry,
-            "icon": false,
-            "li_attr": {"path": path, "min_x": info.min_x, "max_x": info.max_x}
-          });
-        }
-      }
-      for (var sn in sample_names) {
-        out.push({"id": sn, "parent": "#", "text": sn});
-        var sample_obj = sample_names[sn];
-        for (var t in sample_obj) {
-          var type_obj = sample_obj[t];
-          var global_min_x = Infinity,
-              global_max_x = -Infinity;
-          for (var fn in type_obj) {
-            // once through to get max and min...
-            var f_obj = type_obj[fn];
-            global_min_x = Math.min(f_obj.min_x, global_min_x);
-            global_max_x = Math.max(f_obj.max_x, global_max_x);
-          }
-          for (var fn in type_obj) {
-            // and again to make the range icon.
-            var f_obj = type_obj[fn];
-            var range_icon = make_range_icon(global_min_x, global_max_x, f_obj.min_x, f_obj.max_x);
-            out.push({"id": fn, "parent": sn + ":" + t, "text": "<span>"+fn+"</span>" + range_icon, "icon": false, "li_attr": {"min_x": f_obj.min_x, "max_x": f_obj.max_x, "class": "datafile"}});
-          }
-          out.push({"id": sn + ":" + t, "parent": sn, "text": t, "li_attr": {"min_x": global_min_x, "max_x": global_max_x}});
-        }
-      }
-      return out;
-    }
-  */
 
   var getCurrentPath = function(target_id) {
     // get the path from a specified path browser element
@@ -322,11 +248,10 @@
             dirlink = document.createElement('span');
             dirlink.textContent = pathitem + "/";
             dirlink.onclick = function() {
-              //history.pushState({}, "", "?pathlist=" + new_pathlist.slice(0, index+1).join("+"));
               webreduce.server_api.get_file_metadata(datasource, new_pathlist.slice(0, index+1))
               .then( function (metadata) {                
                 updateFileBrowserPane(target, datasource, new_pathlist.slice(0, index+1))(metadata);
-                updateHistory($(target).parent());
+                //updateHistory($(target).parent());
               })
             }
             patheditor.appendChild(dirlink);
@@ -344,11 +269,10 @@
           var new_pathlist = $.extend(true, [], pathlist);
           new_pathlist.push(subdir);
           subdiritem.onclick = function() {
-            //history.pushState({}, "", "?pathlist=" + new_pathlist.join("+"));
             webreduce.server_api.get_file_metadata(datasource, new_pathlist)
               .then( function (metadata) {
                 updateFileBrowserPane(target, datasource, new_pathlist)(metadata);
-                updateHistory($(target).parent());
+                //updateHistory($(target).parent());
               })
           }
           dirbrowser.appendChild(subdiritem);
