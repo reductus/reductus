@@ -40,13 +40,16 @@ webreduce.instruments = webreduce.instruments || {};
   window.onpopstate = function(e) {
     // called by load on Safari with null state, so be sure to skip it.
     //if (e.state) {
-    var start_path = null,
-      url_vars = getUrlVars(),
-      source = 'ncnr';
+    var datasources = webreduce._datasources || {},
+        url_vars = getUrlVars(),
+        source = Object.keys(datasources)[0],
+        start_path = "";
+        
     url_vars.forEach(function(v, i) {
       if (v[0] == 'pathlist' && v[1] && v[1].length) {
-        start_path = v[1].split("/");
-        webreduce.addDataSource("navigation", source, start_path);
+        start_path = v[1];
+        var pathlist = start_path.split("/");
+        webreduce.addDataSource("navigation", source, pathlist);
       }
       else if (v[0] == 'source' && v[1]) {
         source = v[1];
@@ -59,8 +62,13 @@ webreduce.instruments = webreduce.instruments || {};
     
     webreduce.editor.load_stashes();
     
-    if (start_path == null) {
-      webreduce.addDataSource("navigation", source, data_path);
+    if (start_path == "") {
+      // no data sources added - add the default
+      if (source in datasources && 'start_path' in datasources[source]) {
+        start_path = datasources[source]['start_path'];
+      }
+      var pathlist = start_path.split("/");
+      webreduce.addDataSource("navigation", source, pathlist);
     }
   }
 
@@ -255,7 +263,7 @@ webreduce.instruments = webreduce.instruments || {};
       });
       webreduce.editor.create_instance("bottom_panel");
       
-      webreduce.server_api.list_datasources()
+      var list_datasources = webreduce.server_api.list_datasources()
         .then(function(datasources) {
           webreduce._datasources = datasources;
           var dkeys = Object.keys(datasources);
@@ -272,14 +280,16 @@ webreduce.instruments = webreduce.instruments || {};
             }));
             $("#main_menu").menu("refresh");
           });
+          return dkeys[0];
         });
         
-      webreduce.server_api.list_instruments()
+      var list_instruments = webreduce.server_api.list_instruments()
         .then(function(instruments) {
           instruments.forEach(function(d, i){
             $("#main_menu #instrument_menu ul").append($("<li />", {text: d}));
               $("#main_menu").menu("refresh");
           });
+          return instruments[0];
         });
       
       webreduce.update_file_mtimes = function(template) {
@@ -346,9 +356,13 @@ webreduce.instruments = webreduce.instruments || {};
         }
       }
 
-      webreduce.editor.switch_instrument(current_instrument)
-        .then(function() { window.onpopstate() })
-        .catch(function(e) { console.log(e) });
+      Promise.all([list_instruments, list_datasources]).then(function(results) {
+        var instr = results[0],
+            datasource = results[1];
+        webreduce.editor.switch_instrument(instr)
+          .then(function() { window.onpopstate() })
+          .catch(function(e) { console.log(e) });
+      });
     });
   }
 

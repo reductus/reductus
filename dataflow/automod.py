@@ -557,7 +557,8 @@ def parse_datatype(par):
 
             {
                 *path*: location on server,
-                *mtime*: modification time
+                *mtime*: modification time,
+                *source*: data repository (ncnr, ncnr_DOI, local...)
             }
 
         The user interface should present a list of files to choose from,

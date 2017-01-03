@@ -151,6 +151,7 @@
   }
 
   var add_data_source = function(target_id, source, pathlist) {
+    var pathlist = pathlist || [];
     var new_div = $("<div />", {"class": "databrowser", "datasource": source});
     $("#" + target_id).append(new_div);
     webreduce.server_api.get_file_metadata(source, pathlist).then(function(result) {
