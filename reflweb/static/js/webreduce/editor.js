@@ -226,13 +226,17 @@ webreduce.editor = webreduce.editor || {};
               active_module: active_module
             }
             var fieldUI = fieldUImaker.call(context);
-            if (passthrough) {fieldUI.property("disabled", true)};
-            fieldUI.on("input.auto_accept", function() {
+            var auto_accept = function() {
               //console.log(this, d3.select(this).datum(), 'changing!');
               if ($("#auto_accept_changes").prop("checked")) {
                 webreduce.editor.accept_parameters(config_target, active_module);
               }
-            });
+            }
+            if (passthrough) {fieldUI.property("disabled", true)};
+            fieldUI
+              .on("input.auto_accept", auto_accept)
+              .on("change.auto_accept", auto_accept)
+              
           }
         });
       });
