@@ -227,7 +227,7 @@ webreduce.editor = webreduce.editor || {};
             }
             var fieldUI = fieldUImaker.call(context);
             if (passthrough) {fieldUI.property("disabled", true)};
-            fieldUI.on("change.auto_accept", function() {
+            fieldUI.on("input.auto_accept", function() {
               //console.log(this, d3.select(this).datum(), 'changing!');
               if ($("#auto_accept_changes").prop("checked")) {
                 webreduce.editor.accept_parameters(config_target, active_module);
@@ -938,7 +938,7 @@ webreduce.editor = webreduce.editor || {};
       index_div.datum(datum);
       input.text(prettyJSON(datum.value));
       var event = document.createEvent('Event');
-      event.initEvent('change', true, true);
+      event.initEvent('input', true, true);
       input.node().dispatchEvent(event);
     }
     
@@ -1112,7 +1112,7 @@ webreduce.editor = webreduce.editor || {};
         datum.value[i] = new_scale * original_datum[i];
         input.text(JSON.stringify(datum.value, null, 2));
         var event = document.createEvent('Event');
-		event.initEvent('change', true, true);
+		event.initEvent('input', true, true);
 		input.node().dispatchEvent(event);
         chart.update();
       }
@@ -1206,7 +1206,7 @@ webreduce.editor = webreduce.editor || {};
             .attr("type", "number")
             .attr("field_id", field.id)
             .attr("value", datum.value)
-            .on("change", function(d) { datum.value = parseFloat(this.value) });
+            .on("input", function(d) { datum.value = (this.value == "") ? null : parseFloat(this.value) });
     }
     return input;
   }
@@ -1227,7 +1227,7 @@ webreduce.editor = webreduce.editor || {};
           .attr("type", "number")
           .attr("field_id", field.id)
           .attr("value", datum.value)
-          .on("change", function(d) { datum.value = parseInt(this.value) });
+          .on("input", function(d) { datum.value = (this.value == "") ? null : parseInt(this.value) });
     return input;
   }
   webreduce.editor.make_fieldUI.int = intUI;
