@@ -1,5 +1,5 @@
 from MetaArray import MetaArray
-from numpy import ndarray, array, fromstring, float, float32, ones, empty, newaxis, savetxt, sqrt, mod, isnan, ma
+from numpy import ndarray, array, fromstring, float, float32, ones, empty, newaxis, savetxt, sqrt, mod, isnan, ma, hstack
 #from ...dataflow.core import Data
 from cStringIO import StringIO
 
@@ -107,8 +107,11 @@ class FilterableMetaArray(MetaArray):
             from StringIO import StringIO
             fid = StringIO()
             cols = self._info[1]['cols']
-            data_cols = [col['name'] for col in cols if not col['name'].startswith('error')]
-            savetxt(fid, self, header="\t".join(data_cols))
+            # put x axis in first:
+            data_cols = [self._info[0]['name']]
+            data_cols.extend([col['name'] for col in cols if not col['name'].startswith('error')])
+            output_data = hstack((self._info[0]['values'][:,None], self))
+            savetxt(fid, output_data, header="\t".join(data_cols))
             fid.seek(0)
             return fid.read()
         else:
