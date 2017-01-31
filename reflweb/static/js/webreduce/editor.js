@@ -778,12 +778,10 @@ webreduce.editor = webreduce.editor || {};
     return r;
   }
   
-  webreduce.editor.export_data = function(suggested_name) {
-    var suggested_name = (suggested_name == null) ?  "myfile.refl" : suggested_name;
-    var filename = prompt("Export data as:", suggested_name);
-    if (filename == null) {return} // cancelled
-    var w = webreduce.editor,
-      params = {
+  webreduce.editor.export_data = function(filename) {
+    var w = webreduce.editor;
+    if (w._active_terminal == null) { alert("no input or output selected to export"); }
+    var params = {
         template: w._active_template,
         config: {},
         node: w._active_node,
@@ -805,7 +803,13 @@ webreduce.editor = webreduce.editor || {};
           instrument_id: w._instrument_id
         }
       };
-      webreduce.download('# ' + JSON.stringify(header).slice(1,-1) + '\n' + result.values.join('\n\n'), filename);
+      if (filename == null) {
+        var suggested_name = (result.values[0] || {}).name || "myfile.refl";
+        var filename = prompt("Export data as:", suggested_name);
+      }
+      if (filename == null) {return} // cancelled
+      var export_strings = result.values.map(function(v) { return v.export_string });
+      webreduce.download('# ' + JSON.stringify(header).slice(1,-1) + '\n' + export_strings.join('\n\n'), filename);
     });       
   }
   

@@ -1,7 +1,7 @@
 // require(jstree, webreduce.server_api)
 
 (function () {
-  var NEXUS_ZIP_REGEXP = /\.nxz\.[^\.\/]+$/
+  var NEXUS_ZIP_REGEXP = /\.nxz\.[^\.\/]+(?:\.zip)*$/
   var PARALLEL_LOAD = true;
   
   function make_range_icon(global_min_x, global_max_x, min_x, max_x) {

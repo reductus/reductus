@@ -80,6 +80,7 @@ class FilterableMetaArray(MetaArray):
         return metadata
     
     def export(self):
+        return_value = {"name": self.extrainfo["friendly_name"], "entry": self.extrainfo["entry"]}
         if len(self.shape) == 3:
             # return gnuplottable format:
             """ export 2d data to gnuplot format """
@@ -102,7 +103,8 @@ class FilterableMetaArray(MetaArray):
                         dump += "%g\t%g\t%g\n" % (x, y, array_out[ix, iy])
                 result.append(dump)
                 
-            return result[0]
+            return_value["export_string"] =  result[0]
+            
         elif len(self.shape) == 2:
             from StringIO import StringIO
             fid = StringIO()
@@ -113,10 +115,13 @@ class FilterableMetaArray(MetaArray):
             output_data = hstack((self._info[0]['values'][:,None], self))
             savetxt(fid, output_data, header="\t".join(data_cols))
             fid.seek(0)
-            return fid.read()
+            return_value["export_string"] = fid.read()
+            
         else:
             print "can only handle 1d or 2d data"
-            return 
+            return_value["export_string"] = ""
+            
+        return return_value
         
     def get_plottable(self, binary_fp=None):
         if len(self.shape) == 3:

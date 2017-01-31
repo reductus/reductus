@@ -131,8 +131,9 @@ webreduce.instruments = webreduce.instruments || {};
         };
       }());
       
-      var upload_dialog = $("#upload_template").dialog({autoOpen: false});
-      var reload_exported_dialog = $("#reload_exported").dialog({autoOpen: false});
+      var upload_dialog = $("#upload_template").dialog({autoOpen: false, width: 400});
+      var reload_exported_dialog = $("#reload_exported").dialog({autoOpen: false, width: 400});
+      var export_data = $("#export_data").dialog({autoOpen: false, width: 400});
       
       ////////////////////////////////////////////////////////////////////
       // Make a menu

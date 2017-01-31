@@ -263,4 +263,6 @@
         margin: 0;
     }
 
-        
+    div.ui-dialog {
+        width: 450px;
+    }

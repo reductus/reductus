@@ -932,7 +932,9 @@ class ReflData(Group):
         fid.write("# %s\n" % (json.dumps(units).strip("{}"),))
         np.savetxt(fid, np.vstack([self.x, self.v, self.dv, self.dx]).T, fmt="%.10e")
         fid.seek(0)
-        return fid.read()
+        name = getattr(self, "name", "default_name") #  + "_" + getattr(self, "entry", "default_entry")
+        entry = getattr(self, "entry", "default_entry")
+        return {"name": name, "entry": entry, "export_string": fid.read()}
         
     def get_plottable(self):
         return self.todict()
