@@ -527,7 +527,8 @@ webreduce.editor = webreduce.editor || {};
     var w = webreduce.editor,
       node = w._active_node,
       terminal = w._active_terminal,
-      template = w._active_template;
+      template = w._active_template,
+      instrument_id = w._instrument_id;
     var template_copy = jQuery.extend(true, {}, template);
     var subroutine = {};
     subroutine.module = "user.stashed"
@@ -538,7 +539,8 @@ webreduce.editor = webreduce.editor || {};
       "fields": [],
       "outputs": [{"source_module": node, "source_terminal": terminal, "terminal_id": "stashed"}],
       "action_id": "subroutine",
-      "description": "previously processed data"
+      "description": "previously processed data",
+      "instrument_id": instrument_id
     }
     existing_stashes[stashname] = subroutine;
     localStorage['webreduce.editor.stashes'] = JSON.stringify(existing_stashes);
@@ -613,7 +615,8 @@ webreduce.editor = webreduce.editor || {};
       var template = stashed.module_def.template;
       var node = stashed.module_def.outputs[0].source_module;
       var terminal = stashed.module_def.outputs[0].source_terminal;
-      webreduce.editor.load_template(template, node, terminal);
+      var instrument_id = stashed.module_def.instrument_id;
+      webreduce.editor.load_template(template, node, terminal, instrument_id);
     }
   }
   
@@ -781,11 +784,12 @@ webreduce.editor = webreduce.editor || {};
     if (filename == null) {return} // cancelled
     var w = webreduce.editor,
       params = {
-		template: w._active_template,
+        template: w._active_template,
         config: {},
         node: w._active_node,
         terminal: w._active_terminal,
-        return_type: "export"
+        return_type: "export",
+        instrument: w._instrument_id
       },
       recalc_mtimes = $("#auto_reload_mtimes").prop("checked");
     webreduce.editor.calculate(params, recalc_mtimes).then(function(result) {
@@ -797,7 +801,8 @@ webreduce.editor = webreduce.editor || {};
           terminal: params.terminal,
           datasources: webreduce._datasources,
           server_git_hash: result.server_git_hash,
-          server_mtime: new Date((result.server_mtime || 0.0) * 1000).toISOString()
+          server_mtime: new Date((result.server_mtime || 0.0) * 1000).toISOString(),
+          instrument_id: w._instrument_id
         }
       };
       webreduce.download('# ' + JSON.stringify(header).slice(1,-1) + '\n' + result.values.join('\n\n'), filename);
@@ -1280,7 +1285,14 @@ webreduce.editor = webreduce.editor || {};
       })
   }
   
-  webreduce.editor.switch_instrument = function(instrument_id) {
+  webreduce.editor.switch_instrument = function(instrument_id, load_default) {
+    // load_default_template is a boolean: true if you want to do that action
+    // (defaults to true)
+    var load_default = (load_default == null) ? true : load_default;
+    if (instrument_id == webreduce.editor._instrument_id) {
+      // then there's nothing to do...
+      return Promise.resolve();
+    }
     return this.load_instrument(instrument_id)
       .then(function(instrument_def) { 
           var template_names = Object.keys(instrument_def.templates);
@@ -1297,9 +1309,13 @@ webreduce.editor = webreduce.editor || {};
               default_template = test_template_name;
             }
           }
-          current_instrument = instrument_id;
-          var template_copy = jQuery.extend(true, {}, instrument_def.templates[default_template]);
-          return webreduce.editor.load_template(template_copy);
+          if (load_default) {
+            current_instrument = instrument_id;
+            var template_copy = jQuery.extend(true, {}, instrument_def.templates[default_template]);
+            return webreduce.editor.load_template(template_copy);
+          } else {
+            return 
+          }
         });
   }
   
@@ -1313,7 +1329,7 @@ webreduce.editor = webreduce.editor || {};
             te.e.import(template_def);
           })
       d3.select(te.document.getElementById("apply_changes")).on('click', function() {
-        webreduce.editor.load_template(te.e.export());
+        webreduce.editor.load_template(te.e.export(), null, null, instrument_id);
       });
     }
     if (this._active_template_editor == null || this._active_template_editor.closed) {
@@ -1323,47 +1339,54 @@ webreduce.editor = webreduce.editor || {};
     }
   }
   
-  webreduce.editor.load_template = function(template_def, selected_module, selected_terminal) {
-    this._active_template = template_def;
-    var template_sourcepaths = webreduce.getAllTemplateSourcePaths(template_def),
-        browser_sourcepaths = webreduce.getAllBrowserSourcePaths();
-    for (var source in template_sourcepaths) {
-      var paths = template_sourcepaths[source];
-      for (var path in paths) {
-        if (browser_sourcepaths.findIndex(function(sp) {return sp.source == source && sp.path == path}) < 0) {
-          webreduce.addDataSource("navigation", source, path.split("/"));
+  webreduce.editor.load_template = function(template_def, selected_module, selected_terminal, instrument_id) {
+    var we = this;
+    var instrument_id = instrument_id || we._instrument_id;
+    var r = we.switch_instrument(instrument_id, false).then(function() {
+        
+      we._active_template = template_def;
+      var template_sourcepaths = webreduce.getAllTemplateSourcePaths(template_def),
+          browser_sourcepaths = webreduce.getAllBrowserSourcePaths();
+      for (var source in template_sourcepaths) {
+        var paths = template_sourcepaths[source];
+        for (var path in paths) {
+          if (browser_sourcepaths.findIndex(function(sp) {return sp.source == source && sp.path == path}) < 0) {
+            webreduce.addDataSource("navigation", source, path.split("/"));
+          }
         }
       }
-    }
-    var target = d3.select("#" + this._target_id);
-    this._instance.import(template_def);
+      var target = d3.select("#" + we._target_id);    
+      we._instance.import(template_def);
 
-    target.selectAll(".module").classed("draggable wireable", false);
-    target.selectAll("g.module").on("click", webreduce.editor.handle_module_clicked);
-    //target.selectAll("g.module").on("contextmenu", webreduce.editor.handle_module_contextmenu);
-    
-    autoselected = template_def.modules.findIndex(function(m) {
-      var has_fileinfo = webreduce.editor._module_defs[m.module].fields
-        .findIndex(function(f) {return f.datatype == 'fileinfo'}) > -1
-      return has_fileinfo;
-    });
-    
-    if (selected_module != null) {
-      autoselected = selected_module;
-    }
-    
-    if (autoselected > -1) {
-      var toselect = target.selectAll('.module')
-        .filter(function(d,i) { return i == autoselected })
-      // choose the module directly by default
-      var toselect_target = toselect.select(".title").node();
-      // but if a terminal is specified, use that as target instead.
-      if (selected_terminal != null) {
-        var term = toselect.select('rect.terminal[terminal_id="'+selected_terminal+'"]').node();
-        if (term != null) {toselect_target = term} // override the selection with terminal
+      target.selectAll(".module").classed("draggable wireable", false);
+      target.selectAll("g.module").on("click", webreduce.editor.handle_module_clicked);
+      //target.selectAll("g.module").on("contextmenu", webreduce.editor.handle_module_contextmenu);
+      
+      autoselected = template_def.modules.findIndex(function(m) {
+        var has_fileinfo = webreduce.editor._module_defs[m.module].fields
+          .findIndex(function(f) {return f.datatype == 'fileinfo'}) > -1
+        return has_fileinfo;
+      });
+      
+      if (selected_module != null) {
+        autoselected = selected_module;
       }
-      webreduce.editor.handle_module_clicked.call(toselect.node(), toselect.datum(), autoselected, toselect_target); 
-    }
+      
+      if (autoselected > -1) {
+        var toselect = target.selectAll('.module')
+          .filter(function(d,i) { return i == autoselected })
+        // choose the module directly by default
+        var toselect_target = toselect.select(".title").node();
+        // but if a terminal is specified, use that as target instead.
+        if (selected_terminal != null) {
+          var term = toselect.select('rect.terminal[terminal_id="'+selected_terminal+'"]').node();
+          if (term != null) {toselect_target = term} // override the selection with terminal
+        }
+        webreduce.editor.handle_module_clicked.call(toselect.node(), toselect.datum(), autoselected, toselect_target); 
+      }
+      return
+    });
+    return r;
     
   }
   

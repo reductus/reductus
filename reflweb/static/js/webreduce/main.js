@@ -173,10 +173,10 @@ webreduce.instruments = webreduce.instruments || {};
                 // (added during instrument_load)
                   hide_menu();
                   var template_id = $(this).text();
+                  var instrument_id = webreduce.editor._instrument_id;
                   var template_copy = jQuery.extend(true, {}, webreduce.editor._instrument_def.templates[template_id]);
-                  webreduce.editor.load_template(template_copy);
+                  webreduce.editor.load_template(template_copy, null, null, instrument_id);
                   if (localStorage && localStorage.setItem) {
-                    var instrument_id = webreduce.editor._instrument_id;
                     var lookup_id = "webreduce.instruments." + instrument_id + ".last_used_template";
                     localStorage.setItem(lookup_id, template_id);
                   }
@@ -268,8 +268,14 @@ webreduce.instruments = webreduce.instruments || {};
             //console.log(this.result);
             var first_line = this.result.slice(0, this.result.indexOf('\n'));
             first_line = '{' + first_line.replace(/^#/, '') + '}';
-            var template_header = JSON.parse(first_line);
-            webreduce.editor.load_template(template_header.template_data.template, template_header.template_data.node, template_header.template_data.terminal);
+            var template_header = JSON.parse(first_line),
+                template_data = template_header.template_data,
+                template = template_data.template,
+                node = template_data.node,
+                terminal = template_data.terminal,
+                instrument_id = template_data.instrument_id;
+                
+            webreduce.editor.load_template(template, node, terminal, instrument_id);
         }
         reader.readAsText(file);
       });
