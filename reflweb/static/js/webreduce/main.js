@@ -87,6 +87,8 @@ webreduce.instruments = webreduce.instruments || {};
     
 
   window.onload = function() {
+    zip.workerScriptsPath = "js/";
+    zip.useWebWorkers = false;
     webreduce.server_api.__init__().then(function(api) {
       var layout = $('body').layout({
            west__size:          350
@@ -113,7 +115,7 @@ webreduce.instruments = webreduce.instruments || {};
         a.style = "display: none";
         a.id = "savedata";
         return function (data, fileName) {
-          var blob = new Blob([data], {type: "text/plain"});
+          var blob = (data instanceof Blob) ? data : new Blob([data], {type: "text/plain"});
           // IE 10 / 11 
           if (window.navigator.msSaveOrOpenBlob) { 
             window.navigator.msSaveOrOpenBlob(blob, fileName); 

@@ -778,7 +778,7 @@ webreduce.editor = webreduce.editor || {};
     return r;
   }
   
-  webreduce.editor.export_data = function(filename) {
+  webreduce.editor.export_data = function() {
     var w = webreduce.editor;
     if (w._active_terminal == null) { alert("no input or output selected to export"); }
     var params = {
@@ -803,14 +803,45 @@ webreduce.editor = webreduce.editor || {};
           instrument_id: w._instrument_id
         }
       };
-      if (filename == null) {
-        var suggested_name = (result.values[0] || {}).name || "myfile.refl";
-        var filename = prompt("Export data as:", suggested_name);
-      }
-      if (filename == null) {return} // cancelled
-      var export_strings = result.values.map(function(v) { return v.export_string });
-      webreduce.download('# ' + JSON.stringify(header).slice(1,-1) + '\n' + export_strings.join('\n\n'), filename);
-    });       
+      var suggested_name = (result.values[0] || {}).name || "myfile.refl";
+      $("input#export_filename").val(suggested_name + ".dat");
+      var dialog = $("div#export_data").dialog("open");
+      $("button#export_cancel").on("click", function() { dialog.dialog("close"); });
+      $("button#export_confirm").on("click", function() {
+        dialog.dialog("close");
+        var filename = $("input#export_filename").val();
+        var export_strings = result.values.map(function(v) { return v.export_string });
+        var header_string = '# ' + JSON.stringify(header).slice(1,-1) + '\n';
+        if (!$("input#export_split_name").prop("checked")) {
+          webreduce.download(header_string + export_strings.join('\n\n'), filename);
+        }
+        else {      
+          // use a BlobWriter to store the zip into a Blob object
+          return zip.createWriter(new zip.BlobWriter("application/zip"), function(writer) {
+            var p = Promise.resolve();
+            //var promises = [];
+            result.values.forEach(function(v, i) {
+              var to_export = header_string + v.export_string;
+              var np = new Promise(function(resolve, reject) {
+                console.log(to_export.slice(0, 300));
+                writer.add((v.name || "data_" + i) + ".dat", new zip.TextReader(to_export), function() { console.log(to_export); resolve(true); });
+              });
+              //promises.push(np);
+              p = p.then(function() { return np });
+            });
+            //Promise.all(promises).then(function() {
+            p = p.then(function() { 
+              writer.close(function(blob) {
+                webreduce.download(blob, filename);
+              });
+            });
+            return p;
+          }, function(error) {
+            console.log(error);
+          });
+        }
+      });
+    })      
   }
   
   webreduce.editor.accept_parameters = function(target, active_module) {
