@@ -87,8 +87,10 @@
 </div>
 <div id="export_data" title="Export data">
   <div><label>filename:<input type="text" id="export_filename" /></label></div>
-  <label>split by name<input type="checkbox" id="export_split_name"/></label>
-  <label style="visibility:hidden;">split by entry<input type="checkbox" id="export_split_entry"/></label>
+  <div>
+    <label>zipped<input type="radio" name="export_switcher" id="export_zipped" /></label>
+    <label>single file<input type="radio" name="export_switcher" id="export_single_file" checked /></label>
+  </div>
   <div style="float:right;">
     <button id="export_confirm">confirm</button>
     <button id="export_cancel">cancel</button>

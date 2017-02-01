@@ -88,7 +88,7 @@ webreduce.instruments = webreduce.instruments || {};
 
   window.onload = function() {
     zip.workerScriptsPath = "js/";
-    zip.useWebWorkers = false;
+    zip.useWebWorkers = true;
     webreduce.server_api.__init__().then(function(api) {
       var layout = $('body').layout({
            west__size:          350

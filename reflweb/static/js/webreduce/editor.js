@@ -787,7 +787,6 @@ webreduce.editor = webreduce.editor || {};
         node: w._active_node,
         terminal: w._active_terminal,
         return_type: "export",
-        instrument: w._instrument_id
       },
       recalc_mtimes = $("#auto_reload_mtimes").prop("checked");
     webreduce.editor.calculate(params, recalc_mtimes).then(function(result) {
@@ -804,44 +803,62 @@ webreduce.editor = webreduce.editor || {};
         }
       };
       var suggested_name = (result.values[0] || {}).name || "myfile.refl";
-      $("input#export_filename").val(suggested_name + ".dat");
+      $("input#export_filename").val(suggested_name);
       var dialog = $("div#export_data").dialog("open");
       $("button#export_cancel").on("click", function() { dialog.dialog("close"); });
+      $("button#export_confirm").off("click"); // clear previous handler;
       $("button#export_confirm").on("click", function() {
         dialog.dialog("close");
         var filename = $("input#export_filename").val();
         var export_strings = result.values.map(function(v) { return v.export_string });
         var header_string = '# ' + JSON.stringify(header).slice(1,-1) + '\n';
-        if (!$("input#export_split_name").prop("checked")) {
+        if ($("input#export_single_file").prop("checked")) {
+          if (!(/\./.test(filename))) {
+            filename += ".refl"; // replace with instrument-specific ending?
+          }
           webreduce.download(header_string + export_strings.join('\n\n'), filename);
         }
-        else {      
-          // use a BlobWriter to store the zip into a Blob object
-          return zip.createWriter(new zip.BlobWriter("application/zip"), function(writer) {
-            var p = Promise.resolve();
-            //var promises = [];
-            result.values.forEach(function(v, i) {
+        else {
+          var multiple_entries = flag_multiple_entry(result.values);      
+          var filect = 0;
+          var write_next = function(writer, exports) {
+            if (filect < exports.length) {
+              var v = exports[filect++];
               var to_export = header_string + v.export_string;
-              var np = new Promise(function(resolve, reject) {
-                console.log(to_export.slice(0, 300));
-                writer.add((v.name || "data_" + i) + ".dat", new zip.TextReader(to_export), function() { console.log(to_export); resolve(true); });
-              });
-              //promises.push(np);
-              p = p.then(function() { return np });
-            });
-            //Promise.all(promises).then(function() {
-            p = p.then(function() { 
+              var subname = (v.name in multiple_entries) ? v.name + "_" + v.entry : v.name;
+              subname += ".refl"; // replace with instrument-specific ending?
+              var reader = new zip.TextReader(to_export);
+              writer.add(subname, reader, function() { write_next(writer, exports); });
+            }
+            else { 
               writer.close(function(blob) {
                 webreduce.download(blob, filename);
               });
+            }
+          }
+          return zip.createWriter(new zip.BlobWriter("application/zip"), function(writer) {
+              write_next(writer, result.values);
+            }, function(error) {
+              console.log(error);
             });
-            return p;
-          }, function(error) {
-            console.log(error);
-          });
         }
       });
-    })      
+    });      
+  }
+  
+  function flag_multiple_entry(exports) {
+    // the list of exports will each have a name and entry value;
+    // if there is more than one entry item per name, mark it as a multiple
+    var existing_names = {};
+    var multiple_entries = {};
+    exports.forEach(function(v) {
+      if (existing_names.hasOwnProperty(v.name)) {
+        multiple_entries[v.name] = true;
+      } else {
+        existing_names[v.name] = true;
+      }
+    });
+    return multiple_entries;
   }
   
   webreduce.editor.accept_parameters = function(target, active_module) {
