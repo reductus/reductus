@@ -1165,7 +1165,7 @@ def super_load(filelist=None,
 
     output (refldata[]): All entries of all files in the list.
 
-    2016-08-18 Brian Maranville
+    2017-01-13 Brian Maranville
     """
     from .load import url_load_list
     #from .intent import apply_intent
