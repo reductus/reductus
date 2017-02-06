@@ -38,7 +38,7 @@ def group_by_key(key, datasets):
     """
     Return datasets grouped by a value that can be found in a refldata file.
     Handle dotted namespace through recursive lookup.
-    Handle union with comma. (e.g. key = "polarization,sample.name" would 
+    Handle union with comma. (e.g. key = "polarization,sample.name" would
     create group where sample.name and polarization are the same for all)
     """
     groups = {}
@@ -54,7 +54,7 @@ def group_by_key(key, datasets):
         groupkey = tuple(sorted(groupkey))
         groups.setdefault(groupkey, []).append(data)
     return groups
-    
+
 
 def group_by_intent(datasets):
     """
@@ -175,23 +175,25 @@ def poisson_average(y, dy, norm='monitor'):
     are $\sqrt N$ and $\sqrt M$ respectively.  With error propagation, we get
 
     .. math::
+       :nowrap:
 
         \begin{eqnarray}
-        y &=& N/M //
+        y &=& N/M \\
         \left(\frac{\Delta y}{y}\right)^2
-            &=& left{\frac{\Delta N}{N}\right)^2
-              + \left{\frac{\Delta M}{M}\right)^2 //
-            &=& left(\frac{1}{N}\right)
-              + \left(\frac{1}{M}\right) //
+            &=& \left(\frac{\Delta N}{N}\right)^2
+              + \left(\frac{\Delta M}{M}\right)^2 \\
+            &=& \left(\frac{1}{N}\right)
+              + \left(\frac{1}{M}\right) \\
         \Delta y &=& y \sqrt{1/N + 1/M}
         \end{eqnarray}
 
     Inverting, we get
 
     .. math::
+       :nowrap:
 
         \begin{eqnarray}
-        M &=& y (y+1) / \Delta y^2 //
+        M &=& y (y+1) / \Delta y^2 \\
         N &=& y M
         \end{eqnarray}
 
@@ -206,12 +208,13 @@ def poisson_average(y, dy, norm='monitor'):
     the counts over the sum of the monitors.  This gives
 
     .. math::
+       :nowrap:
 
         \begin{eqnarray}
-        M_i &=& y_i (y_i + 1) / \Delta y_i^2 //
-        N_i &=& y_i M_i //
-        \bar y &=& \sum N_i / \sum M_i //
-        \Delta \bar y &=& \bar y \sqrt{1/\sum_N_i + 1/\sum_M_i}
+        M_i &=& y_i (y_i + 1) / \Delta y_i^2 \\
+        N_i &=& y_i M_i \\
+        \bar y &=& \sum N_i / \sum M_i \\
+        \Delta \bar y &=& \bar y \sqrt{1/\sum_{N_i} + 1/\sum_{M_i}}
         \end{eqnarray}
 
     When counting against time the monitor uncertainty $\Delta M$ is
@@ -220,24 +223,23 @@ def poisson_average(y, dy, norm='monitor'):
 
     .. math::
 
-        \begin{eqnarray}
-        y &=& N/M //
-        \Delta y &=& y \sqrt{1/N} //
-        M &=& y / \Delta y^2 //
-        N &=& y M
-        \end{eqnarray}
+        y &= N/M \\
+        \Delta y &= y \sqrt{1/N} \\
+        M &= y / \Delta y^2 \\
+        N &= y M
 
     Again, zero counts leads to $M = 1 / \Delta y$.
 
     Averaging gives
 
     .. math::
+       :nowrap:
 
         \begin{eqnarray}
-        M_i &=& y_i / \Delta y_i^2 //
-        N_i &=& y_i M_i //
-        \bar y &=& \sum N_i / \sum M_i //
-        \Delta \bar y &=& \bar y \sqrt{1/\sum_N_i}
+        M_i &=& y_i / \Delta y_i^2 \\
+        N_i &=& y_i M_i \\
+        \bar y &=& \sum N_i / \sum M_i \\
+        \Delta \bar y &=& \bar y \sqrt{1/\sum_{N_i}}
         \end{eqnarray}
 
     Our expression does not account for detector efficiency, attenuators
@@ -245,13 +247,14 @@ def poisson_average(y, dy, norm='monitor'):
     value $A \pm \Delta A$ for each point, giving
 
     .. math::
+       :nowrap:
 
         \begin{eqnarray}
-        y &=& A N/M //
+        y &=& A N/M \\
         \left(\frac{\Delta y}{y}\right)^2
             &=& \left(\frac{\Delta A}{A}\right)^2
-              + \left{\frac{\Delta N}{N}\right)^2
-              + \left{\frac{\Delta M}{M}\right)^2 //
+              + \left(\frac{\Delta N}{N}\right)^2
+              + \left(\frac{\Delta M}{M}\right)^2
         \end{eqnarray}
 
     Clearly with two inputs $y$, $\Delta y$ we cannot uniquely recover
