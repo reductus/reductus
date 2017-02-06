@@ -1,21 +1,6 @@
-=======
-ReflWeb
-=======
-
-ReflWeb is a reduction client in html+json for composing templates and
-displaying the results.  This is the primary interface to data reduction.
-ReflWeb can also act as a web service for evaluating reflectometry reduction
-templates.
-
-There are some cases where you want to run your own version of the server.
-In particular,
-
-* the files you want to reduce are not available in the public repository,
-
-* you want to develop your own reduction steps, or
-
-* you want to load your own type of files.
-
+===================
+Server Installation
+===================
 
 Installing the Windows binary
 -----------------------------
@@ -47,28 +32,20 @@ Download the repository::
     conda install git
     git clone https://github.com/reflectometry/reduction
 
-Build and test::
+Build::
 
     cd reduction
     python setup.py build_ext --inplace
+
+
+(in the same directory, test if desired)::
+
     nosetests --all-modules reflred
     nosetests --all-modules dataflow
 
 Optional redis server for caching downloaded files::
 
     conda install redis redis-py
-
-Track changes to the repository::
-
-    cd path/to/reduction
-    # show what you have changed locally
-    git status
-    # update to the latest version on the server
-    git pull
-    # Note that this last step may cause conflicts if your git status is
-    # not empty or if you have made changes and committed to your local repo.
-    # Resolving conflicts is beyond the scope of this document.
-
 
 Running the server
 ------------------
@@ -95,4 +72,17 @@ This will start a local server on 127.0.0.1:8000 and open the browser to that
 page.  The menu *Data* item will have an additional *Local* option to access
 the files on your computer.
 
+Updating the server
+-------------------
+To update to the latest version of the code::
 
+    cd path/to/reduction
+    # show what you have changed locally
+    git status
+    # update to the latest version on the server
+    git pull
+    # Note that this last step may cause conflicts if your git status is
+    # not empty or if you have made changes and committed to your local repo.
+    # Resolving conflicts is beyond the scope of this document.
+
+Then repeat the build step.
