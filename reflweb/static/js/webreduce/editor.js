@@ -481,17 +481,15 @@ webreduce.editor = webreduce.editor || {};
           });
           
       plot_controls
-        .append("input")
-          .attr("type", "button")
+        .append("button")
           .attr("id", "export_data")
-          .attr("value", "export")
+          .text("export")
           .on("click", webreduce.editor.export_data)
       
       plot_controls
-        .append("input")
-          .attr("type", "button")
+        .append("button")
           .attr("id", "download_svg")
-          .attr("value", "\u2B63 svg")
+          .html("&darr; svg")
           .on("click", function() {
             var chart = webreduce.editor._active_plot;
             var svg = chart.export_svg();
