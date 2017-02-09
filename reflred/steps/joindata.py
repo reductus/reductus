@@ -177,7 +177,6 @@ def build_dataset(group, columns):
     data.mask = None  # all points are active after join
     #data.angular_resolution # averaged
     data.Qz_basis = 'actual'  # TODO: may want to preserve Qz_basis
-    data.Qz_target = None  # TODO: average the Qz_target?
     data.scan_value = []  # TODO: may want Td, Ti as alternate scan axes
     data.scan_label = []
     data.scan_units = []
@@ -202,6 +201,8 @@ def build_dataset(group, columns):
     data.detector.wavelength_resolution = columns['dL']
     data.monitor.count_time = columns['time']
     data.monitor.counts = columns['monitor']
+    data.Qz_target = columns['Qz_target']
+    #data.Qz_target = None
 
     # Add in any sample environment fields
     data.sample.environment = {}
@@ -235,6 +236,7 @@ def get_fields(group):
         dL=[data.detector.wavelength_resolution for data in group],
         monitor=[data.monitor.counts for data in group],
         time=[data.monitor.count_time for data in group],
+        Qz_target=[data.Qz_target for data in group],
         # using v,dv since poisson average wants rates
         v=[data.v for data in group],
         dv=[data.dv for data in group],
