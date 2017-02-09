@@ -696,7 +696,7 @@ def join(data, Q_tolerance=0.5, dQ_tolerance=0.002, order='file',
 
     output (refldata[]) : joined data
 
-    2016-12-16 Paul Kienzle: split tolerance into Qtol and dQtol
+    2017-02-09 Paul Kienzle: split tolerance into Qtol and dQtol
     """
     from .joindata import sort_files, join_datasets
     from .util import group_by_key
