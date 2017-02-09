@@ -176,7 +176,7 @@ def build_dataset(group, columns):
     #data.xscale
     data.mask = None  # all points are active after join
     #data.angular_resolution # averaged
-    data.Qz_basis = 'actual'  # TODO: may want to preserve Qz_basis
+    data.Qz_basis = head.Qz_basis
     data.scan_value = []  # TODO: may want Td, Ti as alternate scan axes
     data.scan_label = []
     data.scan_units = []
