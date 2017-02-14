@@ -92,7 +92,8 @@ class BrukerRawRefl(refldata.ReflData):
         self.entry = 'entry'
         self.path = os.path.abspath(filename)
         self.name = os.path.basename(filename).split('.')[0]
-        self._set_metadata(raw)
+        #import pprint; pprint.pprint(entry)
+        self._set_metadata(entry)
 
     def _set_metadata(self, entry):
         #print(entry['instrument'].values())
@@ -101,7 +102,7 @@ class BrukerRawRefl(refldata.ReflData):
         self.description = entry['comment']
         self.instrument = 'BrukerXray'
         self.slit1.distance = -275.5
-        self.slit2.distance = -192.5
+        self.slit2.distance = -192.7
         self.slit3.distance = +175.0
         self.slit1.x = 0.03 # TODO: check
         self.slit2.x = 0.03 # TODO: check
@@ -117,7 +118,7 @@ class BrukerRawRefl(refldata.ReflData):
         self.sample.name = entry['samplename']
         self.sample.description = ""
         raw_intent = bruker.SCAN_TYPE.get(entry['data'][0]['scan_type'], "")
-        self.raw_intent = raw_intent
+        self._raw_intent = raw_intent
         if raw_intent in self.trajectory_intents:
             self.intent = self.trajectory_intents[raw_intent]
         self.monitor.base = 'TIME'
@@ -130,28 +131,28 @@ class BrukerRawRefl(refldata.ReflData):
         attenuator_state = das['detslit_code']
         self.detector.counts = das['values']['count']
         self.detector.counts_variance = self.detector.counts
-        if attenuator_state.trim().lower() == 'in':
+        if attenuator_state.strip().lower() == 'in':
             self.detector.counts *= 100.0
             self.detector.counts_variance *= 10000.0
         self.detector.dims = self.detector.counts.shape
         n = self.detector.dims[0]
         self.monitor.counts = np.ones_like(self.detector.counts)
         self.monitor.counts_variance = np.zeros_like(self.detector.counts)
-        self.monitor.count_time = data_as(das,'counter/liveTime','s',rep=n)
-        if self.raw_intent in ["locked coupled", "unlocked coupled"]:
-            self.sample.angle_x = das['theta_start'] + arange(n, dtype='float') * das['increment_1']/2.0
-            self.detector.angle_x = das['two_theta_start'] + arange(n, dtype='float') * das['increment_1']
+        self.monitor.count_time = np.ones_like(self.detector.counts)*das['step_time']
+        if self._raw_intent in ["locked coupled", "unlocked coupled"]:
+            self.sample.angle_x = das['theta_start'] + np.arange(n, dtype='float') * das['increment_1']/2.0
+            self.detector.angle_x = das['two_theta_start'] + np.arange(n, dtype='float') * das['increment_1']
             self.sample.angle_x_target = self.sample.angle_x
             self.detector.angle_x_target = self.detector.angle_x
-        elif self.raw_intent == 'detector scan':
+        elif self._raw_intent == 'detector scan':
             self.sample.angle_x = das['theta_start']
-            self.detector.angle_x = das['two_theta_start'] + arange(n, dtype='float') * das['increment_1']
+            self.detector.angle_x = das['two_theta_start'] + np.arange(n, dtype='float') * das['increment_1']
             self.sample.angle_x_target = self.sample.angle_x
             self.detector.angle_x_target = self.detector.angle_x
-        elif self.raw_intent in ['rocking curve', 'phi scan']:
+        elif self._raw_intent in ['rocking curve', 'phi scan']:
             # this may not be right at all.  I can't understand what reflred/loadraw.tcl is doing here
-            self.sample.angle_x = das['theta_start'] - arange(n, dtype='float') * das['increment_1']
-            self.detector.angle_x = das['two_theta_start'] + arange(n, dtype='float') * das['increment_1']
+            self.sample.angle_x = das['theta_start'] - np.arange(n, dtype='float') * das['increment_1']
+            self.detector.angle_x = das['two_theta_start'] + np.arange(n, dtype='float') * das['increment_1']
             self.sample.angle_x_target = self.sample.angle_x
             self.detector.angle_x_target = self.detector.angle_x
         else:
@@ -161,3 +162,29 @@ class BrukerRawRefl(refldata.ReflData):
         self.scan_value = []
         self.scan_units = []
         self.scan_label= []
+
+def demo():
+    import sys
+    if len(sys.argv) == 1:
+        print("usage: python -m reflred.steps.xrawref file...")
+        sys.exit(1)
+    for filename in sys.argv[1:]:
+        try:
+            entries = load_from_uri(filename)
+        except Exception as exc:
+            print("**** "+str(exc)+" **** while reading "+filename)
+            continue
+
+        # print the first entry
+        print(entries[0])
+
+        # plot all the entries
+        import pylab
+        pylab.figure()
+        for entry in entries:
+            entry.plot()
+        pylab.legend()
+        pylab.show()
+
+if __name__ == "__main__":
+    demo()
