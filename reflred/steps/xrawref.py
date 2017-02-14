@@ -4,6 +4,7 @@
 Load a Bruker raw file into a reflectometry data structure.
 """
 import os
+import datetime
 
 import numpy as np
 
@@ -98,7 +99,12 @@ class BrukerRawRefl(refldata.ReflData):
     def _set_metadata(self, entry):
         #print(entry['instrument'].values())
         self.probe = 'xray'
-        self.date = "%s %s" % (entry['date'], entry['time'])
+
+        # parse date into datetime object
+        month,day,year = [int(v) for v in entry['date'].split('/')]
+        hour,minute,second = [int(v) for v in entry['time'].split(':')]
+        self.date = datetime.datetime(year+2000,month,day,hour,minute,second)
+
         self.description = entry['comment']
         self.instrument = 'BrukerXray'
         self.slit1.distance = -275.5
