@@ -680,8 +680,6 @@ class ReflData(Group):
     #: For time of flight, the number of time channels.  For white
     #: beam instruments, the number of analysers.
     channels = 1
-    #: The desired scale factor for displaying the data.
-    scale = 1.0
     #: Name of the dataset.  This may be a combination of filename and
     #: entry number.
     name = ""

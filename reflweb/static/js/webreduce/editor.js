@@ -1122,13 +1122,21 @@ webreduce.editor = webreduce.editor || {};
         .attr("id", "scalelist")
     
     var datasets = datasets_in.values;
-    original_datum = [];
+    var original_datum = [];
     // now have a list of datasets.
     datum.value = datum.value.slice(0,datasets.length);
-    datasets.forEach(function(d,i) {
-      datum.value[i] = (datum.value[i] == null) ? 1 : datum.value[i];
-      original_datum[i] = datum.value[i];
-    });
+    // valid lengths: 1 or N
+    var is_singleton = (datum.value.length == 1);
+    if (is_singleton) {
+      // special case: everything gets scaled the same amount
+      original_datum = datum.value.slice();
+    } else {
+      // each dataset gets its own multiplier
+      datasets.forEach(function(d,i) {
+        datum.value[i] = (datum.value[i] == null) ? 1 : datum.value[i];
+        original_datum[i] = datum.value[i];
+      });
+    }
     var scale_div = target.select("div#scalelist").append("div")
       .classed("fields", true)
       .datum(datum)
@@ -1141,12 +1149,19 @@ webreduce.editor = webreduce.editor || {};
       .style("vertical-align", "middle")
       .text(JSON.stringify(datum.value, null, 2))
       .on("change", function(d) { datum.value = JSON.parse(this.value) });
+    scale_div.append("br");
+    var polyadic = scale_div.append("label")
+      .text("match dimension")
+      .append("input")
+        .attr("type", "checkbox")
+        .property("checked", true)
     
     unscaled_data = [];
     d3.selectAll("#plotdiv .dot").on("click", null); // clear previous handlers
     d3.selectAll("#plotdiv svg g.series").each(function(d,i) {
       // i is index of dataset
       // make a copy of the data:
+      var scale_index = (is_singleton) ? 0 : i;
       unscaled_data[i] = $.extend(true, [], d);
       var dragmove_point = function(dd,ii) {
         var chart = webreduce.editor._active_plot;
@@ -1168,7 +1183,7 @@ webreduce.editor = webreduce.editor || {};
             ddd[2].ylower = new_scale * old_point[2].ylower;
           }
         })
-        datum.value[i] = new_scale * original_datum[i];
+        datum.value[scale_index] = new_scale * original_datum[scale_index];
         input.text(JSON.stringify(datum.value, null, 2));
         var event = document.createEvent('Event');
 		event.initEvent('input', true, true);

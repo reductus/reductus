@@ -243,6 +243,7 @@ class NCNRNeXusRefl(refldata.ReflData):
         if 'DOI' in entry:
             URI = entry['DOI']
         else:
+            # See: dataflow.modules.doi_resolve for helpers.
             #NCNR_DOI = "10.18434/T4201B"
             NCNR_DOI = "https://ncnr.nist.gov/pub/ncnrdata"
             LOCATION = {'pbr':'ngd', 'magik':'cgd', 'ng7r':'ng7'}
