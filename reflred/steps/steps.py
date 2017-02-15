@@ -1165,7 +1165,8 @@ def super_load(filelist=None,
 
     output (refldata[]): All entries of all files in the list.
 
-    2017-01-13 Brian Maranville
+    | 2017-01-13 Brian Maranville
+    | 2017-02-15 Paul Kienzle: normalize by time if monitor is not present
     """
     from .load import url_load_list
     #from .intent import apply_intent
@@ -1204,7 +1205,7 @@ def super_load_sorted(filelist=None,
                detector_correction=False,
                monitor_correction=False,
                sample_width=None,
-               base='monitor'):
+               base='auto'):
     """
     Load a list of nexus files from the NCNR data server, to be sorted by
     the intent stored in the file.  If intent does not match 

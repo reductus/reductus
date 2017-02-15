@@ -56,7 +56,7 @@ def join_datasets(group, Qtol, dQtol, by_Q=False):
     #print "joining files in",group[0].path,group[0].name,group[0].entry
     # Make sure all datasets are normalized by the same factor.
     normbase = group[0].normbase
-    assert all(data.normbase == normbase for data in group)
+    assert all(data.normbase == normbase for data in group), "can't mix time and monitor normalized data"
 
     # Gather the columns
     fields = get_fields(group)

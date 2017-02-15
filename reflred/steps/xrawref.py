@@ -127,7 +127,7 @@ class BrukerRefl(refldata.ReflData):
             self.detector.counts_variance *= ATTENUATOR**2
         self.detector.dims = self.detector.counts.shape
         n = self.detector.dims[0]
-        self.monitor.counts = np.ones_like(self.detector.counts)
+        self.monitor.counts = np.zeros_like(self.detector.counts)
         self.monitor.counts_variance = np.zeros_like(self.detector.counts)
         self.monitor.count_time = np.ones_like(self.detector.counts) * data['step_time']
         if raw_intent in ["locked coupled", "unlocked coupled"]:

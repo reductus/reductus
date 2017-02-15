@@ -522,7 +522,7 @@ class Monitor(Group):
     time_step = 1 # Default to nearest second
     time_of_flight = None
     base = 'monitor'
-    source_power = 1 # Default to 1 MW power
+    source_power = None # No source power recorded
     source_power_units = "MW"
     source_power_variance = 0
     saturation = None
