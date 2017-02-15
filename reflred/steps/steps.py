@@ -837,11 +837,12 @@ def divide_intensity(data, base):
 
     2015-12-17 Paul Kienzle
     """
-    from .scale import apply_intensity_norm
-    data = copy(data)
-    data.log("divide(base)")
-    data.log_dependency("base", base)
-    apply_intensity_norm(data, base)
+    if base is not None:
+        from .scale import apply_intensity_norm
+        data = copy(data)
+        data.log("divide(base)")
+        data.log_dependency("base", base)
+        apply_intensity_norm(data, base)
     return data
 
 
