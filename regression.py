@@ -124,7 +124,7 @@ def replay_file(filename):
     template_config = {}
     retval = process_template(template, template_config, target=target)
     export = retval.get_export()
-    new_content = '\n\n'.join(export['values'])
+    new_content = '\n\n'.join(v['export_string'] for v in export['values'])
 
     has_diff = show_diff(old_content, new_content)
     if has_diff:
@@ -152,7 +152,7 @@ def play_file(filename):
     instrument_id = template_module.split('.')[1]
     load_instrument(instrument_id)
 
-    node = max(*find_leaves(template_json))
+    node = max(find_leaves(template_json))
     node_module = lookup_module(template_json['modules'][node]['module'])
     terminal = node_module.outputs[0]['id']
 
