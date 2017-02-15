@@ -2,6 +2,7 @@
 
 (function () {
   var NEXUS_ZIP_REGEXP = /\.nxz\.[^\.\/]+(?:\.zip)*$/
+  var BRUKER_REGEXP = /\.raw$/
   var PARALLEL_LOAD = true;
   
   function make_range_icon(global_min_x, global_max_x, min_x, max_x) {
@@ -26,10 +27,11 @@
     webreduce.editor._file_objs[datasource] = webreduce.editor._file_objs[datasource] || {};
     webreduce.editor._file_objs[datasource][path] = file_objs;
     var datafiles = files.filter(function(x) {return (
-      NEXUS_ZIP_REGEXP.test(x) &&
-      (/^(fp_)/.test(x) == false) &&
-      (/^rapidscan/.test(x) == false) &&
-      (/^scripted_findpeak/.test(x) == false)
+      BRUKER_REGEXP.test(x) ||
+      (NEXUS_ZIP_REGEXP.test(x) &&
+       (/^(fp_)/.test(x) == false) &&
+       (/^rapidscan/.test(x) == false) &&
+       (/^scripted_findpeak/.test(x) == false))
       )});
     var loader = webreduce.instruments[instrument_id].load_file;
     var numloaded = 0;

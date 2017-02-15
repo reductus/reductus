@@ -7,6 +7,7 @@ import pytz
 
 from ..iso8601 import seconds_since_epoch
 from . import nexusref
+from . import xrawref
 
 DATA_SOURCES = {}
 
@@ -19,7 +20,10 @@ def url_load(fileinfo):
     path, mtime, entries = fileinfo['path'], fileinfo['mtime'], fileinfo['entries']
     filename = basename(path)
     content = url_get(fileinfo)
-    return nexusref.load_from_string(filename, content, entries=entries)
+    if filename.endswith('.raw'):
+        return xrawref.load_from_string(filename, content, entries=entries)
+    else:
+        return nexusref.load_from_string(filename, content, entries=entries)
 
 def find_mtime(path, source="ncnr"):
     check_datasource(source)
