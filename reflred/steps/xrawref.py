@@ -43,58 +43,43 @@ def load_from_uri(uri, entries=None, url_cache="/tmp"):
         return load_entries(uri, entries=entries)
 
 
-def load_metadata(filename, file_obj=None):
-    """
-    Load the summary info for all entries in a NeXus file.
-    """
-    #file = h5.File(filename)
-    file = h5_open_zip(filename, file_obj)
-    measurements = []
-    for name,entry in file.items():
-        if entry.attrs.get('NX_class', None) == 'NXentry':
-            data = NCNRNeXusRefl(entry, name, filename)
-            measurements.append(data)
-    if file_obj is None:
-        file.close()
-    return measurements
-
-
 def load_entries(filename, file_obj=None, entries=None):
     """
     Load the summary info for the entry in a Bruker file.
     """
     if file_obj is None:
-        entry = bruker.load(filename)
+        bruker_file = bruker.load(filename)
     else:
-        entry = bruker.loads(file_obj.read())
-        
-    data = BrukerRawRefl(entry, 'entry', filename)
-    data.load(entry)
-    return [data]
+        bruker_file = bruker.loads(file_obj.read())
 
+    entries = [BrukerRefl(bruker_file, entryid, filename)
+               for entryid in range(len(bruker_file['data']))]
+    return entries
 
-class BrukerRawRefl(refldata.ReflData):
+TRAJECTORY_INTENTS = {
+    'locked coupled': 'specular',
+    'unlocked coupled': 'specular',
+    'detector scan': 'rock detector',
+    'rocking curve': 'rock sample',
+    'phi scan': 'rock sample'
+}
+
+class BrukerRefl(refldata.ReflData):
     """
     Bruker raw reflectometry file.
 
     See :class:`refldata.ReflData` for details.
     """
     format = "BrukerRaw"
-    trajectory_intents = {
-        'locked coupled': 'specular',
-        'unlocked coupled': 'specular',
-        'detector scan': 'rock detector',
-        'rocking curve': 'rock sample',
-        'phi scan': 'rock sample'
-    }
 
-    def __init__(self, entry, entryname, filename):
-        super(BrukerRawRefl,self).__init__()
-        self.entry = 'entry'
+    def __init__(self, bruker_file, entryid, filename):
+        super(BrukerRefl, self).__init__()
+        self.entry = int(entryid+1)  # 1-origin entry number for each entry
         self.path = os.path.abspath(filename)
         self.name = os.path.basename(filename).split('.')[0]
         #import pprint; pprint.pprint(entry)
-        self._set_metadata(entry)
+        self._set_metadata(bruker_file)
+        self._set_data(bruker_file['data'][entryid])
 
     def _set_metadata(self, entry):
         #print(entry['instrument'].values())
@@ -123,21 +108,18 @@ class BrukerRawRefl(refldata.ReflData):
         
         self.sample.name = entry['samplename']
         self.sample.description = ""
-        raw_intent = bruker.SCAN_TYPE.get(entry['data'][0]['scan_type'], "")
-        self._raw_intent = raw_intent
-        if raw_intent in self.trajectory_intents:
-            self.intent = self.trajectory_intents[raw_intent]
         self.monitor.base = 'TIME'
         self.monitor.time_step = 0.001  # assume 1 ms accuracy on reported clock
         self.monitor.deadtime = 0.0 
         self.polarization = "unpolarized"
 
-    def load(self, entry):
-        das = entry['data'][0]
-        attenuator_state = das['detslit_code']
-        self.detector.counts = das['values']['count']
+    def _set_data(self, data):
+        raw_intent = bruker.SCAN_TYPE.get(data['scan_type'], "")
+        attenuator_state = data['detslit_code'].strip().lower()
+        self.intent = TRAJECTORY_INTENTS.get(raw_intent, refldata.Intent.none)
+        self.detector.counts = data['values']['count']
         self.detector.counts_variance = self.detector.counts.copy()
-        if attenuator_state.strip().lower() == 'in':
+        if attenuator_state == 'in':
             ATTENUATOR = 100.
             #self.v = self.detector.counts*ATTENUATOR
             #self.dv = np.sqrt(self.detector.counts_variance) * ATTENUATOR
@@ -147,30 +129,35 @@ class BrukerRawRefl(refldata.ReflData):
         n = self.detector.dims[0]
         self.monitor.counts = np.ones_like(self.detector.counts)
         self.monitor.counts_variance = np.zeros_like(self.detector.counts)
-        self.monitor.count_time = np.ones_like(self.detector.counts)*das['step_time']
-        if self._raw_intent in ["locked coupled", "unlocked coupled"]:
-            self.sample.angle_x = das['theta_start'] + np.arange(n, dtype='float') * das['increment_1']/2.0
-            self.detector.angle_x = das['two_theta_start'] + np.arange(n, dtype='float') * das['increment_1']
+        self.monitor.count_time = np.ones_like(self.detector.counts) * data['step_time']
+        if raw_intent in ["locked coupled", "unlocked coupled"]:
+            self.sample.angle_x = data['theta_start'] + np.arange(n, dtype='float') * data['increment_1'] / 2.0
+            self.detector.angle_x = data['two_theta_start'] + np.arange(n, dtype='float') * data['increment_1']
             self.sample.angle_x_target = self.sample.angle_x
             self.detector.angle_x_target = self.detector.angle_x
-        elif self._raw_intent == 'detector scan':
-            self.sample.angle_x = das['theta_start']
-            self.detector.angle_x = das['two_theta_start'] + np.arange(n, dtype='float') * das['increment_1']
+            self.scan_value = [self.sample.angle_x, self.detector.angle_x]
+            self.scan_units = ['degrees', 'degrees']
+            self.scan_label = ['theta', 'two_theta']
+        elif raw_intent == 'detector scan':
+            self.sample.angle_x = data['theta_start']
+            self.detector.angle_x = data['two_theta_start'] + np.arange(n, dtype='float') * data['increment_1']
             self.sample.angle_x_target = self.sample.angle_x
             self.detector.angle_x_target = self.detector.angle_x
-        elif self._raw_intent in ['rocking curve', 'phi scan']:
+            self.scan_value = [self.detector.angle_x]
+            self.scan_units = ['degrees']
+            self.scan_label = ['two_theta']
+        elif raw_intent in ['rocking curve', 'phi scan']:
             # this may not be right at all.  I can't understand what reflred/loadraw.tcl is doing here
-            self.sample.angle_x = das['theta_start'] - np.arange(n, dtype='float') * das['increment_1']
-            self.detector.angle_x = das['two_theta_start'] + np.arange(n, dtype='float') * das['increment_1']
+            self.sample.angle_x = data['theta_start'] - np.arange(n, dtype='float') * data['increment_1']
+            self.detector.angle_x = data['two_theta_start'] + np.arange(n, dtype='float') * data['increment_1']
             self.sample.angle_x_target = self.sample.angle_x
             self.detector.angle_x_target = self.detector.angle_x
+            self.scan_value = [self.sample.angle_x, self.detector.angle_x]
+            self.scan_units = ['degrees', 'degrees']
+            self.scan_label = ['theta', 'two_theta']
         else:
             raise ValueError("Unknown sample angle in file")
         self.Qz_target = np.NaN
-        
-        self.scan_value = []
-        self.scan_units = []
-        self.scan_label= []
 
 def demo():
     from .scale import apply_norm
