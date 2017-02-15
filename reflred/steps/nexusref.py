@@ -259,11 +259,11 @@ class NCNRNeXusRefl(refldata.ReflData):
     def load(self, entry):
         das = entry['DAS_logs']
         self.detector.counts = np.asarray(das['pointDetector/counts'][:,0], 'd')
-        self.detector.counts_variance = self.detector.counts
+        self.detector.counts_variance = self.detector.counts.copy()
         self.detector.dims = self.detector.counts.shape
         n = self.detector.dims[0]
         self.monitor.counts = np.asarray(data_as(das,'counter/liveMonitor','',rep=n), 'd')
-        self.monitor.counts_variance = self.monitor.counts
+        self.monitor.counts_variance = self.monitor.counts.copy()
         self.monitor.count_time = data_as(das,'counter/liveTime','s',rep=n)
         for k,s in enumerate([self.slit1, self.slit2, self.slit3, self.slit4]):
             x = 'slitAperture%d/softPosition'%(k+1)
