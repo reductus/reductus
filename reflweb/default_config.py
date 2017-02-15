@@ -25,17 +25,25 @@ use_redis = True
 data_sources = {
     "ncnr": {
         "url": "http://ncnr.nist.gov/pub/",
-        "start_path": "ncnrdata"
+        "start_path": "ncnrdata",
     },
     "ncnr_DOI": {
-        "DOI": "10.18434/T4201B"
+        "DOI": "10.18434/T4201B",
+    },
+    "charlotte": {
+        "url": "http://charlotte.ncnr.nist.gov/pub",
+        "start_path": "",
     },
     # set start_path for local files to usr/local/nice/server_data/experiments
     # for instrument installs
-    "local": {"url": "file:///"}
+    "local": {
+        "url": "file:///",
+        "start_path": "",
+    },
 }
 file_helper_url = {
-    "ncnr": "http://ncnr.nist.gov/ipeek/listftpfiles.php",
-    "ncnr_DOI": "http://ncnr.nist.gov/ipeek/listncnrdatafiles.php"
+    "charlotte": "http://charlotte.ncnr.nist.gov/ipeek/listftpfiles.php",
+    "ncnr": "https://ncnr.nist.gov/ipeek/listftpfiles.php",
+    "ncnr_DOI": "https://ncnr.nist.gov/ipeek/listncnrdatafiles.php"
 }
 instruments = ["refl"]
