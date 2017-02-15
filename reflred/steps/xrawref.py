@@ -93,7 +93,7 @@ class BrukerRawRefl(refldata.ReflData):
         self.entry = 'entry'
         self.path = os.path.abspath(filename)
         self.name = os.path.basename(filename).split('.')[0]
-        import pprint; pprint.pprint(entry)
+        #import pprint; pprint.pprint(entry)
         self._set_metadata(entry)
 
     def _set_metadata(self, entry):
@@ -136,14 +136,13 @@ class BrukerRawRefl(refldata.ReflData):
         das = entry['data'][0]
         attenuator_state = das['detslit_code']
         self.detector.counts = das['values']['count']
-        self.detector.counts_variance = self.detector.counts
+        self.detector.counts_variance = self.detector.counts.copy()
         if attenuator_state.strip().lower() == 'in':
             ATTENUATOR = 100.
             #self.v = self.detector.counts*ATTENUATOR
             #self.dv = np.sqrt(self.detector.counts_variance) * ATTENUATOR
             self.detector.counts *= ATTENUATOR
-            # TODO: scale the variance as well
-            #self.detector.counts_variance *= ATTENUATOR**2
+            self.detector.counts_variance *= ATTENUATOR**2
         self.detector.dims = self.detector.counts.shape
         n = self.detector.dims[0]
         self.monitor.counts = np.ones_like(self.detector.counts)
