@@ -74,7 +74,7 @@ class BrukerRefl(refldata.ReflData):
 
     def __init__(self, bruker_file, entryid, filename):
         super(BrukerRefl, self).__init__()
-        self.entry = int(entryid+1)  # 1-origin entry number for each entry
+        self.entry = str(entryid+1)  # 1-origin entry number for each entry
         self.path = os.path.abspath(filename)
         self.name = os.path.basename(filename).split('.')[0]
         #import pprint; pprint.pprint(entry)
