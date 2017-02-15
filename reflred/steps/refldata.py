@@ -809,7 +809,7 @@ class ReflData(Group):
 
     @property
     def dv(self):
-        return sqrt(self.detector.counts) if self._dv is None else self._dv
+        return sqrt(self.detector.counts_variance) if self._dv is None else self._dv
 
     @dv.setter
     def dv(self, dv):
