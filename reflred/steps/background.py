@@ -19,7 +19,8 @@ def apply_specular_mask(data):
 
 
 def apply_background_subtraction(data, backp, backm):
-    assert all(data.normbase == bkg.normbase for bkg in (backp, backm)), "can't mix time and monitor normalized data"
+    assert all((bkg is None or data.normbase == bkg.normbase)
+               for bkg in (backp, backm)), "can't mix time and monitor normalized data"
     I, varI = subtract_background(data, backp, backm)
     data.v, data.dv = I, np.sqrt(varI)
 
