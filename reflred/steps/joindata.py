@@ -156,7 +156,7 @@ def build_dataset(group, columns):
     data.uri = None  # TODO: does a reduction have a DOI?
     data.points = len(columns['v'])
     #data.channels  # unused
-    data.scale = 1.0  # TODO: not sure if scale is used
+    #data.scale = 1.0  # unused
     #data.name
     #data.entry
     #data.description
