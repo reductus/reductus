@@ -101,10 +101,10 @@ class BrukerRefl(refldata.ReflData):
         #self.slit4.distance = data_as(entry,'instrument/predetector_slit2/distance','mm')
         #self.detector.distance = data_as(entry,'instrument/detector/distance','mm')
         #self.detector.rotation = data_as(entry,'instrument/detector/rotation','degree')
-        self.detector.wavelength = entry['alpha_average']
-        self.detector.wavelength_resolution = 0.001*self.detector.wavelength
-        self.detector.deadtime = 0.0 # sorta true.
-        self.detector.deadtime_error = 0.0 # also kinda true.
+        self.detector.wavelength = np.array([entry['alpha_average']], dtype='float')
+        self.detector.wavelength_resolution = 0.001*self.detector.wavelength.copy()
+        self.detector.deadtime = np.array([0.0]) # sorta true.
+        self.detector.deadtime_error = np.array([0.0]) # also kinda true.
         
         self.sample.name = entry['samplename']
         self.sample.description = ""
