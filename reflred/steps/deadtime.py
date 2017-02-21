@@ -58,9 +58,9 @@ def apply_monitor_dead_time(data, tau_NP=0.0, tau_P=0.0):
     m = data.monitor.counts
     t = data.monitor.count_time
     dm = np.sqrt(data.monitor.counts_variance
-                 if data.monitor.counts_variance else data.monitor.counts)
+                 if data.monitor.counts_variance is not None else data.monitor.counts)
     I, dI = estimate_incident((m/t, dm/t),
-                              tau_NP=tau_NP, tau_P=tau_P)
+                              tau_NP=[tau_NP,0], tau_P=[tau_P,0])
     data.monitor.counts, data.monitor.counts_variance = (I*t), (dI*t)**2
 
 

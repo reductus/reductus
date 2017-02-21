@@ -164,11 +164,13 @@ def monitor_dead_time(data, dead_time, nonparalyzing=0.0, paralyzing=0.0):
         data.log_dependency('dead_time', dead_time)
         apply_monitor_dead_time(data, tau_NP=dead_time.tau_NP,
                                 tau_P=dead_time.tau_P)
-    elif data.monitor.deadtime is not None and isfinite(data.monitor.deadtime):
+    elif data.monitor.deadtime is not None and isfinite(data.monitor.deadtime).all():
         try:
             tau_NP, tau_P = data.monitor.deadtime
         except Exception:
             tau_NP, tau_P = data.monitor.deadtime, 0.0
+        tau_NP *= 1.0e6 # convert to microseconds
+        tau_P *= 1.0e6
         data.log('monitor_dead_time()')
         apply_monitor_dead_time(data, tau_NP=tau_NP, tau_P=tau_P)
     else:
