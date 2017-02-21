@@ -184,7 +184,7 @@ class Converter(object):
         if units == "" or self.scalemap is None: return 1
         return self.scalebase/self.scalemap[units]
 
-    def conversion(self, value, units=""):
+    def conversion(self, units=""):
         if units == "" or self.scalemap is None: return 1.0
         try:
             return self.scalebase/self.scalemap[units]
