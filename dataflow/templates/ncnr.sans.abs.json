@@ -1,0 +1,303 @@
+{
+  "modules": [
+    {
+      "y": 5,
+      "x": 10,
+      "module": "ncnr.sans.SuperLoadSANS",
+      "title": "sample",
+      "config": {
+        "filelist": []
+      }
+    },
+    {
+      "y": 65,
+      "x": 10,
+      "module": "ncnr.sans.SuperLoadSANS",
+      "title": "empty cell",
+      "config": {
+        "filelist": []
+      }
+    },
+    {
+      "y": 140,
+      "x": 5,
+      "config": {
+        "do_det_eff": true,
+        "do_solid_angle": true,
+        "filelist": [],
+        "do_deadtime": true,
+        "deadtime": 0.0000034,
+        "mon0": 100000000,
+        "do_mon_norm": true
+      },
+      "module": "ncnr.sans.SuperLoadSANS",
+      "title": "empty trans"
+    },
+    {
+      "y": 105,
+      "x": 5,
+      "config": {
+        "do_det_eff": true,
+        "do_solid_angle": true,
+        "filelist": [],
+        "do_deadtime": true,
+        "deadtime": 0.0000034,
+        "mon0": 100000000,
+        "do_mon_norm": true
+      },
+      "module": "ncnr.sans.SuperLoadSANS",
+      "title": "sample trans"
+    },
+    {
+      "y": 150,
+      "x": 155,
+      "module": "ncnr.sans.generate_transmission",
+      "title": "Gen trans"
+    },
+    {
+      "y": 75,
+      "x": 515,
+      "module": "ncnr.sans.SuperLoadSANS",
+      "title": "DIV"
+    },
+    {
+      "y": 35,
+      "x": 10,
+      "module": "ncnr.sans.SuperLoadSANS",
+      "title": "blocked",
+      "config": {
+        "filelist": []
+      }
+    },
+    {
+      "y": 5,
+      "x": 200,
+      "module": "ncnr.sans.subtract",
+      "title": "Subtract"
+    },
+    {
+      "y": 65,
+      "x": 230,
+      "module": "ncnr.sans.subtract",
+      "title": "Subtract"
+    },
+    {
+      "y": 65,
+      "x": 370,
+      "module": "ncnr.sans.product",
+      "title": "Product"
+    },
+    {
+      "y": 5,
+      "x": 515,
+      "module": "ncnr.sans.subtract",
+      "title": "Subtract"
+    },
+    {
+      "module": "ncnr.sans.correct_detector_sensitivity",
+      "title": "Det sensit",
+      "x": 680,
+      "y": 5
+    },
+    {
+      "module": "ncnr.sans.LoadSANS",
+      "title": "empty",
+      "x": 15,
+      "y": 220
+    },
+    {
+      "module": "ncnr.sans.generate_transmission",
+      "title": "Gen trans",
+      "x": 495,
+      "y": 190
+    },
+    {
+      "module": "ncnr.sans.absolute_scaling",
+      "title": "Abs Scale",
+      "x": 820,
+      "y": 75
+    }
+  ],
+  "wires": [
+    {
+      "source": [
+        0,
+        "output"
+      ],
+      "target": [
+        7,
+        "subtrahend"
+      ]
+    },
+    {
+      "source": [
+        6,
+        "output"
+      ],
+      "target": [
+        7,
+        "minuend"
+      ]
+    },
+    {
+      "source": [
+        6,
+        "output"
+      ],
+      "target": [
+        8,
+        "minuend"
+      ]
+    },
+    {
+      "source": [
+        1,
+        "output"
+      ],
+      "target": [
+        8,
+        "subtrahend"
+      ]
+    },
+    {
+      "source": [
+        3,
+        "output"
+      ],
+      "target": [
+        4,
+        "in_beam"
+      ]
+    },
+    {
+      "source": [
+        2,
+        "output"
+      ],
+      "target": [
+        4,
+        "empty_beam"
+      ]
+    },
+    {
+      "source": [
+        4,
+        "output"
+      ],
+      "target": [
+        9,
+        "factor_param"
+      ]
+    },
+    {
+      "source": [
+        8,
+        "output"
+      ],
+      "target": [
+        9,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        7,
+        "output"
+      ],
+      "target": [
+        10,
+        "subtrahend"
+      ]
+    },
+    {
+      "source": [
+        9,
+        "output"
+      ],
+      "target": [
+        10,
+        "minuend"
+      ]
+    },
+    {
+      "source": [
+        5,
+        "output"
+      ],
+      "target": [
+        11,
+        "sensitivity"
+      ]
+    },
+    {
+      "source": [
+        10,
+        "output"
+      ],
+      "target": [
+        11,
+        "sansdata"
+      ]
+    },
+    {
+      "source": [
+        3,
+        "output"
+      ],
+      "target": [
+        13,
+        "in_beam"
+      ]
+    },
+    {
+      "source": [
+        12,
+        "output"
+      ],
+      "target": [
+        13,
+        "empty_beam"
+      ]
+    },
+    {
+      "source": [
+        11,
+        "output"
+      ],
+      "target": [
+        14,
+        "sample"
+      ]
+    },
+    {
+      "source": [
+        12,
+        "output"
+      ],
+      "target": [
+        14,
+        "empty"
+      ]
+    },
+    {
+      "source": [
+        5,
+        "output"
+      ],
+      "target": [
+        14,
+        "div"
+      ]
+    },
+    {
+      "source": [
+        13,
+        "output"
+      ],
+      "target": [
+        14,
+        "Tsam"
+      ]
+    }
+  ]
+}
