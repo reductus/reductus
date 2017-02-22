@@ -401,6 +401,25 @@ def product(data, factor_param):
     """
     return data.__mul__(factor_param['factor'])
     
+@module
+def divide(data, factor_param):
+    """
+    Algebraic multiplication of dataset
+    
+    **Inputs**
+    
+    data (sans2d): data in (a)
+    
+    factor_param (params): multiplication factor (b)
+    
+    **Returns**
+    
+    output (sans2d): result (c in a*b = c)
+    
+    2010-01-01 unknown
+    """
+    return data.__mul__(factor_param['factor'])
+    
 def correct_solid_angle(sansdata):
     """\
     given a SansData with q,qx,qy,and theta images defined,
@@ -455,6 +474,83 @@ def correct_detector_sensitivity(sansdata,sensitivity):
     result = sansdata.__truediv__(sensitivity.data)
     
     return result
+
+@cache
+@module
+def absolute_scaling(sample,empty,div,Tsam,instrument="NG7",xmin=55,xmax=74,ymin=53,ymax=72): 
+    """\
+    Calculate absolute scaling
+
+    Coords are taken with reference to bottom left of the image.
+    
+    **Inputs**
+    
+    sample (sans2d): measurement with sample in the beam
+    
+    empty (sans2d): measurement with no sample in the beam
+    
+    div (sans2d): DIV measurement
+    
+    Tsam (params): sample transmission
+    
+    instrument (opt:NG7|NG3): instrument name, should be NG7 or NG3
+    
+    xmin (int): left pixel of integration box
+    
+    xmax (int): right pixel of integration box
+    
+    ymin (int): bottom pixel of integration box
+    
+    ymax (int): top pixel of integration box
+    
+    **Returns**
+    
+    abs (sans2d): data on absolute scale
+    
+    2010-01-01 Andrew Jackson
+    """
+    #data (that is going through reduction),empty beam, div, Transmission of the sample,instrument(NG3.NG5,NG7)
+    #ALL from metadata
+    detCnt = empty.metadata['run.detcnt']
+    countTime = empty.metadata['run.rtime']
+    monCnt = empty.metadata['run.moncnt']
+    sdd = empty.metadata['det.dis'] *100
+    pixel = empty.metadata['det.pixelsizex']
+    if pixel>=1.0:
+        pixel/=10.0
+    lambd = wavelength = empty.metadata['resolution.lmda']
+    attenNo = empty.metadata['run.atten']    
+    #Need attenTrans - AttenuationFactor - need to know whether NG3, NG5 or NG7 (acctStr)
+    
+    from attenuation_constants import attenuation
+    #-----------------------------
+    #AJJ - array indexing issue here. But this is a hack anyway - need to interpolate wavelength values
+    attenTrans = attenuation[instrument][attenNo][int(round(wavelength))]
+    #print "attenFact: ", attenTrans
+    
+    
+    #-------------------------------------------------------------------------------------#
+    
+    #correct empty beam by the sensitivity
+    data = empty.__truediv__(DIV.data)
+    #Then take the sum in XY box
+    detCnt = np.sum(data.data.x[xmin:xmax+1, ymin:ymax+1])
+    #print "DETCNT: ",detCnt
+   
+    #------End Result-------#
+    #This assumes that the data has *not* been normalized at all.
+    #Thus either fix this or pass un-normalized data.
+    kappa = detCnt/countTime/attenTrans*1.0e8/(monCnt/countTime)*(pixel/sdd)**2 #Correct Value: 6617.1
+    #print "Kappa: ", kappa
+                                                 
+    #utc_datetime = date.datetime.utcnow()
+    #print utc_datetime.strftime("%Y-%m-%d %H:%M:%S")
+    
+    #-----Using Kappa to Scale data-----#
+    Dsam = sample.metadata['sample.thk']
+    ABS = sample.__mul__(1/(kappa*Dsam*Tsam['factor']))
+    #------------------------------------
+    return ABS
 
 @cache
 @module

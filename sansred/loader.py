@@ -21,8 +21,10 @@ metadata_lookup = {
     "run.detcnt": "control/detector_counts",
     "run.rtime": "control/count_time",
     "run.moncnt": "control/monitor_counts",
+    "run.atten": "instrument/attenuator/index",
     "analysis.groupid": "DAS_logs/trajectoryData/groupid",
-    "run.configuration": "DAS_logs/configuration/key"
+    "run.configuration": "DAS_logs/configuration/key",
+    "sample.thk": "DAS_logs/sample/thickness",
 }
 
 def readSANSNexuz(input_file, file_obj=None):
