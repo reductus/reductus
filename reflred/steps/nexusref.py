@@ -126,7 +126,7 @@ def h5_open_zip(filename, file_obj=None, mode='r', **kw):
     if file_obj is None:
         file_obj = open(filename, mode=mode)
     is_zip = _EndRecData(file_obj) # is_zipfile(file_obj) doens't work in py2.6
-    if is_zip and not filename.endswith('.zip'):
+    if is_zip and '.attrs' in ZipFile(file_obj).namelist():
         # then it's a nexus-zip file, rather than
         # a zipped hdf5 nexus file
         f = hzf.File(filename, file_obj)

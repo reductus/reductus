@@ -245,7 +245,7 @@ def monitor_saturation(data):
 
     output (refldata): Dead-time corrected data
 
-    2015-12-17 Paul Kienzle
+    2017-02-22 Paul Kienzle
     """
     from .deadtime import apply_monitor_saturation
     data = copy(data)

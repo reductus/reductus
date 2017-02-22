@@ -1,7 +1,8 @@
 // require(jstree, webreduce.server_api)
 
 (function () {
-  var NEXUS_ZIP_REGEXP = /\.nxz\.[^\.\/]+(?:\.zip)*$/
+  var NEXUS_ZIP_REGEXP = /\.nxz\.[^\.\/]+$/
+  var ZIP_REGEXP = /\.zip$/
   var BRUKER_REGEXP = /\.raw$/
   var PARALLEL_LOAD = true;
   
@@ -28,6 +29,7 @@
     webreduce.editor._file_objs[datasource][path] = file_objs;
     var datafiles = files.filter(function(x) {return (
       BRUKER_REGEXP.test(x) ||
+      ZIP_REGEXP.test(x) ||
       (NEXUS_ZIP_REGEXP.test(x) &&
        (/^(fp_)/.test(x) == false) &&
        (/^rapidscan/.test(x) == false) &&
