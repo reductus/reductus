@@ -951,7 +951,7 @@ def fit_footprint(data, qz_min=None, qz_max=None, origin=False):
     return footprint
 
 @module
-def correct_footprint(data, fitted_footprint, qz_min=None, qz_max=None, slope=1.0, slope_error=0.0, intercept=0.0, intercept_error=0.0):
+def correct_footprint(data, fitted_footprint, qz_min=None, qz_max=None, slope=None, slope_error=0.0, intercept=None, intercept_error=0.0):
     """
     Apply fitted footprint correction to each data set.
 
@@ -986,11 +986,15 @@ def correct_footprint(data, fitted_footprint, qz_min=None, qz_max=None, slope=1.
     from .footprint import apply_fitted_footprint, FootprintData
     data = copy(data)
     # always use manually-provided error on slope and intercept (not fitted)
-    dp = np.array([slope_error, intercept_error])    
+    dp = np.array([slope_error, intercept_error])
     if fitted_footprint is None:
         # make empty footprint data object
-        p = np.array([slope, intercept])
+        p = np.array([None, None])
         fitted_footprint = FootprintData(p, None)
+    if slope is not None:
+        fitted_footprint.p[0] = slope
+    if intercept is not None:
+        fitted_footprint.p[1] = intercept
     # in all cases, overwrite the error in fitted_footprint with specified 
     # values:
     fitted_footprint.dp = dp
@@ -1145,7 +1149,7 @@ def super_load(filelist=None,
     monitor_correction {Apply monitor deadtime correction} (bool)
     : Which deadtime constant to use for monitor deadtime.
 
-    intent (str)
+    intent (opt:auto|specular|background+\|background-\|intensity|rock sample|rock detector|rock qx|scan)
     : Measurement intent (specular, background+, background-, slit, rock),
     auto or infer.  If intent is 'scan', then use the first scanned variable.
     

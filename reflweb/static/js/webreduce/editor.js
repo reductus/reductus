@@ -202,19 +202,18 @@ webreduce.editor = webreduce.editor || {};
           if (webreduce.editor.make_fieldUI[field.datatype]) {
             var value;
             var passthrough = false;
+            var field_copy =  $.extend(true, {}, field);
+            var default_value = field_copy.default;
             if (field.id in fields_in) {
-              value = fields_in[field.id];
+              //value = fields_in[field.id];
+              default_value = fields_in[field.id];
               passthrough = true;
             }
-            else if (active_module.config && field.id in active_module.config) {
+            if (active_module.config && field.id in active_module.config) {
               value = active_module.config[field.id];
             }
-            else {
-              // make a copy - if field.default is an object, it will be modified!
-              var field_copy =  $.extend(true, {}, field);
-              value = field_copy.default;
-            }
-            var datum = {"id": field.id, "value": value, "passthrough": passthrough};
+            
+            var datum = {"id": field.id, "value": value, "default_value": default_value, "passthrough": passthrough};
             var fieldUImaker = webreduce.editor.make_fieldUI[field.datatype];
             var context = {
               field: field,
@@ -232,7 +231,7 @@ webreduce.editor = webreduce.editor || {};
                 webreduce.editor.accept_parameters(config_target, active_module);
               }
             }
-            if (passthrough) {fieldUI.property("disabled", true)};
+            //if (passthrough) {fieldUI.property("disabled", true)};
             fieldUI
               .on("input.auto_accept", auto_accept)
               .on("change.auto_accept", auto_accept)
@@ -862,7 +861,7 @@ webreduce.editor = webreduce.editor || {};
   webreduce.editor.accept_parameters = function(target, active_module) {
     target.selectAll("div.fields")
       .each(function(data) {
-        if (!data.passthrough) {
+        if (typeof data.value !== "undefined") {
           if (!active_module.config) {active_module.config = {}};
           active_module.config[data.id] = data.value;
         }
@@ -937,6 +936,7 @@ webreduce.editor = webreduce.editor || {};
     var datasets = datasets_in.values;
     // now have a list of datasets.
     var datum = jQuery.extend(true, {}, datum_in);
+    datum.value = datum.value || datum.default_value;
     datasets.forEach(function(d,i) {
       datum.value[i] = datum.value[i] || [];
     });
@@ -1123,20 +1123,13 @@ webreduce.editor = webreduce.editor || {};
     
     var datasets = datasets_in.values;
     var original_datum = [];
+    var value = (datum.value == null) ? datum.default_value : datum.value;
     // now have a list of datasets.
-    datum.value = datum.value.slice(0,datasets.length);
-    // valid lengths: 1 or N
-    var is_singleton = (datum.value.length == 1);
-    if (is_singleton) {
-      // special case: everything gets scaled the same amount
-      original_datum = datum.value.slice();
-    } else {
-      // each dataset gets its own multiplier
-      datasets.forEach(function(d,i) {
-        datum.value[i] = (datum.value[i] == null) ? 1 : datum.value[i];
-        original_datum[i] = datum.value[i];
-      });
-    }
+    datum.value = value.slice(0,datasets.length);
+    datasets.forEach(function(d,i) {
+      datum.value[i] = (datum.value[i] == null) ? 1 : datum.value[i];
+      original_datum[i] = datum.value[i];
+    });
     var scale_div = target.select("div#scalelist").append("div")
       .classed("fields", true)
       .datum(datum)
@@ -1149,19 +1142,12 @@ webreduce.editor = webreduce.editor || {};
       .style("vertical-align", "middle")
       .text(JSON.stringify(datum.value, null, 2))
       .on("change", function(d) { datum.value = JSON.parse(this.value) });
-    scale_div.append("br");
-    var polyadic = scale_div.append("label")
-      .text("match dimension")
-      .append("input")
-        .attr("type", "checkbox")
-        .property("checked", true)
     
     unscaled_data = [];
     d3.selectAll("#plotdiv .dot").on("click", null); // clear previous handlers
     d3.selectAll("#plotdiv svg g.series").each(function(d,i) {
       // i is index of dataset
       // make a copy of the data:
-      var scale_index = (is_singleton) ? 0 : i;
       unscaled_data[i] = $.extend(true, [], d);
       var dragmove_point = function(dd,ii) {
         var chart = webreduce.editor._active_plot;
@@ -1183,7 +1169,7 @@ webreduce.editor = webreduce.editor || {};
             ddd[2].ylower = new_scale * old_point[2].ylower;
           }
         })
-        datum.value[scale_index] = new_scale * original_datum[scale_index];
+        datum.value[i] = new_scale * original_datum[i];
         input.text(JSON.stringify(datum.value, null, 2));
         var event = document.createEvent('Event');
 		event.initEvent('input', true, true);
@@ -1220,6 +1206,7 @@ webreduce.editor = webreduce.editor || {};
           .attr("type", "text")
           .attr("field_id", field.id)
           .attr("value", datum.value)
+          .attr("placeholder", datum.default_value)
           .on("change", function(d) { datum.value = this.value });
     return input;
   }
@@ -1269,6 +1256,7 @@ webreduce.editor = webreduce.editor || {};
             .attr("type", "text")
             .attr("field_id", field.id)
             .attr("value", JSON.stringify(datum.value))
+            .attr("placeholder", JSON.stringify(datum.default_value))
             .on("change", function(d) { datum.value = JSON.parse(this.value) });
     } else {
       input = target.append("div")
@@ -1277,9 +1265,10 @@ webreduce.editor = webreduce.editor || {};
         .append("label")
           .text(field.label)
           .append("input")
-            .attr("type", "number")
+            .attr("type", "text")
             .attr("field_id", field.id)
             .attr("value", datum.value)
+            .attr("placeholder", JSON.stringify(datum.default_value))
             .on("input", function(d) { datum.value = (this.value == "") ? null : parseFloat(this.value) });
     }
     return input;
@@ -1301,6 +1290,7 @@ webreduce.editor = webreduce.editor || {};
           .attr("type", "number")
           .attr("field_id", field.id)
           .attr("value", datum.value)
+          .attr("placeholder", JSON.stringify(datum.default_value))
           .on("input", function(d) { datum.value = (this.value == "") ? null : parseInt(this.value) });
     return input;
   }
