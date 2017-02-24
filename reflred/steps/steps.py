@@ -633,7 +633,7 @@ def rescale(data, scale=1.0, dscale=0.0):
 #@nocache
 @module
 def join(data, Q_tolerance=0.5, dQ_tolerance=0.002, order='file',
-         group_by = "polarization", tolerance=-1.0):
+         group_by = "polarization", tolerance=None):
     r"""
     Join operates on a list of datasets, returning a list with one dataset,
     or one dataset per polarization state.  When operating on a single
@@ -687,8 +687,8 @@ def join(data, Q_tolerance=0.5, dQ_tolerance=0.002, order='file',
     
     group_by (str) : key by which the files are grouped prior to join
 
-    tolerance(float:1-sigma<-1,inf>) : **deprecated** value for Qtol and dQtol;
-    ignored if the value is less than 0.
+    tolerance(float?:1-sigma<0,inf>) : **deprecated** value for Qtol and dQtol;
+    ignored if the value is None or not specified.
 
     **Returns**
 
@@ -700,7 +700,7 @@ def join(data, Q_tolerance=0.5, dQ_tolerance=0.002, order='file',
     from .util import group_by_key
     # No copy necessary; join is never in-place.
 
-    if tolerance >= 0:
+    if tolerance is not None:
         Q_tolerance = dQ_tolerance = tolerance
     datasets = group_by_key(group_by, data).values()
     output = []
@@ -1156,7 +1156,7 @@ def super_load(filelist=None,
     Qz_basis (opt:actual|detector|sample|target)
     : How to calculate Qz from instrument angles.
 
-    sample_width {Sample width (mm)} (float)
+    sample_width {Sample width (mm)} (float?)
     : Width of the sample along the beam direction in mm, used for
     calculating the effective resolution when the sample is smaller
     than the beam.  Leave blank to use value from data file.
