@@ -148,7 +148,8 @@ webreduce.instruments['ncnr.sans'] = webreduce.instruments['ncnr.sans'] || {};
     var leaf, entry;
     for (fn in jstree._model.data) {
       leaf = jstree._model.data[fn];
-      if (leaf.li_attr && 'filename' in leaf.li_attr && 'entryname' in leaf.li_attr) {
+      if (leaf.li_attr && 'filename' in leaf.li_attr && 'entryname' in leaf.li_attr && 'datasource' in leaf.li_attr) {
+        var file_objs = webreduce.editor._file_objs[leaf.li_attr.datasource][path];
         entry = file_objs[leaf.li_attr.filename].values.filter(function(f) {return f.entry == leaf.li_attr.entryname});
         if (entry && entry[0]) {
           var e = entry[0];
