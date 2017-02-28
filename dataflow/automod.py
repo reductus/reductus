@@ -594,7 +594,7 @@ def parse_datatype(par):
         *y* for a range of *x* or *y* values, or *xy* for a region of the
         graph. This makes most sense with *length=1, multiple=false*.
         The type attribute is set as *typeattr={axis: "axis"}*.  The return
-        value is *[min, max]* for *x* and *y*, or *[minx, miny, maxx, maxy]*
+        value is *[min, max]* for *x* and *y*, or *[minx, maxx, miny, maxy]*
         for *xy*.
 
     *coordinate* -> *datatype=coordinate*
@@ -661,7 +661,7 @@ def parse_datatype(par):
     elif type == "range":
         if attrstr not in ("x", "y", "xy"):
             raise ValueError("range must be one of x, y or xy for " + name)
-        attr["range"] = attrstr
+        attr["axis"] = attrstr
 
     else: # type in ["str", "bool", "fileinfo", "index", "coordinate"]:
         if par["typeattr"] is not None:
