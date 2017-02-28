@@ -554,6 +554,72 @@ def absolute_scaling(sample,empty,div,Tsam,instrument="NG7",xmin=55,xmax=74,ymin
 
 @cache
 @module
+def patchData(data1, data2, xmin=55,xmax=74,ymin=53,ymax=72):
+    """
+    Copies data from data2 to data1 within the defined patch region
+    (often used for processing DIV files)
+    
+    **Inputs**
+    
+    data1 (sans2d): measurement to be patched
+        
+    data2 (sans2d): measurement to get the patch from
+    
+    xmin (int): left pixel of patch box
+    
+    xmax (int): right pixel of patch box
+    
+    ymin (int): bottom pixel of patch box
+    
+    ymax (int): top pixel of patch box
+    
+    **Returns**
+    
+    patched (sans2d): data1 with patch applied from data2
+    
+    """
+    
+    patch_slice = (slice(xmin, xmax+1), slice(ymin, ymax+1))
+    
+    data1.data[patch_slice] = data2.data[patch_slice]
+    
+    return data1
+    
+@cache
+@module
+def makeDIV(data1, data2, xmin=55,xmax=74,ymin=53,ymax=72):
+    """
+    Use data2 to patch the beamstop from data1 within the defined box, then
+    divide by total counts and multiply by number of pixels.
+    
+    **Inputs**
+    
+    data1 (sans2d): base measurement (to be patched and normalized)
+        
+    data2 (sans2d): measurement to get the patch from
+    
+    xmin (int): left pixel of patch box
+    
+    xmax (int): right pixel of patch box
+    
+    ymin (int): bottom pixel of patch box
+    
+    ymax (int): top pixel of patch box
+    
+    **Returns**
+    
+    DIV (sans2d): data1 with patch applied from data2 and normalized
+    """
+    
+    DIV = patchData(data1, data2, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
+    
+    DIV.data = DIV.data / np.sum(DIV.data) * DIV.data.x.size
+    
+    return DIV
+    
+
+@cache
+@module
 def SuperLoadSANS(filelist=None, do_solid_angle=True, do_det_eff=True, do_deadtime=True, deadtime=3.4e-6, do_mon_norm=True, mon0=1e8):
     """ 
     loads a data file into a SansData obj, and performs common reduction steps
