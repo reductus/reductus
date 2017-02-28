@@ -1219,9 +1219,10 @@ webreduce.editor = webreduce.editor || {};
     subinputs
           .attr("value", function(d,i) { return (datum.value) ? datum.value[i] : null })
           
-          
-          
-    if (axis == 'x') {
+    
+    if (axis == 'x' && 
+        webreduce.editor._active_plot && 
+        webreduce.editor._active_plot.interactors) {
       // add x-range interactor
       var value = datum.value || datum.default_value;
       var opts = {
@@ -1247,7 +1248,9 @@ webreduce.editor = webreduce.editor || {};
     else if (axis == 'y') {
       // add y-range interactor
     }
-    else if (axis == 'xy') {
+    else if (axis == 'xy' && 
+             webreduce.editor._active_plot && 
+             webreduce.editor._active_plot.interactors) {
       // add box interactor
       var value = datum.value || datum.default_value;
       var opts = {
@@ -1256,6 +1259,7 @@ webreduce.editor = webreduce.editor || {};
         color1: 'red',
         color2: 'LightRed',
         fill: "none",
+        show_center: false,
         xmin: value[0],
         xmax: value[1],
         ymin: value[2], 
@@ -1271,6 +1275,7 @@ webreduce.editor = webreduce.editor || {};
         event.initEvent('input', true, true);
         subinputs.node().dispatchEvent(event);
       });
+      
       webreduce.editor._active_plot.interactors(interactor);
     }
     
