@@ -343,7 +343,7 @@ def generate_transmission(in_beam,empty_beam,xmin=55,xmax=74,ymin=53,ymax=72):
     
     output (params): calculated transmission for the integration area
     
-    2016-08-04 Brian Maranville    
+    2017-02-28 Brian Maranville    
     """
     #I_in_beam=0.0
     #I_empty_beam=0.0
@@ -359,7 +359,7 @@ def generate_transmission(in_beam,empty_beam,xmin=55,xmax=74,ymin=53,ymax=72):
     #        I_empty_beam=I_empty_beam+empty_beam.data.x[x,y]
     I_in_beam = np.sum(in_beam.data.x[xmin:xmax+1, ymin:ymax+1])
     I_empty_beam = np.sum(empty_beam.data.x[xmin:xmax+1, ymin:ymax+1])
-    result=Parameters(transmission=I_in_beam/I_empty_beam)
+    result=Parameters(factor=I_in_beam/I_empty_beam)
     
     return result
 
@@ -458,7 +458,7 @@ def correct_detector_sensitivity(sansdata,sensitivity):
     
     output (sans2d): result c in a/b = c
     
-    2010-01-01 unknown
+    2017-01-01 unknown
     """
     #result=sansdata.data/sensitivity #Could be done more elegantly by defining a division method on SansData
     #res=SansData()
@@ -471,9 +471,9 @@ def correct_detector_sensitivity(sansdata,sensitivity):
     #res.theta=copy(sansdata.theta)
     
     #Used SansData operation to make more efficient
-    result = sansdata.__truediv__(sensitivity.data)
+    sansdata.data = sansdata.data.__truediv__(sensitivity.data)
     
-    return result
+    return sansdata
 
 @cache
 @module
@@ -507,7 +507,7 @@ def absolute_scaling(sample,empty,div,Tsam,instrument="NG7",xmin=55,xmax=74,ymin
     
     abs (sans2d): data on absolute scale
     
-    2010-01-01 Andrew Jackson
+    2017-01-01 Andrew Jackson
     """
     #data (that is going through reduction),empty beam, div, Transmission of the sample,instrument(NG3.NG5,NG7)
     #ALL from metadata
@@ -532,7 +532,7 @@ def absolute_scaling(sample,empty,div,Tsam,instrument="NG7",xmin=55,xmax=74,ymin
     #-------------------------------------------------------------------------------------#
     
     #correct empty beam by the sensitivity
-    data = empty.__truediv__(DIV.data)
+    data = empty.__truediv__(div.data)
     #Then take the sum in XY box
     detCnt = np.sum(data.data.x[xmin:xmax+1, ymin:ymax+1])
     #print "DETCNT: ",detCnt
