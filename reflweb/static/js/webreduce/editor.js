@@ -368,7 +368,7 @@ webreduce.editor = webreduce.editor || {};
     
     if (!(mychart && mychart.type && mychart.type == "heatmap_2d")) {
       d3.selectAll("#plotdiv").selectAll("svg, div").remove();
-      mychart = new heatChart();
+      mychart = new heatChart.default({margin: {left: 100}} );
       d3.selectAll("#plotdiv").data(datas[0].z).call(mychart);
       webreduce.callbacks.resize_center = function() {mychart.autofit()};
     }
@@ -408,6 +408,7 @@ webreduce.editor = webreduce.editor || {};
       .on("input", update_plotselect)
     
     update_plotselect();
+    mychart.interactors(null);
     mychart.autofit();
     return mychart
   }
@@ -1172,8 +1173,8 @@ webreduce.editor = webreduce.editor || {};
         datum.value[i] = new_scale * original_datum[i];
         input.text(JSON.stringify(datum.value, null, 2));
         var event = document.createEvent('Event');
-		event.initEvent('input', true, true);
-		input.node().dispatchEvent(event);
+        event.initEvent('input', true, true);
+        input.node().dispatchEvent(event);
         chart.update();
       }
       var drag_point = d3.behavior.drag()
@@ -1190,6 +1191,93 @@ webreduce.editor = webreduce.editor || {};
   webreduce.editor.make_fieldUI.scale = scaleUI;
   //function(field, active_template, datum, module_def, target, datasets_in) {
 
+  var rangeUI = function() {
+    var datum = this.datum,
+        field = this.field,
+        axis = this.field.typeattr['axis'] || "?",
+        target = this.target,
+        datasets_in = this.datasets_in,
+        module = this.active_module;
+    
+    var input = target.append("div")
+      .classed("fields", true)
+      .datum(datum)
+    
+    var subfields = ((/x/.test(axis)) ? ["xmin", "xmax"] : []).concat((/y/.test(axis)) ? ["ymin", "ymax"] : []);
+    var subinputs = input.selectAll("div.subfield").data(subfields).enter()
+      .append("div")
+      .classed("subfield", true)
+      .append("label")
+      .text(function(d) {return d})
+        .append("input")
+          .attr("type", "text")
+          .attr("placeholder", function(d,i) { return datum.default_value[i] })
+          .on("change", function(d,i) { 
+            if (datum.value == null) { datum.value = datum.default_value }
+            datum.value[i] = parseFloat(this.value);
+          });
+    subinputs
+          .attr("value", function(d,i) { return (datum.value) ? datum.value[i] : null })
+          
+          
+          
+    if (axis == 'x') {
+      // add x-range interactor
+      var value = datum.value || datum.default_value;
+      var opts = {
+        type: 'xrange',
+        name: 'xrange',
+        color1: 'blue',
+        show_lines: true,
+        x1: value[0],
+        x2: value[1]
+      }
+      var interactor = new xSliceInteractor.default(opts);
+      interactor.dispatch.on("update", function() { 
+        var state = interactor.state;
+        datum.value = [state.x1, state.x2];
+        subinputs
+          .attr("value", function(d,i) { return (datum.value) ? datum.value[i] : null })
+        var event = document.createEvent('Event');
+        event.initEvent('input', true, true);
+        subinputs.node().dispatchEvent(event);
+      });
+      webreduce.editor._active_plot.interactors(interactor);
+    }
+    else if (axis == 'y') {
+      // add y-range interactor
+    }
+    else if (axis == 'xy') {
+      // add box interactor
+      var value = datum.value || datum.default_value;
+      var opts = {
+        type: 'Rectangle',
+        name: 'range',
+        color1: 'red',
+        color2: 'LightRed',
+        fill: "none",
+        xmin: value[0],
+        xmax: value[1],
+        ymin: value[2], 
+        ymax: value[3]
+      }
+      var interactor = new rectangleInteractor.default(opts);
+      interactor.dispatch.on("update", function() { 
+        var state = interactor.state;
+        datum.value = [state.xmin, state.xmax, state.ymin, state.ymax];
+        subinputs
+          .attr("value", function(d,i) { return (datum.value) ? datum.value[i] : null })
+        var event = document.createEvent('Event');
+        event.initEvent('input', true, true);
+        subinputs.node().dispatchEvent(event);
+      });
+      webreduce.editor._active_plot.interactors(interactor);
+    }
+    
+    return input    
+  }
+  webreduce.editor.make_fieldUI.range = rangeUI;
+  
   var strUI = function() {
     var datum = this.datum,
         field = this.field,
