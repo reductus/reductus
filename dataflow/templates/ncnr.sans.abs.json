@@ -115,11 +115,7 @@
       "module": "ncnr.sans.makeDIV",
       "title": "Makediv",
       "x": 555,
-      "y": 115,
-      "config": {
-        "xmax": 79,
-        "ymax": 79
-      }
+      "y": 115
     },
     {
       "module": "ncnr.sans.LoadSANS",
