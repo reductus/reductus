@@ -317,7 +317,7 @@ def monitor_normalize(sansdata,mon0=1e8):
     return res
 
 @module
-def generate_transmission(in_beam,empty_beam,xmin=55,xmax=74,ymin=53,ymax=72):
+def generate_transmission(in_beam,empty_beam, integration_box=[55,74,53,72]):
     """\
     To calculate the transmission, we integrate the intensity in a box for a measurement
     with the substance in the beam and with the substance out of the beam and take their ratio.
@@ -331,13 +331,7 @@ def generate_transmission(in_beam,empty_beam,xmin=55,xmax=74,ymin=53,ymax=72):
     
     empty_beam (sans2d): measurement with no sample in the beam
     
-    xmin (int): left pixel of integration box
-    
-    xmax (int): right pixel of integration box
-    
-    ymin (int): bottom pixel of integration box
-    
-    ymax (int): top pixel of integration box
+    integration_box (range:xy): region over which to integrate
     
     **Returns**
     
@@ -357,6 +351,8 @@ def generate_transmission(in_beam,empty_beam,xmin=55,xmax=74,ymin=53,ymax=72):
     #    for y in range(ymax-coords_upper_right[1],ymax-coords_bottom_left[1]+1):
     #        I_in_beam=I_in_beam+in_beam.data.x[x,y]
     #        I_empty_beam=I_empty_beam+empty_beam.data.x[x,y]
+    
+    xmin, xmax, ymin, ymax = map(int, integration_box)
     I_in_beam = np.sum(in_beam.data.x[xmin:xmax+1, ymin:ymax+1])
     I_empty_beam = np.sum(empty_beam.data.x[xmin:xmax+1, ymin:ymax+1])
     result=Parameters(factor=I_in_beam/I_empty_beam)
@@ -587,7 +583,7 @@ def patchData(data1, data2, xmin=55,xmax=74,ymin=53,ymax=72):
     
 @cache
 @module
-def makeDIV(data1, data2, xmin=55,xmax=74,ymin=53,ymax=72):
+def makeDIV(data1, data2, patchbox=[55,74,53,72]):
     """
     Use data2 to patch the beamstop from data1 within the defined box, then
     divide by total counts and multiply by number of pixels.
@@ -598,18 +594,16 @@ def makeDIV(data1, data2, xmin=55,xmax=74,ymin=53,ymax=72):
         
     data2 (sans2d): measurement to get the patch from
     
-    xmin (int): left pixel of patch box
-    
-    xmax (int): right pixel of patch box
-    
-    ymin (int): bottom pixel of patch box
-    
-    ymax (int): top pixel of patch box
+    patchbox (range:xy): box to apply the patch in
     
     **Returns**
     
     DIV (sans2d): data1 with patch applied from data2 and normalized
+    2016-04-20 Brian Maranville  
     """
+    
+    print("patchbox:", patchbox)
+    xmin, xmax, ymin, ymax = map(int, patchbox)
     
     DIV = patchData(data1, data2, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
     
@@ -646,11 +640,11 @@ def SuperLoadSANS(filelist=None, do_solid_angle=True, do_det_eff=True, do_deadti
     
     output (sans2d[]): all the entries loaded.
     
-    2016-04-17 Brian Maranville    
+    2016-04-18 Brian Maranville    
     """
     data = LoadSANS(filelist, flip=False, transpose=False)
     
-    data = [PixelsToQ(d, correct_solid_angle=do_solid_angle) for d in data]
+    # data = [PixelsToQ(d, correct_solid_angle=do_solid_angle) for d in data]
     
     if do_det_eff:
         data = [correct_detector_efficiency(d) for d in data]
