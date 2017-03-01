@@ -1,5 +1,6 @@
 from posixpath import basename, join
 from copy import copy, deepcopy
+from uncertainty import Measurement
 import numpy as np
 from sansdata import SansData, Sans1dData, Parameters
 import StringIO
@@ -223,7 +224,7 @@ def correct_detector_efficiency(sansdata):
     
     output (sans2d): corrected for efficiency
     
-    2016-08-03 Brian Maranville and Andrew Jackson
+    2016-08-04 Brian Maranville and Andrew Jackson
     """
     
     L2=sansdata.metadata['det.dis']
@@ -242,7 +243,7 @@ def correct_detector_efficiency(sansdata):
     ff = np.exp(-stAl/np.cos(theta_det))*(1-np.exp(-stHe/np.cos(theta_det))) / ( np.exp(-stAl)*(1-np.exp(-stHe)) )
 
     res=SansData()
-    res.data.x=sansdata.data.x/ff
+    res.data=sansdata.data/ff
     #if not sansdata.data.variance==None:
             #res.data.variance=sansdata.data.variance/ff
 
@@ -272,19 +273,13 @@ def correct_dead_time(sansdata,deadtime=3.4e-6):
     
     output (sans2d): corrected for dead time
     
-    2010-01-01 Andrew Jackson?
+    2010-01-02 Andrew Jackson?
     """
     
-    dscale = 1/(1-deadtime*(np.sum(sansdata.data.x)/sansdata.metadata["run.rtime"]))
+    dscale = 1.0/(1.0-deadtime*(np.sum(sansdata.data)/sansdata.metadata["run.rtime"]))
     
-    result = SansData()
-    result.data.x = sansdata.data.x*dscale
-    result.metadata=deepcopy(sansdata.metadata)
-    result.q = copy(sansdata.q)
-    result.qx = copy(sansdata.qx)
-    result.qy = copy(sansdata.qy)
-    result.theta = copy(sansdata.theta)
-    
+    result = sansdata.copy()
+    result.data = sansdata.data*dscale
     return result
 
 @module
@@ -305,15 +300,9 @@ def monitor_normalize(sansdata,mon0=1e8):
     2010-01-01 Andrew Jackson?
     """    
     monitor=sansdata.metadata['run.moncnt']
-    result=sansdata.data.x*mon0/monitor
-    res=SansData()
-    res.data.x=result
-    res.metadata=deepcopy(sansdata.metadata)
-    #added res.q
-    res.q=copy(sansdata.q)
-    res.qx=copy(sansdata.qx)
-    res.qy=copy(sansdata.qy)
-    res.theta=copy(sansdata.theta)
+    result=sansdata.data*mon0/monitor
+    res=sansdata.copy()
+    res.data=result
     return res
 
 @module
@@ -337,7 +326,7 @@ def generate_transmission(in_beam,empty_beam, integration_box=[55,74,53,72]):
     
     output (params): calculated transmission for the integration area
     
-    2017-02-28 Brian Maranville    
+    2017-02-29 Brian Maranville    
     """
     #I_in_beam=0.0
     #I_empty_beam=0.0
@@ -353,9 +342,10 @@ def generate_transmission(in_beam,empty_beam, integration_box=[55,74,53,72]):
     #        I_empty_beam=I_empty_beam+empty_beam.data.x[x,y]
     
     xmin, xmax, ymin, ymax = map(int, integration_box)
-    I_in_beam = np.sum(in_beam.data.x[xmin:xmax+1, ymin:ymax+1])
-    I_empty_beam = np.sum(empty_beam.data.x[xmin:xmax+1, ymin:ymax+1])
-    result=Parameters(factor=I_in_beam/I_empty_beam)
+    I_in_beam = np.sum(in_beam.data[xmin:xmax+1, ymin:ymax+1])
+    I_empty_beam = np.sum(empty_beam.data[xmin:xmax+1, ymin:ymax+1])
+    ratio = I_in_beam/I_empty_beam
+    result=Parameters(factor=ratio.x,factor_error=ratio.variance)
     
     return result
 
@@ -368,7 +358,7 @@ def subtract(subtrahend, minuend):
     
     subtrahend (sans2d): a in (a-b) = c
     
-    minuend (sans2d): b in (a-b) = c
+    minuend (sans2d?): b in (a-b) = c, defaults to zero
     
     **Returns**
     
@@ -376,10 +366,13 @@ def subtract(subtrahend, minuend):
     
     2010-01-01 unknown
     """
-    return subtrahend.__sub1__(minuend)
+    if minuend is not None:
+        return subtrahend - minuend
+    else:
+        return subtrahend
     
 @module
-def product(data, factor_param):
+def product(data, factor_param, propagate_error=True):
     """
     Algebraic multiplication of dataset
     
@@ -387,15 +380,22 @@ def product(data, factor_param):
     
     data (sans2d): data in (a)
     
-    factor_param (params): multiplication factor (b)
+    factor_param (params?): multiplication factor (b), defaults to 1
+    
+    propagate_error {Propagate error} (bool): if factor_error is passed in, use it
     
     **Returns**
     
     output (sans2d): result (c in a*b = c)
     
-    2010-01-01 unknown
+    2010-01-02 unknown
     """
-    return data.__mul__(factor_param['factor'])
+    if factor_param is not None:
+        if propagate_error:
+            variance = factor_param.get('factor_error', 0)
+        return data * Measurement(factor_param.get('factor', 1.0), variance)
+    else:
+        return data
     
 @module
 def divide(data, factor_param):
@@ -406,7 +406,7 @@ def divide(data, factor_param):
     
     data (sans2d): data in (a)
     
-    factor_param (params): multiplication factor (b)
+    factor_param (params): denominator factor (b), defaults to 1
     
     **Returns**
     
@@ -414,8 +414,11 @@ def divide(data, factor_param):
     
     2010-01-01 unknown
     """
-    return data.__mul__(factor_param['factor'])
-    
+    if factor_param is not None:
+        return data.__truediv__(factor_param['factor'])
+    else:
+        return data
+
 def correct_solid_angle(sansdata):
     """\
     given a SansData with q,qx,qy,and theta images defined,
@@ -467,6 +470,7 @@ def correct_detector_sensitivity(sansdata,sensitivity):
     #res.theta=copy(sansdata.theta)
     
     #Used SansData operation to make more efficient
+    print (sansdata.data.variance, sensitivity.data.variance)
     sansdata.data = sansdata.data.__truediv__(sensitivity.data)
     
     return sansdata
@@ -503,7 +507,7 @@ def absolute_scaling(sample,empty,div,Tsam,instrument="NG7",xmin=55,xmax=74,ymin
     
     abs (sans2d): data on absolute scale
     
-    2017-01-01 Andrew Jackson
+    2017-01-02 Andrew Jackson
     """
     #data (that is going through reduction),empty beam, div, Transmission of the sample,instrument(NG3.NG5,NG7)
     #ALL from metadata
@@ -522,7 +526,7 @@ def absolute_scaling(sample,empty,div,Tsam,instrument="NG7",xmin=55,xmax=74,ymin
     #-----------------------------
     #AJJ - array indexing issue here. But this is a hack anyway - need to interpolate wavelength values
     attenTrans = attenuation[instrument][attenNo][int(round(wavelength))]
-    #print "attenFact: ", attenTrans
+    print "attenFact: ", attenTrans
     
     
     #-------------------------------------------------------------------------------------#
@@ -576,10 +580,9 @@ def patchData(data1, data2, xmin=55,xmax=74,ymin=53,ymax=72):
     """
     
     patch_slice = (slice(xmin, xmax+1), slice(ymin, ymax+1))
-    
-    data1.data[patch_slice] = data2.data[patch_slice]
-    
-    return data1
+    output = data1.copy()
+    output.data[patch_slice] = data2.data[patch_slice]
+    return output
     
 @cache
 @module
@@ -640,7 +643,7 @@ def SuperLoadSANS(filelist=None, do_solid_angle=True, do_det_eff=True, do_deadti
     
     output (sans2d[]): all the entries loaded.
     
-    2016-04-18 Brian Maranville    
+    2016-04-22 Brian Maranville    
     """
     data = LoadSANS(filelist, flip=False, transpose=False)
     
@@ -652,7 +655,7 @@ def SuperLoadSANS(filelist=None, do_solid_angle=True, do_det_eff=True, do_deadti
         data = [correct_dead_time(d, deadtime=deadtime) for d in data]
     if do_mon_norm:
         data = [monitor_normalize(d, mon0=mon0) for d in data]
-        
+    
     return data
 
         
