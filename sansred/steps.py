@@ -258,7 +258,7 @@ def correct_detector_efficiency(sansdata):
     return res
 
 @module
-def correct_dead_time(sansdata,deadtime=3.4e-6):
+def correct_dead_time(sansdata,deadtime=1.0e-6):
     """\
     Correct for the detector recovery time after each detected event
     (suppresses counts as count rate increases)
@@ -273,7 +273,7 @@ def correct_dead_time(sansdata,deadtime=3.4e-6):
     
     output (sans2d): corrected for dead time
     
-    2010-01-02 Andrew Jackson?
+    2010-01-03 Andrew Jackson?
     """
     
     dscale = 1.0/(1.0-deadtime*(np.sum(sansdata.data)/sansdata.metadata["run.rtime"]))
@@ -475,6 +475,27 @@ def correct_detector_sensitivity(sansdata,sensitivity):
     
     return sansdata
 
+def lookup_attenuation(instrument_name, attenNo, wavelength):
+    from attenuation_constants import attenuation
+    if attenNo == 0:
+        return {"att": 1.0, "att_err": 0.0}
+        
+    ai = attenuation[instrument_name]
+    attenNoStr = format(int(attenNo), 'd')
+    att = ai['att'][attenNoStr]
+    att_err = ai['att_err'][attenNoStr]
+    wavelength_key = ai['lambda']
+    
+    wmin = np.min(wavelength_key)
+    wmax = np.max(wavelength_key)
+    if wavelength < wmin or wavelength > wmax:
+        raise ValueError("Wavelength out of calibration range (%f, %f). You must manually enter the absolute parameters" % (wmin, wmax))
+    
+    w = np.array([wavelength], dtype="float")
+    att_interp = np.interp(w, wavelength_key, att, 1.0, np.nan)
+    att_err_interp = np.interp(w, wavelength_key, att_err)
+    return {"att": att_interp[0], "att_err": att_err_interp[0]}
+    
 @cache
 @module
 def absolute_scaling(sample,empty,div,Tsam,instrument="NG7",xmin=55,xmax=74,ymin=53,ymax=72): 
@@ -493,7 +514,7 @@ def absolute_scaling(sample,empty,div,Tsam,instrument="NG7",xmin=55,xmax=74,ymin
     
     Tsam (params): sample transmission
     
-    instrument (opt:NG7|NG3): instrument name, should be NG7 or NG3
+    instrument (opt:NG7|NGB|NGB30): instrument name, should be NG7 or NG3
     
     xmin (int): left pixel of integration box
     
@@ -507,7 +528,7 @@ def absolute_scaling(sample,empty,div,Tsam,instrument="NG7",xmin=55,xmax=74,ymin
     
     abs (sans2d): data on absolute scale
     
-    2017-01-02 Andrew Jackson
+    2017-01-03 Andrew Jackson
     """
     #data (that is going through reduction),empty beam, div, Transmission of the sample,instrument(NG3.NG5,NG7)
     #ALL from metadata
@@ -522,12 +543,9 @@ def absolute_scaling(sample,empty,div,Tsam,instrument="NG7",xmin=55,xmax=74,ymin
     attenNo = empty.metadata['run.atten']    
     #Need attenTrans - AttenuationFactor - need to know whether NG3, NG5 or NG7 (acctStr)
     
-    from attenuation_constants import attenuation
-    #-----------------------------
-    #AJJ - array indexing issue here. But this is a hack anyway - need to interpolate wavelength values
-    attenTrans = attenuation[instrument][attenNo][int(round(wavelength))]
-    print "attenFact: ", attenTrans
-    
+    att = lookup_attenuation(instrument, attenNo, wavelength)
+    print "atten: %f +/- %f" % (att["att"], att["att_err"])
+    attenTrans = Measurement(att["att"], att["att_err"])
     
     #-------------------------------------------------------------------------------------#
     
