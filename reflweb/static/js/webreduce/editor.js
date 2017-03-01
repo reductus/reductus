@@ -1394,7 +1394,8 @@ webreduce.editor = webreduce.editor || {};
         field = this.field,
         target = this.target,
         datasets_in = this.datasets_in,
-        module = this.active_module;
+        module = this.active_module,
+        initial_value = (datum.value == null) ? datum.default_value : datum.value;
     var input = target.append("div")
       .classed("fields", true)
       .datum(datum)
@@ -1403,7 +1404,7 @@ webreduce.editor = webreduce.editor || {};
         .append("input")
           .attr("type", "checkbox")
           .attr("field_id", field.id)
-          .property("checked", datum.value)
+          .property("checked", initial_value)
           .on("change", function(d) { datum.value = this.checked });
     return input;
   }
