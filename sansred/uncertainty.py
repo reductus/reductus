@@ -187,15 +187,15 @@ class Measurement(object):
     def __ixor__(self, other): return NotImplemented
     def __ior__(self, other): return NotImplemented
 
-    def __invert__(self): return NotImplmented  # For ~x
-    def __complex__(self): return NotImplmented
-    def __int__(self): return NotImplmented
-    def __long__(self): return NotImplmented
-    def __float__(self): return NotImplmented
-    def __oct__(self): return NotImplmented
-    def __hex__(self): return NotImplmented
-    def __index__(self): return NotImplmented
-    def __coerce__(self): return NotImplmented
+    def __invert__(self): return NotImplemented  # For ~x
+    def __complex__(self): return NotImplemented
+    def __int__(self): return NotImplemented
+    def __long__(self): return NotImplemented
+    def __float__(self): return NotImplemented
+    def __oct__(self): return NotImplemented
+    def __hex__(self): return NotImplemented
+    def __index__(self): return NotImplemented
+    def __coerce__(self): return NotImplemented
 
     def log(self):
         return Measurement(*err1d.log(self.x,self.variance))
