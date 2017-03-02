@@ -79,9 +79,12 @@ __all__ = ['ReflData']
 
 import datetime
 import warnings
+import StringIO
+import json
 
 import numpy as np
 from numpy import inf, arctan2, sqrt, sin, cos, pi, radians
+
 from . import resolution
 
 # for sample background angle offset
@@ -914,7 +917,6 @@ class ReflData(Group):
             fid.write(self.export())
     
     def export(self):
-        import StringIO, json
         fid = StringIO.StringIO()
         for n in ['name', 'entry', 'polarization']:
             fid.write("# %s\n" % (json.dumps({n: getattr(self, n)}).strip("{}"),))

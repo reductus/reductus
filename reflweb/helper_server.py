@@ -10,13 +10,13 @@ from pprint import pprint
 import traceback
 import json
 
+from jsonrpclib.SimpleJSONRPCServer import SimpleJSONRPCServer, SimpleJSONRPCRequestHandler
+import jsonrpclib.config
+
 try:
     import config
 except ImportError:
     import default_config as config
-    
-from jsonrpclib.SimpleJSONRPCServer import SimpleJSONRPCServer, SimpleJSONRPCRequestHandler
-import jsonrpclib.config
 
 jsonrpclib.config.use_jsonclass = False
 
@@ -146,8 +146,8 @@ import dataflow.modules.refl
 from dataflow.modules.refl import INSTRUMENT # default
 import dataflow.modules.ospec
 
-from dataflow.modules import load
-load.DATA_SOURCES = config.data_sources
+from dataflow import fetch
+fetch.DATA_SOURCES = config.data_sources
 
 if config.use_redis == True:
     use_redis()

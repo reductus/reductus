@@ -1,7 +1,9 @@
-from MetaArray import MetaArray
-from numpy import ndarray, array, fromstring, float, float32, ones, empty, newaxis, savetxt, sqrt, mod, isnan, ma, hstack
-#from ...dataflow.core import Data
 from cStringIO import StringIO
+
+from numpy import ndarray, array, fromstring, float, float32, ones, empty, newaxis, savetxt, sqrt, mod, isnan, ma, hstack, log10
+
+from .MetaArray import MetaArray
+from . import filters
 
 class FilterableMetaArray(MetaArray):
     def __new__(cls, *args, **kw):
@@ -11,7 +13,6 @@ class FilterableMetaArray(MetaArray):
         return obj
 
     def filter(self, filtername, *args, **kwargs):
-        import filters
         return filters.__getattribute__(filtername)().apply(self, *args, **kwargs)
 
     def dumps(self):
@@ -84,7 +85,6 @@ class FilterableMetaArray(MetaArray):
         if len(self.shape) == 3:
             # return gnuplottable format:
             """ export 2d data to gnuplot format """
-            from numpy import log10
             # grab the first counts col:
             data = self
             cols = data._info[2]['cols']
@@ -106,7 +106,7 @@ class FilterableMetaArray(MetaArray):
             return_value["export_string"] =  result[0]
             
         elif len(self.shape) == 2:
-            from StringIO import StringIO
+            # TODO: does this need to be StringIO rather than cStringIO?
             fid = StringIO()
             cols = self._info[1]['cols']
             # put x axis in first:

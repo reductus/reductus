@@ -1,6 +1,6 @@
 import re
-
 import urllib2
+
 NIST_DOI_ROOT = "10.18434"
 NCNR_DATA_EXT = "T4201B"
 

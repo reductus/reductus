@@ -1,5 +1,5 @@
-from reflred import hzf_readonly_stripped as hzf
-from sansdata import SansData
+from dataflow.lib import hzf_readonly_stripped as hzf
+from .sansdata import SansData
 
 metadata_lookup = {
     "det.dis": "DAS_logs/detectorPosition/softPosition",

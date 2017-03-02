@@ -1,6 +1,7 @@
-from FilterableMetaArray import FilterableMetaArray as MetaArray
 from functools import wraps
-from magik_filters import Filter2D, Algebra, updateCreationStory, autoApplyToList
+
+from .FilterableMetaArray import FilterableMetaArray as MetaArray
+from .magik_filters import Filter2D, Algebra, updateCreationStory, autoApplyToList
         
 class AsterixPixelsToTwotheta(Filter2D):
     """ input array has pixels axis, convert to 

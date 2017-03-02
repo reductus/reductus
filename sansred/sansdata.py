@@ -1,20 +1,21 @@
 import numpy as np
-from uncertainty import Measurement
 import datetime
 from copy import copy, deepcopy
+
+from dataflow.lib.uncertainty import Uncertainty
 
 IGNORE_CORNER_PIXELS = True
 
 class SansData(object):
     """SansData object used for storing values from a sample file (not div/mask).               
-       Stores the array of data as a Measurement object (detailed in uncertainty.py)
+       Stores the array of data as a Uncertainty object (detailed in uncertainty.py)
        Stores all metadata
        q,qx,qy,theta all get updated with values throughout the reduction process
        Tsam and Temp are just used for storage across modules (in wireit)
     """
     def __init__(self,data=None,metadata=None,q=None,qx=None,qy=None,theta=None,Tsam=None,Temp=None):
         if isinstance(data, np.ndarray):
-            self.data = Measurement(data, data)
+            self.data = Uncertainty(data, data)
         else:
             self.data = data
         self.metadata=metadata
@@ -56,7 +57,7 @@ class SansData(object):
             return SansData(self.data*other,deepcopy(self.metadata),q=copy(self.q),qx=copy(self.qx),qy=copy(self.qy),theta=copy(self.theta))
     
     def copy(self):
-        return SansData(Measurement(self.data.x, self.data.variance),deepcopy(self.metadata),q=copy(self.q),qx=copy(self.qx),qy=copy(self.qy),theta=copy(self.theta))
+        return SansData(Uncertainty(self.data.x, self.data.variance),deepcopy(self.metadata),q=copy(self.q),qx=copy(self.qx),qy=copy(self.qy),theta=copy(self.theta))
     
     #def __str__(self):
         #return self.data.x.__str__()

@@ -6,7 +6,7 @@ from __future__ import division
 
 import numpy as np
 
-from ..uncertainty import Uncertainty as U, interp
+from dataflow.lib.uncertainty import Uncertainty as U, interp
 
 from .refldata import ReflData
 

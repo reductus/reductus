@@ -1,6 +1,6 @@
 import numpy as np
 
-from .. import err1d
+from dataflow.lib import err1d
 
 def indent(text, prefix="  "):
     """
@@ -104,7 +104,7 @@ def plot_sa(data):
     """
     from matplotlib import pyplot as plt
     from uncertainties.unumpy import uarray as U, nominal_values, std_devs
-    from ..errutil import interp
+    from dataflow.lib.errutil import interp
     # TODO: interp doesn't test for matching resolution
     data = dict((d.polarization,d) for d in data)
     pp, mm = data['++'], data['--']

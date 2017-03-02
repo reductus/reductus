@@ -1,14 +1,14 @@
 import urllib2
 import datetime
 from posixpath import basename, join, sep
-from dataflow.calc import _format_ordered
-from dataflow.cache import get_file_cache
 import hashlib
-#
 
 import pytz
 
-from reflred.iso8601 import seconds_since_epoch
+from .calc import _format_ordered
+from .cache import get_file_cache
+from .doi_resolve import get_target
+from .lib.iso8601 import seconds_since_epoch
 
 # override this if you want to point these to another place.
 # in particular, remove the "local" option if deploying in the cloud!
@@ -25,7 +25,6 @@ def check_datasource(source):
     elif isinstance(datasource, dict) and "url" in datasource:
         source_url = datasource["url"]
     elif isinstance(datasource, dict) and "DOI" in datasource:
-        from dataflow.modules.doi_resolve import get_target
         source_url = get_target(datasource["DOI"])
         print("resolving DOI %s to url %s" % (datasource["DOI"], source_url))
         datasource["url"] = source_url # cache for next access

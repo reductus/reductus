@@ -164,13 +164,14 @@ import numpy as np
 # from pypi is slow, and does an excellent job of matching monte carlo
 # estimates of polarization efficiency.
 
-#from ..uncertainty import Uncertainty
+#from dataflow.lib.uncertainty import Uncertainty
 #def U(x,dx): return Uncertainty(x,dx**2)
 #def nominal_values(u): return u.x
 #def std_devs(u): return u.dx
 from uncertainties.unumpy import uarray as U, matrix as UM, nominal_values, std_devs
 
-from ..errutil import interp
+from dataflow.lib.errutil import interp
+
 from . import util
 
 

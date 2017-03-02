@@ -1,15 +1,16 @@
-from numpy import cos, pi, cumsum, arange, ndarray, ones, zeros, array, newaxis, linspace, empty, resize, sin, allclose, zeros_like, linalg, dot, arctan2, float64, histogram2d, sum, sqrt, loadtxt, searchsorted, NaN, logical_not, fliplr, flipud
-import numpy
-from numpy.ma import MaskedArray
 import os, simplejson, datetime, sys, types
 from copy import deepcopy
 
-from FilterableMetaArray import FilterableMetaArray as MetaArray
-from he3analyzer import He3AnalyzerCollection
-from reflred.formats import load
-from reflred import hzf_readonly_stripped as hzf
+from numpy import cos, pi, cumsum, arange, ndarray, ones, zeros, array, newaxis, linspace, empty, resize, sin, allclose, zeros_like, linalg, dot, arctan2, float64, histogram2d, sum, sqrt, loadtxt, searchsorted, NaN, logical_not, fliplr, flipud
+import numpy
+from numpy.ma import MaskedArray
 import h5py
 import dateutil.parser
+
+from dataflow.lib import hzf_readonly_stripped as hzf
+
+from .FilterableMetaArray import FilterableMetaArray as MetaArray
+from .he3analyzer import He3AnalyzerCollection
 
 DEBUG=False
 

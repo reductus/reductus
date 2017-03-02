@@ -1,4 +1,5 @@
 from numpy import array
+
 attenuation = {}
 
 # from NCNR_Utils.ipf in IGOR reduction: 
@@ -91,23 +92,23 @@ ng7_source_string = """\
 """
 
 def compile_source(source, db):
-     import re, json
-     source = source.replace("ng3", "ngb30")
-     preface = re.compile("[ \t]*root:myGlobals:Attenuators:(\S*)att([0-9]+)\s*=\s*\{(.*)\}")
-     err_preface = re.compile("[ \t]*root:myGlobals:Attenuators:(\S*)att([0-9]+)_err\s*=\s*\{(.*)\}")
-     for att in preface.findall(source):
-          instr = att[0].upper()
-          atten = att[1]
-          db.setdefault(instr, {})
-          db[instr].setdefault("att", {})
-          db[instr]["att"][atten] = array(json.loads('[' + att[2] + ']'), dtype="float")
-     for att in err_preface.findall(source):
-          instr = att[0].upper()
-          atten = att[1]
-          db.setdefault(instr, {})
-          db[instr].setdefault("att_err", {})
-          db[instr]["att_err"][atten] = array(json.loads('[' + att[2] + ']'), dtype="float")
-     return
+    import re, json
+    source = source.replace("ng3", "ngb30")
+    preface = re.compile("[ \t]*root:myGlobals:Attenuators:(\S*)att([0-9]+)\s*=\s*\{(.*)\}")
+    err_preface = re.compile("[ \t]*root:myGlobals:Attenuators:(\S*)att([0-9]+)_err\s*=\s*\{(.*)\}")
+    for att in preface.findall(source):
+        instr = att[0].upper()
+        atten = att[1]
+        db.setdefault(instr, {})
+        db[instr].setdefault("att", {})
+        db[instr]["att"][atten] = array(json.loads('[' + att[2] + ']'), dtype="float")
+    for att in err_preface.findall(source):
+        instr = att[0].upper()
+        atten = att[1]
+        db.setdefault(instr, {})
+        db[instr].setdefault("att_err", {})
+        db[instr]["att_err"][atten] = array(json.loads('[' + att[2] + ']'), dtype="float")
+    return
 
 compile_source(ngb30_source_string, attenuation)
 attenuation['NGB30']['lambda'] = array([4,5,6,7,8,10,12,14,17,20], dtype="float")

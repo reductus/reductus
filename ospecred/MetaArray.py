@@ -4,10 +4,10 @@
 ## Class for storing n-dimensional data sets with per-axis meta information
 ## Free for any kind of use.
 
+import types
+from copy import deepcopy
 
 from numpy import ndarray, array, empty, fromstring, concatenate
-import types
-import copy
 
 def axis(name=None, cols=None, values=None, units=None):
   """Convenience function for generating axis descriptions when defining MetaArrays
@@ -173,7 +173,7 @@ class MetaArray(ndarray):
 
   def __deepcopy__(self, memo=None):
     return self.__class__(data=self.view(ndarray),
-                          info=copy.deepcopy(self._info, memo), copy=True)
+                          info=deepcopy(self._info, memo), copy=True)
 
   def copy(self, order=None):
     return self.__copy__(order=order)
@@ -259,7 +259,7 @@ class MetaArray(ndarray):
   
   def infoCopy(self):
     """Return a deep copy of the axis meta info for this object"""
-    return copy.deepcopy(self._info)
+    return deepcopy(self._info)
   
   def write(self, fileName):
     """Write this object to a file. The object can be restored by calling MetaArray(file=fileName)"""
@@ -340,7 +340,7 @@ class MetaArray(ndarray):
     raise Exception("Axis %d has no column named %s.\n  info=%s" % (axis, name, self._info))
   
   def _axisCopy(self, i):
-    return copy.deepcopy(self._info[i])
+    return deepcopy(self._info[i])
   
   def _axisSlice(self, i, cols):
     if self._info[i].has_key('cols') or self._info[i].has_key('values'):

@@ -1,6 +1,6 @@
 import numpy as np
 
-from .. import err1d
+from dataflow.lib import err1d
 
 
 def apply_rescale(data, scale, dscale):

@@ -4,12 +4,12 @@ from os.path import isfile, join as joinpath, dirname, abspath
 import regression
 from reflweb import config
 from dataflow.cache import set_test_cache
-from dataflow.modules import load
+from dataflow import fetch
 
 def regression_test():
     """Regressions tests from tests/regression_files, suitable for nosetests"""
     set_test_cache()
-    load.DATA_SOURCES = config.data_sources
+    fetch.DATA_SOURCES = config.data_sources
     path = abspath(joinpath(dirname(__file__), 'regression_files'))
 
     data_files = [p for f in listdir(path)

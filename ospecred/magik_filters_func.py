@@ -1,23 +1,28 @@
-from numpy import cos, pi, cumsum, arange, ndarray, ones, zeros, array, newaxis, linspace, empty, resize, sin, allclose, zeros_like, linalg, dot, arctan2, float64, histogram2d, sum, nansum, sqrt, loadtxt, searchsorted, NaN, logical_not, fliplr, flipud, indices, polyfit
-
-import numpy
-from numpy.ma import MaskedArray
 import os, sys, types
 from copy import deepcopy
-
-from FilterableMetaArray import FilterableMetaArray as MetaArray
-from reflred import rebin as reb
-from reflred.steps.nexusref import h5_open_zip
-
 from posixpath import basename, join
 import StringIO
 import urllib2
 import time
 import pytz
-from reflred.iso8601 import seconds_since_epoch
+
+from numpy import (cos, pi, cumsum, arange, ndarray, ones, zeros, array,
+                   newaxis, linspace, empty, resize, sin, allclose, zeros_like,
+                   linalg, dot, arctan2, float64, histogram2d, sum, nansum,
+                   sqrt, loadtxt, searchsorted, NaN, logical_not, fliplr,
+                   flipud, indices, polyfit, radians)
+
+from numpy.ma import MaskedArray
+
+from dataflow.lib.steps.nexusref import h5_open_zip
 
 from dataflow.core import Template
 from dataflow.calc import process_template
+from dataflow.fetch import url_get
+from dataflow.lib import rebin as reb
+from dataflow.lib.iso8601 import seconds_since_epoch
+
+from .FilterableMetaArray import FilterableMetaArray as MetaArray
 
 ALL_ACTIONS = []
 DATA_SOURCES = {"ncnr": "http://ncnr.nist.gov/pub/"}
@@ -633,7 +638,7 @@ def alphaFtoQz(data, wavelength=5.0):
 
     new_info[af_axis]['name'] = 'Qz'
     af = new_info[af_axis]['values']
-    qz = 4.0*pi/wavelength * numpy.sin(numpy.radians(af))
+    qz = 4.0*pi/wavelength * sin(radians(af))
     new_info[af_axis]['values'] = qz
     new_info[af_axis]['units'] = 'inv. Angstroms'
     new_array = (data.view(ndarray).copy())
@@ -647,7 +652,6 @@ def alphaFtoQz(data, wavelength=5.0):
 DETECTOR_ACTIVE = (320, 340)
 
 def url_load(fileinfo):
-    from dataflow.modules.load import url_get
     path, mtime, entries = fileinfo['path'], fileinfo['mtime'], fileinfo['entries']
     name = basename(path)
     fid = StringIO.StringIO(url_get(fileinfo))
@@ -769,7 +773,6 @@ def LoadMAGIKPSD(fileinfo=None, collapse=True, collapse_axis='y', auto_PolState=
     2016-04-02 Brian Maranville    
     """
     
-    from dataflow.modules.load import url_get
     path, mtime, entries = fileinfo['path'], fileinfo['mtime'], fileinfo['entries']
     name = basename(path)
     fid = StringIO.StringIO(url_get(fileinfo))
@@ -958,8 +961,8 @@ def loadMAGIKPSD_helper(file_obj, name, path, collapse=True, collapse_axis='y', 
     return output
     
 def test():
-    from dataflow.modules import load
-    load.DATA_SOURCES = {"ncnr": "http://ncnr.nist.gov/pub/"}
+    from dataflow import fetch
+    fetch.DATA_SOURCES = {"ncnr": "http://ncnr.nist.gov/pub/"}
     fileinfo = {
         'mtime': 1457795231.0,
         'path': 'ncnrdata/cgd/201603/21237/data/wp10v132.nxz.cgd',

@@ -425,8 +425,8 @@ def demo():
     pylab.show()
 
 def demo2():
-    import numpy,pylab
-    Q,R,dR = numpy.loadtxt('ga128.refl.mce').T
+    import pylab
+    Q,R,dR = pylab.loadtxt('ga128.refl.mce').T
     dQ = resolution(Q, s=0.154, Tlo=0.36, d=1500., L=4.75, dLoL=0.02)
     pylab.errorbar(Q,R,xerr=dQ,yerr=dR,fmt=',r',capsize=0)
     pylab.grid(True)

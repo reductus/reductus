@@ -6,7 +6,7 @@ from copy import copy
 
 import numpy as np
 
-from .. import unit
+from dataflow.lib import unit
 from .refldata import Intent, ReflData, Environment
 from .util import poisson_average
 from .resolution import divergence, dTdL2dQ, TiTdL2Qxz

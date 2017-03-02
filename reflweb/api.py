@@ -13,6 +13,7 @@ import dataflow.modules.refl
 from dataflow.modules.refl import INSTRUMENT # default
 import dataflow.modules.ospec
 import dataflow.modules.sans
+from dataflow import fetch
 
 try:
     import config
@@ -228,8 +229,7 @@ def list_instruments():
 
 def create_instruments():
     
-    from dataflow.modules import load
-    load.DATA_SOURCES = config.data_sources
+    fetch.DATA_SOURCES = config.data_sources
 
     if config.use_redis == True:
         redis_params = getattr(config, "redis_params", {})

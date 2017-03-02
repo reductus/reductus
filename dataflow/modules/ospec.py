@@ -1,5 +1,5 @@
-from dataflow import core as df
-from dataflow.automod import make_modules
+from dataflow.core import core as df
+from dataflow.automod import make_modules, make_template
 from dataflow import templates
 
 from ospecred import magik_filters_func as steps
@@ -38,9 +38,7 @@ def define_instrument():
 
 
 def loader_template():
-    from dataflow.automod import make_template
-    from dataflow.core import lookup_instrument
-    refl1d = lookup_instrument(INSTRUMENT)
+    refl1d = df.lookup_instrument(INSTRUMENT)
     diagram = [
             ["ncnr_load", {}],
             ["divergence", {"data": "-.output"}],
@@ -56,9 +54,7 @@ def loader_template():
 
 
 def unpolarized_template():
-    from dataflow.automod import make_template
-    from dataflow.core import lookup_instrument
-    refl1d = lookup_instrument(INSTRUMENT)
+    refl1d = df.lookup_instrument(INSTRUMENT)
     diagram = [
         # Load the data
         ["ncnr_load", {}],

@@ -1,7 +1,7 @@
 import numpy as np
 from uncertainties.unumpy import uarray, nominal_values as uval, std_devs as udev
 
-from .. import err1d
+from dataflow.lib import err1d
 
 from .deadtime_fit import deadtime_from_counts, estimate_incident
 

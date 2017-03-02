@@ -1,3 +1,5 @@
+import importlib
+
 items_to_load = {
 "magik_filters": \
 ['Algebra',
@@ -70,7 +72,6 @@ items_to_load = {
 ]
 }
 
-import importlib
 for module in items_to_load.keys():
     itemlist = items_to_load[module]
     for item in itemlist:
@@ -80,8 +81,12 @@ for module in items_to_load.keys():
 
 def list_classes(module):
     import inspect, simplejson
-    return simplejson.dumps([name for name, obj in inspect.getmembers(module) if inspect.isclass(obj)], indent=2)
+    selection = [name for (name, obj) in inspect.getmembers(module)
+                 if inspect.isclass(obj)]
+    return simplejson.dumps(selection, indent=2)
 
 def list_classes_and_functions(module):
     import inspect, simplejson
-    return simplejson.dumps([name for name, obj in inspect.getmembers(module) if inspect.isclass(obj) or inspect.isfunction(obj)], indent=2)
+    selection = [name for (name, obj) in inspect.getmembers(module)
+                 if inspect.isclass(obj) or inspect.isfunction(obj)]
+    return simplejson.dumps(selection, indent=2)

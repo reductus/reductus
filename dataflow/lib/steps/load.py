@@ -5,7 +5,9 @@ from os.path import basename
 
 import pytz
 
-from ..iso8601 import seconds_since_epoch
+from dataflow.lib.iso8601 import seconds_since_epoch
+from dataflow.fetch import url_get
+
 from . import nexusref
 from . import xrawref
 
@@ -16,7 +18,6 @@ def check_datasource(source):
         raise RuntimeError("Need to set reflred.steps.load.DATA_SOURCES['" + source + "'] first!")
 
 def url_load(fileinfo):
-    from dataflow.modules.load import url_get
     path, mtime, entries = fileinfo['path'], fileinfo['mtime'], fileinfo['entries']
     filename = basename(path)
     content = url_get(fileinfo)

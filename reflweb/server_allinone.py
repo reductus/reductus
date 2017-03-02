@@ -1,13 +1,13 @@
 import sys, os
 import BaseHTTPServer
 from SimpleHTTPServer import SimpleHTTPRequestHandler
-from jsonrpclib.SimpleJSONRPCServer import SimpleJSONRPCServer, SimpleJSONRPCRequestHandler
 import urlparse
-
-import jsonrpclib.config
-
 import multiprocessing
 import webbrowser
+
+from jsonrpclib.SimpleJSONRPCServer import SimpleJSONRPCServer, SimpleJSONRPCRequestHandler
+import jsonrpclib.config
+import h5py
 
 jsonrpclib.config.use_jsonclass = False
 HandlerClass = SimpleHTTPRequestHandler
@@ -113,8 +113,6 @@ server.register_function(pow)
 server.register_function(lambda x,y: x+y, 'add')
 server.register_function(lambda x: x, 'ping')
 
-import h5py, os, simplejson
-
 def categorize_files(path='./'):
     fns = os.listdir(path)
     fns.sort()
@@ -140,7 +138,8 @@ def categorize_files(path='./'):
                 output[_name][_scanType]['%d:%s' % (_num, entry)] = {'filename': fn, 'entry': entry}
         except:
             pass
-            
+
+    #import simplejson
     #return simplejson.dumps(output)
     return output
 

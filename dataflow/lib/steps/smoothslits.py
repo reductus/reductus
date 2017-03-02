@@ -8,8 +8,8 @@ from __future__ import division
 
 import numpy as np
 
-from ..err1d import interp
-from ..wsolve import smooth
+from dataflow.lib.err1d import interp
+from dataflow.lib.wsolve import smooth
 
 def apply_smoothing(slits, dx, degree, span):
     assert span>degree, "Span must be greater than degree"

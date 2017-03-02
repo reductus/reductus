@@ -1,9 +1,12 @@
 from posixpath import basename, join
 from copy import copy, deepcopy
-from uncertainty import Measurement
-import numpy as np
-from sansdata import SansData, Sans1dData, Parameters
 import StringIO
+
+import numpy as np
+
+from dataflow.lib.uncertainty import Uncertainty
+
+from .sansdata import SansData, Sans1dData, Parameters
 
 ALL_ACTIONS = []
 IGNORE_CORNER_PIXELS = True
@@ -50,7 +53,8 @@ def module(action):
 ################# 
 
 def url_load(fileinfo):
-    from dataflow.modules.load import url_get
+    from dataflow.fetch import url_get
+
     path, mtime, entries = fileinfo['path'], fileinfo['mtime'], fileinfo['entries']
     name = basename(path)
     fid = StringIO.StringIO(url_get(fileinfo))
@@ -79,7 +83,7 @@ def LoadSANS(filelist=None, flip=False, transpose=False):
     
     2016-04-17 Brian Maranville    
     """
-    from dataflow.modules.load import url_get
+    from dataflow.fetch import url_get
     from .loader import readSANSNexuz
     if filelist is None:
         filelist =[]
@@ -166,7 +170,7 @@ def annular_av(data):
     2016-04-08 Brian Maranville    
     """
     """ """
-    from draw_annulus_aa import annular_mask_antialiased
+    from .draw_annulus_aa import annular_mask_antialiased
     
     #annular_mask_antialiased(shape, center, inner_radius, outer_radius, background_value=0.0, mask_value=1.0, oversampling=8)
     # calculate the change in q that corresponds to a change in pixel of 1
@@ -394,7 +398,7 @@ def product(data, factor_param, propagate_error=True):
     if factor_param is not None:
         if propagate_error:
             variance = factor_param.get('factor_variance', 0.0)
-        return data * Measurement(factor_param.get('factor', 1.0), variance)
+        return data * Uncertainty(factor_param.get('factor', 1.0), variance)
     else:
         return data
     
@@ -477,7 +481,7 @@ def correct_detector_sensitivity(sansdata,sensitivity):
     return sansdata
 
 def lookup_attenuation(instrument_name, attenNo, wavelength):
-    from attenuation_constants import attenuation
+    from .attenuation_constants import attenuation
     if attenNo == 0:
         return {"att": 1.0, "att_err": 0.0}
         
@@ -520,7 +524,7 @@ def correct_attenuation(sample, instrument="NG7"):
     percent_err = attenuation['att_err']
     att_variance = (att*percent_err/100.0)**2
     print("correcting attenuation: ", attenuation, instrument, attenNo, wavelength)
-    denominator = Measurement(att, att_variance)
+    denominator = Uncertainty(att, att_variance)
     atten_corrected = sample.copy()
     atten_corrected.data = sample.data / denominator
     return atten_corrected
@@ -574,7 +578,7 @@ def absolute_scaling(sample,empty,div,Tsam,instrument="NG7",xmin=55,xmax=74,ymin
     
     att = lookup_attenuation(instrument, attenNo, wavelength)
     print "atten: %f +/- %f" % (att["att"], att["att_err"])
-    attenTrans = Measurement(att["att"], att["att_err"])
+    attenTrans = Uncertainty(att["att"], att["att_err"])
     
     #-------------------------------------------------------------------------------------#
     

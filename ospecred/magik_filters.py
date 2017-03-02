@@ -1,13 +1,17 @@
 # -*- coding: latin-1 -*-
+import datetime
+import types
+from copy import deepcopy
+from functools import wraps
+
 from numpy import cos, pi, cumsum, arange, ndarray, ones, zeros, array, newaxis, linspace, empty, resize, sin, allclose, zeros_like, linalg, dot, arctan2, float64, histogram2d, sum, nansum, sqrt, loadtxt, searchsorted, NaN, logical_not, fliplr, flipud, indices, polyfit
 import numpy
 from numpy.ma import MaskedArray
-import os, simplejson, datetime, sys, types
-from copy import deepcopy
 
-from FilterableMetaArray import FilterableMetaArray as MetaArray
-from he3analyzer import He3AnalyzerCollection
-from reflred import rebin as reb
+from dataflow.lib import rebin as reb
+
+from .FilterableMetaArray import FilterableMetaArray as MetaArray
+from .he3analyzer import He3AnalyzerCollection
 
 DEBUG=False
 
@@ -192,7 +196,6 @@ class Filter2D:
             return
         return data
  
-from functools import wraps
 def updateCreationStory(apply):
     """ 
     decorator for 'apply' method - it updates the Creation Story
@@ -1452,6 +1455,7 @@ class PolarizationCorrect(Filter2D):
                     R[i, j, :, 2] = 1.0 # monitor is set to one.  Not sure about this one
                     R[i, j, :, 3] = 1.0 # count time is set to one also.
                 except:
+                    import sys
                     print sys.exc_info()
                     sys.exit()
                     R[i, j, :, 0] = 0.0 # counts

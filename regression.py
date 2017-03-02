@@ -27,12 +27,12 @@ import importlib
 import difflib
 import traceback
 
-# Set the data sources
-from reflweb import config
 from dataflow.cache import set_test_cache
 from dataflow.core import Template, lookup_module
 from dataflow.calc import process_template
-from dataflow.modules import load
+from dataflow import fetch
+
+from reflweb import config
 
 # Match the following on the first line:
 # - initial comment ("#" or "//")
@@ -187,7 +187,7 @@ def main():
     Run a regression test using the first command line as the target file.
     """
     set_test_cache()
-    load.DATA_SOURCES = config.data_sources
+    fetch.DATA_SOURCES = config.data_sources
 
     if len(sys.argv) < 2:
         print("usage: python -m dataflow.show datafile")

@@ -1,12 +1,13 @@
 from dataflow import core as df
-from dataflow.automod import make_modules
 from dataflow import templates
+from dataflow.automod import make_modules, make_template, auto_module
+from dataflow.calc import process_template
 
-from reflred.steps import steps
-from reflred.steps.refldata import ReflData
-from reflred.steps.polarization import PolarizationData
-from reflred.steps.deadtime import DeadTimeData
-from reflred.steps.footprint import FootprintData
+from dataflow.lib.steps import steps
+from dataflow.lib.steps.refldata import ReflData
+from dataflow.lib.steps.polarization import PolarizationData
+from dataflow.lib.steps.deadtime import DeadTimeData
+from dataflow.lib.steps.footprint import FootprintData
 
 INSTRUMENT = "ncnr.refl"
 
@@ -37,10 +38,6 @@ def make_cached_subloader_module(load_action, prefix=""):
     in any of the fields of datatype 'fileinfo', 
     and collates the results of running them one at a time.
     """
-    from dataflow.automod import auto_module
-    from dataflow.core import Template, Module
-    from dataflow.calc import process_template
-    
     # Read the module defintion from the docstring
     module_description = auto_module(load_action)
     fields = module_description['fields']
@@ -59,7 +56,7 @@ def make_cached_subloader_module(load_action, prefix=""):
       "instrument": INSTRUMENT,
       "version": "0.0"
     }
-    template = Template(**template_def)
+    template = df.Template(**template_def)
     
     # Tag each terminal data type with the data type prefix, if it is
     # not already a fully qualified name
@@ -91,7 +88,7 @@ def make_cached_subloader_module(load_action, prefix=""):
     new_action.cached = True
     module_description['id'] += ".cached"
     # Define and register the module
-    return Module(action=new_action, **module_description)    
+    return df.Module(action=new_action, **module_description)
 
 def define_instrument():
     # Define modules
@@ -129,9 +126,7 @@ def define_instrument():
 
 
 def loader_template():
-    from dataflow.automod import make_template
-    from dataflow.core import lookup_instrument
-    refl1d = lookup_instrument(INSTRUMENT)
+    refl1d = df.lookup_instrument(INSTRUMENT)
     diagram = [
             ["ncnr_load", {}],
             ["divergence", {"data": "-.output"}],
@@ -147,9 +142,7 @@ def loader_template():
 
 
 def unpolarized_template():
-    from dataflow.automod import make_template
-    from dataflow.core import lookup_instrument
-    refl1d = lookup_instrument(INSTRUMENT)
+    refl1d = df.lookup_instrument(INSTRUMENT)
     diagram = [
         # Load the data
         ["ncnr_load", {}],

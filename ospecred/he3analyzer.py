@@ -1,7 +1,6 @@
 from numpy import exp, zeros, float64, vectorize, array, where, empty, linalg
 import datetime, time
 import simplejson, os, pickle
-#from ...dataflow.core import Data
 
 class He3Analyzer:
     """ an object that contains information about a particular 3He cell, 
