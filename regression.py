@@ -194,7 +194,7 @@ def main():
         sys.exit()
     try:
         if sys.argv[1].endswith('.json'):
-            play_file(sys.argv[1], )
+            play_file(sys.argv[1])
         else:
             replay_file(sys.argv[1])
         sys.exit(0)
