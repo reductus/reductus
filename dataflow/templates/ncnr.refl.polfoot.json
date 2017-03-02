@@ -93,6 +93,7 @@
         "order": "file",
         "group_by": "polarization"
       }
+
     },
     {
       "y": 130,
@@ -119,16 +120,22 @@
       "title": "Correct Polarization"
     },
     {
+      "y": 120,
+      "x": 790,
       "module": "ncnr.refl.fit_footprint",
-      "title": "Fit Footprint",
-      "x": 700,
-      "y": 70
+      "title": "Fit Footprint"
     },
     {
-      "module": "ncnr.refl.correct_footprint",
-      "title": "Correct Footprint",
+      "y": 10,
       "x": 775,
-      "y": 10
+      "module": "ncnr.refl.correct_footprint",
+      "title": "Correct Footprint"
+    },
+    {
+      "module": "ncnr.refl.extract_xs",
+      "title": "Extract Xs",
+      "x": 655,
+      "y": 120
     }
   ],
   "wires": [
@@ -298,18 +305,8 @@
         "output"
       ],
       "target": [
-        17,
-        "data"
-      ]
-    },
-    {
-      "source": [
-        17,
-        "fitted_footprint"
-      ],
-      "target": [
         18,
-        "fitted_footprint"
+        "data"
       ]
     },
     {
@@ -318,8 +315,28 @@
         "output"
       ],
       "target": [
-        18,
+        19,
         "data"
+      ]
+    },
+    {
+      "source": [
+        19,
+        "output"
+      ],
+      "target": [
+        17,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        17,
+        "fitted_footprint"
+      ],
+      "target": [
+        18,
+        "fitted_footprint"
       ]
     }
   ]
