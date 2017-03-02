@@ -14,7 +14,7 @@ if sys.argv[1] == 'test':
 #sys.dont_write_bytecode = True
 
 from setuptools import setup, Extension, find_packages
-    
+
 version = None
 for line in open(joinpath("reflred","__init__.py")):
     if "__version__" in line:
@@ -30,16 +30,21 @@ open("reflweb/git_version_mtime", "w").write(server_mtime)
 packages = find_packages(exclude=['reflbin'])
 
 def module_config():
-    S = ("reduction.cc","str2imat.c")
-    Sdeps = ("rebin.h","rebin2D.h")
-    sources = [joinpath('reflred','lib',f) for f in S]
-    depends = [joinpath('reflred','lib',f) for f in Sdeps]
-    module = Extension('reflred._reduction',
-                       sources=sources,
-                       depends=depends,
-                       include_dirs=[joinpath('reflred','lib')]
+    source_root = joinpath('reflred','src')
+    sources = ("reduction.cc", "str2imat.c")  ## C API wrapper
+    target = 'reflred._reduction'
+    # sources = ("_rebin.pyx")  ## cython wrapper
+    # target = 'reflred._rebin'
+    depends = ("rebin.h","rebin2D.h")
+    module = Extension(target,
+                       sources=[joinpath(source_root, f) for f in sources],
+                       depends=[joinpath(source_root, f) for f in depends],
+                       include_dirs=[source_root],
+                       language="c++",
                        )
-    return module
+    return [module]  ## C API wrapper
+    # from Cython.Build import cythonize
+    # return cythonize([module])  ## cython wrapper
 
 #sys.dont_write_bytecode = False
 dist = setup(
@@ -65,7 +70,7 @@ dist = setup(
     packages=packages,
     include_package_data=True,
     #data_files=[('reflweb', ['reflweb/git_version_hash'])],
-    ext_modules=[module_config()],
+    ext_modules=module_config(),
     # numpy and scipy are requirements, but don't install them with pip
     install_requires=['uncertainties', 'docutils'],
     extras_require = {

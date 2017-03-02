@@ -3,10 +3,13 @@
 """
 import numpy as np
 
-from . import _reduction
+from . import _reduction  ## C API wrapper
+#from . import _rebin  ## cython wrapper
 
-try: from typing import Sequence, Optional, Union
-except: pass
+try:
+    from typing import Sequence, Optional, Union
+except:
+    pass
 
 def rebin(x, I, xo, Io=None, dtype=np.float64):
     # type: (Sequence, Sequence, Sequence, Optional[np.ndarray], Union[str, type]) -> np.ndarray
@@ -45,11 +48,13 @@ def rebin(x, I, xo, Io=None, dtype=np.float64):
 
     # Call rebin on type if it is available
     try:
-        rebincore = getattr(_reduction,'rebin_'+I.dtype.name)
+        #rebincore = _rebin.rebin_counts_wrapper  ## cython wrapper
+        rebincore = getattr(_reduction, 'rebin_'+I.dtype.name)  ## C API wrapper
     except AttributeError:
         raise TypeError("rebin supports uint8 uint16 uint32 float32 float64, not "
                         + I.dtype.name)
-    rebincore(x,I,xo,Io)
+    for _ in range(10000):
+        rebincore(x,I,xo,Io)
     return Io
 
 def rebin2d(x,y,I,xo,yo,Io=None,dtype=None):
@@ -238,7 +243,7 @@ def _test2d():
 
 def test():
     for t in _test1d(): yield t
-    for t in _test2d(): yield t
+    #for t in _test2d(): yield t
 
 def main():
     for t in test(): t()

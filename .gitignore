@@ -5,6 +5,7 @@
 /doc/_build/
 /doc/dataflow/
 /doc/reflred/
+/reflred/src/_rebin.cc
 /reflred.egg-info/
 /reflweb/config.py
 /reflweb/git_version_*
