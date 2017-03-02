@@ -105,6 +105,7 @@ class Uncertainty(object):
     def __rsub__(self, other):
         return Uncertainty(other-self.x, self.variance+0)
     def __rmul__(self, other):
+        print("in rmul")
         return Uncertainty(self.x*other, self.variance*other**2)
     def __rtruediv__(self, other):
         return Uncertainty(other/self.x,self.variance*other**2/self.x**4)
@@ -236,20 +237,26 @@ def arctan2(y, x):
 
 def mean(x, biased=True):
     r"""
-    Return the mean and variance of a dataset.
+    Return the mean of a dataset.
 
     If variance is estimated from the data, then *biased* is True, and the
     estimated variance is scaled by the normalized $\chi^2$.
     """
-    M, varM = err1d.mean(x, x.variance, biased=biased)
+    M, varM = err1d.mean(x.x, x.variance, biased=biased)
     return Uncertainty(M, varM)
 
+def sum(x, axis=None):
+    r"""
+    Return the sum of a dataset.  Uncertainty adds in quadrature.
+    """
+    M, varM = err1d.sum(x.x, x.variance, axis=axis)
+    return Uncertainty(M, varM)
 
-def average(x, w):
+def average(x, w, axis=None):
     r"""
     Return the weighted average of a data set.
     """
-    M, varM = err1d.average(x, x.variance, w, w.variance)
+    M, varM = err1d.average(x.x, x.variance, w, w.variance, axis=axis)
     return Uncertainty(M, varM)
 
 

@@ -39,6 +39,15 @@ def mean(X, varX, biased=True):
     return M, varM
 
 
+def sum(X, varX, axis=None):
+    # type: (np.ndarray, np.ndarray, in) -> (float, float)
+    r"""
+    Return the sum and sum variance of a a dataset.
+    """
+    M = np.sum(X, axis=axis)
+    varM = np.sum(varX, axis=axis)
+    return M, varM
+
 def average(X, varX, W, varW, axis=None):
     # type: (np.ndarray, np.ndarray, np.ndarray, np.ndarray, int) -> (float, float)
     r"""
