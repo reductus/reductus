@@ -3,11 +3,11 @@ from dataflow import templates
 from dataflow.automod import make_modules, make_template, auto_module
 from dataflow.calc import process_template
 
-from dataflow.lib.steps import steps
-from dataflow.lib.steps.refldata import ReflData
-from dataflow.lib.steps.polarization import PolarizationData
-from dataflow.lib.steps.deadtime import DeadTimeData
-from dataflow.lib.steps.footprint import FootprintData
+from reflred import steps
+from reflred.refldata import ReflData
+from reflred.polarization import PolarizationData
+from reflred.deadtime import DeadTimeData
+from reflred.footprint import FootprintData
 
 INSTRUMENT = "ncnr.refl"
 
