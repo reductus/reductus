@@ -451,10 +451,10 @@ def correct_detector_sensitivity(sansdata,sensitivity):
     
     output (sans2d): result c in a/b = c
     
-    2017-01-02 unknown
+    2017-01-04 unknown
     """    
     res = sansdata.copy()
-    res.data = sansdata.data.__truediv__(sensitivity.data)
+    res.data /= sensitivity.data
     
     return res
 
@@ -678,7 +678,7 @@ def SuperLoadSANS(filelist=None, do_det_eff=True, do_deadtime=True, deadtime=1.0
     
     output (sans2d[]): all the entries loaded.
     
-    2016-05-03 Brian Maranville    
+    2016-05-04 Brian Maranville    
     """
     data = LoadSANS(filelist, flip=False, transpose=False)
         
