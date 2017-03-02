@@ -226,7 +226,7 @@ class FieldFile(object):
                 dtype=numpy.dtype(dtype)
                 if attrs.get('binary', False) == True:
                     s = infile.read()
-                    d = numpy.frombuffer(s, dtype=dtype)
+                    d = numpy.frombuffer(s, dtype=dtype).copy()
                 else:
                     if self.root.getsize(target) == 1:
                         # empty entry: only contains \n
