@@ -165,7 +165,7 @@ def annular_av(data):
     
     output (sans1d): converted to I vs. Q
     
-    2016-04-09 Brian Maranville    
+    2016-04-10 Brian Maranville    
     """
     """ """
     from .draw_annulus_aa import annular_mask_antialiased
@@ -185,6 +185,7 @@ def annular_av(data):
     Q = np.arange(0,Qmax,step)
     I = []
     I_error = []
+    dx = np.zeros_like(Q, dtype="float")
     for i in Q:
         # inner radius is the q we're at right now, converted to pixel dimensions:
         inner_r = i * (1.0/q_per_pixel)
@@ -207,7 +208,9 @@ def annular_av(data):
         I.append(norm_integrated_intensity.x) # not multiplying by step anymore
         I_error.append(norm_integrated_intensity.variance)
     
-    output = Sans1dData(Q, I, dx=0, dv=I_error, xlabel="Q", vlabel="I", xunits="inv. A", vunits="neutrons")
+    I = np.array(I, dtype="float")
+    I_error = np.array(I_error, dtype="float")
+    output = Sans1dData(Q, I, dx=dx, dv=I_error, xlabel="Q", vlabel="I", xunits="inv. A", vunits="neutrons")
     output.metadata=deepcopy(data.metadata) 
     return output
 

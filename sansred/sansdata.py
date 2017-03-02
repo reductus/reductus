@@ -1,6 +1,8 @@
 import numpy as np
 import datetime
 from copy import copy, deepcopy
+import StringIO
+import json
 
 from dataflow.lib.uncertainty import Uncertainty
 
@@ -183,6 +185,18 @@ class Sans1dData(object):
         return self.todict()
     def get_metadata(self):
         return self.todict()
+    def export(self):
+        fid = StringIO.StringIO()
+        fid.write("# %s\n" % (json.dumps(self.metadata).strip("{}"),))
+        columns = {"columns": [self.xlabel, self.vlabel, "uncertainty", "resolution"]}
+        units = {"units": [self.xunits, self.vunits, self.vunits, self.xunits]}
+        fid.write("# %s\n" % (json.dumps(columns).strip("{}"),))
+        fid.write("# %s\n" % (json.dumps(units).strip("{}"),))
+        np.savetxt(fid, np.vstack([self.x, self.v, self.dv, self.dx]).T, fmt="%.10e")
+        fid.seek(0)
+        name = getattr(self, "name", "default_name")
+        entry = getattr(self.metadata, "entry", "default_entry")
+        return {"name": name, "entry": entry, "export_string": fid.read()}
 
 class Parameters(dict):
     def get_metadata(self):
