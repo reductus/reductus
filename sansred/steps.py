@@ -124,8 +124,8 @@ def PixelsToQ(data, correct_solid_angle=True):
     wavelength=data.metadata['resolution.lmda']
     shape=data.data.x.shape
 
-    qx=np.empty(shape,'Float64')
-    qy=np.empty(shape,'Float64')
+    qx=np.empty(shape,'float')
+    qy=np.empty(shape,'float')
     
     x,y = np.indices(shape)
     X=data.metadata['det.pixelsizex']/10.0*(x-x0) # in mm in nexus
@@ -138,9 +138,7 @@ def PixelsToQ(data, correct_solid_angle=True):
     qy=q*np.sin(alpha)
     if correct_solid_angle:
         data.data.x = data.data.x * (np.cos(theta)**3)
-    res=SansData()
-    res.data=copy(data.data)
-    res.metadata=deepcopy(data.metadata)
+    res=data.copy()
     #Adding res.q
     res.q = q
     res.qx=qx
@@ -163,7 +161,7 @@ def annular_av(data):
     
     output (sans1d): converted to I vs. Q
     
-    2016-04-08 Brian Maranville    
+    2016-04-09 Brian Maranville    
     """
     """ """
     from draw_annulus_aa import annular_mask_antialiased
@@ -192,20 +190,18 @@ def annular_av(data):
         if IGNORE_CORNER_PIXELS == True:
             mask[0,0] = mask[-1,0] = mask[-1,-1] = mask[0,-1] = 0.0
         #print "Mask: ",mask
-        integrated_intensity = np.sum(mask.T*data.data.x)
+        integrated_intensity = np.sum(mask.T*data.data)
         #error = getPoissonUncertainty(integrated_intensity)
-        error = np.sqrt(integrated_intensity)
+        #error = np.sqrt(integrated_intensity)
         mask_sum = np.sum(mask)
-        if (integrated_intensity != 0.0):
+        if (integrated_intensity.x != 0.0):
             norm_integrated_intensity = integrated_intensity / mask_sum
-            #error['yupper'] /= mask_sum
-            #error['ylower'] /= mask_sum
-            error /= mask_sum
+            #error /= mask_sum
         else:
             norm_integrated_intensity = integrated_intensity
             
-        I.append(norm_integrated_intensity) # not multiplying by step anymore
-        I_error.append(error)
+        I.append(norm_integrated_intensity.x) # not multiplying by step anymore
+        I_error.append(norm_integrated_intensity.variance)
     
     output = Sans1dData(Q, I, dx=0, dv=I_error, xlabel="Q", vlabel="I", xunits="inv. A", vunits="neutrons")
     output.metadata=deepcopy(data.metadata) 
@@ -242,15 +238,9 @@ def correct_detector_efficiency(sansdata):
     
     ff = np.exp(-stAl/np.cos(theta_det))*(1-np.exp(-stHe/np.cos(theta_det))) / ( np.exp(-stAl)*(1-np.exp(-stHe)) )
 
-    res=SansData()
+    res=sansdata.copy()
     res.data=sansdata.data/ff
-    #if not sansdata.data.variance==None:
-            #res.data.variance=sansdata.data.variance/ff
-
-    res.metadata=deepcopy(sansdata.metadata)
-    res.q = copy(sansdata.q)
-    res.qx=copy(sansdata.qx)
-    res.qy=copy(sansdata.qy)
+    
     #note that the theta calculated for this correction is based on the center of the
     #detector and NOT the center of the beam. Thus leave the q-relevant theta alone.
     res.theta=copy(sansdata.theta)
@@ -458,23 +448,12 @@ def correct_detector_sensitivity(sansdata,sensitivity):
     
     output (sans2d): result c in a/b = c
     
-    2017-01-01 unknown
-    """
-    #result=sansdata.data/sensitivity #Could be done more elegantly by defining a division method on SansData
-    #res=SansData()
-    #res.data=result
-    #res.metadata=deepcopy(sansdata.metadata)
-    ##added res.q
-    #res.q=copy(sansdata.q)
-    #res.qx=copy(sansdata.qx)
-    #res.qy=copy(sansdata.qy)
-    #res.theta=copy(sansdata.theta)
+    2017-01-02 unknown
+    """    
+    res = sansdata.copy()
+    res.data = sansdata.data.__truediv__(sensitivity.data)
     
-    #Used SansData operation to make more efficient
-    print (sansdata.data.variance, sensitivity.data.variance)
-    sansdata.data = sansdata.data.__truediv__(sensitivity.data)
-    
-    return sansdata
+    return res
 
 def lookup_attenuation(instrument_name, attenNo, wavelength):
     from attenuation_constants import attenuation
@@ -495,7 +474,7 @@ def lookup_attenuation(instrument_name, attenNo, wavelength):
     w = np.array([wavelength], dtype="float")
     att_interp = np.interp(w, wavelength_key, att, 1.0, np.nan)
     att_err_interp = np.interp(w, wavelength_key, att_err)
-    return {"att": att_interp[0], "att_err": att_err_interp[0]} # err here is percent error
+    return {"att": att_interp[0], "att_err": att_err_interp[0]} # err here is percent error  
 
 @cache
 @module
@@ -519,15 +498,16 @@ def correct_attenuation(sample, instrument="NG7"):
     att = attenuation['att']
     percent_err = attenuation['att_err']
     att_variance = (att*percent_err/100.0)**2
-    print("correcting attenuation: ", attenuation, instrument, attenNo, wavelength)
+    #print("correcting attenuation: ", attenuation, instrument, attenNo, wavelength)
     denominator = Measurement(att, att_variance)
     atten_corrected = sample.copy()
+    atten_corrected.attenuation_corrected = True
     atten_corrected.data = sample.data / denominator
     return atten_corrected
     
 @cache
 @module
-def absolute_scaling(sample,empty,div,Tsam,instrument="NG7",xmin=55,xmax=74,ymin=53,ymax=72): 
+def absolute_scaling(sample,empty,div,Tsam,instrument="NG7", integration_box=[55,74,53,72]): 
     """\
     Calculate absolute scaling
 
@@ -545,19 +525,13 @@ def absolute_scaling(sample,empty,div,Tsam,instrument="NG7",xmin=55,xmax=74,ymin
     
     instrument (opt:NG7|NGB|NGB30): instrument name, should be NG7 or NG3
     
-    xmin (int): left pixel of integration box
-    
-    xmax (int): right pixel of integration box
-    
-    ymin (int): bottom pixel of integration box
-    
-    ymax (int): top pixel of integration box
+    integration_box (range:xy): region over which to integrate
     
     **Returns**
     
     abs (sans2d): data on absolute scale
     
-    2017-01-03 Andrew Jackson
+    2017-01-09 Andrew Jackson
     """
     #data (that is going through reduction),empty beam, div, Transmission of the sample,instrument(NG3.NG5,NG7)
     #ALL from metadata
@@ -569,33 +543,44 @@ def absolute_scaling(sample,empty,div,Tsam,instrument="NG7",xmin=55,xmax=74,ymin
     if pixel>=1.0:
         pixel/=10.0
     lambd = wavelength = empty.metadata['resolution.lmda']
-    attenNo = empty.metadata['run.atten']
-    #Need attenTrans - AttenuationFactor - need to know whether NG3, NG5 or NG7 (acctStr)
     
-    att = lookup_attenuation(instrument, attenNo, wavelength)
-    print "atten: %f +/- %f" % (att["att"], att["att_err"])
-    attenTrans = Measurement(att["att"], att["att_err"])
+    if not empty.attenuation_corrected:
+        attenNo = empty.metadata['run.atten']
+        #Need attenTrans - AttenuationFactor - need to know whether NG3, NG5 or NG7 (acctStr)
+        attenuation = lookup_attenuation(instrument, attenNo, wavelength)
+        att = attenuation['att']
+        percent_err = attenuation['att_err']
+        att_variance = (att*percent_err/100.0)**2
+        attenTrans = Measurement(att, att_variance)
+    else:
+        # if empty is already corrected for attenuation, don't do it here:
+        attenTrans = Measurement(1.0, 0.0)
     
     #-------------------------------------------------------------------------------------#
     
     #correct empty beam by the sensitivity
     data = empty.__truediv__(div.data)
-    #Then take the sum in XY box
-    detCnt = np.sum(data.data.x[xmin:xmax+1, ymin:ymax+1])
-    #print "DETCNT: ",detCnt
+    #Then take the sum in XY box, including stat. error
+    xmin, xmax, ymin, ymax = map(int, integration_box)
+    detCnt = np.sum(data.data[xmin:xmax+1, ymin:ymax+1])
+    print "DETCNT: ",detCnt
    
     #------End Result-------#
-    #This assumes that the data has *not* been normalized at all.
-    #Thus either fix this or pass un-normalized data.
-    kappa = detCnt/countTime/attenTrans*1.0e8/(monCnt/countTime)*(pixel/sdd)**2 #Correct Value: 6617.1
+    # This assumes that the data is normalized* been normalized at all.
+    # Thus either fix this or pass un-normalized data.
+    #kappa = detCnt/countTime/attenTrans*1.0e8/(monCnt/countTime)*(pixel/sdd)**2 #Correct Value: 6617.1
+    # This assumes that the data is normalized
+    kappa = detCnt/attenTrans * 1.0e8 * (pixel/sdd)**2 # incident intensity * solid angle of the pixel
     #print "Kappa: ", kappa
                                                  
     #utc_datetime = date.datetime.utcnow()
     #print utc_datetime.strftime("%Y-%m-%d %H:%M:%S")
     
+    Tsam_factor = Measurement(Tsam['factor'], Tsam['factor_variance'])
+    
     #-----Using Kappa to Scale data-----#
     Dsam = sample.metadata['sample.thk']
-    ABS = sample.__mul__(1/(kappa*Dsam*Tsam['factor']))
+    ABS = sample.__mul__(1/(kappa*Dsam*Tsam_factor))
     #------------------------------------
     return ABS
 
@@ -665,7 +650,7 @@ def makeDIV(data1, data2, patchbox=[55,74,53,72]):
 
 @cache
 @module
-def SuperLoadSANS(filelist=None, do_solid_angle=True, do_det_eff=True, do_deadtime=True, deadtime=3.4e-6, do_mon_norm=True, do_atten_correct=False, mon0=1e8):
+def SuperLoadSANS(filelist=None, do_det_eff=True, do_deadtime=True, deadtime=1.0e-6, do_mon_norm=True, do_atten_correct=False, mon0=1e8):
     """ 
     loads a data file into a SansData obj, and performs common reduction steps
     Checks to see if data being loaded is 2D; if not, quits
@@ -674,18 +659,16 @@ def SuperLoadSANS(filelist=None, do_solid_angle=True, do_det_eff=True, do_deadti
     **Inputs**
     
     filelist (fileinfo[]): Files to open.
-    
-    do_solid_angle {Solid angle corr.} (bool): correct for mapping of Ewald sphere to flat detector
-        
+            
     do_det_eff {Detector efficiency corr.} (bool): correct detector efficiency
     
     do_deadtime {Dead time corr.} (bool): correct for detector efficiency drop due to detector dead time
     
     deadtime {Dead time value} (float): value of the dead time in the calculation above
     
-    do_mon_norm {Monitor normalization} (bool): normalize data to a provided monitor value
-    
     do_atten_correct {Attenuation correction} (bool): correct intensity for the attenuators in the beam
+    
+    do_mon_norm {Monitor normalization} (bool): normalize data to a provided monitor value    
     
     mon0 (float): provided monitor
         
@@ -693,12 +676,10 @@ def SuperLoadSANS(filelist=None, do_solid_angle=True, do_det_eff=True, do_deadti
     
     output (sans2d[]): all the entries loaded.
     
-    2016-04-30 Brian Maranville    
+    2016-05-03 Brian Maranville    
     """
     data = LoadSANS(filelist, flip=False, transpose=False)
-    
-    # data = [PixelsToQ(d, correct_solid_angle=do_solid_angle) for d in data]
-    
+        
     if do_det_eff:
         data = [correct_detector_efficiency(d) for d in data]
     if do_deadtime:
