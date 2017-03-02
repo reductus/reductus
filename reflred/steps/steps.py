@@ -569,6 +569,48 @@ def extract_xs(data, xs="++"):
     return output
 
 @module
+def filter(data, key="", comparator="eq", value=None):
+    r"""
+    Get a subset of the datasets bundle based on the test
+    
+    **Inputs**
+    
+    data (refldata[]): data files in
+    
+    key (str): name to test in the dataset
+    
+    value (str?): value to compare
+    
+    comparator {Compare operator} (opt:eq|ne|lt|le|gt|ge): comparison operator
+    
+    **Returns**
+    
+    output (refldata[]): data matching the comparison
+
+    2017-02-24 Brian Maranville
+    """
+    
+    import operator
+    compare_lookup = {
+        "==": operator.eq,
+        "!=": operator.ne,
+        "<": operator.lt,
+        "<=": operator.le,
+        ">=": operator.ge,
+        ">": operator.gt,
+        "eq": operator.eq,
+        "ne": operator.ne,
+        "lt": operator.lt,
+        "le": operator.le,
+        "ge": operator.ge,
+        "gt": operator.gt,
+        
+    }
+    compare_op = compare_lookup[comparator]
+    
+    return [d for d in data if hasattr(d, key) and compare_op(getattr(d, key), value)]
+
+@module
 def normalize(data, base='auto'):
     """
     Estimate the detector count rate.
