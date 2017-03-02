@@ -258,7 +258,7 @@ def correct_detector_efficiency(sansdata):
     return res
 
 @module
-def correct_dead_time(sansdata,deadtime=3.4e-6):
+def correct_dead_time(sansdata,deadtime=1.0e-6):
     """\
     Correct for the detector recovery time after each detected event
     (suppresses counts as count rate increases)
@@ -273,7 +273,7 @@ def correct_dead_time(sansdata,deadtime=3.4e-6):
     
     output (sans2d): corrected for dead time
     
-    2010-01-02 Andrew Jackson?
+    2010-01-03 Andrew Jackson?
     """
     
     dscale = 1.0/(1.0-deadtime*(np.sum(sansdata.data)/sansdata.metadata["run.rtime"]))
@@ -344,8 +344,9 @@ def generate_transmission(in_beam,empty_beam, integration_box=[55,74,53,72]):
     xmin, xmax, ymin, ymax = map(int, integration_box)
     I_in_beam = np.sum(in_beam.data[xmin:xmax+1, ymin:ymax+1])
     I_empty_beam = np.sum(empty_beam.data[xmin:xmax+1, ymin:ymax+1])
+    
     ratio = I_in_beam/I_empty_beam
-    result=Parameters(factor=ratio.x,factor_error=ratio.variance)
+    result=Parameters(factor=ratio.x,factor_variance=ratio.variance,factor_err=np.sqrt(ratio.variance))
     
     return result
 
@@ -392,7 +393,7 @@ def product(data, factor_param, propagate_error=True):
     """
     if factor_param is not None:
         if propagate_error:
-            variance = factor_param.get('factor_error', 0)
+            variance = factor_param.get('factor_variance', 0.0)
         return data * Measurement(factor_param.get('factor', 1.0), variance)
     else:
         return data
@@ -475,6 +476,55 @@ def correct_detector_sensitivity(sansdata,sensitivity):
     
     return sansdata
 
+def lookup_attenuation(instrument_name, attenNo, wavelength):
+    from attenuation_constants import attenuation
+    if attenNo == 0:
+        return {"att": 1.0, "att_err": 0.0}
+        
+    ai = attenuation[instrument_name]
+    attenNoStr = format(int(attenNo), 'd')
+    att = ai['att'][attenNoStr]
+    att_err = ai['att_err'][attenNoStr]
+    wavelength_key = ai['lambda']
+    
+    wmin = np.min(wavelength_key)
+    wmax = np.max(wavelength_key)
+    if wavelength < wmin or wavelength > wmax:
+        raise ValueError("Wavelength out of calibration range (%f, %f). You must manually enter the absolute parameters" % (wmin, wmax))
+    
+    w = np.array([wavelength], dtype="float")
+    att_interp = np.interp(w, wavelength_key, att, 1.0, np.nan)
+    att_err_interp = np.interp(w, wavelength_key, att_err)
+    return {"att": att_interp[0], "att_err": att_err_interp[0]} # err here is percent error
+
+@cache
+@module
+def correct_attenuation(sample, instrument="NG7"):
+    """\
+    Divide by the attenuation factor from the lookup tables for the instrument
+    
+    **Inputs**
+    
+    sample (sans2d): measurement
+    
+    instrument (opt:NG7|NGB|NGB30): instrument name
+    
+    **Returns**
+    
+    atten_corrected (sans2d): corrected measurement
+    """
+    attenNo = sample.metadata['run.atten']
+    wavelength = sample.metadata['resolution.lmda']
+    attenuation = lookup_attenuation(instrument, attenNo, wavelength)
+    att = attenuation['att']
+    percent_err = attenuation['att_err']
+    att_variance = (att*percent_err/100.0)**2
+    print("correcting attenuation: ", attenuation, instrument, attenNo, wavelength)
+    denominator = Measurement(att, att_variance)
+    atten_corrected = sample.copy()
+    atten_corrected.data = sample.data / denominator
+    return atten_corrected
+    
 @cache
 @module
 def absolute_scaling(sample,empty,div,Tsam,instrument="NG7",xmin=55,xmax=74,ymin=53,ymax=72): 
@@ -493,7 +543,7 @@ def absolute_scaling(sample,empty,div,Tsam,instrument="NG7",xmin=55,xmax=74,ymin
     
     Tsam (params): sample transmission
     
-    instrument (opt:NG7|NG3): instrument name, should be NG7 or NG3
+    instrument (opt:NG7|NGB|NGB30): instrument name, should be NG7 or NG3
     
     xmin (int): left pixel of integration box
     
@@ -507,7 +557,7 @@ def absolute_scaling(sample,empty,div,Tsam,instrument="NG7",xmin=55,xmax=74,ymin
     
     abs (sans2d): data on absolute scale
     
-    2017-01-02 Andrew Jackson
+    2017-01-03 Andrew Jackson
     """
     #data (that is going through reduction),empty beam, div, Transmission of the sample,instrument(NG3.NG5,NG7)
     #ALL from metadata
@@ -519,15 +569,12 @@ def absolute_scaling(sample,empty,div,Tsam,instrument="NG7",xmin=55,xmax=74,ymin
     if pixel>=1.0:
         pixel/=10.0
     lambd = wavelength = empty.metadata['resolution.lmda']
-    attenNo = empty.metadata['run.atten']    
+    attenNo = empty.metadata['run.atten']
     #Need attenTrans - AttenuationFactor - need to know whether NG3, NG5 or NG7 (acctStr)
     
-    from attenuation_constants import attenuation
-    #-----------------------------
-    #AJJ - array indexing issue here. But this is a hack anyway - need to interpolate wavelength values
-    attenTrans = attenuation[instrument][attenNo][int(round(wavelength))]
-    print "attenFact: ", attenTrans
-    
+    att = lookup_attenuation(instrument, attenNo, wavelength)
+    print "atten: %f +/- %f" % (att["att"], att["att_err"])
+    attenTrans = Measurement(att["att"], att["att_err"])
     
     #-------------------------------------------------------------------------------------#
     
@@ -602,6 +649,7 @@ def makeDIV(data1, data2, patchbox=[55,74,53,72]):
     **Returns**
     
     DIV (sans2d): data1 with patch applied from data2 and normalized
+    
     2016-04-20 Brian Maranville  
     """
     
@@ -617,7 +665,7 @@ def makeDIV(data1, data2, patchbox=[55,74,53,72]):
 
 @cache
 @module
-def SuperLoadSANS(filelist=None, do_solid_angle=True, do_det_eff=True, do_deadtime=True, deadtime=3.4e-6, do_mon_norm=True, mon0=1e8):
+def SuperLoadSANS(filelist=None, do_solid_angle=True, do_det_eff=True, do_deadtime=True, deadtime=3.4e-6, do_mon_norm=True, do_atten_correct=False, mon0=1e8):
     """ 
     loads a data file into a SansData obj, and performs common reduction steps
     Checks to see if data being loaded is 2D; if not, quits
@@ -637,13 +685,15 @@ def SuperLoadSANS(filelist=None, do_solid_angle=True, do_det_eff=True, do_deadti
     
     do_mon_norm {Monitor normalization} (bool): normalize data to a provided monitor value
     
+    do_atten_correct {Attenuation correction} (bool): correct intensity for the attenuators in the beam
+    
     mon0 (float): provided monitor
         
     **Returns**
     
     output (sans2d[]): all the entries loaded.
     
-    2016-04-22 Brian Maranville    
+    2016-04-30 Brian Maranville    
     """
     data = LoadSANS(filelist, flip=False, transpose=False)
     
@@ -654,8 +704,10 @@ def SuperLoadSANS(filelist=None, do_solid_angle=True, do_det_eff=True, do_deadti
     if do_deadtime:
         data = [correct_dead_time(d, deadtime=deadtime) for d in data]
     if do_mon_norm:
-        data = [monitor_normalize(d, mon0=mon0) for d in data]
-    
+        data = [monitor_normalize(d, mon0=mon0) for d in data]    
+    if do_atten_correct:
+        data = [correct_attenuation(d) for d in data]
+        
     return data
 
         
