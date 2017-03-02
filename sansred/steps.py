@@ -547,11 +547,6 @@ def absolute_scaling(sample,empty,div,Tsam,instrument="NG7", integration_box=[55
         pixel/=10.0
     lambd = wavelength = empty.metadata['resolution.lmda']
     
-<<<<<<< HEAD
-    att = lookup_attenuation(instrument, attenNo, wavelength)
-    print "atten: %f +/- %f" % (att["att"], att["att_err"])
-    attenTrans = Uncertainty(att["att"], att["att_err"])
-=======
     if not empty.attenuation_corrected:
         attenNo = empty.metadata['run.atten']
         #Need attenTrans - AttenuationFactor - need to know whether NG3, NG5 or NG7 (acctStr)
@@ -559,11 +554,10 @@ def absolute_scaling(sample,empty,div,Tsam,instrument="NG7", integration_box=[55
         att = attenuation['att']
         percent_err = attenuation['att_err']
         att_variance = (att*percent_err/100.0)**2
-        attenTrans = Measurement(att, att_variance)
+        attenTrans = Uncertainty(att, att_variance)
     else:
         # if empty is already corrected for attenuation, don't do it here:
-        attenTrans = Measurement(1.0, 0.0)
->>>>>>> master
+        attenTrans = Uncertainty(1.0, 0.0)
     
     #-------------------------------------------------------------------------------------#
     

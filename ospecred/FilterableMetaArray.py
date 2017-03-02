@@ -3,7 +3,6 @@ from cStringIO import StringIO
 from numpy import ndarray, array, fromstring, float, float32, ones, empty, newaxis, savetxt, sqrt, mod, isnan, ma, hstack, log10
 
 from .MetaArray import MetaArray
-from . import filters
 
 class FilterableMetaArray(MetaArray):
     def __new__(cls, *args, **kw):
@@ -11,9 +10,6 @@ class FilterableMetaArray(MetaArray):
         #print "fma extra"
         obj.extrainfo = obj._info[-1]
         return obj
-
-    def filter(self, filtername, *args, **kwargs):
-        return filters.__getattribute__(filtername)().apply(self, *args, **kwargs)
 
     def dumps(self):
         meta = { 'shape': self.shape, 'type': str(self.dtype), 'info': self.infoCopy()}

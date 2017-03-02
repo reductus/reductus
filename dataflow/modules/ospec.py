@@ -1,4 +1,4 @@
-from dataflow.core import core as df
+from dataflow import core as df
 from dataflow.automod import make_modules, make_template
 from dataflow import templates
 

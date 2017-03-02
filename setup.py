@@ -30,11 +30,11 @@ open("reflweb/git_version_mtime", "w").write(server_mtime)
 packages = find_packages(exclude=['reflbin'])
 
 def module_config():
-    source_root = joinpath('reflred','src')
+    source_root = joinpath('dataflow','lib','src')
     sources = ("reduction.cc", "str2imat.c")  ## C API wrapper
-    target = 'reflred._reduction'
+    target = 'dataflow.lib._reduction'
     # sources = ("_rebin.pyx")  ## cython wrapper
-    # target = 'reflred._rebin'
+    # target = 'dataflow.lib._rebin'
     depends = ("rebin.h","rebin2D.h")
     module = Extension(target,
                        sources=[joinpath(source_root, f) for f in sources],
