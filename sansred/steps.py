@@ -5,6 +5,7 @@ import StringIO
 import numpy as np
 
 from dataflow.lib.uncertainty import Uncertainty
+from dataflow.lib import uncertainty
 
 from .sansdata import SansData, Sans1dData, Parameters
 
@@ -195,7 +196,7 @@ def annular_av(data):
         if IGNORE_CORNER_PIXELS == True:
             mask[0,0] = mask[-1,0] = mask[-1,-1] = mask[0,-1] = 0.0
         #print "Mask: ",mask
-        integrated_intensity = np.sum(mask.T*data.data)
+        integrated_intensity = uncertainty.sum(data.data*mask.T)
         #error = getPoissonUncertainty(integrated_intensity)
         #error = np.sqrt(integrated_intensity)
         mask_sum = np.sum(mask)
@@ -207,7 +208,7 @@ def annular_av(data):
             
         I.append(norm_integrated_intensity.x) # not multiplying by step anymore
         I_error.append(norm_integrated_intensity.variance)
-    
+
     I = np.array(I, dtype="float")
     I_error = np.array(I_error, dtype="float")
     output = Sans1dData(Q, I, dx=dx, dv=I_error, xlabel="Q", vlabel="I", xunits="inv. A", vunits="neutrons")
