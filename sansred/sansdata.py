@@ -70,8 +70,11 @@ class SansData(object):
         return result
     
     def copy(self):
-        return SansData(Uncertainty(self.data.x, self.data.variance),deepcopy(self.metadata),q=copy(self.q),qx=copy(self.qx),qy=copy(self.qy),theta=copy(self.theta), attenuation_corrected=self.attenuation_corrected)
+        return SansData(copy(self.data),deepcopy(self.metadata),q=copy(self.q),qx=copy(self.qx),qy=copy(self.qy),theta=copy(self.theta), attenuation_corrected=self.attenuation_corrected)
     
+    def __copy__(self):
+        return self.copy()
+        
     #def __str__(self):
         #return self.data.x.__str__()
     #def __repr__(self):

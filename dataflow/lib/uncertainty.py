@@ -24,6 +24,8 @@ from __future__ import division
 
 __all__ = ['Uncertainty']
 
+from copy import copy
+
 import numpy as np
 
 from . import err1d
@@ -51,7 +53,10 @@ class Uncertainty(object):
     # Constructor
     def __init__(self, x, variance=None):
         self.x, self.variance = x, variance
-
+        
+    def __copy__(self):
+        return Uncertainty(copy(self.x), copy(self.variance))
+        
     # Numpy array slicing operations
     def __len__(self):
         return len(self.x)

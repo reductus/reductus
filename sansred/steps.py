@@ -243,7 +243,7 @@ def correct_detector_efficiency(sansdata):
     ff = np.exp(-stAl/np.cos(theta_det))*(1-np.exp(-stHe/np.cos(theta_det))) / ( np.exp(-stAl)*(1-np.exp(-stHe)) )
 
     res=sansdata.copy()
-    res.data=sansdata.data/ff
+    res.data=res.data/ff
     
     #note that the theta calculated for this correction is based on the center of the
     #detector and NOT the center of the beam. Thus leave the q-relevant theta alone.
@@ -273,7 +273,7 @@ def correct_dead_time(sansdata,deadtime=1.0e-6):
     dscale = 1.0/(1.0-deadtime*(np.sum(sansdata.data)/sansdata.metadata["run.rtime"]))
     
     result = sansdata.copy()
-    result.data = sansdata.data*dscale
+    result.data *= dscale
     return result
 
 @module
@@ -294,9 +294,8 @@ def monitor_normalize(sansdata,mon0=1e8):
     2010-01-01 Andrew Jackson?
     """    
     monitor=sansdata.metadata['run.moncnt']
-    result=sansdata.data*mon0/monitor
     res=sansdata.copy()
-    res.data=result
+    res.data *= mon0/monitor
     return res
 
 @module
@@ -505,7 +504,7 @@ def correct_attenuation(sample, instrument="NG7"):
     denominator = Uncertainty(att, att_variance)
     atten_corrected = sample.copy()
     atten_corrected.attenuation_corrected = True
-    atten_corrected.data = sample.data / denominator
+    atten_corrected.data /= denominator
     return atten_corrected
     
 @cache
@@ -579,7 +578,7 @@ def absolute_scaling(sample,empty,div,Tsam,instrument="NG7", integration_box=[55
     #utc_datetime = date.datetime.utcnow()
     #print utc_datetime.strftime("%Y-%m-%d %H:%M:%S")
     
-    Tsam_factor = Measurement(Tsam['factor'], Tsam['factor_variance'])
+    Tsam_factor = Uncertainty(Tsam['factor'], Tsam['factor_variance'])
     
     #-----Using Kappa to Scale data-----#
     Dsam = sample.metadata['sample.thk']
