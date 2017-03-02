@@ -13,7 +13,7 @@ class SansData(object):
        q,qx,qy,theta all get updated with values throughout the reduction process
        Tsam and Temp are just used for storage across modules (in wireit)
     """
-    def __init__(self,data=None,metadata=None,q=None,qx=None,qy=None,theta=None,Tsam=None,Temp=None):
+    def __init__(self,data=None,metadata=None,q=None,qx=None,qy=None,theta=None,Tsam=None,Temp=None,attenuation_corrected=False):
         if isinstance(data, np.ndarray):
             self.data = Uncertainty(data, data)
         else:
@@ -23,41 +23,54 @@ class SansData(object):
         self.qx=qx
         self.qy=qy
         self.theta=theta
+        self.attenuation_corrected=attenuation_corrected
         
         self.Tsam = None #Tsam and Temp are used to store the transmissions for later use
         self.Temp = None
     # Note that I have not defined an inplace subtraction
     def __sub__(self,other):
+        result = self.copy()
         if isinstance(other,SansData):
-            return SansData(self.data-other.data,deepcopy(self.metadata),q=copy(self.q),qx=copy(self.qx),qy=copy(self.qy),theta=copy(self.theta))
+            result.data = self.data - other.data
         else:
-            return SansData(self.data-other,deepcopy(self.metadata),q=copy(self.q),qx=copy(self.qx),qy=copy(self.qy),theta=copy(self.theta))
+            result.data = self.data - other
+        return result
     #Actual subtraction
     def __sub1__(self,other):
+        result = self.copy()
         if isinstance(other,SansData):
-            return SansData(self.data-other.data,deepcopy(self.metadata),q=copy(self.q),qx=copy(self.qx),qy=copy(self.qy),theta=copy(self.theta))
+            result.data = self.data - other.data
         else:
-            return SansData(self.data-other,deepcopy(self.metadata),q=copy(self.q),qx=copy(self.qx),qy=copy(self.qy),theta=copy(self.theta))
+            result.data = self.data - other
+        return result
     def __add__(self,other):
+        result = self.copy()
         if isinstance(other,SansData):
-            return SansData(self.data+other.data,deepcopy(self.metadata),q=copy(self.q),qx=copy(self.qx),qy=copy(self.qy),theta=copy(self.theta))
+            result.data = self.data + other.data
         else:
-            return SansData(self.data+other,deepcopy(self.metadata),q=copy(self.q),qx=copy(self.qx),qy=copy(self.qy),theta=copy(self.theta))
+            result.data = self.data + other
+        return result
     def __rsub__(self, other):
-        return SansData(other-self.data,deepcopy(self.metadata),q=copy(self.q),qx=copy(self.qx),qy=copy(self.qy),theta=copy(self.theta))
+        result = self.copy()
+        result.data = other - self.data
+        return result
     def __truediv__(self,other):
+        result = self.copy()
         if isinstance(other,SansData):
-            return SansData(self.data/other.data,deepcopy(self.metadata),q=copy(self.q),qx=copy(self.qx),qy=copy(self.qy),theta=copy(self.theta))
+            result.data = self.data/other.data
         else:
-            return SansData(self.data/other,deepcopy(self.metadata),q=copy(self.q),qx=copy(self.qx),qy=copy(self.qy),theta=copy(self.theta))
+            result.data = self.data/other
+        return result
     def __mul__(self,other):
+        result = self.copy()
         if isinstance(other,SansData):
-            return SansData(self.data*other.data,deepcopy(self.metadata),q=copy(self.q),qx=copy(self.qx),qy=copy(self.qy),theta=copy(self.theta))
+            result.data = self.data * other.data
         else:
-            return SansData(self.data*other,deepcopy(self.metadata),q=copy(self.q),qx=copy(self.qx),qy=copy(self.qy),theta=copy(self.theta))
+            result.data = self.data * other
+        return result
     
     def copy(self):
-        return SansData(Uncertainty(self.data.x, self.data.variance),deepcopy(self.metadata),q=copy(self.q),qx=copy(self.qx),qy=copy(self.qy),theta=copy(self.theta))
+        return SansData(Uncertainty(self.data.x, self.data.variance),deepcopy(self.metadata),q=copy(self.q),qx=copy(self.qx),qy=copy(self.qy),theta=copy(self.theta), attenuation_corrected=self.attenuation_corrected)
     
     #def __str__(self):
         #return self.data.x.__str__()

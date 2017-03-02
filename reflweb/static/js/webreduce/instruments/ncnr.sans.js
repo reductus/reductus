@@ -46,7 +46,7 @@ webreduce.instruments['ncnr.sans'] = webreduce.instruments['ncnr.sans'] || {};
         xlabel = 'x-axis';
     sans1d_objs.forEach(function(entry) {
       var ydata = entry.v;
-      var dydata = entry.dv;
+      var dydata = entry.dv.map(Math.sqrt);
       var xdata = entry.x;
       ylabel = entry.vlabel;
       ylabel += "(" + entry.vunits + ")";
