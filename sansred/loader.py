@@ -1,4 +1,6 @@
 from dataflow.lib import hzf_readonly_stripped as hzf
+from dataflow.lib import unit
+
 from .sansdata import SansData
 
 metadata_lookup = {
@@ -27,6 +29,21 @@ metadata_lookup = {
     "sample.thk": "DAS_logs/sample/thickness",
 }
 
+unit_specifiers = {
+    "det.dis": "cm",
+    "det.pixelsizex": "cm",
+    "det.pixelsizey": "cm",
+    "sample.thk": "cm"
+}
+
+def data_as(field, units):
+    """
+    Return value of field in the desired units.
+    """
+    converter = unit.Converter(field.attrs.get('units', ''))
+    value = converter(field.value, units)
+    return value
+
 def readSANSNexuz(input_file, file_obj=None):
     datasets = []
     file = hzf.File(input_file, file_obj)
@@ -39,11 +56,15 @@ def readSANSNexuz(input_file, file_obj=None):
         for mkey in metadata_lookup:
             field = entry.get(metadata_lookup[mkey], None)
             if field is not None:
-                field = field.value[0]
+                if mkey in unit_specifiers:
+                    field = data_as(field, unit_specifiers[mkey])[0]
+                else:
+                    field = field.value[0]
                 if field.dtype.kind == 'f':
                     field = field.astype("float")
                 elif field.dtype.kind == 'i':
                     field = field.astype("int")
+                
             metadata[mkey] = field
         
         metadata['entry'] = entryname

@@ -537,17 +537,15 @@ def absolute_scaling(sample,empty,div,Tsam,instrument="NG7", integration_box=[55
     
     abs (sans2d): data on absolute scale
     
-    2017-01-10 Andrew Jackson
+    2017-01-13 Andrew Jackson
     """
     #data (that is going through reduction),empty beam, div, Transmission of the sample,instrument(NG3.NG5,NG7)
     #ALL from metadata
     detCnt = empty.metadata['run.detcnt']
     countTime = empty.metadata['run.rtime']
     monCnt = empty.metadata['run.moncnt']
-    sdd = empty.metadata['det.dis'] *100
-    pixel = empty.metadata['det.pixelsizex']
-    if pixel>=1.0:
-        pixel/=10.0
+    sdd = empty.metadata['det.dis'] # already in cm
+    pixel = empty.metadata['det.pixelsizex'] # already in cm
     lambd = wavelength = empty.metadata['resolution.lmda']
     
     if not empty.attenuation_corrected:
@@ -574,7 +572,7 @@ def absolute_scaling(sample,empty,div,Tsam,instrument="NG7", integration_box=[55
     #------End Result-------#
     # This assumes that the data is has not been normalized at all.
     # Thus either fix this or pass un-normalized data.
-    kappa = detCnt/monCnt/attenTrans * 1.0e8 * (pixel/sdd)**2 # incident intensity * solid angle of the pixel
+    kappa = detCnt / attenTrans * 1.0e8 / monCnt * (pixel/sdd)**2 # incident intensity * solid angle of the pixel
     #print "Kappa: ", kappa
                                                  
     #utc_datetime = date.datetime.utcnow()
