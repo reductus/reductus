@@ -537,7 +537,7 @@ def absolute_scaling(sample,empty,div,Tsam,instrument="NG7", integration_box=[55
     
     abs (sans2d): data on absolute scale
     
-    2017-01-09 Andrew Jackson
+    2017-01-10 Andrew Jackson
     """
     #data (that is going through reduction),empty beam, div, Transmission of the sample,instrument(NG3.NG5,NG7)
     #ALL from metadata
