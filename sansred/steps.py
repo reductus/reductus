@@ -572,11 +572,9 @@ def absolute_scaling(sample,empty,div,Tsam,instrument="NG7", integration_box=[55
     print "DETCNT: ",detCnt
    
     #------End Result-------#
-    # This assumes that the data is normalized* been normalized at all.
+    # This assumes that the data is has not been normalized at all.
     # Thus either fix this or pass un-normalized data.
-    #kappa = detCnt/countTime/attenTrans*1.0e8/(monCnt/countTime)*(pixel/sdd)**2 #Correct Value: 6617.1
-    # This assumes that the data is normalized
-    kappa = detCnt/attenTrans * 1.0e8 * (pixel/sdd)**2 # incident intensity * solid angle of the pixel
+    kappa = detCnt/monCnt/attenTrans * 1.0e8 * (pixel/sdd)**2 # incident intensity * solid angle of the pixel
     #print "Kappa: ", kappa
                                                  
     #utc_datetime = date.datetime.utcnow()
