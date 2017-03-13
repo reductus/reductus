@@ -22,25 +22,29 @@ jsonrpc_port = 8001
 http_port = 8000
 serve_staticfiles = True
 use_redis = True
-data_sources = {
-    "ncnr": {
+data_sources = [
+    {
+        "name": "ncnr_DOI",
+        "DOI": "10.18434/T4201B",
+    },
+    {
+        "name": "ncnr",
         "url": "http://ncnr.nist.gov/pub/",
         "start_path": "ncnrdata",
     },
-    "ncnr_DOI": {
-        "DOI": "10.18434/T4201B",
-    },
-    "charlotte": {
+    {
+        "name": "charlotte",
         "url": "http://charlotte.ncnr.nist.gov/pub",
         "start_path": "",
     },
     # set start_path for local files to usr/local/nice/server_data/experiments
     # for instrument installs
-    "local": {
+    {
+        "name": "local",
         "url": "file:///",
         "start_path": "",
     },
-}
+]
 file_helper_url = {
     "charlotte": "http://charlotte.ncnr.nist.gov/ipeek/listftpfiles.php",
     "ncnr": "https://ncnr.nist.gov/ipeek/listftpfiles.php",

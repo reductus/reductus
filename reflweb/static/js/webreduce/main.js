@@ -54,7 +54,7 @@ webreduce.instruments = webreduce.instruments || {};
     //if (e.state) {
     var datasources = webreduce._datasources || {},
         url_vars = getUrlVars(),
-        source = Object.keys(datasources)[0],
+        source = (datasources[0] || {}).name,
         start_path = "";
         
     url_vars.forEach(function(v, i) {
@@ -76,8 +76,9 @@ webreduce.instruments = webreduce.instruments || {};
     
     if (start_path == "") {
       // no data sources added - add the default
-      if (source in datasources && 'start_path' in datasources[source]) {
-        start_path = datasources[source]['start_path'];
+      var datasource = datasources.find(function(d) {return d.name == source});
+      if (datasource && 'start_path' in datasource) {
+        start_path = datasource['start_path'];
       }
       var pathlist = start_path.split("/");
       webreduce.addDataSource("navigation", source, pathlist);
@@ -286,22 +287,20 @@ webreduce.instruments = webreduce.instruments || {};
       
       var list_datasources = webreduce.server_api.list_datasources()
         .then(function(datasources) {
-          webreduce._datasources = datasources;
-          var dkeys = Object.keys(datasources);
-          dkeys.forEach(function(d, i){
-            var dsource = datasources[d];
+          webreduce._datasources = datasources; // should be a list now.
+          datasources.forEach(function(dsource, i){
             var pathlist = (dsource.start_path || "").split("/");
             $("#main_menu #data_menu_sources ul").append($("<li />", {
-              text: d,
+              text: dsource.name,
               start_path: dsource.start_path || "",
               click: function() {
                 hide_menu();
-                webreduce.addDataSource("navigation", d, pathlist);
+                webreduce.addDataSource("navigation", dsource.name, pathlist);
               }
             }));
             $("#main_menu").menu("refresh");
           });
-          return dkeys[0];
+          return datasources[0].name;
         });
         
       var list_instruments = webreduce.server_api.list_instruments()

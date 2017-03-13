@@ -12,19 +12,16 @@ from .lib.iso8601 import seconds_since_epoch
 
 # override this if you want to point these to another place.
 # in particular, remove the "local" option if deploying in the cloud!
-DATA_SOURCES = {}
+DATA_SOURCES = []
 DEFAULT_DATA_SOURCE = "ncnr"
 
 def check_datasource(source):
-    try:
-        datasource = DATA_SOURCES[source]
-    except KeyError:
+    datasource = next((x for x in DATA_SOURCES if x['name'] == source), {})
+    if datasource == {}:
         raise RuntimeError("Need to set dataflow.modules.load.DATA_SOURCES['" + source + "'] first!")
-    if isinstance(datasource, str):
-        source_url = datasource
-    elif isinstance(datasource, dict) and "url" in datasource:
+    if "url" in datasource:
         source_url = datasource["url"]
-    elif isinstance(datasource, dict) and "DOI" in datasource:
+    elif "DOI" in datasource:
         source_url = get_target(datasource["DOI"])
         print("resolving DOI %s to url %s" % (datasource["DOI"], source_url))
         datasource["url"] = source_url # cache for next access
