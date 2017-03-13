@@ -678,7 +678,7 @@ def SuperLoadSANS(filelist=None, do_det_eff=True, do_deadtime=True, deadtime=1.0
     
     output (sans2d[]): all the entries loaded.
     
-    2016-05-04 Brian Maranville    
+    2016-05-05 Brian Maranville    
     """
     data = LoadSANS(filelist, flip=False, transpose=False)
         
