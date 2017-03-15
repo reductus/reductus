@@ -156,6 +156,25 @@
         cursor: pointer !important;
     }
     
+    svg.editor path.wire {
+        stroke-dasharray: 2,2;
+        stroke: blue;
+        stroke-width: 5px !important;
+    }
+    
+    svg.editor path.wire.filled {
+        stroke-dasharray: none;
+        stroke: green !important;
+    }
+    
+    svg.editor g.module rect.terminal.input.filled {
+        fill: url(#input_hatch);
+    }
+    
+    svg.editor g.module rect.terminal.output.filled {
+        fill: url(#ouput_hatch);
+    }
+    
     svg.editor g.module g.selected rect {
       stroke-width: 5px !important;
     }

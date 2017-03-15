@@ -43,7 +43,66 @@ webreduce.editor = webreduce.editor || {};
         if (accept_fn) { accept_fn(); }
         return false
       }
-    }) 
+    })
+    // add decoration filters and patterns for highlighting filled paths
+    var defs = this._instance.svg().append("defs");
+    var glow_filter = defs.append("filter")
+      .attr("id", "glow")
+      .attr("filterUnits", "objectBoundingBox")
+      .attr("x", "-50%")
+      .attr("y", "-50%")
+      .attr("width", "200%")
+      .attr("height", "200%")
+    
+    glow_filter.append("feOffset")
+        .attr("result", "offOut")
+        .attr("in", "SourceGraphic")
+        .attr("dx", 0)
+        .attr("dy", 0)
+        
+    glow_filter.append("feColorMatrix")
+        .attr("in", "offOut")
+        .attr("result", "matrixOut")
+        .attr("type", "matrix")
+        .attr("values", "0 0 0 0 0 \
+                         1 1 1 1 0 \
+                         0 0 0 0 0 \
+                         0 0 0 1 0")
+                         
+    glow_filter.append("feGaussianBlur")
+        .attr("in", "matrixOut")
+        .attr("result", "blurOut")
+        .attr("stdDeviation", 10);
+
+    glow_filter.append("feBlend")
+        .attr("in", "SourceGraphic")
+        .attr("in2", "blurOut")
+        .attr("mode", "normal")
+
+    // on wires with data in them:
+    // svg.selectAll("path.wire.filled").style("stroke-dasharray", null).style("stroke", "green");
+    // svg.selectAll("path.wire.empty").style("stroke-dasharray", "2,2").style("stroke", "red");
+
+    var output_pattern = defs.append("pattern")
+      .attr("id", "output_hatch")
+      .attr("patternUnits", "userSpaceOnUse")
+      .attr("width", 10)
+      .attr("height", 10)
+      .append("path")
+        .attr("d", "M-1,1 l2,-2 M0,10 l10,-10 M9,11 l2,-2")
+        .style("stroke", "#88FFFF")
+        .style("fill-opacity", 1)
+        .style("stroke-width", 3)
+        
+    var input_pattern = defs.append("pattern")
+      .attr("id", "input_hatch")
+      .attr("patternUnits", "userSpaceOnUse")
+      .attr("width", 10)
+      .attr("height", 10)
+      .append("path")
+        .attr("d", "M-1,1 l2,-2 M0,10 l10,-10 M9,11 l2,-2")
+        .style("stroke", "#0000FF")
+        .style("stroke-width", 3)
   }
   
   webreduce.editor.handle_module_clicked = function(d,i,clicked_elem) {
