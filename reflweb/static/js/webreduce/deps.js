@@ -105,7 +105,6 @@ function _dependencies(pairs) {
 
 function mark_satisfied(template, module_defs) {
     var nodes_ordered = order(template);
-    console.log(nodes_ordered);
     var modules_visited = template.modules.map(function(m) { return false; });
     var modules_satisfied = d3.set();
     var modules_unsatisfied = d3.set();
@@ -116,7 +115,6 @@ function mark_satisfied(template, module_defs) {
         var module = template.modules[node];
         var external_config = (template.config || {})[node];
         var mdef = module_defs[module.module];
-        //return mdef.inputs.every(function(i) { return get_input_satisfied(node, i.id) });
         var inputs_satisfied = mdef.inputs.length == 0 || mdef.inputs.every(function(i) { return get_input_satisfied(node, i.id, mdef) });
         var fileinputs = mdef.fields.filter(function(f) { return f.datatype == 'fileinfo' });
         var fileinputs_satisfied = fileinputs.length == 0 || fileinputs.every(function(f) { 
@@ -149,10 +147,10 @@ function mark_satisfied(template, module_defs) {
     nodes_ordered.forEach(function(n) { return get_module_satisfied(n) });
     
     return {
-        modules_satisfied: modules_satisfied.values(), 
-        modules_unsatisfied: modules_unsatisfied.values(),
-        wires_satisfied: wires_satisfied.values(),
-        wires_unsatisfied: wires_unsatisfied.values()
+        modules_satisfied: modules_satisfied, 
+        modules_unsatisfied: modules_unsatisfied,
+        wires_satisfied: wires_satisfied,
+        wires_unsatisfied: wires_unsatisfied
     }
     
 }

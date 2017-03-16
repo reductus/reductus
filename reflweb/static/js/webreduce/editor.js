@@ -91,7 +91,7 @@ webreduce.editor = webreduce.editor || {};
       .append("path")
         .attr("d", "M-1,1 l2,-2 M0,10 l10,-10 M9,11 l2,-2")
         .style("stroke", "#88FFFF")
-        .style("fill-opacity", 1)
+        .style("stroke-opacity", 1)
         .style("stroke-width", 3)
         
     var input_pattern = defs.append("pattern")
@@ -99,9 +99,11 @@ webreduce.editor = webreduce.editor || {};
       .attr("patternUnits", "userSpaceOnUse")
       .attr("width", 10)
       .attr("height", 10)
+      .style("fill-opacity", 1)
       .append("path")
         .attr("d", "M-1,1 l2,-2 M0,10 l10,-10 M9,11 l2,-2")
-        .style("stroke", "#0000FF")
+        .style("stroke", "#88FF88")
+        .style("stroke-opacity", 1)
         .style("stroke-width", 3)
   }
   
@@ -926,6 +928,29 @@ webreduce.editor = webreduce.editor || {};
           active_module.config[data.id] = data.value;
         }
       });
+    webreduce.editor.update_completions();
+  }
+  
+  webreduce.editor.update_completions = function() {
+    var satisfactions = mark_satisfied(this._active_template, this._module_defs);
+    var wires = this._active_template.wires;
+    var svg = this._instance.svg();
+    svg.selectAll("path.wire").classed("filled", function(d,i) { return satisfactions.wires_satisfied.has(i); });
+    svg.selectAll("g.module").each(function(d,i) {
+      d3.select(this).selectAll("rect.terminal.output").classed("filled", (satisfactions.modules_satisfied.has(i)));
+    })
+    svg.selectAll("rect.terminal.input").classed("filled", false);
+    svg.selectAll("rect.terminal.input").each(function(d,i) {
+      var term = d3.select(this);
+      var id = term.attr("terminal_id");
+      var node = d3.select(this.parentNode.parentNode).attr("index");
+      wires.forEach(function(w,i) { 
+        var mine = (w.target[0] == node && w.target[1] == id); 
+        if (mine && satisfactions.wires_satisfied.has(i)) {
+          term.classed("filled", true);
+        }
+      });
+    });
   }
   
   webreduce.editor.make_fieldUI = {}; // generators for field datatypes

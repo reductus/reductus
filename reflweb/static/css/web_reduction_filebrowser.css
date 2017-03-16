@@ -157,22 +157,43 @@
     }
     
     svg.editor path.wire {
-        stroke-dasharray: 2,2;
-        stroke: blue;
+        stroke-dasharray: none;
         stroke-width: 5px !important;
+        stroke: red;
+    }
+    
+    @keyframes offset {
+      from {
+        stroke-dashoffset: 20;
+      }
+      to {
+        stroke-dashoffset: 0;
+      }
     }
     
     svg.editor path.wire.filled {
-        stroke-dasharray: none;
+        /*stroke-linecap: round;*/
+        stroke-dasharray: 2,2;
+        animation: offset 1s linear forwards infinite;
         stroke: green !important;
     }
     
+    svg.editor g.module rect.terminal.input {
+        fill-opacity: 1 !important;
+        fill: url(#input_hatch) !important;
+    }
+    
     svg.editor g.module rect.terminal.input.filled {
-        fill: url(#input_hatch);
+        fill: #88FF88 !important;
+    }
+    
+    svg.editor g.module rect.terminal.output {
+        fill-opacity: 1 !important;
+        fill: url(#output_hatch) !important;
     }
     
     svg.editor g.module rect.terminal.output.filled {
-        fill: url(#ouput_hatch);
+        fill: #88FFFF !important;
     }
     
     svg.editor g.module g.selected rect {
