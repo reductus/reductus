@@ -30,7 +30,7 @@ webreduce.editor = webreduce.editor || {};
   webreduce.editor.create_instance = function(target_id) {
     // create an instance of the dataflow editor in
     // the html element referenced by target_id
-    this._instance = new dataflow.editor();
+    this._instance = new dataflowEditorStreamlineNew.default();
     this._target_id = target_id;
     this._instance.data([{modules:[],wires: []}]);
     var target = d3.select("#" + target_id);
@@ -932,7 +932,7 @@ webreduce.editor = webreduce.editor || {};
   }
   
   webreduce.editor.update_completions = function() {
-    var satisfactions = mark_satisfied(this._active_template, this._module_defs);
+    var satisfactions = webreduce.dependencies.mark_satisfied(this._active_template, this._module_defs);
     var wires = this._active_template.wires;
     var svg = this._instance.svg();
     svg.selectAll("path.wire").classed("filled", function(d,i) { return satisfactions.wires_satisfied.has(i); });
