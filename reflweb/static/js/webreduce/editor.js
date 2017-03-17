@@ -1051,7 +1051,7 @@ webreduce.editor = webreduce.editor || {};
       });
       
     var drag_instance = webreduce.editor._active_plot.drag;
-    var selector = new rectangleSelect(drag_instance);
+    var selector = new rectangleSelect.default(drag_instance);
     webreduce.editor._active_plot.interactors(selector);
     var select_active = true;
     
