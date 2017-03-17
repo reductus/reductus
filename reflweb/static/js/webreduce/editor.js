@@ -498,7 +498,7 @@ webreduce.editor = webreduce.editor || {};
     options.show_line = $("#show_line").prop("checked");
     
     // create the 1d chart:
-    var mychart = new xyChart(options);
+    var mychart = new xyChart.default(options);
     d3.selectAll("#plotdiv").selectAll("svg, div").remove();
     d3.selectAll("#plotdiv").data([plotdata.data]).call(mychart);
     mychart.zoomRect(true);
