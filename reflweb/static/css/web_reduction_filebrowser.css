@@ -82,11 +82,17 @@ svg.editor {
 
 .line {
     fill: none;
+    opacity: 1;
     stroke-width: 1.5px;
 }
 
-.highlight {
+.line.highlight {
+    opacity: 1;
     stroke-width: 4.5px !important;
+}
+
+.line.unhighlight {
+    opacity: 0.2;
 }
 
 .dot {
