@@ -296,6 +296,8 @@ webreduce.editor = webreduce.editor || {};
             fieldUI
               .on("input.auto_accept", auto_accept)
               .on("change.auto_accept", auto_accept)
+            // add tooltip with description of parameter
+            d3.select(fieldUI.node().parentNode).attr("title", field.description);
               
           }
         });
