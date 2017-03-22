@@ -167,6 +167,10 @@ svg.editor g.module rect {
   fill: white;
 }
 
+svg.editor g.module rect.title {
+  fill-opacity: 0;
+}
+
 svg.editor rect.terminal.output {
     fill: url(#output_hatch);
 }
