@@ -87,13 +87,12 @@
     {
       "y": 100,
       "x": 460,
-      "module": "ncnr.refl.join",
-      "title": "join",
       "config": {
-        "order": "file",
-        "group_by": "polarization"
-      }
-
+        "group_by": "polarization",
+        "order": "file"
+      },
+      "module": "ncnr.refl.join",
+      "title": "join"
     },
     {
       "y": 130,
@@ -117,7 +116,7 @@
       "y": 10,
       "x": 615,
       "module": "ncnr.refl.correct_polarization",
-      "title": "Correct Polarization"
+      "title": "Correct Pol"
     },
     {
       "y": 120,
@@ -127,15 +126,15 @@
     },
     {
       "y": 10,
-      "x": 775,
+      "x": 785,
       "module": "ncnr.refl.correct_footprint",
       "title": "Correct Footprint"
     },
     {
-      "module": "ncnr.refl.extract_xs",
-      "title": "Extract Xs",
+      "y": 120,
       "x": 655,
-      "y": 120
+      "module": "ncnr.refl.extract_xs",
+      "title": "Extract Xs"
     }
   ],
   "wires": [
