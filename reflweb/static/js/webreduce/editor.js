@@ -30,7 +30,7 @@ webreduce.editor = webreduce.editor || {};
   webreduce.editor.create_instance = function(target_id) {
     // create an instance of the dataflow editor in
     // the html element referenced by target_id
-    this._instance = new dataflowEditorStreamlineNew.default();
+    this._instance = new dataflowEditorStreamlineNew.default(null, true);
     this._target_id = target_id;
     this._instance.data([{modules:[],wires: []}]);
     var target = d3.select("#" + target_id);
