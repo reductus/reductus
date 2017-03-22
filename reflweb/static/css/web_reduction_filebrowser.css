@@ -190,7 +190,7 @@ svg.editor polygon.terminal.state {
     
 svg.editor path.wire {
     fill: none;
-    stroke-dasharray: none;
+    stroke-dasharray: 2,2;
     stroke-width: 5px;
     stroke: red;
 }
@@ -206,8 +206,8 @@ svg.editor path.wire {
     
 svg.editor path.wire.filled {
     /*stroke-linecap: round;*/
-    stroke-dasharray: 2,2;
-    animation: offset 1s linear forwards infinite;
+    stroke-dasharray: none;
+    /*animation: offset 1s linear forwards infinite;*/
     stroke: green;
 }
     
