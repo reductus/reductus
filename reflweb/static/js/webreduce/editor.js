@@ -939,17 +939,17 @@ webreduce.editor = webreduce.editor || {};
     var svg = this._instance.svg();
     svg.selectAll("path.wire").classed("filled", function(d,i) { return satisfactions.wires_satisfied.has(i); });
     svg.selectAll("g.module").each(function(d,i) {
-      d3.select(this).selectAll("rect.terminal.output").classed("filled", (satisfactions.modules_satisfied.has(i)));
+      d3.select(this).selectAll("rect.terminal.output").style("fill", (satisfactions.modules_satisfied.has(i)) ? null : "url(#output_hatch)");
     })
-    svg.selectAll("rect.terminal.input").classed("filled", false);
+    svg.selectAll("rect.terminal.input").style("fill", "url(#input_hatch)");
     svg.selectAll("rect.terminal.input").each(function(d,i) {
       var term = d3.select(this);
       var id = term.attr("terminal_id");
       var node = d3.select(this.parentNode.parentNode).attr("index");
       wires.forEach(function(w,i) { 
-        var mine = (w.target[0] == node && w.target[1] == id); 
+        var mine = (w.target[0] == node && w.target[1] == id);
         if (mine && satisfactions.wires_satisfied.has(i)) {
-          term.classed("filled", true);
+          term.style("fill", null);
         }
       });
     });

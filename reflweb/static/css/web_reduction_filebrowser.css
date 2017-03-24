@@ -171,19 +171,12 @@ svg.editor g.module rect.title {
   fill-opacity: 0;
 }
 
-svg.editor rect.terminal.output {
-    fill: url(#output_hatch);
-}
 
-svg.editor rect.terminal.output.filled {
+svg.editor rect.terminal.output {
     fill: #88FFFF;
 }
 
 svg.editor rect.terminal.input {
-    fill: url(#input_hatch);
-}
-
-svg.editor rect.terminal.input.filled {
     fill: #88FF88;
 }
 
