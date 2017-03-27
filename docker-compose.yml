@@ -1,0 +1,24 @@
+version: '3'
+services:
+  reflweb:
+      build:
+        context: .
+        dockerfile: docker-compose/Dockerfile
+      links:
+          - reductus
+      ports:
+          - "8000:80"
+
+  reductus:
+      build: 
+        context: .
+        dockerfile: docker-compose/gevent/Dockerfile
+      links:
+          - redis
+      expose:
+          - "8001"
+          
+  redis:
+      image: redis
+      expose:
+          - "6379"
