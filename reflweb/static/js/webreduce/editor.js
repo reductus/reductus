@@ -1582,14 +1582,18 @@ webreduce.editor = webreduce.editor || {};
       we._active_template = template_def;
       var template_sourcepaths = webreduce.getAllTemplateSourcePaths(template_def),
           browser_sourcepaths = webreduce.getAllBrowserSourcePaths();
+      var sources_loaded = Promise.resolve();
       for (var source in template_sourcepaths) {
         var paths = template_sourcepaths[source];
         for (var path in paths) {
           if (browser_sourcepaths.findIndex(function(sp) {return sp.source == source && sp.path == path}) < 0) {
-            webreduce.addDataSource("navigation", source, path.split("/"));
+            sources_loaded = sources_loaded.then(function() {
+              return webreduce.addDataSource("navigation", source, path.split("/"));
+            });
           }
         }
       }
+      
       var target = d3.select("#" + we._target_id);    
       we._instance.import(template_def);
 
@@ -1617,7 +1621,12 @@ webreduce.editor = webreduce.editor || {};
           var term = toselect.select('rect.terminal[terminal_id="'+selected_terminal+'"]').node();
           if (term != null) {toselect_target = term} // override the selection with terminal
         }
-        webreduce.editor.handle_module_clicked.call(toselect.node(), toselect.datum(), autoselected, toselect_target); 
+        
+        sources_loaded = sources_loaded.then(function() {
+          return webreduce.editor.handle_module_clicked.call(toselect.node(), toselect.datum(), autoselected, toselect_target); 
+        }).then(function() {
+          return webreduce.editor.update_completions();
+        });
       }
       return
     });

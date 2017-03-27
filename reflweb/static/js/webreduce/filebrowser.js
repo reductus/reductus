@@ -1,4 +1,5 @@
 // require(jstree, webreduce.server_api)
+'use strict';
 
 (function () {
   var NEXUS_ZIP_REGEXP = /\.nxz\.[^\.\/]+$/
@@ -71,12 +72,15 @@
       });
 
     p.then(function(target) {
-      target.on("ready.jstree", function() {
-        if (webreduce.instruments[instrument_id].decorators) {
-            webreduce.instruments[instrument_id].decorators.forEach(function(d) {
-                d(target);
-            });
-          }
+      var ready = new Promise(function(resolve, reject) {
+        target.on("ready.jstree", function() {
+          if (webreduce.instruments[instrument_id].decorators) {
+              webreduce.instruments[instrument_id].decorators.forEach(function(d) {
+                  d(target);
+              });
+            }
+          resolve();
+        });
       });
 
       target
@@ -116,7 +120,10 @@
         });
         //handleChecked(null, null, true);
       });
+      return ready;
     });
+    return p;
+    
   }
 
   // categorizers are callbacks that take an info object and return category string
@@ -158,8 +165,8 @@
     var pathlist = pathlist || [];
     var new_div = $("<div />", {"class": "databrowser", "datasource": source});
     $("#" + target_id).append(new_div);
-    webreduce.server_api.get_file_metadata(source, pathlist).then(function(result) {
-      webreduce.updateFileBrowserPane(new_div[0], source, pathlist)(result);
+    return webreduce.server_api.get_file_metadata(source, pathlist).then(function(result) {
+      return webreduce.updateFileBrowserPane(new_div[0], source, pathlist, result);
     });
   }
 
@@ -223,92 +230,83 @@
     history.pushState({}, "", urlstr);
   }
   
-  function updateFileBrowserPane(target, datasource, pathlist) {
-      function handler(dirdata) {
-        var buttons = $("<div />", {class: "buttons"});
-        var clear_all = $("<button />", {text: "uncheck all"});
-        clear_all.click(function() {$(".remote-filebrowser", target)
-          .jstree("uncheck_all"); handleChecked();
-        });
-        var remove_datasource = $("<button />", {text: "remove"});
-        remove_datasource.click(function() { var nav=$(target).parent(); $(target).empty().remove(); updateHistory(nav);});
-        buttons
-          //.append($("<span />", {class: "ui-icon ui-icon-circle-close"}))
-          .append(clear_all)
-          .append(remove_datasource)
-          .append('<span class="datasource">source: ' + datasource + '</span>');
+  function updateFileBrowserPane(target, datasource, pathlist, dirdata) {
+    var buttons = $("<div />", {class: "buttons"});
+    var clear_all = $("<button />", {text: "uncheck all"});
+    clear_all.click(function() {$(".remote-filebrowser", target)
+      .jstree("uncheck_all"); handleChecked();
+    });
+    var remove_datasource = $("<button />", {text: "remove"});
+    remove_datasource.click(function() { var nav=$(target).parent(); $(target).empty().remove(); updateHistory(nav);});
+    buttons
+      //.append($("<span />", {class: "ui-icon ui-icon-circle-close"}))
+      .append(clear_all)
+      .append(remove_datasource)
+      .append('<span class="datasource">source: ' + datasource + '</span>');
 
-        var files = dirdata.files,
-            metadata = dirdata.files_metadata;
-        files.sort(function(a,b) { return dirdata.files_metadata[b].mtime - dirdata.files_metadata[a].mtime });
-        // dirdata is {'subdirs': list_of_subdirs, 'files': list_of_files, 'pathlist': list_of_path
+    var files = dirdata.files,
+        metadata = dirdata.files_metadata;
+    files.sort(function(a,b) { return dirdata.files_metadata[b].mtime - dirdata.files_metadata[a].mtime });
+    // dirdata is {'subdirs': list_of_subdirs, 'files': list_of_files, 'pathlist': list_of_path
 
-        var patheditor = document.createElement('div');
-        patheditor.className = 'patheditor';
-        var subdiritem, dirlink, new_pathlist;
-        if (pathlist.length > 0) {
-          var new_pathlist = $.extend(true, [], pathlist);
-          $.each(new_pathlist, function(index, pathitem) {
-            dirlink = document.createElement('span');
-            dirlink.textContent = pathitem + "/";
-            dirlink.onclick = function() {
-              webreduce.server_api.get_file_metadata(datasource, new_pathlist.slice(0, index+1))
-              .then( function (metadata) {                
-                updateFileBrowserPane(target, datasource, new_pathlist.slice(0, index+1))(metadata);
-                //updateHistory($(target).parent());
-              })
-            }
-            patheditor.appendChild(dirlink);
-          });
+    var patheditor = document.createElement('div');
+    patheditor.className = 'patheditor';
+    var subdiritem, dirlink, new_pathlist;
+    if (pathlist.length > 0) {
+      var new_pathlist = $.extend(true, [], pathlist);
+      $.each(new_pathlist, function(index, pathitem) {
+        dirlink = document.createElement('span');
+        dirlink.textContent = pathitem + "/";
+        dirlink.onclick = function() {
+          webreduce.server_api.get_file_metadata(datasource, new_pathlist.slice(0, index+1))
+          .then( function (metadata) {                
+            updateFileBrowserPane(target, datasource, new_pathlist.slice(0, index+1), metadata);
+            //updateHistory($(target).parent());
+          })
         }
+        patheditor.appendChild(dirlink);
+      });
+    }
 
-        var dirbrowser = document.createElement('ul');
-        dirbrowser.id = "dirbrowser";
-        dirbrowser.setAttribute("style", "margin:0px;");
-        dirdata.subdirs.reverse();
-        $.each(dirdata.subdirs, function(index, subdir) {
-          subdiritem = document.createElement('li');
-          subdiritem.classList.add('subdiritem');
-          subdiritem.textContent = "(dir) " + subdir;
-          var new_pathlist = $.extend(true, [], pathlist);
-          new_pathlist.push(subdir);
-          subdiritem.onclick = function() {
-            webreduce.server_api.get_file_metadata(datasource, new_pathlist)
-              .then( function (metadata) {
-                updateFileBrowserPane(target, datasource, new_pathlist)(metadata);
-                //updateHistory($(target).parent());
-              })
-          }
-          dirbrowser.appendChild(subdiritem);
-        });
-
-        var filebrowser = document.createElement('div');
-        filebrowser.classList.add("remote-filebrowser");
-
-        $(target).empty()
-          .append(buttons)
-          .append(patheditor)
-          //.append(deadtime_choose)
-          .append(dirbrowser)
-          .append(filebrowser)
-          .append("<hr>");
-
-        // instrument-specific categorizers
-        // webreduce.instruments[instrument_id].categorizeFiles(files, metadata, pathlist.join("/"), target_id);
-        categorizeFiles(files, metadata, datasource, pathlist.join("/"), target);
-
-        //$(dirbrowser).selectable({
-        //    filter:'td',
-        //    stop: handleSelection
-        //});
-        //$(filebrowser).tablesorter();
+    var dirbrowser = document.createElement('ul');
+    dirbrowser.id = "dirbrowser";
+    dirbrowser.setAttribute("style", "margin:0px;");
+    dirdata.subdirs.reverse();
+    $.each(dirdata.subdirs, function(index, subdir) {
+      subdiritem = document.createElement('li');
+      subdiritem.classList.add('subdiritem');
+      subdiritem.textContent = "(dir) " + subdir;
+      var new_pathlist = $.extend(true, [], pathlist);
+      new_pathlist.push(subdir);
+      subdiritem.onclick = function() {
+        webreduce.server_api.get_file_metadata(datasource, new_pathlist)
+          .then( function (metadata) {
+            updateFileBrowserPane(target, datasource, new_pathlist, metadata);
+            //updateHistory($(target).parent());
+          })
       }
-      return handler
+      dirbrowser.appendChild(subdiritem);
+    });
+
+    var filebrowser = document.createElement('div');
+    filebrowser.classList.add("remote-filebrowser");
+
+    $(target).empty()
+      .append(buttons)
+      .append(patheditor)
+      //.append(deadtime_choose)
+      .append(dirbrowser)
+      .append(filebrowser)
+      .append("<hr>");
+
+    // instrument-specific categorizers
+    // webreduce.instruments[instrument_id].categorizeFiles(files, metadata, pathlist.join("/"), target_id);
+    return categorizeFiles(files, metadata, datasource, pathlist.join("/"), target);
   }
 
   function handleChecked(d, i, stopPropagation) {
     var instrument_id = webreduce.editor._instrument_id;
-    var xlabel, ylabel
+    var xlabel, ylabel,
         datas = [],
         options={series: [], axes: {xaxis: {label: "x-axis"}, yaxis: {label: "y-axis"}}},
         fileinfo = [],
