@@ -21,12 +21,17 @@ from tinyrpc.dispatch import RPCDispatcher
 
         
 if __name__ == '__main__':
+    if len(sys.argv) >= 2:
+        port = int(sys.argv[1])
+    else:
+        port = config.jsonrpc_port
+
     dispatcher = RPCDispatcher()
     transport = WsgiServerTransport(queue_class=gevent.queue.Queue)
 
     # start wsgi server as a background-greenlet
     ssl_args = getattr(config, 'ssl_args', {})
-    wsgi_server = gevent.wsgi.WSGIServer((config.jsonrpc_servername, config.jsonrpc_port), transport.handle, **ssl_args)
+    wsgi_server = gevent.wsgi.WSGIServer((config.jsonrpc_servername, port), transport.handle, **ssl_args)
     gevent.spawn(wsgi_server.serve_forever)
     wsgi_server.update_environ()
     actual_host, actual_port = wsgi_server.address
@@ -48,6 +53,6 @@ if __name__ == '__main__':
         os.chdir("static")
         start_server(config.jsonrpc_servername, config.http_port, rpc_port=actual_port)
     # in the main greenlet, run our rpc_server
-    print("serving")
+    print("serving on port %d" % (port,))
     rpc_server.serve_forever()
     print "done serving rpc forever"
