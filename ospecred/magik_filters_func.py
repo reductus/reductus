@@ -906,7 +906,7 @@ def loadMAGIKPSD_helper(file_obj, name, path, collapse=True, collapse_axis='y', 
                     mon.shape = (1,) + mon.shape # broadcast the monitor over the other dimension
                     count_time.shape = (1,) + count_time.shape
                 axis_to_sum = 2 if collapse_axis == 'y' else 1
-                counts = numpy.sum(counts_value, axis=axis_to_sum)
+                counts = sum(counts_value, axis=axis_to_sum)
                 if transpose == True: counts = counts.swapaxes(0,1)
                 if flip == True: counts = flipud(counts)
                 data_array[..., 0] = counts
