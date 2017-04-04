@@ -338,23 +338,7 @@
           return entry_obj;
         });
         entries = entries.concat(entry_objs);
-        /*
-        var new_plotdata = webreduce.instruments[instrument_id].plot(entry_objs);
-        options.series = options.series.concat(new_plotdata.series);
-        datas = datas.concat(new_plotdata.data);
-        if (xlabel != null && new_plotdata.xlabel != xlabel) {
-          throw "mismatched x axes in selection: " + String(xlabel) + " and " + String(new_plotdata.xlabel);
-        }
-        else {
-          xlabel = new_plotdata.xlabel;
-        }
-        if (ylabel != null && new_plotdata.ylabel != ylabel) {
-          throw "mismatched y axes in selection: " + String(ylabel) + " and " + String(new_plotdata.ylabel);
-        }
-        else {
-          ylabel = new_plotdata.ylabel;
-        }
-        */
+        
       }
     });
     if (!stopPropagation) {
