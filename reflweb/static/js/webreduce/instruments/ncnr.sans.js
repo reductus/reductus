@@ -8,7 +8,7 @@ webreduce.instruments['ncnr.sans'] = webreduce.instruments['ncnr.sans'] || {};
   function load_sans(load_params, db, noblock) {
     // load params is a list of: 
     // {datasource: "ncnr", path: "ncnrdata/cgd/...", mtime: 12319123109}
-    var noblock = noblock != false;
+    var noblock = (noblock == true); // defaults to false if not specified
     var calc_params = load_params.map(function(lp) {
       return {
         template: {
