@@ -1598,14 +1598,14 @@ webreduce.editor = webreduce.editor || {};
           browser_sourcepaths = webreduce.getAllBrowserSourcePaths();
       var sources_loaded = Promise.resolve();
       for (var source in template_sourcepaths) {
-        var paths = template_sourcepaths[source];
-        for (var path in paths) {
+        var paths = Object.keys(template_sourcepaths[source]);
+        paths.forEach(function(path,i) {
           if (browser_sourcepaths.findIndex(function(sp) {return sp.source == source && sp.path == path}) < 0) {
             sources_loaded = sources_loaded.then(function() {
               return webreduce.addDataSource("navigation", source, path.split("/"));
             });
           }
-        }
+        });
       }
       
       var target = d3.select("#" + we._target_id);    
