@@ -172,8 +172,9 @@ webreduce.instruments['ncnr.refl'] = webreduce.instruments['ncnr.refl'] || {};
           var xaxis = 'x'; // primary_axis[e.intent || 'specular'];
           if (!(get_refl_item(entry[0], xaxis))) { console.log(entry[0]); throw "error: no such axis " + xaxis + " in entry for intent " + e.intent }
           var extent = d3.extent(get_refl_item(entry[0], xaxis));
-          leaf.li_attr.xmin = extent[0];
-          leaf.li_attr.xmax = extent[1];
+          var leaf_actual = jstree._model.data[leaf.id];
+          leaf_actual.li_attr.xmin = extent[0];
+          leaf_actual.li_attr.xmax = extent[1];
           var parent = leaf;
           for (var i=0; i<propagate_up_levels; i++) {
             var parent_id = parent.parent;
