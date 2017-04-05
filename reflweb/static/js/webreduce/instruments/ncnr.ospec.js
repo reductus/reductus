@@ -5,9 +5,10 @@ webreduce.instruments['ncnr.ospec'] = webreduce.instruments['ncnr.ospec'] || {};
 
 // define the loader and categorizers for ncnr.refl instrument
 (function(instrument) {
-  function load_ospec(load_params, db) {
+  function load_ospec(load_params, db, noblock) {
     // load params is a list of: 
     // {datasource: "ncnr", path: "ncnrdata/cgd/...", mtime: 12319123109}
+    var noblock = noblock != false;
     var calc_params = load_params.map(function(lp) {
       return {
         template: {
@@ -20,22 +21,22 @@ webreduce.instruments['ncnr.ospec'] = webreduce.instruments['ncnr.ospec'] || {};
           "instrument": "ncnr.magik",
           "version": "0.0"
         }, 
-        config: {"0": {"fileinfo": {"path": lp.path, "source": lp.datasource, "mtime": lp.mtime}}},
+        config: {"0": {"fileinfo": {"path": lp.path, "source": lp.source, "mtime": lp.mtime}}},
         node: 0,
         terminal:  "output",
         return_type: "metadata"
       }
     });
-    return webreduce.editor.calculate(calc_params, false, false).then(function(results) {
-      return results.map(function(result, i) {
+    return webreduce.editor.calculate(calc_params, false, noblock).then(function(results) {
+      results.forEach(function(result, i) {
         var lp = load_params[i];
         if (result && result.values) {
           result.values.forEach(function(v) {v.mtime = lp.mtime});
           if (db) { db[lp.path] = result; }
-          return result.values;
         }
-      })
-    })
+      });
+      return results;
+    });
   }
   
   function make_range_icon(global_min_x, global_max_x, min_x, max_x) {
@@ -78,8 +79,34 @@ webreduce.instruments['ncnr.ospec'] = webreduce.instruments['ncnr.ospec'] || {};
     function(info) { return info.path }
   ];
   
+  function add_viewer_link(target) {
+    var jstree = target.jstree(true);
+    var source_id = target.parent().attr("id");
+    var path = webreduce.getCurrentPath(target.parent());
+    var leaf, first_child, entry;
+    for (fn in jstree._model.data) {
+      leaf = jstree._model.data[fn];
+      if (leaf.children.length > 0) {
+        first_child = jstree._model.data[leaf.children[0]];
+        if (first_child.li_attr && 'filename' in first_child.li_attr && 'entryname' in first_child.li_attr && 'source' in first_child.li_attr) {
+          var fullpath = first_child.li_attr.filename;
+          var datasource = first_child.li_attr.source;
+          if (["ncnr", "ncnr_DOI"].indexOf(datasource) < 0) { continue }
+          if (datasource == "ncnr_DOI") { fullpath = "ncnrdata" + fullpath; }
+          var pathsegments = fullpath.split("/");
+          var pathlist = pathsegments.slice(0, pathsegments.length-1).join("+");
+          var filename = pathsegments.slice(-1);
+          var link = "<a href=\"http://ncnr.nist.gov/ipeek/nexus-zip-viewer.html";
+          link += "?pathlist=" + pathlist;
+          link += "&filename=" + filename;
+          link += "\" style=\"text-decoration:none;\">&#9432;</a>";
+          leaf.text += link;
+        }
+      }
+    }
+  }
   
-  instrument.decorators = [];
+  instrument.decorators = [add_viewer_link];
     
 })(webreduce.instruments['ncnr.ospec']);
 

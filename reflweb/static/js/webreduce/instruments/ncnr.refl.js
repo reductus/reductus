@@ -6,9 +6,10 @@ webreduce.instruments['ncnr.refl'] = webreduce.instruments['ncnr.refl'] || {};
 // define the loader and categorizers for ncnr.refl instrument
 (function(instrument) {
   //function load_refl(datasource, path, mtime, db){
-  function load_refl(load_params, db) {
+  function load_refl(load_params, db, noblock) {
     // load params is a list of: 
     // {datasource: "ncnr", path: "ncnrdata/cgd/...", mtime: 12319123109}
+    var noblock = noblock != false;
     var calc_params = load_params.map(function(lp) {
       return {
         template: {
@@ -21,21 +22,21 @@ webreduce.instruments['ncnr.refl'] = webreduce.instruments['ncnr.refl'] || {};
           "instrument": "ncnr.magik",
           "version": "0.0"
         }, 
-        config: {"0": {"filelist": [{"path": lp.path, "source": lp.datasource, "mtime": lp.mtime}]}},
+        config: {"0": {"filelist": [{"path": lp.path, "source": lp.source, "mtime": lp.mtime}]}},
         node: 0,
         terminal:  "output",
         return_type: "metadata"
       }
     });
-    return webreduce.editor.calculate(calc_params, false, false).then(function(results) {
-      return results.map(function(result, i) {
+    return webreduce.editor.calculate(calc_params, false, noblock).then(function(results) {
+      results.forEach(function(result, i) {
         var lp = load_params[i];
         if (result && result.values) {
           result.values.forEach(function(v) {v.mtime = lp.mtime});
           if (db) { db[lp.path] = result; }
-          return result.values;
         }
-      })
+      });
+      return results;
     })
   }
   
@@ -148,11 +149,24 @@ webreduce.instruments['ncnr.refl'] = webreduce.instruments['ncnr.refl'] || {};
     var path = webreduce.getCurrentPath(target.parent());
     var leaf, entry;
     // first set min and max for entries:
-    for (fn in jstree._model.data) {
-      leaf = jstree._model.data[fn];
-      if (leaf.li_attr && 'filename' in leaf.li_attr && 'entryname' in leaf.li_attr && 'datasource' in leaf.li_attr) {
-        var file_objs = webreduce.editor._file_objs[leaf.li_attr.datasource][path];
-        entry = file_objs[leaf.li_attr.filename].values.filter(function(f) {return f.entry == leaf.li_attr.entryname});
+    var to_decorate = jstree.get_json("#", {"flat": true})
+      .filter(function(leaf) { 
+        return (leaf.li_attr && 
+                'filename' in leaf.li_attr && 
+                'entryname' in leaf.li_attr && 
+                'source' in leaf.li_attr &&
+                'mtime' in leaf.li_attr) 
+        })
+    var load_params = to_decorate.map(function(leaf) {
+      var li = leaf.li_attr;
+      return  {"path": li.filename, "source": li.source, "mtime": li.mtime}
+    })
+    
+    return load_refl(load_params, null, true).then(function(results) {
+      results.forEach(function(r, i) {
+        var values = r.values || [];
+        var leaf = to_decorate[i]; // same length as values
+        var entry = values.filter(function(f) {return f.entry == leaf.li_attr.entryname});
         if (entry && entry[0]) {
           var e = entry[0];
           var xaxis = 'x'; // primary_axis[e.intent || 'specular'];
@@ -178,18 +192,23 @@ webreduce.instruments['ncnr.refl'] = webreduce.instruments['ncnr.refl'] || {};
             }
           }
         }
+      });
+      return
+    }).then(function() {
+      for (fn in jstree._model.data) {
+        leaf = jstree._model.data[fn];
+        if (leaf.parent == null) {continue}
+        var l = leaf.li_attr;
+        var p = jstree._model.data[leaf.parent].li_attr;
+        if (l.xmin != null && l.xmax != null && p.xmin != null && p.xmax != null) {
+          var range_icon = make_range_icon(parseFloat(p.xmin), parseFloat(p.xmax), parseFloat(l.xmin), parseFloat(l.xmax));
+          leaf.text += range_icon;
+        }
       }
-    }
-    for (fn in jstree._model.data) {
-      leaf = jstree._model.data[fn];
-      if (leaf.parent == null) {continue}
-      var l = leaf.li_attr;
-      var p = jstree._model.data[leaf.parent].li_attr;
-      if (l.xmin != null && l.xmax != null && p.xmin != null && p.xmax != null) {
-        var range_icon = make_range_icon(parseFloat(p.xmin), parseFloat(p.xmax), parseFloat(l.xmin), parseFloat(l.xmax));
-        leaf.text += range_icon;
-      }
-    }
+    });
+    //console.log('loaded: ', load_params, load_refl(load_params, file_objs), file_objs);
+
+    
   }
   
   function add_sample_description(target) {
@@ -197,11 +216,23 @@ webreduce.instruments['ncnr.refl'] = webreduce.instruments['ncnr.refl'] || {};
     var source_id = target.parent().attr("id");
     var path = webreduce.getCurrentPath(target.parent());
     var leaf, entry;
-    for (fn in jstree._model.data) {
-      leaf = jstree._model.data[fn];
-      if (leaf.li_attr && 'filename' in leaf.li_attr && 'entryname' in leaf.li_attr && 'datasource' in leaf.li_attr) {
-        var file_objs = webreduce.editor._file_objs[leaf.li_attr.datasource][path];
-        entry = file_objs[leaf.li_attr.filename].values.filter(function(f) {return f.entry == leaf.li_attr.entryname});
+    var to_decorate = jstree.get_json("#", {"flat": true})
+      .filter(function(leaf) { 
+        return (leaf.li_attr && 
+                'filename' in leaf.li_attr && 
+                'entryname' in leaf.li_attr && 
+                'source' in leaf.li_attr &&
+                'mtime' in leaf.li_attr) 
+        })
+    var load_params = to_decorate.map(function(leaf) {
+      var li = leaf.li_attr;
+      return  {"path": li.filename, "source": li.source, "mtime": li.mtime}
+    });
+    return load_refl(load_params, null, true).then(function(results) {
+      results.forEach(function(r, i) {
+        var values = r.values || [];
+        var leaf = to_decorate[i]; // same length as values
+        var entry = values.filter(function(f) {return f.entry == leaf.li_attr.entryname});
         if (entry && entry[0]) {
           var e = entry[0];
           if ('sample' in e && 'description' in e.sample) {
@@ -211,23 +242,22 @@ webreduce.instruments['ncnr.refl'] = webreduce.instruments['ncnr.refl'] || {};
             parent.li_attr.title = e.sample.description;
           }
         }
-      }
-    }
+      })
+    });
   }
   
   function add_viewer_link(target) {
     var jstree = target.jstree(true);
     var source_id = target.parent().attr("id");
     var path = webreduce.getCurrentPath(target.parent());
-    var file_objs = webreduce.editor._file_objs[path];
     var leaf, first_child, entry;
     for (fn in jstree._model.data) {
       leaf = jstree._model.data[fn];
       if (leaf.children.length > 0) {
         first_child = jstree._model.data[leaf.children[0]];
-        if (first_child.li_attr && 'filename' in first_child.li_attr && 'entryname' in first_child.li_attr && 'datasource' in first_child.li_attr) {
+        if (first_child.li_attr && 'filename' in first_child.li_attr && 'entryname' in first_child.li_attr && 'source' in first_child.li_attr) {
           var fullpath = first_child.li_attr.filename;
-          var datasource = first_child.li_attr.datasource;
+          var datasource = first_child.li_attr.source;
           if (["ncnr", "ncnr_DOI"].indexOf(datasource) < 0) { continue }
           if (datasource == "ncnr_DOI") { fullpath = "ncnrdata" + fullpath; }
           var pathsegments = fullpath.split("/");

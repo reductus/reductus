@@ -5,9 +5,10 @@ webreduce.instruments['ncnr.sans'] = webreduce.instruments['ncnr.sans'] || {};
 
 // define the loader and categorizers for ncnr.sans instrument
 (function(instrument) {
-  function load_sans(load_params, db) {
+  function load_sans(load_params, db, noblock) {
     // load params is a list of: 
     // {datasource: "ncnr", path: "ncnrdata/cgd/...", mtime: 12319123109}
+    var noblock = noblock != false;
     var calc_params = load_params.map(function(lp) {
       return {
         template: {
@@ -20,21 +21,21 @@ webreduce.instruments['ncnr.sans'] = webreduce.instruments['ncnr.sans'] || {};
           "instrument": "ncnr.sans",
           "version": "0.0"
         },
-        config: {"0": {"filelist": [{"path": lp.path, "source": lp.datasource, "mtime": lp.mtime}]}},
+        config: {"0": {"filelist": [{"path": lp.path, "source": lp.source, "mtime": lp.mtime}]}},
         node: 0,
         terminal:  "output",
         return_type: "metadata"
       }
     });
-    return webreduce.editor.calculate(calc_params, false, false).then(function(results) {
-      return results.map(function(result, i) {
+    return webreduce.editor.calculate(calc_params, false, noblock).then(function(results) {
+      results.forEach(function(result, i) {
         var lp = load_params[i];
         if (result && result.values) {
           result.values.forEach(function(v) {v.mtime = lp.mtime});
           if (db) { db[lp.path] = result; }
-          return result.values;
         }
-      })
+      });
+      return results;
     })
   }
   
@@ -116,19 +117,31 @@ webreduce.instruments['ncnr.sans'] = webreduce.instruments['ncnr.sans'] || {};
     function(info) { return (info['run.experimentScanID'] + ':' + info['sample.description']) }
   ];
   
+  
   function add_sample_description(target) {
     var jstree = target.jstree(true);
     var source_id = target.parent().attr("id");
     var path = webreduce.getCurrentPath(target.parent());
-    var file_objs = webreduce.editor._file_objs[path];
     var leaf, entry;
-    for (fn in jstree._model.data) {
-      leaf = jstree._model.data[fn];
-      if (leaf.li_attr && 'filename' in leaf.li_attr && 'entryname' in leaf.li_attr) {
-        entry = file_objs[leaf.li_attr.filename].values.filter(function(f) {return f.entry == leaf.li_attr.entryname});
+    var to_decorate = jstree.get_json("#", {"flat": true})
+      .filter(function(leaf) { 
+        return (leaf.li_attr && 
+                'filename' in leaf.li_attr && 
+                'entryname' in leaf.li_attr && 
+                'source' in leaf.li_attr &&
+                'mtime' in leaf.li_attr) 
+        })
+    var load_params = to_decorate.map(function(leaf) {
+      var li = leaf.li_attr;
+      return  {"path": li.filename, "source": li.source, "mtime": li.mtime}
+    });
+    return load_sans(load_params, null, true).then(function(results) {
+      results.forEach(function(r, i) {
+        var values = r.values || [];
+        var leaf = to_decorate[i]; // same length as values
+        var entry = values.filter(function(f) {return f.entry == leaf.li_attr.entryname});
         if (entry && entry[0]) {
           var e = entry[0];
-          //console.log(e);
           if ('sample.description' in e) {
             leaf.li_attr.title = e['sample.description'];
             var parent_id = leaf.parent;
@@ -136,21 +149,34 @@ webreduce.instruments['ncnr.sans'] = webreduce.instruments['ncnr.sans'] || {};
             parent.li_attr.title = e['sample.description'];
           }
         }
-      }
-    }
+      })
+    });
   }
+  
   
   function add_counts(target) {
     var jstree = target.jstree(true);
     var source_id = target.parent().attr("id");
     var path = webreduce.getCurrentPath(target.parent());
-    var file_objs = webreduce.editor._file_objs[path];
     var leaf, entry;
-    for (fn in jstree._model.data) {
-      leaf = jstree._model.data[fn];
-      if (leaf.li_attr && 'filename' in leaf.li_attr && 'entryname' in leaf.li_attr && 'datasource' in leaf.li_attr) {
-        var file_objs = webreduce.editor._file_objs[leaf.li_attr.datasource][path];
-        entry = file_objs[leaf.li_attr.filename].values.filter(function(f) {return f.entry == leaf.li_attr.entryname});
+    var to_decorate = jstree.get_json("#", {"flat": true})
+      .filter(function(leaf) { 
+        return (leaf.li_attr && 
+                'filename' in leaf.li_attr && 
+                'entryname' in leaf.li_attr && 
+                'source' in leaf.li_attr &&
+                'mtime' in leaf.li_attr) 
+        })
+    var load_params = to_decorate.map(function(leaf) {
+      var li = leaf.li_attr;
+      return  {"path": li.filename, "source": li.source, "mtime": li.mtime}
+    });
+    
+    return load_sans(load_params, null, true).then(function(results) {
+      results.forEach(function(r, i) {
+        var values = r.values || [];
+        var leaf = to_decorate[i]; // same length as values
+        var entry = values.filter(function(f) {return f.entry == leaf.li_attr.entryname});
         if (entry && entry[0]) {
           var e = entry[0];
           //console.log(e, ('run.detcnt' in e && 'run.moncnt' in e && 'run.rtime' in e));
@@ -161,20 +187,22 @@ webreduce.instruments['ncnr.sans'] = webreduce.instruments['ncnr.sans'] || {};
             //parent.li_attr.title = e['sample.description'];
           }
         }
-      }
-    }
+      });
+    });
   }
   
   function add_viewer_link(target) {
     var jstree = target.jstree(true);
     var source_id = target.parent().attr("id");
     var path = webreduce.getCurrentPath(target.parent());
-    var file_objs = webreduce.editor._file_objs[path];
     var leaf, first_child, entry;
     for (fn in jstree._model.data) {
       leaf = jstree._model.data[fn];
       if (leaf.li_attr && 'filename' in leaf.li_attr && 'entryname' in leaf.li_attr) {
         var fullpath = leaf.li_attr.filename;
+        var datasource = leaf.li_attr.source;
+        if (["ncnr", "ncnr_DOI"].indexOf(datasource) < 0) { continue }
+        if (datasource == "ncnr_DOI") { fullpath = "ncnrdata" + fullpath; }
         var pathsegments = fullpath.split("/");
         var pathlist = pathsegments.slice(0, pathsegments.length-1).join("+");
         var filename = pathsegments.slice(-1);

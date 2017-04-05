@@ -25,9 +25,6 @@
     var load_promises = [];
     var fileinfo = {};
     var file_objs = {};
-    webreduce.editor._file_objs = webreduce.editor._file_objs || {};
-    webreduce.editor._file_objs[datasource] = webreduce.editor._file_objs[datasource] || {};
-    webreduce.editor._file_objs[datasource][path] = file_objs;
     var datafiles = files.filter(function(x) {return (
       BRUKER_REGEXP.test(x) ||
       ZIP_REGEXP.test(x) ||
@@ -45,7 +42,7 @@
     ////////////////////////////////////////////////////////////////////////////
     var load_params = datafiles.map(function(j) {
       return {
-        "datasource": datasource, 
+        "source": datasource, 
         "path": path + "/" + j,
         "mtime": files_metadata[j].mtime 
       }
@@ -75,8 +72,9 @@
       var ready = new Promise(function(resolve, reject) {
         target.on("ready.jstree", function() {
           if (webreduce.instruments[instrument_id].decorators) {
+              var dp = Promise.resolve();
               webreduce.instruments[instrument_id].decorators.forEach(function(d) {
-                  d(target);
+                  dp = dp.then(function() { return d(target) });
               });
             }
           resolve();
@@ -153,7 +151,7 @@
           cobj = cobj[category]; // walk the tree...
         }
         // modify the last entry to include key of file_obj
-        leaf['li_attr'] = {"filename": p, "entryname": entryname, "mtime": entry.mtime, "datasource": datasource};
+        leaf['li_attr'] = {"filename": p, "entryname": entryname, "mtime": entry.mtime, "source": datasource};
       }
     }
     // if not empty, push in the root node:
@@ -306,46 +304,47 @@
 
   function handleChecked(d, i, stopPropagation) {
     var instrument_id = webreduce.editor._instrument_id;
+    var loader = webreduce.instruments[instrument_id].load_file;
     var xlabel, ylabel,
         datas = [],
         options={series: [], axes: {xaxis: {label: "x-axis"}, yaxis: {label: "y-axis"}}},
         fileinfo = [],
         datatype = null,
-        entries = [];
+        entries = []
+    var loaded_promise = Promise.resolve();
     $(".remote-filebrowser").each(function() {
       var jstree = $(this).jstree(true);
       if (jstree) {
-        var path = getCurrentPath(this.parentNode);
-        var source = getDataSource(this.parentNode);
-        var file_objs = (webreduce.editor._file_objs[source] || {})[path] || {};
-        //var selected_nodes = jstree.get_selected().map(function(s) {return jstree.get_node(s)});
         var checked_nodes = jstree.get_checked().map(function(s) {return jstree.get_node(s)});
         var entrynodes = checked_nodes.filter(function(n) {
-          return (n.li_attr.filename != null && n.li_attr.entryname != null)
+          var li = n.li_attr;
+          return (li.filename != null && li.entryname != null && li.source != null && li.mtime != null)
         });
-        var entry_objs = entrynodes.map(function(n) {
-          var file_key = n.li_attr.filename,
-              entryname = n.li_attr.entryname,
-              file_obj = file_objs[file_key],              
-              entry_obj = file_obj.values.find(function(r) {return r.entry == entryname}),
-              //filename = file_key.split("/").slice(-1).join(""),
-              mtime = n.li_attr.mtime;
-          fileinfo.push({path: file_key, source: source, mtime: mtime, entries: [entryname]});
-          if (datatype == null) { datatype = file_obj.datatype }
-          else if (datatype != file_obj.datatype) {
-            console.log("warning: datatypes do not match in loaded files"); 
-          }
-          return entry_obj;
+        var new_fileinfo = entrynodes.map(function(leaf) {
+          var li = leaf.li_attr;
+          return {path: li.filename, source: li.source, mtime: li.mtime, entries: [li.entryname]}
         });
-        entries = entries.concat(entry_objs);
+        fileinfo = fileinfo.concat(new_fileinfo);
         
       }
     });
     if (!stopPropagation) {
       $("div.fields").trigger("fileinfo.update", [fileinfo]);
     }
-    var result = {"datatype": datatype, "values": entries}
-    webreduce.editor._active_plot = webreduce.editor.show_plots(result);
+    loader(fileinfo).then(function(results) {
+      var entries = results.map(function(r,i) {
+        var values = r.values || [];
+        var fi = fileinfo[i];
+        var entry = values.find(function(e) { return e.entry == fi.entries[0] });
+        if (datatype == null) { datatype = r.datatype }
+        else if (datatype != r.datatype) {
+          console.log("warning: datatypes do not match in loaded files"); 
+        }
+        return entry;
+      });
+      var result = {"datatype": datatype, "values": entries}
+      webreduce.editor._active_plot = webreduce.editor.show_plots(result);
+    });
   }
   webreduce = window.webreduce || {};
   webreduce.updateFileBrowserPane = updateFileBrowserPane;

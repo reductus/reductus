@@ -731,6 +731,26 @@ webreduce.editor = webreduce.editor || {};
         return res.rows.map(function(r) {return [r.doc.created_at, r.doc._id]})
       })
   }
+  
+  webreduce.editor.get_signature = function(params) {
+    var template = params.template,
+        config = params.config || {},
+        node = params.node,
+        terminal = params.terminal,
+        return_type = params.return_type || 'metadata';
+    
+    var versioned = webreduce.editor.get_versioned_template(template), 
+        sig = Sha1.hash(JSON.stringify({
+          method: "calculate",
+          template: versioned,
+          config: config,
+          node: node,
+          terminal: terminal,
+          return_type: return_type }));
+          
+    return sig
+  }
+          
 
   function calculate_one(params, caching) {
     var r = new Promise(function(resolve, reject) {resolve()});
@@ -741,17 +761,11 @@ webreduce.editor = webreduce.editor || {};
         return_type = params.return_type || 'metadata';
         
     if (caching) {
-      var versioned = webreduce.editor.get_versioned_template(template), 
-          sig = Sha1.hash(JSON.stringify({
-            method: "calculate",
-            template: versioned,
-            config: config,
-            node: node,
-            terminal: terminal,
-            return_type: return_type }))
+      var sig = webreduce.editor.get_signature(params);
       r = r.then(function() { 
         return webreduce.editor._cache.get(sig).then(function(cached) {return cached.value})
         .catch(function(e) {
+          var versioned = webreduce.editor.get_versioned_template(template);
           return webreduce.server_api.calc_terminal(versioned, config, node, terminal, return_type)
             .then(function(result) {
               var doc = {
