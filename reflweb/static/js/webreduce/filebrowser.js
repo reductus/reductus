@@ -74,7 +74,7 @@
           if (webreduce.instruments[instrument_id].decorators) {
               var dp = Promise.resolve();
               webreduce.instruments[instrument_id].decorators.forEach(function(d) {
-                  dp = dp.then(function() { return d(target) });
+                  dp = dp.then(function() { return d(target, file_objs) });
               });
             }
           resolve();
