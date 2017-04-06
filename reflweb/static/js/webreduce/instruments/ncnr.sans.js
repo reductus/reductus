@@ -118,101 +118,87 @@ webreduce.instruments['ncnr.sans'] = webreduce.instruments['ncnr.sans'] || {};
   ];
   
   
-  function add_sample_description(target) {
+  function add_sample_description(target, file_objs) {
     var jstree = target.jstree(true);
-    var source_id = target.parent().attr("id");
-    var path = webreduce.getCurrentPath(target.parent());
-    var leaf, entry;
+    //var path = webreduce.getCurrentPath(target.parent());
     var to_decorate = jstree.get_json("#", {"flat": true})
       .filter(function(leaf) { 
         return (leaf.li_attr && 
-                'filename' in leaf.li_attr && 
-                'entryname' in leaf.li_attr && 
+                'filename' in leaf.li_attr &&
+                leaf.li_attr.filename in file_objs &&
+                'entryname' in leaf.li_attr &&
                 'source' in leaf.li_attr &&
                 'mtime' in leaf.li_attr) 
         })
-    var load_params = to_decorate.map(function(leaf) {
-      var li = leaf.li_attr;
-      return  {"path": li.filename, "source": li.source, "mtime": li.mtime}
-    });
-    return load_sans(load_params, null, true).then(function(results) {
-      results.forEach(function(r, i) {
-        var values = r.values || [];
-        var leaf = to_decorate[i]; // same length as values
-        var entry = values.filter(function(f) {return f.entry == leaf.li_attr.entryname});
-        if (entry && entry[0]) {
-          var e = entry[0];
-          if ('sample.description' in e) {
-            leaf.li_attr.title = e['sample.description'];
-            var parent_id = leaf.parent;
-            parent = jstree._model.data[parent_id];
-            parent.li_attr.title = e['sample.description'];
-          }
+  
+    to_decorate.forEach(function(leaf, i) {
+      var filename = leaf.li_attr.filename;
+      var file_obj = file_objs[filename];
+      var entry = file_obj.values.filter(function(f) {return f.entry == leaf.li_attr.entryname});
+      if (entry && entry[0]) {
+        var e = entry[0];
+        if ('sample.description' in e) {
+          leaf.li_attr.title = e['sample.description'];
+          var parent_id = leaf.parent;
+          parent = jstree._model.data[parent_id];
+          parent.li_attr.title = e['sample.description'];
         }
-      })
-    });
-  }
-  
-  
-  function add_counts(target) {
-    var jstree = target.jstree(true);
-    var source_id = target.parent().attr("id");
-    var path = webreduce.getCurrentPath(target.parent());
-    var leaf, entry;
-    var to_decorate = jstree.get_json("#", {"flat": true})
-      .filter(function(leaf) { 
-        return (leaf.li_attr && 
-                'filename' in leaf.li_attr && 
-                'entryname' in leaf.li_attr && 
-                'source' in leaf.li_attr &&
-                'mtime' in leaf.li_attr) 
-        })
-    var load_params = to_decorate.map(function(leaf) {
-      var li = leaf.li_attr;
-      return  {"path": li.filename, "source": li.source, "mtime": li.mtime}
-    });
-    
-    return load_sans(load_params, null, true).then(function(results) {
-      results.forEach(function(r, i) {
-        var values = r.values || [];
-        var leaf = to_decorate[i]; // same length as values
-        var entry = values.filter(function(f) {return f.entry == leaf.li_attr.entryname});
-        if (entry && entry[0]) {
-          var e = entry[0];
-          //console.log(e, ('run.detcnt' in e && 'run.moncnt' in e && 'run.rtime' in e));
-          if ('run.detcnt' in e && 'run.moncnt' in e && 'run.rtime' in e) {
-            leaf.li_attr.title = 't:' + e['run.rtime'] + ' det:' + e['run.detcnt'] + ' mon:' + e['run.moncnt'];
-            //var parent_id = leaf.parent;
-            //parent = jstree._model.data[parent_id];
-            //parent.li_attr.title = e['sample.description'];
-          }
-        }
-      });
-    });
-  }
-  
-  function add_viewer_link(target) {
-    var jstree = target.jstree(true);
-    var source_id = target.parent().attr("id");
-    var path = webreduce.getCurrentPath(target.parent());
-    var leaf, first_child, entry;
-    for (fn in jstree._model.data) {
-      leaf = jstree._model.data[fn];
-      if (leaf.li_attr && 'filename' in leaf.li_attr && 'entryname' in leaf.li_attr) {
-        var fullpath = leaf.li_attr.filename;
-        var datasource = leaf.li_attr.source;
-        if (["ncnr", "ncnr_DOI"].indexOf(datasource) < 0) { continue }
-        if (datasource == "ncnr_DOI") { fullpath = "ncnrdata" + fullpath; }
-        var pathsegments = fullpath.split("/");
-        var pathlist = pathsegments.slice(0, pathsegments.length-1).join("+");
-        var filename = pathsegments.slice(-1);
-        var link = "<a href=\"http://ncnr.nist.gov/ipeek/nexus-zip-viewer.html";
-        link += "?pathlist=" + pathlist;
-        link += "&filename=" + filename;
-        link += "\" style=\"text-decoration:none;\">&#9432;</a>";
-        leaf.text += link;
       }
-    }
+    });
+  }
+  
+  
+  function add_counts(target, file_objs) {
+    var jstree = target.jstree(true);
+    var leaf, entry;
+    var to_decorate = jstree.get_json("#", {"flat": true})
+      .filter(function(leaf) { 
+        return (leaf.li_attr && 
+                'filename' in leaf.li_attr && 
+                leaf.li_attr.filename in file_objs &&
+                'entryname' in leaf.li_attr && 
+                'source' in leaf.li_attr &&
+                'mtime' in leaf.li_attr) 
+        })
+    
+    to_decorate.forEach(function(leaf, i) {
+      var filename = leaf.li_attr.filename;
+      var file_obj = file_objs[filename];
+      var entry = file_obj.values.filter(function(f) {return f.entry == leaf.li_attr.entryname});
+      if (entry && entry[0]) {
+        var e = entry[0];
+        //console.log(e, ('run.detcnt' in e && 'run.moncnt' in e && 'run.rtime' in e));
+        if ('run.detcnt' in e && 'run.moncnt' in e && 'run.rtime' in e) {
+          var leaf_actual = jstree._model.data[leaf.id];
+          leaf_actual.li_attr.title = 't:' + e['run.rtime'] + ' det:' + e['run.detcnt'] + ' mon:' + e['run.moncnt'];
+        }
+      }
+    });
+  }
+  
+  function add_viewer_link(target, file_objs) {
+    var jstree = target.jstree(true);
+    var to_decorate = jstree.get_json("#", {"flat": true})
+      .filter(function(leaf) { 
+        return (leaf.li_attr && 
+                'filename' in leaf.li_attr && 
+                'source' in leaf.li_attr) 
+        })
+    to_decorate.forEach(function(leaf, i) {
+      var fullpath = leaf.li_attr.filename;
+      var datasource = leaf.li_attr.source;
+      if (["ncnr", "ncnr_DOI"].indexOf(datasource) < 0) { return }
+      if (datasource == "ncnr_DOI") { fullpath = "ncnrdata" + fullpath; }
+      var pathsegments = fullpath.split("/");
+      var pathlist = pathsegments.slice(0, pathsegments.length-1).join("+");
+      var filename = pathsegments.slice(-1);
+      var link = "<a href=\"http://ncnr.nist.gov/ipeek/nexus-zip-viewer.html";
+      link += "?pathlist=" + pathlist;
+      link += "&filename=" + filename;
+      link += "\" style=\"text-decoration:none;\">&#9432;</a>";
+      var leaf_actual = jstree._model.data[leaf.id];
+      leaf_actual.text += link;
+    })
   }
   
   instrument.decorators = [add_viewer_link, add_counts];

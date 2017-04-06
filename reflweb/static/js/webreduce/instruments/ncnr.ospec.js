@@ -76,34 +76,40 @@ webreduce.instruments['ncnr.ospec'] = webreduce.instruments['ncnr.ospec'] || {};
   instrument.load_file = load_ospec;
   instrument.categorizers = [
     function(info) { return info.friendly_name },
-    function(info) { return info.path }
+    function(info) { return info.path },
+    function(info) { return info.polarization || "unpolarized" }
   ];
   
-  function add_viewer_link(target) {
+  function add_viewer_link(target, file_objs) {
     var jstree = target.jstree(true);
-    var source_id = target.parent().attr("id");
-    var path = webreduce.getCurrentPath(target.parent());
-    var leaf, first_child, entry;
-    for (fn in jstree._model.data) {
-      leaf = jstree._model.data[fn];
-      if (leaf.children.length > 0) {
-        first_child = jstree._model.data[leaf.children[0]];
-        if (first_child.li_attr && 'filename' in first_child.li_attr && 'entryname' in first_child.li_attr && 'source' in first_child.li_attr) {
-          var fullpath = first_child.li_attr.filename;
-          var datasource = first_child.li_attr.source;
-          if (["ncnr", "ncnr_DOI"].indexOf(datasource) < 0) { continue }
-          if (datasource == "ncnr_DOI") { fullpath = "ncnrdata" + fullpath; }
-          var pathsegments = fullpath.split("/");
-          var pathlist = pathsegments.slice(0, pathsegments.length-1).join("+");
-          var filename = pathsegments.slice(-1);
-          var link = "<a href=\"http://ncnr.nist.gov/ipeek/nexus-zip-viewer.html";
-          link += "?pathlist=" + pathlist;
-          link += "&filename=" + filename;
-          link += "\" style=\"text-decoration:none;\">&#9432;</a>";
-          leaf.text += link;
-        }
-      }
-    }
+    var parents_decorated = {};
+    var to_decorate = jstree.get_json("#", {"flat": true})
+      .filter(function(leaf) { 
+        return (leaf.li_attr && 
+                'filename' in leaf.li_attr && 
+                'source' in leaf.li_attr) 
+        })
+    // for refl, this will return a list of entries, but
+    // we want to decorate the file that contains the entries.
+    to_decorate.forEach(function(leaf, i) {
+      var parent_id = leaf.parent;
+      // only add link once per file
+      if (parent_id in parents_decorated) { return }
+      var fullpath = leaf.li_attr.filename;
+      var datasource = leaf.li_attr.source;
+      if (["ncnr", "ncnr_DOI"].indexOf(datasource) < 0) { return }
+      if (datasource == "ncnr_DOI") { fullpath = "ncnrdata" + fullpath; }
+      var pathsegments = fullpath.split("/");
+      var pathlist = pathsegments.slice(0, pathsegments.length-1).join("+");
+      var filename = pathsegments.slice(-1);
+      var link = "<a href=\"http://ncnr.nist.gov/ipeek/nexus-zip-viewer.html";
+      link += "?pathlist=" + pathlist;
+      link += "&filename=" + filename;
+      link += "\" style=\"text-decoration:none;\">&#9432;</a>";
+      var parent_actual = jstree._model.data[parent_id];
+      parent_actual.text += link;
+      parents_decorated[parent_id] = true;
+    })
   }
   
   instrument.decorators = [add_viewer_link];
