@@ -72,7 +72,7 @@ dist = setup(
     #data_files=[('reflweb', ['reflweb/git_version_hash'])],
     ext_modules=module_config(),
     # numpy and scipy are requirements, but don't install them with pip
-    install_requires=['uncertainties', 'docutils'],
+    install_requires=['uncertainties', 'docutils', 'wheel', 'gevent', 'werkzeug', 'tinyrpc', 'pytz', 'h5py', 'redis', 'msgpack-python'],
     extras_require = {
         'preinstalled': ['scipy', 'numpy'],
         'masked_curve_fit': ['numdifftools'],
