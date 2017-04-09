@@ -2,7 +2,14 @@
 
 #include <iostream>
 #include <iomanip>
-#include <stdint.h>
+#ifdef _MSC_VER
+    typedef unsigned char uint8_t;
+    typedef unsigned short int uint16_t;
+    typedef unsigned int uint32_t;
+    typedef unsigned long int uint64_t;
+#else
+    #include <stdint.h>
+#endif
 #include <Python.h>
 #include <rebin.h>
 #include <rebin2D.h>

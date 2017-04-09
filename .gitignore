@@ -1,5 +1,6 @@
 *.so
 *.pyc
+*.pyd
 /build/
 /dist/
 /doc/_build/
