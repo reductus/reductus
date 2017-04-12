@@ -38,9 +38,17 @@ Changes to the python code can be incorporated into the containers by stopping t
 To stop::
     
     docker-compose stop
+    
+To access the client, if using the new Docker beta navigate to http://localhost:8000/reflweb/web_reduction_filebrowser.html
+On Windows 7, if using docker-machine, you will have to get the IP of the default docker install and use that instead of localhost, e.g. ::
 
-Run directly in console
+    docker-machine ip default
+    
+*In my case it was http://192.168.99.100:8000/reflweb/web_reduction_filebrowser.html*
+
+Method 2: Run directly in console
 ~~~~~~~~~~~~~~~~~~~~~~~
+You must have a C99 build environment set up before starting.  
 Clone the repo, then install (might be a good ideat to make a virtualenv first), e.g. ::
     
     python setup.py install
@@ -49,3 +57,5 @@ Then start the server with::
 
     cd reflweb 
     python server_tinyrpc.py
+
+
