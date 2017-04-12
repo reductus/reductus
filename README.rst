@@ -18,3 +18,34 @@ reflweb
     
 
 To load data from a local store in web reduction, go to menu->data->add source->local (must be running the server locally, with the local datastore enabled in config)
+
+
+Installation and use
+--------------------
+
+Method 1: Docker Compose
+~~~~~~~~~~~~~~~~~~~~~~~~
+This is the easiest way to get started.  Clone the repo, the change directories into the repository and run::
+
+    docker-compose build
+    docker-compose up -d
+
+This will result in a trio of docker containers being spun up, one with a web server for the interface ('reflweb'), one with the backend calculation RPC server ('reductus') and one with the Redis cache.
+
+Files in ./reflweb/testdata/ will be mapped into the server at /data, for testing the local file handling.
+Changes to the python code can be incorporated into the containers by stopping them, then repeating the build and up commands above.  
+
+To stop::
+    
+    docker-compose stop
+
+Run directly in console
+~~~~~~~~~~~~~~~~~~~~~~~
+Clone the repo, then install (might be a good ideat to make a virtualenv first), e.g. ::
+    
+    python setup.py install
+
+Then start the server with::
+
+    cd reflweb 
+    python server_tinyrpc.py
