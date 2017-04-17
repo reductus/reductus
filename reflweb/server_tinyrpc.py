@@ -4,11 +4,6 @@ import urlparse
 from pprint import pprint
 import traceback
 
-try:
-    import config
-except ImportError:
-    import default_config as config
-
 import gevent
 import gevent.wsgi
 import gevent.queue
@@ -19,8 +14,12 @@ from tinyrpc.dispatch import RPCDispatcher
 
 #webbrowser.open_new_tab('http://localhost:%d/index.html?rpc_port=%d' % (http_port, rpc_port))
 
-        
-if __name__ == '__main__':
+try:
+    import config
+except ImportError:
+    import default_config as config
+
+def main():
     if len(sys.argv) >= 2:
         port = int(sys.argv[1])
     else:
@@ -42,7 +41,7 @@ if __name__ == '__main__':
         JSONRPCProtocol(),
         dispatcher
     )
-    
+
     import api
     from api import api_methods, create_instruments
     create_instruments()
@@ -56,3 +55,6 @@ if __name__ == '__main__':
     print("serving on port %d" % (port,))
     rpc_server.serve_forever()
     print "done serving rpc forever"
+
+if __name__ == '__main__':
+    main()
