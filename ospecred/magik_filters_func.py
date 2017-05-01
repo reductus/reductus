@@ -645,6 +645,158 @@ def alphaFtoQz(data, wavelength=5.0):
     new_data = MetaArray(new_array, info=new_info)
     return new_data
 
+@module
+def autogrid(datasets, operation='union', extra_grid_point=True, min_step=1e-10):
+    """ 
+    take multiple datasets and create a grid which covers all of them
+    - stepsize is smallest stepsize found in datasets
+    returns an empty grid with units and labels
+    
+    if extra_grid_point is True, adds one point to the end of each axis
+    so each dimension is incremented by one (makes edges for rebinning) 
+    
+    **Inputs**
+    
+    datasets (ospec2d[]): input data
+    
+    operation (opt:union|intersection): make grid to cover all points (union) or only where overlapped (intersection)
+    
+    extra_grid_point (bool): if extra_grid_point is True, adds one point to the end of each axis so each dimension is incremented by one (makes edges for rebinning) 
+    
+    min_step (float): smallest difference that is not rounded to zero
+    
+    **Returns**
+    
+    grid (ospec2d): output grid
+    
+    2017-05-01 Brian Maranville
+    """
+    
+    num_datasets = len(datasets)
+    dims = 2
+    dim_min = zeros((dims, num_datasets))
+    dim_max = zeros((dims, num_datasets))
+    dim_len = zeros((dims, num_datasets))
+    dim_step = zeros((dims, num_datasets))
+
+    for i, data in enumerate(datasets):
+        info = data.infoCopy()
+        for dim in range(dims):
+            av = data.axisValues(dim)
+            dim_min[dim, i] = av.min()
+            dim_max[dim, i] = av.max()
+            dim_len[dim, i] = len(av)
+            if dim_len[dim, i] > 1:
+                dim_step[dim, i] = float(dim_max[dim, i] - dim_min[dim, i]) / (dim_len[dim, i] - 1)
+                # dim0_max[i] += th_step[i] # add back on the last step
+            else:
+                dim_step[dim, i] = min_step
+
+    final_stepsizes = []
+    absolute_max = []
+    absolute_min = []
+    for dim in range(dims):
+        dim_stepsize = dim_step[dim].min()
+        if dim_stepsize < min_step:
+            dim_stepsize = min_step
+        final_stepsizes.append(dim_stepsize)
+        
+        if operation == 'union':
+            absolute_max.append(dim_max[dim].max())
+            absolute_min.append(dim_min[dim].min())
+        elif operation == 'intersection':
+            absolute_max.append(dim_max[dim].min())
+            absolute_min.append(dim_min[dim].max())
+        else: 
+            raise ValueError('operation must be one of "union" or "intersection"')
+        
+    # now calculate number of steps:
+    output_dims = []
+    for dim in range(dims):
+        if (dim_len[dim].max() == 1) or (absolute_max[dim] == absolute_min[dim]):
+            steps = 1
+        else:
+            steps = int(round(float(absolute_max[dim] - absolute_min[dim]) / final_stepsizes[dim]))
+        if extra_grid_point == True:
+            steps += 1
+        output_dims.append(steps)
+    
+    new_info = datasets[0].infoCopy() # take units etc from first dataset
+     # then tack on the number of columns already there:
+    output_dims.append(len(new_info[2]['cols']))
+    for dim in range(dims):
+        new_info[dim]["values"] = (arange(output_dims[dim], dtype='float') * final_stepsizes[dim]) + absolute_min[dim]
+    output_grid = MetaArray(zeros(tuple(output_dims)), info=new_info)
+    return output_grid
+
+
+@module
+def combine(datasets, grid, operation="union"):
+    """ 
+    Combine multiple datasets with or without overlap, adding 
+    all the values in the time, monitor and data columns, and populating
+    the pixels column (number of pixels in each new bin)
+    
+    **Inputs**
+    
+    datasets (ospec2d[]): input data
+    
+    grid (ospec2d?): optional grid
+    
+    operation (opt:union|intersection): make grid to cover all points (union) or only where overlapped (intersection) for autogridding
+        
+    **Returns**
+    
+    combined (ospec2d) : datasets added together
+    
+    2017-05-01 Brian Maranville
+    """
+    
+    if grid == None:
+        grid = autogrid(datasets, operation=operation)
+    for dataset in datasets:
+        grid = add_to_grid(dataset, grid)
+    # extra info changed
+    # strip info that is meaningless in combined dataset: (filename, start_time, end_time)
+    for key in ['filename', 'start_datetime', 'end_datetime']:
+        if grid._info[-1].has_key(key): grid._info[-1].pop(key)
+    return grid
+        
+def add_to_grid(dataset, grid):
+    dims = 2
+    grid_slice = [slice(None, None, 1),] * dims
+    bin_edges = []
+    for dim in range(dims):
+        av = grid.axisValues(dim).copy()
+        dspacing = (av[-1] - av[0]) / (len(av) - 1)
+        edges = resize(av, len(av) + 1)
+        edges[-1] = av[-1] + dspacing
+        if dspacing < 0:
+            edges = edges[::-1] # reverse
+            grid_slice[dim] = slice(None, None, -1)
+        bin_edges.append(edges)
+    
+    data_edges = []
+    data_slice = [slice(None, None, 1),] * dims
+    for dim in range(dims):
+        av = dataset.axisValues(dim).copy()
+        dspacing = (av[-1] - av[0]) / (len(av) - 1)
+        edges = resize(av, len(av) + 1)
+        edges[-1] = av[-1] + dspacing
+        if dspacing < 0:
+            edges = edges[::-1] # reverse
+            data_slice[dim] = slice(None, None, -1)
+        data_edges.append(edges)
+    
+    new_info = dataset.infoCopy()        
+    for i, col in enumerate(new_info[2]['cols']):
+        #if col['name'] in cols_to_add:
+        array_to_rebin = dataset[:, :, col['name']].view(ndarray) 
+        #print data_edges, bin_edges
+        new_array = reb.rebin2d(data_edges[0], data_edges[1], array_to_rebin[data_slice], bin_edges[0], bin_edges[1])
+        grid[:, :, col['name']] += new_array[grid_slice]
+        
+    return grid
 
 #################
 # Loader stuff   
