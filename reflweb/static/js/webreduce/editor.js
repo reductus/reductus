@@ -421,12 +421,29 @@ webreduce.editor = webreduce.editor || {};
             mychart[this.id](this.checked);
           });
       
-       plot_controls
+      plot_controls
         .append("input")
           .attr("type", "button")
           .attr("id", "export_data")
           .attr("value", "export")
           .on("click", webreduce.editor.export_data)
+          
+      var colormap_select = plot_controls
+        .append("label")
+          .text("colormap")
+        .append("select")
+        .attr("id", "colormap_select")
+        .on("change", function() {
+          var new_colormap = colormap.get_colormap(this.value);
+          webreduce.editor._active_plot.colormap(new_colormap).redrawImage();
+          webreduce.editor._active_plot.colorbar.update();
+        })
+      colormap_select
+        .selectAll("option").data(colormap.colormap_names)
+          .enter().append("option")
+          .attr("value", function(d) {return d})
+          .property("selected", function(d) {return d == 'jet'})
+          .text(function(d) {return d})
     }
     
     if (!(mychart && mychart.type && mychart.type == "heatmap_2d")) {
