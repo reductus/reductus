@@ -452,7 +452,7 @@ webreduce.editor = webreduce.editor || {};
       d3.selectAll("#plotdiv").data(datas[0].z).call(mychart);
       webreduce.callbacks.resize_center = function() {mychart.autofit()};
     }
-    
+        
     var update_plotselect = function() {
       //d3.select(this).datum(parseInt(this.value));
       //console.log(d3.select(this), d3.select(this).datum(), this.value);
@@ -476,9 +476,13 @@ webreduce.editor = webreduce.editor || {};
         .ylabel(data.ylabel);
       //d3.selectAll("#plotdiv").selectAll("svg, div").remove();
       //d3.selectAll("#plotdiv").data(data.z).call(mychart);
+      var new_colormap = colormap.get_colormap($("select#colormap_select").val());
+      mychart.colormap(new_colormap);
       mychart.source_data(data.z[0]);
       mychart.zoomScroll(true);
       mychart.ztransform($("#zscale").val())
+      
+      
     }
     
     d3.select("#plot_controls .plot-select input")
