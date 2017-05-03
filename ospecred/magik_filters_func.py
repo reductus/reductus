@@ -438,7 +438,7 @@ def thetaTwothetaToQxQz(data, output_grid, wavelength=5.0, qxmin=-0.003, qxmax=0
     
     data (ospec2d): input data
     
-    output_grid (ospec2d): empty data object with axes defined (optional)
+    output_grid (ospec2d?): empty data object with axes defined (optional)
     
     wavelength (float): override wavelength in data file
     
