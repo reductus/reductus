@@ -13,7 +13,7 @@ except ImportError:
     pass
 
 
-def QL2T(Q=None,L=None):
+def QL2T(Q=None, L=None):
     r"""
     Compute angle from $Q$ (|1/Ang|) and wavelength (|Ang|).
 
@@ -23,11 +23,11 @@ def QL2T(Q=None,L=None):
 
     Returns $\theta$\ |deg|.
     """
-    Q,L = asarray(Q,'d'), asarray(L,'d')
+    Q, L = asarray(Q, 'd'), asarray(L, 'd')
     return degrees(asin(abs(Q) * L / (4*pi)))
 
 
-def TL2Q(T=None,L=None):
+def TL2Q(T=None, L=None):
     r"""
     Compute $Q$ from angle (|deg|) and wavelength $L$ (|Ang|).
 
@@ -37,7 +37,7 @@ def TL2Q(T=None,L=None):
 
     Returns $Q$ |1/Ang|
     """
-    T,L = radians(asarray(T,'d')), asarray(L,'d')
+    T, L = radians(asarray(T, 'd')), asarray(L, 'd')
     return 4 * pi * sin(T) / L
 
 
@@ -69,10 +69,10 @@ def dTdL2dQ(T=None, dT=None, L=None, dL=None):
     """
 
     # Compute dQ from wavelength dispersion (dL) and angular divergence (dT)
-    T,dT = radians(asarray(T,'d')), radians(asarray(dT,'d'))
-    L,dL = asarray(L,'d'),asarray(dL,'d')
+    T, dT = radians(asarray(T, 'd')), radians(asarray(dT, 'd'))
+    L, dL = asarray(L, 'd'), asarray(dL, 'd')
     #print T, dT, L, dL
-    dQ = (4*pi/L) * sqrt( (sin(T)*dL/L)**2 + (cos(T)*dT)**2 )
+    dQ = (4*pi/L) * sqrt((sin(T)*dL/L)**2 + (cos(T)*dT)**2)
 
     #sqrt((dL/L)**2+(radians(dT)/tan(radians(T)))**2)*probe.Q
     return dQ
@@ -87,9 +87,9 @@ def dQdT2dLoL(Q, dQ, T, dT):
 
     Returns 1-\ $\sigma$ $\Delta\lambda/\lambda$
     """
-    T,dT = radians(asarray(T,'d')), radians(asarray(dT,'d'))
-    Q,dQ = asarray(Q,'d'),asarray(dQ,'d')
-    return sqrt( (dQ/Q)**2 - (dT/tan(T))**2 )
+    T, dT = radians(asarray(T, 'd')), radians(asarray(dT, 'd'))
+    Q, dQ = asarray(Q, 'd'), asarray(dQ, 'd')
+    return sqrt((dQ/Q)**2 - (dT/tan(T))**2)
 
 
 def dQdL2dT(Q, dQ, L, dL):
@@ -102,15 +102,15 @@ def dQdL2dT(Q, dQ, L, dL):
 
     Returns FWHM $\theta, \Delta\theta$
     """
-    L,dL = asarray(L,'d'),asarray(dL,'d')
-    Q,dQ = asarray(Q,'d'),asarray(dQ,'d')
-    T = QL2T(Q,L)
-    dT = degrees( sqrt( (dQ/Q)**2 - (dL/L)**2) * tan(radians(T)) )
+    L, dL = asarray(L, 'd'), asarray(dL, 'd')
+    Q, dQ = asarray(Q, 'd'), asarray(dQ, 'd')
+    T = QL2T(Q, L)
+    dT = degrees(sqrt((dQ/Q)**2 - (dL/L)**2) * tan(radians(T)))
     return dT
 
 
-Plancks_constant=6.62618e-27 # Planck constant (erg*sec)
-neutron_mass=1.67495e-24     # neutron mass (g)
+Plancks_constant = 6.62618e-27 # Planck constant (erg*sec)
+neutron_mass = 1.67495e-24     # neutron mass (g)
 def TOF2L(d_moderator, TOF):
     r"""
     Convert neutron time-of-flight to wavelength.
@@ -130,7 +130,7 @@ def TOF2L(d_moderator, TOF):
 
 
 def bins(low, high, dLoL):
-    """
+    r"""
     Return bin centers from low to high preserving a fixed resolution.
 
     *low*, *high* are the minimum and maximum wavelength.
@@ -218,7 +218,7 @@ def binedges(L):
         dLoL = L[0]/L[1] - 1.
         last = 1./(1.+dLoL)
     E = L*(2./(2.+dLoL))
-    return hstack((E,E[-1]*last))
+    return hstack((E, E[-1]*last))
 
 def divergence(slits=None, distance=None, T=None,
                sample_width=1e10, sample_broadening=0.,
@@ -307,10 +307,10 @@ def divergence(slits=None, distance=None, T=None,
         return FWHM2sigma(degrees(dT)) + sample_broadening
     else:
         return FWHM2sigma(degrees(dT_s1_s2))
-        
+
 
 def slit_widths(T=None, slits_at_Tlo=None, Tlo=90, Thi=90,
-                  slits_below=None, slits_above=None):
+                slits_below=None, slits_above=None):
     """
     Compute the slit widths for the standard scanning reflectometer
     fixed-opening-fixed geometry.
@@ -350,17 +350,17 @@ def slit_widths(T=None, slits_at_Tlo=None, Tlo=90, Thi=90,
     if slits_below is None:
         slits_below = slits_at_Tlo
     try:
-        b1,b2 = slits_below
+        b1, b2 = slits_below
     except TypeError:
-        b1=b2 = slits_below
+        b1 = b2 = slits_below
     s1 = ones_like(T) * b1
     s2 = ones_like(T) * b2
 
     # Slits at Tlo<=T<=Thi
     try:
-        m1,m2 = slits_at_Tlo
+        m1, m2 = slits_at_Tlo
     except TypeError:
-        m1=m2 = slits_at_Tlo
+        m1 = m2 = slits_at_Tlo
     idx = abs(T) >= Tlo
     s1[idx] = m1 * T[idx]/Tlo
     s2[idx] = m2 * T[idx]/Tlo
@@ -369,14 +369,14 @@ def slit_widths(T=None, slits_at_Tlo=None, Tlo=90, Thi=90,
     if slits_above is None:
         slits_above = m1 * Thi/Tlo, m2 * Thi/Tlo
     try:
-        t1,t2 = slits_above
+        t1, t2 = slits_above
     except TypeError:
-        t1=t2 = slits_above
+        t1 = t2 = slits_above
     idx = abs(T) > Thi
     s1[idx] = t1
     s2[idx] = t2
 
-    return s1,s2
+    return s1, s2
 
 
 '''

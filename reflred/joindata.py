@@ -2,6 +2,8 @@
 """
 Join reflectivity datasets with matching intent/cross section.
 """
+from __future__ import print_function
+
 from copy import copy
 
 import numpy as np
@@ -144,7 +146,7 @@ def build_dataset(group, columns):
     data.detector.counts = None
     data.detector.counts_variance = None
     data.monitor.counts_variance = None
-    for k in range(1,5):
+    for k in range(1, 5):
         slit = getattr(data, 'slit%d'%k)
         slit.x = slit.y = slit.x_target = slit.y_target = None
 
@@ -206,7 +208,7 @@ def build_dataset(group, columns):
 
     # Add in any sample environment fields
     data.sample.environment = {}
-    for k,v in head.sample.environment.items():
+    for k, v in head.sample.environment.items():
         if k in columns:
             env = Environment()
             env.units = v.units
@@ -252,10 +254,10 @@ def get_env(group):
     head = group[0]
     # Gather environment variables such as temperature and field.
     # Make sure they are all in the same units.
-    columns = dict((e.name,[]) for e in head.sample.environment)
-    converter = dict((e.name,unit.Converter(e.units)) for e in head.sample.environment)
+    columns = dict((e.name, []) for e in head.sample.environment)
+    converter = dict((e.name, unit.Converter(e.units)) for e in head.sample.environment)
     for data in group:
-        for env_name,env_list in columns.items():
+        for env_name, env_list in columns.items():
             env = data.sample.environment.get(env_name, None)
             if env is not None:
                 values = converter[env_name](env.average, units=env.units)

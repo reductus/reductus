@@ -175,10 +175,10 @@ from dataflow.lib.errutil import interp
 from . import util
 
 
-ALL_XS = '++','+-','-+','--'
-PM_XS = '++','+-','--'
-MP_XS = '++','-+','--'
-NSF_XS = '++','--'
+ALL_XS = '++', '+-', '-+', '--'
+PM_XS = '++', '+-', '--'
+MP_XS = '++', '-+', '--'
+NSF_XS = '++', '--'
 
 class PolarizationData:
     def __init__(self, intensity_data, Imin=0.0, Emin=0.0, FRbal=0.5, clip=True):
@@ -209,9 +209,10 @@ class PolarizationData:
         if other.warnings:
             self.messages.append(label + ":")
             self.messages.append(other.messages)
-            
+
     def get_metadata(self):
-        eff = polarization_efficiency(self.beam, Imin=self.Imin, Emin=self.Emin, FRbal=self.FRbal, clip=self.clip)
+        eff = polarization_efficiency(self.beam, Imin=self.Imin, Emin=self.Emin,
+                                      FRbal=self.FRbal, clip=self.clip)
         output = dict([(k, str(v)) for k, v in eff.items()])
         return output
 
@@ -220,8 +221,9 @@ def apply_polarization_correction(data, polarization, spinflip=True):
 
 def correct(data_in, spinflip, beam, Imin=0.0, Emin=0.0, FRbal=0.5, clip=False):
     dtheta = beam['++'].angular_resolution
-    beta,fp,rp,x,y,mask =  _calc_efficiency(beam=beam, dtheta=dtheta,
-            Imin=Imin, Emin=Emin, FRbal=FRbal, clip=clip)
+    beta, fp, rp, x, y, mask \
+        =  _calc_efficiency(beam=beam, dtheta=dtheta,
+                            Imin=Imin, Emin=Emin, FRbal=FRbal, clip=clip)
 
     data = dict([(d.polarization, d) for d in data_in])
     use_pm = spinflip and '+-' in data
@@ -264,12 +266,12 @@ def _apply_correction(data, dtheta, Hinv, use_pm, use_mp):
     # Apply the correction at each point
     X, dX = np.zeros(Y.shape), np.zeros(Y.shape)
     for i, idx in enumerate(index):
-        x = Hinv[idx] * UM(Y[:,i]).T
+        x = Hinv[idx] * UM(Y[:, i]).T
         X[:, i], dX[:, i] = nominal_values(x).flat, std_devs(x).flat
 
     # Put the corrected intensities back into the datasets
     for k, xs in enumerate(parts):
-        data[xs].v, data[xs].dv = X[k,:], dX[k,:]
+        data[xs].v, data[xs].dv = X[k, :], dX[k, :]
         data[xs].vlabel = 'counts per incident count'
         data[xs].vunits = None
 
@@ -278,43 +280,45 @@ def _correction_matrix(beta, fp, rp, x, y, use_pm, use_mp):
     """
     Generate polarization correction matrices for each slit configuration *dT*.
     """
-    Fp,Fm = 1+fp, 1-fp
-    Rp,Rm = 1+rp, 1-rp
-    Fp_x,Fm_x = 1+fp*x, 1-fp*x
-    Rp_y,Rm_y = 1+rp*y, 1-rp*y
+    Fp, Fm = 1+fp, 1-fp
+    Rp, Rm = 1+rp, 1-rp
+    Fp_x, Fm_x = 1+fp*x, 1-fp*x
+    Rp_y, Rm_y = 1+rp*y, 1-rp*y
 
     if use_pm and use_mp:
         H = np.array([
             [Fm_x * Rm_y, Fm_x * Rp_y, Fp_x * Rm_y, Fp_x * Rp_y],
             [Fm_x * Rm  , Fm_x * Rp  , Fp_x * Rm  , Fp_x * Rp  ],
             [Fm   * Rm_y, Fm   * Rp_y, Fp   * Rm_y, Fp   * Rp_y],
-            [Fm   * Rm  , Fm   * Rp  , Fp   * Rm  , Fp   * Rp  ]
+            [Fm   * Rm  , Fm   * Rp  , Fp   * Rm  , Fp   * Rp  ],
             ])
     elif use_pm:
         H = np.array([
             [Fm_x * Rm_y,(Fm_x * Rp_y+ Fp_x * Rm_y), Fp_x * Rp_y],
             [Fm_x * Rm  ,(Fm_x * Rp  + Fp_x * Rm  ), Fp_x * Rp  ],
-            [Fm   * Rm  ,(Fm   * Rp  + Fp   * Rm  ), Fp   * Rp  ]
+            [Fm   * Rm  ,(Fm   * Rp  + Fp   * Rm  ), Fp   * Rp  ],
         ])
     elif use_mp:
         H = np.array([
             [Fm_x * Rm_y,(Fm_x * Rp_y+ Fp_x * Rm_y), Fp_x * Rp_y],
             [Fm   * Rm_y,(Fm   * Rp_y+ Fp   * Rm_y), Fp   * Rp_y],
-            [Fm   * Rm  ,(Fm   * Rp  + Fp   * Rm  ), Fp   * Rp  ]
+            [Fm   * Rm  ,(Fm   * Rp  + Fp   * Rm  ), Fp   * Rp  ],
         ])
     else:
         H = np.array([
             [Fm_x * Rm_y, Fp_x * Rp_y  ],
-            [Fm   * Rm  , Fp   * Rp    ]
+            [Fm   * Rm  , Fp   * Rp    ],
             ])
+
     #print("H:", UM(H[:,:,0]), UM(H[:,:,0]).I)
-    return [UM(H[:,:,k]*Bk).I for k,Bk in enumerate(beta)]
+    return [UM(H[:, :, k]*Bk).I for k, Bk in enumerate(beta)]
 
 def plot_efficiency(beam, Imin=0.0, Emin=0.0, FRbal=0.5, clip=False):
     eff = polarization_efficiency(beam, Imin=Imin, Emin=Emin, FRbal=FRbal, clip=clip)
     from matplotlib import pyplot as plt
     ax1 = plt.subplot(211)
-    for xs in ALL_XS: beam[xs].plot()
+    for xs in ALL_XS:
+        beam[xs].plot()
     _ploteff(eff, 'beta')
     plt.legend()
     plt.setp(ax1.get_xticklabels(), visible=False)
@@ -330,8 +334,8 @@ def plot_efficiency(beam, Imin=0.0, Emin=0.0, FRbal=0.5, clip=False):
     plt.xlabel('slit 1 opening (mm)')
 
 
-EFF_LABELS = {'ff':'front flipper','rf':'rear flipper',
-              'fp':'front polarizer','rp':'rear polarizer'}
+EFF_LABELS = {'ff':'front flipper', 'rf':'rear flipper',
+              'fp':'front polarizer', 'rp':'rear polarizer'}
 EFF_SCALES = {'ff':100, 'rf':100, 'fp':100, 'rp':100}
 EFF_COLORS = {'ff':'green', 'rf':'blue', 'fp':'cyan', 'rp':'purple'}
 def _ploteff(eff, part):
@@ -339,7 +343,7 @@ def _ploteff(eff, part):
     label = EFF_LABELS.get(part, part)
     scale = EFF_SCALES.get(part, 1.0)
     color = EFF_COLORS.get(part, 'black')
-    x,mask = eff['slit1'], eff['mask']
+    x, mask = eff['slit1'], eff['mask']
     y, dy = scale*nominal_values(eff[part]), scale*std_devs(eff[part])
     plt.errorbar(x, y, dy, fmt='.', color=color, label=label, capsize=0, hold=True)
     #print "mask",mask
@@ -348,8 +352,6 @@ def _ploteff(eff, part):
         #             fmt='.', color='red', label='_', capsize=0, hold=True)
         #plt.plot(x[mask], y[mask], '.', color='red', hold=True)
         #plt.vlines(x[mask], (y-dy)[mask], (y+dy)[mask], colors='red', hold=True)
-
-
 
 def polarization_efficiency(beam, Imin=0.0, Emin=0.0, FRbal=0.5, clip=False):
     """
@@ -380,16 +382,17 @@ def polarization_efficiency(beam, Imin=0.0, Emin=0.0, FRbal=0.5, clip=False):
     # resolution range
     dtheta = beam['++'].angular_resolution
     s1 = beam['++'].slit1.x
-    beta,fp,rp,x,y,mask = \
+    beta, fp, rp, x, y, mask = \
         _calc_efficiency(beam=beam, dtheta=dtheta, FRbal=FRbal,
                          Imin=Imin, Emin=Emin, clip=clip)
-    ff,rf = (1-x)/2, (1-y)/2
-    return dict(dtheta=dtheta,slit1=s1,beta=beta,ff=ff,rf=rf,fp=fp,rp=rp,mask=mask)
+    ff, rf = (1-x)/2, (1-y)/2
+    return dict(dtheta=dtheta, slit1=s1, beta=beta,
+                ff=ff, rf=rf, fp=fp, rp=rp, mask=mask)
 
 def _calc_efficiency(beam, dtheta, Imin, Emin, FRbal, clip):
     # Beam intensity.
     # NOTE: A:mm, B:pm, C:mp, D:mm
-    pp,pm,mp,mm = [_interp_intensity(dtheta, beam[xs]) for xs in ALL_XS]
+    pp, pm, mp, mm = [_interp_intensity(dtheta, beam[xs]) for xs in ALL_XS]
 
     Ic = ((mm*pp) - (pm*mp)) / ((mm+pp) - (pm+mp))
     reject = np.zeros_like(Ic, dtype='bool')  # Reject nothing initially
@@ -429,26 +432,55 @@ def _interp_intensity(dT, data):
     #return util.interp(dT, data.angular_resolution, U(data.v, data.dv))
 
 # Different versions of clip depending on which uncertainty package is used.
-def clip_no_error(field,low,high,nanval=0.):
-    idx = np.isnan(field); field[idx] = nanval; reject = idx
-    idx = field<low;       field[idx] = low;    reject |= idx
-    idx = field>high;      field[idx] = high;   reject |= idx
+def clip_no_error(field, low, high, nanval=0.):
+    idx = np.isnan(field)
+    field[idx] = nanval
+    reject = idx
+
+    idx = field < low
+    field[idx] = low
+    reject |= idx
+
+    idx = field > high
+    field[idx] = high
+    reject |= idx
+
     return reject
 
-def clip_reflred_err1d(field,low,high,nanval=0.):
-    idx = np.isnan(field.x); field[idx] = U(nanval,field.variance[idx]); reject = idx
-    idx = field.x<low;  field[idx] = U(low,field.variance[idx]);  reject |= idx
-    idx = field.x>high; field[idx] = U(high,field.variance[idx]); reject |= idx
+
+def clip_reflred_err1d(field, low, high, nanval=0.):
+    idx = np.isnan(field.x)
+    field[idx] = U(nanval, field.variance[idx])
+    reject = idx
+
+    idx = field.x < low
+    field[idx] = U(low, field.variance[idx])
+    reject |= idx
+
+    idx = field.x > high
+    field[idx] = U(high, field.variance[idx])
+    reject |= idx
+
     return reject
 
-def clip_pypi_uncertainties(field,low,high,nanval=0.):
+
+def clip_pypi_uncertainties(field, low, high, nanval=0.):
     # Move value to the limit without changing the correlated errors.
     # This is probably wrong, but it is less wrong than other straight forward
     # options, such setting x to the limit with zero uncertainty.  At least
     # the clipped points will be flagged.
-    idx=np.isnan(nominal_values(field)); field[idx]=[v+(nanval-v.n) for v in field[idx]]; reject=idx
-    idx=field<low;  field[idx]=[v+(low-v.n)  for v in field[idx]]; reject |= idx
-    idx=field>high; field[idx]=[v-(v.n-high) for v in field[idx]]; reject |= idx
+    idx = np.isnan(nominal_values(field))
+    field[idx] = [v+(nanval-v.n) for v in field[idx]]
+    reject = idx
+
+    idx = field < low
+    field[idx] = [v+(low-v.n) for v in field[idx]]
+    reject |= idx
+
+    idx = field > high
+    field[idx] = [v-(v.n-high) for v in field[idx]]
+    reject |= idx
+
     return reject
 
 

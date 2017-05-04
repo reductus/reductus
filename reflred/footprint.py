@@ -1,7 +1,7 @@
 from copy import copy
 
 import numpy as np
-from numpy import pi, sqrt, polyval, radians, tan, arctan, inf, sqrt, sin
+from numpy import pi, sqrt, polyval, radians, tan, arctan, inf, sin
 
 from dataflow.lib.wsolve import wpolyfit
 from dataflow.lib.uncertainty import Uncertainty as U, interp
@@ -15,7 +15,7 @@ class FootprintData(object):
         return {
             "slope": self.p[0],
             "intercept": self.p[1],
-            # these next are intentionally different from the names of 
+            # these next are intentionally different from the names of
             # the inputs fields in the footprint module, so that
             # they don't populate those fields when running manually.
             "slope_fit_error_": self.dp[0],
@@ -34,13 +34,13 @@ def fit_footprint(data, low, high, kind='line'):
     for data_k in data:
         idx = np.ones_like(data_k.Qz, dtype='bool')
         if low is not None:
-            idx = idx & (data_k.Qz >= low) 
+            idx = idx & (data_k.Qz >= low)
         if high is not None:
             idx = idx & (data_k.Qz <= high)
         x.append(data_k.Qz[idx])
         y.append(data_k.v[idx])
         dy.append(data_k.dv[idx])
-    
+
     x = np.hstack(x)
     y = np.hstack(y)
     dy = np.hstack(dy)
@@ -73,7 +73,7 @@ def fit_footprint_shared_range(data, low, high, kind='line'):
     x = np.hstack(x)
     y = np.hstack(y)
     dy = np.hstack(dy)
-    
+
 
     if low > high:
         low, high = high, low
@@ -97,7 +97,7 @@ def apply_fitted_footprint(data, fitted_footprint, range):
 def apply_measured_footprint(data, measured_footprint):
     x = measured_footprint.Qz
     y = U(measured_footprint.v, measured_footprint.dv**2)
-    footprint  = interp(data.Qz, x, y, left=U(1.0,0.0), right=U(1.0,0.0))
+    footprint = interp(data.Qz, x, y, left=U(1.0, 0.0), right=U(1.0, 0.0))
     _apply_footprint(data, footprint)
 
 
@@ -140,7 +140,7 @@ def _fit_footprint_data(x, y, dy, kind):
     """
     if len(x) < 2:
         p, dp = np.array([0., 1.]), np.array([0., 0.])
-    elif kind== 'plateau':
+    elif kind == 'plateau':
         poly = wpolyfit(abs(x), y, dy, degree=0, origin=False)
         p, dp = poly.coeff, poly.std
         p, dp = np.hstack((0, p)), np.hstack((0, dp))
@@ -151,7 +151,7 @@ def _fit_footprint_data(x, y, dy, kind):
         poly = wpolyfit(abs(x), y, dy, degree=1, origin=False)
         p, dp = poly.coeff, poly.std
     else:
-      raise TypeError('unknown footprint type %r'%kind)
+        raise TypeError('unknown footprint type %r'%kind)
     return p, dp
 
 
@@ -168,7 +168,7 @@ def _generate_footprint_curve(p, dp, x, xmin, xmax):
         xmin, xmax = xmax, xmin
 
     ## linear between Qmin and Qmax
-    y = polyval(p,abs(x))
+    y = polyval(p, abs(x))
     var_y = polyval(dp**2, x**2)
 
     ## ignore values below Qmin
@@ -255,13 +255,13 @@ def _trapezoid_sum_right(p, w1, w2):
     slope = 1.0/(w1-w2)
     a = np.maximum(p, -w1) + w1
     b = np.maximum(p, -w2) + w1
-    A = 0.5*slope*(b**2-a**2)*(b>a)
+    A = 0.5*slope*(b**2-a**2)*(b > a)
     a = np.maximum(p, -w2) + w2
     b = np.maximum(p, w2) + w2
-    A += (b-a)*(b>a)
+    A += (b-a)*(b > a)
     a = w1 - np.maximum(p, w1)
     b = w1 - np.maximum(p, w2)
-    A += 0.5*slope*(b**2-a**2)*(b>a)
+    A += 0.5*slope*(b**2-a**2)*(b > a)
     return A
 
 
@@ -329,7 +329,7 @@ def spill(slit, Qz, wavelength, detector_distance, detector_width, thickness,
     #    thickness/cos(theta) = thickness/sqrt(1-(wavelength Qz/4 pi)^2)
     # since cos(asin(x)) = sqrt(1-x^2).
     low2 = low - thickness / sqrt(1 - (wavelength*Qz/(4*pi))**2)
-    high2 = det*(det>=high) + high*(det<high)
+    high2 = det*(det >= high) + high*(det < high)
     spill_low = integrate(wA, wB, det, low2)
     spill_high = integrate(wA, wB, high2, wB)
 
@@ -337,4 +337,3 @@ def spill(slit, Qz, wavelength, detector_distance, detector_width, thickness,
     # Normalize that by the total area of the beam (A+B)/2
     abfoot_y = 2 * Io * (area + spill_low + spill_high) / (wA+wB)
     return abfoot_y
-

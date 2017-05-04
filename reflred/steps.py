@@ -212,12 +212,12 @@ def detector_dead_time(data, dead_time, nonparalyzing=0.0, paralyzing=0.0):
         data.log('detector_dead_time(nonparalyzing=%.15g, paralyzing=%.15g)'
                  % (nonparalyzing, paralyzing))
         apply_detector_dead_time(data, tau_NP=nonparalyzing,
-                                tau_P=paralyzing)
+                                 tau_P=paralyzing)
     elif dead_time is not None:
         data.log('detector_dead_time(dead_time)')
         data.log_dependency('dead_time', dead_time)
         apply_detector_dead_time(data, tau_NP=dead_time.tau_NP,
-                                tau_P=dead_time.tau_P)
+                                 tau_P=dead_time.tau_P)
     elif data.detector.deadtime is not None:
         try:
             tau_NP, tau_P = data.detector.deadtime
@@ -447,7 +447,7 @@ def mask_points(data, mask_indices=None):
     **Inputs**
 
     data (refldata) : background data which may contain specular point
-    
+
     mask_indices (index[]*) : 0-origin data point indices to mask. For example,
     *mask_indices=[1,4,6]* masks the 2nd, 5th and 7th point respectively. Each
     dataset should have its own mask.
@@ -522,7 +522,7 @@ def group_by_intent(data):
     rock {Rocking curve} (refldata[]) : rocking curve measurements
 
     other (refldata[]) : everything else
-    
+
     2016-07-20 Brian Maranville
     """
     map_intent = {
@@ -549,15 +549,15 @@ def group_by_intent(data):
 def extract_xs(data, xs="++"):
     r"""
     Get a polarization cross-section from a bundle
-    
+
     **Inputs**
-    
+
     data (refldata[]): data files in of all cross sections
-    
+
     xs {Cross-section} (opt:++\|--\|+-\|-+\|unpolarized): cross-section to extract
-    
+
     **Returns**
-    
+
     output (refldata[]): data matching just that cross-section
 
     2016-05-05 Brian Maranville
@@ -572,24 +572,24 @@ def extract_xs(data, xs="++"):
 def filter(data, key="", comparator="eq", value=None):
     r"""
     Get a subset of the datasets bundle based on the test
-    
+
     **Inputs**
-    
+
     data (refldata[]): data files in
-    
+
     key (str): name to test in the dataset
-    
+
     value (str?): value to compare
-    
+
     comparator {Compare operator} (opt:eq|ne|lt|le|gt|ge): comparison operator
-    
+
     **Returns**
-    
+
     output (refldata[]): data matching the comparison
 
     2017-02-24 Brian Maranville
     """
-    
+
     import operator
     compare_lookup = {
         "==": operator.eq,
@@ -604,10 +604,10 @@ def filter(data, key="", comparator="eq", value=None):
         "le": operator.le,
         "ge": operator.ge,
         "gt": operator.gt,
-        
+
     }
     compare_op = compare_lookup[comparator]
-    
+
     return [d for d in data if hasattr(d, key) and compare_op(getattr(d, key), value)]
 
 @module
@@ -675,7 +675,7 @@ def rescale(data, scale=1.0, dscale=0.0):
 #@nocache
 @module
 def join(data, Q_tolerance=0.5, dQ_tolerance=0.002, order='file',
-         group_by = "polarization", tolerance=None):
+         group_by="polarization", tolerance=None):
     r"""
     Join operates on a list of datasets, returning a list with one dataset,
     or one dataset per polarization state.  When operating on a single
@@ -726,7 +726,7 @@ def join(data, Q_tolerance=0.5, dQ_tolerance=0.002, order='file',
 
     order (opt:file|time|theta|slit|none) : order determines which file is the
     base file, supplying the metadata for the joined set
-    
+
     group_by (str) : key by which the files are grouped prior to join
 
     tolerance(float?:1-sigma<0,inf>) : **deprecated** value for Qtol and dQtol;
@@ -828,7 +828,7 @@ def subtract_background(data, backp, backm, align="none"):
     backp {Background+} (refldata?) : plus-offset background data
 
     backm {Background-} (refldata?) : minus-offset background data
-    
+
     align (opt:none|sample|detector|auto) : apply align_background to
     background inputs with offset='auto'
 
@@ -993,7 +993,9 @@ def fit_footprint(data, qz_min=None, qz_max=None, origin=False):
     return footprint
 
 @module
-def correct_footprint(data, fitted_footprint, qz_min=None, qz_max=None, slope=None, slope_error=0.0, intercept=None, intercept_error=0.0):
+def correct_footprint(data, fitted_footprint, qz_min=None, qz_max=None,
+                      slope=None, slope_error=0.0, intercept=None,
+                      intercept_error=0.0):
     """
     Apply fitted footprint correction to each data set.
 
@@ -1007,17 +1009,17 @@ def correct_footprint(data, fitted_footprint, qz_min=None, qz_max=None, slope=No
     fitted_footprint (ncnr.refl.footprint.params?) : fitted footprint
 
     qz_min {Qz min} (float) : Lower bound of region to apply footprint correction
-    
+
     qz_max {Qz max} (float) : Upper bound of footprint correction region
 
-    slope (float) : footprint slope 
-    
+    slope (float) : footprint slope
+
     slope_error {Error on slope} (float): and uncertainty
 
-    intercept (float) : footprint intercept 
-    
+    intercept (float) : footprint intercept
+
     intercept_error {Error on intercept} (float): and uncertainty
-    
+
     **Returns**
 
     outputs (refldata): footprint-corrected data
@@ -1037,7 +1039,7 @@ def correct_footprint(data, fitted_footprint, qz_min=None, qz_max=None, slope=No
         fitted_footprint.p[0] = slope
     if intercept is not None:
         fitted_footprint.p[1] = intercept
-    # in all cases, overwrite the error in fitted_footprint with specified 
+    # in all cases, overwrite the error in fitted_footprint with specified
     # values:
     fitted_footprint.dp = dp
     data.log("footprint(p=%s,dp=%s)"
@@ -1091,7 +1093,7 @@ def estimate_polarization(data, FRbalance=50.0, Emin=0.0, Imin=0.0, clip=False):
                                Emin=0.01*Emin, Imin=Imin, clip=clip)
 
     poldata.log("PolarizationData(beam, Imin=%.15g, Emin=%.15g%%, FRbal=%.15g%%, clip=%d)"
-             %(Imin, Emin, FRbalance, 0+clip))
+                % (Imin, Emin, FRbalance, 0+clip))
     #for xs in ('++','+-','-+','--'):
     #    poldata.log_dependency("beam"+xs, data[xs])
     return poldata
@@ -1161,7 +1163,7 @@ def super_load(filelist=None,
                detector_correction=False,
                monitor_correction=False,
                intent='auto',
-               Qz_basis = 'actual',
+               Qz_basis='actual',
                sample_width=None,
                base='auto'):
     r"""
@@ -1194,7 +1196,7 @@ def super_load(filelist=None,
     intent (opt:auto|specular|background+\|background-\|intensity|rock sample|rock detector|rock qx|scan)
     : Measurement intent (specular, background+, background-, slit, rock),
     auto or infer.  If intent is 'scan', then use the first scanned variable.
-    
+
     Qz_basis (opt:actual|detector|sample|target)
     : How to calculate Qz from instrument angles.
 
@@ -1202,7 +1204,7 @@ def super_load(filelist=None,
     : Width of the sample along the beam direction in mm, used for
     calculating the effective resolution when the sample is smaller
     than the beam.  Leave blank to use value from data file.
-    
+
     base {Normalize by} (opt:auto|monitor|time|power|none)
     : how to convert from counts to count rates
 
@@ -1247,13 +1249,13 @@ def super_load(filelist=None,
 @cache
 @module
 def super_load_sorted(filelist=None,
-               detector_correction=False,
-               monitor_correction=False,
-               sample_width=None,
-               base='auto'):
+                      detector_correction=False,
+                      monitor_correction=False,
+                      sample_width=None,
+                      base='auto'):
     """
     Load a list of nexus files from the NCNR data server, to be sorted by
-    the intent stored in the file.  If intent does not match 
+    the intent stored in the file.  If intent does not match
     'specular', 'background+', 'background-' or 'intensity', it is not returned.
 
     **Inputs**
@@ -1265,22 +1267,22 @@ def super_load_sorted(filelist=None,
 
     monitor_correction {Apply monitor deadtime correction} (bool)
     : Which deadtime constant to use for monitor deadtime.
-    
+
     sample_width {Sample width (mm)} (float): Width of the sample along the
     beam direction in mm, used for calculating the effective resolution when
     the sample is smaller than the beam.  Leave blank to use value from data file.
-    
+
     base {Normalize by} (opt:auto|monitor|time|power|none)
     : how to convert from counts to count rates
 
     **Returns**
 
     spec (refldata[]): All entries of all spec files in the list.
-    
+
     bgp (refldata[]): All entries of all bg+ files in the list.
-    
+
     bgm (refldata[]): All entries of all bg- files in the list.
-    
+
     slit (refldata[]): All entries of all slit files in the list.
 
     2016-06-30 Brian Maranville
@@ -1336,6 +1338,5 @@ def spin_asymmetry(data):
     denom = (mmv + ppv)
     output.v = (ppv - mmv) / denom
     # d(sa)/d(x) = 2*x/(x+y)**2, d(sa)/d(y) = -2*y/(x+y)**2
-    output.dv = sqrt( ((2.0*mmv*mmdv)/(denom**2))**2 + ((2.0*ppv*ppdv)/(denom**2))**2 )
+    output.dv = sqrt(((2.0*mmv*mmdv)/(denom**2))**2 + ((2.0*ppv*ppdv)/(denom**2))**2)
     return output
-

@@ -178,7 +178,7 @@ def masked_curve_fit(f, x, y, p0=None, sigma=None, fixed=None, method='lm', **kw
     # Hide fixed parameters
     if fixed is not None:
         p = p0+0.
-        fitted = (p==p)
+        fitted = (p == p)
         fitted[fixed] = False
         init = p[fitted]
         def cost(x, *args, **kw):
@@ -192,7 +192,8 @@ def masked_curve_fit(f, x, y, p0=None, sigma=None, fixed=None, method='lm', **kw
     if method == 'lm':
         popt, pcov = curve_fit(cost, x, y, p0=init, sigma=sigma, **kw)
     else:
-        if sigma is None: sigma = 1
+        if sigma is None:
+            sigma = 1
         def chisq(p):
             resid = (cost(x, *p, **kw) - y)/sigma
             v = np.sum(resid**2)/(len(x)-len(p))
@@ -210,7 +211,7 @@ def masked_curve_fit(f, x, y, p0=None, sigma=None, fixed=None, method='lm', **kw
             pcov = np.dot(Linv.T.conj(), Linv)
         except Exception as exc:
             print(exc)
-            pcov = np.zeros((len(p0),len(p0)))
+            pcov = np.zeros((len(p0), len(p0)))
 
     # Restore fixed parameters
     if fixed is not None:
@@ -307,7 +308,7 @@ def estimate_incident(observed_rate, tau_NP, tau_P, above=False):
             I -= _forward(I, n, p, r) / _dforward(I, n, p)
         # Use bisection near Rpeak since the slope approaches zero and
         # Newton-Raphson may fail.  These should be rare.
-        index = (r>0.9*Rpeak)
+        index = (r > 0.9*Rpeak)
         I[index] = [_invert_below(Ipeak, Rpeak, rk, n, p) for rk in r[index]]
 
     return I, (I/R)*dR
@@ -350,7 +351,7 @@ def deadtime_from_counts(counts, mode='mixed'):
     *mode* is described in :func:`estimate_deadtime`.
     """
     # assumes data is aligned and sorted by slit opening
-    rates = [(c/t, np.sqrt(c)/t) for c,t in counts]
+    rates = [(c/t, np.sqrt(c)/t) for c, t in counts]
 
     return estimate_deadtime(rates, mode=mode)
 
@@ -423,7 +424,7 @@ def estimate_deadtime(datasets, mode='auto'):
     def prediction(x, *p):
         if any(v < 0 for v in p):
             return 1000*y
-        return _rate_estimate(p[0],p[1],p[2:2+num_atten],p[2+num_atten:])
+        return _rate_estimate(p[0], p[1], p[2:2+num_atten], p[2+num_atten:])
 
     p, s = masked_curve_fit(prediction, x, y, p0, sigma=dy, fixed=fixed)
     if mode == 'auto':
@@ -492,7 +493,7 @@ def _fit_resid_jacobian(p, x, y, f, w):
     rate = np.hstack((attenuated_rate, direct_rate))
     # f = (A*R * exp(-A*R*tau_P*DEADTIME_SCALE) / (1. + A*R*tau_NP*DEADTIME_SCALE))
     fx = expected_rate(rate, tau_NP, tau_P)
-    num_rates =  len(direct_rate)
+    num_rates = len(direct_rate)
     den = 1. + rate * tau_NP*DEADTIME_SCALE
     common = (tau_P*DEADTIME_SCALE*rate - 1./den)
     dfdA = fx * (-common/attenuation)
@@ -502,9 +503,9 @@ def _fit_resid_jacobian(p, x, y, f, w):
     dfdR[:num_rates] *= attenuation
     dfdA[num_rates:] = 0.
     dfdR = np.vstack((np.diag(dfdR[:num_rates]), np.diag(dfdR[num_rates:])))
-    J = np.hstack((dfdA[:,None], dfdN[:,None], dfdP[:,None], dfdR))
+    J = np.hstack((dfdA[:, None], dfdN[:, None], dfdP[:, None], dfdR))
     #print(J)
-    wJ = w[:,None]*J
+    wJ = w[:, None]*J
 
     ## Cross check against the numerical derivative using numdifftools
     #print("calc numeric J")
@@ -547,7 +548,7 @@ def peak_rate(tau_NP=0., tau_P=0.):
     else:
         Ipeak = 0.5*(sqrt(4*tau_NP/tau_P + 1) - 1)/tau_NP/DEADTIME_SCALE
     Rpeak = (expected_rate(Ipeak, tau_NP=tau_NP, tau_P=tau_P)
-                if tau_P>0 else 1/tau_NP/DEADTIME_SCALE)
+             if tau_P > 0 else 1/tau_NP/DEADTIME_SCALE)
 
     return Ipeak, Rpeak
 
@@ -564,7 +565,7 @@ def expected_rate(rate, tau_NP=0., tau_P=0.):
 
 def simulate_measurement(rate, target_counts, attenuator, tau_NP, tau_P,
                          cutoff_time=0.):
-    """
+    r"""
     Simulate time and counts for each rate with and without attenuator.
 
     *rate* is a vector of incident beam rates representing different
@@ -636,7 +637,7 @@ def run_sim(tau_NP=0, tau_P=0, attenuator=10, mode='mixed', plot=True):
     # target_counts = 1e20  # force count by time
 
     # simulate data
-    attenuated,unattenuated = simulate_measurement(rate, target_counts,
+    attenuated, unattenuated = simulate_measurement(rate, target_counts,
                 attenuator, tau_NP, tau_P, cutoff_time=cutoff_time)
 
     # estimate dead time
@@ -644,7 +645,7 @@ def run_sim(tau_NP=0, tau_P=0, attenuator=10, mode='mixed', plot=True):
         res = deadtime_from_counts([attenuated, unattenuated], mode=mode)
         #print(*res)
     except Exception as exc:
-        res = (tau_NP,0), (tau_P,0), (1./attenuator,0), (rate,0*rate)
+        res = (tau_NP, 0), (tau_P, 0), (1./attenuator, 0), (rate, 0*rate)
         print(exc)
     tau_NP_f, tau_P_f, attenuation_f, rate_f = res
 
@@ -653,12 +654,12 @@ def run_sim(tau_NP=0, tau_P=0, attenuator=10, mode='mixed', plot=True):
     #print("time",time)
 
     # redo simulation for test
-    attenuated,unattenuated = simulate_measurement(rate, target_counts,
+    attenuated, unattenuated = simulate_measurement(rate, target_counts,
                 attenuator, tau_NP, tau_P, cutoff_time=cutoff_time)
     # correct the unattenuated data
     wt = (attenuated[0]/attenuated[1], sqrt(attenuated[0])/attenuated[1])
     wo = (unattenuated[0]/unattenuated[1], sqrt(unattenuated[0])/unattenuated[1])
-    scale = estimate_attenuation((wo[0],wo[1]), tau_NP=tau_NP_f, tau_P=tau_P_f,
+    scale = estimate_attenuation((wo[0], wo[1]), tau_NP=tau_NP_f, tau_P=tau_P_f,
         #above=True
     )
     corrected = scale*uarray(wo[0], wo[1])
@@ -667,9 +668,9 @@ def run_sim(tau_NP=0, tau_P=0, attenuator=10, mode='mixed', plot=True):
     # Print results
     total_time = np.sum(attenuated[1] + unattenuated[1])
     print("  Total time to run experiment: %.2f hrs"%(total_time/3600))
-    def _compare(name,target,fitted):
-        err = (fitted.n-target)/(target if target>0 else 1.)
-        sbad = "*" if abs(err)>0.5 else " "
+    def _compare(name, target, fitted):
+        err = (fitted.n-target)/(target if target > 0 else 1.)
+        sbad = "*" if abs(err) > 0.5 else " "
         sval = str(target)
         sfit = str(fitted) if np.isfinite(fitted.s) else "%g"%fitted.n
         serr = "%.2f%%"%(err*100)
@@ -699,18 +700,18 @@ def run_sim(tau_NP=0, tau_P=0, attenuator=10, mode='mixed', plot=True):
 
 
 def _show_plots(target, fitted, wt, wo, corrected):
-    tau_NP, tau_P, attenuator, rate= target
+    tau_NP, tau_P, attenuator, rate = target
     tau_NP_f, tau_P_f, attenuation_f, rate_f = fitted
 
     # Plot the results
     sim_pars = (r'Sim $\tau_{NP}=%g\,{\rm %s}$,  $\tau_{P}=%g\,{\rm %s}$,  ${\rm attenuator}=%g$'
-            )%(tau_NP, DEADTIME_UNITS, tau_P, DEADTIME_UNITS, attenuator)
+               )%(tau_NP, DEADTIME_UNITS, tau_P, DEADTIME_UNITS, attenuator)
     fit_pars = (r'Fit $\tau_{NP}=%s$,  $\tau_P=%s$,  ${\rm attenuator}=%.2f$'
-            )%(
-                ("%.2f"%tau_NP_f[0] if np.inf > tau_NP_f[1] > 0 else "-"),
-                ("%.2f"%tau_P_f[0] if np.inf > tau_P_f[1] > 0 else "-"),
-                1./attenuation_f[0],
-            )
+               )%(
+                   ("%.2f"%tau_NP_f[0] if np.inf > tau_NP_f[1] > 0 else "-"),
+                   ("%.2f"%tau_P_f[0] if np.inf > tau_P_f[1] > 0 else "-"),
+                   1./attenuation_f[0],
+               )
     title = '\n'.join((sim_pars, fit_pars))
     import pylab
     pylab.subplot(211)
@@ -778,17 +779,20 @@ def _show_inversion(wo, tau_P_f, tau_NP_f):
 
     #Ipeak, Rpeak = peak_rate(tau_NP_f[0], tau_P_f[0])
     idx = np.argmax(wo[0])-1
-    print("index",idx)
+    print("index", idx)
     Rmax, dRmax = wo[0][idx], wo[1][idx]
     A = np.linspace(0, 5, 400)
-    fA = lambda R: _forward(A, R*tau_NP_f[0]*DEADTIME_SCALE, R*tau_P_f[0]*DEADTIME_SCALE)
-    Ao = lambda R,dR: estimate_attenuation(([R],[dR]), tau_NP_f, tau_P_f)[0].n
+    r = 0.  # _forward computes f(x) - r, so set r to 0. to recover f(x)
+    fA = lambda R: _forward(A, R*tau_NP_f[0]*DEADTIME_SCALE, R*tau_P_f[0]*DEADTIME_SCALE, r)
+    Ao = lambda R, dR: estimate_attenuation(([R], [dR]), tau_NP_f, tau_P_f)[0].n
     pylab.plot(A, fA(Rmax), '-', label="Rmax")
-    pylab.axvline(x=Ao(Rmax,dRmax))
+    pylab.axvline(x=Ao(Rmax, dRmax))
     pylab.plot(A, fA(wo[0][idx-2]), '-', label="-2")
     pylab.plot(A, fA(wo[0][idx-1]), '-', label="-1")
-    if idx+1<len(wo[0]): pylab.plot(A, fA(wo[0][idx+1]), '-', label="+1")
-    if idx+2<len(wo[0]): pylab.plot(A, fA(wo[0][idx+2]), '-', label="+2")
+    if idx+1 < len(wo[0]):
+        pylab.plot(A, fA(wo[0][idx+1]), '-', label="+1")
+    if idx+2 < len(wo[0]):
+        pylab.plot(A, fA(wo[0][idx+2]), '-', label="+2")
     pylab.legend()
     pylab.grid(True)
 
@@ -809,23 +813,23 @@ if __name__ == "__main__":
     #TAU_NP, TAU_P = 0.050, 0.150
     #TAU_NP, TAU_P = 0.050, 0
 
-    MODE='auto'
-    #MODE='mixed'
-    #MODE='P'
-    #MODE='NP'
+    MODE = 'auto'
+    #MODE = 'mixed'
+    #MODE = 'P'
+    #MODE = 'NP'
 
     #ATTENUATOR = 5
     ATTENUATOR = 10
     #ATTENUATOR = 20
 
     ## Random models
-    TAU_NP, TAU_P = np.random.exponential((1,1))
+    TAU_NP, TAU_P = np.random.exponential((1, 1))
     #TAU_NP, TAU_P = np.random.exponential((0.1,0.0002))
     #TAU_NP, TAU_P = np.random.exponential((0.01,1))
     #TAU_NP, TAU_P = np.random.exponential((1,0.01))
     #ATTENUATOR = np.random.uniform(5,100)
 
-    PLOT=True
+    PLOT = True
     #PLOT=False
     run_sim(tau_NP=TAU_NP, tau_P=TAU_P,
             attenuator=ATTENUATOR, mode=MODE, plot=PLOT)

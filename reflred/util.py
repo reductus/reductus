@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import numpy as np
 
 from dataflow.lib import err1d
@@ -18,7 +20,7 @@ def group_data(datasets):
     # TODO: also need to group by temperature/field
     groups = {}
     for d in datasets:
-        groups.setdefault((d.intent,d.polarization),[]).append(d)
+        groups.setdefault((d.intent, d.polarization), []).append(d)
     return groups
 
 
@@ -28,7 +30,7 @@ def group_by_xs(datasets):
     """
     cross_sections = {}
     for data in datasets:
-        cross_sections.setdefault(data.polarization,[]).append(data)
+        cross_sections.setdefault(data.polarization, []).append(data)
 
     #print "datasets",[":".join((d.name,d.entry,d.polarization,d.intent)) for d in datasets]
     #print "xs",cross_sections
@@ -62,7 +64,7 @@ def group_by_intent(datasets):
     """
     intents = {}
     for data in datasets:
-        intents.setdefault(data.intent,[]).append(data)
+        intents.setdefault(data.intent, []).append(data)
 
     #print "datasets",[":".join((d.name,d.entry,d.polarization,d.intent)) for d in datasets]
     #print "xs",cross_sections
@@ -89,7 +91,7 @@ def nearest(x, xp, fp=None):
 
     # make sure that the xp array is sorted
     xp = np.asarray(xp)
-    if np.any(np.diff(xp)<0.):
+    if np.any(np.diff(xp) < 0.):
         idx = np.argsort(xp)
         xp, fp = xp[idx], fp[idx]
 
@@ -106,12 +108,12 @@ def plot_sa(data):
     from uncertainties.unumpy import uarray as U, nominal_values, std_devs
     from dataflow.lib.errutil import interp
     # TODO: interp doesn't test for matching resolution
-    data = dict((d.polarization,d) for d in data)
+    data = dict((d.polarization, d) for d in data)
     pp, mm = data['++'], data['--']
     v_pp = U(pp.v, pp.dv)
     v_mm = interp(pp.x, mm.x, U(mm.v, mm.dv))
     sa = (v_pp - v_mm) / (v_pp + v_mm)
-    v,dv = nominal_values(sa), std_devs(sa)
+    v, dv = nominal_values(sa), std_devs(sa)
     plt.errorbar(pp.x, v, yerr=dv, fmt='.', label=pp.name)
     plt.xlabel("%s (%s)"%(pp.xlabel, pp.xunits) if pp.xunits else pp.xlabel)
     plt.ylabel(r'$(R^{++} -\, R^{--}) / (R^{++} +\, R^{--})$')
@@ -120,41 +122,43 @@ def plot_sa(data):
 def test_nearest():
     # length 1 arrays
     xp, fp = [1], [5]
-    assert (nearest(0, xp) == 0)
+    assert nearest(0, xp) == 0
     assert (nearest([0], xp) == [0]).all()
     assert (nearest([0, 1], xp) == [0, 0]).all()
-    assert (nearest(0, xp, fp) == fp[0])
+    assert nearest(0, xp, fp) == fp[0]
     assert (nearest([0], xp, fp) == [fp[0]]).all()
     assert (nearest([0, 1], xp, fp) == [fp[0]]*2).all()
 
     # constants as arrays
     xp, fp = [1, 1, 1], [5, 5, 5]
-    assert (nearest(0, xp) == 0)
+    assert nearest(0, xp) == 0
     assert (nearest([0], xp) == [0]).all()
     assert (nearest([0, 1], xp) == [0, 0]).all()
-    assert (nearest(0, xp, fp) == fp[0])
+    assert nearest(0, xp, fp) == fp[0]
     assert (nearest([0], xp, fp) == [fp[0]]).all()
     assert (nearest([0, 1], xp, fp) == [fp[0]]*2).all()
 
     # actual arrays
     xp, fp = [1, 2, 3], [4, 5, 6]
-    assert (nearest(0, xp) == 0)
+    assert nearest(0, xp) == 0
     assert (nearest([0], xp) == [0]).all()
-    assert (nearest([0,1,1.1,1.6,2.1,2.9,3,3.1], xp) == [0,0,0,1,1,2,2,2]).all()
-    assert (nearest(0, xp, fp) == fp[0])
+    assert (nearest([0, 1, 1.1, 1.6, 2.1, 2.9, 3, 3.1], xp)
+            == [0, 0, 0, 1, 1, 2, 2, 2]).all()
+    assert nearest(0, xp, fp) == fp[0]
     assert (nearest([0], xp, fp) == [fp[0]]).all()
-    assert (nearest([0,1,1.1,1.6,2.1,2.9,3,3.1], xp, fp)
-            == [fp[i] for i in [0,0,0,1,1,2,2,2]]).all()
+    assert (nearest([0, 1, 1.1, 1.6, 2.1, 2.9, 3, 3.1], xp, fp)
+            == [fp[i] for i in [0, 0, 0, 1, 1, 2, 2, 2]]).all()
 
     # unsorted arrays
     xp, fp = [1, 3, 2], [4, 5, 6]
-    assert (nearest(0, xp) == 0)
+    assert nearest(0, xp) == 0
     assert (nearest([0], xp) == [0]).all()
-    assert (nearest([0,1,1.1,1.6,2.1,2.9,3,3.1], xp) == [0,0,0,2,2,1,1,1]).all()
-    assert (nearest(0, xp, fp) == fp[0])
+    assert (nearest([0, 1, 1.1, 1.6, 2.1, 2.9, 3, 3.1], xp)
+            == [0, 0, 0, 2, 2, 1, 1, 1]).all()
+    assert nearest(0, xp, fp) == fp[0]
     assert (nearest([0], xp, fp) == [fp[0]]).all()
-    assert (nearest([0,1,1.1,1.6,2.1,2.9,3,3.1], xp, fp)
-            == [fp[i] for i in [0,0,0,2,2,1,1,1]]).all()
+    assert (nearest([0, 1, 1.1, 1.6, 2.1, 2.9, 3, 3.1], xp, fp)
+            == [fp[i] for i in [0, 0, 0, 2, 2, 1, 1, 1]]).all()
 
 
 def poisson_average(y, dy, norm='monitor'):
@@ -263,14 +267,14 @@ def poisson_average(y, dy, norm='monitor'):
     is better for error propagation.  Monitor weighted averaging
     works well for everything except data with many zero counts.
     """
-    dy = dy + (dy==0)  # Protect against zero counts in division
+    dy = dy + (dy == 0)  # Protect against zero counts in division
 
     # Recover monitor and counts
     if norm == "monitor":
         monitors = y*(y+1)/dy**2
     else:
         monitors = y/dy**2
-    monitors[y==0] = 1./dy[y==0]  # Special handling for 0 counts
+    monitors[y == 0] = 1./dy[y == 0]  # Special handling for 0 counts
     counts = y*monitors
 
     # Compute average rate
@@ -362,8 +366,8 @@ def demo_error_prop(title, rate, monitors, attenuators=None,
     ucounts = uarray(counts, np.sqrt(counts))
     incident = ucounts*uattenuators
 
-    print "="*10, title+", rate=%g,"%rate, \
-        "median counts=%d"%np.median(counts), "="*10
+    print("="*10, title+", rate=%g,"%rate, \
+          "median counts=%d"%np.median(counts), "="*10)
 
     # rate averaged across different counting intervals
     y = incident/umonitors
@@ -386,7 +390,7 @@ def demo_error_prop(title, rate, monitors, attenuators=None,
     #print "counts:", counts
     #print "incident:", incident
     if use_attenuators:
-        print "attenuators:", list(zip(*attenuators))[0]
+        print("attenuators:", list(zip(*attenuators))[0])
     def show(label, r, tag=""):
         if r is direct:
             rel = ""
@@ -434,7 +438,7 @@ def fetch_url(url, url_cache="/tmp"):
     if url_cache is None:
         return _fetch_url_uncached(url)
 
-    cached_path = os.path.join(url_cache, urlparse(url).path.replace('/','_'))
+    cached_path = os.path.join(url_cache, urlparse(url).path.replace('/', '_'))
     if os.path.exists(cached_path):
         with open(cached_path) as fd:
             ret = fd.read()
@@ -456,6 +460,5 @@ if __name__ == "__main__":
     demo_error_prop("same monitor", 0.035, [2000]*700)
     demo_error_prop("same monitor", 0.0035, [2000]*700)
     demo_error_prop("same monitor", 0.00035, [2000]*700)
-    demo_error_prop("attenuators", 10.0, [2000, 2000, 4000], [(1,0), (12,0.2), (12,0.2)])
-    demo_error_prop("attenuators", 10.0, [2000, 4000], [(12,0.2), (122,0.2)])
-    print
+    demo_error_prop("attenuators", 10.0, [2000, 2000, 4000], [(1, 0), (12, 0.2), (12, 0.2)])
+    demo_error_prop("attenuators", 10.0, [2000, 4000], [(12, 0.2), (122, 0.2)])

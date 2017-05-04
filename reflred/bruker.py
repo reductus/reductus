@@ -1,4 +1,5 @@
 import struct
+
 import numpy
 
 MEAS_FLAG = {
@@ -47,17 +48,17 @@ VARYING_BIT = (
 
 def _make_struct(fields, data, offset=0):
     names = zip(*fields)[0]
-    types = "<"+"".join(dtype for _,dtype in fields)
+    types = "<"+"".join(dtype for _, dtype in fields)
     values = struct.unpack_from(types, data, offset=offset)
     values = [(v.strip('\0') if t.endswith('s') else v)
-              for (_,t),v in zip(fields,values)]
+              for (_, t), v in zip(fields, values)]
     offset += struct.calcsize(types)
-    return dict(zip(names,values)), offset
+    return dict(zip(names, values)), offset
 
 RAW_HEADER = (
     ('raw_id', '8s'),              # 0
-    ('meas_flag','i'),             # 8 0: unmeasured, 1: measured, 2: active, 3: aborted, 4: interrupted
-    ('no_of_tot_meas_ranges','i'), # 12
+    ('meas_flag', 'i'),            # 8 0: unmeasured, 1: measured, 2: active, 3: aborted, 4: interrupted
+    ('no_of_tot_meas_ranges', 'i'), # 12
     ('date', '10s'),               # 16 mm/dd/yy
     ('time', '10s'),               # 26 hh:mm:ss
     ('user', '72s'),               # 36
@@ -175,20 +176,20 @@ EXTRA_RECORD = {
         ('mode', 'i'),
         ('two_theta_actual', 'f'),
         ('time_actual', 'f'),
-        ('counts','f'),
-        ('compound','32s'),
-        ('peak_id','i'),
-        ('reserved','60s'),
+        ('counts', 'f'),
+        ('compound', '32s'),
+        ('peak_id', 'i'),
+        ('reserved', '60s'),
         ),
     150: ( # ORM
         ('first_two_theta', 'f'),
         ('last_two_theta', 'f'),
-        ('reserved','16s'),
+        ('reserved', '16s'),
         ),
     190: ( # OLC
         ('two_theta_offset', 'f'),
         ('int_offset', 'f'),
-        ('reserved','16s'),
+        ('reserved', '16s'),
         ),
     200: ( # AD
         ('act_two_theta', 'd'),
@@ -240,12 +241,12 @@ EXTRA_RECORD = {
         ('fOmege1Original', 'd'),
         ('fOmega2Original', 'd'),
         ('iSimLength', 'i'),
-        ),
         # needs simdat, simusubstrate, layer block header
-    10140: ( # OCM
-        ('comment', '0s'), 
         ),
-        # needs comment, which is total length of the record 
+    10140: ( # OCM
+        ('comment', '0s'),
+        # needs comment, which is total length of the record
+        ),
     10250: ( # REFSIM
         ('ABS_FLAG', '1s'),
         ('SIZ_FLAG', '1s'),
@@ -264,8 +265,8 @@ EXTRA_RECORD = {
         ('multis', 'h'),
         ('variable_data1', 'i'),
         ('variable_data2', 'i'),
-        ),
         # needs rlayer, mulit
+        ),
     }
 
 
@@ -284,7 +285,7 @@ def loads(data):
 
     # process the main header
     offset = 0
-    header,offset = _make_struct(RAW_HEADER, data, offset)
+    header, offset = _make_struct(RAW_HEADER, data, offset)
     #assert offset == 712
 
 
@@ -292,17 +293,17 @@ def loads(data):
     ranges = []
     for _ in range(header['no_of_tot_meas_ranges']):
         # range starts with the range header
-        rheader,offset = _make_struct(RAW_RANGE_HEADER, data, offset)
+        rheader, offset = _make_struct(RAW_RANGE_HEADER, data, offset)
         extra_length = rheader['total_size_of_extra_records']
 
         # can have multiple extra records, so append them as they appear
         rheader['extra'] = []
         while extra_length > 0:
             # find the extra record type, and use it to parse the extra data
-            rectype,reclen =  struct.unpack_from('ii', data, offset=offset)
+            rectype, reclen = struct.unpack_from('ii', data, offset=offset)
             if rectype not in EXTRA_RECORD:
                 raise ValueError('unknown measurement type %d'%rectype)
-            rextra,_ = _make_struct(EXTRA_RECORD[rectype], data, offset+8)
+            rextra, _ = _make_struct(EXTRA_RECORD[rectype], data, offset+8)
             # note: some extra records (e.g., HRXRD simulations) have variable
             # data stored after the record.  We're skipping this for now.
 
@@ -323,23 +324,23 @@ def loads(data):
         types = ('f'+'d'*ncol)*nrow
         values = struct.unpack_from(types, data, offset=offset)
         offset += nrow * (4 + 8*ncol)
-        columns = numpy.array(values, 'd').reshape((ncol+1,nrow))
+        columns = numpy.array(values, 'd').reshape((ncol+1, nrow))
 
         # figure out which columns are in use
-        colnames = [n for i,n in enumerate(VARYING_BIT)
+        colnames = [n for i, n in enumerate(VARYING_BIT)
                     if (2**i)&rheader['varying_parameters']]
         if len(colnames) != ncol:
             raise ValueError('varying_parameters and data_record_length are inconsistent')
-        values = { 'count': columns[0] }
-        values.update((n,v) for n,v in zip(colnames,columns[1:]))
-        
+        values = {'count': columns[0]}
+        values.update((n, v) for n, v in zip(colnames, columns[1:]))
+
         rheader['values'] = values
         ranges.append(rheader)
-        
+
     header['data'] = ranges
     return header
-    
+
 if __name__ == "__main__":
-    import sys,pprint
+    import sys, pprint
     pprint.pprint(load(sys.argv[1]))
 

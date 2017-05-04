@@ -15,10 +15,10 @@ def apply_intensity_norm(data, base):
     I, varI = err1d.div(data.v, data.dv**2, S, varS)
     data.v, data.dv = I, np.sqrt(varI)
 
+
 def estimate_attenuation(datasets):
     raise NotImplementedError()
     index = np.sort([d.angular_resolution[0] for d in datasets])
-
 
 
 NORMALIZE_OPTIONS = 'auto|monitor|time|power|none'
@@ -59,7 +59,7 @@ def apply_norm(data, base='auto'):
     else:
         raise ValueError("Expected %r in %s" % (base, NORMALIZE_OPTIONS))
     #print "norm",C,varC,M,varM
-    value, variance = err1d.div(C, varC+(varC==0), M, varM)
+    value, variance = err1d.div(C, varC+(varC == 0), M, varM)
     data.v = value
     data.dv = np.sqrt(variance)
     data.vunits = 'counts per '+units if units else 'counts'

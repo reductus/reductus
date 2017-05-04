@@ -31,7 +31,7 @@ def data_as(group, fieldname, units, rep=1):
             return np.repeat(value, rep, axis=0)
         elif value.shape[0] != rep:
             raise ValueError("field %r does not match counts in %r"
-                             %(field.name,field.file.filename))
+                             %(field.name, field.file.filename))
         else:
             return value
     else:
@@ -63,8 +63,6 @@ def load_from_uri(uri, entries=None, url_cache="/tmp"):
 
     Remote files are cached in *url_cache*.  Use None to fetch without caching.
     """
-    import os
-
     if uri.startswith('file://'):
         return load_entries(uri[7:], entries=entries)
     elif uri.startswith('http://') or uri.startswith('https://'):
@@ -82,7 +80,7 @@ def load_metadata(filename, file_obj=None):
     #file = h5.File(filename)
     file = h5_open_zip(filename, file_obj)
     measurements = []
-    for name,entry in file.items():
+    for name, entry in file.items():
         if entry.attrs.get('NX_class', None) == 'NXentry':
             data = NCNRNeXusRefl(entry, name, filename)
             measurements.append(data)
@@ -111,14 +109,14 @@ def load_entries(filename, file_obj=None, entries=None):
 
 def h5_open_zip(filename, file_obj=None, mode='r', **kw):
     """
-    Open a NeXus file, even if it is in a zip file, 
+    Open a NeXus file, even if it is in a zip file,
     or if it is a NeXus-zip file.
 
     If the filename ends in '.zip', it will be unzipped to a temporary
     directory before opening and deleted on :func:`closezip`.  If opened
     for writing, then the file will be created in a temporary directory,
     then zipped and deleted on :func:`closezip`.
-    
+
     If it is a zipfile but doesn't end in '.zip', it is assumed
     to be a NeXus-zip file and is opened with that library.
 
@@ -192,7 +190,7 @@ class NCNRNeXusRefl(refldata.ReflData):
     }
 
     def __init__(self, entry, entryname, filename):
-        super(NCNRNeXusRefl,self).__init__()
+        super(NCNRNeXusRefl, self).__init__()
         self.entry = entryname
         self.path = os.path.abspath(filename)
         self.name = os.path.basename(filename).split('.')[0]
@@ -205,20 +203,20 @@ class NCNRNeXusRefl(refldata.ReflData):
         self.date = iso8601.parse_date(entry['start_time'][0])
         self.description = entry['experiment_description'][0]
         self.instrument = entry['instrument/name'][0]
-        self.slit1.distance = data_as(entry,'instrument/presample_slit1/distance','mm')
-        self.slit2.distance = data_as(entry,'instrument/presample_slit2/distance','mm')
-        #self.slit3.distance = data_as(entry,'instrument/predetector_slit1/distance','mm')
-        #self.slit4.distance = data_as(entry,'instrument/predetector_slit2/distance','mm')
-        #self.detector.distance = data_as(entry,'instrument/detector/distance','mm')
-        #self.detector.rotation = data_as(entry,'instrument/detector/rotation','degree')
-        self.detector.wavelength = data_as(entry,'instrument/monochromator/wavelength','Ang')
-        self.detector.wavelength_resolution = data_as(entry,'instrument/monochromator/wavelength_error','Ang')
+        self.slit1.distance = data_as(entry, 'instrument/presample_slit1/distance', 'mm')
+        self.slit2.distance = data_as(entry, 'instrument/presample_slit2/distance', 'mm')
+        #self.slit3.distance = data_as(entry, 'instrument/predetector_slit1/distance','mm')
+        #self.slit4.distance = data_as(entry, 'instrument/predetector_slit2/distance','mm')
+        #self.detector.distance = data_as(entry, 'instrument/detector/distance','mm')
+        #self.detector.rotation = data_as(entry, 'instrument/detector/rotation','degree')
+        self.detector.wavelength = data_as(entry, 'instrument/monochromator/wavelength','Ang')
+        self.detector.wavelength_resolution = data_as(entry, 'instrument/monochromator/wavelength_error','Ang')
         self.detector.deadtime = data_as(entry, 'instrument/single_detector/dead_time', 'us')
         self.detector.deadtime_error = data_as(entry, 'instrument/single_detector/dead_time_error', 'us')
         monitor_device = entry.get('control/monitor', {})
-        self.monitor.deadtime = data_as(monitor_device,'dead_time','us')
+        self.monitor.deadtime = data_as(monitor_device, 'dead_time','us')
         self.monitor.deadtime_error = data_as(monitor_device, 'dead_time_error', 'us')
-        
+
         self.sample.name = entry['sample/name'][0] if 'name' in entry['sample'] else ""
         self.sample.description = entry['sample/description'][0] if 'description' in entry['sample'] else ""
         raw_intent = das['trajectoryData/_scanType'][0] if '_scanType' in das['trajectoryData'] else ""
@@ -253,22 +251,22 @@ class NCNRNeXusRefl(refldata.ReflData):
             nice_instrument = str(das['experiment/instrument'].value[0]).lower()
             instrument = LOCATION.get(nice_instrument, nice_instrument)
             year, month = self.date.year, self.date.month
-            cycle = "%4d%02d"%(year,month)
+            cycle = "%4d%02d"%(year, month)
             experiment = str(entry['experiment_identifier'].value[0])
             filename = os.path.basename(self.path)
-            URI = "/".join((NCNR_DOI,instrument,cycle,experiment,"data",filename))
+            URI = "/".join((NCNR_DOI, instrument, cycle, experiment, "data", filename))
         self.uri = URI
 
     def load(self, entry):
         das = entry['DAS_logs']
-        self.detector.counts = np.asarray(das['pointDetector/counts'][:,0], 'd')
+        self.detector.counts = np.asarray(das['pointDetector/counts'][:, 0], 'd')
         self.detector.counts_variance = self.detector.counts.copy()
         self.detector.dims = self.detector.counts.shape
         n = self.detector.dims[0]
-        self.monitor.counts = np.asarray(data_as(das,'counter/liveMonitor','',rep=n), 'd')
+        self.monitor.counts = np.asarray(data_as(das, 'counter/liveMonitor', '', rep=n), 'd')
         self.monitor.counts_variance = self.monitor.counts.copy()
-        self.monitor.count_time = data_as(das,'counter/liveTime','s',rep=n)
-        for k,s in enumerate([self.slit1, self.slit2, self.slit3, self.slit4]):
+        self.monitor.count_time = data_as(das, 'counter/liveTime', 's', rep=n)
+        for k, s in enumerate([self.slit1, self.slit2, self.slit3, self.slit4]):
             x = 'slitAperture%d/softPosition'%(k+1)
             y = 'vertSlitAperture%d/softPosition'%(k+1)
             x_target = 'slitAperture%d/desiredSoftPosition'%(k+1)
@@ -281,18 +279,18 @@ class NCNRNeXusRefl(refldata.ReflData):
             s.y_target = data_as(das, y_target, 'mm', rep=n)
         if 'sampleAngle' in das:
             # selects MAGIK or PBR, which have sample and detector angle
-            self.sample.angle_x = data_as(das,'sampleAngle/softPosition','degree',rep=n)
-            self.detector.angle_x = data_as(das,'detectorAngle/softPosition','degree',rep=n)
-            self.sample.angle_x_target = data_as(das,'sampleAngle/desiredSoftPosition','degree',rep=n)
-            self.detector.angle_x_target = data_as(das,'detectorAngle/desiredSoftPosition','degree',rep=n)
+            self.sample.angle_x = data_as(das, 'sampleAngle/softPosition', 'degree', rep=n)
+            self.detector.angle_x = data_as(das, 'detectorAngle/softPosition', 'degree', rep=n)
+            self.sample.angle_x_target = data_as(das, 'sampleAngle/desiredSoftPosition', 'degree', rep=n)
+            self.detector.angle_x_target = data_as(das, 'detectorAngle/desiredSoftPosition', 'degree', rep=n)
         elif 'q' in das:
             # selects NG7R which has only q device (qz) and sampleTilt
-            tilt = data_as(das, 'sampleTilt/softPosition','degree',rep=n)
+            tilt = data_as(das, 'sampleTilt/softPosition', 'degree', rep=n)
             theta = data_as(das, 'q/thetaIncident', 'degree', rep=n)
             self.sample.angle_x = theta + tilt
             self.detector.angle_x = 2*theta
             # NaN if not defined
-            tilt_target = data_as(das, 'sampleTilt/desiredSoftPosition','degree',rep=n)
+            tilt_target = data_as(das, 'sampleTilt/desiredSoftPosition', 'degree', rep=n)
             theta_target = data_as(das, 'q/desiredThetaInident', 'degree', rep=n)
             self.sample.angle_x_target = theta_target + tilt_target
             self.detector.angle_x_target = 2*theta_target
@@ -303,7 +301,7 @@ class NCNRNeXusRefl(refldata.ReflData):
             self.background_offset = 'theta'
         self.scan_value = []
         self.scan_units = []
-        self.scan_label= []
+        self.scan_label = []
         SCANNED_VARIABLES = 'trajectory/scannedVariables'
         if SCANNED_VARIABLES in das:
             scanned_variables = das[SCANNED_VARIABLES].value
@@ -330,7 +328,7 @@ class NCNRNeXusRefl(refldata.ReflData):
                 self.scan_value.append(scan_value)
                 self.scan_units.append(scan_units)
                 self.scan_label.append(scan_label)
-        #TODO: temperature, field
+        # TODO: temperature, field
 
     def _load_slits(self, instrument):
         """

@@ -92,6 +92,8 @@ QZ_FROM_SAMPLE = 'sample angle'
 QZ_FROM_DETECTOR = 'detector angle'
 
 class Group(object):
+    _fields = ()
+    _props = ()
     def __setattr__(self, key, value):
         # Check for class attr when setting; this is because hasattr on
         # a property will return False if getattr on that property raises
@@ -103,7 +105,7 @@ class Group(object):
                                  % (key, self.__class__.__name__))
         object.__setattr__(self, key, value)
     def __init__(self, **kw):
-        _set(self,kw)
+        _set(self, kw)
     def __str__(self):
         return _str(self)
     def _toDict(self):
@@ -111,7 +113,7 @@ class Group(object):
 
 
 def set_fields(cls):
-    groups = set(name for name,type in getattr(cls, '_groups', ()))
+    groups = set(name for name, type in getattr(cls, '_groups', ()))
     properties = []
     fields = []
     for k, v in sorted((k, v) for k, v in cls.__dict__.items()):
@@ -532,7 +534,7 @@ class Monitor(Group):
     deadtime = None
     deadtime_error = None
 
-class Intent:
+class Intent(object):
     """
     Intent is one of the following:
 
@@ -691,7 +693,7 @@ class ReflData(Group):
     #: Description of the entry.
     description = ""
     #: Starting date and time of the measurement.
-    date = datetime.datetime(1970,1,1)
+    date = datetime.datetime(1970, 1, 1)
     #: Duration of the measurement.
     duration = 0
     #: '' unpolarized
@@ -847,7 +849,7 @@ class ReflData(Group):
             raise ValueError("Need to estimate divergence before requesting dQ")
         T, dT = self.sample.angle_x, self.angular_resolution+self.sample.broadening
         L, dL = self.detector.wavelength, self.detector.wavelength_resolution
-        return resolution.dTdL2dQ(T,dT,L,dL)
+        return resolution.dTdL2dQ(T, dT, L, dL)
 
     def __init__(self, **kw):
         for attr, cls in ReflData._groups:
@@ -858,19 +860,19 @@ class ReflData(Group):
 
     def __str__(self):
         base = [_str(self, indent=2)]
-        others = ["".join(("  ", s, "\n", str(getattr(self,s))))
+        others = ["".join(("  ", s, "\n", str(getattr(self, s))))
                   for s, _ in ReflData._groups]
         return "\n".join(base+others+self.messages)
 
     def todict(self):
         state = _toDict(self)
-        groups = dict((s, _toDict(getattr(self,s)))
+        groups = dict((s, _toDict(getattr(self, s)))
                       for s, _ in ReflData._groups)
         state.update(groups)
         return state
 
     def fromdict(self, state):
-        props = dict((k,v) for k,v in state.items() if k in self._fields)
+        props = dict((k, v) for k, v in state.items() if k in self._fields)
         props = _fromDict(props)
         for k, v in props.items():
             setattr(self, k, v)
@@ -915,38 +917,39 @@ class ReflData(Group):
     def save(self, filename):
         with open(filename, 'w') as fid:
             fid.write(self.export())
-    
+
     def export(self):
         fid = StringIO.StringIO()
         for n in ['name', 'entry', 'polarization']:
-            fid.write("# %s\n" % (json.dumps({n: getattr(self, n)}).strip("{}"),))
+            fid.write("# %s\n" % json.dumps({n: getattr(self, n)}).strip("{}"))
         columns = {"columns": [self.xlabel, self.vlabel, "uncertainty", "resolution"]}
         units = {"units": [self.xunits, self.vunits, self.vunits, self.xunits]}
         wavelength = getattr(self.detector, "wavelength", None)
         if wavelength is not None:
-            fid.write("# %s\n" % (json.dumps({"wavelength": float(wavelength[0])}).strip("{}"),))
+            fid.write("# %s\n" % json.dumps({"wavelength": float(wavelength[0])}).strip("{}"))
         wavelength_resolution = getattr(self.detector, "wavelength_resolution", None)
         if wavelength_resolution is not None:
-            fid.write("# %s\n" % (json.dumps({"wavelength_resolution": float(wavelength_resolution[0])}).strip("{}"),))
-        fid.write("# %s\n" % (json.dumps(columns).strip("{}"),))
-        fid.write("# %s\n" % (json.dumps(units).strip("{}"),))
+            fid.write("# %s\n" % json.dumps({"wavelength_resolution": float(wavelength_resolution[0])}).strip("{}"))
+        fid.write("# %s\n" % json.dumps(columns).strip("{}"))
+        fid.write("# %s\n" % json.dumps(units).strip("{}"))
         np.savetxt(fid, np.vstack([self.x, self.v, self.dv, self.dx]).T, fmt="%.10e")
         fid.seek(0)
         name = getattr(self, "name", "default_name") #  + "_" + getattr(self, "entry", "default_entry")
         entry = getattr(self, "entry", "default_entry")
         return {"name": name, "entry": entry, "export_string": fid.read()}
-        
+
     def get_plottable(self):
         return self.todict()
+
     def get_metadata(self):
         return self.todict()
-    
+
 def _str(object, indent=4):
     """
     Helper function: document data object by convert attributes listed in
     properties into a string.
     """
-    props = [a+"="+str(getattr(object,a)) for a in object._fields]
+    props = [a + "=" + str(getattr(object, a)) for a in object._fields]
     prefix = " "*indent
     return prefix+("\n"+prefix).join(props)
 
@@ -973,7 +976,7 @@ def _toDictItem(obj):
 
 def _fromDict(props):
     # Note: timestamps must have the property named "date"
-    for name,value in props.items():
+    for name, value in props.items():
         if isinstance(value, list) and value:
             if all(isinstance(v, (int, float)) for v in value):
                 props[name] = np.asarray(value)
@@ -992,7 +995,7 @@ def _set(object, kw):
 
         def __init__(self, **kw): _set(self,kw)
     """
-    for k,v in kw.items():
+    for k, v in kw.items():
         # this will fail with an attribute error for incorrect keys
         getattr(object, k)
         setattr(object, k, v)

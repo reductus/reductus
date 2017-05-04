@@ -12,8 +12,8 @@ from dataflow.lib.err1d import interp
 from dataflow.lib.wsolve import smooth
 
 def apply_smoothing(slits, dx, degree, span):
-    assert span>degree, "Span must be greater than degree"
-    s = np.hstack([[d.angular_resolution,d.slit1.x,d.slit2.x] for d in slits])
+    assert span > degree, "Span must be greater than degree"
+    s = np.hstack([[d.angular_resolution, d.slit1.x, d.slit2.x] for d in slits])
     s = find_common(s.T, dx=dx).T
     #import pylab;pylab.plot(np.arange(len(s[0])),s.T); pylab.show(); import sys; sys.exit()
 
@@ -29,7 +29,7 @@ def apply_smoothing(slits, dx, degree, span):
         d.v, d.dv = v, dv
 
 def find_common(x, dx):
-    x = x[np.argsort(x[:,0])]
+    x = x[np.argsort(x[:, 0])]
     xo, total, n = x[0]+0, x[0]+0, 1
     out = []
     for xk in x[1:]:

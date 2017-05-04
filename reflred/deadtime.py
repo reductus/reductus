@@ -6,7 +6,7 @@ from dataflow.lib import err1d
 from .deadtime_fit import deadtime_from_counts, estimate_incident
 
 
-class DeadTimeData:
+class DeadTimeData(object):
     def __init__(self, datasets, tau_NP, tau_P,
                  attenuators, rates, index):
         self.messages = []
@@ -21,12 +21,12 @@ class DeadTimeData:
 
     def plot(self):
         raise NotImplementedError("see deadtime_fit for plots we want")
-    
+
     def get_metadata(self):
         metadata =  {
             "tau_P": self.tau_P,
             "tau_NP": self.tau_NP,
-            "attenuators": self.attenuators
+            "attenuators": self.attenuators,
         }
         return metadata
 
@@ -60,7 +60,7 @@ def apply_monitor_dead_time(data, tau_NP=0.0, tau_P=0.0):
     dm = np.sqrt(data.monitor.counts_variance
                  if data.monitor.counts_variance is not None else data.monitor.counts)
     I, dI = estimate_incident((m/t, dm/t),
-                              tau_NP=[tau_NP,0], tau_P=[tau_P,0])
+                              tau_NP=[tau_NP, 0], tau_P=[tau_P, 0])
     data.monitor.counts, data.monitor.counts_variance = (I*t), (dI*t)**2
 
 
@@ -70,7 +70,7 @@ def apply_detector_dead_time(data, tau_NP=0.0, tau_P=0.0):
     dm = np.sqrt(data.detector.counts_variance
                  if data.detector.counts_variance is not None else data.detector.counts)
     I, dI = estimate_incident((m/t, dm/t),
-                              tau_NP=[tau_NP,0], tau_P=[tau_P,0])
+                              tau_NP=[tau_NP, 0], tau_P=[tau_P, 0])
     data.detector.counts, data.detector.counts_variance = (I*t), (dI*t)**2
 
 

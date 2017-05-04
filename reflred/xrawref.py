@@ -1,8 +1,9 @@
 # This program is public domain
-
 """
 Load a Bruker raw file into a reflectometry data structure.
 """
+from __future__ import print_function
+
 import os
 import datetime
 
@@ -32,8 +33,6 @@ def load_from_uri(uri, entries=None, url_cache="/tmp"):
 
     Remote files are cached in *url_cache*.  Use None to fetch without caching.
     """
-    import os
-
     if uri.startswith('file://'):
         return load_entries(uri[7:], entries=entries)
     elif uri.startswith('http://') or uri.startswith('https://'):
@@ -87,9 +86,9 @@ class BrukerRefl(refldata.ReflData):
         self.probe = 'xray'
 
         # parse date into datetime object
-        month,day,year = [int(v) for v in entry['date'].split('/')]
-        hour,minute,second = [int(v) for v in entry['time'].split(':')]
-        self.date = datetime.datetime(year+2000,month,day,hour,minute,second)
+        month, day, year = [int(v) for v in entry['date'].split('/')]
+        hour, minute, second = [int(v) for v in entry['time'].split(':')]
+        self.date = datetime.datetime(year+2000, month, day, hour, minute, second)
 
         self.description = entry['comment']
         self.instrument = 'BrukerXray'
@@ -106,12 +105,12 @@ class BrukerRefl(refldata.ReflData):
         self.detector.wavelength_resolution = 0.001*self.detector.wavelength.copy()
         self.detector.deadtime = np.array([0.0]) # sorta true.
         self.detector.deadtime_error = np.array([0.0]) # also kinda true.
-        
+
         self.sample.name = entry['samplename']
         self.sample.description = ""
         self.monitor.base = 'TIME'
         self.monitor.time_step = 0.001  # assume 1 ms accuracy on reported clock
-        self.monitor.deadtime = 0.0 
+        self.monitor.deadtime = 0.0
         self.polarization = "unpolarized"
 
     def _set_data(self, data):

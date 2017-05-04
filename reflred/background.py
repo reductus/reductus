@@ -29,7 +29,7 @@ def set_background_alignment(back, offset):
     """
     Guess whether background is offset from sample angle or from detector angle.
     """
-    if offset is None or offset=='auto':
+    if offset is None or offset == 'auto':
         # for auto, if Qz_target is set by the trajectory then use it
         if back.Qz_target is not None and not np.isnan(back.Qz_target).any():
             back.Qz_basis = 'target'
@@ -44,7 +44,7 @@ def set_background_alignment(back, offset):
     #else:
         #raise KeyError('unknown offset: must be sample|detector')
     back.Qz_basis = offset
-    
+
 
 # TODO: should only subtract items with the same angular resolution
 def subtract_background(spec, backp, backm):
@@ -129,7 +129,7 @@ def _check_mostly_constant(v):
     delta = abs(med)*0.05
     # exclude points too far away from central value
     #print med,delta,v
-    outliers = np.sum((v<med-delta)|(v>med+delta))
+    outliers = np.sum((v < med-delta) | (v > med+delta))
     #print "outliers",outliers
     # if too many points excluded, then reject the "mostly constant" assumption
     return outliers <= len(v)//10
@@ -142,8 +142,8 @@ def test_alignment_guess():
     a3 = np.arange(-0.5, 6, 0.5)
     a3[1] = 0.
     a4 = 2*a3
-    a3err = np.random.uniform(-0.0001,0.0001, size=a3.size)
-    a4err = np.random.uniform(-0.0001,0.0001, size=a3.size)
+    a3err = np.random.uniform(-0.0001, 0.0001, size=a3.size)
+    a4err = np.random.uniform(-0.0001, 0.0001, size=a3.size)
 
     # detector offset
     back.sample.angle_x = a3 + a3err
