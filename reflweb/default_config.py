@@ -2,18 +2,18 @@
 # rename or copy this file to config.py if you make changes #
 #############################################################
 
-# change this to your fully-qualified domain name to run a 
+# change this to your fully-qualified domain name to run a
 # remote server.  The default value of localhost will
 # only allow connections from the same computer.
 #
-# for remote (cloud) deployments, it is advised to remove 
+# for remote (cloud) deployments, it is advised to remove
 # the "local" data_sources item below, and to serve static
 # files using a standard webserver
 #
 # if use_redis is False, server will use in-memory cache.
 
 # TODO: Convert this to JSON file in web-accesible ('static')
-# directory.  
+# directory.
 
 jsonrpc_servername = "localhost"
 jsonrpc_port = 8001

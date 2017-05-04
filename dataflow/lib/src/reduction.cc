@@ -173,11 +173,33 @@ static PyMethodDef methods[] = {
 } ;
 
 
+
+#if PY_MAJOR_VERSION >= 3
+static struct PyModuleDef moduledef = {
+    PyModuleDef_HEAD_INIT,
+    "_reduction",
+    NULL,
+    0,
+    methods, // myextension_methods
+    NULL,
+    NULL,  // myextension_traverse
+    NULL,  // myextension_clear
+    NULL
+} ;
+
 #if defined(WIN32) && !defined(__MINGW32__)
 __declspec(dllexport)
 #endif
-
-
+PyMODINIT_FUNC
+PyInit__reduction(void)
+{
+  PyObject *module = PyModule_Create(&moduledef);
+  return module;
+}
+#else
+#if defined(WIN32) && !defined(__MINGW32__)
+__declspec(dllexport)
+#endif
 extern "C" void init_reduction(void) {
   Py_InitModule4("_reduction",
   		methods,
@@ -186,3 +208,4 @@ extern "C" void init_reduction(void) {
 		PYTHON_API_VERSION
 		);
 }
+#endif

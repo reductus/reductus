@@ -1,6 +1,18 @@
+import sys
 import posixpath
 import zipfile
-import numpy, json
+import json
+
+import numpy
+
+if sys.version_info[0] >= 3:
+    def bytes_to_str(s):
+        # type: (AnyStr) -> str
+        return s.decode('utf-8') if isinstance(s, bytes) else s  # type: ignore
+else:  # python 2.x
+    def bytes_to_str(s):
+        # type: (AnyStr) -> str
+        return s
 
 builtin_open = open
 
@@ -21,7 +33,8 @@ class Node(object):
             self.path = posixpath.join(parent_node.path, path)
 
     def makeAttrs(self):
-        return json.loads(self.root.open(posixpath.join(self.path, self._attrs_filename), "r").read())
+        attr_data = self.root.open(posixpath.join(self.path, self._attrs_filename), "r").read()
+        return json.loads(bytes_to_str(attr_data))
 
     @property
     def parent(self):
@@ -182,7 +195,8 @@ class FieldFile(object):
             # relative path:
             path = posixpath.join(node.path, path)
         self.path = path
-        self.attrs = json.loads(self.root.open(self.path + self._attrs_suffix, "r").read())
+        attr_data = self.root.open(self.path + self._attrs_suffix, "r").read()
+        self.attrs = json.loads(bytes_to_str(attr_data))
         self._value = None
 
 
@@ -237,10 +251,7 @@ class FieldFile(object):
                         d = numpy.array([''], dtype=dtype)
                     else:
                         d = numpy.loadtxt(infile, dtype=dtype, delimiter='\t')
-                        if dtype.kind == 'S' and d.size > 0:
-                            d = numpy.char.replace(d, r'\t', '\t')
-                            d = numpy.char.replace(d, r'\r', '\r')
-                            d = numpy.char.replace(d, r'\n', '\n')
+                        d = _unescape_str(d)
             finally:
                 infile.close()
             if 'shape' in attrs:
@@ -252,9 +263,23 @@ class FieldFile(object):
             self._value = d
         return self._value
 
+def _unescape_str(data):
+    if data.dtype.kind == 'S' and data.size:
+        # Hide the \\ in \1 so that it doesn't get processed twice.  At the
+        # end, convert it back to \\.  This allows us to support \\t without
+        # it turning into a tab character or a backslash tab sequence.
+        # Don't convert empty arrays since the change type
+        data = numpy.char.replace(data, b'\\\\', b'\1')
+        data = numpy.char.replace(data, b'\\t', b'\t')
+        data = numpy.char.replace(data, b'\\r', b'\r')
+        data = numpy.char.replace(data, b'\\n', b'\n')
+        data = numpy.char.replace(data, b'\1', b'\\')
+    return data
+
 def makeSoftLink(parent, path):
     orig_attrs_path = path.lstrip("/") + ".link"
-    linkinfo = json.loads(parent.root.open(orig_attrs_path, 'r').read())
+    attr_data = parent.root.open(orig_attrs_path, 'r').read()
+    linkinfo = json.loads(bytes_to_str(attr_data))
     target = linkinfo['target']
     target_obj = parent.root[target]
     target_obj.orig_path = path

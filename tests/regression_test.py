@@ -2,7 +2,7 @@ from os import listdir
 from os.path import isfile, join as joinpath, dirname, abspath
 
 import regression
-from reflweb import config
+from reflweb import default_config as config
 from dataflow.cache import set_test_cache
 from dataflow import fetch
 

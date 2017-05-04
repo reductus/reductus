@@ -2,7 +2,7 @@ from __future__ import print_function
 
 from posixpath import basename, join
 from copy import copy, deepcopy
-import StringIO
+from io import BytesIO
 
 import numpy as np
 
@@ -60,7 +60,7 @@ def url_load(fileinfo):
 
     path, mtime, entries = fileinfo['path'], fileinfo['mtime'], fileinfo['entries']
     name = basename(path)
-    fid = StringIO.StringIO(url_get(fileinfo))
+    fid = BytesIO(url_get(fileinfo))
     nx_entries = LoadMAGIKPSD.load_entries(name, fid, entries=entries)
     fid.close()
     return nx_entries
@@ -94,7 +94,7 @@ def LoadSANS(filelist=None, flip=False, transpose=False):
     for fileinfo in filelist:
         path, mtime, entries = fileinfo['path'], fileinfo['mtime'], fileinfo['entries']
         name = basename(path)
-        fid = StringIO.StringIO(url_get(fileinfo))
+        fid = BytesIO(url_get(fileinfo))
         entries = readSANSNexuz(name, fid)
         for entry in entries:
             if flip:

@@ -235,7 +235,7 @@ class He3Analyzer:
         T = self.getTransmissionVec(t, back_aligned)
         NT = zeros((4, 4))
         mask = logical_and((flipper_on == flipper_on_select), (He3_up == He3_up_select))
-        print mask
+        print(mask)
         NT[mask] = (N * T)[mask]
 
         return NT
@@ -256,9 +256,9 @@ class He3AnalyzerCollection():
         self.path = path
         self.cells = cells
         try:
-            print "loading %s" % filename
+            print("loading %s" % filename)
             self.AddFromFile(filename)
-            print "loaded %s" % filename
+            print("loaded %s" % filename)
         except:
             pass
 

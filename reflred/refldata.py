@@ -79,8 +79,8 @@ __all__ = ['ReflData']
 
 import datetime
 import warnings
-import StringIO
 import json
+from io import BytesIO
 
 import numpy as np
 from numpy import inf, arctan2, sqrt, sin, cos, pi, radians
@@ -919,7 +919,7 @@ class ReflData(Group):
             fid.write(self.export())
 
     def export(self):
-        fid = StringIO.StringIO()
+        fid = BytesIO()
         for n in ['name', 'entry', 'polarization']:
             fid.write("# %s\n" % json.dumps({n: getattr(self, n)}).strip("{}"))
         columns = {"columns": [self.xlabel, self.vlabel, "uncertainty", "resolution"]}

@@ -381,7 +381,9 @@ def fingerprint_node(module, node_config, inputs_fp):
     config_str = str(_format_ordered(config))
     current_module_version = lookup_module(module['module']).version
     parts = [module['module'], current_module_version, config_str] + inputs_fp
-    fp = hashlib.sha1(":".join(parts)).hexdigest()
+    key = ":".join(parts)
+    #key = key.encode('utf-8')
+    fp = hashlib.sha1(key).hexdigest()
     return fp
 
 # new methods that keep everything ordered

@@ -6,6 +6,7 @@ Load a NeXus file into a reflectometry data structure.
 import os
 import tempfile
 from zipfile import ZipFile, _EndRecData
+from io import BytesIO
 
 import numpy as np
 import h5py as h5
@@ -50,8 +51,7 @@ def load_from_string(filename, data, entries=None):
     """
     Load a nexus file from a string, e.g., as returned from url.read().
     """
-    from StringIO import StringIO
-    fd = StringIO(data)
+    fd = BytesIO(data)
     entries = load_entries(filename, fd, entries=entries)
     fd.close()
     return entries
@@ -200,6 +200,7 @@ class NCNRNeXusRefl(refldata.ReflData):
         #print(entry['instrument'].values())
         das = entry['DAS_logs']
         self.probe = 'neutron'
+        #self.date = iso8601.parse_date(entry['start_time'][0].decode('utf-8'))
         self.date = iso8601.parse_date(entry['start_time'][0])
         self.description = entry['experiment_description'][0]
         self.instrument = entry['instrument/name'][0]

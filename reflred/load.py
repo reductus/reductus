@@ -1,7 +1,9 @@
-import urllib2
 import datetime
-import StringIO
 from os.path import basename
+try:
+    import urllib.request as urllib2
+except ImportError:
+    import urllib2
 
 import pytz
 

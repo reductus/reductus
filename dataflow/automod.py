@@ -734,7 +734,7 @@ def _validate_one(par, value, as_default):
         choices = par["typeattr"]["choices"]
         isopenset = par["typeattr"]["open"]
         # Note: choices is a list of pairs [["option", "display"], ...]
-        if value not in zip(*choices)[0]:
+        if value not in list(zip(*choices))[0]:
             #print value, choices
             if not isopenset or as_default is True:
                 raise ValueError("value %r not in choice list for %s"
@@ -813,6 +813,8 @@ def _type_check(name, value, ptype):
         value = int(value)
     elif ptype is float and isinstance(value, int):
         value = float(value)
+    #elif ptype is str and isinstance(value, bytes):
+    #    value = value.decode('utf-8')
     elif ptype is str and isinstance(value, unicode):
         value = str(value)
     if not isinstance(value, ptype):

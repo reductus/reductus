@@ -1,7 +1,7 @@
 import datetime
 from copy import copy, deepcopy
-import StringIO
 import json
+from io import BytesIO
 
 import numpy as np
 
@@ -197,7 +197,7 @@ class Sans1dData(object):
         return self.todict()
 
     def export(self):
-        fid = StringIO.StringIO()
+        fid = BytesIO()
         fid.write("# %s\n" % json.dumps(self.metadata).strip("{}"))
         columns = {"columns": [self.xlabel, self.vlabel, "uncertainty", "resolution"]}
         units = {"units": [self.xunits, self.vunits, self.vunits, self.xunits]}

@@ -9,7 +9,7 @@ def LoadUXDData(filename, path="", friendly_name=""):
 
     #This program assumes that the step sizes of all Rocking Curves are the same
     #I do not know what will happen if they are not (I've never tried) - but the result will probably not be pretty
-    
+
     ############# Variables #################################
     #Read from file header (applies to all ranges)
     wavelength = 0
@@ -40,7 +40,7 @@ def LoadUXDData(filename, path="", friendly_name=""):
 
     file_obj = open(os.path.join(path, filename), 'r')
     np = numpy
-    
+
     for lines in file_obj:
         line = lines.strip()
 
@@ -49,7 +49,7 @@ def LoadUXDData(filename, path="", friendly_name=""):
             range_theta_array.append(theta)
             theta += step_size
             range_counts_array.append(float(line))
-            
+
         elif line.count("_WL1") != 0:
             nums = line.split(" = ")
             wavelength = float(nums[1].strip())
@@ -65,7 +65,7 @@ def LoadUXDData(filename, path="", friendly_name=""):
             if curr_range != 1:
                 counts_array.append(range_counts_array)
                 theta_array.append(range_theta_array)
-                
+
                 range_counts_array = []
                 range_theta_array = []
         elif line.count("_STEPTIME") != 0:
@@ -106,7 +106,7 @@ def LoadUXDData(filename, path="", friendly_name=""):
 
         range_counts_array = []
         range_theta_array = []
-        
+
     #Now that we're done with reading the file, its time to set up the MetaArray
     file_obj.close() # We're done with the file now
 
@@ -134,7 +134,7 @@ def LoadUXDData(filename, path="", friendly_name=""):
         data_array[start:stop, i, 3] = count_time_array[i]
 
     info = [
-        {"name": "theta", "units": "degrees", "values": data_theta_array}, 
+        {"name": "theta", "units": "degrees", "values": data_theta_array},
         {"name": "twotheta", "units": "degrees", "values": two_theta_array}]
     info.append({"name": "Measurements", "cols": [
                         {"name": "counts"},
@@ -143,15 +143,15 @@ def LoadUXDData(filename, path="", friendly_name=""):
                         {"name": "count_time"}]})
     info.append({"filename": filename, "friendly_name": friendly_name, "path":path, "CreationStory": ""})
 
-    data = MetaArray(data_array, dtype='float', info=info)    
+    data = MetaArray(data_array, dtype='float', info=info)
     return data
 
 def LoadUXDMany(filedescriptors):
     result = []
     for fd in filedescriptors:
         new_data = LoadUXDData(fd['filename'], friendly_name=fd['friendly_name'])
-        if type(new_data) is types.ListType:
+        if isinstance(new_data, list):
             result.extend(new_data)
         else:
             result.append(new_data)
-    return result        
+    return result

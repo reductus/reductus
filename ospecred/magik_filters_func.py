@@ -1,11 +1,14 @@
 import os, sys, types
 from copy import deepcopy
 from posixpath import basename, join
-import StringIO
-import urllib2
 import time
-import pytz
+from io import BytesIO
+try:
+    import urllib.request as urllib2
+except ImportError:
+    import urllib2
 
+import pytz
 from numpy import (cos, pi, cumsum, arange, ndarray, ones, zeros, array,
                    newaxis, linspace, empty, resize, sin, allclose, zeros_like,
                    linalg, dot, arctan2, float64, histogram2d, sum, nansum,
@@ -172,7 +175,7 @@ def normalizeToMonitor(data):
             monitor_id += col_suffix
         info[-2]['cols'].append({"name":"counts_norm%s" % (col_suffix,)})
         mask = data["Measurements":monitor_id].nonzero()
-        #print mask
+        #print(mask)
         output_array[..., j][mask] = data["Measurements":col][mask] / data["Measurements":monitor_id][mask]
         #expression = "data1_counts%s / data1_%s" % (col_suffix, monitor_id)
         #error_expression = "sqrt(data1_counts%s) / data1_%s" % (col_suffix, monitor_id)
@@ -214,7 +217,7 @@ def cropData(data, xmin=None, xmax=None, ymin=None, ymax=None):
     x_array = data._info[0]['values']
     y_array = data._info[1]['values']
 
-    print xmin, xmax, ymin, ymax
+    print(xmin, xmax, ymin, ymax)
 
     def get_index(t, x):
         if (x == "" or x == None):
@@ -324,18 +327,18 @@ def pixelsToTwotheta(data, params, pixels_per_degree=50.0, qzero_pixel=149.0, in
     if 'pixels_per_degree' in params: pixels_per_degree = params['pixels_per_degree']
     if 'qzero_pixel' in params: qzero_pixel = params['qzero_pixel']
     #kw = locals().keys()
-    #print kw, params
+    #print(kw, params)
     #for name in kw:
     #    if name in params:
-    #        exec "print '%s', %s, params['%s']" % (name, name,name) in locals()
+    #        exec "print('%s', %s, params['%s']" % (name, name,name)) in locals()
     #        exec ("%s = params['%s']" % (name, name)) in locals()
-    #        exec "print %s" % (name,) in locals()
+    #        exec "print(name)" in locals()
 
     pixels_per_degree = float(pixels_per_degree) # coerce, in case it was an integer
     qzero_pixel = float(qzero_pixel)
     instr_resolution = float(instr_resolution)
 
-    print pixels_per_degree, qzero_pixel
+    print(pixels_per_degree, qzero_pixel)
 
     new_info = data.infoCopy()
     det_angle = new_info[-1].get('det_angle', None)
@@ -356,7 +359,7 @@ def pixelsToTwotheta(data, params, pixels_per_degree=50.0, qzero_pixel=149.0, in
     if ((det_angle_max - det_angle_min) < instr_resolution) or ndim == 1 or ax_name != 'xpixel':
         #then the detector is fixed and we just change the values in 'xpixel' axis vector to twotheta
         # or the axis to be converted is y, which doesn't move in angle.
-        print "doing the simple switch of axis values..."
+        print("doing the simple switch of axis values...")
 
         #data_slices = [slice(None, None, 1), slice(None, None, 1)]
         #data_slices[pixel_axis] = slice(None, None, -1)
@@ -460,7 +463,7 @@ def thetaTwothetaToQxQz(data, output_grid, wavelength=5.0, qxmin=-0.003, qxmax=0
 
     2016-04-01 Brian Maranville
     """
-    print "output grid: ", output_grid
+    print("output grid: ", output_grid)
     if output_grid == None:
         info = [{"name": "qx", "units": "inv. Angstroms", "values": linspace(qxmin, qxmax, qxbins) },
             {"name": "qz", "units": "inv. Angstroms", "values": linspace(qzmin, qzmax, qzbins) },]
@@ -528,7 +531,7 @@ def thetaTwothetaToQxQz(data, output_grid, wavelength=5.0, qxmin=-0.003, qxmax=0
 
     #extra_info
     output_grid._info[-1] = data._info[-1].copy()
-    print "output shape:", output_grid.shape
+    print("output shape:", output_grid.shape)
     return output_grid
 
 @module
@@ -590,7 +593,7 @@ def thetaTwothetaToAlphaIAlphaF(data):
 
     for i, col in enumerate(outgrid_info[2]['cols']):
         values_to_bin = data[:,:,col['name']].view(ndarray).flatten().tolist()
-        print len(target_ai), len(target_af), len(values_to_bin)
+        print(len(target_ai), len(target_af), len(values_to_bin))
         outshape = (output_grid.shape[0], output_grid.shape[1])
         hist2d, xedges, yedges = histogram2d(target_ai, target_af, bins = (outshape[0],outshape[1]), range=((0,outshape[0]),(0,outshape[1])), weights=values_to_bin)
         output_grid[:,:,col['name']] += hist2d
@@ -792,7 +795,7 @@ def add_to_grid(dataset, grid):
     for i, col in enumerate(new_info[2]['cols']):
         #if col['name'] in cols_to_add:
         array_to_rebin = dataset[:, :, col['name']].view(ndarray)
-        #print data_edges, bin_edges
+        #print(data_edges, bin_edges)
         new_array = reb.rebin2d(data_edges[0], data_edges[1], array_to_rebin[data_slice], bin_edges[0], bin_edges[1])
         grid[:, :, col['name']] += new_array[grid_slice]
 
@@ -806,7 +809,7 @@ DETECTOR_ACTIVE = (320, 340)
 def url_load(fileinfo):
     path, mtime, entries = fileinfo['path'], fileinfo['mtime'], fileinfo['entries']
     name = basename(path)
-    fid = StringIO.StringIO(url_get(fileinfo))
+    fid = BytesIO(url_get(fileinfo))
     nx_entries = LoadMAGIKPSD.load_entries(name, fid, entries=entries)
     fid.close()
     return nx_entries
@@ -822,7 +825,7 @@ def check_datasource(source):
 
 def find_mtime(path, source="ncnr"):
     check_datasource(source)
-    print DATA_SOURCES[source]
+    print(DATA_SOURCES[source])
     try:
         url = urllib2.urlopen(DATA_SOURCES[source]+path)
         mtime = url.info().getdate('last-modified')
@@ -927,7 +930,7 @@ def LoadMAGIKPSD(fileinfo=None, collapse=True, collapse_axis='y', auto_PolState=
 
     path, mtime, entries = fileinfo['path'], fileinfo['mtime'], fileinfo['entries']
     name = basename(path)
-    fid = StringIO.StringIO(url_get(fileinfo))
+    fid = BytesIO(url_get(fileinfo))
     file_obj = h5_open_zip(name, fid)
     return loadMAGIKPSD_helper(file_obj, name, path, collapse=collapse, collapse_axis=collapse_axis, auto_PolState=auto_PolState, PolState=PolState, flip=flip, transpose=transpose)
 
@@ -954,11 +957,11 @@ def loadMAGIKPSD_helper(file_obj, name, path, collapse=True, collapse_axis='y', 
             PolState = ''
         #datalen = file_obj.detector.counts.shape[0]
         if ndims == 2:
-            if DEBUG: print "2d"
+            if DEBUG: print("2d")
             ypixels = dims[0]
             xpixels = dims[1]
         elif ndims >= 3:
-            if DEBUG: print "3d"
+            if DEBUG: print("3d")
             frames = dims[0]
             xpixels = dims[1]
             ypixels = dims[2]

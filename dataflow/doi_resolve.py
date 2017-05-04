@@ -1,7 +1,11 @@
 from __future__ import print_function
 
 import re
-import urllib2
+
+try:
+    import urllib.request as urllib2
+except ImportError:
+    import urllib2
 
 NIST_DOI_ROOT = "10.18434"
 NCNR_DATA_EXT = "T4201B"

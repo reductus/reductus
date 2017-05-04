@@ -43,10 +43,14 @@ For example::
 
 from __future__ import print_function
 
-import urllib2
 import datetime
 from posixpath import basename, join, sep
 import hashlib
+
+try:
+    import urllib.request as urllib2
+except ImportError:
+    import urllib2
 
 import pytz
 
@@ -83,8 +87,9 @@ def url_get(fileinfo):
     cache = get_file_cache()
     fileinfo_minimal = {'path': path, 'mtime': mtime}
     config_str = str(_format_ordered(fileinfo_minimal))
-    parts = ["url_get", config_str]
-    fp = hashlib.sha1(":".join(parts)).hexdigest()
+    key = ":".join(("url_get", config_str))
+    #key = key.encode('utf-8')
+    fp = hashlib.sha1(key).hexdigest()
     if cache.exists(fp):
         ret = cache.get(fp)
         print("getting " + path + " from cache!")

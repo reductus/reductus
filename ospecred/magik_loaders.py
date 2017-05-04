@@ -55,7 +55,7 @@ def LoadICPMany(filedescriptors):
     result = []
     for fd in filedescriptors:
         new_data = LoadICPData(fd.pop('filename'), **fd)
-        if type(new_data) is types.ListType:
+        if isinstance(new_data, list):
             result.extend(new_data)
         else:
             result.append(new_data)
@@ -84,7 +84,7 @@ def LoadMAGIKPSD(filename, path="", friendly_name="", collapse_y=True, auto_PolS
         active_slice = slice(None, DETECTOR_ACTIVE[0], DETECTOR_ACTIVE[1])
         counts_value = entry['DAS_logs']['areaDetector']['counts'].value[:, 1:DETECTOR_ACTIVE[0]+1, :DETECTOR_ACTIVE[1]]
         dims = counts_value.shape
-        print dims
+        print(dims)
         ndims = len(dims)
         if auto_PolState:
             PolState = lookup.get(entryname, "")
@@ -93,11 +93,11 @@ def LoadMAGIKPSD(filename, path="", friendly_name="", collapse_y=True, auto_PolS
             PolState = ''
         #datalen = file_obj.detector.counts.shape[0]
         if ndims == 2:
-            if DEBUG: print "2d"
+            if DEBUG: print("2d")
             ypixels = dims[0]
             xpixels = dims[1]
         elif ndims >= 3:
-            if DEBUG: print "3d"
+            if DEBUG: print("3d")
             frames = dims[0]
             xpixels = dims[1]
             ypixels = dims[2]
@@ -234,11 +234,11 @@ def LoadICPData(filename, path="", friendly_name="", auto_PolState=False, PolSta
         PolState = ''
     #datalen = file_obj.detector.counts.shape[0]
     if ndims == 2:
-        if DEBUG: print "2d"
+        if DEBUG: print("2d")
         ypixels = file_obj.detector.counts.shape[0]
         xpixels = file_obj.detector.counts.shape[1]
     elif ndims >= 3:
-        if DEBUG: print "3d"
+        if DEBUG: print("3d")
         frames = file_obj.detector.counts.shape[0]
         ypixels = file_obj.detector.counts.shape[1]
         xpixels = file_obj.detector.counts.shape[2]

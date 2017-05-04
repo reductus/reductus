@@ -88,12 +88,12 @@ def _build_metric_units(unit, abbr):
                         n=1e-9, p=1e-12, f=1e-15)
     short_prefix['μ'] = 1e-6
     map = {abbr:1}
-    map.update([(P+abbr, scale) for (P, scale) in short_prefix.iteritems()])
+    map.update([(P+abbr, scale) for (P, scale) in short_prefix.items()])
     for name in [unit, unit.capitalize()]:
         map.update({name:1, name+'s':1})
-        map.update([(P+name, scale) for (P, scale) in prefix.iteritems()])
-        map.update([(P+'*'+name, scale) for (P, scale) in prefix.iteritems()])
-        map.update([(P+name+'s', scale) for (P, scale) in prefix.iteritems()])
+        map.update([(P+name, scale) for (P, scale) in prefix.items()])
+        map.update([(P+'*'+name, scale) for (P, scale) in prefix.items()])
+        map.update([(P+name+'s', scale) for (P, scale) in prefix.items()])
     return map
 
 
@@ -102,8 +102,8 @@ def _build_plural_units(**kw):
     Construct names for the given units.  Builds singular and plural form.
     """
     map = {}
-    map.update([(name, scale) for name, scale in kw.iteritems()])
-    map.update([(name+'s', scale) for name, scale in kw.iteritems()])
+    map.update([(name, scale) for name, scale in kw.items()])
+    map.update([(name+'s', scale) for name, scale in kw.items()])
     return map
 
 

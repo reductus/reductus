@@ -6,6 +6,7 @@ from __future__ import print_function
 
 import os
 import datetime
+from io import BytesIO
 
 import numpy as np
 
@@ -20,8 +21,7 @@ def load_from_string(filename, data, entries=None):
     """
     Load a nexus file from a string, e.g., as returned from url.read().
     """
-    from StringIO import StringIO
-    fd = StringIO(data)
+    fd = BytesIO(data)
     entries = load_entries(filename, fd, entries=entries)
     fd.close()
     return entries

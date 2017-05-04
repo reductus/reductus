@@ -32,7 +32,7 @@ def show_result(name, p, dp, Ep, Edp, tol=2e-16):
     if VERBOSE > 0:
         print("Test:", name)
         print("parameter   expected value   rel. error")
-        for i in xrange(len(p)):
+        for i in range(len(p)):
             print("%12.5g  %12.5g %12.5g"%(p[i], Ep[i], err_p[i]))
         print("p-error     expected value   rel. error")
         for i in range(len(p)):
@@ -67,7 +67,7 @@ def check_uncertainty(n=10000):
         dy = y
     p = wpolyfit(x, y, dy=dy, degree=1)
     P = N.empty((2, n), 'd')
-    for i in xrange(n):
+    for i in range(n):
         #pi = N.polyfit(x,N.random.normal(y,dy),degree=1)
         pi = wpolyfit(x, N.random.normal(y, dy), dy=dy, degree=1)
         P[:, i] = pi.coeff

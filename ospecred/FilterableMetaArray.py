@@ -1,4 +1,5 @@
-from cStringIO import StringIO
+from io import BytesIO
+#from cStringIO import StringIO as BytesIO
 
 from numpy import ndarray, array, fromstring, float, float32, ones, empty, newaxis, savetxt, sqrt, mod, isnan, ma, hstack, log10
 
@@ -7,7 +8,7 @@ from .MetaArray import MetaArray
 class FilterableMetaArray(MetaArray):
     def __new__(cls, *args, **kw):
         obj = MetaArray.__new__(cls, *args, **kw)
-        #print "fma extra"
+        #print("fma extra")
         obj.extrainfo = obj._info[-1]
         return obj
 
@@ -21,7 +22,7 @@ class FilterableMetaArray(MetaArray):
                 ax['values_len'] = len(axstrs[-1])
                 ax['values_type'] = str(ax['values'].dtype)
                 del ax['values']
-        fd = StringIO()
+        fd = BytesIO()
         fd.write(str(meta) + '\n\n')
         for ax in axstrs:
             fd.write(ax)
@@ -37,10 +38,10 @@ class FilterableMetaArray(MetaArray):
                 values = array(ax['values'])
                 extrema[ax['name']] = [values.min(), values.max()]
         return extrema
-    
+
     @classmethod
     def loads(cls, str):
-        fd = StringIO(str)
+        fd = BytesIO(str)
         meta = ''
         while True:
             line = fd.readline().strip()
@@ -48,14 +49,14 @@ class FilterableMetaArray(MetaArray):
                 break
             meta += line
         meta = eval(meta)
-        
+
         ## read in axis values
         for ax in meta['info']:
             if ax.has_key('values_len'):
                 ax['values'] = fromstring(fd.read(ax['values_len']), dtype=ax['values_type'])
                 del ax['values_len']
                 del ax['values_type']
-        
+
         subarr = fromstring(fd.read(), dtype=meta['type'])
         subarr = subarr.view(FilterableMetaArray)
         subarr.shape = meta['shape']
@@ -75,7 +76,7 @@ class FilterableMetaArray(MetaArray):
         metadata.update(self.extrainfo)
         metadata['plottable'] = self.get_plottable()
         return metadata
-    
+
     def export(self):
         return_value = {"name": self.extrainfo["friendly_name"], "entry": self.extrainfo["entry"]}
         if len(self.shape) == 3:
@@ -85,11 +86,11 @@ class FilterableMetaArray(MetaArray):
             data = self
             cols = data._info[2]['cols']
             data_cols = [col['name'] for col in cols if col['name'].startswith('counts')]
-            
+
             result = []
-            for colnum, col in enumerate(data_cols):      
+            for colnum, col in enumerate(data_cols):
                 array_out = data['Measurements':col].view(ndarray)
-                
+
                 dump = ""
                 xlist = data._info[0]['values'].tolist()
                 ylist = data._info[1]['values'].tolist()
@@ -98,12 +99,11 @@ class FilterableMetaArray(MetaArray):
                     for iy, y in enumerate(ylist):
                         dump += "%g\t%g\t%g\n" % (x, y, array_out[ix, iy])
                 result.append(dump)
-                
+
             return_value["export_string"] =  result[0]
-            
+
         elif len(self.shape) == 2:
-            # TODO: does this need to be StringIO rather than cStringIO?
-            fid = StringIO()
+            fid = BytesIO()
             cols = self._info[1]['cols']
             # put x axis in first:
             data_cols = [self._info[0]['name']]
@@ -112,22 +112,22 @@ class FilterableMetaArray(MetaArray):
             savetxt(fid, output_data, header="\t".join(data_cols))
             fid.seek(0)
             return_value["export_string"] = fid.read()
-            
+
         else:
-            print "can only handle 1d or 2d data"
+            print("can only handle 1d or 2d data")
             return_value["export_string"] = ""
-            
+
         return return_value
-        
+
     def get_plottable(self, binary_fp=None):
         if len(self.shape) == 3:
             return self.get_plottable_2d(binary_fp)
         elif len(self.shape) == 2:
             return self.get_plottable_1d()
         else:
-            print "can only handle 1d or 2d data"
-            return 
-            
+            print("can only handle 1d or 2d data")
+            return
+
     def get_plottable_1d(self, binary_fp=None):
         colors = ['Blue', 'Red', 'Green', 'Yellow']
         cols = self._info[1]['cols']
@@ -142,7 +142,7 @@ class FilterableMetaArray(MetaArray):
             'clear_existing': False,
             'data': []
         }
-        
+
         for i, col in enumerate(data_cols):
             y = self['Measurements':col].tolist()
             #error_col = next((i for i in xrange(len(cols)) if cols[i]['name'] == ('error_'+col)), -1)
@@ -153,9 +153,9 @@ class FilterableMetaArray(MetaArray):
             series_data = [[xx,yy] for xx, yy in zip(x,y)]
             plottable_data['data'].append(series_data)
             plottable_data['options']['series'].append({'label': col})
-            
+
         return [plottable_data]
-        
+
     def get_plottable_nd(self, binary_fp=None):
         colors = ['Blue', 'Red', 'Green', 'Yellow']
         cols = self._info[1]['cols']
@@ -179,7 +179,7 @@ class FilterableMetaArray(MetaArray):
                                 },
                          },],
         }
-        
+
         for i, col in enumerate(data_cols):
             y = self['Measurements':col].tolist()
             error_col = next((i for i in xrange(len(cols)) if cols[i]['name'] == ('error_'+col)), -1)
@@ -194,18 +194,18 @@ class FilterableMetaArray(MetaArray):
             }
             plottable_data['ordery'].append(ordery)
             plottable_data['series'][0]['data'][col] = series_y
-            
+
         return [plottable_data]
-            
+
     def get_plottable_2d(self, binary_fp=None):
         # grab the first counts col:
         cols = self._info[2]['cols']
         data_cols = [col['name'] for col in cols if col['name'].startswith('counts')]
-        
+
         result = []
-        for colnum, col in enumerate(data_cols):      
+        for colnum, col in enumerate(data_cols):
             array_out = self['Measurements':col].view(ndarray)
-            
+
             dump = {}
             if binary_fp is not None:
                 # use lookup to get binary value
@@ -213,12 +213,12 @@ class FilterableMetaArray(MetaArray):
                 dump['binary_fp'] = binary_fp + ":" + str(colnum)
             else: # use the old way
                 z = [ma.masked_array(array_out.T, mask=isnan(array_out.T)).tolist(fill_value=None)]
-                
+
             #zbin_base64 = base64.b64encode(array_out.tostring())
             #z = [arr[:, 0].tolist() for arr in self]
             dims = {}
             # can't display zeros effectively in log... set zmin to smallest non-zero
-            
+
             lowest = 1e-10
             non_zeros = array_out[array_out > lowest]
             if len(non_zeros) > 0:
@@ -227,7 +227,7 @@ class FilterableMetaArray(MetaArray):
             else:
                 dims['zmin'] = float(lowest)
                 dims['zmax'] = float(lowest)
-                
+
             #dims['zmin'] = array_out.min()
             #dims['zmax'] = array_out.max()
             axis = ['x', 'y']
@@ -243,26 +243,26 @@ class FilterableMetaArray(MetaArray):
             title = 'MAGIK data' # That's creative enough, right?
             plot_type = '2d'
             transform = 'log' # this is nice by default
-            dump.update( dict(type=plot_type, z=z, title=title, dims=dims, 
-                        xlabel=xlabel, ylabel=ylabel, zlabel=zlabel, 
+            dump.update( dict(type=plot_type, z=z, title=title, dims=dims,
+                        xlabel=xlabel, ylabel=ylabel, zlabel=zlabel,
                         transform=transform) )
             result.append(dump)
         return result
-    
+
     def get_plottable_binary(self):
         cols = self._info[2]['cols']
         data_cols = [col['name'] for col in cols if col['name'].startswith('counts')]
-        
+
         result = []
         for col in data_cols:
             # output in column-major order, since first index is "x",
-            # and we want to traverse that axis first.       
+            # and we want to traverse that axis first.
             array_out = self['Measurements':col].view(ndarray)
             array_out = array_out.ravel('F')
             result.append(array_out.astype(float32).tostring())
-        
+
         return result
-     
+
     def get_csv(self):
         if len(self.shape) == 3:
             num_cols = self.shape[2]
@@ -272,19 +272,19 @@ class FilterableMetaArray(MetaArray):
             data_names = []
             data_names.append(self._info[0]['name']) # xlabel
             data_names.append(self._info[1]['name']) # ylabel
-            
+
             for i in range(num_cols):
                 new_array[:,i+2] = self[:,:,i].view(ndarray).ravel()
                 data_names.append(self._info[2]['cols'][i]['name'])
-            
-            outstr = StringIO()
+
+            outstr = BytesIO()
             outstr.write('#' + '\t'.join(data_names) + '\n')
             savetxt(outstr, new_array, delimiter='\t', newline='\n')
-            
+
             outstr.seek(0)
             return_val = outstr.read()
             outstr.close()
-            
+
             return return_val
 
         elif len(self.shape) == 2:
@@ -293,27 +293,27 @@ class FilterableMetaArray(MetaArray):
             new_array[:,0] = (self._info[0]['values'])
             data_names = []
             data_names.append(self._info[0]['name']) # xlabel
-            
+
             for i in range(num_cols):
                 new_array[:,i+1] = self[:,i].view(ndarray)
                 data_names.append(self._info[1]['cols'][i]['name'])
-            
-            outstr = StringIO()
+
+            outstr = BytesIO()
             outstr.write('#' + '\t'.join(data_names) + '\n')
             savetxt(outstr, new_array, delimiter='\t')
-            
+
             outstr.seek(0)
             return_val = outstr.read()
             outstr.close()
             return return_val
-            
+
         else:
-            print "can only handle 1d or 2d data"
-            return     
-        
+            print("can only handle 1d or 2d data")
+            return
+
 #    def get_plottable_new(self):
 #        array_out = self['Measurements':'counts']
-#        z = {'png': base64.b64encode(array_to_png(array_out, colormap='jet')), 
+#        z = {'png': base64.b64encode(array_to_png(array_out, colormap='jet')),
 #             'data': array_out.tolist()}
 #        dims = {}
 #        dims['zmin'] = array_out.min()
