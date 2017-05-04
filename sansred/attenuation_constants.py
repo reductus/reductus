@@ -1,11 +1,14 @@
+import re
+import json
+
 from numpy import array
 
 attenuation = {}
 
-# from NCNR_Utils.ipf in IGOR reduction: 
+# From NCNR_Utils.ipf in IGOR reduction:
 ngb_source_string = """\
   // new calibrations MAY 2013
-	root:myGlobals:Attenuators:NGBatt0 = {1,1,1,1,1,1,1,1,1,1,1,1,1}	
+	root:myGlobals:Attenuators:NGBatt0 = {1,1,1,1,1,1,1,1,1,1,1,1,1}
 	root:myGlobals:Attenuators:NGBatt1 = {0.512,0.474,0.418,0.392,0.354,0.325,0.294,0.27,0.255,0.222,0.185,0.155}
  	root:myGlobals:Attenuators:NGBatt2 = {0.268,0.227,0.184,0.16,0.129,0.108,0.0904,0.0777,0.0689,0.0526,0.0372,0.0263}
   	root:myGlobals:Attenuators:NGBatt3 = {0.135,0.105,0.0769,0.0629,0.0455,0.0342,0.0266,0.0212,0.0178,0.0117,0.007,0.00429}
@@ -29,7 +32,7 @@ ngb_source_string = """\
 	root:myGlobals:Attenuators:NGBatt7_err = {0.693,0.76,0.556,0.607,0.554,0.774,0.516,0.56,0.924,5,5,5}
 	root:myGlobals:Attenuators:NGBatt8_err = {0.771,0.813,0.59,0.657,0.612,0.867,0.892,1.3,5,5,5,5}
 	root:myGlobals:Attenuators:NGBatt9_err = {0.837,0.867,0.632,0.722,0.751,1.21,5,5,5,5,5,5}
-	root:myGlobals:Attenuators:NGBatt10_err = {0.892,0.921,0.715,0.845,1.09,5,5,5,5,5,5,5}  
+	root:myGlobals:Attenuators:NGBatt10_err = {0.892,0.921,0.715,0.845,1.09,5,5,5,5,5,5,5}
 
 """
 
@@ -46,7 +49,7 @@ ngb30_source_string = """\
 	root:myGlobals:Attenuators:ng3att8 = {0.000320057,0.0001918,0.0001025,6.085e-05,3.681e-05,1.835e-05,6.74002e-06,3.25288e-06,1.15321e-06,3.98173e-07}
 	root:myGlobals:Attenuators:ng3att9 = {6.27682e-05,3.69e-05,1.908e-05,1.196e-05,8.738e-06,6.996e-06,6.2901e-07,2.60221e-07,7.49748e-08,2.08029e-08}
 	root:myGlobals:Attenuators:ng3att10 = {1.40323e-05,8.51e-06,5.161e-06,4.4e-06,4.273e-06,1.88799e-07,5.87021e-08,2.08169e-08,4.8744e-09,1.08687e-09}
-  
+
      // percent errors as measured, May 2007 values
      // zero error for zero attenuators, appropriate average values put in for unknown values
 	root:myGlobals:Attenuators:ng3att0_err = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }
@@ -64,7 +67,7 @@ ngb30_source_string = """\
 
 ng7_source_string = """\
   // New calibration, June 2007, John Barker
-	root:myGlobals:Attenuators:ng7att0 = {1, 1, 1, 1, 1, 1, 1, 1 ,1,1}	
+	root:myGlobals:Attenuators:ng7att0 = {1, 1, 1, 1, 1, 1, 1, 1 ,1,1}
 	root:myGlobals:Attenuators:ng7att1 = {0.448656,0.4192,0.3925,0.3661,0.3458,0.3098,0.2922,0.2738,0.2544,0.251352}
  	root:myGlobals:Attenuators:ng7att2 = {0.217193,0.1898,0.1682,0.148,0.1321,0.1076,0.0957,0.08485,0.07479,0.0735965}
   	root:myGlobals:Attenuators:ng7att3 = {0.098019,0.07877,0.06611,0.05429,0.04548,0.03318,0.02798,0.0234,0.02004,0.0202492}
@@ -88,14 +91,13 @@ ng7_source_string = """\
 	root:myGlobals:Attenuators:ng7att7_err = {0.8,0.697,0.9149,0.583,1.173,2.427,1.242,2,2,2}
 	root:myGlobals:Attenuators:ng7att8_err = {1,0.898,1.24,0.696,1.577,3.412,3,3,3,3}
 	root:myGlobals:Attenuators:ng7att9_err = {1.5,1.113,1.599,1.154,2.324,4.721,5,5,5,5}
-	root:myGlobals:Attenuators:ng7att10_err = {1.5,1.493,5,5,5,5,5,5,5,5}  
+	root:myGlobals:Attenuators:ng7att10_err = {1.5,1.493,5,5,5,5,5,5,5,5}
 """
 
 def compile_source(source, db):
-    import re, json
     source = source.replace("ng3", "ngb30")
-    preface = re.compile("[ \t]*root:myGlobals:Attenuators:(\S*)att([0-9]+)\s*=\s*\{(.*)\}")
-    err_preface = re.compile("[ \t]*root:myGlobals:Attenuators:(\S*)att([0-9]+)_err\s*=\s*\{(.*)\}")
+    preface = re.compile(r"[ \t]*root:myGlobals:Attenuators:(\S*)att([0-9]+)\s*=\s*\{(.*)\}")
+    err_preface = re.compile(r"[ \t]*root:myGlobals:Attenuators:(\S*)att([0-9]+)_err\s*=\s*\{(.*)\}")
     for att in preface.findall(source):
         instr = att[0].upper()
         atten = att[1]
@@ -108,11 +110,10 @@ def compile_source(source, db):
         db.setdefault(instr, {})
         db[instr].setdefault("att_err", {})
         db[instr]["att_err"][atten] = array(json.loads('[' + att[2] + ']'), dtype="float")
-    return
 
 compile_source(ngb30_source_string, attenuation)
-attenuation['NGB30']['lambda'] = array([4,5,6,7,8,10,12,14,17,20], dtype="float")
+attenuation['NGB30']['lambda'] = array([4, 5, 6, 7, 8, 10, 12, 14, 17, 20], dtype="float")
 compile_source(ng7_source_string, attenuation)
-attenuation['NG7']['lambda'] = array([4,5,6,7,8,10,12,14,17,20], dtype="float")
+attenuation['NG7']['lambda'] = array([4, 5, 6, 7, 8, 10, 12, 14, 17, 20], dtype="float")
 compile_source(ngb_source_string, attenuation)
-attenuation['NGB']['lambda'] = array([3,4,5,6,8,10,12,14,16,20,25,30], dtype="float")
+attenuation['NGB']['lambda'] = array([3, 4, 5, 6, 8, 10, 12, 14, 16, 20, 25, 30], dtype="float")

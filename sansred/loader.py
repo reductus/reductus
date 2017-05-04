@@ -50,8 +50,8 @@ def readSANSNexuz(input_file, file_obj=None):
     for entryname, entry in file.items():
         metadata = {}
         reals = {}
-            
-        detdata = entry['data/areaDetector'].value.reshape(128,128)
+
+        detdata = entry['data/areaDetector'].value.reshape(128, 128)
 
         for mkey in metadata_lookup:
             field = entry.get(metadata_lookup[mkey], None)
@@ -64,17 +64,16 @@ def readSANSNexuz(input_file, file_obj=None):
                     field = field.astype("float")
                 elif field.dtype.kind == 'i':
                     field = field.astype("int")
-                
+
             metadata[mkey] = field
-        
+
         metadata['entry'] = entryname
         #metadata['det.dis'] = das['detectorPosition/softPosition'].value[0]
         #metadata['resolution.lmda'] = das['wavelength/ewavelength'].value[0]
         #metadata['det.beamx'] = das['areaDetector/beamCenterX'].value[0]
         #metadata['det.beamy'] = das['areaDetector/beamCenterY'].value[0]
-        
-        dataset = SansData(data = detdata, metadata = metadata)
+
+        dataset = SansData(data=detdata, metadata=metadata)
         datasets.append(dataset)
-    
+
     return datasets
-    
