@@ -995,4 +995,5 @@ def test_parse_parameters():
 
     assert p['e1']['typeattr'] == {'pattern': '.*'}
 
-    assert p['r1']['typeattr'] == {'range': 'x'}
+    assert p['r1']['datatype'] == 'range'
+    assert p['r1']['typeattr'] == {'axis': 'x'}

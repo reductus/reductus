@@ -509,8 +509,8 @@ def run_example(template, config, seed=None, verbose=False): # pragma no cover
 # internal tests
 def test_format_ordered():
     udict, odict = {'x': 2, 'a': 3}, [('a', 3), ('x', 2)]
-    def ufn(a):
-        return a
+    # Note: Leave the ufn function as a 1-liner.  The test relies on the format
+    def ufn(a): return a
     class A(object):
         def __init__(self):
             self.x, self.a = 2, 3

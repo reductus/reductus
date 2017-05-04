@@ -323,12 +323,12 @@ class PolynomialModel(object):
     @property
     def var(self):
         """solution variance"""
-        return self._conf.var
+        return np.hstack((self._conf.var, 0)) if self.origin else self._conf.var
 
     @property
     def std(self):
         """solution standard deviation"""
-        return self._conf.std
+        return np.hstack((self._conf.std, 0)) if self.origin else self._conf.std
 
     @property
     def p(self):
