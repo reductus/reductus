@@ -21,32 +21,61 @@ from __future__ import division  # Get true division
 
 import numpy as np
 
-def mean(X, varX, biased=True):
+def mean(X, varX, biased=True, axis=None, dtype=None, out=(None, None), keepdims=False):
     # type: (np.ndarray, np.ndarray, bool) -> (float, float)
     r"""
     Return the mean and variance of a dataset.
 
-    If varX is estimated from the data, then *biased* is True, and the
+    If varX is estimated from the data, then use *biased=True* so that the
     estimated variance is scaled by the normalized $\chi^2$.  See the
     wikipedia page for the weighted arithmetic mean for details.
     """
-    total_weight = np.sum(1./varX)
-    M = np.sum(X/varX)/total_weight
+    total_weight = np.sum(1./varX, axis=axis, dtype=dtype, keepdims=keepdims)
+    M = np.sum(X/varX, axis=axis, dtype=dtype, keepdims=keepdims)/total_weight
     varM = 1./total_weight
     if biased:
-        # Scale by chisq if variance calculation is biased
-        varM *= np.sum((X-M)**2/varX)/(len(X)-1)
+        # Scale by normalized chisq if variance calculation is biased
+        chisq = np.sum((X-M)**2/varX, axis=axis, dtype=dtype, keepdims=keepdims)
+        dof = np.prod(X.shape)/np.prod(chisq.shape) - 1
+        varM *= chisq/dof
+
+    # Special handling for the case when out is specified, for example, if out
+    # is a view on a slice within another array.  The pseudo-swap replaces
+    # M, varM with Mout, varMout if that returned array matches the requested
+    # output arrays if explicit output arrays are requested.
+    Mout, varMout = out
+    if Mout is not None:
+        Mout[:], M = M, Mout
+    if varMout is not None:
+        varMout[:], varM = varM, varMout
     return M, varM
 
 
-def sum(X, varX, axis=None):
-    # type: (np.ndarray, np.ndarray, in) -> (float, float)
+def sum(X, varX, axis=None, dtype=None, out=(None, None), keepdims=False):
+    # type: (np.ndarray, np.ndarray, ...) -> (float, float)
     r"""
-    Return the sum and sum variance of a a dataset.
+    Return the sum and variance of a dataset.
+
+    Follows the numpy sum interface, except a pair of output arrays is required
+    if you want to reuse an output.
     """
-    M = np.sum(X, axis=axis)
-    varM = np.sum(varX, axis=axis)
+    M = np.sum(X, axis=axis, dtype=dtype, out=out[0], keepdims=keepdims)
+    varM = np.sum(varX, axis=axis, dtype=dtype, out=out[1], keepdims=keepdims)
     return M, varM
+
+
+def cumsum(X, varX, axis=None, dtype=None, out=(None, None), keepdims=False):
+    # type: (np.ndarray, np.ndarray, ...) -> (float, float)
+    r"""
+    Return the cumulative sum and variance of a dataset.
+
+    Follows the numpy cumsum interface, except a pair of output arrays is
+    required if you want to reuse an output.
+    """
+    M = np.cumsum(X, axis=axis, dtype=dtype, out=out[0], keepdims=keepdims)
+    varM = np.cumsum(varX, axis=axis, dtype=dtype, out=out[1], keepdims=keepdims)
+    return M, varM
+
 
 def average(X, varX, W, varW, axis=None):
     # type: (np.ndarray, np.ndarray, np.ndarray, np.ndarray, int) -> (float, float)
