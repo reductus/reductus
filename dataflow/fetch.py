@@ -1,3 +1,46 @@
+"""
+Data sources
+============
+
+Need to configure a list of data sources from which to fetch files.  This is
+done by setting the global *DATA_SOURCE* variable in the dataflow.fetch module
+
+Each datasources needs to specify the name of the data source, its URL
+and a path within the URL which will provide a list of files.  Alternatively,
+if the data source has an associated DOI, then specify the DOI.
+
+For example::
+
+    from dataflow import fetch
+    fetch.DATA_SOURCES = [
+        {
+            "name": "ncnr_DOI",
+            "DOI": "10.18434/T4201B",
+        },
+        {
+            "name": "ncnr",
+            "url": "http://ncnr.nist.gov/pub/",
+            "start_path": "ncnrdata",
+        },
+        {
+            "name": "charlotte",
+            "url": "http://charlotte.ncnr.nist.gov/pub",
+            "start_path": "",
+        },
+        {
+            "name": "nice_local",
+            "url": "file:///",
+            "start_path": "usr/local/nice/server_data/experiments",
+        },
+        {
+            "name": "local",
+            "url": "file:///",
+            "start_path": "",
+        },
+    ]
+
+"""
+
 from __future__ import print_function
 
 import urllib2
@@ -14,6 +57,7 @@ from .lib.iso8601 import seconds_since_epoch
 
 # override this if you want to point these to another place.
 # in particular, remove the "local" option if deploying in the cloud!
+
 DATA_SOURCES = []
 DEFAULT_DATA_SOURCE = "ncnr"
 
