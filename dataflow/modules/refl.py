@@ -12,7 +12,7 @@ from reflred.footprint import FootprintData
 INSTRUMENT = "ncnr.refl"
 
 class DataflowReflData(ReflData):
-    """ 
+    """
     This doesn't work because on first load, the class is still ReflData from nexusref
     (only becomes DataFlowReflData on cache/reload)
     """
@@ -22,7 +22,8 @@ class DataflowReflData(ReflData):
                 'xaxis': {'label': self.xlabel + ' (' + self.xunits + ')'},
                 'yaxis': {'label': self.vlabel + ' (' + self.vunits + ')'}
             },
-            'data': [[x,y,{'yupper': y+dy, 'ylower':y-dy,'xupper':x,'xlower':x}] for x,y,dy in zip(self.x, self.v, self.dv)],
+            'data': [[x, y, {'yupper': y+dy, 'ylower':y-dy, 'xupper':x, 'xlower':x}]
+                     for x, y, dy in zip(self.x, self.v, self.dv)],
             'title': self.name + ":" + self.entry
         }
         return plottable
@@ -35,56 +36,56 @@ class DataflowReflData(ReflData):
 def make_cached_subloader_module(load_action, prefix=""):
     """
     This assumes that the load_action can be run with a single fileinfo
-    in any of the fields of datatype 'fileinfo', 
+    in any of the fields of datatype 'fileinfo',
     and collates the results of running them one at a time.
     """
     # Read the module defintion from the docstring
     module_description = auto_module(load_action)
     fields = module_description['fields']
-    fileinfo_fields = [f for f in fields if f['datatype']=='fileinfo']
+    fileinfo_fields = [f for f in fields if f['datatype'] == 'fileinfo']
 
     # Tag module ids with prefix
     module_description['name'] += " (cached)"
     mod_id = module_description['id'] = prefix + module_description['id']
     template_def = {
-      "name": "loader_template",
-      "description": "cached remote loader",
-      "modules": [
-        {"module": mod_id, "version": "0.1", "config": {}}
-      ],
-      "wires": [],
-      "instrument": INSTRUMENT,
-      "version": "0.0"
+        "name": "loader_template",
+        "description": "cached remote loader",
+        "modules": [
+            {"module": mod_id, "version": "0.1", "config": {}}
+        ],
+        "wires": [],
+        "instrument": INSTRUMENT,
+        "version": "0.0"
     }
     template = df.Template(**template_def)
-    
+
     # Tag each terminal data type with the data type prefix, if it is
     # not already a fully qualified name
     for v in module_description['inputs'] + module_description['outputs']:
         if '.' not in v['datatype']:
             v['datatype'] = prefix + v['datatype']
 
-    def new_action(**kwargs):        
+    def new_action(**kwargs):
         outputs = []
         fileinfos = {}
         for ff in fileinfo_fields:
             fileinfos[ff['id']] = kwargs.pop(ff['id'], [])
             # replace fileinfos with empty lists
-            kwargs[ff['id']] = [] 
+            kwargs[ff['id']] = []
         for field_id in fileinfos:
             fileinfo = fileinfos[field_id]
-            for fi in fileinfo:               
+            for fi in fileinfo:
                 # put a single fileinfo into the hopper
                 kwargs[field_id] = [fi]
                 config = {"0": kwargs}
                 nodenum = 0
-                terminal_id = "output"               
+                terminal_id = "output"
                 retval = process_template(template, config, target=(nodenum, terminal_id))
                 outputs.extend(retval.values)
                 # take it back out before continuing the loop(s)
-                kwargs[field_id] = [] 
+                kwargs[field_id] = []
         return outputs
-    
+
     new_action.cached = True
     module_description['id'] += ".cached"
     # Define and register the module
@@ -95,7 +96,7 @@ def define_instrument():
     modules = make_modules(steps.ALL_ACTIONS, prefix=INSTRUMENT+'.')
     modules.append(make_cached_subloader_module(steps.super_load, prefix=INSTRUMENT+'.'))
     modules.append(make_cached_subloader_module(steps.ncnr_load, prefix=INSTRUMENT+'.'))
-    
+
     # Define data types
     refldata = df.DataType(INSTRUMENT+".refldata", ReflData)
     poldata = df.DataType(INSTRUMENT+".poldata", PolarizationData)
@@ -110,14 +111,14 @@ def define_instrument():
     #template_path = resource_path("../dataflow/templates")
     #template_names = [fn for fn in os.listdir(template_path) if fn.endswith(".json")]
     #templates = [json.loads(open(os.path.join(template_path, tn), 'r').read()) for tn in template_names]
-    
+
     # Define instrument
     refl1d = df.Instrument(
         id=INSTRUMENT,
         name='NCNR reflectometer',
         menu=[('steps', modules)],
         datatypes=[refldata, poldata, deadtime, footprint],
-        template_defs = templates.get_templates(INSTRUMENT),
+        template_defs=templates.get_templates(INSTRUMENT),
         )
 
     # Register instrument
@@ -128,8 +129,8 @@ def define_instrument():
 def loader_template():
     refl1d = df.lookup_instrument(INSTRUMENT)
     diagram = [
-            ["ncnr_load", {}],
-            ["divergence", {"data": "-.output"}],
+        ["ncnr_load", {}],
+        ["divergence", {"data": "-.output"}],
     ]
     template = make_template(
         name="loader",
@@ -162,25 +163,25 @@ def unpolarized_template():
         ["join => spec", {"data": "-.output"}],
 
         ["nop", {"data": "split.backp"}],
-        ["mask_specular",  {"data": "-.output"}],
-        ["align_background",  {"data": "-.output", "offset": "auto"}],
-        ["join => backp",  {"data": "-.output"},],
+        ["mask_specular", {"data": "-.output"}],
+        ["align_background", {"data": "-.output", "offset": "auto"}],
+        ["join => backp", {"data": "-.output"}],
 
         ["nop", {"data": "split.backm"}],
-        ["mask_specular",  {"data": "-.output"}],
-        ["align_background",  {"data": "-.output", "offset": "auto"}],
-        ["join => backm",  {"data": "-.output"}],
+        ["mask_specular", {"data": "-.output"}],
+        ["align_background", {"data": "-.output", "offset": "auto"}],
+        ["join => backm", {"data": "-.output"}],
 
         ["nop", {"data": "split.intensity"}],
-        ["rescale",  {"data": "-.output", "scale": [1.0], "dscale": [0.0]}],
-        ["join => intensity",  {"data": "-.output", "tolerance": 0.0001}],
+        ["rescale", {"data": "-.output", "scale": [1.0], "dscale": [0.0]}],
+        ["join => intensity", {"data": "-.output", "tolerance": 0.0001}],
 
         # Operate on the combined data for the final reduction
         ["subtract_background", {
             "data": "spec.output",
             "backp": "backp.output",
             "backm": "backm.output"}],
-        ["divide_intensity",  {"data": "-.output", "base": "intensity.output"}],
+        ["divide_intensity", {"data": "-.output", "base": "intensity.output"}],
         #["footprint",  {"data": "-.output")}],
     ]
     #for m in refl1d.modules: print m.__dict__
@@ -202,12 +203,12 @@ def demo():
     #template.show()
     #print "="*24
     test_dataset = [{'path': "ncnrdata/cgd/201511/21066/data/HMDSO_17nm_dry14.nxz.cgd",
-                      'mtime': 1447353278}]
+                     'mtime': 1447353278}]
     refl = process_template(template=template,
                             config={"0": {"filelist": test_dataset}},
                             target=(len(template.modules)-1, "output"),
                             #target=(2, "data"),  # return an input
-                            )
+                           )
     #print "refl",refl.values
     return refl.values
 

@@ -71,7 +71,7 @@ def interp(x, xp, fp, left=None, right=None):
         f = fp[np.zeros_like(x, dtype='i')]
     else:
         xp = np.asarray(xp)
-        if np.any(np.diff(xp)<=0.):
+        if np.any(np.diff(xp) <= 0.):
             raise ValueError("interp needs a sorted list")
         if not is_scalar_x:
             x = np.asarray(x)
@@ -89,8 +89,8 @@ def interp(x, xp, fp, left=None, right=None):
         else:
             return f
     else:
-        f[x<xp[0]] = left if left is not None else fp[0]
-        f[x>xp[-1]] = right if right is not None else fp[-1]
+        f[x < xp[0]] = left if left is not None else fp[0]
+        f[x > xp[-1]] = right if right is not None else fp[-1]
         return f
 
 

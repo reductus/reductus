@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import re
 import urllib2
 
@@ -16,15 +18,15 @@ def get_DOI_metadata(doi=NCNR_DATA_DOI):
 
 def unescape(s):
     return re.sub("%([0-9A-Fa-f][0-9A-Fa-f])", lambda m: chr(int(m.group(1), 16)), s)
-   
+
 def get_target(doi=NCNR_DATA_DOI):
     # an easier way to get the target value... not tested extensively
     url = "http://dx.doi.org/%s" % (doi,)
     file_pointer = urllib2.urlopen(url)
     return file_pointer.url
-    
+
 if __name__ == '__main__':
     m = get_DOI_metadata()
-    print("metadata: %s\n" % (m,))
+    print("metadata: %s\n" % m)
     n = get_target()
-    print("target: %s" % (n,))
+    print("target: %s" % n)

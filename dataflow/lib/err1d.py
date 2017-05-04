@@ -120,10 +120,12 @@ def interp(X, Xp, Fp, varFp, left=None, right=None):
     else:
         F, varF = Fp[idx], varFp[idx]
     #print p,F,varF,idx
-    if left is None: left = Fp[0],varFp[0]
-    if right is None: right = Fp[-1],varFp[-1]
-    F[X<Xp[0]], varF[X<Xp[0]] = left
-    F[X>Xp[-1]], varF[X>Xp[-1]] = right
+    if left is None:
+        left = Fp[0], varFp[0]
+    if right is None:
+        right = Fp[-1], varFp[-1]
+    F[X < Xp[0]], varF[X < Xp[0]] = left
+    F[X > Xp[-1]], varF[X > Xp[-1]] = right
 
     return F, varF
 
@@ -355,7 +357,7 @@ def test():
         else:
             Z, varZ = op(X, varX, Y, varY)
         assert abs(Z-result)/result < 1e-13 and (varZ-variance)/variance < 1e-13, \
-            "expected (%g,%g) got (%g,%g)"%(result,variance,Z,varZ)
+            "expected (%g,%g) got (%g,%g)"%(result, variance, Z, varZ)
 
     _check(add, X+Y, varX + varY)
     _check(sub, X-Y, varX + varY)
@@ -380,7 +382,7 @@ def test_against_uncertainties_package():
     def _compare(result, u):
         Z, varZ = result
         assert abs(Z-u.n)/u.n < 1e-13 and (varZ-u.s**2)/u.s**2 < 1e-13, \
-            "expected (%g,%g) got (%g,%g)"%(u.n,u.s**2,Z,varZ)
+            "expected (%g,%g) got (%g,%g)"%(u.n, u.s**2, Z, varZ)
 
     def _check_pow(u):
         _compare(pow(X, varX, N), u)

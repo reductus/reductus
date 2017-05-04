@@ -22,7 +22,7 @@ def define_instrument():
     ospec1d = df.DataType(INSTRUMENT+".ospec1d", FilterableMetaArray)
     params = df.DataType(INSTRUMENT+".params", Parameters)
     #offset_data = df.DataType(INSTRUMENT+".offset_data", dict)
-    
+
     # Define instrument
     ospec = df.Instrument(
         id=INSTRUMENT,
@@ -76,7 +76,7 @@ def unpolarized_template():
         ["nop", {"data": "split.backp"}],
         ["mask_specular",  {"data": "-.output"}],
         ["align_background",  {"data": "-.output", "offset": "auto"}],
-        ["join => backp",  {"data": "-.output"},],
+        ["join => backp",  {"data": "-.output"}],
 
         ["nop", {"data": "split.backm"}],
         ["mask_specular",  {"data": "-.output"}],
@@ -120,7 +120,7 @@ def demo():
                             target=(len(template.modules)-1, "output"),
                             #target=(2, "data"),  # return an input
                             )
-    #print "refl",refl.values
+    #print "refl", refl.values
     return refl.values
 
 

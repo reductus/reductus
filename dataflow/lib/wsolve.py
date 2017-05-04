@@ -1,7 +1,7 @@
 r"""
 Weighted linear and polynomial solver with uncertainty.
 
-Given $A \bar x = \bar y \pm \delta \bar y$, solve using *s = wsolve(A,y,dy)*
+Given $A \bar x = \bar y \pm \delta \bar y$, solve using *s = wsolve(A, y, dy)*
 
 *wsolve* uses the singular value decomposition for increased accuracy.
 
@@ -29,11 +29,11 @@ Weighted system::
 
     >>> import numpy as np
     >>> import wsolve
-    >>> A = np.matrix("1,2,3;2,1,3;1,1,1",'d').A
-    >>> dy = [0.2,0.01,0.1]
+    >>> A = np.matrix("1,2,3;2,1,3;1,1,1", 'd').A
+    >>> dy = [0.2, 0.01, 0.1]
     >>> y = [ 14.16, 13.01, 6.15]
-    >>> s = wsolve.wsolve(A,y,dy)
-    >>> print(", ".join("%0.2f +/- %0.2f"%(a,b) for a,b in zip(s.x,s.std)))
+    >>> s = wsolve.wsolve(A, y, dy)
+    >>> print(", ".join("%0.2f +/- %0.2f"%(a, b) for a, b in zip(s.x, s.std)))
     1.05 +/- 0.17, 2.20 +/- 0.12, 2.91 +/- 0.12
 
 
@@ -60,9 +60,9 @@ except ImportError:
 #
 # Example 2: weighted overdetermined system  y = x1 + 2*x2 + 3*x3 + e
 #
-#    A = fullfact([3,3,3]); xin=[1;2;3];
+#    A = fullfact([3, 3, 3]); xin=[1;2;3];
 #    y = A*xin; dy = rand(size(y))/50; y+=dy.*randn(size(y));
-#    [x,s] = wsolve(A,y,dy);
+#    [x, s] = wsolve(A, y, dy);
 #    dx = s.normr*sqrt(sumsq(inv(s.R'))'/s.df);
 #    res = [xin, x, dx]
 
@@ -113,7 +113,7 @@ class LinearModel(object):
     """
     def __init__(self, x=None, DoF=None, SVinv=None, rnorm=None):
         # type: (np.ndarray, int, np.ndarray, float) -> None
-        # Note: SVinv should be computed from S,V where USV' = A
+        # Note: SVinv should be computed from S, V where USV' = A
         #: solution to the equation $Ax = y$
         self.x = x
         #: number of degrees of freedom in the solution
@@ -182,9 +182,9 @@ class LinearModel(object):
         #
         # Since x is a vector, t t' is the inner product sum(t**2).
         # Note that LAPACK allows us to do this simultaneously for many
-        # different x using sqrt(sum(T**2,axis=1)), with T = X' Vinv(S).
+        # different x using sqrt(sum(T**2, axis=1)), with T = X' Vinv(S).
         #
-        # Note: sqrt(F(1-a;1,df)) = T(1-a/2;df)
+        # Note: sqrt(F(1-a;1, df)) = T(1-a/2;df)
         #
         from scipy.stats import t  # lazy import in case scipy not present
         y = np.dot(X, self.x).ravel()
@@ -230,8 +230,8 @@ def wsolve(A, y, dy=1.0, rcond=1e-12):
 
     Returns :class:`LinearModel`.
     """
-    # The ugliness v[:,N.newaxis] transposes a vector
-    # The ugliness N.dot(a,b) is a*b for a,b matrices
+    # The ugliness v[:, N.newaxis] transposes a vector
+    # The ugliness N.dot(a, b) is a*b for a, b matrices
     # The ugliness vh.T.conj() is the hermitian transpose
 
     # Make sure inputs are arrays
@@ -243,7 +243,7 @@ def wsolve(A, y, dy=1.0, rcond=1e-12):
 
     # Apply weighting if dy is not a scalar
     # If dy is a scalar, it cancels out of both sides of the equation
-    # Note: with A,dy arrays instead of matrices, A/dy operates element-wise
+    # Note: with A, dy arrays instead of matrices, A/dy operates element-wise
     # Since dy is a row vector, this divides each row of A by the corresponding
     # element of dy.
     if dy.ndim == 2:
@@ -371,7 +371,7 @@ class PolynomialModel(object):
 
 
 def wpolyfit(x, y, dy=1.0, degree=None, origin=False):
-    # type: (Sequence[float], Sequence[float], Union[Sequence[float],float], Optional[int], bool) -> PolynomialModel
+    # type: (Sequence[float], Sequence[float], Union[Sequence[float], float], Optional[int], bool) -> PolynomialModel
     r"""
     Return the polynomial of degree $n$ that minimizes $\sum(p(x_i) - y_i)^2/\sigma_i^2$.
 
@@ -383,13 +383,13 @@ def wpolyfit(x, y, dy=1.0, degree=None, origin=False):
 
     A = _poly_matrix(x, degree, origin)
     s = wsolve(A, y, dy)
-    return PolynomialModel(s, origin=origin, data=(x,y,dy))
+    return PolynomialModel(s, origin=origin, data=(x, y, dy))
 
 
 def wpolyplot(poly, with_pi=False, with_ci=True):
     # type: (PolynomialModel, bool, bool) -> None
     import pylab
-    x,y,dy = poly.data
+    x, y, dy = poly.data
     pylab.errorbar(x, y, yerr=dy, fmt='gx')
     pylab.hold(True)
     px = np.linspace(x.min(), x.max(), 400)
@@ -397,9 +397,9 @@ def wpolyplot(poly, with_pi=False, with_ci=True):
     cy, cdy = poly.ci(px)
     pylab.plot(px, py, 'g-')
     if with_pi:
-         pylab.plot(px, py + pdy, 'g-.', px, py - pdy, 'g-.', hold=True)
+        pylab.plot(px, py + pdy, 'g-.', px, py - pdy, 'g-.', hold=True)
     if with_ci:
-         pylab.plot(px, cy + cdy, 'r-.', px, cy - cdy, 'r-.', hold=True)
+        pylab.plot(px, cy + cdy, 'r-.', px, cy - cdy, 'r-.', hold=True)
 
 
 def smooth(x, xp, yp, dyp=None, degree=2, span=5):
@@ -423,7 +423,7 @@ def smooth(x, xp, yp, dyp=None, degree=2, span=5):
     Note: *xp* does not need to be equally spaced, but if it has large clumps
     then a fixed window length is not the most appropriate algorithm.
     Instead, one could specify a window width *dx* for each *x*, and use
-    all data points within *[x-dx,x+dx]* as the input to the polynomial.
+    all data points within *[x-dx, x+dx]* as the input to the polynomial.
     This capability is not yet implemented.
     """
     if dyp is None:
@@ -482,7 +482,7 @@ def demo():
     import pylab; pylab.show()
 
 def demo2():
-    x = [1,2,3]
+    x = [1, 2, 3]
     y = [10, 8, 6]
     dy = [1, 3, 1]
     poly = wpolyfit(x, y, dy=dy, degree=1)
@@ -504,9 +504,9 @@ def test():
     py, ci = poly.ci(px)
 
     # Uncomment these to show target values
-    # print "Tp = [%.16g, %.16g]"%(p[0],p[1])
-    # print "Tdp = [%.16g, %.16g]"%(dp[0],dp[1])
-    # print "Tpi,Tci = %.16g, %.16g"%(pi,ci)
+    # print "Tp = [%.16g, %.16g]"%(p[0], p[1])
+    # print "Tdp = [%.16g, %.16g]"%(dp[0], dp[1])
+    # print "Tpi, Tci = %.16g, %.16g"%(pi, ci)
     Tp = np.array([7.787249069840737, 1.503992847461524])
     Tdp = np.array([1.522338103010216, 2.117633626902384])
     Tpi, Tci = 7.611128464981324, 2.342860389884832

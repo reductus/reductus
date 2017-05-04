@@ -16,14 +16,14 @@ def define_instrument():
     sans1d = df.DataType(INSTRUMENT+".sans1d", Sans1dData)
     params = df.DataType(INSTRUMENT+".params", Parameters)
     #offset_data = df.DataType(INSTRUMENT+".offset_data", dict)
-    
+
     # Define instrument
     sans = df.Instrument(
         id=INSTRUMENT,
         name='NCNR SANS',
         menu=[('steps', modules)],
         datatypes=[sans2d, sans1d, params],
-        template_defs = templates.get_templates(INSTRUMENT),
+        template_defs=templates.get_templates(INSTRUMENT),
         )
 
     # Register instrument

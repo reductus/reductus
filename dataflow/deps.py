@@ -3,13 +3,14 @@
 """
 Dependency calculator.
 """
+from __future__ import print_function
 
 def processing_order(pairs, n=0):
     """
     Order the work in a workflow.
 
     Given a set of n items to evaluate numbered from zero through n-1,
-    and dependency pairs 
+    and dependency pairs
 
 
     :Parameters:
@@ -103,9 +104,12 @@ def test():
 
     # Cycle test
     pairs = [(1, 4), (4, 3), (4, 5), (5, 1)]
-    try: _ = processing_order(pairs, n=9)
-    except ValueError: pass
-    else: raise Exception("test3 expect ValueError exception for %s" % (pairs,))
+    try:
+        _ = processing_order(pairs, n=9)
+    except ValueError:
+        pass
+    else:
+        raise Exception("test3 expect ValueError exception for %s" % (pairs,))
 
     # large test for gross speed check
     A = np.random.randint(4000, size=(1000, 2))

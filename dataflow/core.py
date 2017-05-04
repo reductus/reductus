@@ -1,6 +1,8 @@
 """
 Core class definitions
 """
+from __future__ import print_function
+
 import inspect
 import json
 import types
@@ -50,8 +52,8 @@ def lookup_module(id):
 
 
 def register_datatype(datatype):
-    if (datatype.id in _datatype_registry and
-                datatype != _datatype_registry[datatype.id]):
+    if (datatype.id in _datatype_registry
+            and datatype != _datatype_registry[datatype.id]):
         raise TypeError("Datatype already registered")
     _datatype_registry[datatype.id] = datatype
 
@@ -177,7 +179,7 @@ class Module(object):
     def __init__(self, id, version, name, description, icon=None,
                  inputs=None, outputs=None, fields=None, action=None,
                  author="", action_id="",
-                 ):
+                ):
         self.id = id
         self.version = version
         self.name = name
@@ -191,7 +193,7 @@ class Module(object):
         self.action_id = action_id
 
     def get_terminal_by_id(self, id):
-        """ 
+        """
         Lookup terminal by id, and return.
         Returns None if id does not exist.
         """
@@ -199,7 +201,7 @@ class Module(object):
             self._terminal_by_id = dict((t['id'], t)
                                         for t in self.inputs+self.outputs)
         return self._terminal_by_id[id]
-        
+
     def get_source_code(self):
         """
         Retrieves the source code for the identified module that
@@ -321,7 +323,7 @@ class Template(object):
             parent = remaining.pop()
             # find which nodes depend on it
             children = set(w['target'][0] for w in self.wires
-                           if w['source'][0]==parent)
+                           if w['source'][0] == parent)
             # remember to process those that are not already listed
             remaining |= children - processed
             # list the new nodes as descendents
@@ -357,7 +359,7 @@ class Template(object):
         Print template on console as prettified json.
         """
         print(json.dumps(self.__getstate__(), indent=2, sort_keys=True,
-              separators=(',', ': ')))
+                         separators=(',', ': ')))
 
     def get_definition(self):
         return self.__getstate__()
@@ -455,7 +457,7 @@ class Instrument(object):
         for m in self.modules:
             if m.name == name: return m.id
         raise KeyError(name + ' does not exist in instrument ' + self.name)
-        
+
     def get_definition(self):
         keys = ['id', 'name', 'archive']
         definition = dict([(k, getattr(self, k)) for k in keys])
@@ -464,7 +466,7 @@ class Instrument(object):
         definition['templates'] = self.template_defs
         return definition
 
-        
+
 class DataType(object):
     """
     Data objects represent the information flowing over a wire.
@@ -482,7 +484,7 @@ class DataType(object):
     def get_definition(self):
         return {"id": self.id}
 
-        
+
 class Bundle(object):
     def __init__(self, datatype, values):
         self.datatype = datatype
@@ -490,19 +492,19 @@ class Bundle(object):
 
     def todict(self):
         values = [v.todict() for v in self.values]
-        return { 'datatype': self.datatype.id, 'values': values }
-        
+        return {'datatype': self.datatype.id, 'values': values}
+
     def get_plottable(self):
         values = [v.get_plottable() for v in self.values]
-        return { 'datatype': self.datatype.id, 'values': values }
-        
+        return {'datatype': self.datatype.id, 'values': values}
+
     def get_metadata(self):
         values = [v.get_metadata() for v in self.values]
-        return { 'datatype': self.datatype.id, 'values': values }
-        
+        return {'datatype': self.datatype.id, 'values': values}
+
     def get_export(self):
         values = [v.export() for v in self.values]
-        return { 'datatype': self.datatype.id, 'values': values }
+        return {'datatype': self.datatype.id, 'values': values}
 
     @staticmethod
     def fromdict(state):
@@ -529,12 +531,12 @@ def sanitizeForJSON(obj):
     """
     Take an object made of python objects and remove inf and nan
     """
-    if type(obj) is types.DictionaryType:
+    if isinstance(obj, dict):
         output = {}
-        for k,v in obj.items():
+        for k, v in obj.items():
             output[k] = sanitizeForJSON(v)
         return output
-    elif type(obj) is types.ListType:
+    elif isinstance(obj, list):
         return map(sanitizeForJSON, obj)
     elif obj == inf:
         # Use WARNING SIGN for NaN
@@ -552,12 +554,12 @@ def sanitizeFromJSON(obj):
     """
     Convert inf/nan from json representation to python.
     """
-    if type(obj) is types.DictionaryType:
+    if isinstance(obj, dict):
         output = {}
-        for k,v in obj.items():
+        for k, v in obj.items():
             output[k] = sanitizeFromJSON(v)
         return output
-    elif type(obj) is types.ListType:
+    elif isinstance(obj, list):
         return map(sanitizeFromJSON, obj)
     elif obj == _INF_STRING:
         return inf

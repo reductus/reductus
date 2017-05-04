@@ -1,4 +1,4 @@
-{ 
+{
     "module": "common.subroutine",
     "title": "title to appear on gui",
     "config": {"exposed_key": ["values", "to", "override"]},
@@ -8,8 +8,8 @@
                 {"module": "ncnr.refl.load", "title": "load", "config": {}}
             ],
             "wires": []
-        }
-            
+        },
+
         "inputs": [
             {"source_module": 1, "source_terminal": "data", "terminal_id": "my_input"}
         ],
@@ -18,18 +18,18 @@
         ],
         "fields": [
             {"source_module": 0, "source_field_id": "fileinfo", "label": "optional override for field", "id": "exposed_key"}
-        ]
+        ],
         "action_id": "subroutine",
         "version": "not needed?",
         "description": "HTML-formatted string to show in help"
     }
 }
-        
-                
+
+
 // action_id should be "subroutine", then module id can be more flexible
 // e.g. a server-defined subroutine can be "ncnr.refl.superload"
 // while a user-defined subroutine can be "user.subroutine"
 
-// client-defined subroutines don't share a namespace for modules, 
+// client-defined subroutines don't share a namespace for modules,
 // so they must send a valid module_def for every user-defined module
 // with every transaction.

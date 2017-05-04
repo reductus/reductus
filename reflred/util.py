@@ -32,8 +32,8 @@ def group_by_xs(datasets):
     for data in datasets:
         cross_sections.setdefault(data.polarization, []).append(data)
 
-    #print "datasets",[":".join((d.name,d.entry,d.polarization,d.intent)) for d in datasets]
-    #print "xs",cross_sections
+    #print("datasets", [":".join((d.name, d.entry, d.polarization, d.intent)) for d in datasets])
+    #print("xs", cross_sections)
     return cross_sections
 
 def group_by_key(key, datasets):
@@ -66,8 +66,8 @@ def group_by_intent(datasets):
     for data in datasets:
         intents.setdefault(data.intent, []).append(data)
 
-    #print "datasets",[":".join((d.name,d.entry,d.polarization,d.intent)) for d in datasets]
-    #print "xs",cross_sections
+    #print("datasets", [":".join((d.name, d.entry, d.polarization, d.intent)) for d in datasets])
+    #print("xs", cross_sections)
     return intents
 
 
@@ -292,8 +292,8 @@ def poisson_average(y, dy, norm='monitor'):
     else:
         bar_dy = bar_y * np.sqrt(1./combined_monitors)
 
-    #print "est. monitors:",monitors
-    #print "est. counts:",counts
+    #print("est. monitors:", monitors)
+    #print("est. counts:", counts)
     return bar_y, bar_dy
 
 
@@ -386,9 +386,9 @@ def demo_error_prop(title, rate, monitors, attenuators=None,
         tmon = ufloat(np.sum(monitors), len(monitors)*time_err)
     direct = tin/tmon
 
-    #print "monitors:", monitors
-    #print "counts:", counts
-    #print "incident:", incident
+    #print("monitors:", monitors)
+    #print("counts:", counts)
+    #print("incident:", incident)
     if use_attenuators:
         print("attenuators:", list(zip(*attenuators))[0])
     def show(label, r, tag=""):
@@ -397,7 +397,7 @@ def demo_error_prop(title, rate, monitors, attenuators=None,
         else:
             rel = (" diff: (%.1f,%.1f)%% "
                    % (100*(r.n-direct.n)/direct.n, 100*(r.s-direct.s)/direct.s))
-        print label, "r:", r, " dr/r: %.2f%%"%(100*r.s/r.n), rel, tag
+        print(label, "r:", r, " dr/r: %.2f%%"%(100*r.s/r.n), rel, tag)
     show("Combined", direct)
     show("Poisson ", y_ave)
     show("Gaussian", y_g)

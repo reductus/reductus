@@ -1,20 +1,25 @@
 """
 Example to show how to create and run a reduction routine.
 """
-import os, sys, math
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from __future__ import print_function
+
+import os
+import sys
+import math
+from pprint import pprint
+
+from numpy.random import random
+
 from dataflow import config
 from dataflow.calc import run_template
 from dataflow.core import Module, DataType, Instrument, Template, register_instrument
 from dataflow.modules.load import load_module
 from dataflow.modules.save import save_module
-from numpy.random import random
-from pprint import pprint
 
 # ====== Define the module =======
 
 def random_module(id=None, datatype=None, action=None,
-                 version='0.0', fields=[]):
+                  version='0.0', fields=[]):
     """Module for adding random values to a dataset"""
 
     # Define the icon with proper location and terminal sizes
@@ -27,7 +32,7 @@ def random_module(id=None, datatype=None, action=None,
             'output': (20, 10, 1, 0),
         }
     }
-    
+
     # Define the terminal details
     # The required and multiple keys are used only on input terminals.
     # required: True if input is needed
@@ -39,12 +44,12 @@ def random_module(id=None, datatype=None, action=None,
              description='data',
              required=False,
              multiple=True,
-             ),
+            ),
         dict(id='output',
              datatype=datatype,
              use='out',
              description='transformed data',
-             ),
+            ),
     ]
 
     # One field: the largest amount of displacement from the given data
@@ -58,14 +63,14 @@ def random_module(id=None, datatype=None, action=None,
 
     # Combine everything into a module
     module = Module(id=id,
-                  name='Random',
-                  version=version,
-                  description=action.__doc__,
-                  icon=icon,
-                  terminals=terminals,
-                  fields=[random_field] + fields,
-                  action=action,
-                  )
+                    name='Random',
+                    version=version,
+                    description=action.__doc__,
+                    icon=icon,
+                    terminals=terminals,
+                    fields=[random_field] + fields,
+                    action=action,
+                   )
     return module
 
 # ======== Define the action and declare the module =======
@@ -91,11 +96,12 @@ def _data_randomize(data, max_change):
 # the actual "action" for the rand module
 def random_action(input=None, max_change=None):
     """Action that adds or subtracts random values under a given limit."""
-    print "randomize <=", max_change
+    print("randomize <=", max_change)
     flat = []
     # operate on a bundle rather than individual input
     # because the multiple field is True
-    for bundle in input: flat.extend(bundle)
+    for bundle in input:
+        flat.extend(bundle)
     result = [_data_randomize(f, max_change) for f in flat]
     return dict(output=result)
 rand = random_module(id='rowan.random', datatype=ROWAN_DATA,
@@ -113,7 +119,8 @@ load = load_module(id='rowan.load', datatype=ROWAN_DATA,
 
 def save_action(input=None, ext=None):
     """Saves files to another extension"""
-    for f in input: _save_one(f, ext)
+    for f in input:
+        _save_one(f, ext)
     return {}
 def _save_one(input, ext):
     outname = input['name']
@@ -121,6 +128,7 @@ def _save_one(input, ext):
         outname = ".".join([os.path.splitext(outname)[0], ext])
     print("saving %s as %s"%(input['name'], outname))
     save_data(input, name=outname)
+
 # the 'ext'ension field; there's no use in saving fields though (hopefully there will be a need later?)
 save_ext = {
     "type":"[string]",
@@ -140,36 +148,39 @@ def init_data():
           'x': [1, 2, 3, 4, 5., 6, 7, 8],
           'y': [20, 40, 60, 80, 60, 40, 20, 6],
           'monitor': [100] * 8,
-          }
+         }
     f2 = {'name': 'f2.rowan26',
           'x': [4, 5, 6, 7, 8, 9],
           'y': [37, 31, 18, 11, 2, 1],
           'monitor': [50] * 6,
-          }
+         }
     f1['dy'] = [math.sqrt(v) for v in f1['y']]
     f2['dy'] = [math.sqrt(v) for v in f2['y']]
-    for f in f1, f2: FILES[f['name']] = f
+    for f in f1, f2:
+        FILES[f['name']] = f
+
 def save_data(data, name):
     FILES[name] = data
+
 def load_data(name):
     return FILES.get(name, None)
 
 # ========== Data and instrument definitions ========
 
 rowan1d = DataType(id=ROWAN_DATA,
-                  name='1-D Rowan Data',
-                  plot='rowanplot')
+                   name='1-D Rowan Data',
+                   plot='rowanplot')
 # it has three modules: load, save, and rand
 # when the instrument is registered, these modules will also be registered
 ROWAN26 = Instrument(id='ncnr.rowan26',
-                 name='NCNR ROWAN26',
-                 archive=config.NCNR_DATA + '/rowan26',
-                 menu=[('Input', [load, save]),
-                       ('Reduction', [rand])
-                       ],
-                 requires=[config.JSCRIPT + '/rowanplot.js'],
-                 datatypes=[rowan1d],
-                 )
+                     name='NCNR ROWAN26',
+                     archive=config.NCNR_DATA + '/rowan26',
+                     menu=[('Input', [load, save]),
+                           ('Reduction', [rand]),
+                          ],
+                     requires=[config.JSCRIPT + '/rowanplot.js'],
+                     datatypes=[rowan1d],
+                    )
 init_data()
 instruments = [ROWAN26]
 for instrument in instruments:
@@ -189,18 +200,13 @@ wires = [
     ]
 # I'm unsure why config is needed currently if nothing needs to be supplied
 # However, it does need to be the same length as the modules list
-config = [
-    {},
-    {},
-    {},
-    ]
+config = [{}, {}, {}]
 template = Template(name='test rowan',
                     description='example ROWAN diagram',
                     modules=modules,
                     wires=wires,
                     instrument=ROWAN26.id,
-                    )
+                   )
 # the actual call to perform the reduction
 result = run_template(template, config)
 pprint(result)
-

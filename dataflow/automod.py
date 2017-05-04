@@ -157,7 +157,7 @@ def make_template(name, description, diagram, instrument, version):
         # check that the remaining config info refers to fields in the
         # module
         fields = set(p["id"] for p in module.fields)
-        for k,v in config.items():
+        for k, v in config.items():
             if k not in fields:
                 raise ValueError(err("unknown config field %r"%k))
 
@@ -349,7 +349,7 @@ def _parse_function(action):
 
     # parse the sections
     name = _unsplit_name(action.__name__)
-    heading = "\n".join(("="*len(name),name,"="*len(name),""))
+    heading = "\n".join(("="*len(name), name, "="*len(name), ""))
     #description = "".join(description_lines)
     description = rst2html(heading + docstr, part="whole", math_output="mathjax")
     inputs = parse_parameters(input_lines)
@@ -650,7 +650,7 @@ def parse_datatype(par):
         try:
             pattern = re.compile(attrstr)
         except Exception as exc:
-            raise ValueError("regex error %r for %s"%(str(exc),name))
+            raise ValueError("regex error %r for %s"%(str(exc), name))
         # if the default is given, check that it matches the pattern
         default = par.get("default", None)
         if default and not pattern.search(default):
@@ -749,7 +749,7 @@ def _validate_one(par, value, as_default):
 
     elif datatype == "range":
         range = par["typeattr"]["axis"]
-        n = 4 if range=="xy" else 2
+        n = 4 if range == "xy" else 2
         value = _list_check(name, value, n, float)
 
     elif datatype == "index":
@@ -763,7 +763,7 @@ def _validate_one(par, value, as_default):
 
     elif datatype == "fileinfo":
         value = _finfo_check(name, value)
-    
+
     elif datatype == "scale":
         value = _type_check(name, value, float)
 
@@ -775,18 +775,18 @@ def _validate_one(par, value, as_default):
 def _finfo_check(name, value):
     try:
         if (not isinstance(value, dict)
-                or "path" not in value 
+                or "path" not in value
                 or "mtime" not in value
                 or "source" not in value
-                or (len(value)>3 and "entries" not in value)
-                or len(value)>4):
+                or (len(value) > 3 and "entries" not in value)
+                or len(value) > 4):
             raise ValueError("wrong structure")
         value["path"] = _type_check(name, value["path"], str)
         value["mtime"] = _type_check(name, value["mtime"], int)
         value["source"] = _type_check(name, value["source"], str)
         if value.setdefault("entries", None) is not None:
             value["entries"] = _list_check(name, value["entries"], 0, str)
-            
+
     except:
         #raise
         raise ValueError("value %r is not {source: str, path: str, mtime: int, entries: [str, ...]} for %s"
@@ -839,7 +839,7 @@ def parse_range(range, limit=inf):
     min = float(minstr) if minstr and minstr != "-inf" else -limit
     max = float(maxstr) if maxstr and maxstr != "inf" else limit
     if min >= max:
-        raise ValueError("min must be less than max in (%g,%g)"%(min,max))
+        raise ValueError("min must be less than max in (%g,%g)"%(min, max))
     if min < -limit:
         raise ValueError("min value %g must be more than %g"%(min, -limit))
     if max > limit:
@@ -990,7 +990,7 @@ def test_parse_parameters():
         ['long', 'long'], ['options', 'options'], ['split', 'split']
     ]
     assert p['o4']['typeattr']['choices'] == [
-        ['p1', 'Parameter 1'], ['',''], ['Parameter 2', 'Parameter 2']
+        ['p1', 'Parameter 1'], ['', ''], ['Parameter 2', 'Parameter 2']
     ]
 
     assert p['e1']['typeattr'] == {'pattern': '.*'}

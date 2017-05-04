@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import urllib2
 import datetime
 from posixpath import basename, join, sep
@@ -29,7 +31,7 @@ def check_datasource(source):
         source_url = ""
         raise RuntimeError("Must have url specified for data source: " + source + " in config.")
     return source_url
-        
+
 
 def url_get(fileinfo):
     path, mtime, entries = fileinfo['path'], fileinfo['mtime'], fileinfo['entries']
@@ -55,21 +57,21 @@ def url_get(fileinfo):
             t_repo = datetime.datetime(*url_time_struct[:7], tzinfo=pytz.utc)
             t_request = datetime.datetime.fromtimestamp(mtime, pytz.utc)
             if t_request > t_repo:
-                print "request mtime = %s, repo mtime = %s"%(t_request, t_repo)
+                print("request mtime = %s, repo mtime = %s"%(t_request, t_repo))
                 raise ValueError("Requested mtime is newer than repository mtime for %r"%path)
             elif t_request < t_repo:
-                print "request mtime = %s, repo mtime = %s"%(t_request, t_repo)
+                print("request mtime = %s, repo mtime = %s"%(t_request, t_repo))
                 raise ValueError("Requested mtime is older than repository mtime for %r"%path)
 
             ret = url.read()
-            print "caching " + path
+            print("caching " + path)
             cache.set(fp, ret)
         except urllib2.HTTPError as exc:
             raise ValueError("Could not open %r\n%s"%(path, str(exc)))
         finally:
             if url is not None:
                 url.close()
-        
+
     return ret
 
 def find_mtime(path):
@@ -82,10 +84,11 @@ def find_mtime(path):
     mtime_obj = datetime.datetime(*mtime[:7], tzinfo=pytz.utc)
     timestamp = seconds_since_epoch(mtime_obj)
 
-    return { 'path': path, 'mtime': timestamp }
+    return {'path': path, 'mtime': timestamp}
 
 
 def url_get_list(files=None):
-    if files is None: return []
+    if files is None:
+        return []
     result = [entry for fileinfo in files for entry in url_get(fileinfo)]
     return result

@@ -9,11 +9,12 @@ been calculated and cached for the given input values.
 :func:`fingerprint_template` returns the unique fingerprint for each node
 in the template given its input values.
 """
+from __future__ import print_function
 
 try:
     # CRUFT: use cPickle for python 2.7
     import cPickle as pickle
-except:
+except ImportError:
     import pickle
 import hashlib
 import contextlib
@@ -39,7 +40,7 @@ def find_calculated(template, config):
             for node, _ in enumerate(template.modules)]
 
 
-def process_template(template, config, target=(None,None)):
+def process_template(template, config, target=(None, None)):
     """
     Evaluate the template.
 
@@ -239,7 +240,7 @@ def _eval_node(node_id, module, inputs, template_fields, user_fields):
         if len(values) == 0:
             # If no inputs, then either send an empty list or None, depending
             # on whether the input terminal is expecting a list or a singleton.
-            fields[name] = [(None if par["length"]==1 else [])]*bundle_length
+            fields[name] = [(None if par["length"] == 1 else [])]*bundle_length
         elif par["length"] == 0:
             fields[name] = [values]*bundle_length
         elif len(values) == bundle_length:
@@ -254,7 +255,7 @@ def _eval_node(node_id, module, inputs, template_fields, user_fields):
 
     for k in range(bundle_length):
         # set up inputs
-        action_args = dict((name,values[k]) for name, values in fields.items())
+        action_args = dict((name, values[k]) for name, values in fields.items())
 
         # perform action
         #print "args", node_id, k, action_args
@@ -477,7 +478,7 @@ def verify_examples(source_file, tests, target_dir, seed=1): # pragma no cover
             with open(target_path, 'rb') as fid:
                 target_str = fid.read()
             if not actual_str == target_str:
-                actual_path = join(tempfile.gettempdir(),filename)
+                actual_path = join(tempfile.gettempdir(), filename)
                 if not exists(dirname(actual_path)):
                     os.makedirs(dirname(actual_path))
                 with open(actual_path, 'wb') as fid:
@@ -500,32 +501,33 @@ def run_example(template, config, seed=None, verbose=False): # pragma no cover
     if verbose:
         print('result: '+json.dumps(result, sort_keys=True, indent=2))
     for key, value in result.items():
-        for output in value.get('output',[]):
+        for output in value.get('output', []):
             if not isinstance(output, dict):
                 #print key, 'plot: ', output.get_plottable()
                 pass
 
 # internal tests
 def test_format_ordered():
-    udict,odict = {'x':2,'a':3}, [('a',3),('x',2)]
-    def ufn(a): return a
+    udict, odict = {'x': 2, 'a': 3}, [('a', 3), ('x', 2)]
+    def ufn(a):
+        return a
     class A(object):
         def __init__(self):
-            self.x, self.a = 2,3
+            self.x, self.a = 2, 3
     class A2:
         def __init__(self):
-            self.x, self.a = 2,3
+            self.x, self.a = 2, 3
     pairs = [
-        (udict,odict),
-        ({'first':udict,'second':'ple'}, [('first',odict), ('second','ple')]),
-        ([1,udict,3], [1,odict,3]),
-        ((1,udict,3), (1,odict,3)),
+        (udict, odict),
+        ({'first': udict, 'second': 'ple'}, [('first', odict), ('second', 'ple')]),
+        ([1, udict, 3], [1, odict, 3]),
+        ((1, udict, 3), (1, odict, 3)),
         (ufn, "    def ufn(a): return a\n"),
         (A(), ['A', odict]),
         (A2(), ['A2', odict]),
         ]
 
-    for u,o in pairs:
+    for u, o in pairs:
         actual = _format_ordered(u)
-        print("%s => %r =? %r"%(str(u),actual,o))
+        print("%s => %r =? %r"%(str(u), actual, o))
         assert actual == o

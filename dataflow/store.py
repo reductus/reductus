@@ -10,7 +10,7 @@ the templates and the reduction flows need to be stored.
 The following functions are available:
 
     dumps
-    
+
         Convert reduction flow object to storable string.
 
     loads
@@ -23,7 +23,6 @@ __all__ = ['dumps', 'loads']
 import json
 
 from . import core
-
 
 def dumps(obj):
     if isinstance(obj, core.Template):

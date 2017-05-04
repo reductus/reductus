@@ -90,7 +90,7 @@ def now(use_microsecond=False):
     If *use_microsecond* then include fractional seconds in the
     returned string.
     """
-    return format_date(time.time(),precision=(6 if use_microsecond else 0))
+    return format_date(time.time(), precision=(6 if use_microsecond else 0))
 
 def format_date(timestamp, precision=0):
     # type: (Union[float, datetime, time_struct], int) -> str
@@ -141,16 +141,16 @@ def format_date(timestamp, precision=0):
         timestamp = timestamp.timetuple()
 
     # Find time zone offset
-    isdst = timestamp.tm_isdst if timestamp.tm_isdst >=0 else 0
+    isdst = timestamp.tm_isdst if timestamp.tm_isdst >= 0 else 0
     if dt is None:
-        dt = -(time.timezone,time.altzone)[isdst]
+        dt = -(time.timezone, time.altzone)[isdst]
 
     # Do the formatting
-    local = time.strftime('%Y-%m-%dT%H:%M:%S',timestamp)
-    fraction = ".%0*d"%(precision,microsecond//10**(6-precision)) if precision else ""
+    local = time.strftime('%Y-%m-%dT%H:%M:%S', timestamp)
+    fraction = ".%0*d"%(precision, microsecond//10**(6-precision)) if precision else ""
     sign = "+" if dt >= 0 else "-"
-    offset = "%02d%02d"%(abs(dt)//3600,(abs(dt)%3600)//60)
-    return "".join((local,fraction,sign,offset))
+    offset = "%02d%02d"%(abs(dt)//3600, (abs(dt)%3600)//60)
+    return "".join((local, fraction, sign, offset))
 
 class TimeZone(tzinfo):
     """
@@ -164,7 +164,7 @@ class TimeZone(tzinfo):
             sign = '-' if offset < 0 else '+'
             hour = second//3600
             minute = (second%3600)//60
-            name = "%s%02d%02d"%(sign,hour,minute)
+            name = "%s%02d%02d"%(sign, hour, minute)
         self.__offset = timedelta(seconds=offset)
         self.__name = name
 
@@ -202,7 +202,7 @@ class TimeZone(tzinfo):
         return "<TimeZone %r>" % self.__name
 
 UTC = TimeZone(name="UTC")
-EPOCH = datetime(1970,1,1,tzinfo=UTC)
+EPOCH = datetime(1970, 1, 1, tzinfo=UTC)
 
 def parse_date(datestring, default_timezone=UTC, strict=False):
     """
@@ -218,7 +218,7 @@ def parse_date(datestring, default_timezone=UTC, strict=False):
     Raises TypeError if not passed a string.
     Raises ValueError if the string is not a valid time stamp.
     """
-    #print("parse_date with",datestring)
+    #print("parse_date with", datestring)
     try:
         if not strict:
             m = ISO8601_RELAXED.match(datestring)
@@ -241,14 +241,14 @@ def parse_date(datestring, default_timezone=UTC, strict=False):
     fraction = int(float("0.%s" % groups["fraction"]) * 1e6) if groups["fraction"] else 0
     if groups["timezone"] is None:
         tz = default_timezone
-    elif groups["timezone"]=="Z":
+    elif groups["timezone"] == "Z":
         tz = UTC
     else:
-        sign = +1 if groups["tzprefix"]=="+" else -1
+        sign = +1 if groups["tzprefix"] == "+" else -1
         dt = (int(groups["tzhour"])*60
               + (int(groups["tzminute"]) if groups["tzminute"] else 0))
         tz = TimeZone(name=groups["timezone"], offset=sign*dt*60)
-    return datetime(year,month,day,hour,minute,second,fraction,tz)
+    return datetime(year, month, day, hour, minute, second, fraction, tz)
 
 def seconds_since_epoch(date, default_timezone=UTC):
     """
@@ -265,9 +265,9 @@ def seconds_since_epoch(date, default_timezone=UTC):
 
 
 # ================= TESTS =================
-def _check_date(s,d,strict): # pragma: no cover
+def _check_date(s, d, strict): # pragma: no cover
     t = parse_date(s)
-    assert t-d == timedelta(0),"%r != %s"%(s,d)
+    assert t-d == timedelta(0), "%r != %s"%(s, d)
     try:
         parse_date(s, strict=True)
         if not strict:
@@ -275,44 +275,47 @@ def _check_date(s,d,strict): # pragma: no cover
     except ValueError as exc:
         if strict:
             raise Exception("unexpected exception for strict %r\n  %s"
-                            %(s,str(exc)))
+                            % (s, str(exc)))
 def _check_fail(s): # pragma: no cover
-    try: parse_date(s)
-    except Exception: return
+    try:
+        parse_date(s)
+    except Exception:
+        return
     raise Exception("exception not raised for %r")
 
-def _check_equal(s1,s2): # pragma: no cover
-    assert parse_date(s1)-parse_date(s2) == timedelta(0), "%r != %r"%(s1,s2)
+def _check_equal(s1, s2): # pragma: no cover
+    assert parse_date(s1)-parse_date(s2) == timedelta(0), "%r != %r"%(s1, s2)
 
-def _check_format(s,d): # pragma: no cover
+def _check_format(s, d): # pragma: no cover
     s2 = format_date(d)
-    assert s==s2, "%r != %r"%(s,s2)
+    assert s == s2, "%r != %r"%(s, s2)
+
 def test(): # pragma: no cover
     _check_fail("2007-03-23T05:27Z0500")
     _check_fail("200")
     _check_fail("garbage")
-    _check_date("2007",datetime(2007,1,1,0,0,0,0,UTC),strict=False)
-    _check_date("2007-03",datetime(2007,3,1,0,0,0,0,UTC),strict=False)
-    _check_date("2007-03-23",datetime(2007,3,23,0,0,0,0,UTC),strict=False)
-    _check_date("2007-3-23",datetime(2007,3,23,0,0,0,0,UTC),strict=False)
-    _check_date("2007-3-3",datetime(2007,3,3,0,0,0,0,UTC),strict=False)
-    _check_date("2007-03-23T05:27",datetime(2007,3,23,5,27,0,0,UTC),strict=True)
-    _check_date("2007-03-23 05:27",datetime(2007,3,23,5,27,0,0,UTC),strict=True)
-    _check_date("2007-03-23 05:27Z",datetime(2007,3,23,5,27,0,0,UTC),strict=True)
-    _check_date("2007-03-23 05:27Z",datetime(2007,3,23,5,27,0,0,UTC),strict=True)
+    _check_date("2007", datetime(2007, 1, 1, 0, 0, 0, 0, UTC), strict=False)
+    _check_date("2007-03", datetime(2007, 3, 1, 0, 0, 0, 0, UTC), strict=False)
+    _check_date("2007-03-23", datetime(2007, 3, 23, 0, 0, 0, 0, UTC), strict=False)
+    _check_date("2007-3-23", datetime(2007, 3, 23, 0, 0, 0, 0, UTC), strict=False)
+    _check_date("2007-3-3", datetime(2007, 3, 3, 0, 0, 0, 0, UTC), strict=False)
+    _check_date("2007-03-23T05:27", datetime(2007, 3, 23, 5, 27, 0, 0, UTC), strict=True)
+    _check_date("2007-03-23 05:27", datetime(2007, 3, 23, 5, 27, 0, 0, UTC), strict=True)
+    _check_date("2007-03-23 05:27Z", datetime(2007, 3, 23, 5, 27, 0, 0, UTC), strict=True)
+    _check_date("2007-03-23 05:27Z", datetime(2007, 3, 23, 5, 27, 0, 0, UTC), strict=True)
     _check_date("2007-03-23T05:27-0300",
-                datetime(2007,3,23,5,27,0,0,TimeZone(-3*3600)),strict=True)
+                datetime(2007, 3, 23, 5, 27, 0, 0, TimeZone(-3*3600)), strict=True)
     _check_date("2007-03-23T05:27-300",
-                datetime(2007,3,23,5,27,0,0,TimeZone(-3*3600)),strict=False)
+                datetime(2007, 3, 23, 5, 27, 0, 0, TimeZone(-3*3600)), strict=False)
     _check_date("2007-03-23T05:27-03",
-                datetime(2007,3,23,5,27,0,0,TimeZone(-3*3600)),strict=False)
+                datetime(2007, 3, 23, 5, 27, 0, 0, TimeZone(-3*3600)), strict=False)
     _check_date("2007-03-23T05:27+2",
-                datetime(2007,3,23,5,27,0,0,TimeZone(2*3600)),strict=False)
+                datetime(2007, 3, 23, 5, 27, 0, 0, TimeZone(2*3600)), strict=False)
     _check_date("2007-03-23T05:27:23.023-0300",
-                datetime(2007,3,23,5,27,23,23000,TimeZone(-3*3600)),strict=True)
+                datetime(2007, 3, 23, 5, 27, 23, 23000, TimeZone(-3*3600)), strict=True)
     _check_date("2007-03-23T05:27:23.023-0300",
-                datetime(2007,3,23,5,27,23,23000,TimeZone(-3*3600)),strict=True)
-    _check_equal("2007-03-23T02:17-0330","2007-03-23T05:47Z")
+                datetime(2007, 3, 23, 5, 27, 23, 23000, TimeZone(-3*3600)), strict=True)
+    _check_equal("2007-03-23T02:17-0330", "2007-03-23T05:47Z")
 
     # Check seconds since epoch calculations
     got = seconds_since_epoch("2007-01-25T12:30:00Z")
@@ -320,28 +323,28 @@ def test(): # pragma: no cover
     #>>> iso8601.seconds_since_epoch("2007-01-25T12:00:00Z")
     #1169744400.0
 
-    assert got == expected,"%s != %s"%(got,expected)
+    assert got == expected, "%s != %s"%(got, expected)
     got = seconds_since_epoch("2007-01-25T12:30:00-0100")
-    assert got == expected+3600,"%s != %s"%(got,expected+3600)
+    assert got == expected+3600, "%s != %s"%(got, expected+3600)
     got = seconds_since_epoch("2007-01-25T12:30:00.1-0100")
-    assert abs(got-(expected+3600.1))<1e-6,"%s != %s"%(got,expected+3600.1)
+    assert abs(got-(expected+3600.1)) < 1e-6, "%s != %s"%(got, expected+3600.1)
 
     # Determine local time offset
     hrs = abs(time.timezone)//3600
     mins = (abs(time.timezone)%3600)//60
-    utcoffset = "%s%02d%02d"%('-' if time.timezone>=0 else '+', hrs, mins)
+    utcoffset = "%s%02d%02d"%('-' if time.timezone >= 0 else '+', hrs, mins)
 
     # Check format from naive datetime object
     _check_format("2007-01-24T05:27:23"+utcoffset,
-                  datetime(2007,1,24,5,27,23,16400))
+                  datetime(2007, 1, 24, 5, 27, 23, 16400))
 
     # Check formatting from struct_time object
     _check_format("2007-01-23T05:27:24"+utcoffset,
-                  datetime(2007,1,23,5,27,24).timetuple())
+                  datetime(2007, 1, 23, 5, 27, 24).timetuple())
 
     # Check formatting from seconds since epoch
     got = format_date(seconds_since_epoch("2007-01-25T11:30:00-0100"))
-    expected = format_date(datetime(2007,1,25,12-hrs,30-mins))
+    expected = format_date(datetime(2007, 1, 25, 12-hrs, 30-mins))
     assert got == expected, "%r != %r"%(got, expected)
 
     # Check formatting from zoned datetime objects
