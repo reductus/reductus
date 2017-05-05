@@ -537,7 +537,7 @@ def sanitizeForJSON(obj):
             output[k] = sanitizeForJSON(v)
         return output
     elif isinstance(obj, list):
-        return map(sanitizeForJSON, obj)
+        return list(map(sanitizeForJSON, obj))
     elif obj == inf:
         # Use WARNING SIGN for NaN
         return _INF_STRING

@@ -2,6 +2,13 @@ import os, sys
 import time
 from pprint import pprint
 import traceback
+import json
+try:
+    from urllib.parse import urlencode
+    import urllib.request as urllib2
+except ImportError:
+    from urllib import urlencode
+    import urllib2
 
 import dataflow
 from dataflow.core import Template, sanitizeForJSON, lookup_instrument, _instrument_registry
@@ -20,7 +27,7 @@ try:
 except ImportError:
     import default_config as config
 
-# for local and development installs of the server, the .git folder 
+# for local and development installs of the server, the .git folder
 # will exist in parent (reduction) folder...
 if os.path.exists(os.path.join(os.path.dirname(__file__), "..", ".git")):
     import time, subprocess
@@ -87,32 +94,30 @@ def local_file_metadata(pathlist):
         else:
             # you've probably hit an unfulfilled path link or something.
             pass
-            
-    metadata = {"subdirs": subdirs, "files": files, "pathlist": pathlist, "files_metadata": files_metadata} 
-    return metadata 
+
+    metadata = {"subdirs": subdirs, "files": files, "pathlist": pathlist, "files_metadata": files_metadata}
+    return metadata
 
 @expose
 def get_file_metadata(source="ncnr", pathlist=None):
     if pathlist is None: pathlist = []
-    import urllib
-    import urllib2
-    import json
-    
+
     if source == "local":
         metadata = local_file_metadata(pathlist)
     else:
         url = config.file_helper_url[source] #'http://ncnr.nist.gov/ipeek/listftpfiles.php'
         values = {'pathlist[]' : pathlist}
-        data = urllib.urlencode(values, True)
-        req = urllib2.Request(url, data)
-        #print "request",url,data
+        data = urlencode(values, True)
+        req = urllib2.Request(url, data.encode('ascii'))
+        #print("request", url, data, req, type(req))
         response = urllib2.urlopen(req)
         fn = response.read()
-        metadata = json.loads(fn)
-        #print "response",json.loads(fn)
-        # this converts json to python object, then the json-rpc lib converts it 
+        #print("response", fn)
+        metadata = json.loads(fn.decode('ascii'))
+        #print("parsed response", metadata)
+        # this converts json to python object, then the json-rpc lib converts it
         # right back, but it is more consistent for the client this way:
-        
+
     return metadata
 
 @expose
@@ -124,8 +129,8 @@ def get_instrument(instrument_id=INSTRUMENT):
     return instrument.get_definition()
 
 def refl_load(file_descriptors):
-    """ 
-    file_descriptors will be a list of dicts like 
+    """
+    file_descriptors will be a list of dicts like
     [{"path": "ncnrdata/cgd/201511/21066/data/HMDSO_17nm_dry14.nxz.cgd", "mtime": 1447353278}, ...]
     """
     modules = [{"module": "ncnr.refl.load", "version": "0.1", "config": {}}]
@@ -146,7 +151,7 @@ def find_calculated(template_def, config):
 @expose
 def calc_terminal(template_def, config, nodenum, terminal_id, return_type='full'):
     """ json-rpc wrapper for calc_single
-    template_def = 
+    template_def =
     {"name": "template_name",
      "description": "template description!",
      "modules": ["list of modules"],
@@ -154,24 +159,24 @@ def calc_terminal(template_def, config, nodenum, terminal_id, return_type='full'
      "instrument": "facility.instrument_name",
      "version": "2.7.3"
     }
-    
+
     where modules in list of modules above have structure:
-    module = 
+    module =
     {"module": "facility.instrument_name.module_name",
      "version": "0.3.2"
     }
-    
+
     and wires have structure:
     [["wire_start_module_id:wire_start_terminal_id", "wire_end_module_id:wire_end_terminal_id"],
      ["1:output", "2:input"],
      ["0:xslice", "3:input"]
     ]
-    
-    config = 
+
+    config =
     [{"param": "value"}, ...]
-    
+
     nodenum is the module number from the template for which you wish to get the calculated value
-    
+
     terminal_id is the id of the terminal for that module, that you want to get the value from
     (output terminals only).
     """
@@ -225,23 +230,23 @@ def list_datasources():
     print(config.data_sources)
     return config.data_sources
 
-@expose    
+@expose
 def list_instruments():
-    return _instrument_registry.keys()
+    return list(_instrument_registry.keys())
 
 def create_instruments():
-    
+
     fetch.DATA_SOURCES = config.data_sources
 
     if config.use_redis == True:
         redis_params = getattr(config, "redis_params", {})
         use_redis(**redis_params)
-    
+
     # load refl instrument if nothing specified in config
-    instruments = getattr(config, 'instruments', ['refl']) 
+    instruments = getattr(config, 'instruments', ['refl'])
     for instrument_id in instruments:
         getattr(dataflow.modules, instrument_id).define_instrument()
 
-    
+
 if __name__ == '__main__':
     create_instruments()
