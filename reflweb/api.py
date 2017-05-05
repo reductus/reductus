@@ -48,7 +48,7 @@ def expose(action):
     use_msgpack = getattr(config, 'use_msgpack', False)
     @wraps(action)
     def wrapper(*args, **kwds):
-        print ":::reflweb.api."+action.__name__
+        print(":::reflweb.api."+action.__name__)
         try:
             if use_msgpack:
                 import msgpack, base64
@@ -59,9 +59,10 @@ def expose(action):
                 retval['value'] = sanitizeForJSON(action(*args, **kwds))
         except Exception as exc:
             traceback.print_exc()
-            print ">>> :::refweb.api."+action.__name__
+            print(">>> :::refweb.api."+action.__name__)
             raise
         #print "leaving :::reflweb.api."+action.__name__
+        print(retval)
         return retval
     return wrapper
 
@@ -180,8 +181,8 @@ def calc_terminal(template_def, config, nodenum, terminal_id, return_type='full'
     try:
         retval = process_template(template, config, target=(nodenum, terminal_id))
     except Exception:
-        print "==== template ===="; pprint(template_def)
-        print "==== config ===="; pprint(config)
+        print("==== template ===="); pprint(template_def)
+        print("==== config ===="); pprint(config)
         #traceback.print_exc()
         raise
     if return_type == 'full':
@@ -207,8 +208,8 @@ def calc_template(template_def, config):
     try:
         retvals = process_template(template, config, target=(None,None))
     except Exception:
-        print "==== template ===="; pprint(template_def)
-        print "==== config ===="; pprint(config)
+        print("==== template ===="); pprint(template_def)
+        print("==== config ===="); pprint(config)
         #traceback.print_exc()
         raise
     output = {}
@@ -221,6 +222,7 @@ def calc_template(template_def, config):
 
 @expose
 def list_datasources():
+    print(config.data_sources)
     return config.data_sources
 
 @expose    

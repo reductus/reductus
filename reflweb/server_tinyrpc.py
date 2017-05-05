@@ -1,8 +1,12 @@
 import os, sys
 import time
-import urlparse
-from pprint import pprint
 import traceback
+
+try:
+    import Queue
+except ImportError:
+    import queue
+    sys.modules['Queue'] = queue
 
 import gevent
 import gevent.wsgi
@@ -54,7 +58,7 @@ def main():
     # in the main greenlet, run our rpc_server
     print("serving on port %d" % (port,))
     rpc_server.serve_forever()
-    print "done serving rpc forever"
+    print("done serving rpc forever")
 
 if __name__ == '__main__':
     main()
