@@ -7,6 +7,7 @@ a list of actions.  The doc strings of the actions define the interface.
 :func:`make_template` defines a convenient syntax for creating templates
 from a script.
 """
+import sys
 import inspect
 import re
 
@@ -15,6 +16,8 @@ from numpy import inf
 from .anno_exc import annotate_exception
 from .core import Module, Template
 from .rst2html import rst2html
+
+IS_PY3 = sys.version_info[0] >= 3
 
 def make_template(name, description, diagram, instrument, version):
     """
@@ -813,10 +816,10 @@ def _type_check(name, value, ptype):
         value = int(value)
     elif ptype is float and isinstance(value, int):
         value = float(value)
-    #elif ptype is str and isinstance(value, bytes):
-    #    value = value.decode('utf-8')
-    elif ptype is str and isinstance(value, unicode):
-        value = str(value)
+    elif ptype is str and not IS_PY3 and isinstance(value, unicode):
+        value = value.encode('utf-8')
+    elif ptype is str and IS_PY3 and isinstance(value, bytes):
+        value = value.decode('utf-8')
     if not isinstance(value, ptype):
         raise ValueError("expected %s for %s but got %s"
                          % (str(ptype), name, str(type(value))))

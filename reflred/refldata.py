@@ -77,6 +77,7 @@ __all__ = ['ReflData']
 
 ## Something similar can be used for uncertainty, preferably stored as variance
 
+import sys
 import datetime
 import warnings
 import json
@@ -86,6 +87,8 @@ import numpy as np
 from numpy import inf, arctan2, sqrt, sin, cos, pi, radians
 
 from . import resolution
+
+IS_PY3 = sys.version_info[0] >= 3
 
 # for sample background angle offset
 QZ_FROM_SAMPLE = 'sample angle'
@@ -921,17 +924,15 @@ class ReflData(Group):
     def export(self):
         fid = BytesIO()
         for n in ['name', 'entry', 'polarization']:
-            fid.write("# %s\n" % json.dumps({n: getattr(self, n)}).strip("{}"))
-        columns = {"columns": [self.xlabel, self.vlabel, "uncertainty", "resolution"]}
-        units = {"units": [self.xunits, self.vunits, self.vunits, self.xunits]}
+            _write_key_value(fid, n, getattr(self, n))
         wavelength = getattr(self.detector, "wavelength", None)
-        if wavelength is not None:
-            fid.write("# %s\n" % json.dumps({"wavelength": float(wavelength[0])}).strip("{}"))
         wavelength_resolution = getattr(self.detector, "wavelength_resolution", None)
+        if wavelength is not None:
+            _write_key_value(fid, "wavelength", float(wavelength[0]))
         if wavelength_resolution is not None:
-            fid.write("# %s\n" % json.dumps({"wavelength_resolution": float(wavelength_resolution[0])}).strip("{}"))
-        fid.write("# %s\n" % json.dumps(columns).strip("{}"))
-        fid.write("# %s\n" % json.dumps(units).strip("{}"))
+            _write_key_value(fid, "wavelength_resolution", float(wavelength_resolution[0]))
+        _write_key_value(fid, "columns", [self.xlabel, self.vlabel, "uncertainty", "resolution"])
+        _write_key_value(fid, "units", [self.xunits, self.vunits, self.vunits, self.xunits])
         np.savetxt(fid, np.vstack([self.x, self.v, self.dv, self.dx]).T, fmt="%.10e")
         fid.seek(0)
         name = getattr(self, "name", "default_name") #  + "_" + getattr(self, "entry", "default_entry")
@@ -943,6 +944,13 @@ class ReflData(Group):
 
     def get_metadata(self):
         return self.todict()
+
+def _write_key_value(fid, key, value):
+    value_str = json.dumps(value)
+    if IS_PY3:
+        fid.write(b'# "%s": %s\n'%(key.encode('utf-8'), value_str.encode('utf-8')))
+    else:
+        fid.write('# "%s": %s\n'%(key, value_str))
 
 def _str(object, indent=4):
     """

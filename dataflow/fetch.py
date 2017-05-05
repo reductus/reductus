@@ -54,7 +54,7 @@ except ImportError:
 
 import pytz
 
-from .calc import _format_ordered
+from .calc import _format_ordered, generate_fingerprint
 from .cache import get_file_cache
 from .doi_resolve import get_target
 from .lib.iso8601 import seconds_since_epoch
@@ -87,9 +87,7 @@ def url_get(fileinfo):
     cache = get_file_cache()
     fileinfo_minimal = {'path': path, 'mtime': mtime}
     config_str = str(_format_ordered(fileinfo_minimal))
-    key = ":".join(("url_get", config_str))
-    #key = key.encode('utf-8')
-    fp = hashlib.sha1(key).hexdigest()
+    fp = generate_fingerprint(("url_get", config_str))
     if cache.exists(fp):
         ret = cache.get(fp)
         print("getting " + path + " from cache!")

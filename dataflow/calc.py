@@ -11,20 +11,24 @@ in the template given its input values.
 """
 from __future__ import print_function
 
+import sys
+
+import hashlib
+import contextlib
+from inspect import getsource
 try:
     # CRUFT: use cPickle for python 2.7
     import cPickle as pickle
 except ImportError:
     import pickle
-import hashlib
-import contextlib
-from inspect import getsource
 
 from .anno_exc import annotate_exception
 from .cache import get_cache
 from .core import lookup_module, lookup_datatype
 from .core import Bundle
 from .automod import validate
+
+IS_PY3 = sys.version_info[0] >= 3
 
 PICKLE_PROTOCOL = 2 # fast and small and good for Python 2.6+
 
@@ -381,8 +385,15 @@ def fingerprint_node(module, node_config, inputs_fp):
     config_str = str(_format_ordered(config))
     current_module_version = lookup_module(module['module']).version
     parts = [module['module'], current_module_version, config_str] + inputs_fp
+    return generate_fingerprint(parts)
+
+def generate_fingerprint(parts):
+    """
+    Generate a fingerprint from string parts.
+    """
     key = ":".join(parts)
-    #key = key.encode('utf-8')
+    if IS_PY3:
+        key = key.encode('utf-8')
     fp = hashlib.sha1(key).hexdigest()
     return fp
 

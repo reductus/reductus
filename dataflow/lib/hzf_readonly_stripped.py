@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import sys
 import posixpath
 import zipfile
@@ -5,7 +7,8 @@ import json
 
 import numpy
 
-if sys.version_info[0] >= 3:
+IS_PY3 = sys.version_info[0] >= 3
+if IS_PY3:
     def bytes_to_str(s):
         # type: (AnyStr) -> str
         return s.decode('utf-8') if isinstance(s, bytes) else s  # type: ignore
@@ -235,23 +238,32 @@ class FieldFile(object):
             target = self.path
             try:
                 infile = self.root.open(target, 'rb')
-                dtype = str(attrs['format'])
+                dtype_str = str(attrs['format'])
                 # CRUFT: <l4, <d8 are not sensible dtypes
-                if dtype == '<l4': dtype = '<i4'
-                if dtype == '<l8': dtype = '<i8'
-                if dtype == '<d8': dtype = '<f8'
-                dtype = numpy.dtype(dtype)
+                if dtype_str == '<l4': dtype_str = '<i4'
+                if dtype_str == '<l8': dtype_str = '<i8'
+                if dtype_str == '<d8': dtype_str = '<f8'
+                if IS_PY3: dtype_str = dtype_str.replace('S', 'U')
+                dtype = numpy.dtype(dtype_str)
                 if attrs.get('binary', False) == True:
                     s = infile.read()
                     d = numpy.frombuffer(s, dtype=dtype).copy()
+                elif self.root.getsize(target) == 1:
+                    # empty entry: only contains \n
+                    # this is only possible with empty string being written.
+                    d = numpy.array([''], dtype=dtype)
+                elif dtype.kind == 'S':
+                    data = [[v for v in line[:-1].split(b'\t')]
+                            for line in infile]
+                    d = numpy.squeeze(numpy.array(data))
+                    d = _unescape_str(d)
+                elif dtype.kind == 'U':
+                    data = [[v.decode('utf-8') for v in line[:-1].split(b'\t')]
+                            for line in infile]
+                    d = numpy.squeeze(numpy.array(data))
+                    d = _unescape_str(d)
                 else:
-                    if self.root.getsize(target) == 1:
-                        # empty entry: only contains \n
-                        # this is only possible with empty string being written.
-                        d = numpy.array([''], dtype=dtype)
-                    else:
-                        d = numpy.loadtxt(infile, dtype=dtype, delimiter='\t')
-                        d = _unescape_str(d)
+                    d = numpy.loadtxt(infile, dtype=dtype, delimiter='\t')
             finally:
                 infile.close()
             if 'shape' in attrs:
@@ -264,16 +276,17 @@ class FieldFile(object):
         return self._value
 
 def _unescape_str(data):
-    if data.dtype.kind == 'S' and data.size:
+    if data.size:
         # Hide the \\ in \1 so that it doesn't get processed twice.  At the
         # end, convert it back to \\.  This allows us to support \\t without
         # it turning into a tab character or a backslash tab sequence.
         # Don't convert empty arrays since the change type
-        data = numpy.char.replace(data, b'\\\\', b'\1')
-        data = numpy.char.replace(data, b'\\t', b'\t')
-        data = numpy.char.replace(data, b'\\r', b'\r')
-        data = numpy.char.replace(data, b'\\n', b'\n')
-        data = numpy.char.replace(data, b'\1', b'\\')
+        data = numpy.char.replace(data, '\\\\', '\1')
+        data = numpy.char.replace(data, '\\t', '\t')
+        data = numpy.char.replace(data, '\\r', '\r')
+        data = numpy.char.replace(data, '\\n', '\n')
+        data = numpy.char.replace(data, '\1', '\\')
+
     return data
 
 def makeSoftLink(parent, path):
