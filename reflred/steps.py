@@ -736,7 +736,8 @@ def join(data, Q_tolerance=0.5, dQ_tolerance=0.002, order='file',
 
     output (refldata[]) : joined data
 
-    2017-02-09 Paul Kienzle: split tolerance into Qtol and dQtol
+    | 2017-02-09 Paul Kienzle: split tolerance into Qtol and dQtol
+    | 2017-05-05 Paul Kienzle: consistent sort order for outputs
     """
     from .joindata import sort_files, join_datasets
     from .util import group_by_key
@@ -744,7 +745,7 @@ def join(data, Q_tolerance=0.5, dQ_tolerance=0.002, order='file',
 
     if tolerance is not None:
         Q_tolerance = dQ_tolerance = tolerance
-    datasets = group_by_key(group_by, data).values()
+    datasets = [v for k, v in sorted(group_by_key(group_by, data).items())]
     output = []
     for group in datasets:
         group = sort_files(group, order)

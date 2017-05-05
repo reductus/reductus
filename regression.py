@@ -195,7 +195,7 @@ def main():
     fetch.DATA_SOURCES = config.data_sources
 
     if len(sys.argv) < 2:
-        print("usage: python -m dataflow.show datafile")
+        print("usage: python regression.py datafile")
         sys.exit()
     try:
         if sys.argv[1].endswith('.json'):
