@@ -44,6 +44,7 @@ For example::
 from __future__ import print_function
 
 import datetime
+import time
 from posixpath import basename, join, sep
 import hashlib
 
@@ -100,8 +101,9 @@ def url_get(fileinfo):
         print("loading", full_url, name)
         try:
             url = urllib2.urlopen(full_url)
-            url_time_struct = url.info().getdate('last-modified')
-            t_repo = datetime.datetime(*url_time_struct[:7], tzinfo=pytz.utc)
+            url_mtime = url.headers['last-modified']
+            url_time_struct = time.strptime(url_mtime, '%a, %d %b %Y %H:%M:%S %Z')
+            t_repo = datetime.datetime(*url_time_struct[:6], tzinfo=pytz.utc)
             t_request = datetime.datetime.fromtimestamp(mtime, pytz.utc)
             if t_request > t_repo:
                 print("request mtime = %s, repo mtime = %s"%(t_request, t_repo))
