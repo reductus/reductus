@@ -934,10 +934,12 @@ class ReflData(Group):
         _write_key_value(fid, "columns", [self.xlabel, self.vlabel, "uncertainty", "resolution"])
         _write_key_value(fid, "units", [self.xunits, self.vunits, self.vunits, self.xunits])
         np.savetxt(fid, np.vstack([self.x, self.v, self.dv, self.dx]).T, fmt="%.10e")
-        fid.seek(0)
-        name = getattr(self, "name", "default_name") #  + "_" + getattr(self, "entry", "default_entry")
+        export_string = fid.getvalue()
+        if IS_PY3:
+            export_string = export_string.decode('utf-8')
+        name = getattr(self, "name", "default_name")
         entry = getattr(self, "entry", "default_entry")
-        return {"name": name, "entry": entry, "export_string": fid.read()}
+        return {"name": name, "entry": entry, "export_string": export_string}
 
     def get_plottable(self):
         return self.todict()

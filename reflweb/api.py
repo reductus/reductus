@@ -27,11 +27,14 @@ try:
 except ImportError:
     import default_config as config
 
+IS_PY3 = sys.version_info[0] >= 3
+
 # for local and development installs of the server, the .git folder
 # will exist in parent (reduction) folder...
 if os.path.exists(os.path.join(os.path.dirname(__file__), "..", ".git")):
     import time, subprocess
     server_git_hash = subprocess.Popen(["git", "rev-parse", "HEAD"], stdout=subprocess.PIPE).stdout.read().strip()
+    if IS_PY3: server_git_hash = server_git_hash.decode('ascii')
     server_mtime = int(subprocess.Popen(["git", "log", "-1", "--pretty=format:%ct"], stdout=subprocess.PIPE).stdout.read().strip())
     print("running git rev-parse HEAD", server_git_hash, server_mtime)
 else:
@@ -39,6 +42,7 @@ else:
     import pkg_resources
     if pkg_resources.resource_exists("reflweb", "git_version_hash"):
         server_git_hash = pkg_resources.resource_string("reflweb", "git_version_hash").strip()
+        if IS_PY3: server_git_hash = server_git_hash.decode('ascii')
         server_mtime = int(pkg_resources.resource_string("reflweb", "git_version_mtime").strip())
     else:
         server_git_hash = "unknown"

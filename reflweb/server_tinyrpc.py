@@ -2,12 +2,6 @@ import os, sys
 import time
 import traceback
 
-try:
-    import Queue
-except ImportError:
-    import queue
-    sys.modules['Queue'] = queue
-
 import gevent
 import gevent.wsgi
 import gevent.queue

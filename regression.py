@@ -106,10 +106,9 @@ def replay_file(filename):
     """
 
     # Load the template and the target output
-    with open(filename, 'rb') as fid:
+    with open(filename, 'r') as fid:
         first_line = fid.readline()
-        first_line_str = first_line.decode('utf-8') if IS_PY3 else first_line
-        template_data = json.loads(TEMPLATE.sub('{', first_line_str))
+        template_data = json.loads(TEMPLATE.sub('{', first_line))
         old_content = fid.read()
 
     # Show the template
@@ -127,11 +126,8 @@ def replay_file(filename):
     template_config = {}
     retval = process_template(template, template_config, target=target)
     export = retval.get_export()
-    new_content = b'\n\n'.join(v['export_string'] for v in export['values'])
-    if IS_PY3:
-        has_diff = show_diff(old_content.decode(), new_content.decode())
-    else:
-        has_diff = show_diff(old_content, new_content)
+    new_content = '\n\n'.join(v['export_string'] for v in export['values'])
+    has_diff = show_diff(old_content, new_content)
     if has_diff:
         # Save the new output into athe temp directory so we can easily update
         # the regression tests
