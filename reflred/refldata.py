@@ -922,7 +922,7 @@ class ReflData(Group):
             fid.write(self.export())
 
     def export(self):
-        fid = BytesIO()
+        fid = BytesIO()  # numpy.savetxt requires a byte stream
         for n in ['name', 'entry', 'polarization']:
             _write_key_value(fid, n, getattr(self, n))
         wavelength = getattr(self.detector, "wavelength", None)
@@ -933,7 +933,8 @@ class ReflData(Group):
             _write_key_value(fid, "wavelength_resolution", float(wavelength_resolution[0]))
         _write_key_value(fid, "columns", [self.xlabel, self.vlabel, "uncertainty", "resolution"])
         _write_key_value(fid, "units", [self.xunits, self.vunits, self.vunits, self.xunits])
-        np.savetxt(fid, np.vstack([self.x, self.v, self.dv, self.dx]).T, fmt="%.10e")
+        data = np.vstack([self.x, self.v, self.dv, self.dx]).T
+        np.savetxt(fid, data, fmt="%.10e")
         export_string = fid.getvalue()
         if IS_PY3:
             export_string = export_string.decode('utf-8')

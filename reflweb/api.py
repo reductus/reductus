@@ -1,5 +1,7 @@
-import os, sys
-import time
+from __future__ import print_function
+
+import sys
+import os
 from pprint import pprint
 import traceback
 import json
@@ -32,7 +34,7 @@ IS_PY3 = sys.version_info[0] >= 3
 # for local and development installs of the server, the .git folder
 # will exist in parent (reduction) folder...
 if os.path.exists(os.path.join(os.path.dirname(__file__), "..", ".git")):
-    import time, subprocess
+    import subprocess
     server_git_hash = subprocess.Popen(["git", "rev-parse", "HEAD"], stdout=subprocess.PIPE).stdout.read().strip()
     if IS_PY3: server_git_hash = server_git_hash.decode('ascii')
     server_mtime = int(subprocess.Popen(["git", "log", "-1", "--pretty=format:%ct"], stdout=subprocess.PIPE).stdout.read().strip())
@@ -99,12 +101,18 @@ def local_file_metadata(pathlist):
             # you've probably hit an unfulfilled path link or something.
             pass
 
-    metadata = {"subdirs": subdirs, "files": files, "pathlist": pathlist, "files_metadata": files_metadata}
+    metadata = {
+        "subdirs": subdirs,
+        "files": files,
+        "pathlist": pathlist,
+        "files_metadata": files_metadata
+        }
     return metadata
 
 @expose
 def get_file_metadata(source="ncnr", pathlist=None):
-    if pathlist is None: pathlist = []
+    if pathlist is None:
+        pathlist = []
 
     if source == "local":
         metadata = local_file_metadata(pathlist)
@@ -215,7 +223,7 @@ def calc_template(template_def, config):
     template = Template(**template_def)
     #print "template_def:", template_def, "config:", config
     try:
-        retvals = process_template(template, config, target=(None,None))
+        retvals = process_template(template, config, target=(None, None))
     except Exception:
         print("==== template ===="); pprint(template_def)
         print("==== config ===="); pprint(config)
@@ -242,7 +250,7 @@ def create_instruments():
 
     fetch.DATA_SOURCES = config.data_sources
 
-    if config.use_redis == True:
+    if config.use_redis:
         redis_params = getattr(config, "redis_params", {})
         use_redis(**redis_params)
 
