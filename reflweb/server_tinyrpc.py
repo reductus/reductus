@@ -19,6 +19,29 @@ try:
 except ImportError:
     import default_config as config
 
+from functools import wraps
+def wrap_action(action):
+    use_msgpack = getattr(config, 'use_msgpack', False)
+    @wraps
+    def wrapper(*args, **kwds):
+        print ":::reflweb.api."+action.__name__
+        try:
+            if use_msgpack:
+                import msgpack, base64
+                retval = {"serialization": "msgpack", "encoding": "base64"}
+                retval['value'] = base64.b64encode(msgpack.dumps(action(*args, **kwds)))
+            else:
+                retval = {"serialization": "json", "encoding": "string"}
+                retval['value'] = sanitizeForJSON(action(*args, **kwds))
+        except Exception as exc:
+            traceback.print_exc()
+            print ">>> :::refweb.api."+action.__name__
+            raise
+        #print "leaving :::reflweb.api."+action.__name__
+        return retval
+        
+    return wrapper
+    
 def main():
     if len(sys.argv) >= 2:
         port = int(sys.argv[1])
@@ -46,7 +69,7 @@ def main():
     from api import api_methods, create_instruments
     create_instruments()
     for method in api_methods:
-        dispatcher.add_method(getattr(api, method), method)
+        dispatcher.add_method(wrap_action(getattr(api, method)), method)
     if config.serve_staticfiles == True:
         from httpserver import start_server
         os.chdir("static")
