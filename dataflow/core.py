@@ -6,6 +6,7 @@ from __future__ import print_function
 import inspect
 import json
 import types
+from collections import OrderedDict
 
 from numpy import NaN, inf
 
@@ -13,7 +14,7 @@ from .deps import processing_order
 
 TEMPLATE_VERSION = '1.0'
 
-_instrument_registry = {}
+_instrument_registry = OrderedDict()
 _module_registry = {}
 _datatype_registry = {}
 def register_instrument(instrument):
