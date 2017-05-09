@@ -38,6 +38,6 @@ webreduce.server_api = webreduce.server_api || {};
     app.server_api[method_name] = wrap_hug_msgpack(method_name);
   });
   
-  app.server_api.__init__ = function() {}
+  app.server_api.__init__ = function() { return Promise.resolve(true); }
   
 })(webreduce);
