@@ -163,7 +163,7 @@
     var pathlist = pathlist || [];
     var new_div = $("<div />", {"class": "databrowser", "datasource": source});
     $("#" + target_id).prepend(new_div);
-    return webreduce.server_api.get_file_metadata(source, pathlist).then(function(result) {
+    return webreduce.server_api.get_file_metadata({source: source, pathlist: pathlist}).then(function(result) {
       return webreduce.updateFileBrowserPane(new_div[0], source, pathlist, result);
     });
   }
@@ -256,7 +256,7 @@
         dirlink = document.createElement('span');
         dirlink.textContent = pathitem + "/";
         dirlink.onclick = function() {
-          webreduce.server_api.get_file_metadata(datasource, new_pathlist.slice(0, index+1))
+          webreduce.server_api.get_file_metadata({source: datasource, pathlist: new_pathlist.slice(0, index+1)})
           .then( function (metadata) {                
             updateFileBrowserPane(target, datasource, new_pathlist.slice(0, index+1), metadata);
             //updateHistory($(target).parent());
@@ -277,7 +277,7 @@
       var new_pathlist = $.extend(true, [], pathlist);
       new_pathlist.push(subdir);
       subdiritem.onclick = function() {
-        webreduce.server_api.get_file_metadata(datasource, new_pathlist)
+        webreduce.server_api.get_file_metadata({source: datasource, pathlist: new_pathlist})
           .then( function (metadata) {
             updateFileBrowserPane(target, datasource, new_pathlist, metadata);
             //updateHistory($(target).parent());
