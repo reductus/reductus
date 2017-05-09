@@ -6,6 +6,7 @@ uwsgi --http 0.0.0.0:8002 --wsgi-file server_hug.py --clable __hug_wsgi__
 To serve with hug:
 
 hug -p 8001 -f server_hug.py
+(then visit http://localhost:8001/static/ in your browser)
 
 """
 
