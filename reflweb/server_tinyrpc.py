@@ -19,20 +19,21 @@ try:
 except ImportError:
     import default_config as config
 
-from functools import wraps
+from functools import update_wrapper
 def wrap_action(action):
     use_msgpack = getattr(config, 'use_msgpack', False)
-    @wraps
-    def wrapper(*args, **kwds):
+    def wrapper(kwds=None):
         print ":::reflweb.api."+action.__name__
+        if kwds is None:
+            kwds = {}
         try:
             if use_msgpack:
                 import msgpack, base64
                 retval = {"serialization": "msgpack", "encoding": "base64"}
-                retval['value'] = base64.b64encode(msgpack.dumps(action(*args, **kwds)))
+                retval['value'] = base64.b64encode(msgpack.dumps(action(**kwds)))
             else:
                 retval = {"serialization": "json", "encoding": "string"}
-                retval['value'] = sanitizeForJSON(action(*args, **kwds))
+                retval['value'] = sanitizeForJSON(action(**kwds))
         except Exception as exc:
             traceback.print_exc()
             print ">>> :::refweb.api."+action.__name__
@@ -40,7 +41,7 @@ def wrap_action(action):
         #print "leaving :::reflweb.api."+action.__name__
         return retval
         
-    return wrapper
+    return update_wrapper(wrapper, action)
     
 def main():
     if len(sys.argv) >= 2:

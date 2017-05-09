@@ -322,7 +322,7 @@ webreduce.instruments = webreduce.instruments || {};
         var updated_times = {};
         var get_updated = function(source, path) {
           return function() {
-            return webreduce.server_api.get_file_metadata(source, path.split("/")).then(function(r) {
+            return webreduce.server_api.get_file_metadata({source: source, pathlist: path.split("/")}).then(function(r) {
               for (var fn in r.files_metadata) {
                 updated_times[source][path + "/" + fn] = r.files_metadata[fn].mtime;
               }

@@ -787,7 +787,12 @@ webreduce.editor = webreduce.editor || {};
         return webreduce.editor._cache.get(sig).then(function(cached) {return cached.value})
         .catch(function(e) {
           var versioned = webreduce.editor.get_versioned_template(template);
-          return webreduce.server_api.calc_terminal(versioned, config, node, terminal, return_type)
+          return webreduce.server_api.calc_terminal({
+               template_def: versioned,
+               config: config,
+               nodenum: node,
+               terminal_id: terminal,
+               return_type: return_type})
             .then(function(result) {
               var doc = {
                 _id: sig, 
@@ -803,7 +808,13 @@ webreduce.editor = webreduce.editor || {};
         })
       })
     } else {
-      r = r.then(function() { return webreduce.server_api.calc_terminal(template, config, node, terminal, return_type) })
+      r = r.then(function() { return webreduce.server_api.calc_terminal({
+        template_def: template,
+        config: config,
+        nodenum: node,
+        terminal_id: terminal,
+        return_type: return_type});
+      });
     }
     return r
   }
@@ -1538,7 +1549,7 @@ webreduce.editor = webreduce.editor || {};
   webreduce.editor.load_instrument = function(instrument_id) {
     var editor = this;
     editor._instrument_id = instrument_id;
-    return webreduce.server_api.get_instrument(instrument_id)
+    return webreduce.server_api.get_instrument({instrument_id: instrument_id})
       .then(function(instrument_def) {
         editor._instrument_def = instrument_def;
         editor._module_defs = {};
