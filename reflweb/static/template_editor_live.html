@@ -107,14 +107,14 @@ polygon.terminal.state {
 }
 </style>
 <body>
-  <script type="text/javascript" src="//ajax.googleapis.com/ajax/libs/jquery/1.10.1/jquery.min.js"></script>
+  <script src="//code.jquery.com/jquery-1.11.1.min.js"></script> 
   <script type="text/javascript" src="js/jquery.blockUI.js"></script>
   <script type="text/javascript" src="js/jquery.jsonrpc.js"></script>
-  <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.min.js" charset="utf-8"></script>
+  <script src="https://d3js.org/d3.v3.min.js" charset="utf-8"></script>
   <script type="text/javascript" src="//www.ncnr.nist.gov/instruments/magik/d3-science/lib/jquery-extend.js"></script>
   <script type="text/javascript" src="//www.ncnr.nist.gov/instruments/magik/d3-science/lib/dataflow-editor-streamline-new.js"></script>
   <script type="text/javascript" src="js/msgpack.min.js"></script>
-  <script type="text/javascript" src="js/webreduce/server_api/jsonRPC-api.js"></script>
+  <script type="text/javascript" src="js/webreduce/server_api/hug_msgpack.js"></script>
 <script>
 //  var event = new Event('editor_ready');
 </script>
@@ -295,7 +295,7 @@ load_instrument = function(instrument_id, update_selector) {
     d3.select('#select_instrument option[value="' + instrument_id + '"]').property("selected", true);
   }
   var current_instrument = instrument_id; 
-  return webreduce.server_api.get_instrument(current_instrument)
+  return webreduce.server_api.get_instrument({instrument_id: current_instrument})
     .then(function(instrument_def) {
       instruments[current_instrument] = instrument_def;
       module_defs = {};
