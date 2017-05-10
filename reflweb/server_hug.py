@@ -14,6 +14,7 @@ import os, sys
 import traceback
 
 import hug
+from falcon import HTTP_500
 import msgpack as msgpack_converter
 
 try:
@@ -44,6 +45,11 @@ def msgpack(content, request=None, response=None, **kwargs):
 @hug.static('/static')
 def static_files():
     return ('./static',)
+    
+@hug.exception(Exception, output=msgpack)
+def handle_exception(exception, response):
+    response.status = HTTP_500
+    return {'exception': repr(exception)}
     
 import api
 api.create_instruments()
