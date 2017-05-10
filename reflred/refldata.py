@@ -942,6 +942,8 @@ class ReflData(Group):
         entry = getattr(self, "entry", "default_entry")
         return {"name": name, "entry": entry, "export_string": export_string}
 
+    
+    
     def get_plottable(self):
         return self.todict()
 
@@ -951,7 +953,7 @@ class ReflData(Group):
 def _write_key_value(fid, key, value):
     value_str = json.dumps(value)
     if IS_PY3:
-        fid.write(b'# "%s": %s\n'%(key.encode('utf-8'), value_str.encode('utf-8')))
+        fid.write('# "{0}": {1}\n'.format(key, value_str).encode('utf-8'))
     else:
         fid.write('# "%s": %s\n'%(key, value_str))
 
