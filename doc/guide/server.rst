@@ -86,3 +86,86 @@ To update to the latest version of the code::
     # Resolving conflicts is beyond the scope of this document.
 
 Then repeat the build step.
+
+Running a production server
+---------------------------
+Using Apache, with load-balancing:
+
+using server_tinyrpc (python2.7)
+++++++++++++++++++++++++++++++++
+
+* install mod_proxy_balancer
+* copy contents of reduction/reflweb/static to apache home somewhere (usually a folder called reductus)
+* enable a site with this configuration, e.g.:
+
+::
+
+  <VirtualHost *:80>
+        ServerName h3.umd.edu
+
+        ServerAdmin webmaster@localhost
+        DocumentRoot /var/www/html
+        Header set Cache-Control "must-revalidate"
+        <Proxy "balancer://mycluster">
+            BalancerMember "http://localhost:8001"
+            BalancerMember "http://localhost:8002"
+            BalancerMember "http://localhost:8003"
+            BalancerMember "http://localhost:8004"
+            BalancerMember "http://localhost:8005"
+        </Proxy>
+        ProxyPass "/RPC2" "balancer://mycluster"
+        ProxyPassReverse "/RPC2" "balancer://mycluster"
+
+        ErrorLog ${APACHE_LOG_DIR}/error.log
+        CustomLog ${APACHE_LOG_DIR}/access.log combined
+  </VirtualHost>
+
+* start a bunch of rpc servers with (in the reflweb folder)::
+
+  start_tinyrpc_many.sh 8001 5
+
+* this runs `nohup python server_tinyrpc.py 8001 > /dev/null 2>&1&` etc.
+* a sample crontab entry is 
+::
+  
+  @reboot cd /home/bbm/reduction/reflweb && /home/bbm/reduction/reflweb/start_tinyrpc_many.sh 8001 5
+
+
+
+using hug (python3.4+)
+++++++++++++++++++++++++++++++++
+
+* install mod_proxy_uwsgi
+* copy contents of reduction/reflweb/static to apache home somewhere (usually a folder called reductus)
+* enable a site with this configuration:
+
+::
+
+  <VirtualHost *:80>
+        ServerAdmin webmaster@localhost
+        DocumentRoot /var/www/html
+        Header set Cache-Control "must-revalidate"
+        <Proxy "balancer://mycluster">
+            BalancerMember "uwsgi://localhost:8001"
+            BalancerMember "uwsgi://localhost:8002"
+            BalancerMember "uwsgi://localhost:8003"
+            BalancerMember "uwsgi://localhost:8004"
+            BalancerMember "uwsgi://localhost:8005"
+        </Proxy>
+        ProxyPass "/RPC2" "balancer://mycluster"
+        ProxyPassReverse "/RPC2" "balancer://mycluster"
+        
+        ErrorLog ${APACHE_LOG_DIR}/error.log
+        CustomLog ${APACHE_LOG_DIR}/access.log combined
+  </VirtualHost>
+
+* start a bunch of rpc servers using (in the reflweb folder)::
+
+  start_hug_many.sh 8001 5
+
+* this runs `nohup python server_tinyrpc.py 8001 > /dev/null 2>&1&` etc.
+* a sample crontab entry looks like
+::
+
+  @reboot cd /home/bbm/reduction/reflweb && /home/bbm/reduction/reflweb/start_hug_many.sh 8001 5
+
