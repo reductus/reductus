@@ -1,10 +1,17 @@
 # -*- coding: latin-1 -*-
+# pylint: disable=line-too-long
+from __future__ import print_function, division
+
 import datetime
 import types
 from copy import deepcopy
 from functools import wraps
 
-from numpy import cos, pi, cumsum, arange, ndarray, ones, zeros, array, newaxis, linspace, empty, resize, sin, allclose, zeros_like, linalg, dot, arctan2, float64, histogram2d, sum, nansum, sqrt, loadtxt, searchsorted, NaN, logical_not, fliplr, flipud, indices, polyfit
+from numpy import (cos, pi, cumsum, arange, ndarray, ones, zeros, array,
+                   newaxis, linspace, empty, resize, sin, allclose, zeros_like,
+                   linalg, dot, arctan2, float64, histogram2d, sum, nansum,
+                   sqrt, loadtxt, searchsorted, NaN, logical_not, fliplr,
+                   flipud, indices, polyfit)
 import numpy
 from numpy.ma import MaskedArray
 
@@ -13,10 +20,10 @@ from dataflow.lib import rebin as reb
 from .FilterableMetaArray import FilterableMetaArray as MetaArray
 from .he3analyzer import He3AnalyzerCollection
 
-DEBUG=False
+DEBUG = False
 
 class Supervisor():
-    """ class to hold rebinned_data objects and increment their reference count """
+    """class to hold rebinned_data objects and increment their reference count"""
     def __init__(self):
         self.rb_count = 0
         self.rebinned_data_objects = []
@@ -48,38 +55,40 @@ class Supervisor():
         return self
 
 def th_2th_single_dataobj():
-    info = [{"name": "Theta", "units": "degrees", "values": th_list },
+    info = [{"name": "Theta", "units": "degrees", "values": th_list},
             {"name": "TwoTheta", "units": "degrees", "values": twoth_list},
             {"name": "Measurements", "cols": [
-                    {"name": "counts"},
-                    {"name": "pixels"},
-                    {"name": "monitor"},
-                    {"name": "count_time"}]},
+                {"name": "counts"},
+                {"name": "pixels"},
+                {"name": "monitor"},
+                {"name": "count_time"}]},
             {"PolState": '++'}]
     data = MetaArray((th_len, twoth_len, 5), info=info)
     return data
 
 def th_2th_polarized_dataobj():
-    info = [{"name": "Theta", "units": "degrees", "values": th_list },
+    info = [{"name": "Theta", "units": "degrees", "values": th_list},
             {"name": "TwoTheta", "units": "degrees", "values": twoth_list},
             {"name": "PolState", "values": "++"},
             {"name": "Measurements", "cols": [
-                    {"name": "counts"},
-                    {"name": "pixels"},
-                    {"name": "monitor"},
-                    {"name": "count_time"}]},
+                {"name": "counts"},
+                {"name": "pixels"},
+                {"name": "monitor"},
+                {"name": "count_time"}]},
             {"PolState": '++'}]
     data = MetaArray((th_len, twoth_len, 1, 5), info=info)
     return data
 
 def qx_qz_single_dataobj(qxmin, qxmax, qxbins, qzmin, qzmax, qzbins):
-    info = [{"name": "qz", "units": "inv. Angstroms", "values": linspace(qzmin, qzmax, qzbins) },
-            {"name": "qx", "units": "inv. Angstroms", "values": linspace(qxmin, qxmax, qxbins) },
+    info = [{"name": "qz", "units": "inv. Angstroms", "values":
+             linspace(qzmin, qzmax, qzbins)},
+            {"name": "qx", "units": "inv. Angstroms", "values":
+             linspace(qxmin, qxmax, qxbins)},
             {"name": "Measurements", "cols": [
-                    {"name": "counts"},
-                    {"name": "pixels"},
-                    {"name": "monitor"},
-                    {"name": "count_time"}]},
+                {"name": "counts"},
+                {"name": "pixels"},
+                {"name": "monitor"},
+                {"name": "count_time"}]},
             {"PolState": '++'}]
     data = MetaArray((qzbins, qxbins, 4), info=info)
     return data
@@ -92,13 +101,15 @@ class EmptyQxQzGrid(MetaArray):
         creation_story = subtype.__name__
         creation_story += "({0}, {1}, {2}, {3}, {4}, {5})".format(qxmin, qxmax, qxbins, qzmin, qzmax, qzbins)
         info = [
-            {"name": "qx", "units": "inv. Angstroms", "values": linspace(qxmin, qxmax, qxbins) },
-            {"name": "qz", "units": "inv. Angstroms", "values": linspace(qzmin, qzmax, qzbins) },
+            {"name": "qx", "units": "inv. Angstroms", "values":
+             linspace(qxmin, qxmax, qxbins)},
+            {"name": "qz", "units": "inv. Angstroms", "values":
+             linspace(qzmin, qzmax, qzbins)},
             {"name": "Measurements", "cols": [
-                    {"name": "counts"},
-                    {"name": "pixels"},
-                    {"name": "monitor"},
-                    {"name": "count_time"}]},
+                {"name": "counts"},
+                {"name": "pixels"},
+                {"name": "monitor"},
+                {"name": "count_time"}]},
             {'CreationStory': creation_story}]
         data = MetaArray(zeros((qxbins, qzbins, 4)), info=info)
         return data
@@ -108,56 +119,58 @@ class EmptyQxQzGridPolarized(MetaArray):
         creation_story = subtype.__name__
         creation_story += "({0}, {1}, {2}, {3}, {4}, {5})".format(qxmin, qxmax, qxbins, qzmin, qzmax, qzbins)
         info = [
-            {"name": "qx", "units": "inv. frakking Angstroms", "values": linspace(qxmin, qxmax, qxbins) },
-            {"name": "qz", "units": "inv. Angstroms", "values": linspace(qzmin, qzmax, qzbins) },
+            {"name": "qx", "units": "inv. frakking Angstroms", "values":
+             linspace(qxmin, qxmax, qxbins)},
+            {"name": "qz", "units": "inv. Angstroms", "values":
+             linspace(qzmin, qzmax, qzbins)},
             {"name": "Measurements", "cols": [
-                    {"name": "counts_down_down"},
-                    {"name": "counts_down_up"},
-                    {"name": "counts_up_down"},
-                    {"name": "counts_up_up"},
-                    {"name": "monitor_down_down"},
-                    {"name": "monitor_down_up"},
-                    {"name": "monitor_up_down"},
-                    {"name": "monitor_up_up"},
-                    {"name": "pixels"},
-                    {"name": "count_time"}]},
+                {"name": "counts_down_down"},
+                {"name": "counts_down_up"},
+                {"name": "counts_up_down"},
+                {"name": "counts_up_up"},
+                {"name": "monitor_down_down"},
+                {"name": "monitor_down_up"},
+                {"name": "monitor_up_down"},
+                {"name": "monitor_up_up"},
+                {"name": "pixels"},
+                {"name": "count_time"}]},
             {'CreationStory': creation_story}]
         data = MetaArray(zeros((qxbins, qzbins, 10)), info=info)
         return data
 
 def th_2th_combined_dataobj():
-    info = [{"name": "Theta", "units": "degrees", "values": th_list },
+    info = [{"name": "Theta", "units": "degrees", "values": th_list},
             {"name": "TwoTheta", "units": "degrees", "values": twoth_list},
             {"name": "PolState", "values": ['++', '+-', '-+', '--']},
             {"name": "Measurements", "cols": [
-                    {"name": "counts"},
-                    {"name": "pixels"},
-                    {"name": "monitor"},
-                    {"name": "count_time"}]}]
+                {"name": "counts"},
+                {"name": "pixels"},
+                {"name": "monitor"},
+                {"name": "count_time"}]}]
     data = MetaArray((th_len, twoth_len, 4, 5), dtype='float', info=info)
     return data
 
 def reflbinned_pixel_single_dataobj(datalen, xpixels):
-    info = [{"name": "datapoints", "units": None, "values": range(datalen) },
-            {"name": "xpixel", "units": "pixels", "values": range(xpixels) },
+    info = [{"name": "datapoints", "units": None, "values": range(datalen)},
+            {"name": "xpixel", "units": "pixels", "values": range(xpixels)},
             {"name": "Measurements", "cols": [
-                    {"name": "counts"},
-                    {"name": "pixels"},
-                    {"name": "monitor"},
-                    {"name": "count_time"}]},
+                {"name": "counts"},
+                {"name": "pixels"},
+                {"name": "monitor"},
+                {"name": "count_time"}]},
             {"PolState": '++'}]
     data = MetaArray(ones((datalen, xpixels, 5)), dtype='float', info=info)
     return data
 
 def reflbinned_pixel_combined_dataobj(datalen, xpixels):
-    info = [{"name": "datapoints", "units": None, "values": range(datalen) },
-            {"name": "xpixel", "units": "pixels", "values": range(xpixels) },
+    info = [{"name": "datapoints", "units": None, "values": range(datalen)},
+            {"name": "xpixel", "units": "pixels", "values": range(xpixels)},
             {"name": "PolState", "values": ['++', '+-', '-+', '--']},
             {"name": "Measurements", "cols": [
-                    {"name": "counts"},
-                    {"name": "pixels"},
-                    {"name": "monitor"},
-                    {"name": "count_time"}]}]
+                {"name": "counts"},
+                {"name": "pixels"},
+                {"name": "monitor"},
+                {"name": "count_time"}]}]
     data = MetaArray((datalen, xpixels, 4, 5), info=info)
     return data
 
@@ -182,7 +195,7 @@ class Filter2D:
 
     def validate(self, data):
         validated = True
-        if not type(data) == MetaArray:
+        if not isinstance(data, MetaArray):
             print("not MetaArray")
             return False #short-circuit
         if not len(data.shape) == 3:
@@ -205,7 +218,8 @@ def updateCreationStory(apply):
     def newfunc(self, data, *args, **kwargs):
         name = self.__class__.__name__
         new_args = "".join([', {arg}'.format(arg=arg) for arg in args])
-        new_kwargs = "".join([', {key}={value}'.format(key=key, value=kwargs[key]) for key in kwargs])
+        new_kwargs = "".join(', {key}={value}'.format(key=key, value=kwargs[key])
+                             for key in kwargs)
         new_creation_story = ".filter('{fname}'{args}{kwargs})".format(fname=name, args=new_args, kwargs=new_kwargs)
         result = apply(self, data, *args, **kwargs)
 
@@ -251,8 +265,8 @@ def fitPSDCalibration(calibration, minimum_peak_intensity=500.0):
     tts = []
     widths = []
     for i in range(counts.shape[1]):
-        data = counts[:,i].view(ndarray)
-        tt  = twotheta[i]
+        data = counts[:, i].view(ndarray)
+        tt = twotheta[i]
         if sum(data) < minimum_peak_intensity:
             continue
         X = arange(data.size) + 0.5
@@ -371,7 +385,7 @@ class MaskData(Filter2D):
         y_array = data._info[1]['values']
 
         def get_index(t, x):
-            if (x == "" or x == None):
+            if x == "" or x is None:
                 return None
             if float(x) > t.max():
                 return None
@@ -379,7 +393,8 @@ class MaskData(Filter2D):
                 return None
             return searchsorted(t, float(x))
 
-        dataslice = (slice(get_index(x_array, xmin), get_index(x_array, xmax)), slice(get_index(y_array, ymin), get_index(y_array, ymax)))
+        dataslice = (slice(get_index(x_array, xmin), get_index(x_array, xmax)),
+                     slice(get_index(y_array, ymin), get_index(y_array, ymax)))
         #print("indexing:", get_index(x_array, xmin), get_index(x_array, xmax, get_index(y_array, ymin), get_index(y_array, ymax))
         print(dataslice)
         mask[dataslice] = True # set the masked portions to False
@@ -420,21 +435,21 @@ class SliceNormData(Filter2D):
         norm_y = sum(norm_array, axis=0)
         sum_y = sum(counts_array, axis=0)
         mask_y = (norm_y != 0)
-        y_out[:,0][mask_y] += sum_y[mask_y] / norm_y[mask_y]
-        y_out[:,1][mask_y] += sqrt(sum_y)[mask_y] / norm_y[mask_y]
+        y_out[:, 0][mask_y] += sum_y[mask_y] / norm_y[mask_y]
+        y_out[:, 1][mask_y] += sqrt(sum_y)[mask_y] / norm_y[mask_y]
 
         norm_x = sum(norm_array, axis=1)
         sum_x = sum(counts_array, axis=1)
         mask_x = (norm_x != 0)
-        x_out[:,0][mask_x] += sum_x[mask_x] / norm_x[mask_x]
-        x_out[:,1][mask_x] += sqrt(sum_x)[mask_x] / norm_x[mask_x]
+        x_out[:, 0][mask_x] += sum_x[mask_x] / norm_x[mask_x]
+        x_out[:, 1][mask_x] += sqrt(sum_x)[mask_x] / norm_x[mask_x]
 
         col_info = {"name": "Measurements", "cols": [
-                    {"name": "counts"},
-                    {"name": "error"} ]}
+            {"name": "counts"},
+            {"name": "error"}]}
 
-        x_data_obj = MetaArray( x_out, info=[x_axis, col_info, new_info[-1]] )
-        y_data_obj = MetaArray( y_out, info=[y_axis, col_info, new_info[-1]] )
+        x_data_obj = MetaArray(x_out, info=[x_axis, col_info, new_info[-1]])
+        y_data_obj = MetaArray(y_out, info=[y_axis, col_info, new_info[-1]])
 
         return [x_data_obj, y_data_obj]
 
@@ -452,8 +467,8 @@ class CollapseData(Filter2D):
         x_out = sum(data.view(ndarray), axis=1)
         y_out = sum(data.view(ndarray), axis=0)
 
-        x_data_obj = MetaArray( x_out, info=[x_axis, col_info, extra_info] )
-        y_data_obj = MetaArray( y_out, info=[y_axis, col_info, extra_info] )
+        x_data_obj = MetaArray(x_out, info=[x_axis, col_info, extra_info])
+        y_data_obj = MetaArray(y_out, info=[y_axis, col_info, extra_info])
 
         return [x_data_obj, y_data_obj]
 
@@ -474,7 +489,7 @@ class SliceData(Filter2D):
         print(xmin, xmax, ymin, ymax)
 
         def get_index(t, x):
-            if (x == "" or x == None):
+            if x == "" or x is None:
                 return None
             if float(x) > t.max():
                 return None
@@ -491,8 +506,8 @@ class SliceData(Filter2D):
         x_axis['values'] = x_axis['values'][xslice]
         y_axis['values'] = y_axis['values'][yslice]
 
-        x_data_obj = MetaArray( x_out, info=[x_axis, col_info, extra_info] )
-        y_data_obj = MetaArray( y_out, info=[y_axis, col_info, extra_info] )
+        x_data_obj = MetaArray(x_out, info=[x_axis, col_info, extra_info])
+        y_data_obj = MetaArray(y_out, info=[y_axis, col_info, extra_info])
 
         return [x_data_obj, y_data_obj]
 
@@ -509,7 +524,7 @@ class FootprintCorrection(Filter2D):
         monitor_cols = [col for col in cols if col.startswith('monitor')]
 
         axis_names = [new_info[0]['name'], new_info[1]['name']]
-        axes = set([1,0])
+        axes = set([1, 0])
         if "theta" in axis_names:
             th_axis_num = axis_names.index("theta")
             th_axis = "theta"
@@ -559,7 +574,7 @@ class WiggleCorrection(Filter2D):
             return
 
         num_xpixels = len(data.axisValues('xpixel'))
-        if not (num_xpixels == 608):
+        if not num_xpixels == 608:
             print("this correction is only defined for Brookhaven detector!")
         xpixel = data.axisValues('xpixel')
         #arange(num_xpixels + 1, 'float')
@@ -623,16 +638,17 @@ class SmoothData(Filter2D):
         src_data = data.view(ndarray)
 
         if src_data.shape[axis] < width:
-            raise ValueError("Input vector " + str(src_data.shape) + " needs to be bigger than window size: " + str(width))
+            raise ValueError("Input vector " + str(src_data.shape)
+                             + " needs to be bigger than window size: " + str(width))
 
-        if width<3:
+        if width < 3:
             return data
 
-        if not window in ['flat', 'hanning', 'hamming', 'bartlett', 'blackman']:
+        if window not in ['flat', 'hanning', 'hamming', 'bartlett', 'blackman']:
             raise ValueError("Window is not one of 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'")
 
         if window == 'flat': #moving average
-            kernel=ones(width,'d')
+            kernel = ones(width, 'd')
         else:
             #w=eval('numpy.'+window+'(window_len)')
             kernel = getattr(numpy, window)(width)
@@ -676,7 +692,7 @@ class SmoothData(Filter2D):
         # now go through and replace counts cols
         for colnum, col in enumerate(new_info[-2]['cols']):
             if col['name'].startswith('counts'):
-                output_data[...,colnum] = smoothed_data[...,colnum]
+                output_data[..., colnum] = smoothed_data[..., colnum]
 
         new_data = MetaArray(output_data, info=new_info)
 
@@ -691,12 +707,13 @@ class NormalizeToMonitor(Filter2D):
     @autoApplyToList
     def apply(self, data):
         cols = [col['name'] for col in data._info[-2]['cols']]
-        passthrough_cols = [col for col in cols if (not col.startswith('counts'))] # and not col.startswith('monitor'))]
+        passthrough_cols = [col for col in cols if not col.startswith('counts')] # and not col.startswith('monitor'))]
         counts_cols = [col for col in cols if col.startswith('counts')]
         monitor_cols = [col for col in cols if col.startswith('monitor')]
         info = data.infoCopy()
         info[-2]['cols'] = []
-        output_array = zeros( data.shape[:-1] + (len(counts_cols) + len(passthrough_cols),), dtype=float) * NaN
+        output_array = zeros(data.shape[:-1] + (len(counts_cols) + len(passthrough_cols),),
+                             dtype=float) * NaN
         expressions = []
         for i, col in enumerate(passthrough_cols):
             info[-2]['cols'].append({"name":col})
@@ -706,12 +723,13 @@ class NormalizeToMonitor(Filter2D):
             j = i + len(passthrough_cols)
             col_suffix = col[len('counts'):]
             monitor_id = 'monitor'
-            if ('monitor'+col_suffix) in monitor_cols:
+            if 'monitor'+col_suffix in monitor_cols:
                 monitor_id += col_suffix
             info[-2]['cols'].append({"name":"counts_norm%s" % (col_suffix,)})
             mask = data["Measurements":monitor_id].nonzero()
             #print(mask)
-            output_array[..., j][mask] = data["Measurements":col][mask] / data["Measurements":monitor_id][mask]
+            output_array[..., j][mask] \
+                = data["Measurements":col][mask] / data["Measurements":monitor_id][mask]
             #expression = "data1_counts%s / data1_%s" % (col_suffix, monitor_id)
             #error_expression = "sqrt(data1_counts%s) / data1_%s" % (col_suffix, monitor_id)
             #expressions.append({"name": "counts_norm%s" % (col_suffix,), "expression":expression})
@@ -748,7 +766,8 @@ class PixelsToTwotheta(Filter2D):
         # det_angle should be a vector of the same length as the other axis (usually theta)
         # or else just a float, in which case the detector is not moving!
         ndim = len(new_info) - 2 # last two entries in info are for metadata
-        pixel_axis = next((i for i in xrange(len(new_info)-2) if new_info[i]['name'] == ax_name), None)
+        pixel_axis = next((i for i in xrange(len(new_info)-2) if new_info[i]['name'] == ax_name),
+                          None)
         if pixel_axis < 0:
             raise ValueError("error: no %s axis in this dataset" % (ax_name,))
 
@@ -802,7 +821,7 @@ class PixelsToTwotheta(Filter2D):
             new_info[pixel_axis]['name'] = 'twotheta' # getting rid of pixel units: substitute twoth
             new_info[pixel_axis]['values'] = output_twoth
             new_info[pixel_axis]['units'] = 'degrees'
-            output_shape = [0,0,0]
+            output_shape = [0, 0, 0]
             output_shape[pixel_axis] = len(output_twoth)
             output_shape[other_axis] = data.shape[other_axis] # len(other_vector)
             output_shape[2] = data.shape[2] # number of columns is unchanged!
@@ -825,7 +844,9 @@ class PixelsToTwotheta(Filter2D):
                     #input_slice[pixel_axis] = slice(i, i+1)
                     input_slice[other_axis] = i
                     array_to_rebin = data_in[input_slice]
-                    new_array = reb.rebin(input_twoth_bin_edges, array_to_rebin, output_twoth_bin_edges)
+                    new_array = reb.rebin(input_twoth_bin_edges,
+                                          array_to_rebin,
+                                          output_twoth_bin_edges)
                     new_data.view(ndarray)[input_slice] = new_array
 
         return new_data
@@ -854,7 +875,8 @@ class Autogrid(Filter2D):
                 dim_max[dim, i] = av.max()
                 dim_len[dim, i] = len(av)
                 if dim_len[dim, i] > 1:
-                    dim_step[dim, i] = float(dim_max[dim, i] - dim_min[dim, i]) / (dim_len[dim, i] - 1)
+                    dim_step[dim, i] = (float(dim_max[dim, i] - dim_min[dim, i])
+                                        / (dim_len[dim, i] - 1))
                     # dim0_max[i] += th_step[i] # add back on the last step
                 else:
                     dim_step[dim, i] = min_step
@@ -883,7 +905,8 @@ class Autogrid(Filter2D):
             if (dim_len[dim].max() == 1) or (absolute_max[dim] == absolute_min[dim]):
                 steps = 1
             else:
-                steps = int(round(float(absolute_max[dim] - absolute_min[dim]) / final_stepsizes[dim]))
+                steps = int(round(float(absolute_max[dim] - absolute_min[dim])
+                                  / final_stepsizes[dim]))
             if extra_grid_point == True:
                 steps += 1
             output_dims.append(steps)
@@ -892,7 +915,8 @@ class Autogrid(Filter2D):
          # then tack on the number of columns already there:
         output_dims.append(len(new_info[2]['cols']))
         for dim in range(dims):
-            new_info[dim]["values"] = (arange(output_dims[dim], dtype='float') * final_stepsizes[dim]) + absolute_min[dim]
+            new_info[dim]["values"] = (arange(output_dims[dim], dtype='float')
+                                       * final_stepsizes[dim]) + absolute_min[dim]
         output_grid = MetaArray(zeros(tuple(output_dims)), info=new_info)
         return output_grid
 
@@ -999,7 +1023,11 @@ class AppendPolarizationMatrix(Filter2D):
 
         # the order of columns here is determined by the order coming out of He3Analyer NTRow:
         # (++, +-, --, -+)
-        pol_columns = [{"name": 'NT_up_up'}, {"name": 'NT_up_down'}, {"name": 'NT_down_down'}, {"name": 'NT_down_up'}]
+        pol_columns = [
+            {"name": 'NT_up_up'},
+            {"name": 'NT_up_down'},
+            {"name": 'NT_down_down'},
+            {"name": 'NT_down_up'}]
         new_info[2]["cols"] = new_info[2]["cols"][:4] + pol_columns
         new_data = MetaArray(new_data_array, info=new_info)
 
@@ -1065,7 +1093,9 @@ class Combine(Filter2D):
             #if col['name'] in cols_to_add:
             array_to_rebin = dataset[:, :, col['name']].view(ndarray)
             #print(data_edges, bin_edges)
-            new_array = reb.rebin2d(data_edges[0], data_edges[1], array_to_rebin[data_slice], bin_edges[0], bin_edges[1])
+            new_array = reb.rebin2d(data_edges[0], data_edges[1],
+                                    array_to_rebin[data_slice],
+                                    bin_edges[0], bin_edges[1])
             grid[:, :, col['name']] += new_array[grid_slice]
 
         return grid
@@ -1140,7 +1170,8 @@ class TwothetaToQ(Filter2D):
 
         new_info = data.infoCopy()
         ndim = len(new_info) - 2 # last two entries in info are for metadata
-        twotheta_axis = next((i for i in xrange(len(new_info)-2) if new_info[i]['name'] == ax_name), None)
+        twotheta_axis = next((i for i in xrange(len(new_info)-2) if new_info[i]['name'] == ax_name),
+                             None)
         if twotheta_axis < 0:
             raise ValueError("error: no %s axis in this dataset" % (ax_name,))
 
@@ -1176,11 +1207,12 @@ class ThetaTwothetaToQxQz(Filter2D):
 
     @autoApplyToList
     #@updateCreationStory
-    def apply(self, data, output_grid=None, wavelength=5.0, qxmin=None, qxmax=None, qxbins=None, qzmin=None, qzmax=None, qzbins=None):
+    def apply(self, data, output_grid=None, wavelength=5.0, qxmin=None,
+              qxmax=None, qxbins=None, qzmin=None, qzmax=None, qzbins=None):
     #def apply(self, data, output_grid=None, wavelength=5.0):
         if output_grid == None:
-            info = [{"name": "qx", "units": "inv. Angstroms", "values": linspace(qxmin, qxmax, qxbins) },
-                {"name": "qz", "units": "inv. Angstroms", "values": linspace(qzmin, qzmax, qzbins) },]
+            info = [{"name": "qx", "units": "inv. Angstroms", "values": linspace(qxmin, qxmax, qxbins)},
+                    {"name": "qz", "units": "inv. Angstroms", "values": linspace(qzmin, qzmax, qzbins)}]
             old_info = data.infoCopy()
             info.append(old_info[2]) # column information!
             info.append(old_info[3]) # creation story!
@@ -1192,7 +1224,8 @@ class ThetaTwothetaToQxQz(Filter2D):
             #outgrid_info[1] = {"name": "qz", "units": "inv. Angstroms", "values": linspace(qzmin, qzmax, qzbins) }
             outgrid_info = deepcopy(output_grid._info) # take axes and creation story from emptyqxqz...
             outgrid_info[2] = deepcopy(data._info[2]) # take column number and names from dataset
-            output_grid = MetaArray(zeros((output_grid.shape[0], output_grid.shape[1], data.shape[2])), info=outgrid_info)
+            output_grid = MetaArray(zeros((output_grid.shape[0], output_grid.shape[1], data.shape[2])),
+                                    info=outgrid_info)
 
         theta_axis = data._getAxis('theta')
         twotheta_axis = data._getAxis('twotheta')
@@ -1209,8 +1242,8 @@ class ThetaTwothetaToQxQz(Filter2D):
             th_array.shape = (1,) + th_array.shape
 
         tilt_array = th_array - (twotheta_array / 2.0)
-        qxOut = 2.0 * qLength * sin((pi / 180.0) * (twotheta_array / 2.0)) * sin(pi * tilt_array / 180.0)
-        qzOut = 2.0 * qLength * sin((pi / 180.0) * (twotheta_array / 2.0)) * cos(pi * tilt_array / 180.0)
+        qxOut = 2.0 * qLength * sin((pi/180.0) * (twotheta_array/2.0)) * sin(pi*tilt_array/180.0)
+        qzOut = 2.0 * qLength * sin((pi/180.0) * (twotheta_array/2.0)) * cos(pi*tilt_array/180.0)
 
         # getting values from output grid:
         outgrid_info = output_grid.infoCopy()
@@ -1230,10 +1263,13 @@ class ThetaTwothetaToQxQz(Filter2D):
         target_qz_list = target_qz[target_mask]
 
         for i, col in enumerate(outgrid_info[2]['cols']):
-            values_to_bin = data[:,:,col['name']].view(ndarray)[target_mask]
+            values_to_bin = data[:, :, col['name']].view(ndarray)[target_mask]
             outshape = (output_grid.shape[0], output_grid.shape[1])
-            hist2d, xedges, yedges = histogram2d(target_qx_list,target_qz_list, bins = (outshape[0],outshape[1]), range=((0,outshape[0]),(0,outshape[1])), weights=values_to_bin)
-            output_grid[:,:,col['name']] += hist2d
+            hist2d, xedges, yedges = histogram2d(target_qx_list,target_qz_list,
+                                                 bins=(outshape[0], outshape[1]),
+                                                 range=((0, outshape[0]),(0, outshape[1])),
+                                                 weights=values_to_bin)
+            output_grid[:, :, col['name']] += hist2d
             #framed_array[target_qz_list, target_qx_list, i] = data[:,:,col['name']][target_mask]
 
         cols = outgrid_info[2]['cols']
@@ -1242,9 +1278,9 @@ class ThetaTwothetaToQxQz(Filter2D):
         # just take the first one...
         if len(monitor_cols) > 0:
             monitor_col = monitor_cols[0]
-            data_missing_mask = (output_grid[:,:,monitor_col] == 0)
+            data_missing_mask = (output_grid[:, :, monitor_col] == 0)
             for dc in data_cols:
-                output_grid[:,:,dc].view(ndarray)[data_missing_mask] = NaN;
+                output_grid[:, :, dc].view(ndarray)[data_missing_mask] = NaN
 
 
         #extra info changed
@@ -1281,12 +1317,13 @@ class ThetaTwothetaToAlphaIAlphaF(Filter2D):
         alpha_i = th_array.copy()
         alpha_f = arange(af_min, af_max, two_theta_step)
 
-        info = [{"name": "alpha_i", "units": "degrees", "values": th_array.copy() },
-                {"name": "alpha_f", "units": "degrees", "values": alpha_f.copy() },]
+        info = [{"name": "alpha_i", "units": "degrees", "values": th_array.copy()},
+                {"name": "alpha_f", "units": "degrees", "values": alpha_f.copy()}]
         old_info = data.infoCopy()
         info.append(old_info[2]) # column information!
         info.append(old_info[3]) # creation story!
-        output_grid = MetaArray(zeros((th_array.shape[0], alpha_f.shape[0], data.shape[-1])), info=info)
+        output_grid = MetaArray(zeros((th_array.shape[0], alpha_f.shape[0], data.shape[-1])),
+                                info=info)
 
         if theta_axis < twotheta_axis: # then theta is first: add a dimension at the end
             alpha_i.shape = alpha_i.shape + (1,)
@@ -1309,11 +1346,14 @@ class ThetaTwothetaToAlphaIAlphaF(Filter2D):
         target_af = ((af_out - af_min) / two_theta_step).flatten().astype(int).tolist()
 
         for i, col in enumerate(outgrid_info[2]['cols']):
-            values_to_bin = data[:,:,col['name']].view(ndarray).flatten().tolist()
+            values_to_bin = data[:, :, col['name']].view(ndarray).flatten().tolist()
             print(len(target_ai), len(target_af), len(values_to_bin))
             outshape = (output_grid.shape[0], output_grid.shape[1])
-            hist2d, xedges, yedges = histogram2d(target_ai, target_af, bins = (outshape[0],outshape[1]), range=((0,outshape[0]),(0,outshape[1])), weights=values_to_bin)
-            output_grid[:,:,col['name']] += hist2d
+            hist2d, xedges, yedges = histogram2d(target_ai, target_af,
+                                                 bins=(outshape[0], outshape[1]),
+                                                 range=((0, outshape[0]), (0, outshape[1])),
+                                                 weights=values_to_bin)
+            output_grid[:, :, col['name']] += hist2d
 
         cols = outgrid_info[2]['cols']
         data_cols = [col['name'] for col in cols if col['name'].startswith('counts')]
@@ -1321,9 +1361,9 @@ class ThetaTwothetaToAlphaIAlphaF(Filter2D):
         # just take the first one...
         if len(monitor_cols) > 0:
             monitor_col = monitor_cols[0]
-            data_missing_mask = (output_grid[:,:,monitor_col] == 0)
+            data_missing_mask = (output_grid[:, :, monitor_col] == 0)
             for dc in data_cols:
-                output_grid[:,:,dc].view(ndarray)[data_missing_mask] = NaN;
+                output_grid[:, :, dc].view(ndarray)[data_missing_mask] = NaN
 
         #extra info changed
         creation_story = data._info[-1]['CreationStory']
@@ -1590,7 +1630,7 @@ class Subtract(Filter2D):
                 for i, col in enumerate(new_info[2]['cols']):
                     if col['name'].startswith('counts') and col['name'] in subtractable_columns:
                         new_s = reb.rebin(edges, s['Measurements':col['name']], data_edges[active_axis])
-                        new_sshape = [1,1]
+                        new_sshape = [1, 1]
                         new_sshape[active_axis] = len(new_s)
                         new_s.shape = tuple(new_sshape)
                         new_data['Measurements':col['name']] -= new_s
@@ -1670,9 +1710,13 @@ class Algebra(Filter2D):
     """ generic algebraic manipulations """
     def get_safe_operations_namespace(self):
         #make a list of safe functions
-        safe_list = ['math', 'acos', 'asin', 'atan', 'atan2', 'ceil', 'cos', 'cosh', 'degrees', 'e', 'exp', 'fabs', 'floor', 'fmod', 'frexp', 'hypot', 'ldexp', 'log', 'log10', 'modf', 'pi', 'pow', 'radians', 'sin', 'sinh', 'sqrt', 'tan', 'tanh','newaxis']
+        safe_list = [
+            'math', 'acos', 'asin', 'atan', 'atan2', 'ceil', 'cos', 'cosh',
+            'degrees', 'e', 'exp', 'fabs', 'floor', 'fmod', 'frexp', 'hypot',
+            'ldexp', 'log', 'log10', 'modf', 'pi', 'pow', 'radians', 'sin',
+            'sinh', 'sqrt', 'tan', 'tanh', 'newaxis']
         #use the list to filter the local namespace
-        safe_dict = dict([ (k, numpy.__dict__.get(k, None)) for k in safe_list ])
+        safe_dict = dict([(k, numpy.__dict__.get(k, None)) for k in safe_list])
         return safe_dict
 
     def add_to_namespace(self, data, prefix, namespace, automask=True):
@@ -1686,7 +1730,7 @@ class Algebra(Filter2D):
             data_view = data['Measurements':col['name']].view(ndarray)
             if automask and ("pixels" in cols):
                 data_view = MaskedArray(data_view)
-                data_view.mask = ( data["Measurements":"pixels"] > 0 )
+                data_view.mask = (data["Measurements":"pixels"] > 0)
             #namespace[new_name] = data['Measurements':col['name']].view(ndarray)[mask]
             namespace[new_name] = data_view
 
@@ -1708,7 +1752,7 @@ class Algebra(Filter2D):
 #            if len(data2.shape) > len(data_shape):
 #                data_shape = data2.shape
             self.add_to_namespace(data2, "data2_", local_namespace, automask)
-        output_array = zeros( data_shape[:-1] + (len(output_cols) + len(passthrough_cols),), dtype=float)
+        output_array = zeros(data_shape[:-1] + (len(output_cols) + len(passthrough_cols),), dtype=float)
         for i, o in enumerate(output_cols):
             print(o['expression'], data1.shape, output_array[..., i].shape)
             output_array[..., i] = eval(o['expression'], safe_globals, local_namespace)
@@ -1729,7 +1773,7 @@ class CombinePolcorrect(Filter2D):
         pass
 
 def get_index(t, x):
-    if (x == "" or x == None):
+    if (x == "" or x is None):
         return None
     if float(x) > t.max():
         return None
@@ -1750,4 +1794,3 @@ if __name__ == '__main__':
     #print(eval(data._info[-1]["CreationStory"]))
     #print(data)
     assert data.all() == eval(data._info[-1]["CreationStory"]).all()
-

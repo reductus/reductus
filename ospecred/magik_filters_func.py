@@ -220,7 +220,7 @@ def cropData(data, xmin=None, xmax=None, ymin=None, ymax=None):
     print(xmin, xmax, ymin, ymax)
 
     def get_index(t, x):
-        if (x == "" or x == None):
+        if (x == "" or x is None):
             return None
         if float(x) > t.max():
             return None

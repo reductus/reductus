@@ -12,7 +12,8 @@ from numpy import ndarray, array, empty, fromstring, concatenate
 def axis(name=None, cols=None, values=None, units=None):
   """Convenience function for generating axis descriptions when defining MetaArrays
 
-  Example:
+  Example::
+
     MetaArray([...], info=[
       axis('Time', values=[0.0, 0.1, 0.2, 0.3], units='s'),
       axis('Signal', cols=[('V0', 'V', 'Voltage0'), ('V1', 'V', 'Voltage1'), ('I0', 'A', 'Current0')])
@@ -58,22 +59,26 @@ class MetaArray(ndarray):
   descriptions. An additional dict at the end of the axis list may specify parameters
   that apply to values in the entire array.
 
-  For example:
-    A 2D array of altitude values for a topographical map might look like
+  For example, a 2D array of altitude values for a topographical map might look like::
+
       info=[
         {'name': 'lat', 'title': 'Lattitude'},
         {'name': 'lon', 'title': 'Longitude'},
         {'title': 'Altitude', 'units': 'm'}
       ]
-    In this case, every value in the array represents the altitude in feet at the lat, lon
-    position represented by the array index. All of the following return the
-    value at lat=10, lon=5:
+
+  In this case, every value in the array represents the altitude in feet at the lat, lon
+  position represented by the array index. All of the following return the
+  value at lat=10, lon=5::
+
       array[10, 5]
       array['lon':5, 'lat':10]
       array['lat':10][5]
-    Now suppose we want to combine this data with another array of equal dimensions that
-    represents the average rainfall for each location. We could easily store these as two
-    separate arrays or combine them into a 3D array with this description:
+
+  Now suppose we want to combine this data with another array of equal dimensions that
+  represents the average rainfall for each location. We could easily store these as two
+  separate arrays or combine them into a 3D array with this description::
+
       info=[
         {'name': 'vals', 'cols': [
           {'name': 'altitude', 'units': 'm'},
@@ -82,14 +87,17 @@ class MetaArray(ndarray):
         {'name': 'lat', 'title': 'Lattitude'},
         {'name': 'lon', 'title': 'Longitude'}
       ]
-    We can now access the altitude values with array[0] or array['altitude'], and the
-    rainfall values with array[1] or array['rainfall']. All of the following return
-    the rainfall value at lat=10, lon=5:
+
+  We can now access the altitude values with array[0] or array['altitude'], and the
+  rainfall values with array[1] or array['rainfall']. All of the following return
+  the rainfall value at lat=10, lon=5::
+
       array[1, 10, 5]
       array['lon':5, 'lat':10, 'val': 'rainfall']
       array['rainfall', 'lon':5, 'lat':10]
-    Notice that in the second example, there is no need for an extra (4th) axis description
-    since the actual values are described (name and units) in the column info for the first axis.
+
+  Notice that in the second example, there is no need for an extra (4th) axis description
+  since the actual values are described (name and units) in the column info for the first axis.
   """
 
   def __new__(subtype, data=None, file=None, info=None, dtype=None, copy=False):
