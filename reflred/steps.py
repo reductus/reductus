@@ -1,3 +1,9 @@
+"""
+Reflectometry reduction
+=======================
+
+"""
+
 # This program is public domain
 import os
 from copy import copy
@@ -5,7 +11,12 @@ from copy import copy
 # TODO: maybe bring back formula to show the math of each step
 # TODO: what about polarized data?
 
-ALL_ACTIONS = []
+# Action names
+__all__ = [] # type: List[str]
+
+# Action methods
+ALL_ACTIONS = [] # type: List[Callable[Any, Any]]
+
 def cache(action):
     """
     Decorator which adds the *cached* attribute to the function.
@@ -39,6 +50,11 @@ def module(action):
     This just collects the action, it does not otherwise modify it.
     """
     ALL_ACTIONS.append(action)
+    __all__.append(action.__name__)
+
+    # Sort modules alphabetically
+    ALL_ACTIONS.sort(key=lambda action: action.__name__)
+    __all__.sort()
 
     # This is a decorator, so return the original function
     return action
