@@ -1,3 +1,9 @@
+"""
+Bruker data
+===========
+
+Data loader for Bruker table-top X-ray source raw file format.
+"""
 import struct
 
 import numpy
@@ -271,7 +277,9 @@ EXTRA_RECORD = {
 
 
 def load(filename):
-    # pull in the entire file
+    """
+    Load Bruker X-ray data from *filename*.
+    """
     with open(filename, 'rb') as f:
         data = f.read()
     if data[:7] != "RAW1.01":
@@ -280,6 +288,9 @@ def load(filename):
     return loads(data)
 
 def loads(data):
+    """
+    Load Bruker X-ray data from the byte stream contained in *data*.
+    """
     if data[:7] != "RAW1.01":
         raise ValueError("not a Bruker XRD RAW file")
 
@@ -343,4 +354,3 @@ def loads(data):
 if __name__ == "__main__":
     import sys, pprint
     pprint.pprint(load(sys.argv[1]))
-
