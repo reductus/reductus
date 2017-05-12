@@ -1,7 +1,4 @@
 """
-Data sources
-============
-
 Need to configure a list of data sources from which to fetch files.  This is
 done by setting the global *DATA_SOURCE* variable in the dataflow.fetch module
 

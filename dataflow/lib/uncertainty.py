@@ -1,7 +1,4 @@
 """
-Uncertainty propagation class
-=============================
-
 Based on scalars or numpy vectors, this class allows you to store and
 manipulate values+uncertainties, with propagation of gaussian error for
 addition, subtraction, multiplication, division, power, exp, log

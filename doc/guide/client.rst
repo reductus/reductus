@@ -1,5 +1,5 @@
 ==================
-Client user manual
+Using Reductus
 ==================
 
 Overview
@@ -43,7 +43,6 @@ as described in :doc:`server`
 
 .. toctree::
     :maxdepth: 2
-    :numbered:
     :titlesonly:
     :glob:
     :hidden:

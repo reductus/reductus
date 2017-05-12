@@ -1,7 +1,4 @@
 """
-Bruker data
-===========
-
 Data loader for Bruker table-top X-ray source raw file format.
 """
 import struct

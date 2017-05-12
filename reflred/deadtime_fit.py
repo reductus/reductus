@@ -1,9 +1,6 @@
 # -*- coding: utf-8 -*-
 
 r"""
-Dead time correction algorithms
-===============================
-
 Introduction
 ------------
 
@@ -134,11 +131,13 @@ Available functions
 References
 ----------
 
-.. [Lee] Lee, S. H.; Gardner, R. P. (2000).
+.. [Lee]
+    Lee, S. H.; Gardner, R. P. (2000).
     *A new G-M counter dead time model*,
     Applied Radiation and Isotopes, **53**, 731-737.
 
-.. [Lebigot], Lebigot, Eric O. (2015).
+.. [Lebigot]
+    Lebigot, Eric O. (2015).
     *Uncertainties: a Python package for calculations with uncertainties*,
     `http://pythonhosted.org/uncertainties/`_.
 

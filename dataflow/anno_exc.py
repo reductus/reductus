@@ -1,7 +1,4 @@
 """
-Annotate exceptions
-===================
-
 Add an annotation to an exception giving a context for the embedded exception.
 
 For example::

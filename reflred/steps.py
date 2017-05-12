@@ -1,9 +1,3 @@
-"""
-Reflectometry reduction
-=======================
-
-"""
-
 # This program is public domain
 import os
 from copy import copy

@@ -1,7 +1,4 @@
 """
-Cache manager
-=============
-
 Calculations can be cached, either using a redis server or using a local
 in-memory cache.  The redis server is useful when serving calculations
 over the net via CGI since it can be used by different processes.

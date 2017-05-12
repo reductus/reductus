@@ -22,8 +22,7 @@ The returned model object *s* provides:
     s(p)     predicted value at point p
     ======== ============================================
 
-Example
-=======
+**Example**
 
 Weighted system::
 

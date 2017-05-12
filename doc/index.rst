@@ -13,7 +13,6 @@ Table of Contents
 =================
 
 .. toctree::
-    :numbered:
     :maxdepth: 4
 
     guide/index.rst
