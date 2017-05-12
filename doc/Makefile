@@ -25,6 +25,7 @@ endif
 PAPEROPT_a4     = -D latex_paper_size=a4
 PAPEROPT_letter = -D latex_paper_size=letter
 ALLSPHINXOPTS   = -d _build/doctrees $(PAPEROPT_$(PAPER)) $(SPHINXOPTS) .
+PACKAGES = dataflow ospecred sansred reflred
 
 help:
 	@echo "Please use \`make <target>' where <target> is one of"
@@ -43,7 +44,7 @@ help:
 .PHONY: help clean html dirhtml pickle json htmlhelp qthelp latex changes linkcheck doctest build
 
 api: genapi.py
-	-$(RMDIR) api
+	-$(RMDIR) $(PACKAGES)
 	$(PYTHON) genapi.py
 
 build: api
@@ -59,7 +60,7 @@ upload:
 	scp _build/latex/SASModels.pdf reflectometry.org:web/danse/download
 
 clean:
-	-$(RMDIR) _build dataflow reflred
+	-$(RMDIR) _build $(PACKAGES)
 
 html: build
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) _build/html

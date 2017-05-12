@@ -17,8 +17,11 @@ with the `web client`_ only.
 
     guide/client.rst
     guide/server.rst
+    guide/intro.rst
     dataflow/index.rst
     reflred/index.rst
+    ospecred/index.rst
+    sansred/index.rst
 
 Indices and Tables
 ==================
