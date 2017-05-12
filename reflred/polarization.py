@@ -169,6 +169,7 @@ import numpy as np
 #def nominal_values(u): return u.x
 #def std_devs(u): return u.dx
 from uncertainties.unumpy import uarray as U, matrix as UM, nominal_values, std_devs
+from uncertainties import ufloat
 
 from dataflow.lib.errutil import interp
 
@@ -222,8 +223,8 @@ def apply_polarization_correction(data, polarization, spinflip=True):
 def correct(data_in, spinflip, beam, Imin=0.0, Emin=0.0, FRbal=0.5, clip=False):
     dtheta = beam['++'].angular_resolution
     beta, fp, rp, x, y, mask \
-        =  _calc_efficiency(beam=beam, dtheta=dtheta,
-                            Imin=Imin, Emin=Emin, FRbal=FRbal, clip=clip)
+        = _calc_efficiency(beam=beam, dtheta=dtheta,
+                           Imin=Imin, Emin=Emin, FRbal=FRbal, clip=clip)
 
     data = dict([(d.polarization, d) for d in data_in])
     use_pm = spinflip and '+-' in data
@@ -261,13 +262,13 @@ def _apply_correction(data, dtheta, Hinv, use_pm, use_mp):
     Y = np.vstack(y)
 
     # Look up correction matrix for each point using the ++ cross section
-    index = util.nearest(data['++'].angular_resolution, dtheta)
+    correction_index = util.nearest(data['++'].angular_resolution, dtheta)
 
     # Apply the correction at each point
     X, dX = np.zeros(Y.shape), np.zeros(Y.shape)
-    for i, idx in enumerate(index):
-        x = Hinv[idx] * UM(Y[:, i]).T
-        X[:, i], dX[:, i] = nominal_values(x).flat, std_devs(x).flat
+    for point, polarization in enumerate(correction_index):
+        x = Hinv[polarization] * UM(Y[:, point]).T
+        X[:, point], dX[:, point] = nominal_values(x).flat, std_devs(x).flat
 
     # Put the corrected intensities back into the datasets
     for k, xs in enumerate(parts):
@@ -285,29 +286,30 @@ def _correction_matrix(beta, fp, rp, x, y, use_pm, use_mp):
     Fp_x, Fm_x = 1+fp*x, 1-fp*x
     Rp_y, Rm_y = 1+rp*y, 1-rp*y
 
+    # pylint: disable=bad-whitespace
     if use_pm and use_mp:
         H = np.array([
-            [Fm_x * Rm_y, Fm_x * Rp_y, Fp_x * Rm_y, Fp_x * Rp_y],
-            [Fm_x * Rm  , Fm_x * Rp  , Fp_x * Rm  , Fp_x * Rp  ],
-            [Fm   * Rm_y, Fm   * Rp_y, Fp   * Rm_y, Fp   * Rp_y],
-            [Fm   * Rm  , Fm   * Rp  , Fp   * Rm  , Fp   * Rp  ],
+            [Fm_x*Rm_y, Fm_x*Rp_y, Fp_x*Rm_y, Fp_x*Rp_y],
+            [Fm_x*Rm  , Fm_x*Rp  , Fp_x*Rm  , Fp_x*Rp  ],
+            [Fm  *Rm_y, Fm  *Rp_y, Fp  *Rm_y, Fp  *Rp_y],
+            [Fm  *Rm  , Fm  *Rp  , Fp  *Rm  , Fp  *Rp  ],
             ])
     elif use_pm:
         H = np.array([
-            [Fm_x * Rm_y,(Fm_x * Rp_y+ Fp_x * Rm_y), Fp_x * Rp_y],
-            [Fm_x * Rm  ,(Fm_x * Rp  + Fp_x * Rm  ), Fp_x * Rp  ],
-            [Fm   * Rm  ,(Fm   * Rp  + Fp   * Rm  ), Fp   * Rp  ],
+            [Fm_x*Rm_y, (Fm_x*Rp_y + Fp_x*Rm_y), Fp_x*Rp_y],
+            [Fm_x*Rm  , (Fm_x*Rp   + Fp_x*Rm  ), Fp_x*Rp  ],
+            [Fm  *Rm  , (Fm  *Rp   + Fp  *Rm  ), Fp  *Rp  ],
         ])
     elif use_mp:
         H = np.array([
-            [Fm_x * Rm_y,(Fm_x * Rp_y+ Fp_x * Rm_y), Fp_x * Rp_y],
-            [Fm   * Rm_y,(Fm   * Rp_y+ Fp   * Rm_y), Fp   * Rp_y],
-            [Fm   * Rm  ,(Fm   * Rp  + Fp   * Rm  ), Fp   * Rp  ],
+            [Fm_x*Rm_y, (Fm_x*Rp_y + Fp_x*Rm_y), Fp_x*Rp_y],
+            [Fm  *Rm_y, (Fm  *Rp_y + Fp  *Rm_y), Fp  *Rp_y],
+            [Fm  *Rm  , (Fm  *Rp   + Fp  *Rm  ), Fp  *Rp  ],
         ])
     else:
         H = np.array([
-            [Fm_x * Rm_y, Fp_x * Rp_y  ],
-            [Fm   * Rm  , Fp   * Rp    ],
+            [Fm_x*Rm_y, Fp_x*Rp_y  ],
+            [Fm  *Rm  , Fp  *Rp    ],
             ])
 
     #print("H:", UM(H[:,:,0]), UM(H[:,:,0]).I)
@@ -433,53 +435,81 @@ def _interp_intensity(dT, data):
 
 # Different versions of clip depending on which uncertainty package is used.
 def clip_no_error(field, low, high, nanval=0.):
-    idx = np.isnan(field)
-    field[idx] = nanval
-    reject = idx
+    """
+    Clip the values to the range, returning the indices of the values
+    which were clipped.  Note that this modifies field in place. NaN
+    values are clipped to the nanval default.  *field* is a floating
+    point array, with no uncertainty.
+    """
+    index = np.isnan(field)
+    field[index] = nanval
+    reject = index
 
-    idx = field < low
-    field[idx] = low
-    reject |= idx
+    index = field < low
+    field[index] = low
+    reject |= index
 
-    idx = field > high
-    field[idx] = high
-    reject |= idx
+    index = field > high
+    field[index] = high
+    reject |= index
 
     return reject
 
 
 def clip_reflred_err1d(field, low, high, nanval=0.):
-    idx = np.isnan(field.x)
-    field[idx] = U(nanval, field.variance[idx])
-    reject = idx
+    """
+    Clip the values to the range, returning the indices of the values
+    which were clipped.  Note that this modifies field in place. NaN
+    values are clipped to the nanval default.
 
-    idx = field.x < low
-    field[idx] = U(low, field.variance[idx])
-    reject |= idx
+    *field* is dataflow.uncertainty array, whose values retain their
+    variance even if they are forced within the bounds.  *low*, *high*
+    and *nanval* are floats.
+    """
+    index = np.isnan(field.x)
+    field[index] = U(nanval, field.variance[index])
+    reject = index
 
-    idx = field.x > high
-    field[idx] = U(high, field.variance[idx])
-    reject |= idx
+    index = field.x < low
+    field[index] = U(low, field.variance[index])
+    reject |= index
+
+    index = field.x > high
+    field[index] = U(high, field.variance[index])
+    reject |= index
 
     return reject
 
 
 def clip_pypi_uncertainties(field, low, high, nanval=0.):
+    """
+    Clip the values to the range, returning the indices of the values
+    which were clipped.  Note that this modifies field in place. NaN
+    values are clipped to the nanval default.
+
+    *field* is an array from the uncertainties package, whose values retain
+    their variance even if they are forced within the bounds.  Clipping is
+    performed by subtracting from the uncertain value, which will help
+    preserve correlations when performing further operations on the clipped
+    values.
+
+    *low*, *high* and *nanval* are floats.
+    """
     # Move value to the limit without changing the correlated errors.
     # This is probably wrong, but it is less wrong than other straight forward
     # options, such setting x to the limit with zero uncertainty.  At least
     # the clipped points will be flagged.
-    idx = np.isnan(nominal_values(field))
-    field[idx] = [v+(nanval-v.n) for v in field[idx]]
-    reject = idx
+    index = np.isnan(nominal_values(field))
+    field[index] = [ufloat(nanval, 0.) for v in field[index]]
+    reject = index
 
-    idx = field < low
-    field[idx] = [v+(low-v.n) for v in field[idx]]
-    reject |= idx
+    index = field < low
+    field[index] = [v+(low-v.n) for v in field[index]]
+    reject |= index
 
-    idx = field > high
-    field[idx] = [v-(v.n-high) for v in field[idx]]
-    reject |= idx
+    index = field > high
+    field[index] = [v-(v.n-high) for v in field[index]]
+    reject |= index
 
     return reject
 
@@ -488,8 +518,3 @@ if 'Uncertainty' in globals():
     _clip_data = clip_reflred_err1d
 else:
     _clip_data = clip_pypi_uncertainties
-_clip_data.__doc__ =  """
-    Clip the values to the range, returning the indices of the values
-    which were clipped.  Note that this modifies field in place. NaN
-    values are clipped to the nanval default.
-    """

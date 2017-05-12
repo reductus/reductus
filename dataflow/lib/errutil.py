@@ -92,5 +92,3 @@ def interp(x, xp, fp, left=None, right=None):
         f[x < xp[0]] = left if left is not None else fp[0]
         f[x > xp[-1]] = right if right is not None else fp[-1]
         return f
-
-
