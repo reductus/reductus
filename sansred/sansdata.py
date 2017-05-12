@@ -1,3 +1,10 @@
+"""
+SANS data format
+================
+
+Internal data representation for SANS data.
+"""
+
 import datetime
 from copy import copy, deepcopy
 import json

@@ -1,3 +1,11 @@
+"""
+Calibration constants for SANS.
+
+Defines *attenuation* dictionary with::
+
+    attenuation['NGB30|NG7|NGB']['att|att_err|lambda'] = [value, ...]
+"""
+
 import re
 import json
 

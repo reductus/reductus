@@ -1,3 +1,10 @@
+"""
+SANS data loader
+================
+
+Load SANS NeXus file into :mod:`sansred.sansdata` data structure.
+"""
+
 from dataflow.lib import hzf_readonly_stripped as hzf
 from dataflow.lib import unit
 
@@ -45,6 +52,9 @@ def data_as(field, units):
     return value
 
 def readSANSNexuz(input_file, file_obj=None):
+    """
+    Load all entries from the NeXus file into sans data sets.
+    """
     datasets = []
     file = hzf.File(input_file, file_obj)
     for entryname, entry in file.items():

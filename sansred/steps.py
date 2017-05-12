@@ -1,3 +1,10 @@
+"""
+SANS reduction steps
+====================
+
+Set of reduction steps for SANS reduction.
+"""
+
 from __future__ import print_function
 
 from posixpath import basename, join

@@ -1,18 +1,28 @@
+"""
+Annulus mask
+============
+
+Create an antialiased annulus mask using PIL image commands.
+"""
+
 from PIL import Image, ImageDraw
 import numpy
 
 def annular_mask_antialiased(shape, center, inner_radius, outer_radius,
                              background_value=0.0, mask_value=1.0,
                              oversampling=8):
+    # type: (Tuple[int, int], Tuple[float, float], float, float, float, float, int)  -> numpy.ndarray
     """
-    Takes shape tuple: (x, y) - this is the size of the output image
-    center tuple: (x, y)
-    inner_radius: float
-    outer_radius: float
-    background_value: float (the image is initialized to this value)
-    mask_value: floate (the annulus is drawn with this value)
-    oversampling: int (the mask is drawn on a canvas this many times bigger
-    than the final size, then resampled down to give smoother edges)
+    Takes the following:
+
+    * *shape* tuple: (x, y) - this is the size of the output image
+    * *center* tuple: (x, y)
+    * *inner_radius*: float
+    * *outer_radius*: float
+    * *background_value*: float (the image is initialized to this value)
+    * *mask_value*: float (the annulus is drawn with this value)
+    * *oversampling*: int (the mask is drawn on a canvas this many times bigger
+      than the final size, then resampled down to give smoother edges)
     """
     # Create a 32-bit float image
     intermediate_shape = (shape[0]*int(oversampling), shape[1]*int(oversampling))
