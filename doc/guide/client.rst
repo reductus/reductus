@@ -15,12 +15,11 @@ or out of an output can be done by clicking on them, while clicking on a
 module itself will bring up a menu of the parameters in the rightmost
 panel of the client.
 
-
-
 Loading data files
 ==================
-The leftmost modules in any reduction will be the *loaders*, which take
-a raw data file (or often, just a URI link to where the raw data file
+In the `reductus`_ application,
+the leftmost modules in any reduction will be the *loaders*, which take a
+raw data file (or often, just a URI link to where the raw data file
 can be found online) and convert it into a data structure which can be used
 by the rest of the reduction system.
 

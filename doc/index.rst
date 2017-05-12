@@ -1,27 +1,23 @@
 Introduction
 ============
-The online data reduction system reductus is made up of two parts:
+The online data reduction system `reductus`_ is made up of two parts:
 
 * an HTML/Javascript client that runs in a web browser
 * a computation server
 
 Most users will not have to install a server, and will interact
-with the `web client`_ only.
+with the public web client only.  See below for documentation on
+specific instruments.
 
-.. _web client: http://h3.umd.edu/reductus
-
+Table of Contents
+=================
 
 .. toctree::
     :numbered:
     :maxdepth: 4
 
-    guide/client.rst
-    guide/server.rst
-    guide/intro.rst
-    dataflow/index.rst
-    reflred/index.rst
-    ospecred/index.rst
-    sansred/index.rst
+    guide/index.rst
+    api/index.rst
 
 Indices and Tables
 ==================
