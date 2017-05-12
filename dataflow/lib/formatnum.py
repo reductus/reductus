@@ -43,7 +43,8 @@ import math
 from numpy import isinf, isnan, inf, NaN
 
 try:
-    from typing import Optional
+    #from typing import Optional
+    pass
 except ImportError:
     pass
 

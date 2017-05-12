@@ -52,7 +52,8 @@ serves only to provide relative weighting between the points.
 __all__ = ['wsolve', 'wpolyfit', 'LinearModel', 'PolynomialModel', 'smooth']
 
 try:
-    from typing import Optional, Union, Sequence
+    #from typing import Optional, Union, Sequence
+    pass
 except ImportError:
     pass
 

@@ -34,7 +34,9 @@ To stop::
 To access the client, if using the new Docker beta navigate to
 http://localhost:8000/reflweb/web_reduction_filebrowser.html
 On Windows 7, if using docker-machine, you will have to get the IP of
-the default docker install and use that instead of localhost, e.g. ::
+the default docker install and use that instead of localhost, e.g.,
+
+::
 
     docker-machine ip default
 

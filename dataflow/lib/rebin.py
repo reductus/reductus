@@ -7,8 +7,9 @@ from . import _reduction  ## C API wrapper
 #from . import _rebin  ## cython wrapper
 
 try:
-    from typing import Sequence, Optional, Union
-except:
+    #from typing import Sequence, Optional, Union
+    pass
+except ImportError:
     pass
 
 def rebin(x, I, xo, Io=None, dtype=np.float64):

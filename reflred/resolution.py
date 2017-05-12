@@ -8,7 +8,8 @@ from numpy import arcsin as asin, ceil
 from numpy import ones_like, arange, isscalar, asarray, hstack
 
 try:
-    from typing import Tuple
+    #from typing import Tuple
+    pass
 except ImportError:
     pass
 

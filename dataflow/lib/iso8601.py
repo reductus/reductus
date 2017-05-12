@@ -32,7 +32,8 @@ from datetime import datetime, timedelta, tzinfo
 import re
 
 try:
-    from typing import Union
+    #from typing import Union
+    pass
 except ImportError:
     pass
 

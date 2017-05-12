@@ -14,10 +14,11 @@ from .util import poisson_average
 from .resolution import divergence, dTdL2dQ, TiTdL2Qxz
 
 try:
-    from typing import List, Dict, Union, Sequence
-    Columns = Dict[str, List[np.ndarray]]
-    StackedColumns = Dict[str, np.ndarray]
-    IndexSet = List[int]
+    #from typing import List, Dict, Union, Sequence
+    #Columns = Dict[str, List[np.ndarray]]
+    #StackedColumns = Dict[str, np.ndarray]
+    #IndexSet = List[int]
+    pass
 except ImportError:
     pass
 
