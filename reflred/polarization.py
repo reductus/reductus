@@ -255,10 +255,8 @@ def _apply_correction(data, dtheta, Hinv, use_pm, use_mp):
     y = [U(data['++'].v, data['++'].dv)]
     for p in parts[1:]:
         px = data[p].Qz
-        if len(px) != len(x):
-            raise ValueError("All cross sections must have the same length for polarization correction")
         py = U(data[p].v, data[p].dv)
-        y.append(interp(x, px, py))
+        y.append(interp(x, px, py, left=np.NaN, right=np.NaN))
     Y = np.vstack(y)
 
     # Look up correction matrix for each point using the ++ cross section
@@ -394,7 +392,8 @@ def polarization_efficiency(beam, Imin=0.0, Emin=0.0, FRbal=0.5, clip=False):
 def _calc_efficiency(beam, dtheta, Imin, Emin, FRbal, clip):
     # Beam intensity.
     # NOTE: A:mm, B:pm, C:mp, D:mm
-    pp, pm, mp, mm = [_interp_intensity(dtheta, beam[xs]) for xs in ALL_XS]
+    #pp, pm, mp, mm = [_interp_intensity(dtheta, beam[xs]) for xs in ALL_XS]
+    pp, pm, mp, mm = [_nearest_intensity(dtheta, beam[xs]) for xs in ALL_XS]
 
     Ic = ((mm*pp) - (pm*mp)) / ((mm+pp) - (pm+mp))
     reject = np.zeros_like(Ic, dtype='bool')  # Reject nothing initially
@@ -429,9 +428,14 @@ def _calc_efficiency(beam, dtheta, Imin, Emin, FRbal, clip):
 
     return beta, fp, rp, x, y, reject
 
+def _nearest_intensity(dT, data):
+    index = util.nearest(dT, data.angular_resolution)
+    if (abs(dT - data.angular_resolution[index]) > 0.001).any():
+        raise ValueError("polarization cross sections for direct beam are not aligned")
+    return U(data.v, data.dv)[index]
+
 def _interp_intensity(dT, data):
-    return util.nearest(dT, data.angular_resolution, U(data.v, data.dv))
-    #return util.interp(dT, data.angular_resolution, U(data.v, data.dv))
+    return interp(dT, data.angular_resolution, U(data.v, data.dv))
 
 # Different versions of clip depending on which uncertainty package is used.
 def clip_no_error(field, low, high, nanval=0.):

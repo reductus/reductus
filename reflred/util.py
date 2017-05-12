@@ -92,8 +92,8 @@ def nearest(x, xp, fp=None):
     # make sure that the xp array is sorted
     xp = np.asarray(xp)
     if np.any(np.diff(xp) < 0.):
-        idx = np.argsort(xp)
-        xp, fp = xp[idx], fp[idx]
+        index = np.argsort(xp)
+        xp, fp = xp[index], fp[index]
 
     # find the midpoints of xp and use that as the index
     xp = 0.5*(xp[:-1] + xp[1:])
