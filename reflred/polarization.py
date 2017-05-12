@@ -175,6 +175,8 @@ from dataflow.lib.errutil import interp
 
 from . import util
 
+# A divergence difference of 5e-5 corresponds to 0.1 mm for 2 m slit separation
+ACCEPTABLE_DIVERGENCE_DIFFERENCE = 5e-5
 
 ALL_XS = '++', '+-', '-+', '--'
 PM_XS = '++', '+-', '--'
@@ -430,7 +432,7 @@ def _calc_efficiency(beam, dtheta, Imin, Emin, FRbal, clip):
 
 def _nearest_intensity(dT, data):
     index = util.nearest(dT, data.angular_resolution)
-    if (abs(dT - data.angular_resolution[index]) > 0.001).any():
+    if (abs(dT - data.angular_resolution[index]) > ACCEPTABLE_DIVERGENCE_DIFFERENCE).any():
         raise ValueError("polarization cross sections for direct beam are not aligned")
     return U(data.v, data.dv)[index]
 
