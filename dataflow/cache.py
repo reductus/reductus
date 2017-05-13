@@ -75,7 +75,7 @@ class CacheManager(object):
             except Exception as exc:
                 warning = "Redis connection failed with:\n\t" + str(exc)
                 warning += "\nFalling back to in-memory cache."
-                warnigns.warn(warning)
+                warnings.warn(warning)
         self.set_test_cache()
 
     def set_test_cache(self):
