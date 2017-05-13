@@ -4,7 +4,7 @@ from pprint import pprint
 import traceback
 
 import dataflow
-from dataflow.core import Template, sanitizeForJSON, lookup_instrument, _instrument_registry
+from dataflow.core import Template, lookup_instrument, _instrument_registry
 from dataflow.cache import use_redis
 from dataflow.calc import process_template
 import dataflow.core as df
