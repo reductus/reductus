@@ -2,12 +2,18 @@
 Server Installation
 ===================
 
-First step is to clone the repository using `git <https://git-scm.com/>`_::
+If you do not have access to the internet, or if the files that you want
+to reduce are not available to `reductus`_ then you will need to run a
+local version of the server. The reductus *Data* menu will have an
+additional *Local* option to access the files on your computer.
+
+To run the server, you will first need to clone the repository
+using `git <https://git-scm.com/>`_::
 
     git clone https://github.com/reflectometry/reduction
 
-Method 1: Docker Compose
-------------------------
+Running a server with Docker
+----------------------------
 
 The easiest way to get started is to use a `Docker <https://www.docker.com>`_
 container.  Prebuilt containers may eventually be available from an automated
@@ -43,8 +49,8 @@ the default docker install and use that instead of localhost, e.g.,
 *In my case it was http://192.168.99.100:8000/reflweb/web_reduction_filebrowser.html*
 
 
-Method 2: Run directly in console
----------------------------------
+Running a local server
+----------------------
 
 Running in the console is more difficult because it requires a working python
 setup with a lot of dependent packages.
@@ -117,9 +123,6 @@ In a separate terminal, start the reflweb server::
     PYTHONPATH=.. python server_tinyrpc.py
     # this will automatically browse to http://localhost:8000
 
-The menu *Data* item will have an additional *Local* option to access
-the files on your computer.
-
 Updating the server
 ~~~~~~~~~~~~~~~~~~~
 
@@ -138,10 +141,13 @@ Then repeat the build step.
 
 Running a production server
 ---------------------------
-Using Apache, with load-balancing:
+
+Build the package as usual for running a local server.
+
+Install Apache with load-balancing.
 
 using server_tinyrpc (python2.7)
-++++++++++++++++++++++++++++++++
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 * install mod_proxy_balancer
 * copy contents of reduction/reflweb/static to apache home somewhere (usually a folder called reductus)
@@ -174,15 +180,15 @@ using server_tinyrpc (python2.7)
   start_tinyrpc_many.sh 8001 5
 
 * this runs `nohup python server_tinyrpc.py 8001 > /dev/null 2>&1&` etc.
-* a sample crontab entry is 
+* a sample crontab entry is
 ::
-  
+
   @reboot cd /home/bbm/reduction/reflweb && /home/bbm/reduction/reflweb/start_tinyrpc_many.sh 8001 5
 
 
 
 using hug (python3.4+)
-++++++++++++++++++++++++++++++++
+~~~~~~~~~~~~~~~~~~~~~~
 
 * install mod_proxy_uwsgi
 * copy contents of reduction/reflweb/static to apache home somewhere (usually a folder called reductus)
@@ -203,7 +209,7 @@ using hug (python3.4+)
         </Proxy>
         ProxyPass "/RPC2" "balancer://mycluster"
         ProxyPassReverse "/RPC2" "balancer://mycluster"
-        
+
         ErrorLog ${APACHE_LOG_DIR}/error.log
         CustomLog ${APACHE_LOG_DIR}/access.log combined
   </VirtualHost>
@@ -217,4 +223,3 @@ using hug (python3.4+)
 ::
 
   @reboot cd /home/bbm/reduction/reflweb && /home/bbm/reduction/reflweb/start_hug_many.sh 8001 5
-
