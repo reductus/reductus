@@ -11,13 +11,14 @@ from tinyrpc.server.gevent import RPCServerGreenlets
 from tinyrpc.dispatch import RPCDispatcher
 
 #webbrowser.open_new_tab('http://localhost:%d/index.html?rpc_port=%d' % (http_port, rpc_port))
+from dataflow.core import sanitizeForJSON
 
 try:
     import config
 except ImportError:
     import default_config as config
 
-from functools import wraps
+from functools import update_wrapper
 def wrap_action(action):
     use_msgpack = getattr(config, 'use_msgpack', False)
     @wraps
@@ -38,7 +39,7 @@ def wrap_action(action):
         #print "leaving :::reflweb.api."+action.__name__
         return retval
         
-    return wrapper
+    return update_wrapper(wrapper, action)
     
 def main():
     if len(sys.argv) >= 2:

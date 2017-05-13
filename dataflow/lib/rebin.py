@@ -3,8 +3,12 @@
 """
 import numpy as np
 
-from . import _reduction  ## C API wrapper
-#from . import _rebin  ## cython wrapper
+try:
+    from . import _reduction  ## C API wrapper
+    #from . import _rebin  ## cython wrapper
+except ImportError:
+    import warnings
+    warnings.warn("Reduction module not compiled...rebinning unavailable")
 
 try:
     #from typing import Sequence, Optional, Union

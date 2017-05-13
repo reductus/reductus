@@ -12,14 +12,7 @@ webreduce.server_api = webreduce.server_api || {};
 
 (function(app) {
   function wrap_jsonRPC(method_name, cache) {
-    function wrapped() {
-      // pass every argument to the wrapped function as a list:
-      var params = [];
-      for (var i=0; i<arguments.length; i++) {
-        // this excludes the extra properties in arguments that aren't
-        // array-like.
-        params[i] = arguments[i];
-      }
+    function wrapped(params) {
       var r = new Promise(function(resolve, reject) {
         $.jsonRPC.request(method_name, {
           async: true,
