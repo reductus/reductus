@@ -71,6 +71,7 @@ class CacheManager(object):
         if self._redis_kwargs is not None:
             try:
                 self._cache = redis_connect(**self._redis_kwargs)
+                self._file_cache = self._cache
                 return
             except Exception as exc:
                 warning = "Redis connection failed with:\n\t" + str(exc)
@@ -113,7 +114,7 @@ class CacheManager(object):
         """
         if self._cache is None:
             self._connect()
-        return self._file_cache if self._file_cache else self._cache
+        return self._file_cache
 
 # Singleton cache manager if you only need one cache
 CACHE_MANAGER = CacheManager()
