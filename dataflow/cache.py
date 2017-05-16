@@ -68,7 +68,7 @@ class CacheManager(object):
         self._redis_kwargs = None
 
     def _connect(self):
-        if self._cache is None and self._redis_kwargs is not None:
+        if self._redis_kwargs is not None:
             try:
                 self._cache = redis_connect(**self._redis_kwargs)
                 return
@@ -103,14 +103,16 @@ class CacheManager(object):
         """
         Connect to the key-value cache.
         """
-        self._connect()
+        if self._cache is None:
+            self._connect()
         return self._cache
 
     def get_file_cache(self):
         """
         Connect to the file cache.
         """
-        self._connect()
+        if self._cache is None:
+            self._connect()
         return self._file_cache if self._file_cache else self._cache
 
 # Singleton cache manager if you only need one cache
