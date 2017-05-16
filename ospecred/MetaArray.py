@@ -150,7 +150,7 @@ class MetaArray(ndarray):
 
       ## read in axis values
       for ax in meta['info']:
-        if ax.has_key('values_len'):
+        if 'values_len' in ax:
           ax['values'] = fromstring(fd.read(ax['values_len']), dtype=ax['values_type'])
           del ax['values_len']
           del ax['values_type']
@@ -204,7 +204,7 @@ class MetaArray(ndarray):
   def axisValues(self, axis):
     """Return the list of values for an axis"""
     ax = self._interpretAxis(axis)
-    if self._info[ax].has_key('values'):
+    if 'values' in self._info[ax]:
       return self._info[ax]['values']
     else:
       raise Exception('Array axis %s (%d) has no associated values.' % (str(axis), ax))
@@ -216,13 +216,13 @@ class MetaArray(ndarray):
   def axisUnits(self, axis):
     """Return the units for axis"""
     ax = self._info[self._interpretAxis(axis)]
-    if ax.has_key('units'):
+    if 'units' in ax:
       return ax['units']
 
   def columnUnits(self, axis, column):
     """Return the units for column in axis"""
     ax = self._info[self._interpretAxis(axis)]
-    if ax.has_key('cols'):
+    if 'cols' in ax:
       for c in ax['cols']:
         if c['name'] == column:
           return c['units']
@@ -275,7 +275,7 @@ class MetaArray(ndarray):
     meta = { 'shape': self.shape, 'type': str(self.dtype), 'info': self.infoCopy()}
     axstrs = []
     for ax in meta['info']:
-      if ax.has_key('values'):
+      if 'values' in ax:
         axstrs.append(ax['values'].tostring())
         ax['values_len'] = len(axstrs[-1])
         ax['values_type'] = str(ax['values'].dtype)
@@ -335,15 +335,15 @@ class MetaArray(ndarray):
   def _getAxis(self, name):
     for i in range(0, len(self._info)):
       axis = self._info[i]
-      if axis.has_key('name') and axis['name'] == name:
+      if 'name' in axis and axis['name'] == name:
         return i
     raise Exception("No axis named %s.\n  info=%s" % (name, self._info))
 
   def _getIndex(self, axis, name):
     ax = self._info[axis]
-    if ax is not None and ax.has_key('cols'):
+    if ax is not None and 'cols' in ax:
       for i in range(0, len(ax['cols'])):
-        if ax['cols'][i].has_key('name') and ax['cols'][i]['name'] == name:
+        if 'name' in ax['cols'][i] and ax['cols'][i]['name'] == name:
           return i
     raise Exception("Axis %d has no column named %s.\n  info=%s" % (axis, name, self._info))
 
@@ -351,17 +351,17 @@ class MetaArray(ndarray):
     return deepcopy(self._info[i])
 
   def _axisSlice(self, i, cols):
-    if self._info[i].has_key('cols') or self._info[i].has_key('values'):
+    if 'cols' in self._info[i] or 'values' in self._info[i]:
       ax = self._axisCopy(i)
       if isinstance(cols, slice):
-        if ax.has_key('cols'):
+        if 'cols' in ax:
           ax['cols'] = ax['cols'][cols]
-        if ax.has_key('values'):
+        if 'values' in ax:
           ax['values'] = ax['values'][cols]
       if isinstance(cols, list):
-        if ax.has_key('cols'):
+        if 'cols' in ax:
           ax['cols'] = [ax['cols'][i] for i in cols]
-        if ax.has_key('values'):
+        if 'values' in ax:
           ax['values'] = [ax['values'][i] for i in cols]
     else:
       ax = self._info[i]

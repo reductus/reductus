@@ -17,7 +17,7 @@ class FilterableMetaArray(MetaArray):
         assert isinstance(meta['info'], list)
         axstrs = []
         for ax in meta['info']:
-            if ax.has_key('values'):
+            if 'values' in ax:
                 axstrs.append(ax['values'].tostring())
                 ax['values_len'] = len(axstrs[-1])
                 ax['values_type'] = str(ax['values'].dtype)
@@ -34,7 +34,7 @@ class FilterableMetaArray(MetaArray):
     def get_extrema(self):
         extrema = {}
         for ax in self._info:
-            if ax.has_key('values'):
+            if 'values' in ax:
                 values = array(ax['values'])
                 extrema[ax['name']] = [values.min(), values.max()]
         return extrema
@@ -52,7 +52,7 @@ class FilterableMetaArray(MetaArray):
 
         ## read in axis values
         for ax in meta['info']:
-            if ax.has_key('values_len'):
+            if 'values_len' in ax:
                 ax['values'] = fromstring(fd.read(ax['values_len']), dtype=ax['values_type'])
                 del ax['values_len']
                 del ax['values_type']
