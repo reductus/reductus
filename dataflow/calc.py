@@ -30,7 +30,7 @@ from .automod import validate
 
 IS_PY3 = sys.version_info[0] >= 3
 
-PICKLE_PROTOCOL = 2 # fast and small and good for Python 2.6+
+PICKLE_PROTOCOL = pickle.HIGHEST_PROTOCOL # use the best
 
 def find_calculated(template, config):
     """
