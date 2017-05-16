@@ -762,7 +762,7 @@ def combine(datasets, grid, operation="union"):
     # extra info changed
     # strip info that is meaningless in combined dataset: (filename, start_time, end_time)
     for key in ['filename', 'start_datetime', 'end_datetime']:
-        if grid._info[-1].has_key(key): grid._info[-1].pop(key)
+        if key in grid._info[-1]: grid._info[-1].pop(key)
     return grid
 
 def add_to_grid(dataset, grid):
