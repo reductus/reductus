@@ -182,7 +182,7 @@ class FilterableMetaArray(MetaArray):
 
         for i, col in enumerate(data_cols):
             y = self['Measurements':col].tolist()
-            error_col = next((i for i in xrange(len(cols)) if cols[i]['name'] == ('error_'+col)), -1)
+            error_col = next((i for i in range(len(cols)) if cols[i]['name'] == ('error_'+col)), -1)
             if error_col > 0:
                 yerror = self['Measurements':'error_'+col].tolist()
             else:

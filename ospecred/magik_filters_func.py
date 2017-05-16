@@ -346,7 +346,7 @@ def pixelsToTwotheta(data, params, pixels_per_degree=50.0, qzero_pixel=149.0, in
     # det_angle should be a vector of the same length as the other axis (usually theta)
     # or else just a float, in which case the detector is not moving!
     ndim = len(new_info) - 2 # last two entries in info are for metadata
-    pixel_axis = next((i for i in xrange(len(new_info)-2) if new_info[i]['name'] == ax_name), None)
+    pixel_axis = next((i for i in range(len(new_info)-2) if new_info[i]['name'] == ax_name), None)
     if pixel_axis < 0:
         raise ValueError("error: no %s axis in this dataset" % (ax_name,))
 
@@ -635,7 +635,7 @@ def alphaFtoQz(data, wavelength=5.0):
     # or else just a float, in which case the detector is not moving!
     ndim = len(new_info) - 2 # last two entries in info are for metadata
     ax_name = "alpha_f"
-    af_axis = next((i for i in xrange(len(new_info)-2) if new_info[i]['name'] == ax_name), None)
+    af_axis = next((i for i in range(len(new_info)-2) if new_info[i]['name'] == ax_name), None)
     if af_axis < 0:
         raise ValueError("error: no %s axis in this dataset" % (ax_name,))
 
