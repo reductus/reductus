@@ -114,7 +114,7 @@ class File(Node):
         self.readonly = True
         Node.__init__(self, parent_node=None, path="/")
         if file_obj is None:
-            file_obj = builtin_open(filename, mode='r')
+            file_obj = builtin_open(filename, mode='rb')
         self.zipfile = zipfile.ZipFile(file_obj)
         self.attrs = self.makeAttrs()
         self.filename = filename

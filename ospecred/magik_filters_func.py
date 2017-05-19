@@ -417,7 +417,6 @@ def pixelsToTwotheta(data, params, pixels_per_degree=50.0, qzero_pixel=149.0, in
             input_twoth_bin_edges[:-1] = twoth + da
             #data_cols = ['counts', 'pixels', 'monitor', 'count_time']
             cols = new_info[-2]['cols']
-
             for col in range(len(cols)):
                 input_slice = [slice(None, None), slice(None, None), col]
                 #input_slice[pixel_axis] = slice(i, i+1)

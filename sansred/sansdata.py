@@ -154,7 +154,7 @@ class SansData(object):
 
     def get_metadata(self):
         metadata = {}
-        metadata.update(self.metadata)
+        metadata.update(pythonize(self.metadata))
         metadata['plottable'] = self.get_plottable()
         return metadata
 
@@ -164,6 +164,22 @@ class SansData(object):
     @classmethod
     def loads(cls, str):
         return pickle.loads(str)
+
+def pythonize(obj):
+    output = {}
+    for a in obj:
+        attr = obj.get(a, None)
+        if isinstance(attr, np.integer):
+            attr = int(attr)
+        elif isinstance(attr, np.floating):
+            attr = float(attr)
+        elif isinstance(attr, np.ndarray):
+            attr = attr.tolist()
+        elif isinstance(attr, datetime.datetime):
+            attr = [attr.year, attr.month, attr.day,
+                    attr.hour, attr.minute, attr.second]
+        output[a] = attr
+    return output
 
 class Sans1dData(object):
     properties = ['x', 'v', 'dx', 'dv', 'xlabel', 'vlabel', 'xunits', 'vunits', 'metadata']
@@ -186,7 +202,7 @@ class Sans1dData(object):
         for a in properties:
             attr = getattr(obj, a)
             if isinstance(attr, np.integer):
-                obj = int(attr)
+                attr = int(attr)
             elif isinstance(attr, np.floating):
                 attr = float(attr)
             elif isinstance(attr, np.ndarray):
