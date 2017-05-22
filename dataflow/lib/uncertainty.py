@@ -351,10 +351,12 @@ class Uncertainty(object):
         See numpy.sum for details on the interface.
         """
         if out is not None:
-            out = out.x, out.variance
+            new_out = out.x, out.variance
+        else:
+            new_out = (None, None)
         M, varM = err1d.sum(self.x, self.variance, axis=axis,
-                            dtype=dtype, out=out, keepdims=keepdims)
-        return Uncertainty(M, varM) if out is None else out
+                            dtype=dtype, out=new_out, keepdims=keepdims)
+        return Uncertainty(M, varM) if out is None else new_out
 
     def cumsum(self, axis=None, dtype=None, out=None, keepdims=False):
         r"""
@@ -363,10 +365,12 @@ class Uncertainty(object):
         See numpy.cumsum for details on the interface.
         """
         if out is not None:
-            out = out.x, out.variance
+            new_out = out.x, out.variance
+        else:
+            new_out = (None, None)
         M, varM = err1d.cumsum(self.x, self.variance, axis=axis,
-                               dtype=dtype, out=out, keepdims=keepdims)
-        return Uncertainty(M, varM) if out is None else out
+                               dtype=dtype, out=new_out, keepdims=keepdims)
+        return Uncertainty(M, varM) if out is None else new_out
 
     def std(self, *args, **kw):
         raise TypeError("Use mean() to compute the mean and variance of uncertainty items")
