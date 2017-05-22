@@ -1,5 +1,7 @@
 import os, sys
 import time
+import urlparse
+from pprint import pprint
 import traceback
 
 import gevent
@@ -21,19 +23,21 @@ except ImportError:
 from functools import update_wrapper
 def wrap_action(action):
     use_msgpack = getattr(config, 'use_msgpack', False)
-    def wrapper(*args, **kwds):
-        print( ":::reflweb.api."+action.__name__)
+    def wrapper(**kwds):
+        print ":::reflweb.api."+action.__name__
+        if kwds is None:
+            kwds = {}
         try:
             if use_msgpack:
                 import msgpack, base64
                 retval = {"serialization": "msgpack", "encoding": "base64"}
-                retval['value'] = base64.b64encode(msgpack.dumps(action(*args, **kwds)))
+                retval['value'] = base64.b64encode(msgpack.dumps(action(**kwds)))
             else:
                 retval = {"serialization": "json", "encoding": "string"}
-                retval['value'] = sanitizeForJSON(action(*args, **kwds))
+                retval['value'] = sanitizeForJSON(action(**kwds))
         except Exception as exc:
             traceback.print_exc()
-            print(">>> :::refweb.api."+action.__name__)
+            print ">>> :::refweb.api."+action.__name__
             raise
         #print "leaving :::reflweb.api."+action.__name__
         return retval
@@ -75,7 +79,7 @@ def main():
     # in the main greenlet, run our rpc_server
     print("serving on port %d" % (port,))
     rpc_server.serve_forever()
-    print("done serving rpc forever")
+    print "done serving rpc forever"
 
 if __name__ == '__main__':
     main()

@@ -34,6 +34,8 @@ metadata_lookup = {
     "analysis.groupid": "DAS_logs/trajectoryData/groupid",
     "run.configuration": "DAS_logs/configuration/key",
     "sample.thk": "DAS_logs/sample/thickness",
+    "adam.voltage": "DAS_logs/adam4021/voltage",
+    "sample.temp": "DAS_logs/temp/primaryNode/average_value",
 }
 
 unit_specifiers = {
