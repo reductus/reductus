@@ -21,7 +21,6 @@ except ImportError:
 from functools import update_wrapper
 def wrap_action(action):
     use_msgpack = getattr(config, 'use_msgpack', False)
-    @wraps
     def wrapper(*args, **kwds):
         print( ":::reflweb.api."+action.__name__)
         try:
