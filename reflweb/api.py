@@ -219,7 +219,6 @@ def calc_template(template_def, config):
 
 @expose
 def list_datasources():
-    print(config.data_sources)
     return config.data_sources
 
 @expose
