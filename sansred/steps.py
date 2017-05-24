@@ -667,7 +667,62 @@ def makeDIV(data1, data2, patchbox=(55, 74, 53, 72)):
 
     return DIV
 
-
+@module
+def radialToCylindrical(data, theta_offset = 0.0, oversample_th = 2.0, oversample_r = 2.0):
+    """
+    Convert radial data to cylindrical coordinates
+    
+    **Inputs**
+    
+    data (sans2d): data to be transformed
+    
+    theta_offset (float): move the bounds of the output from the default (0 to 360 deg)
+    
+    oversample_th (float): oversampling in theta (to increase fidelity of output)
+    
+    oversample_r (float): oversampling in r
+    
+    **Returns**
+    
+    cylindrical (sans2d): transformed data
+    
+    mask (sans2d): normalization array
+    
+    2017-05-24 Brian Maranville
+    """
+    
+    from cylindrical_coordinate_transform import ConvertToCylindrical
+    
+    if data.qx is None or data.qy is None:
+        xmin = -data.metadata['det.beamx']
+        xmax = xmin + 128
+        ymin = -data.metadata['det.beamy']
+        ymax = ymin + 128
+    else:
+        xmin = data.qx.min()
+        xmax = data.qx.max()
+        ymin = data.qy.min()
+        ymax = data.qy.max()
+    
+    print(xmin, xmax, ymin, ymax)
+    cylindrical, maskdata, extent = ConvertToCylindrical(data.data.x, xmin, xmax, ymin, ymax, theta_offset=theta_offset, oversample_th=oversample_th, oversample_r=oversample_r)
+    
+    output = data.copy()
+    output.data = Uncertainty(cylindrical.T, cylindrical.T)
+    
+    mask = data.copy()
+    mask.data = Uncertainty(maskdata.T, maskdata.T)
+    
+    #if data.qx is not None:
+    #    output.qx = np.linspace(extent[0], extent[1], cylindrical.shape[1])
+    #    mask.qx = output.qx.copy()
+    #    
+    #if data.qy is not None:
+    #    output.qy = np.linspace(extent[2], extent[3], cylindrical.shape[0])
+    #    mask.qy = output.qy.copy()
+    
+    return output, mask
+    
 @cache
 @module
 def SuperLoadSANS(filelist=None, do_det_eff=True, do_deadtime=True,
