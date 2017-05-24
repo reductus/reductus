@@ -47,7 +47,9 @@ for method in api.api_methods:
     mfunc = getattr(api, method)
     wrapped = wrap_method(mfunc)
     path = posixpath.join(RPC_ENDPOINT, method)
+    shortpath = posixpath.join("/", method)
     app.add_url_rule(path, path, wrapped, methods=["POST"])
+    app.add_url_rule(shortpath, shortpath, wrapped, methods=["POST"])
     
 if __name__ == '__main__':
     port = 8002
