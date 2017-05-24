@@ -43,8 +43,6 @@ def wrap_method(mfunc):
 
 import api
 api.create_instruments()
-
-wrapped_funcs = {}
 for method in api.api_methods:
     mfunc = getattr(api, method)
     wrapped = wrap_method(mfunc)

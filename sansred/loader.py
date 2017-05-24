@@ -60,32 +60,54 @@ def readSANSNexuz(input_file, file_obj=None):
     datasets = []
     file = hzf.File(input_file, file_obj)
     for entryname, entry in file.items():
-        metadata = {}
-        reals = {}
+        areaDetector = entry['data/areaDetector'].value
+        shape = areaDetector.shape
+        if len(shape) == 2:
+            metadata = {}
+            for mkey in metadata_lookup:
+                field = entry.get(metadata_lookup[mkey], None)
+                if field is not None:
+                    if mkey in unit_specifiers:
+                        field = data_as(field, unit_specifiers[mkey])[0]
+                    else:
+                        field = field.value[0]
+                    if field.dtype.kind == 'f':
+                        field = field.astype("float")
+                    elif field.dtype.kind == 'i':
+                        field = field.astype("int")
 
-        detdata = entry['data/areaDetector'].value.reshape(128, 128)
+                metadata[mkey] = field
 
-        for mkey in metadata_lookup:
-            field = entry.get(metadata_lookup[mkey], None)
-            if field is not None:
-                if mkey in unit_specifiers:
-                    field = data_as(field, unit_specifiers[mkey])[0]
-                else:
-                    field = field.value[0]
-                if field.dtype.kind == 'f':
-                    field = field.astype("float")
-                elif field.dtype.kind == 'i':
-                    field = field.astype("int")
+            metadata['entry'] = entryname
+            dataset = SansData(data=areaDetector, metadata=metadata)
+            datasets.append(dataset)
+            
+        elif len(shape) == 3:
+            for i in range(shape[0]):
+                metadata = {}
+                for mkey in metadata_lookup:
+                    field = entry.get(metadata_lookup[mkey], None)
+                    if field is not None:
+                        if mkey in unit_specifiers:
+                            field = data_as(field, unit_specifiers[mkey])
+                        else:
+                            field = field.value
+                        if field.dtype.kind == 'f':
+                            field = field.astype("float")
+                        elif field.dtype.kind == 'i':
+                            field = field.astype("int")
+                    
+                        if len(field) == shape[0]:
+                            metadata[mkey] = field[i]
+                        else:
+                            metadata[mkey] = field[0]
+                    else:
+                        metadata[mkey] = field
 
-            metadata[mkey] = field
-
-        metadata['entry'] = entryname
-        #metadata['det.dis'] = das['detectorPosition/softPosition'].value[0]
-        #metadata['resolution.lmda'] = das['wavelength/ewavelength'].value[0]
-        #metadata['det.beamx'] = das['areaDetector/beamCenterX'].value[0]
-        #metadata['det.beamy'] = das['areaDetector/beamCenterY'].value[0]
-
-        dataset = SansData(data=detdata, metadata=metadata)
-        datasets.append(dataset)
+                metadata['entry'] = entryname
+                dataset = SansData(data=areaDetector[i].copy(), metadata=metadata)
+                datasets.append(dataset)
+        else:
+            raise ValueError("areaDetector data must have dimension 2 or 3")
 
     return datasets
