@@ -688,10 +688,10 @@ def radialToCylindrical(data, theta_offset = 0.0, oversample_th = 2.0, oversampl
     
     mask (sans2d): normalization array
     
-    2017-05-24 Brian Maranville
+    2017-05-25 Brian Maranville
     """
     
-    from cylindrical_coordinate_transform import ConvertToCylindrical
+    from cylindrical import ConvertToCylindrical
     
     if data.qx is None or data.qy is None:
         xmin = -data.metadata['det.beamx']
@@ -705,13 +705,13 @@ def radialToCylindrical(data, theta_offset = 0.0, oversample_th = 2.0, oversampl
         ymax = data.qy.max()
     
     print(xmin, xmax, ymin, ymax)
-    cylindrical, maskdata, extent = ConvertToCylindrical(data.data.x, xmin, xmax, ymin, ymax, theta_offset=theta_offset, oversample_th=oversample_th, oversample_r=oversample_r)
+    _, normalization, normalized, extent = ConvertToCylindrical(data.data.x, xmin, xmax, ymin, ymax, theta_offset=theta_offset, oversample_th=oversample_th, oversample_r=oversample_r)
     
     output = data.copy()
-    output.data = Uncertainty(cylindrical.T, cylindrical.T)
+    output.data = Uncertainty(normalized.T, normalized.T)
     
     mask = data.copy()
-    mask.data = Uncertainty(maskdata.T, maskdata.T)
+    mask.data = Uncertainty(normalization.T, normalization.T)
     
     #if data.qx is not None:
     #    output.qx = np.linspace(extent[0], extent[1], cylindrical.shape[1])
