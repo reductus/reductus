@@ -68,4 +68,6 @@ e.g.
 Then start the server with::
 
     cd reflweb
-    python server_tinyrpc.py
+    python server_flask.py 8002
+    
+and visit the page http://localhost:8002/static/index.html
