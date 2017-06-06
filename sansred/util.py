@@ -33,8 +33,8 @@ except ImportError:
     Record = None
     Stream = None
 
-from . import formatnum
-from . import iso8601
+from dataflow.lib import formatnum
+from dataflow.lib import iso8601
 
 MAX_DIGITS = 8
 TRAJECTORY_DEVICE = "trajectory"
