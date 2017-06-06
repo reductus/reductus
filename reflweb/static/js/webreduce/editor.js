@@ -309,7 +309,7 @@ webreduce.editor = webreduce.editor || {};
     var template = template || webreduce.editor._active_template,
         recalc_mtimes = $("#auto_reload_mtimes").prop("checked");
         params_to_calc = to_compare.map(function(a) {
-          return {template: template, config: {}, node: a.node, terminal: a.terminal, return_type: "metadata"}
+          return {template: template, config: {}, node: a.node, terminal: a.terminal, return_type: "plottable"}
         });
     return webreduce.editor.calculate(params_to_calc, recalc_mtimes)
       .then(function(results) {
@@ -717,7 +717,7 @@ webreduce.editor = webreduce.editor || {};
         config: {},
         node: stashed.module_def.outputs[0].source_module,
         terminal: stashed.module_def.outputs[0].source_terminal,
-        return_type: "metadata"
+        return_type: "plottable"
       }
     });
     return webreduce.editor.calculate(params_to_calc, recalc_mtimes)

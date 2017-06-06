@@ -6,10 +6,11 @@ webreduce.instruments['ncnr.refl'] = webreduce.instruments['ncnr.refl'] || {};
 // define the loader and categorizers for ncnr.refl instrument
 (function(instrument) {
   //function load_refl(datasource, path, mtime, db){
-  function load_refl(load_params, db, noblock) {
+  function load_refl(load_params, db, noblock, return_type) {
     // load params is a list of: 
     // {datasource: "ncnr", path: "ncnrdata/cgd/...", mtime: 12319123109}
     var noblock = (noblock == true); // defaults to false if not specified
+    var return_type = return_type || 'metadata';
     var calc_params = load_params.map(function(lp) {
       return {
         template: {
@@ -25,7 +26,7 @@ webreduce.instruments['ncnr.refl'] = webreduce.instruments['ncnr.refl'] || {};
         config: {"0": {"filelist": [{"path": lp.path, "source": lp.source, "mtime": lp.mtime}]}},
         node: 0,
         terminal:  "output",
-        return_type: "metadata"
+        return_type: return_type
       }
     });
     return webreduce.editor.calculate(calc_params, false, noblock).then(function(results) {

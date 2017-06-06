@@ -47,7 +47,7 @@
         "mtime": files_metadata[j].mtime 
       }
     });
-    var p = loader(load_params, file_objs)
+    var p = loader(load_params, file_objs, false, 'metadata')
       .then(function(results) {
         var categorizers = webreduce.instruments[instrument_id].categorizers;
         var treeinfo = file_objs_to_tree(file_objs, categorizers, datasource);
@@ -331,7 +331,7 @@
     if (!stopPropagation) {
       $("div.fields").trigger("fileinfo.update", [fileinfo]);
     }
-    loader(fileinfo).then(function(results) {
+    loader(fileinfo, null, false, 'plottable').then(function(results) {
       var entries = results.map(function(r,i) {
         var values = r.values || [];
         var fi = fileinfo[i];

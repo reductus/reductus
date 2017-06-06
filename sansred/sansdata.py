@@ -126,6 +126,7 @@ class SansData(object):
             xlabel = "Qx (inv. Angstroms)"
             ylabel = "Qy (inv. Angstroms)"
         plottable_data = {
+            'entry': self.metadata['entry'],
             'type': '2d',
             'z':  [data.T.tolist()],
             'title': self.metadata['run.filename']+': ' + self.metadata['sample.labl'],
@@ -155,7 +156,6 @@ class SansData(object):
     def get_metadata(self):
         metadata = {}
         metadata.update(pythonize(self.metadata))
-        metadata['plottable'] = self.get_plottable()
         return metadata
 
     def dumps(self):

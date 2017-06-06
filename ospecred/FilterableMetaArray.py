@@ -74,7 +74,6 @@ class FilterableMetaArray(MetaArray):
     def get_metadata(self):
         metadata = {}
         metadata.update(self.extrainfo)
-        metadata['plottable'] = self.get_plottable()
         return metadata
 
     def export(self):
@@ -137,6 +136,7 @@ class FilterableMetaArray(MetaArray):
         title = self._info[-1].get('friendly_name', "1d data")
         plottable_data = {
             'type': '1d',
+            'entry': self.extrainfo.get('entry', 'entry'),
             'title': title,
             'options': {'series': []},
             'clear_existing': False,
@@ -200,54 +200,51 @@ class FilterableMetaArray(MetaArray):
     def get_plottable_2d(self, binary_fp=None):
         # grab the first counts col:
         cols = self._info[2]['cols']
-        data_cols = [col['name'] for col in cols if col['name'].startswith('counts')]
+        col = next(iter([col['name'] for col in cols if col['name'].startswith('counts')]))
+        mon = next(iter([col['name'] for col in cols if col['name'].startswith('monitor')]))
+        array_out = self['Measurements':col].view(ndarray) / self['Measurements':mon].view(ndarray) 
 
-        result = []
-        for colnum, col in enumerate(data_cols):
-            array_out = self['Measurements':col].view(ndarray)
+        dump = {'entry': self.extrainfo.get('entry', 'entry')}
+        if binary_fp is not None:
+            # use lookup to get binary value
+            z = [[0,0]]
+            dump['binary_fp'] = binary_fp + ":" + str(colnum)
+        else: # use the old way
+            z = [ma.masked_array(array_out.T, mask=isnan(array_out.T)).tolist(fill_value=None)]
 
-            dump = {}
-            if binary_fp is not None:
-                # use lookup to get binary value
-                z = [[0,0]]
-                dump['binary_fp'] = binary_fp + ":" + str(colnum)
-            else: # use the old way
-                z = [ma.masked_array(array_out.T, mask=isnan(array_out.T)).tolist(fill_value=None)]
+        #zbin_base64 = base64.b64encode(array_out.tostring())
+        #z = [arr[:, 0].tolist() for arr in self]
+        dims = {}
+        # can't display zeros effectively in log... set zmin to smallest non-zero
 
-            #zbin_base64 = base64.b64encode(array_out.tostring())
-            #z = [arr[:, 0].tolist() for arr in self]
-            dims = {}
-            # can't display zeros effectively in log... set zmin to smallest non-zero
+        lowest = 1e-10
+        non_zeros = array_out[array_out > lowest]
+        if len(non_zeros) > 0:
+            dims['zmin'] = float(non_zeros.min())
+            dims['zmax'] = float(non_zeros.max())
+        else:
+            dims['zmin'] = float(lowest)
+            dims['zmax'] = float(lowest)
 
-            lowest = 1e-10
-            non_zeros = array_out[array_out > lowest]
-            if len(non_zeros) > 0:
-                dims['zmin'] = float(non_zeros.min())
-                dims['zmax'] = float(non_zeros.max())
-            else:
-                dims['zmin'] = float(lowest)
-                dims['zmax'] = float(lowest)
-
-            #dims['zmin'] = array_out.min()
-            #dims['zmax'] = array_out.max()
-            axis = ['x', 'y']
-            for index, label in enumerate(axis):
-                arr = self._info[index]['values']
-                dims[axis[index] + 'min'] = float(arr.min())
-                dims[axis[index] + 'max'] = float(arr.max())
-                dims[axis[index] + 'dim'] = len(arr)
-            xlabel = self._info[0]['name']
-            ylabel = self._info[1]['name']
-            zlabel = col
-            #zlabel = self._info[2]['cols'][0]['name']
-            title = 'MAGIK data' # That's creative enough, right?
-            plot_type = '2d'
-            transform = 'log' # this is nice by default
-            dump.update( dict(type=plot_type, z=z, title=title, dims=dims,
-                        xlabel=xlabel, ylabel=ylabel, zlabel=zlabel,
-                        transform=transform) )
-            result.append(dump)
-        return result
+        #dims['zmin'] = array_out.min()
+        #dims['zmax'] = array_out.max()
+        axis = ['x', 'y']
+        for index, label in enumerate(axis):
+            arr = self._info[index]['values']
+            dims[axis[index] + 'min'] = float(arr.min())
+            dims[axis[index] + 'max'] = float(arr.max())
+            dims[axis[index] + 'dim'] = len(arr)
+        xlabel = self._info[0]['name']
+        ylabel = self._info[1]['name']
+        zlabel = col
+        #zlabel = self._info[2]['cols'][0]['name']
+        title = 'MAGIK data' # That's creative enough, right?
+        plot_type = '2d'
+        transform = 'log' # this is nice by default
+        dump.update( dict(type=plot_type, z=z, title=title, dims=dims,
+                    xlabel=xlabel, ylabel=ylabel, zlabel=zlabel,
+                    transform=transform) )
+        return dump
 
     def get_plottable_binary(self):
         cols = self._info[2]['cols']

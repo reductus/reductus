@@ -5,10 +5,11 @@ webreduce.instruments['ncnr.ospec'] = webreduce.instruments['ncnr.ospec'] || {};
 
 // define the loader and categorizers for ncnr.refl instrument
 (function(instrument) {
-  function load_ospec(load_params, db, noblock) {
+  function load_ospec(load_params, db, noblock, return_type) {
     // load params is a list of: 
     // {datasource: "ncnr", path: "ncnrdata/cgd/...", mtime: 12319123109}
     var noblock = (noblock == true); // defaults to false if not specified
+    var return_type = return_type || 'metadata';
     var calc_params = load_params.map(function(lp) {
       return {
         template: {
@@ -24,7 +25,7 @@ webreduce.instruments['ncnr.ospec'] = webreduce.instruments['ncnr.ospec'] || {};
         config: {"0": {"fileinfo": {"path": lp.path, "source": lp.source, "mtime": lp.mtime}}},
         node: 0,
         terminal:  "output",
-        return_type: "metadata"
+        return_type: return_type
       }
     });
     return webreduce.editor.calculate(calc_params, false, noblock).then(function(results) {
@@ -61,7 +62,7 @@ webreduce.instruments['ncnr.ospec'] = webreduce.instruments['ncnr.ospec'] || {};
       //plottable = result.values.slice(-1)[0].plottable[0];
       plottable = {
         "type": "2d", 
-        "datas": result.values.map(function(v) { return v.plottable[0] })
+        "datas": result.values
       }
     }
     else if (result.datatype == 'ncnr.ospec.ospec1d' && result.values.length > 0) {
