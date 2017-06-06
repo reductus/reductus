@@ -814,6 +814,9 @@ webreduce.editor = webreduce.editor || {};
         nodenum: node,
         terminal_id: terminal,
         return_type: return_type});
+      })
+      .catch(function(e) {
+        console.log("error", e)
       });
     }
     return r
