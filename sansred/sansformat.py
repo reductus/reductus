@@ -18,7 +18,30 @@ except ImportError:
 
 import numpy as np
 
-from . import util
+# CRUFT: python 2.x needs to convert unicode to str; 3.x leaves it as unicode
+if sys.version_info[0] >= 3:
+    def bytes_to_str(s):
+        # type: (AnyStr) -> str
+        return s.decode('utf-8') if isinstance(s, bytes) else s # type: ignore
+    def str_to_bytes(s):
+        # type: (AnyStr) -> bytes
+        """Return byte string or list of byte strings"""
+        return s.encode('utf-8') if isinstance(s, str) else s # type: ignore
+    def write(fid, s):
+        # type: (IO[Any], AnyStr) -> None
+        #print("fid type=%s"%type(fid))
+        fid.write(str_to_bytes(s))
+else: # python 2.x
+    def bytes_to_str(s):
+        # type: (AnyStr) -> str
+        return s
+    def str_to_bytes(s):
+        # type: (AnyStr) -> bytes
+        """Return byte string or list of byte strings"""
+        return s
+    def write(fid, s):
+        # type: (IO[Any], AnyStr) -> None
+        fid.write(s)
 
 __all__ = ["load", "save"]
 
@@ -347,9 +370,9 @@ def readNCNRData(inputfile):
 
     #Remove spaces around string fields
     for k in INFO.strings:
-        metadata[k] = util.bytes_to_str(metadata[k]).strip()
+        metadata[k] = bytes_to_str(metadata[k]).strip()
     #Convert dates
-    metadata['run.datetime'] = time.strptime(util.bytes_to_str(metadata['run.datetime']),
+    metadata['run.datetime'] = time.strptime(bytes_to_str(metadata['run.datetime']),
                                              INFO.types['run.datetime'])
 
     #print "data len", len(data[514:])
@@ -394,8 +417,8 @@ def writeNCNRData(filename, data, metadata):
                                                metadata['run.datetime']).upper()
     else:
         rawdata['run.reserve'] = "%8s"%rawdata['run.reserve']
-    rawdata['run.datetime'] = util.str_to_bytes(rawdata['run.datetime'])
-    rawdata['run.reserve'] = util.str_to_bytes(rawdata['run.reserve'])
+    rawdata['run.datetime'] = str_to_bytes(rawdata['run.datetime'])
+    rawdata['run.reserve'] = str_to_bytes(rawdata['run.reserve'])
 
     #for k, v in rawdata.items(): print(k, type(v))
 
@@ -405,9 +428,9 @@ def writeNCNRData(filename, data, metadata):
 
     #print "reading", inputfile
     with open(filename, 'wb') as f:
-        util.write(f, '\0\0')
-        util.write(f, header)
-        util.write(f, body)
+        write(f, '\0\0')
+        write(f, header)
+        write(f, body)
 
 def _raw_str(s, format):
     # type: (bytes, str) -> bytes
@@ -415,7 +438,7 @@ def _raw_str(s, format):
     Pad strings with blanks to total length.
     """
     n = int(format[:-1])  # convert format code such as '12s' to length 12
-    b = util.str_to_bytes(s)
+    b = str_to_bytes(s)
     return b[:n] if len(b) >= n else (b+b' '*(n-len(b)))
 
 
