@@ -12,33 +12,30 @@ webreduce.server_api = webreduce.server_api || {};
 
 (function(app) {
   function wrap_jsonRPC(method_name, cache) {
-    function wrapped() {
-      // pass every argument to the wrapped function as a list:
-      var params = [];
-      for (var i=0; i<arguments.length; i++) {
-        // this excludes the extra properties in arguments that aren't
-        // array-like.
-        params[i] = arguments[i];
-      }
-      $.blockUI();
+    function wrapped(params) {
       var r = new Promise(function(resolve, reject) {
         $.jsonRPC.request(method_name, {
           async: true,
           params: params,
           cache: cache,
-          success: function(result) {
-            $.unblockUI();
-            resolve(result.result);
+          success: function(reply) {
+            // defaults are: encoding='string', serialization='json';
+            var value = reply.result.value;
+            // overrides:
+            if (reply.result.encoding == 'base64') {
+              value = b64ToBinary(value);
+            }
+            if (reply.result.serialization == 'msgpack') {
+              value = msgpack.decode(value);
+            }
+            resolve(value);
           },
-          error: function(result) {
-            $.unblockUI();
-            reject({method_name: method_name, params: params, caller: wrapped.caller, resolver: resolve, result: result});
+          error: function(reply) {
+            reject({method_name: method_name, params: params, caller: wrapped.caller, resolver: resolve, result: reply});
           }
         });
       })
       .catch(function(error) {
-        // hook in a custom handler
-        $.unblockUI();
         if (app.api_exception_handler) {
           app.api_exception_handler(error); 
         } else {
@@ -50,25 +47,38 @@ webreduce.server_api = webreduce.server_api || {};
     return wrapped
   }
   
-  var toWrap_cached = ["find_calculated", "get_instrument", "calc_terminal", "list_datasources", "list_instruments"];
-  var toWrap_uncached = ["get_file_metadata"];
-  toWrap_cached.forEach(function(method_name) {
-    app.server_api[method_name] = wrap_jsonRPC(method_name, true);
-  });
-  toWrap_uncached.forEach(function(method_name) {
+  var toWrap = ["find_calculated", "get_instrument", "calc_terminal", "list_datasources", "list_instruments", "get_file_metadata"];
+  toWrap.forEach(function(method_name) {
     app.server_api[method_name] = wrap_jsonRPC(method_name, false);
   });
   
   app.server_api.__init__ = function() {
     return $.getJSON("rpc_config.json", function(config) {
+      // get the "parallel_load" suggestion from the rpc_config:
+      app.server_api._load_parallel = (config.load_parallel == null) ? false : config.load_parallel;
+      var endPoint = "";
+      if (config.host != null) {
+        endPoint += "//" + config.host + ((config.port == null) ? "" : (":" + config.port.toFixed()));
+      } 
+      endPoint += "/RPC2";
       $.jsonRPC.setup({
-        //endPoint: '//localhost:' + rpc_port + '/RPC2',
-        endPoint: "http://" + config.host + ":" + config.port.toFixed() + "/RPC2",
+        endPoint: endPoint,
         namespace: '',
-        // this gets explicitly set for each call, but by default make it true:
-        cache: true
+        // caching the jquery requests makes no difference because we are using "POST"
+        cache: false
       });
     });
+  }
+    
+  function b64ToBinary(base64) {
+    var raw = window.atob(base64);
+    var rawLength = raw.length;
+    var array = new Uint8Array(new ArrayBuffer(rawLength));
+
+    for(i = 0; i < rawLength; i++) {
+      array[i] = raw.charCodeAt(i);
+    }
+    return array;
   }
 })(webreduce);
 

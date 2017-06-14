@@ -10,7 +10,7 @@ the templates and the reduction flows need to be stored.
 The following functions are available:
 
     dumps
-    
+
         Convert reduction flow object to storable string.
 
     loads
@@ -24,7 +24,6 @@ import json
 
 from . import core
 
-
 def dumps(obj):
     if isinstance(obj, core.Template):
         classname = 'Template'
@@ -32,6 +31,8 @@ def dumps(obj):
     elif isinstance(obj, core.DataType):
         classname = 'DataType'
         version, state = obj.__getstate__()
+    else:
+        raise TypeError('unknown object "%s"' % str(type(obj)))
 
     return json.dumps([classname, version, state])
 

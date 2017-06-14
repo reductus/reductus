@@ -1,1 +1,4 @@
-__version__ = "0.5"
+# This program is public domain
+"""
+Data corrections for reflectometry.
+"""

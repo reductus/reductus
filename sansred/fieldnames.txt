@@ -1,0 +1,142 @@
+# Experiment
+proposalID            proposalID
+title                 title
+participants          participants
+localContact          contact
+researchArea          research_area
+instrument            instrument
+
+# Trajectory
+controlVariables      controls
+scannedVariables      scanned
+program               program
+name                  name
+
+# background poll period is common to power supply, motor, counter, ...
+backgroundPollPeriod  poll_period
+
+# Motor
+backlash              backlash
+conversion            scale
+desiredSoftPosition   set
+distanceToEngaged     error
+driveCurrentAutoMode  poweroff
+hardPosition          hwpos
+maxRetries            max_retries
+negLimitState         lowswitch
+parity                sign
+posLimitState         highswitch
+rawLowerLimit         rawlow
+rawPosition           rawpos
+rawTolerance          rawtol
+rawUpperLimit         rawhigh
+softLowerLimit        low
+softPosition          -
+softTolerance         tol
+softUpperLimit        high
+zero                  zero
+
+# MainCounter
+countAgainst          cmode
+liveMonitor           monitor
+liveROI               roi
+liveTime              time
+monitorPreset         mon.set
+roiPreset             roi.set
+timePreset            time.set
+roiAgainst            roi_detector
+primaryNode           summary
+startTime             start
+stopTime              stop
+
+# LogicalCounter
+counts                -
+dimensions            dim
+offset                offset
+strides               stride
+liveROI               roi
+chooseROI             roi_mode
+roiMask               roi_mask
+
+# Temperature
+# Note: index numbers are handled automatically
+controlLoopSensor     PIDsensor
+controlLoopState      PIDstate
+controlLoopStop       PIDstop
+lowerLimit            low
+primaryNode           -
+primarySensorIndex    primary
+sensor                T
+setpoint              set
+state                 state
+stop                  stop
+timeout               timeout
+toleranceBandTime     tolwait
+tolerance             tol
+upperLimit            high
+
+# power supply
+# These are tricky since they may either be controlled by voltage or by current
+# and so it may present as currentSetpoint/voltageLimit, voltageSetpoint/currentLimit
+# or currentSetpoint/voltageSetpoint depending on mode (current, voltage or both)
+# The default mapping, which sends currentSetpoint and voltageSetpoint to
+# set is ambiguous if the mode is both.  This can be fixed using explicit
+# renaming using filter.SetAlias in the instrument configuration.
+currentValue          current
+currentSetpoint       set
+currentLimit          current_limit
+voltageValue          voltage
+voltageSetpoint       set
+voltageLimit          voltage_limit
+
+# Lattice parameters
+a                     a
+b                     b
+c                     c
+alpha                 alpha
+beta                  beta
+gamma                 gamma
+
+# Sample orientation
+h                       H
+k                       K
+l                       L
+hklStrategy             mode
+sampleGeometry          geometry
+lowerCutSampleTheta     cutth
+lowerCutSampleTwoTheta  cut2th
+scatteringSenseTheta    sense
+useAlternateAngles      altangle
+useAlternateOrientation altorient
+
+# Eulerian
+lowerCutChi             lcutchi
+lowerCutPhi             lcutphi
+strategicChi            stratchi
+strategicPhi            stratphi
+
+# Tilt
+lowerCutLowerTilt            cutl
+lowerCutUpperTilt            cutu
+scatteringSenseLowerTilt     scatl
+scatteringSenseUpperTilt     scatu
+strategicLowerTilt           stratl
+strategicUpperTilt           stratu
+
+# Tilt reference place
+hkl1                  hkl1
+hkl2                  hkl2
+
+# UB matrix
+quaternion            quaternion
+
+# Mirror
+dSpacing              dspacing
+energy                -
+energyLowerLimit      Elow
+energyUpperLimit      Ehigh
+
+# No need to list fields such as wavelength, wavelengthSpread, energyTransfer,
+# which automatically alias device.primary as device.
+#energyTransfer        -
+#twoTheta              -

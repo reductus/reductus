@@ -1,31 +1,25 @@
 Introduction
 ============
-Dataflow data reduction for neutron scattering instruments.
+The online data reduction system `reductus`_ is made up of two parts:
 
-.. htmlonly::
-   :Release: |version|
-   :Date:    |today|
+* an HTML/Javascript client that runs in a web browser
+* a computation server
 
-   Download pdf version `here <Dataflow.pdf>`_
+Most users will not have to install a server, and will interact
+with the public web client only.  See below for documentation on
+specific instruments.
+
+Table of Contents
+=================
 
 .. toctree::
-   :numbered:
-   :maxdepth: 4
+    :maxdepth: 4
 
-   dataflow/index.rst
-   reflred/index.rst
+    guide/index.rst
+    api/index.rst
 
 Indices and Tables
 ==================
 
 * :ref:`genindex`
 * :ref:`modindex`
-
-.. htmlonly::
-  * :ref:`search`
-
-
-
-
-  
-

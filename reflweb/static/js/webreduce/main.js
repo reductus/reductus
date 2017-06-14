@@ -2,69 +2,94 @@ webreduce = window.webreduce || {};
 webreduce.instruments = webreduce.instruments || {};
 
 (function webreduction() {
-     //"use strict";
-     // add a comment
+   //"use strict";
+   // add a comment
 
-    active_reduction = {
-      "config": {},
-      "template": {}
+  active_reduction = {
+    "config": {},
+    "template": {}
+  }
+  current_instrument = "ncnr.refl";
+
+  var NEXUS_ZIP_REGEXP = /\.nxz\.[^\.\/]+$/
+  var dirHelper = "listftpfiles.php";
+  var data_path = ["ncnrdata"];
+  var statusline_log = function(message) {
+    var statusline = $("#statusline");
+    if (statusline && statusline.html) {
+      statusline.html(message);
     }
-    current_instrument = "ncnr.refl";
+  }
 
-    var NEXUS_ZIP_REGEXP = /\.nxz\.[^\.\/]+$/
-    var dirHelper = "listftpfiles.php";
-    var data_path = ["ncnrdata"];
-    var statusline_log = function(message) {
-      var statusline = $("#statusline");
-      if (statusline && statusline.html) {
-        statusline.html(message);
-      }
+  webreduce.statusline_log = statusline_log;
+
+  function getUrlVars() {
+    var vars = [], hash;
+    var hashes = window.location.href.slice(window.location.href.indexOf('?') + 1).split('&');
+    for(var i = 0; i < hashes.length; i++) {
+      hash = hashes[i].split('=');
+      vars.push(hash);
+    }
+    return vars;
+  }
+
+  webreduce.callbacks = {};
+  webreduce.callbacks.resize_center = function() {};
+  
+  window.onbeforeunload = function (e) {
+    var e = e || window.event;
+    var msg = "Do you really want to leave this page?"
+
+    // For IE and Firefox
+    if (e) {
+        e.returnValue = msg;
     }
 
-    webreduce.statusline_log = statusline_log;
+    // For Safari / chrome
+    return msg;
+  };
 
-    function getUrlVars() {
-      var vars = [], hash;
-      var hashes = window.location.href.slice(window.location.href.indexOf('?') + 1).split('&');
-      for(var i = 0; i < hashes.length; i++) {
-        hash = hashes[i].split('=');
-        vars.push(hash);
-      }
-      return vars;
-    }
-
-    webreduce.callbacks = {};
-    webreduce.callbacks.resize_center = function() {};
-    
-
-    window.onpopstate = function(e) {
-      // called by load on Safari with null state, so be sure to skip it.
-      //if (e.state) {
-      var start_path = null,
+  window.onpopstate = function(e) {
+    // called by load on Safari with null state, so be sure to skip it.
+    //if (e.state) {
+    var datasources = webreduce._datasources || {},
         url_vars = getUrlVars(),
-        source = 'ncnr';
-      url_vars.forEach(function(v, i) {
-        if (v[0] == 'pathlist' && v[1] && v[1].length) {
-          start_path = v[1].split("/");
-          webreduce.addDataSource("navigation", source, start_path);
-        }
-        else if (v[0] == 'source' && v[1]) {
-          source = v[1];
-        }
-        else if (v[0] == 'instrument' && v[1]) {
-          current_instrument = v[1];
-          webreduce.editor.switch_instrument(current_instrument);
-        }
-      })
-      
-      if (start_path == null) {
-        webreduce.addDataSource("navigation", source, data_path);
+        source = (datasources[0] || {}).name,
+        start_path = "";
+        
+    url_vars.forEach(function(v, i) {
+      if (v[0] == 'pathlist' && v[1] && v[1].length) {
+        start_path = v[1];
+        var pathlist = start_path.split("/");
+        webreduce.addDataSource("navigation", source, pathlist);
       }
+      else if (v[0] == 'source' && v[1]) {
+        source = v[1];
+      }
+      else if (v[0] == 'instrument' && v[1]) {
+        current_instrument = v[1];
+        webreduce.editor.switch_instrument(current_instrument);
+      }
+    })
+    
+    webreduce.editor.load_stashes();
+    
+    if (start_path == "") {
+      // no data sources added - add the default
+      var datasource = datasources.find(function(d) {return d.name == source});
+      if (datasource && 'start_path' in datasource) {
+        start_path = datasource['start_path'];
+      }
+      var pathlist = start_path.split("/");
+      webreduce.addDataSource("navigation", source, pathlist);
     }
+  }
 
     
 
-    window.onload = function() {
+  window.onload = function() {
+    zip.workerScriptsPath = "js/";
+    zip.useWebWorkers = true;
     webreduce.server_api.__init__().then(function(api) {
       var layout = $('body').layout({
            west__size:          350
@@ -80,7 +105,9 @@ webreduce.instruments = webreduce.instruments || {};
       layout.toggle('east');
       layout.allowOverflow('north');
       //$("#menu").menu({width: '200px;', position: {my: "left top", at: "left+15 bottom"}});
-	  
+      $(".ui-layout-west")
+				.tabs()
+
 	  
       webreduce.layout = layout;
       webreduce.download = (function () {
@@ -89,19 +116,27 @@ webreduce.instruments = webreduce.instruments || {};
         a.style = "display: none";
         a.id = "savedata";
         return function (data, fileName) {
-          var blob = new Blob([data], {type: "text/plain"}),
-            url = window.URL.createObjectURL(blob);
-          a.href = url;
-          a.download = fileName;
-          a.target = "_blank";
-          //window.open(url, '_blank', fileName);
-          a.click();
-          setTimeout(function() { window.URL.revokeObjectURL(url) }, 1000);
+          var blob = (data instanceof Blob) ? data : new Blob([data], {type: "text/plain"});
+          // IE 10 / 11 
+          if (window.navigator.msSaveOrOpenBlob) { 
+            window.navigator.msSaveOrOpenBlob(blob, fileName); 
+          } else {
+            var url = window.URL.createObjectURL(blob);
+            a.href = url;
+            a.download = fileName;
+            a.target = "_blank";
+            //window.open(url, '_blank', fileName);
+            a.click();
+            setTimeout(function() { window.URL.revokeObjectURL(url) }, 1000);
+          }
+          // cleanup: this seems to break things!
+          //document.body.removeChild(a);
         };
       }());
       
-      var upload_dialog = $("#upload_template").dialog({autoOpen: false});
-      var reload_exported_dialog = $("#reload_exported").dialog({autoOpen: false});
+      var upload_dialog = $("#upload_template").dialog({autoOpen: false, width: 400});
+      var reload_exported_dialog = $("#reload_exported").dialog({autoOpen: false, width: 400});
+      var export_data = $("#export_data").dialog({autoOpen: false, width: 400});
       
       ////////////////////////////////////////////////////////////////////
       // Make a menu
@@ -111,35 +146,41 @@ webreduce.instruments = webreduce.instruments || {};
           .append($("<ul />")
             .append($("<li />", {text: "New"})
               .on("click", function() {
-                $("#main_menu").hide(); 
+                hide_menu();
                 var empty_template = {modules: [], wires: []};
                 webreduce.editor.edit_template(empty_template)})
             )
             .append($("<li />", {text: "Edit"})
-              .on("click", function() {$("#main_menu").hide(); webreduce.editor.edit_template()})
+              .on("click", function() {hide_menu(); webreduce.editor.edit_template()})
             )
             .append($("<li />", {text: "Download"})
               .on("click", function() {
-                $("#main_menu").hide();
+                hide_menu();
                 var filename = prompt("Save template as:", "template.json");
                 if (filename == null) {return} // cancelled
                 webreduce.download(JSON.stringify(webreduce.editor._active_template, null, 2), filename);
               })
             )
             .append($("<li />", {text: "Upload"})
-              .on("click", function() {$("#main_menu").hide(); upload_dialog.dialog("open")})
+              .on("click", function() {hide_menu(); upload_dialog.dialog("open")})
+            )
+            .append($("<li />")
+              .append($("<label />", {text: "Auto-accept changes"})
+                .append($("<input />", {type: "checkbox", id: "auto_accept_changes", checked: true}))
+                .on("change", function() {hide_menu();})
+              )
             )
             .append($("<li />", {text: "Predefined", id: "predefined_templates"})
               .append($("<ul />"))
               .on("click", "ul li", function(ev) {
                 // delegated click handler, so it can get events on elements not added yet
                 // (added during instrument_load)
-                  $("#main_menu").hide();
+                  hide_menu();
                   var template_id = $(this).text();
+                  var instrument_id = webreduce.editor._instrument_id;
                   var template_copy = jQuery.extend(true, {}, webreduce.editor._instrument_def.templates[template_id]);
-                  webreduce.editor.load_template(template_copy);
+                  webreduce.editor.load_template(template_copy, null, null, instrument_id);
                   if (localStorage && localStorage.setItem) {
-                    var instrument_id = webreduce.editor._instrument_id;
                     var lookup_id = "webreduce.instruments." + instrument_id + ".last_used_template";
                     localStorage.setItem(lookup_id, template_id);
                   }
@@ -148,32 +189,65 @@ webreduce.instruments = webreduce.instruments || {};
           ))
         .append($("<li />", {id: "data_menu", text: "Data"})
           .append($("<ul />")
+            .append($("<li />", {text: "Stash"})
+              .on("click", function() {hide_menu(); webreduce.editor.stash_data()})
+            )
+            .append($("<li />", {text: "Export"})
+              .on("click", function() {hide_menu(); webreduce.editor.export_data()})
+            )
             .append($("<li />", {text: "Reload Exported"})
-              .on("click", function() {$("#main_menu").hide(); reload_exported_dialog.dialog("open")})
+              .on("click", function() {hide_menu(); reload_exported_dialog.dialog("open")})
+            )
+            .append($("<li />")
+              .append($("<label />", {text: "Auto-reload mtimes"})
+                .append($("<input />", {type: "checkbox", id: "auto_reload_mtimes", checked: true}))
+                .on("change", function() {hide_menu();})
+              )
+            )
+            .append($("<li />")
+              .append($("<label />", {text: "Cache calculations"})
+                .append($("<input />", {type: "checkbox", id: "cache_calculations", checked: true}))
+                .on("change", function() {hide_menu();})
+              )
+            )
+            .append($("<li />", {text: "Clear Cache"})
+              .on("click", function() {hide_menu(); webreduce.editor.clear_cache()})
             )
             .append($("<li />", {id: "data_menu_sources", text: "Add source"})
               .append($("<ul />"))
-              .on("click", "ul li", function(ev) {
-                // delegated click handler, so it can get events on elements not added yet
-                // (added during startup)
-                  $("#main_menu").hide();
-                  webreduce.addDataSource("navigation", $(this).text(), []);
-                })
-              )
             )
           )
+        )
         .append($("<li />", {id: "instrument_menu", text: "Instrument"})
           .append($("<ul />"))
           .on("click", "ul li", function(ev) {
             // delegated click handler, so it can get events on elements not added yet
             // (added during startup)
-              $("#main_menu").hide();
+              hide_menu();
               webreduce.editor.switch_instrument($(this).text());
             })
           )
         .menu()
+        
+      function hide_menu() {
+        $("#main_menu").menu("collapseAll", null, true).hide();
+        $("body").off("click.not-menu");
+        return false;
+      }
 
-      $("#show_main_menu").on("click", function() {$("#main_menu").toggle()});
+      $("#show_main_menu").on("click", function(ev) {
+        if ($("#main_menu").is(":visible")) {
+          hide_menu();
+        } else {
+          $("#main_menu").menu("collapseAll", null, true).show();
+          $("body").on("click.not-menu", function(ev) {
+            if (!$(ev.target).is("#main_menu_div *")) {
+              hide_menu();
+            }
+          });
+        }
+        //$("#main_menu").toggle()
+      });
    
       $("input#template_file").change(function() {
         var file = this.files[0]; // only one file allowed
@@ -198,29 +272,44 @@ webreduce.instruments = webreduce.instruments || {};
             //console.log(this.result);
             var first_line = this.result.slice(0, this.result.indexOf('\n'));
             first_line = '{' + first_line.replace(/^#/, '') + '}';
-            var template_header = JSON.parse(first_line);
-            webreduce.editor.load_template(template_header.template_data.template, template_header.template_data.node, template_header.template_data.terminal);
+            var template_header = JSON.parse(first_line),
+                template_data = template_header.template_data,
+                template = template_data.template,
+                node = template_data.node,
+                terminal = template_data.terminal,
+                instrument_id = template_data.instrument_id;
+                
+            webreduce.editor.load_template(template, node, terminal, instrument_id);
         }
         reader.readAsText(file);
       });
       webreduce.editor.create_instance("bottom_panel");
       
-      webreduce.server_api.list_datasources()
+      var list_datasources = webreduce.server_api.list_datasources()
         .then(function(datasources) {
-          console.log(datasources);
-          datasources.forEach(function(d, i){
-            $("#main_menu #data_menu_sources ul").append($("<li />", {text: d}));
-              $("#main_menu").menu("refresh");
+          webreduce._datasources = datasources; // should be a list now.
+          datasources.forEach(function(dsource, i){
+            var pathlist = (dsource.start_path || "").split("/");
+            $("#main_menu #data_menu_sources ul").append($("<li />", {
+              text: dsource.name,
+              start_path: dsource.start_path || "",
+              click: function() {
+                hide_menu();
+                webreduce.addDataSource("navigation", dsource.name, pathlist);
+              }
+            }));
+            $("#main_menu").menu("refresh");
           });
+          return datasources[0].name;
         });
         
-      webreduce.server_api.list_instruments()
+      var list_instruments = webreduce.server_api.list_instruments()
         .then(function(instruments) {
-          console.log(instruments);
           instruments.forEach(function(d, i){
             $("#main_menu #instrument_menu ul").append($("<li />", {text: d}));
               $("#main_menu").menu("refresh");
           });
+          return instruments[0];
         });
       
       webreduce.update_file_mtimes = function(template) {
@@ -231,16 +320,19 @@ webreduce.instruments = webreduce.instruments || {};
         // now step through the list of sources and paths and get the mtimes from the server:
         var times_promise = new Promise(function(resolve, reject) {resolve(null)});
         var updated_times = {};
+        var get_updated = function(source, path) {
+          return function() {
+            return webreduce.server_api.get_file_metadata({source: source, pathlist: path.split("/")}).then(function(r) {
+              for (var fn in r.files_metadata) {
+                updated_times[source][path + "/" + fn] = r.files_metadata[fn].mtime;
+              }
+            });
+          }
+        }
         for (var source in fsp) {
           updated_times[source] = {};
           for (var path in fsp[source]) {
-            times_promise = times_promise.then(function() {
-              return webreduce.server_api.get_file_metadata(source, path.split("/")).then(function(r) {
-                for (var fn in r.files_metadata) {
-                  updated_times[source][path + "/" + fn] = r.files_metadata[fn].mtime;
-                }
-              });
-            })
+            times_promise = times_promise.then(get_updated(source, path));
           }
         }
         
@@ -268,9 +360,11 @@ webreduce.instruments = webreduce.instruments || {};
       
       webreduce.api_exception_handler = function(exc) {
         console.log("api exception: ", exc);
-        alert("exception - error message: \n" + exc.result.error.message);
+        var message = exc.exception || "no error message";
+        alert("exception - error message: \n" + message);
+        console.log(exc.traceback);
         // catch the error that comes from stale timestamps for files
-        if (exc.result.error.message.indexOf("ValueError: Requested mtime is") > -1) {
+        if (message.indexOf("ValueError: Requested mtime is") > -1) {
           setTimeout(function() { 
             alert("Newer version of data file(s) found in source...\n\n" + 
                   "updating template with new file-modified times\n\n" + 
@@ -282,9 +376,15 @@ webreduce.instruments = webreduce.instruments || {};
           throw(exc);
         }
       }
-      window.onpopstate();
-      webreduce.editor.switch_instrument(current_instrument);
-  });
+
+      Promise.all([list_instruments, list_datasources]).then(function(results) {
+        var instr = results[0],
+            datasource = results[1];
+        webreduce.editor.switch_instrument(instr)
+          .then(function() { window.onpopstate() })
+          .catch(function(e) { console.log(e) });
+      });
+    });
   }
 
 })();

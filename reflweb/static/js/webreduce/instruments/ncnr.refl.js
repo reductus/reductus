@@ -5,24 +5,39 @@ webreduce.instruments['ncnr.refl'] = webreduce.instruments['ncnr.refl'] || {};
 
 // define the loader and categorizers for ncnr.refl instrument
 (function(instrument) {
-  function load_refl(datasource, path, mtime, db){
-    var template = {
-      "name": "loader_template",
-      "description": "ReflData remote loader",
-      "modules": [
-        {"module": "ncnr.refl.ncnr_load.cached", "version": "0.1", "config": {}}
-      ],
-      "wires": [],
-      "instrument": "ncnr.magik",
-      "version": "0.0"
-    }
-    var config = {"0": {"filelist": [{"path": path, "source": datasource, "mtime": mtime}]}},
-        module_id = 0,
-        terminal_id = "output";
-    return webreduce.server_api.calc_terminal(template, config, module_id, terminal_id).then(function(result) {
-      result.values.forEach(function(v) {v.mtime = mtime});
-      if (db) { db[path] = result; }
-      return result.values
+  //function load_refl(datasource, path, mtime, db){
+  function load_refl(load_params, db, noblock, return_type) {
+    // load params is a list of: 
+    // {datasource: "ncnr", path: "ncnrdata/cgd/...", mtime: 12319123109}
+    var noblock = (noblock == true); // defaults to false if not specified
+    var return_type = return_type || 'metadata';
+    var calc_params = load_params.map(function(lp) {
+      return {
+        template: {
+          "name": "loader_template",
+          "description": "ReflData remote loader",
+          "modules": [
+            {"module": "ncnr.refl.ncnr_load.cached", "version": "0.1", "config": {}}
+          ],
+          "wires": [],
+          "instrument": "ncnr.magik",
+          "version": "0.0"
+        }, 
+        config: {"0": {"filelist": [{"path": lp.path, "source": lp.source, "mtime": lp.mtime}]}},
+        node: 0,
+        terminal:  "output",
+        return_type: return_type
+      }
+    });
+    return webreduce.editor.calculate(calc_params, false, noblock).then(function(results) {
+      results.forEach(function(result, i) {
+        var lp = load_params[i];
+        if (result && result.values) {
+          result.values.forEach(function(v) {v.mtime = lp.mtime});
+          if (db) { db[lp.path] = result; }
+        }
+      });
+      return results;
     })
   }
   
@@ -136,6 +151,9 @@ webreduce.instruments['ncnr.refl'] = webreduce.instruments['ncnr.refl'] || {};
     else if (result.datatype == 'ncnr.refl.footprint.params') {
       plottable = {"type": "params", "params": result.values}
     }
+    else if (result.datatype == 'ncnr.refl.deadtime') {
+      plottable = {"type": "params", "params": result.values}
+    }
     else if (result.datatype == 'ncnr.refl.poldata') {
       plottable = {"type": "params", "params": result.values}
     }
@@ -149,45 +167,54 @@ webreduce.instruments['ncnr.refl'] = webreduce.instruments['ncnr.refl'] || {};
     function(info) { return info.polarization || "unpolarized" }
   ];
   
-  function add_range_indicators(target) {
+  function add_range_indicators(target, file_objs) {
     var propagate_up_levels = 2; // levels to push up xmin and xmax.
     var jstree = target.jstree(true);
-    var source_id = target.parent().attr("id");
-    var path = webreduce.getCurrentPath(target.parent());
-    var file_objs = webreduce.editor._file_objs[path];
-    var leaf, entry;
+    
     // first set min and max for entries:
-    for (fn in jstree._model.data) {
-      leaf = jstree._model.data[fn];
-      if (leaf.li_attr && 'filename' in leaf.li_attr && 'entryname' in leaf.li_attr) {
-        entry = file_objs[leaf.li_attr.filename].values.filter(function(f) {return f.entry == leaf.li_attr.entryname});
-        if (entry && entry[0]) {
-          var e = entry[0];
-          var xaxis = 'x'; // primary_axis[e.intent || 'specular'];
-          if (!(get_refl_item(entry[0], xaxis))) { console.log(entry[0]); throw "error: no such axis " + xaxis + " in entry for intent " + e.intent }
-          var extent = d3.extent(get_refl_item(entry[0], xaxis));
-          leaf.li_attr.xmin = extent[0];
-          leaf.li_attr.xmax = extent[1];
-          var parent = leaf;
-          for (var i=0; i<propagate_up_levels; i++) {
-            var parent_id = parent.parent;
-            parent = jstree._model.data[parent_id];
-            if (parent.li_attr.xmin != null) {
-              parent.li_attr.xmin = Math.min(extent[0], parent.li_attr.xmin);
-            }
-            else {
-              parent.li_attr.xmin = extent[0];
-            }
-            if (parent.li_attr.xmax != null) {
-              parent.li_attr.xmax = Math.max(extent[1], parent.li_attr.xmax);
-            }
-            else {
-              parent.li_attr.xmax = extent[1];
-            }
+    var to_decorate = jstree.get_json("#", {"flat": true})
+      .filter(function(leaf) { 
+        return (leaf.li_attr && 
+                'filename' in leaf.li_attr && 
+                leaf.li_attr.filename in file_objs &&
+                'entryname' in leaf.li_attr && 
+                'source' in leaf.li_attr &&
+                'mtime' in leaf.li_attr) 
+        })
+    
+    to_decorate.forEach(function(leaf, i) {
+      var filename = leaf.li_attr.filename;
+      var file_obj = file_objs[filename];
+      var entry = file_obj.values.filter(function(f) {return f.entry == leaf.li_attr.entryname});
+      if (entry && entry[0]) {
+        var e = entry[0];
+        var xaxis = 'x'; // primary_axis[e.intent || 'specular'];
+        if (!(get_refl_item(entry[0], xaxis))) { console.log(entry[0]); throw "error: no such axis " + xaxis + " in entry for intent " + e.intent }
+        var extent = d3.extent(get_refl_item(entry[0], xaxis));
+        var leaf_actual = jstree._model.data[leaf.id];
+        leaf_actual.li_attr.xmin = extent[0];
+        leaf_actual.li_attr.xmax = extent[1];
+        var parent = leaf;
+        for (var i=0; i<propagate_up_levels; i++) {
+          var parent_id = parent.parent;
+          parent = jstree._model.data[parent_id];
+          if (parent.li_attr.xmin != null) {
+            parent.li_attr.xmin = Math.min(extent[0], parent.li_attr.xmin);
+          }
+          else {
+            parent.li_attr.xmin = extent[0];
+          }
+          if (parent.li_attr.xmax != null) {
+            parent.li_attr.xmax = Math.max(extent[1], parent.li_attr.xmax);
+          }
+          else {
+            parent.li_attr.xmax = extent[1];
           }
         }
       }
-    }
+    });
+
+    // then go back through add range indicators
     for (fn in jstree._model.data) {
       leaf = jstree._model.data[fn];
       if (leaf.parent == null) {continue}
@@ -200,53 +227,63 @@ webreduce.instruments['ncnr.refl'] = webreduce.instruments['ncnr.refl'] || {};
     }
   }
   
-  function add_sample_description(target) {
+  function add_sample_description(target, file_objs) {
     var jstree = target.jstree(true);
-    var source_id = target.parent().attr("id");
-    var path = webreduce.getCurrentPath(target.parent());
-    var file_objs = webreduce.editor._file_objs[path];
-    var leaf, entry;
-    for (fn in jstree._model.data) {
-      leaf = jstree._model.data[fn];
-      if (leaf.li_attr && 'filename' in leaf.li_attr && 'entryname' in leaf.li_attr) {
-        entry = file_objs[leaf.li_attr.filename].values.filter(function(f) {return f.entry == leaf.li_attr.entryname});
-        if (entry && entry[0]) {
-          var e = entry[0];
-          //console.log(e.sample);
-          if ('sample' in e && 'description' in e.sample) {
-            leaf.li_attr.title = e.sample.description;
-            var parent_id = leaf.parent;
-            parent = jstree._model.data[parent_id];
-            parent.li_attr.title = e.sample.description;
-          }
+    var to_decorate = jstree.get_json("#", {"flat": true})
+      .filter(function(leaf) { 
+        return (leaf.li_attr && 
+                'filename' in leaf.li_attr &&
+                leaf.li_attr.filename in file_objs &&
+                'entryname' in leaf.li_attr && 
+                'source' in leaf.li_attr &&
+                'mtime' in leaf.li_attr) 
+        })
+    to_decorate.forEach(function(leaf, i) {
+      var values = file_objs[leaf.li_attr.filename].values || [];
+      var entry = values.filter(function(f) {return f.entry == leaf.li_attr.entryname});
+      if (entry && entry[0]) {
+        var e = entry[0];
+        if ('sample' in e && 'description' in e.sample) {
+          var leaf_actual = jstree._model.data[leaf.id];
+          leaf_actual.li_attr.title = e.sample.description;
+          var parent_id = leaf.parent;
+          var parent = jstree._model.data[parent_id];
+          parent.li_attr.title = e.sample.description;
         }
       }
-    }
+    });
   }
   
-  function add_viewer_link(target) {
+  function add_viewer_link(target, file_objs) {
     var jstree = target.jstree(true);
-    var source_id = target.parent().attr("id");
-    var path = webreduce.getCurrentPath(target.parent());
-    var file_objs = webreduce.editor._file_objs[path];
-    var leaf, first_child, entry;
-    for (fn in jstree._model.data) {
-      leaf = jstree._model.data[fn];
-      if (leaf.children.length > 0) {
-        first_child = jstree._model.data[leaf.children[0]];
-        if (first_child.li_attr && 'filename' in first_child.li_attr && 'entryname' in first_child.li_attr) {
-          var fullpath = first_child.li_attr.filename;
-          var pathsegments = fullpath.split("/");
-          var pathlist = pathsegments.slice(0, pathsegments.length-1).join("+");
-          var filename = pathsegments.slice(-1);
-          var link = "<a href=\"http://ncnr.nist.gov/ipeek/nexus-zip-viewer.html";
-          link += "?pathlist=" + pathlist;
-          link += "&filename=" + filename;
-          link += "\" style=\"text-decoration:none;\">&#9432;</a>";
-          leaf.text += link;
-        }
-      }
-    }
+    var parents_decorated = {};
+    var to_decorate = jstree.get_json("#", {"flat": true})
+      .filter(function(leaf) { 
+        return (leaf.li_attr && 
+                'filename' in leaf.li_attr && 
+                'source' in leaf.li_attr) 
+        })
+    // for refl, this will return a list of entries, but
+    // we want to decorate the file that contains the entries.
+    to_decorate.forEach(function(leaf, i) {
+      var parent_id = leaf.parent;
+      // only add link once per file
+      if (parent_id in parents_decorated) { return }
+      var fullpath = leaf.li_attr.filename;
+      var datasource = leaf.li_attr.source;
+      if (["ncnr", "ncnr_DOI"].indexOf(datasource) < 0) { return }
+      if (datasource == "ncnr_DOI") { fullpath = "ncnrdata" + fullpath; }
+      var pathsegments = fullpath.split("/");
+      var pathlist = pathsegments.slice(0, pathsegments.length-1).join("+");
+      var filename = pathsegments.slice(-1);
+      var link = "<a href=\"http://ncnr.nist.gov/ipeek/nexus-zip-viewer.html";
+      link += "?pathlist=" + pathlist;
+      link += "&filename=" + filename;
+      link += "\" style=\"text-decoration:none;\">&#9432;</a>";
+      var parent_actual = jstree._model.data[parent_id];
+      parent_actual.text += link;
+      parents_decorated[parent_id] = true;
+    })
   }
   
   instrument.decorators = [add_range_indicators, add_sample_description, add_viewer_link];

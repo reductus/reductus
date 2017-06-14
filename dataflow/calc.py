@@ -1,17 +1,26 @@
 """
 Run a reduction workflow.
 
-The function run_template
-"""
+:func:`process_template` evaluates a template for the given input values.
 
-try:
-    # Python 3.5 does not have cPickle
-    import cPickle as pickle
-except:
-    import pickle
+:func:`find_calculated` returns the list the template nodes that have already
+been calculated and cached for the given input values.
+
+:func:`fingerprint_template` returns the unique fingerprint for each node
+in the template given its input values.
+"""
+from __future__ import print_function
+
+import sys
+
 import hashlib
 import contextlib
 from inspect import getsource
+try:
+    # CRUFT: use cPickle for python 2.7
+    import cPickle as pickle
+except ImportError:
+    import pickle
 
 from .anno_exc import annotate_exception
 from .cache import get_cache
@@ -19,7 +28,9 @@ from .core import lookup_module, lookup_datatype
 from .core import Bundle
 from .automod import validate
 
-PICKLE_PROTOCOL = 2 # fast and small and good for Python 2.6+
+IS_PY3 = sys.version_info[0] >= 3
+
+PICKLE_PROTOCOL = pickle.HIGHEST_PROTOCOL # use the best
 
 def find_calculated(template, config):
     """
@@ -33,7 +44,7 @@ def find_calculated(template, config):
             for node, _ in enumerate(template.modules)]
 
 
-def process_template(template, config, target=(None,None)):
+def process_template(template, config, target=(None, None)):
     """
     Evaluate the template.
 
@@ -212,7 +223,6 @@ def _eval_node(node_id, module, inputs, template_fields, user_fields):
         values = fields[name]
         if not par['multiple']:
             values = [values] if values is not None else []
-        #print "fields", node_id, name, values
         values = [_validate_par(node_id, par, value) for value in values]
         if len(values) == 0:
             del fields[name]
@@ -223,6 +233,7 @@ def _eval_node(node_id, module, inputs, template_fields, user_fields):
         else:
             raise ValueError("Need one value of %s for each dataset in %s"
                              % (name, node_id))
+        #print "fields", node_id, name, values
 
     # validate input terminals
     for par in module.inputs:
@@ -233,7 +244,7 @@ def _eval_node(node_id, module, inputs, template_fields, user_fields):
         if len(values) == 0:
             # If no inputs, then either send an empty list or None, depending
             # on whether the input terminal is expecting a list or a singleton.
-            fields[name] = [(None if par["length"]==1 else [])]*bundle_length
+            fields[name] = [(None if par["length"] == 1 else [])]*bundle_length
         elif par["length"] == 0:
             fields[name] = [values]*bundle_length
         elif len(values) == bundle_length:
@@ -248,7 +259,7 @@ def _eval_node(node_id, module, inputs, template_fields, user_fields):
 
     for k in range(bundle_length):
         # set up inputs
-        action_args = dict((name,values[k]) for name, values in fields.items())
+        action_args = dict((name, values[k]) for name, values in fields.items())
 
         # perform action
         #print "args", node_id, k, action_args
@@ -374,7 +385,16 @@ def fingerprint_node(module, node_config, inputs_fp):
     config_str = str(_format_ordered(config))
     current_module_version = lookup_module(module['module']).version
     parts = [module['module'], current_module_version, config_str] + inputs_fp
-    fp = hashlib.sha1(":".join(parts)).hexdigest()
+    return generate_fingerprint(parts)
+
+def generate_fingerprint(parts):
+    """
+    Generate a fingerprint from string parts.
+    """
+    key = ":".join(parts)
+    if IS_PY3:
+        key = key.encode('utf-8')
+    fp = hashlib.sha1(key).hexdigest()
     return fp
 
 # new methods that keep everything ordered
@@ -471,7 +491,7 @@ def verify_examples(source_file, tests, target_dir, seed=1): # pragma no cover
             with open(target_path, 'rb') as fid:
                 target_str = fid.read()
             if not actual_str == target_str:
-                actual_path = join(tempfile.gettempdir(),filename)
+                actual_path = join(tempfile.gettempdir(), filename)
                 if not exists(dirname(actual_path)):
                     os.makedirs(dirname(actual_path))
                 with open(actual_path, 'wb') as fid:
@@ -494,32 +514,33 @@ def run_example(template, config, seed=None, verbose=False): # pragma no cover
     if verbose:
         print('result: '+json.dumps(result, sort_keys=True, indent=2))
     for key, value in result.items():
-        for output in value.get('output',[]):
+        for output in value.get('output', []):
             if not isinstance(output, dict):
                 #print key, 'plot: ', output.get_plottable()
                 pass
 
 # internal tests
 def test_format_ordered():
-    udict,odict = {'x':2,'a':3}, [('a',3),('x',2)]
+    udict, odict = {'x': 2, 'a': 3}, [('a', 3), ('x', 2)]
+    # Note: Leave the ufn function as a 1-liner.  The test relies on the format
     def ufn(a): return a
     class A(object):
         def __init__(self):
-            self.x, self.a = 2,3
+            self.x, self.a = 2, 3
     class A2:
         def __init__(self):
-            self.x, self.a = 2,3
+            self.x, self.a = 2, 3
     pairs = [
-        (udict,odict),
-        ({'first':udict,'second':'ple'}, [('first',odict), ('second','ple')]),
-        ([1,udict,3], [1,odict,3]),
-        ((1,udict,3), (1,odict,3)),
+        (udict, odict),
+        ({'first': udict, 'second': 'ple'}, [('first', odict), ('second', 'ple')]),
+        ([1, udict, 3], [1, odict, 3]),
+        ((1, udict, 3), (1, odict, 3)),
         (ufn, "    def ufn(a): return a\n"),
         (A(), ['A', odict]),
         (A2(), ['A2', odict]),
         ]
 
-    for u,o in pairs:
+    for u, o in pairs:
         actual = _format_ordered(u)
-        print("%s => %r =? %r"%(str(u),actual,o))
+        print("%s => %r =? %r"%(str(u), actual, o))
         assert actual == o

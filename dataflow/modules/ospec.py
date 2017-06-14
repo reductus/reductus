@@ -1,5 +1,5 @@
 from dataflow import core as df
-from dataflow.automod import make_modules
+from dataflow.automod import make_modules, make_template
 from dataflow import templates
 
 from ospecred import magik_filters_func as steps
@@ -22,7 +22,7 @@ def define_instrument():
     ospec1d = df.DataType(INSTRUMENT+".ospec1d", FilterableMetaArray)
     params = df.DataType(INSTRUMENT+".params", Parameters)
     #offset_data = df.DataType(INSTRUMENT+".offset_data", dict)
-    
+
     # Define instrument
     ospec = df.Instrument(
         id=INSTRUMENT,
@@ -38,9 +38,7 @@ def define_instrument():
 
 
 def loader_template():
-    from dataflow.automod import make_template
-    from dataflow.core import lookup_instrument
-    refl1d = lookup_instrument(INSTRUMENT)
+    refl1d = df.lookup_instrument(INSTRUMENT)
     diagram = [
             ["ncnr_load", {}],
             ["divergence", {"data": "-.output"}],
@@ -56,9 +54,7 @@ def loader_template():
 
 
 def unpolarized_template():
-    from dataflow.automod import make_template
-    from dataflow.core import lookup_instrument
-    refl1d = lookup_instrument(INSTRUMENT)
+    refl1d = df.lookup_instrument(INSTRUMENT)
     diagram = [
         # Load the data
         ["ncnr_load", {}],
@@ -80,7 +76,7 @@ def unpolarized_template():
         ["nop", {"data": "split.backp"}],
         ["mask_specular",  {"data": "-.output"}],
         ["align_background",  {"data": "-.output", "offset": "auto"}],
-        ["join => backp",  {"data": "-.output"},],
+        ["join => backp",  {"data": "-.output"}],
 
         ["nop", {"data": "split.backm"}],
         ["mask_specular",  {"data": "-.output"}],
@@ -124,7 +120,7 @@ def demo():
                             target=(len(template.modules)-1, "output"),
                             #target=(2, "data"),  # return an input
                             )
-    #print "refl",refl.values
+    #print "refl", refl.values
     return refl.values
 
 

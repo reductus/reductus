@@ -1,9 +1,15 @@
 *.so
 *.pyc
+*.pyd
+__pycache__
 /build/
 /dist/
 /doc/_build/
 /doc/dataflow/
 /doc/reflred/
+/doc/ospecred/
+/doc/sansred/
+/reflred/src/_rebin.cc
 /reflred.egg-info/
 /reflweb/config.py
+/reflweb/git_version_*

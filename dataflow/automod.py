@@ -7,6 +7,7 @@ a list of actions.  The doc strings of the actions define the interface.
 :func:`make_template` defines a convenient syntax for creating templates
 from a script.
 """
+import sys
 import inspect
 import re
 
@@ -15,6 +16,8 @@ from numpy import inf
 from .anno_exc import annotate_exception
 from .core import Module, Template
 from .rst2html import rst2html
+
+IS_PY3 = sys.version_info[0] >= 3
 
 def make_template(name, description, diagram, instrument, version):
     """
@@ -157,7 +160,7 @@ def make_template(name, description, diagram, instrument, version):
         # check that the remaining config info refers to fields in the
         # module
         fields = set(p["id"] for p in module.fields)
-        for k,v in config.items():
+        for k, v in config.items():
             if k not in fields:
                 raise ValueError(err("unknown config field %r"%k))
 
@@ -255,11 +258,18 @@ def auto_module(action):
     associated with the wires and have enough information that they can
     be plotted.
 
+    Every module should have a date stamp and author, with date as
+    yyyy-mm-dd so that it sorts correctly.  A change notice can be
+    included, separated from author by ':'.  If there are multiple
+    updates to the module, precede each with '| ' so that line breaks
+    are preserved in the formatted documentation.
+
     The resulting doc string should look okay in sphinx. For example,
 
-    ``
+    ::
+
         def rescale(data, scale=1.0, dscale=0.0):
-            \"""
+            r\"""
             Rescale the count rate by some scale and uncertainty.
 
             **Inputs**
@@ -274,13 +284,16 @@ def auto_module(action):
 
             output (refldata) : scaled data
 
-            2015-12-17 Paul Kienzle
+            | 2015-12-17 Paul Kienzle: first release
+            | 2016-02-04 Paul Kienzle: change parameter name
             \"""
-    ``
 
-    The 'float:' type indicates that it is a floating point value with no
-    units, as opposed to a floating point value for which we haven't thought
-    about the units that are needed.
+    The 'float:' type indicates that it is a unitless floating point value
+    rather than a floating point value for which we forgot to specify units.
+
+    The 'r' preceding the docstring allows us to put backslashes in the
+    documentation, which is convenient when we have latex markup in between
+    dollar signs or in a \\:math\\: environment.
     """
     try:
         return _parse_function(action)
@@ -290,7 +303,7 @@ def auto_module(action):
 
 
 
-timestamp = re.compile(r"^(?P<date>[0-9]{4}-[0-9]{2}-[0-9]{2})\s+(?P<author>.*?)\s*$")
+timestamp = re.compile(r"^([|] )?(?P<date>[0-9]{4}-[0-9]{2}-[0-9]{2})\s+(?P<author>.*?)\s*(:\s*(?P<change>.*?)\s*)?$")
 def _parse_function(action):
     # grab arguments and defaults from the function definition
     argspec = inspect.getargspec(action)
@@ -310,6 +323,7 @@ def _parse_function(action):
     input_lines = []
     output_lines = []
     version, author = "", ""
+    changelog = []
 
     # Split docstring into sections
     state = 0 # processing description
@@ -320,6 +334,7 @@ def _parse_function(action):
             state = 3
             version = match.group('date')
             author = match.group('author')
+            changelog.append((version, author, match.group('change')))
         elif stripped == "**Inputs**":
             state = 1
         elif line.strip() == "**Returns**":
@@ -337,7 +352,7 @@ def _parse_function(action):
 
     # parse the sections
     name = _unsplit_name(action.__name__)
-    heading = "\n".join(("="*len(name),name,"="*len(name),""))
+    heading = "\n".join(("="*len(name), name, "="*len(name), ""))
     #description = "".join(description_lines)
     description = rst2html(heading + docstr, part="whole", math_output="mathjax")
     inputs = parse_parameters(input_lines)
@@ -390,6 +405,7 @@ def _parse_function(action):
         'fields': input_fields,
         'version': version,
         'author': author,
+        #'changelog': changelog,
         'action_id': action.__module__ + "." + action.__name__
         }
 
@@ -544,7 +560,8 @@ def parse_datatype(par):
 
             {
                 *path*: location on server,
-                *mtime*: modification time
+                *mtime*: modification time,
+                *source*: data repository (ncnr, ncnr_DOI, local...)
             }
 
         The user interface should present a list of files to choose from,
@@ -580,7 +597,7 @@ def parse_datatype(par):
         *y* for a range of *x* or *y* values, or *xy* for a region of the
         graph. This makes most sense with *length=1, multiple=false*.
         The type attribute is set as *typeattr={axis: "axis"}*.  The return
-        value is *[min, max]* for *x* and *y*, or *[minx, miny, maxx, maxy]*
+        value is *[min, max]* for *x* and *y*, or *[minx, maxx, miny, maxy]*
         for *xy*.
 
     *coordinate* -> *datatype=coordinate*
@@ -619,6 +636,7 @@ def parse_datatype(par):
     elif type == "opt":
         if "|" not in attrstr:
             raise ValueError("options not specified for " + name)
+        attrstr = attrstr.replace('\\', '')  # allow escaped backslashes for rst
         choices = [v.split('=', 2) for v in attrstr.split("|")]
         choices = [(v*2 if len(v) == 1 else v) for v in choices]
         choices = [[v[0].strip(), v[1].strip()] for v in choices]
@@ -635,7 +653,7 @@ def parse_datatype(par):
         try:
             pattern = re.compile(attrstr)
         except Exception as exc:
-            raise ValueError("regex error %r for %s"%(str(exc),name))
+            raise ValueError("regex error %r for %s"%(str(exc), name))
         # if the default is given, check that it matches the pattern
         default = par.get("default", None)
         if default and not pattern.search(default):
@@ -646,7 +664,7 @@ def parse_datatype(par):
     elif type == "range":
         if attrstr not in ("x", "y", "xy"):
             raise ValueError("range must be one of x, y or xy for " + name)
-        attr["range"] = attrstr
+        attr["axis"] = attrstr
 
     else: # type in ["str", "bool", "fileinfo", "index", "coordinate"]:
         if par["typeattr"] is not None:
@@ -719,7 +737,7 @@ def _validate_one(par, value, as_default):
         choices = par["typeattr"]["choices"]
         isopenset = par["typeattr"]["open"]
         # Note: choices is a list of pairs [["option", "display"], ...]
-        if value not in zip(*choices)[0]:
+        if value not in list(zip(*choices))[0]:
             #print value, choices
             if not isopenset or as_default is True:
                 raise ValueError("value %r not in choice list for %s"
@@ -734,7 +752,7 @@ def _validate_one(par, value, as_default):
 
     elif datatype == "range":
         range = par["typeattr"]["axis"]
-        n = 4 if range=="xy" else 2
+        n = 4 if range == "xy" else 2
         value = _list_check(name, value, n, float)
 
     elif datatype == "index":
@@ -748,7 +766,7 @@ def _validate_one(par, value, as_default):
 
     elif datatype == "fileinfo":
         value = _finfo_check(name, value)
-    
+
     elif datatype == "scale":
         value = _type_check(name, value, float)
 
@@ -760,18 +778,18 @@ def _validate_one(par, value, as_default):
 def _finfo_check(name, value):
     try:
         if (not isinstance(value, dict)
-                or "path" not in value 
+                or "path" not in value
                 or "mtime" not in value
                 or "source" not in value
-                or (len(value)>3 and "entries" not in value)
-                or len(value)>4):
+                or (len(value) > 3 and "entries" not in value)
+                or len(value) > 4):
             raise ValueError("wrong structure")
         value["path"] = _type_check(name, value["path"], str)
         value["mtime"] = _type_check(name, value["mtime"], int)
         value["source"] = _type_check(name, value["source"], str)
         if value.setdefault("entries", None) is not None:
             value["entries"] = _list_check(name, value["entries"], 0, str)
-            
+
     except:
         #raise
         raise ValueError("value %r is not {source: str, path: str, mtime: int, entries: [str, ...]} for %s"
@@ -798,8 +816,10 @@ def _type_check(name, value, ptype):
         value = int(value)
     elif ptype is float and isinstance(value, int):
         value = float(value)
-    elif ptype is str and isinstance(value, unicode):
-        value = str(value)
+    elif ptype is str and not IS_PY3 and isinstance(value, unicode):
+        value = value.encode('utf-8')
+    elif ptype is str and IS_PY3 and isinstance(value, bytes):
+        value = value.decode('utf-8')
     if not isinstance(value, ptype):
         raise ValueError("expected %s for %s but got %s"
                          % (str(ptype), name, str(type(value))))
@@ -824,7 +844,7 @@ def parse_range(range, limit=inf):
     min = float(minstr) if minstr and minstr != "-inf" else -limit
     max = float(maxstr) if maxstr and maxstr != "inf" else limit
     if min >= max:
-        raise ValueError("min must be less than max in (%g,%g)"%(min,max))
+        raise ValueError("min must be less than max in (%g,%g)"%(min, max))
     if min < -limit:
         raise ValueError("min value %g must be more than %g"%(min, -limit))
     if max > limit:
@@ -912,12 +932,6 @@ def test_parse_parameters():
     """
 
     p = dict((pk['id'], pk) for pk in parse_parameters(all_good.split('\n')))
-    for pk in p:
-        # Note: parse_datatype is not part of parse_parameters because we
-        # want to be able to check the default value for each type, and we
-        # only want the t
-        parse_datatype(pk)
-
     #import pprint; pprint.pprint(p)
 
     assert p['s1']['description'] == 'p1 description'
@@ -981,9 +995,10 @@ def test_parse_parameters():
         ['long', 'long'], ['options', 'options'], ['split', 'split']
     ]
     assert p['o4']['typeattr']['choices'] == [
-        ['p1', 'Parameter 1'], ['',''], ['Parameter 2', 'Parameter 2']
+        ['p1', 'Parameter 1'], ['', ''], ['Parameter 2', 'Parameter 2']
     ]
 
     assert p['e1']['typeattr'] == {'pattern': '.*'}
 
-    assert p['r1']['typeattr'] == {'range': 'x'}
+    assert p['r1']['datatype'] == 'range'
+    assert p['r1']['typeattr'] == {'axis': 'x'}

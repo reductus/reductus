@@ -1,0 +1,359 @@
+{
+  "modules": [
+    {
+      "y": 5,
+      "x": 10,
+      "config": {
+        "filelist": []
+      },
+      "module": "ncnr.sans.SuperLoadSANS",
+      "title": "sample"
+    },
+    {
+      "y": 65,
+      "x": 10,
+      "config": {
+        "filelist": []
+      },
+      "module": "ncnr.sans.SuperLoadSANS",
+      "title": "empty cell"
+    },
+    {
+      "y": 140,
+      "x": 5,
+      "config": {
+        "do_det_eff": true,
+        "do_solid_angle": true,
+        "filelist": [],
+        "do_deadtime": true,
+        "deadtime": 0.0000034,
+        "mon0": 100000000,
+        "do_mon_norm": true
+      },
+      "module": "ncnr.sans.SuperLoadSANS",
+      "title": "empty trans"
+    },
+    {
+      "y": 105,
+      "x": 5,
+      "config": {
+        "do_det_eff": true,
+        "do_solid_angle": true,
+        "filelist": [],
+        "do_deadtime": true,
+        "deadtime": 0.0000034,
+        "mon0": 100000000,
+        "do_mon_norm": true
+      },
+      "module": "ncnr.sans.SuperLoadSANS",
+      "title": "sample trans"
+    },
+    {
+      "y": 150,
+      "x": 155,
+      "module": "ncnr.sans.generate_transmission",
+      "title": "Gen trans"
+    },
+    {
+      "y": 35,
+      "x": 10,
+      "config": {
+        "filelist": []
+      },
+      "module": "ncnr.sans.SuperLoadSANS",
+      "title": "blocked"
+    },
+    {
+      "y": 5,
+      "x": 200,
+      "module": "ncnr.sans.subtract",
+      "title": "Subtract"
+    },
+    {
+      "y": 65,
+      "x": 230,
+      "module": "ncnr.sans.subtract",
+      "title": "Subtract"
+    },
+    {
+      "y": 65,
+      "x": 370,
+      "module": "ncnr.sans.product",
+      "title": "Product"
+    },
+    {
+      "y": 5,
+      "x": 515,
+      "module": "ncnr.sans.subtract",
+      "title": "Subtract"
+    },
+    {
+      "y": 5,
+      "x": 680,
+      "module": "ncnr.sans.correct_detector_sensitivity",
+      "title": "Det sensit"
+    },
+    {
+      "y": 210,
+      "x": 385,
+      "module": "ncnr.sans.LoadSANS",
+      "title": "empty"
+    },
+    {
+      "y": 175,
+      "x": 665,
+      "module": "ncnr.sans.generate_transmission",
+      "title": "Gen trans"
+    },
+    {
+      "y": 75,
+      "x": 820,
+      "module": "ncnr.sans.absolute_scaling",
+      "title": "Abs Scale"
+    },
+    {
+      "module": "ncnr.sans.makeDIV",
+      "title": "Makediv",
+      "x": 555,
+      "y": 115
+    },
+    {
+      "module": "ncnr.sans.LoadSANS",
+      "title": "base plex",
+      "x": 410,
+      "y": 115,
+      "config": {
+        "filelist": [
+          {
+            "path": "/ng7sans/201702/nonims1/data/sans28191.zip",
+            "source": "ncnr_DOI",
+            "mtime": 1487250250,
+            "entries": [
+              "entry"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "module": "ncnr.sans.LoadSANS",
+      "title": "offset plex",
+      "x": 410,
+      "y": 145,
+      "config": {
+        "filelist": [
+          {
+            "path": "/ng7sans/201702/nonims1/data/sans28190.zip",
+            "source": "ncnr_DOI",
+            "mtime": 1487248423,
+            "entries": [
+              "entry"
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "wires": [
+    {
+      "source": [
+        0,
+        "output"
+      ],
+      "target": [
+        6,
+        "subtrahend"
+      ]
+    },
+    {
+      "source": [
+        5,
+        "output"
+      ],
+      "target": [
+        6,
+        "minuend"
+      ]
+    },
+    {
+      "source": [
+        5,
+        "output"
+      ],
+      "target": [
+        7,
+        "minuend"
+      ]
+    },
+    {
+      "source": [
+        1,
+        "output"
+      ],
+      "target": [
+        7,
+        "subtrahend"
+      ]
+    },
+    {
+      "source": [
+        3,
+        "output"
+      ],
+      "target": [
+        4,
+        "in_beam"
+      ]
+    },
+    {
+      "source": [
+        2,
+        "output"
+      ],
+      "target": [
+        4,
+        "empty_beam"
+      ]
+    },
+    {
+      "source": [
+        4,
+        "output"
+      ],
+      "target": [
+        8,
+        "factor_param"
+      ]
+    },
+    {
+      "source": [
+        7,
+        "output"
+      ],
+      "target": [
+        8,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        6,
+        "output"
+      ],
+      "target": [
+        9,
+        "subtrahend"
+      ]
+    },
+    {
+      "source": [
+        8,
+        "output"
+      ],
+      "target": [
+        9,
+        "minuend"
+      ]
+    },
+    {
+      "source": [
+        9,
+        "output"
+      ],
+      "target": [
+        10,
+        "sansdata"
+      ]
+    },
+    {
+      "source": [
+        3,
+        "output"
+      ],
+      "target": [
+        12,
+        "in_beam"
+      ]
+    },
+    {
+      "source": [
+        11,
+        "output"
+      ],
+      "target": [
+        12,
+        "empty_beam"
+      ]
+    },
+    {
+      "source": [
+        10,
+        "output"
+      ],
+      "target": [
+        13,
+        "sample"
+      ]
+    },
+    {
+      "source": [
+        11,
+        "output"
+      ],
+      "target": [
+        13,
+        "empty"
+      ]
+    },
+    {
+      "source": [
+        12,
+        "output"
+      ],
+      "target": [
+        13,
+        "Tsam"
+      ]
+    },
+    {
+      "source": [
+        14,
+        "DIV"
+      ],
+      "target": [
+        13,
+        "div"
+      ]
+    },
+    {
+      "source": [
+        14,
+        "DIV"
+      ],
+      "target": [
+        10,
+        "sensitivity"
+      ]
+    },
+    {
+      "source": [
+        15,
+        "output"
+      ],
+      "target": [
+        14,
+        "data1"
+      ]
+    },
+    {
+      "source": [
+        16,
+        "output"
+      ],
+      "target": [
+        14,
+        "data2"
+      ]
+    }
+  ]
+}

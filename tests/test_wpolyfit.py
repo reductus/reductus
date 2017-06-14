@@ -13,31 +13,33 @@ and 1e-16.
 
 ## Author: Paul Kienzle
 ## This program is public domain
+from __future__ import print_function
 
 import sys
 import numpy as N
-from reflred.wsolve import wpolyfit
+from dataflow.lib.wsolve import wpolyfit
 
-VERBOSE=1
+VERBOSE = 1
 
-def show_result(name,p,dp,Ep,Edp,tol=2e-16):
+def show_result(name, p, dp, Ep, Edp, tol=2e-16):
     # compute relative error
-    err_p = abs((p-Ep)/Ep) if (Ep!=0).all() else abs(p-Ep)
-    err_dp = abs((dp-Edp)/Edp) if (Edp!=0).all() else abs(dp-Edp)
+    err_p = abs((p-Ep)/Ep) if (Ep != 0).all() else abs(p-Ep)
+    err_dp = abs((dp-Edp)/Edp) if (Edp != 0).all() else abs(dp-Edp)
     # If expected value is zero use absolute error
-    err_p[Ep==0] = p[Ep==0]
-    err_dp[Edp==0] = dp[Edp==0]
-    if VERBOSE>0:
-        print "Test:",name
-        print "parameter   expected value   rel. error"
-        for i in xrange(len(p)):
-            print "%12.5g  %12.5g %12.5g"%(p[i],Ep[i],err_p[i])
-        print "p-error     expected value   rel. error"
-        for i in xrange(len(p)):
-            print "%12.5g  %12.5g %12.5g"%(dp[i],Edp[i],err_dp[i])
-        print "-"*39
-    assert (err_p<tol).all() and (err_dp<tol).all(),\
-        "wsolve %s exceeded tolerance of %g"%(name,tol)
+    print(name, p, dp, Ep, Edp, err_p, err_dp)
+    err_p[Ep == 0] = p[Ep == 0]
+    err_dp[Edp == 0] = dp[Edp == 0]
+    if VERBOSE > 0:
+        print("Test:", name)
+        print("parameter   expected value   rel. error")
+        for i in range(len(p)):
+            print("%12.5g  %12.5g %12.5g"%(p[i], Ep[i], err_p[i]))
+        print("p-error     expected value   rel. error")
+        for i in range(len(p)):
+            print("%12.5g  %12.5g %12.5g"%(dp[i], Edp[i], err_dp[i]))
+        print("-"*39)
+    assert (err_p < tol).all() and (err_dp < tol).all(),\
+        "wsolve %s exceeded tolerance of %g"%(name, tol)
 
 def check_uncertainty(n=10000):
     """
@@ -58,24 +60,24 @@ def check_uncertainty(n=10000):
         0.0032322  0.4260864  0.033705;
         0.0036939  0.4799956  0.036983
         """).A
-    x,y,dy=data[:,0],data[:,1],data[:,2]
+    x, y, dy = data[:, 0], data[:, 1], data[:, 2]
     if True: # simpler system to analyze
-        x = N.linspace(2,4,12)
+        x = N.linspace(2, 4, 12)
         y = 3*x+5
         dy = y
-    p = wpolyfit(x,y,dy=dy,degree=1)
-    P=N.empty((2,n),'d')
-    for i in xrange(n):
+    p = wpolyfit(x, y, dy=dy, degree=1)
+    P = N.empty((2, n), 'd')
+    for i in range(n):
         #pi = N.polyfit(x,N.random.normal(y,dy),degree=1)
-        pi = wpolyfit(x,N.random.normal(y,dy),dy=dy,degree=1)
-        P[:,i] = pi.coeff
-    #print "P",P
-    Ep,Edp = N.mean(P,1),N.std(P,1)
-    show_result("uncertainty check",p.coeff,p.std,Ep,Edp)
+        pi = wpolyfit(x, N.random.normal(y, dy), dy=dy, degree=1)
+        P[:, i] = pi.coeff
+    #print("P", P)
+    Ep, Edp = N.mean(P, 1), N.std(P, 1)
+    show_result("uncertainty check", p.coeff, p.std, Ep, Edp)
 
     if False:
         import pylab
-        pylab.hist(P[0,:])
+        pylab.hist(P[0, :])
         pylab.show()
     """ # Not yet converted from octave
     input('Press <Enter> to see some sample regression lines: ');
@@ -90,15 +92,15 @@ def check_uncertainty(n=10000):
     """
 
 
-def check(name,data,target,origin=False,tol=2e-16):
+def check(name, data, target, origin=False, tol=2e-16):
     """
     name   data set name
     data   [y,x]
     target [p,dp] but low to high rather than high to low
     """
-    p = wpolyfit(data[:,1],data[:,0],degree=target.shape[0]-1,origin=origin)
-    Ep,Edp = N.flipud(target).T
-    show_result(name,p.coeff,p.std,Ep,Edp,tol=tol)
+    p = wpolyfit(data[:, 1], data[:, 0], degree=target.shape[0]-1, origin=origin)
+    Ep, Edp = N.flipud(target).T
+    show_result(name, p.coeff, p.std, Ep, Edp, tol=tol)
 
 
 def run_tests():
@@ -211,7 +213,7 @@ def run_tests():
                 -0.246781078275479E-02    0.535617408889821E-03;
                 -0.402962525080404E-04    0.896632837373868E-05
                 """).A
-    check("Filippelli, A., NIST.",data,target,tol=1e-7)
+    check("Filippelli, A., NIST.", data, target, tol=1e-7)
 
 
 ##Procedure:     Linear Least Squares Regression
@@ -277,7 +279,7 @@ def run_tests():
               0.732059160401003E-06    0.157817399981659E-09;
              -0.316081871345029E-14    0.486652849992036E-16
              """).A
-    check("Pontius, P., NIST",data,target,tol=5e-12)
+    check("Pontius, P., NIST", data, target, tol=5e-12)
 
 
 #Procedure:     Linear Least Squares Regression
@@ -361,7 +363,7 @@ def run_tests():
            2613660    19;
            3368421    20
            """).A
-    check("Wampler1",data,target, tol=1e-8)
+    check("Wampler1", data, target, tol=1e-8)
 
 ##Reference:     Wampler, R. H. (1970).
 ##               A Report of the Accuracy of Some Widely-Used Least
@@ -458,7 +460,7 @@ def run_tests():
           2611612.    19;
           3369180.    20
           """).A
-    check("Wampler3",data,target,tol=5e-10)
+    check("Wampler3", data, target, tol=5e-10)
 
 ##Model:         Polynomial Class
 ##               6 Parameters (B0,B1,...,B5)
@@ -503,7 +505,7 @@ def run_tests():
             3444321   20
             """).A
 
-    check("Wampler4", data, target,tol=1e-8);
+    check("Wampler4", data, target, tol=1e-8)
 
 
 ##Model:         Polynomial Class
@@ -551,7 +553,7 @@ def run_tests():
     check("Wampler5", data, target, tol=5e-7)
 
 if __name__ == "__main__":
-    if '-q' in sys.argv: VERBOSE=0
+    VERBOSE = ('-q' not in sys.argv)
     #check_uncertainty(n=10000)
     run_tests()
-    print >>sys.stderr,"OK"
+    print("OK", file=sys.stderr)

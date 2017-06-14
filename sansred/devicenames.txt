@@ -1,0 +1,8 @@
+counter               -
+experiment            experiment
+trajectory            trajectory
+custom                -
+areaDetector          area
+linearDetector        psd
+pointDetector         counts
+sampleOrientation     -

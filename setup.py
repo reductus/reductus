@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import sys
+import sys, os
 from os.path import join as joinpath, dirname
 import re
 
@@ -20,19 +20,31 @@ for line in open(joinpath("reflred","__init__.py")):
     if "__version__" in line:
         version = line.split('"')[1]
 
-packages = find_packages(exclude=['reflbin', 'reflweb'])
+import subprocess
+git_version_hash = subprocess.Popen(["git", "rev-parse", "HEAD"], stdout=subprocess.PIPE).stdout.read()
+open("reflweb/git_version_hash", "wb").write(git_version_hash)
+server_mtime = subprocess.Popen(["git", "log", "-1", "--pretty=format:%ct"], stdout=subprocess.PIPE).stdout.read()
+open("reflweb/git_version_mtime", "wb").write(server_mtime)
+
+
+packages = find_packages(exclude=['reflbin'])
 
 def module_config():
-    S = ("reduction.cc","str2imat.c")
-    Sdeps = ("rebin.h","rebin2D.h")
-    sources = [joinpath('reflred','lib',f) for f in S]
-    depends = [joinpath('reflred','lib',f) for f in Sdeps]
-    module = Extension('reflred._reduction',
-                       sources=sources,
-                       depends=depends,
-                       include_dirs=[joinpath('reflred','lib')]
-                       )
-    return module
+    source_root = joinpath('dataflow', 'lib', 'src')
+    sources = ("reduction.cc", "str2imat.c")  ## C API wrapper
+    target = 'dataflow.lib._reduction'
+    # sources = ("_rebin.pyx")  ## cython wrapper
+    # target = 'dataflow.lib._rebin'
+    depends = ("rebin.h", "rebin2D.h")
+    module = Extension(target,
+                       sources=[joinpath(source_root, f) for f in sources],
+                       depends=[joinpath(source_root, f) for f in depends],
+                       include_dirs=[source_root],
+                       language="c++",
+                      )
+    return [module]  ## C API wrapper
+    # from Cython.Build import cythonize
+    # return cythonize([module])  ## cython wrapper
 
 #sys.dont_write_bytecode = False
 dist = setup(
@@ -57,13 +69,16 @@ dist = setup(
     ],
     packages=packages,
     include_package_data=True,
-    ext_modules=[module_config()],
+    #data_files=[('reflweb', ['reflweb/git_version_hash'])],
+    ext_modules=module_config(),
     # numpy and scipy are requirements, but don't install them with pip
-    install_requires=['uncertainties', 'docutils'],
-    extras_require = {
+    install_requires=[
+        'uncertainties', 'docutils', 'wheel', 'pytz', 'hug', 'h5py', 
+        'redis', 'msgpack-python',],
+    extras_require={
         'preinstalled': ['scipy', 'numpy'],
         'masked_curve_fit': ['numdifftools'],
-    },
-)
+        },
+    )
 
 # End of file
