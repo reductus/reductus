@@ -112,6 +112,120 @@ def LoadSANS(filelist=None, flip=False, transpose=False):
 
     return data
 
+"""
+    Variable vz_1 = 3.956e5		//velocity [cm/s] of 1 A neutron
+	Variable g = 981.0				//gravity acceleration [cm/s^2]
+	Variable m_h	= 252.8			// m/h [=] s/cm^2
+////	//
+	Variable yg_d,acc,sdd,ssd,lambda0,DL_L,sig_l
+	Variable var_qlx,var_qly,var_ql,qx,qy,sig_perp,sig_para, sig_para_new
+	
+	G = 981.  //!	ACCELERATION OF GRAVITY, CM/SEC^2
+	acc = vz_1 		//	3.956E5 //!	CONVERT WAVELENGTH TO VELOCITY CM/SEC
+	SDD = L2		//1317
+	SSD = L1		//1627 		//cm
+	lambda0 = lambda		//		15
+	DL_L = lambdaWidth		//0.236
+	SIG_L = DL_L/sqrt(6)
+	YG_d = -0.5*G*SDD*(SSD+SDD)*(LAMBDA0/acc)^2
+/////	Print "DISTANCE BEAM FALLS DUE TO GRAVITY (CM) = ",YG
+//		Print "Gravity q* = ",-2*pi/lambda0*2*yg_d/sdd
+	
+	sig_perp = kap*kap/12 * (3*(S1/L1)^2 + 3*(S2/LP)^2 + (proj_DDet/L2)^2)
+	sig_perp = sqrt(sig_perp)
+	
+	
+	FindQxQy(inQ,phi,qx,qy)
+
+// missing a factor of 2 here, and the form is different than the paper, so re-write	
+//	VAR_QLY = SIG_L^2 * (QY+4*PI*YG_d/(2*SDD*LAMBDA0))^2
+//	VAR_QLX = (SIG_L*QX)^2
+//	VAR_QL = VAR_QLY + VAR_QLX  //! WAVELENGTH CONTRIBUTION TO VARIANCE
+//	sig_para = (sig_perp^2 + VAR_QL)^0.5
+	
+	// r_dist is passed in, [=]cm
+	// from the paper
+	a_val = 0.5*G*SDD*(SSD+SDD)*m_h^2 * 1e-16		//units now are cm /(A^2)
+	
+    r_dist = sqrt(  (pixSize*((p+1)-xctr))^2 +  (pixSize*((q+1)-yctr)+(2)*yg_d)^2 )		//radial distance from ctr to pt
+    
+	var_QL = 1/6*(kap/SDD)^2*(DL_L)^2*(r_dist^2 - 4*r_dist*a_val*lambda0^2*sin(phi) + 4*a_val^2*lambda0^4)
+	sig_para_new = (sig_perp^2 + VAR_QL)^0.5
+	
+	
+///// return values PBR	
+	SigmaQX = sig_para_new
+	SigmaQy = sig_perp
+	
+////	
+	
+	results = "success"
+	Return results
+End
+"""
+
+#@cache
+#@module
+def calculateDQ(data):
+    """
+    Add the dQ column to the data, based on slit apertures and gravity
+    r_dist is the real-space distance from ctr of detector to QxQy pixel location
+    
+    From NCNR_Utils.ipf which is in turn from 
+    "The effect of gravity on the resolution of small-angle neutron diffraction peaks"
+      D.F.R Mildner, J.G. Barker & S.R. Kline J. Appl. Cryst. (2011). 44, 1127-1129.
+      [ doi:10.1107/S0021889811033322 ]
+
+    **Inputs**
+    
+    data (sans2d): data in
+    
+    **Returns**
+    
+    output (sans2d): data in with dQ column filled in
+    
+    2017-06-16  Brian Maranville
+    """
+    
+    G = 981.  #!	ACCELERATION OF GRAVITY, CM/SEC^2
+    acc = vz_1 = 3.956e5 # velocity [cm/s] of 1 A neutron
+    m_h	= 252.8			# m/h [=] s/cm^2
+    # the detector pixel is square, so correct for phi
+    DDetX = data.metadata["det.pixelsizex"]
+    DDetY = data.metadata["det.pixelsizey"]
+    x_offset = data.metadata["det.pixeloffsetx"]
+    y_offset = data.metadata["det.pixeloffsety"]
+    xctr = data.metadata["det.beamx"]
+    yctr = data.metadata["det.beamy"]
+    print (x_offset, y_offset)
+    
+    apOff = data.metadata["sample.position"]
+    L1 = data.metadata["resolution.ap12dis"] - apOff
+    L2 = data.metadata["det.dis"] + apOff
+    LP = 1.0/( 1.0/L1 + 1.0/L2)
+    SDD = L2		#1317
+    SSD = L1		#1627 		//cm
+    lambda0 = data.metadata["resolution.lmda"]	#		15
+    DL_L = data.metadata["resolution.dlmda"]		#0.236
+    SIG_L = DL_L/np.sqrt(6.0)
+    YG_d = -0.5*G*SDD*(SSD+SDD)*(lambda0/acc)**2
+    kap = 2.0*np.pi/lambda0
+    phi = np.arctan2((y_offset - yctr + 2.0*YG_d)[None,:], (x_offset - xctr)[:,None])
+    proj_DDet = DDetX*np.cos(phi) + DDetY*np.sin(phi)
+    r_dist = np.sqrt(((x_offset - xctr)[:,None])**2 + ((y_offset - yctr + 2.0*YG_d)[None,:])**2)  #radial distance from ctr to pt
+    
+    sig_perp = kap*kap/12.0 * (3.0*(S1/L1)**2 + 3.0*(S2/LP)**2 + (proj_DDet/L2)**2)
+    sig_perp = np.sqrt(sig_perp)
+
+    a_val = 0.5*G*SDD*(SSD+SDD)*m_h**2 * 1e-16		# units now are cm /(A^2)
+
+    var_QL = 1/6*(kap/SDD)**2*(DL_L)**2*(r_dist**2 - 4*r_dist*a_val*lambda0**2*np.sin(phi) + 4*a_val**2*lambda0**4)
+    sig_para_new = np.sqrt(sig_perp**2 + var_QL)
+    
+    data.dq_perp = sig_perp
+    data.dq_para = sig_para_new
+    return data
+    
 @cache
 @module
 def PixelsToQ(data, correct_solid_angle=True):

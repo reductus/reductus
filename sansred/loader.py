@@ -12,10 +12,13 @@ from .sansdata import SansData
 
 metadata_lookup = {
     "det.dis": "DAS_logs/detectorPosition/softPosition",
-    "resolution.lmda" : "DAS_logs/wavelength/wavelength",
-    "det.beamx": "DAS_logs/areaDetector/beamCenterX",
-    "det.beamy": "DAS_logs/areaDetector/beamCenterY",
+    "resolution.lmda" : "instrument/monochromator/wavelength",
+    "resolution.dlmda": "instrument/monochromator/wavelength_error",
+    "det.beamx": "instrument/detector/beam_center_x",
+    "det.beamy": "instrument/detector/beam_center_y",
+    "det.pixeloffsetx": "instrument/detector/x_offset",
     "det.pixelsizex": "instrument/detector/x_pixel_size",
+    "det.pixeloffsety": "instrument/detector/y_offset",
     "det.pixelsizey": "instrument/detector/y_pixel_size",
     "analysis.intent": "DAS_logs/trajectoryData/intent",
     "analysis.filepurpose": "DAS_logs/trajectoryData/filepurpose",
@@ -36,12 +39,18 @@ metadata_lookup = {
     "sample.thk": "DAS_logs/sample/thickness",
     "adam.voltage": "DAS_logs/adam4021/voltage",
     "sample.temp": "DAS_logs/temp/primaryNode/average_value",
+    "resolution.ap1": "instrument/source_aperture/size",
+    "resolution.ap2": "instrument/sample_aperture/size",
+    "resolution.ap12dis": "instrument/source_aperture/distance",
+    "sample.position": "instrument/sample_aperture/distance"
 }
 
 unit_specifiers = {
     "det.dis": "cm",
     "det.pixelsizex": "cm",
+    "det.pixeloffsetx": "cm",
     "det.pixelsizey": "cm",
+    "det.pixeloffsety": "cm",
     "sample.thk": "cm"
 }
 
@@ -68,7 +77,7 @@ def readSANSNexuz(input_file, file_obj=None):
                 field = entry.get(metadata_lookup[mkey], None)
                 if field is not None:
                     if mkey in unit_specifiers:
-                        field = data_as(field, unit_specifiers[mkey])[0]
+                        field = data_as(field, unit_specifiers[mkey])
                     else:
                         field = field.value[0]
                     if field.dtype.kind == 'f':
