@@ -583,6 +583,8 @@ webreduce.editor = webreduce.editor || {};
             .attr("value", function(d) {return d})
             .text(function(d) {return d})
       
+      //axis_controls.select('.scale-select[axis="y"]').node().value = "log"; // by default start
+      
       plot_controls.selectAll(".show-boxes")
         .data(["errorbars", "points", "line"])
         .enter().append("label")

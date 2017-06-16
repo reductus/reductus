@@ -869,8 +869,8 @@ class ReflData(Group):
     def columns(self):
         from copy import deepcopy
         data_columns = {
-            'x': {'label': self.xlabel, 'units': self.xunits, 'errorbars': 'dx', "scale": "linear"},
-            'v': {'label': self.vlabel, 'units': self.vunits, 'errorbars': 'dv', "scale": "log"},
+            'x': {'label': self.xlabel, 'units': self.xunits, 'errorbars': 'dx'},
+            'v': {'label': self.vlabel, 'units': self.vunits, 'errorbars': 'dv'},
             'Qz': {'label': 'Qz', 'units': "1/Ang"},
             'Qx': {'label': 'Qx', 'units': "1/Ang"}
         }
