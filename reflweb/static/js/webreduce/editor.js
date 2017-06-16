@@ -550,8 +550,9 @@ webreduce.editor = webreduce.editor || {};
       return chartdata;
     }
     
+    var plot_controls = d3.select("#plot_controls");
     // set up plot control buttons and options:
-    if (d3.select("#plot_controls").attr("plot_type") != "nd") {
+    if (plot_controls.attr("plot_type") != "nd") {
       // then make the controls:
       var plot_controls = d3.select("#plot_controls")
       plot_controls.attr("plot_type", "nd")
@@ -566,10 +567,6 @@ webreduce.editor = webreduce.editor || {};
           .classed("column-select", true)
           .attr("id", function(d) {return d + "col"})
           .attr("axis", function(d) {return d[0]})
-          .selectAll("option").data(Object.keys(plotdata.columns).sort())
-            .enter().append("option")
-            .attr("value", function(d) {return d})
-            .text(function(d) {return d});
             
       axis_controls
         .append("select")
@@ -596,9 +593,10 @@ webreduce.editor = webreduce.editor || {};
           .attr("type", "checkbox")
           .attr("checked", "checked")
           .on("change", function() {
-            var o = mychart.options();
+            var chart = webreduce.editor._active_plot;
+            var o = chart.options();
             o[this.id] = this.checked;
-            webreduce.editor._active_plot.options(o).update();
+            chart.options(o).update();
           });
           
       plot_controls
@@ -607,15 +605,6 @@ webreduce.editor = webreduce.editor || {};
           .attr("id", "export_data")
           .attr("value", "export")
           .on("click", webreduce.editor.export_data)
-      
-      /*
-      plot_controls
-        .append("input")
-          .attr("type", "button")
-          .attr("id", "print_view")
-          .attr("value", "print view")
-          .on("click", function() {webreduce.editor._active_plot.print_plot()})
-      */
       
       plot_controls
         .append("input")
@@ -633,6 +622,14 @@ webreduce.editor = webreduce.editor || {};
           });
     }
     
+    var colnames = Object.keys(plotdata.columns).sort();
+    plot_controls.selectAll(".axis-controls .column-select").each(function(c) {
+      d3.select(this).selectAll('option').remove()
+      d3.select(this).selectAll('option')
+        .data(colnames).enter().append('option')
+        .attr("value", function(d) {return d})
+        .text(function(d) {return d})
+    })
     
     if (options.xcol) {
       $("#xcol").val(options.xcol);

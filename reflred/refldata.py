@@ -867,6 +867,7 @@ class ReflData(Group):
     
     @property
     def columns(self):
+        from copy import deepcopy
         data_columns = {
             'x': {'label': self.xlabel, 'units': self.xunits, 'errorbars': 'dx', "scale": "linear"},
             'v': {'label': self.vlabel, 'units': self.vunits, 'errorbars': 'dv', "scale": "log"},
@@ -874,19 +875,18 @@ class ReflData(Group):
             'Qx': {'label': 'Qx', 'units': "1/Ang"}
         }
         for subclsnm in ['sample', 'detector', 'monitor', 'slit1', 'slit2', 'slit3', 'slit4']:
-            subcls = getattr(self, subclsnm, {})
-            sub_cols = getattr(subcls, 'columns', {})
-            new_cols = {}
+            subcls = getattr(self, subclsnm, None)
+            if subcls is None:
+                continue
+            sub_cols = deepcopy(getattr(subcls, 'columns', {}))
             for col in sub_cols.keys():
                 # units are defined for the subcolumns, but nothing else... do that here:
                 sub_col = sub_cols[col]
-                label = "%s/%s" % (subclsnm, col)
-                sub_col['label'] = label
-                new_cols[label] = sub_col
-                print label, new_cols
-                
-            data_columns.update(new_cols)
-        print data_columns
+                v = getattr(subcls, col, None)
+                if v is not None and len(v) > 0:
+                    label = "%s/%s" % (subclsnm, col)
+                    sub_col['label'] = label
+                    data_columns[label] = sub_col
         return data_columns
             
     def __init__(self, **kw):
