@@ -171,7 +171,7 @@ def calculateDQ(data):
     Add the dQ column to the data, based on slit apertures and gravity
     r_dist is the real-space distance from ctr of detector to QxQy pixel location
     
-    From NCNR_Utils.ipf which is in turn from 
+    From NCNR_Utils.ipf (Steve R. Kline) in which the math is in turn from 
     "The effect of gravity on the resolution of small-angle neutron diffraction peaks"
       D.F.R Mildner, J.G. Barker & S.R. Kline J. Appl. Cryst. (2011). 44, 1127-1129.
       [ doi:10.1107/S0021889811033322 ]
@@ -187,7 +187,7 @@ def calculateDQ(data):
     2017-06-16  Brian Maranville
     """
     
-    G = 981.  #!	ACCELERATION OF GRAVITY, CM/SEC^2
+    G = 981.  #!    ACCELERATION OF GRAVITY, CM/SEC^2
     acc = vz_1 = 3.956e5 # velocity [cm/s] of 1 A neutron
     m_h	= 252.8			# m/h [=] s/cm^2
     # the detector pixel is square, so correct for phi
