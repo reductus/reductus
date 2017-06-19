@@ -883,7 +883,7 @@ class ReflData(Group):
                 # units are defined for the subcolumns, but nothing else... do that here:
                 sub_col = sub_cols[col]
                 v = getattr(subcls, col, None)
-                if v is not None and hasattr(v, '__length__') and len(v) > 0:
+                if v is not None and hasattr(v, 'size') and v.size > 0:
                     label = "%s/%s" % (subclsnm, col)
                     sub_col['label'] = label
                     data_columns[label] = sub_col
