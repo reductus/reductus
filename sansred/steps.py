@@ -197,9 +197,10 @@ def calculateDQ(data):
     y_offset = data.metadata["det.pixeloffsety"]
     xctr = data.metadata["det.beamx"]
     yctr = data.metadata["det.beamy"]
-    print (x_offset, y_offset)
     
     apOff = data.metadata["sample.position"]
+    S1 = data.metadata["resolution.ap1"]
+    S2 = data.metadata["resolution.ap2"]
     L1 = data.metadata["resolution.ap12dis"] - apOff
     L2 = data.metadata["det.dis"] + apOff
     LP = 1.0/( 1.0/L1 + 1.0/L2)

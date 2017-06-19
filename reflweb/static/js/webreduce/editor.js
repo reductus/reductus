@@ -393,7 +393,6 @@ webreduce.editor = webreduce.editor || {};
           .style("width", "4em")
           .attr("value", 0)
           
-          
       plot_controls.selectAll(".scale-select")
         .data(["zscale"])
         .enter().append("label")
@@ -411,6 +410,7 @@ webreduce.editor = webreduce.editor || {};
             .enter().append("option")
             .attr("value", function(d) {return d})
             .text(function(d) {return d})
+            
       plot_controls.selectAll(".show-boxes")
         .data(["grid"])
         .enter().append("label")

@@ -39,7 +39,7 @@ metadata_lookup = {
     "sample.thk": "DAS_logs/sample/thickness",
     "adam.voltage": "DAS_logs/adam4021/voltage",
     "sample.temp": "DAS_logs/temp/primaryNode/average_value",
-    "resolution.ap1": "instrument/source_aperture/size",
+    "resolution.ap1": "DAS_logs/geometry/sourceAperture",
     "resolution.ap2": "instrument/sample_aperture/size",
     "resolution.ap12dis": "instrument/source_aperture/distance",
     "sample.position": "instrument/sample_aperture/distance"
@@ -51,16 +51,34 @@ unit_specifiers = {
     "det.pixeloffsetx": "cm",
     "det.pixelsizey": "cm",
     "det.pixeloffsety": "cm",
-    "sample.thk": "cm"
+    "sample.thk": "cm",
+    "resolution.ap1": "cm",
+    "resolution.ap2": "cm",
 }
+
+def process_sourceAperture(field, units):
+    import numpy as np
+    def handler(v):
+        return np.float(v.split()[0])
+    handle_values = np.vectorize(handler)
+    value = handle_values(field.value)
+    units_from = ""
+    v0 = field.value[0].split()
+    if len(v0) > 1:
+        units_from = v0[1]
+    converter = unit.Converter(units_from)
+    return converter(value, units)    
 
 def data_as(field, units):
     """
     Return value of field in the desired units.
     """
-    converter = unit.Converter(field.attrs.get('units', ''))
-    value = converter(field.value, units)
-    return value
+    if field.name.split('/')[-1] == 'sourceAperture':
+        return process_sourceAperture(field, units)
+    else:
+        converter = unit.Converter(field.attrs.get('units', ''))
+        value = converter(field.value, units)
+        return value
 
 def readSANSNexuz(input_file, file_obj=None):
     """
@@ -71,7 +89,15 @@ def readSANSNexuz(input_file, file_obj=None):
     for entryname, entry in file.items():
         areaDetector = entry['data/areaDetector'].value
         shape = areaDetector.shape
+        if len(shape) < 2 or len(shape) > 3:
+            raise ValueError("areaDetector data must have dimension 2 or 3")
+            return
         if len(shape) == 2:
+            # add another dimension at the front
+            shape = (1,) + shape
+            areaDetector = areaDetector.reshape(shape)
+            
+        for i in range(shape[0]):
             metadata = {}
             for mkey in metadata_lookup:
                 field = entry.get(metadata_lookup[mkey], None)
@@ -79,44 +105,21 @@ def readSANSNexuz(input_file, file_obj=None):
                     if mkey in unit_specifiers:
                         field = data_as(field, unit_specifiers[mkey])
                     else:
-                        field = field.value[0]
+                        field = field.value
                     if field.dtype.kind == 'f':
                         field = field.astype("float")
                     elif field.dtype.kind == 'i':
                         field = field.astype("int")
-
-                metadata[mkey] = field
-
-            metadata['entry'] = entryname
-            dataset = SansData(data=areaDetector, metadata=metadata)
-            datasets.append(dataset)
-            
-        elif len(shape) == 3:
-            for i in range(shape[0]):
-                metadata = {}
-                for mkey in metadata_lookup:
-                    field = entry.get(metadata_lookup[mkey], None)
-                    if field is not None:
-                        if mkey in unit_specifiers:
-                            field = data_as(field, unit_specifiers[mkey])
-                        else:
-                            field = field.value
-                        if field.dtype.kind == 'f':
-                            field = field.astype("float")
-                        elif field.dtype.kind == 'i':
-                            field = field.astype("int")
-                    
-                        if len(field) == shape[0]:
-                            metadata[mkey] = field[i]
-                        else:
-                            metadata[mkey] = field[0]
+                
+                    if len(field) == shape[0]:
+                        metadata[mkey] = field[i]
                     else:
                         metadata[mkey] = field
+                else:
+                    metadata[mkey] = field
 
-                metadata['entry'] = entryname
-                dataset = SansData(data=areaDetector[i].copy(), metadata=metadata)
-                datasets.append(dataset)
-        else:
-            raise ValueError("areaDetector data must have dimension 2 or 3")
+            metadata['entry'] = entryname
+            dataset = SansData(data=areaDetector[i].copy(), metadata=metadata)
+            datasets.append(dataset)            
 
     return datasets
