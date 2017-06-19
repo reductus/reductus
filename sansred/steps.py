@@ -209,10 +209,10 @@ def calculateDQ(data):
     L1 = data.metadata["resolution.ap12dis"] - apOff
     L2 = data.metadata["det.dis"] + apOff
     LP = 1.0/( 1.0/L1 + 1.0/L2)
-    SDD = L2		#1317
-    SSD = L1		#1627 		//cm
-    lambda0 = data.metadata["resolution.lmda"]	#		15
-    DL_L = data.metadata["resolution.dlmda"]		#0.236
+    SDD = L2
+    SSD = L1
+    lambda0 = data.metadata["resolution.lmda"]    #  15
+    DL_L = data.metadata["resolution.dlmda"]    # 0.236
     YG_d = -0.5*G*SDD*(SSD+SDD)*(lambda0/acc)**2
     kap = 2.0*np.pi/lambda0
     phi = np.mod(np.arctan2(Y + 2.0*YG_d, X), 2.0*np.pi) # from x-axis, from 0 to 2PI
