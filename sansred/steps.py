@@ -198,6 +198,11 @@ def calculateDQ(data):
     xctr = data.metadata["det.beamx"]
     yctr = data.metadata["det.beamy"]
     
+    shape = data.data.x.shape
+    x, y = np.indices(shape)
+    X = DDetX * (x-xctr)
+    Y = DDetY * (y-yctr)
+    
     apOff = data.metadata["sample.position"]
     S1 = data.metadata["resolution.ap1"]
     S2 = data.metadata["resolution.ap2"]
@@ -208,12 +213,13 @@ def calculateDQ(data):
     SSD = L1		#1627 		//cm
     lambda0 = data.metadata["resolution.lmda"]	#		15
     DL_L = data.metadata["resolution.dlmda"]		#0.236
-    SIG_L = DL_L/np.sqrt(6.0)
     YG_d = -0.5*G*SDD*(SSD+SDD)*(lambda0/acc)**2
     kap = 2.0*np.pi/lambda0
-    phi = np.arctan2((y_offset - yctr + 2.0*YG_d)[None,:], (x_offset - xctr)[:,None])
-    proj_DDet = DDetX*np.cos(phi) + DDetY*np.sin(phi)
-    r_dist = np.sqrt(((x_offset - xctr)[:,None])**2 + ((y_offset - yctr + 2.0*YG_d)[None,:])**2)  #radial distance from ctr to pt
+    phi = np.mod(np.arctan2(Y + 2.0*YG_d, X), 2.0*np.pi)
+    #phi = np.arctan2((y_offset - yctr + 2.0*YG_d)[None,:], (x_offset - xctr)[:,None])
+    proj_DDet = np.abs(DDetX*np.cos(phi)) + np.abs(DDetY*np.sin(phi))
+    #r_dist = np.sqrt(((x_offset - xctr)[:,None])**2 + ((y_offset - yctr + 2.0*YG_d)[None,:])**2)  #radial distance from ctr to pt
+    r_dist = np.sqrt(X**2 + (Y + 2.0*YG_d)**2)  #radial distance from ctr to pt
     
     sig_perp = kap*kap/12.0 * (3.0*(S1/L1)**2 + 3.0*(S2/LP)**2 + (proj_DDet/L2)**2)
     sig_perp = np.sqrt(sig_perp)
@@ -257,10 +263,10 @@ def PixelsToQ(data, correct_solid_angle=True):
     qy = np.empty(shape, 'float')
 
     x, y = np.indices(shape)
-    X = data.metadata['det.pixelsizex']/10.0*(x-x0) # in mm in nexus
-    Y = data.metadata['det.pixelsizey']/10.0*(y-y0)
+    X = data.metadata['det.pixelsizex']*(x-x0) # in mm in nexus, but converted by loader
+    Y = data.metadata['det.pixelsizey']*(y-y0)
     r = np.sqrt(X**2+Y**2)
-    theta = np.arctan2(r, L2*100)/2 #remember to convert L2 to cm from meters
+    theta = np.arctan2(r, L2)/2 #remember to convert L2 to cm from meters
     q = (4*np.pi/wavelength)*np.sin(theta)
     alpha = np.arctan2(Y, X)
     qx = q*np.cos(alpha)
