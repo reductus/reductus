@@ -215,10 +215,8 @@ def calculateDQ(data):
     DL_L = data.metadata["resolution.dlmda"]		#0.236
     YG_d = -0.5*G*SDD*(SSD+SDD)*(lambda0/acc)**2
     kap = 2.0*np.pi/lambda0
-    phi = np.mod(np.arctan2(Y + 2.0*YG_d, X), 2.0*np.pi)
-    #phi = np.arctan2((y_offset - yctr + 2.0*YG_d)[None,:], (x_offset - xctr)[:,None])
+    phi = np.mod(np.arctan2(Y + 2.0*YG_d, X), 2.0*np.pi) # from x-axis, from 0 to 2PI
     proj_DDet = np.abs(DDetX*np.cos(phi)) + np.abs(DDetY*np.sin(phi))
-    #r_dist = np.sqrt(((x_offset - xctr)[:,None])**2 + ((y_offset - yctr + 2.0*YG_d)[None,:])**2)  #radial distance from ctr to pt
     r_dist = np.sqrt(X**2 + (Y + 2.0*YG_d)**2)  #radial distance from ctr to pt
     
     sig_perp = kap*kap/12.0 * (3.0*(S1/L1)**2 + 3.0*(S2/LP)**2 + (proj_DDet/L2)**2)
@@ -226,13 +224,13 @@ def calculateDQ(data):
 
     a_val = 0.5*G*SDD*(SSD+SDD)*m_h**2 * 1e-16		# units now are cm /(A^2)
 
-    var_QL = 1/6*(kap/SDD)**2*(DL_L)**2*(r_dist**2 - 4*r_dist*a_val*lambda0**2*np.sin(phi) + 4*a_val**2*lambda0**4)
+    var_QL = 1.0/6.0*((kap/SDD)**2)*(DL_L**2)*(r_dist**2 - 4.0*r_dist*a_val*(lambda0**2)*np.sin(phi) + 4.0*(a_val**2)*(lambda0**4))
     sig_para_new = np.sqrt(sig_perp**2 + var_QL)
     
     data.dq_perp = sig_perp
     data.dq_para = sig_para_new
     return data
-    
+
 @cache
 @module
 def PixelsToQ(data, correct_solid_angle=True):
