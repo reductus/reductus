@@ -238,21 +238,15 @@ def cropData(data, xmin=None, xmax=None, ymin=None, ymax=None):
     return result
 
 @module
-def sliceData(data, xmin=None, xmax=None, ymin=None, ymax=None):
+def sliceData(data, slicebox=[None,None,None,None]):
     """
     Sum 2d data along both axes and return 1d datasets
 
     **Inputs**
 
     data (ospec2d) : data in
-
-    xmin (float): lower bound of xslice region, in data coordinates
-
-    xmax (float): upper bound of xslice region, in data coordinates
-
-    ymin (float): lower bound of yslice region, in data coordinates
-
-    ymax (float): upper bound of yslice region, in data coordinates
+    
+    slicebox (range?:xy): region over which to integrate (in data coordinates)
 
     **Returns**
 
@@ -262,6 +256,10 @@ def sliceData(data, xmin=None, xmax=None, ymin=None, ymax=None):
 
     2016-04-01 Brian Maranville
     """
+    
+    if slicebox is None:
+        slicebox = [None, None, None, None]
+    xmin, xmax, ymin, ymax = slicebox
     new_info = data.infoCopy()
     x_axis = new_info[0]
     y_axis = new_info[1]
@@ -283,7 +281,7 @@ def sliceData(data, xmin=None, xmax=None, ymin=None, ymax=None):
     xslice = slice(get_index(x_array, xmin), get_index(x_array, xmax))
     yslice = slice(get_index(y_array, ymin), get_index(y_array, ymax))
     dataslice = (xslice, yslice)
-
+    # print xmin, xmax, ymin, ymax
     x_out = nansum(data.view(ndarray)[dataslice], axis=1)
     y_out = nansum(data.view(ndarray)[dataslice], axis=0)
     x_axis['values'] = x_axis['values'][xslice]

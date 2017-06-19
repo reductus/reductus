@@ -66,7 +66,7 @@ webreduce.instruments['ncnr.ospec'] = webreduce.instruments['ncnr.ospec'] || {};
       }
     }
     else if (result.datatype == 'ncnr.ospec.ospec1d' && result.values.length > 0) {
-      plottable = result.values.slice(-1)[0].plottable[0];
+      plottable = result.values.slice(-1)[0][0];
     }
     else if (result.datatype == 'ncnr.ospec.params') {
       plottable = {"type": "params", "params": result.values}

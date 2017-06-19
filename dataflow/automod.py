@@ -812,7 +812,9 @@ def _list_check(name, values, n, ptype):
     return values
 
 def _type_check(name, value, ptype):
-    if ptype is int and isinstance(value, float) and int(value) == value:
+    if value is None:
+        return value
+    elif ptype is int and isinstance(value, float) and int(value) == value:
         value = int(value)
     elif ptype is float and isinstance(value, int):
         value = float(value)

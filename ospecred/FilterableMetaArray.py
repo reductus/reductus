@@ -200,9 +200,9 @@ class FilterableMetaArray(MetaArray):
     def get_plottable_2d(self, binary_fp=None):
         # grab the first counts col:
         cols = self._info[2]['cols']
-        col = next(iter([col['name'] for col in cols if col['name'].startswith('counts')]))
-        mon = next(iter([col['name'] for col in cols if col['name'].startswith('monitor')]))
-        array_out = self['Measurements':col].view(ndarray) / self['Measurements':mon].view(ndarray) 
+        counts_col = next(iter([col['name'] for col in cols if col['name'].startswith('counts')]))
+        mon_col = next(iter([col['name'] for col in cols if col['name'].startswith('monitor')]))
+        array_out = self['Measurements':counts_col].view(ndarray) / self['Measurements':mon_col].view(ndarray) 
 
         dump = {'entry': self.extrainfo.get('entry', 'entry')}
         if binary_fp is not None:

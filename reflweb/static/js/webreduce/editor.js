@@ -237,7 +237,7 @@ webreduce.editor = webreduce.editor || {};
       }
       var recalc_mtimes = $("#auto_reload_mtimes").prop("checked"),
           params_to_calc = terminals_to_calculate.map(function(terminal_id) {
-            return {template: active_template, config: {}, node: i, terminal: terminal_id, return_type: "metadata"}
+            return {template: active_template, config: {}, node: i, terminal: terminal_id, return_type: "plottable"}
           })
       webreduce.editor.calculate(params_to_calc, recalc_mtimes)
         .then(function(results) {
@@ -1535,7 +1535,7 @@ webreduce.editor = webreduce.editor || {};
       .text(function(d) {return d})
         .append("input")
           .attr("type", "text")
-          .attr("placeholder", function(d,i) { return datum.default_value[i] })
+          .attr("placeholder", function(d,i) { return (datum.default_value || [])[i] })
           .on("change", function(d,i) { 
             if (datum.value == null) { datum.value = datum.default_value }
             datum.value[i] = parseFloat(this.value);
