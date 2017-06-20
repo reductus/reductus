@@ -250,9 +250,9 @@ def sliceData(data, slicebox=[None,None,None,None]):
 
     **Returns**
 
-    xout (ospec1d) : xslice
+    xout (ospecnd) : xslice
 
-    yout (ospec1d) : yslice
+    yout (ospecnd) : yslice
 
     2016-04-01 Brian Maranville
     """

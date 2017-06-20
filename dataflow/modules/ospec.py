@@ -20,6 +20,7 @@ def define_instrument():
     # Define data types
     ospec2d = df.DataType(INSTRUMENT+".ospec2d", FilterableMetaArray)
     ospec1d = df.DataType(INSTRUMENT+".ospec1d", FilterableMetaArray)
+    ospecnd = df.DataType(INSTRUMENT+".ospecnd", FilterableMetaArray)
     params = df.DataType(INSTRUMENT+".params", Parameters)
     #offset_data = df.DataType(INSTRUMENT+".offset_data", dict)
 
@@ -28,7 +29,7 @@ def define_instrument():
         id=INSTRUMENT,
         name='NCNR offspecular',
         menu=[('steps', modules)],
-        datatypes=[ospec2d, ospec1d, params],
+        datatypes=[ospec2d, ospecnd, params],
         template_defs = templates.get_templates(INSTRUMENT),
         )
 

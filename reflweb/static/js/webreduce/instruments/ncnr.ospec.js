@@ -53,6 +53,42 @@ webreduce.instruments['ncnr.ospec'] = webreduce.instruments['ncnr.ospec'] || {};
     return output
   }
   
+  function plot_ospec_nd(ospec_objs) {
+    // entry_ids is list of {path: path, filename: filename, entryname: entryname} ids
+    var series = new Array();
+    var column_sets = ospec_objs.map(function(ro) {return ro.columns || {} });
+    var datas = [], xcol, ycol;
+    var all_columns = column_sets[0];
+    column_sets.forEach(function(new_cols) {
+      for (var c in all_columns) {
+        if (all_columns.hasOwnProperty(c) && !(c in new_cols)) {
+          delete all_columns[c];
+        }
+      }
+    });
+    
+    var datas = ospec_objs.map(function(oo) { return oo.data });
+    var series = ospec_objs.map(function(oo) { return {label: oo.name + ":" + oo.entry} })
+    xcol = ospec_objs[0].xcol;
+    ycol = ospec_objs[0].ycol;
+    var plottable = {
+      type: "nd",
+      columns: all_columns,
+      
+      options: {
+        series: series,
+        axes: {
+          xaxis: {label: all_columns[xcol].label + "(" + all_columns[xcol].units + ")"}, 
+          yaxis: {label: all_columns[ycol].label + "(" + all_columns[ycol].units + ")"}},
+        xcol: xcol, 
+        ycol: ycol
+      },
+      data: datas
+    }
+
+    return plottable
+  } 
+  
   instrument.plot = function(result) { 
     var plottable;
     if (result == null) {
@@ -67,6 +103,9 @@ webreduce.instruments['ncnr.ospec'] = webreduce.instruments['ncnr.ospec'] || {};
     }
     else if (result.datatype == 'ncnr.ospec.ospec1d' && result.values.length > 0) {
       plottable = result.values.slice(-1)[0][0];
+    }
+    else if (result.datatype == 'ncnr.ospec.ospecnd' && result.values.length > 0) {
+      plottable = plot_ospec_nd(result.values);
     }
     else if (result.datatype == 'ncnr.ospec.params') {
       plottable = {"type": "params", "params": result.values}

@@ -122,7 +122,7 @@ class FilterableMetaArray(MetaArray):
         if len(self.shape) == 3:
             return self.get_plottable_2d(binary_fp)
         elif len(self.shape) == 2:
-            return self.get_plottable_1d()
+            return self.get_plottable_nd()
         else:
             print("can only handle 1d or 2d data")
             return
@@ -160,15 +160,18 @@ class FilterableMetaArray(MetaArray):
         colors = ['Blue', 'Red', 'Green', 'Yellow']
         cols = self._info[1]['cols']
         data_cols = [col['name'] for col in cols if not col['name'].startswith('error')]
+        column_listing = dict([(d, {"label": d}) for d in data_cols])
         x = self._info[0]['values'].tolist()
         xlabel = self._info[0]['name']
+        column_listing[xlabel] = {"label": xlabel}
         plottable_data = {
             'type': 'nd',
-            'title': '1d summed Data',
-
+            'title': self.extrainfo['path'],
+            'columns': column_listing,
+            'data': {xlabel: {'values': x}},
             'clear_existing': False,
-            'orderx': [{'key': xlabel, 'label': xlabel }],
-            'ordery': [],
+            'xcol': xlabel,
+            'ycol': cols[0]['name'],
             'series': [ {'label': self._info[-1].get('friendly_name', '1d data'),
                         'color': 'Red',
                         'style': 'line',
@@ -183,19 +186,12 @@ class FilterableMetaArray(MetaArray):
         for i, col in enumerate(data_cols):
             y = self['Measurements':col].tolist()
             error_col = next((i for i in range(len(cols)) if cols[i]['name'] == ('error_'+col)), -1)
+            series_y = {'values': y}
             if error_col > 0:
-                yerror = self['Measurements':'error_'+col].tolist()
-            else:
-                yerror = sqrt(abs(self['Measurements':col])).tolist()
-            ordery = {'key': col, 'label': col}
-            series_y = {
-                'values': y,
-                'errors': yerror,
-            }
-            plottable_data['ordery'].append(ordery)
-            plottable_data['series'][0]['data'][col] = series_y
+                series_y['errorbars'] = self['Measurements':'error_'+col].tolist()
+            plottable_data['data'][col] = series_y
 
-        return [plottable_data]
+        return plottable_data
 
     def get_plottable_2d(self, binary_fp=None):
         # grab the first counts col:
