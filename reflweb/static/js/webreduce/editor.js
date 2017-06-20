@@ -1576,7 +1576,16 @@ webreduce.editor = webreduce.editor || {};
              webreduce.editor._active_plot && 
              webreduce.editor._active_plot.interactors) {
       // add box interactor
+      var xrange = webreduce.editor._active_plot.x().domain(),
+          yrange = webreduce.editor._active_plot.y().domain();
       var value = datum.value || datum.default_value;
+      var value = [
+        (value[0] == null) ? xrange[0] : value[0],
+        (value[1] == null) ? xrange[1] : value[1],
+        (value[2] == null) ? yrange[0] : value[2],
+        (value[3] == null) ? yrange[1] : value[3]
+      ]
+      
       var opts = {
         type: 'Rectangle',
         name: 'range',
@@ -1590,6 +1599,8 @@ webreduce.editor = webreduce.editor || {};
         ymax: value[3]
       }
       var interactor = new rectangleInteractor.default(opts);
+      webreduce.editor._active_plot.interactors(interactor);
+      // bind the update after init, so that it doesn't alter the field at init.
       interactor.dispatch.on("update", function() { 
         var state = interactor.state;
         datum.value = [state.xmin, state.xmax, state.ymin, state.ymax];
@@ -1599,8 +1610,6 @@ webreduce.editor = webreduce.editor || {};
         event.initEvent('input', true, true);
         subinputs.node().dispatchEvent(event);
       });
-      
-      webreduce.editor._active_plot.interactors(interactor);
     }
     
     return input    
