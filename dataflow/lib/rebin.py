@@ -58,8 +58,7 @@ def rebin(x, I, xo, Io=None, dtype=np.float64):
     except AttributeError:
         raise TypeError("rebin supports uint8 uint16 uint32 float32 float64, not "
                         + I.dtype.name)
-    for _ in range(10000):
-        rebincore(x, I, xo, Io)
+    rebincore(x, I, xo, Io)
     return Io
 
 def rebin2d(x, y, I, xo, yo, Io=None, dtype=None):
