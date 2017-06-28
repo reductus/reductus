@@ -5,7 +5,6 @@ def rebin_counts_broadcast(x, I, xo, Io, ND_portion=1.0):
     Identify overlaps in bin edges and rebin
     Assumes both x and xo are sorted in increasing order.
     """
-
     # overlap map (MxN), where M is input size(x) and N is output size (xo):
     overlap = (np.minimum(xo[None, 1:], x[1:, None])
                - np.maximum(xo[None, :-1], x[:-1, None])).clip(min=0.0)
@@ -30,7 +29,7 @@ def rebin_counts_portion_transfer(x, I, xo, Io, ND_portion=1.0):
     Io += hist
 
 def rebin_counts_portion(x, I, xo, Io, ND_portion=1.0):
-    # use this one for 1D.
+    # use this one for 1D: very fast.
     cc = np.empty_like(x)
     cc[0] = 0.0
     cc[1:] = np.cumsum(I*ND_portion)
@@ -50,8 +49,6 @@ def rebin_counts_2D_bruteforce(x, y, I, xo, yo, Io):
 
     weighted_overlap = I[:, None, :, None] * xportion[:, :, None, None] * yportion[None, None, :, :]
     Io += np.sum(np.sum(weighted_overlap, axis=0), axis=1)
-
-interp_y = np.vectorize(np.interp, excluded=[0, 1])
 
 def rebin_counts_2D_indexing(x, y, I, xo, yo, Io):
     output = np.empty_like(Io)
