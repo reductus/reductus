@@ -45,12 +45,12 @@ def msgpack(content, request=None, response=None, **kwargs):
 @hug.static('/static')
 def static_files():
     return ('./static',)
-    
+
 @hug.exception(Exception, output=msgpack)
 def handle_exception(exception, response):
     response.status = HTTP_500
     return {'exception': repr(exception)}
-    
+
 import api
 api.create_instruments()
 router = hug.route.API(__name__)
@@ -58,5 +58,3 @@ for method in api.api_methods:
     mfunc = getattr(api, method)
     router.get('/'+method, prefixes=RPC_ENDPOINT)(mfunc)
     router.post('/'+method, prefixes=RPC_ENDPOINT, output=msgpack)(mfunc)
-    
-

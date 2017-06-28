@@ -25,20 +25,22 @@ except ImportError:
 RPC_ENDPOINT = '/RPC2'
 
 app = Flask(__name__)
-    
+
 @app.errorhandler(Exception)
 def handle_error(e):
     code = 500
     if isinstance(e, HTTPException):
         code = e.code
-    return make_response(msgpack_converter.dumps({'exception': repr(e), 'traceback': traceback.format_exc()}), code)
+    content = {'exception': repr(e), 'traceback': traceback.format_exc()}
+    return make_response(msgpack_converter.dumps(content), code)
 
 def wrap_method(mfunc):
     def wrapper(*args, **kwargs):
         real_kwargs = request.get_json() if request.get_data() else {}
-        resp = make_response(msgpack_converter.dumps(mfunc(*args, **real_kwargs)))
-        resp.headers['Content-Type'] = 'application/msgpack'
-        return resp
+        content = mfunc(*args, **real_kwargs)
+        response = make_response(msgpack_converter.dumps(content))
+        response.headers['Content-Type'] = 'application/msgpack'
+        return response
     return wrapper
 
 import api
@@ -50,11 +52,9 @@ for method in api.api_methods:
     shortpath = posixpath.join("/", method)
     app.add_url_rule(path, path, wrapped, methods=["POST"])
     app.add_url_rule(shortpath, shortpath, wrapped, methods=["POST"])
-    
+
 if __name__ == '__main__':
     port = 8002
     if len(sys.argv) > 1:
         port = int(sys.argv[1])
     app.run(port=port)
-    
-
