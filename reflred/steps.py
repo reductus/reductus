@@ -1003,7 +1003,7 @@ def fit_footprint(data, fit_range=[None, None], origin=False):
     return footprint
 
 @module
-def correct_footprint(data, fitted_footprint, qz_min=None, qz_max=None,
+def correct_footprint(data, fitted_footprint, correction_range=[None, None],
                       slope=None, slope_error=0.0, intercept=None,
                       intercept_error=0.0):
     """
@@ -1018,9 +1018,7 @@ def correct_footprint(data, fitted_footprint, qz_min=None, qz_max=None,
 
     fitted_footprint (ncnr.refl.footprint.params?) : fitted footprint
 
-    qz_min {Qz min} (float) : Lower bound of region to apply footprint correction
-
-    qz_max {Qz max} (float) : Upper bound of footprint correction region
+    correction_range {Correction Application Range} (range?:x) : Lower bound of region to apply footprint correction
 
     slope (float) : footprint slope
 
@@ -1034,10 +1032,12 @@ def correct_footprint(data, fitted_footprint, qz_min=None, qz_max=None,
 
     outputs (refldata): footprint-corrected data
 
-    2016-04-29 Paul Kienzle
+    2017-06-29 Paul Kienzle
     """
     import numpy as np
     from .footprint import apply_fitted_footprint, FootprintData
+    if correction_range is None:
+        correction_range = [None, None]
     data = copy(data)
     # always use manually-provided error on slope and intercept (not fitted)
     dp = np.array([slope_error, intercept_error])
@@ -1054,7 +1054,7 @@ def correct_footprint(data, fitted_footprint, qz_min=None, qz_max=None,
     fitted_footprint.dp = dp
     data.log("footprint(p=%s,dp=%s)"
              % (str(fitted_footprint.p), str(fitted_footprint.dp)))
-    apply_fitted_footprint(data, fitted_footprint, [qz_min, qz_max])
+    apply_fitted_footprint(data, fitted_footprint, correction_range)
     return data
 
 @nocache
