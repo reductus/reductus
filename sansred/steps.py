@@ -757,6 +757,38 @@ def patchData(data1, data2, xmin=55, xmax=74, ymin=53, ymax=72):
 
 @cache
 @module
+def addSimple(data):
+    """
+    Naive addition of counts and monitor from different datasets,
+    assuming all datasets were taken under identical conditions 
+    (except for count time)
+    
+    Just adds together count time, counts and monitor.
+    
+    Use metadata from first dataset for output.
+    
+    **Inputs**
+    
+    data (sans2d[]): measurements to be added together
+    
+    **Returns**
+    
+    sum (sans2d): sum of inputs
+    
+    2017-06-29  Brian Maranville
+    """
+    
+    output = data[0].copy()
+    for d in data[1:]:
+        output.data += d.data
+        output.metadata['run.moncnt'] += d.metadata['run.moncnt']
+        output.metadata['run.rtime'] += d.metadata['run.rtime']
+        output.metadata['run.detcnt'] += d.metadata['run.detcnt']
+    return output
+    
+
+@cache
+@module
 def makeDIV(data1, data2, patchbox=(55, 74, 53, 72)):
     """
     Use data2 to patch the beamstop from data1 within the defined box, then

@@ -1,348 +1,350 @@
 {
   "modules": [
     {
-      "y": 5,
       "x": 10,
+      "module": "ncnr.sans.SuperLoadSANS",
       "config": {
         "filelist": []
       },
-      "module": "ncnr.sans.SuperLoadSANS",
+      "y": 5,
       "title": "sample"
     },
     {
-      "y": 65,
       "x": 10,
+      "module": "ncnr.sans.SuperLoadSANS",
       "config": {
         "filelist": []
       },
-      "module": "ncnr.sans.SuperLoadSANS",
+      "y": 65,
       "title": "empty cell"
     },
     {
-      "y": 140,
       "x": 5,
-      "config": {
-        "do_det_eff": true,
-        "do_solid_angle": true,
-        "filelist": [],
-        "do_deadtime": true,
-        "deadtime": 0.0000034,
-        "mon0": 100000000,
-        "do_mon_norm": true
-      },
       "module": "ncnr.sans.SuperLoadSANS",
+      "config": {
+        "do_deadtime": true,
+        "do_solid_angle": true,
+        "do_mon_norm": true,
+        "mon0": 100000000,
+        "do_det_eff": true,
+        "filelist": [],
+        "deadtime": 0.0000034
+      },
+      "y": 140,
       "title": "empty trans"
     },
     {
-      "y": 105,
       "x": 5,
-      "config": {
-        "do_det_eff": true,
-        "do_solid_angle": true,
-        "filelist": [],
-        "do_deadtime": true,
-        "deadtime": 0.0000034,
-        "mon0": 100000000,
-        "do_mon_norm": true
-      },
       "module": "ncnr.sans.SuperLoadSANS",
+      "config": {
+        "do_deadtime": true,
+        "do_solid_angle": true,
+        "do_mon_norm": true,
+        "mon0": 100000000,
+        "do_det_eff": true,
+        "filelist": [],
+        "deadtime": 0.0000034
+      },
+      "y": 105,
       "title": "sample trans"
     },
     {
-      "y": 150,
       "x": 155,
       "module": "ncnr.sans.generate_transmission",
+      "y": 150,
       "title": "Gen trans"
     },
     {
-      "y": 35,
       "x": 10,
+      "module": "ncnr.sans.SuperLoadSANS",
       "config": {
         "filelist": []
       },
-      "module": "ncnr.sans.SuperLoadSANS",
+      "y": 35,
       "title": "blocked"
     },
     {
-      "y": 5,
       "x": 200,
       "module": "ncnr.sans.subtract",
+      "y": 5,
       "title": "Subtract"
     },
     {
-      "y": 65,
       "x": 230,
       "module": "ncnr.sans.subtract",
+      "y": 65,
       "title": "Subtract"
     },
     {
-      "y": 65,
       "x": 370,
       "module": "ncnr.sans.product",
+      "y": 65,
       "title": "Product"
     },
     {
-      "y": 5,
       "x": 515,
       "module": "ncnr.sans.subtract",
+      "y": 5,
       "title": "Subtract"
     },
     {
-      "y": 5,
       "x": 680,
       "module": "ncnr.sans.correct_detector_sensitivity",
+      "y": 5,
       "title": "Det sensit"
     },
     {
-      "y": 210,
       "x": 385,
       "module": "ncnr.sans.LoadSANS",
+      "y": 210,
       "title": "empty"
     },
     {
-      "y": 175,
       "x": 665,
       "module": "ncnr.sans.generate_transmission",
+      "y": 175,
       "title": "Gen trans"
     },
     {
-      "y": 75,
-      "x": 820,
+      "x": 940,
       "module": "ncnr.sans.absolute_scaling",
+      "y": 70,
       "title": "Abs Scale"
     },
     {
+      "x": 690,
       "module": "ncnr.sans.makeDIV",
       "title": "Makediv",
-      "x": 555,
-      "y": 115
+      "y": 95
     },
     {
-      "module": "ncnr.sans.LoadSANS",
-      "title": "base plex",
       "x": 410,
-      "y": 115,
+      "module": "ncnr.sans.LoadSANS",
       "config": {
         "filelist": [
           {
             "path": "/ng7sans/201702/nonims1/data/sans28191.zip",
-            "source": "ncnr_DOI",
             "mtime": 1487250250,
+            "source": "ncnr_DOI",
             "entries": [
               "entry"
             ]
           }
         ]
-      }
+      },
+      "title": "base plex",
+      "y": 115
     },
     {
-      "module": "ncnr.sans.LoadSANS",
-      "title": "offset plex",
       "x": 410,
-      "y": 145,
+      "module": "ncnr.sans.LoadSANS",
       "config": {
         "filelist": [
           {
             "path": "/ng7sans/201702/nonims1/data/sans28190.zip",
-            "source": "ncnr_DOI",
             "mtime": 1487248423,
+            "source": "ncnr_DOI",
             "entries": [
               "entry"
             ]
           }
         ]
-      }
+      },
+      "title": "offset plex",
+      "y": 145
+    },
+    {
+      "module": "ncnr.sans.addSimple",
+      "title": "sum",
+      "x": 550,
+      "y": 95
+    },
+    {
+      "module": "ncnr.sans.addSimple",
+      "title": "sum",
+      "x": 550,
+      "y": 125
     }
   ],
   "wires": [
     {
+      "target": [
+        6,
+        "subtrahend"
+      ],
       "source": [
         0,
         "output"
-      ],
-      "target": [
-        6,
-        "subtrahend"
       ]
     },
     {
-      "source": [
-        5,
-        "output"
-      ],
       "target": [
         6,
         "minuend"
-      ]
-    },
-    {
+      ],
       "source": [
         5,
         "output"
-      ],
+      ]
+    },
+    {
       "target": [
         7,
         "minuend"
+      ],
+      "source": [
+        5,
+        "output"
       ]
     },
     {
+      "target": [
+        7,
+        "subtrahend"
+      ],
       "source": [
         1,
         "output"
-      ],
-      "target": [
-        7,
-        "subtrahend"
       ]
     },
     {
-      "source": [
-        3,
-        "output"
-      ],
       "target": [
         4,
         "in_beam"
+      ],
+      "source": [
+        3,
+        "output"
       ]
     },
     {
+      "target": [
+        4,
+        "empty_beam"
+      ],
       "source": [
         2,
         "output"
-      ],
-      "target": [
-        4,
-        "empty_beam"
       ]
     },
     {
-      "source": [
-        4,
-        "output"
-      ],
       "target": [
         8,
         "factor_param"
+      ],
+      "source": [
+        4,
+        "output"
       ]
     },
     {
-      "source": [
-        7,
-        "output"
-      ],
       "target": [
         8,
         "data"
+      ],
+      "source": [
+        7,
+        "output"
       ]
     },
     {
-      "source": [
-        6,
-        "output"
-      ],
       "target": [
         9,
         "subtrahend"
+      ],
+      "source": [
+        6,
+        "output"
       ]
     },
     {
-      "source": [
-        8,
-        "output"
-      ],
       "target": [
         9,
         "minuend"
+      ],
+      "source": [
+        8,
+        "output"
       ]
     },
     {
-      "source": [
-        9,
-        "output"
-      ],
       "target": [
         10,
         "sansdata"
+      ],
+      "source": [
+        9,
+        "output"
       ]
     },
     {
-      "source": [
-        3,
-        "output"
-      ],
       "target": [
         12,
         "in_beam"
+      ],
+      "source": [
+        3,
+        "output"
       ]
     },
     {
-      "source": [
-        11,
-        "output"
-      ],
       "target": [
         12,
         "empty_beam"
-      ]
-    },
-    {
-      "source": [
-        10,
-        "output"
       ],
-      "target": [
-        13,
-        "sample"
-      ]
-    },
-    {
       "source": [
         11,
         "output"
+      ]
+    },
+    {
+      "target": [
+        13,
+        "sample"
       ],
+      "source": [
+        10,
+        "output"
+      ]
+    },
+    {
       "target": [
         13,
         "empty"
+      ],
+      "source": [
+        11,
+        "output"
       ]
     },
     {
-      "source": [
-        12,
-        "output"
-      ],
       "target": [
         13,
         "Tsam"
+      ],
+      "source": [
+        12,
+        "output"
       ]
     },
     {
-      "source": [
-        14,
-        "DIV"
-      ],
       "target": [
         13,
         "div"
-      ]
-    },
-    {
+      ],
       "source": [
         14,
         "DIV"
-      ],
-      "target": [
-        10,
-        "sensitivity"
       ]
     },
     {
-      "source": [
-        15,
-        "output"
-      ],
       "target": [
+        10,
+        "sensitivity"
+      ],
+      "source": [
         14,
-        "data1"
+        "DIV"
       ]
     },
     {
@@ -351,8 +353,38 @@
         "output"
       ],
       "target": [
+        18,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        18,
+        "sum"
+      ],
+      "target": [
         14,
         "data2"
+      ]
+    },
+    {
+      "source": [
+        15,
+        "output"
+      ],
+      "target": [
+        17,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        17,
+        "sum"
+      ],
+      "target": [
+        14,
+        "data1"
       ]
     }
   ]
