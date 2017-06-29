@@ -974,7 +974,7 @@ def abinitio_footprint(data, Io=1., width=None, offset=0.):
     return data
 
 @module
-def fit_footprint(data, qz_min=None, qz_max=None, origin=False):
+def fit_footprint(data, fit_range=[None, None], origin=False):
     """
     Fit a footprint using a range of data below the critical edge.
 
@@ -985,10 +985,8 @@ def fit_footprint(data, qz_min=None, qz_max=None, origin=False):
     **Inputs**
 
     data (refldata[]) : uncorrected measurement
-
-    qz_min {fit range min} (float): lower bound of range to fit
-
-    qz_max {fit range max} (float): upper bound of range to fit
+    
+    fit_range (range?:x): x-region over which to fit
 
     origin (bool) : True if data should go through the origin
 
@@ -999,8 +997,9 @@ def fit_footprint(data, qz_min=None, qz_max=None, origin=False):
     2016-04-29 Paul Kienzle
     """
     from .footprint import fit_footprint
-    r = [qz_min, qz_max]
-    footprint = fit_footprint(data, qz_min, qz_max, kind='slope' if origin else 'line')
+    if fit_range is None:
+        fit_range = [None, None]
+    footprint = fit_footprint(data, fit_range[0], fit_range[1], kind='slope' if origin else 'line')
     return footprint
 
 @module

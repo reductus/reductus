@@ -1523,6 +1523,7 @@ webreduce.editor = webreduce.editor || {};
         datasets_in = this.datasets_in,
         module = this.active_module;
     
+    target.append("div").append("label").text(field.label);
     var input = target.append("div")
       .classed("fields", true)
       .datum(datum)
@@ -1541,14 +1542,20 @@ webreduce.editor = webreduce.editor || {};
             datum.value[i] = parseFloat(this.value);
           });
     subinputs
-          .attr("value", function(d,i) { return (datum.value) ? datum.value[i] : null })
+      .attr("value", function(d,i) { return (datum.value) ? datum.value[i] : null })
+      .property("value", function(d,i) { return (datum.value) ? datum.value[i] : null })
           
     
     if (axis == 'x' && 
         webreduce.editor._active_plot && 
         webreduce.editor._active_plot.interactors) {
       // add x-range interactor
+      var xrange = webreduce.editor._active_plot.x().domain();
       var value = datum.value || datum.default_value;
+      var value = [
+        (value[0] == null) ? xrange[0] : value[0],
+        (value[1] == null) ? xrange[1] : value[1]
+      ]
       var opts = {
         type: 'xrange',
         name: 'xrange',
@@ -1558,16 +1565,27 @@ webreduce.editor = webreduce.editor || {};
         x2: value[1]
       }
       var interactor = new xSliceInteractor.default(opts);
+      webreduce.editor._active_plot.interactors(interactor);
+      subinputs.on("change", function(d,i) { 
+        if (datum.value == null) { datum.value = datum.default_value }
+        var v = parseFloat(this.value);
+        v = (isNaN(v)) ? null : v;
+        datum.value[i] = v;
+        var xitem = ["x1", "x2"][i];
+        interactor.state[xitem] = (v == null) ? xrange[i] : v;
+        interactor.update(false);
+      });
       interactor.dispatch.on("update", function() { 
         var state = interactor.state;
         datum.value = [state.x1, state.x2];
         subinputs
+          .property("value", function(d,i) { return (datum.value) ? datum.value[i] : null })
           .attr("value", function(d,i) { return (datum.value) ? datum.value[i] : null })
         var event = document.createEvent('Event');
         event.initEvent('input', true, true);
         subinputs.node().dispatchEvent(event);
       });
-      webreduce.editor._active_plot.interactors(interactor);
+      
     }
     else if (axis == 'y') {
       // add y-range interactor
