@@ -21,6 +21,8 @@ class FootprintData(object):
             "slope_fit_error_": self.dp[0],
             "intercept_fit_error": self.dp[1]
         }
+    def get_plottable(self):
+        return self.get_metadata()
 
 def fit_footprint(data, low, high, kind='line'):
     """

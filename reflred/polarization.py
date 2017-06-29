@@ -218,6 +218,9 @@ class PolarizationData:
                                       FRbal=self.FRbal, clip=self.clip)
         output = dict([(k, str(v)) for k, v in eff.items()])
         return output
+        
+    def get_plottable(self):
+        return self.get_metadata()
 
 def apply_polarization_correction(data, polarization, spinflip=True):
     polarization.apply(data, spinflip=spinflip)
