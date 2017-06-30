@@ -90,8 +90,9 @@
 <div id="export_data" title="Export data">
   <div><label>filename:<input type="text" id="export_filename" /></label></div>
   <div>
-    <label>zipped<input type="radio" name="export_switcher" id="export_zipped" /></label>
-    <label>single file<input type="radio" name="export_switcher" id="export_single_file" checked /></label>
+    <label>zipped<input type="radio" name="export_switcher" data-handler="zipfile" id="export_zipped" /></label>
+    <label>single file<input type="radio" name="export_switcher" data-handler="singlefile" id="export_single_file" checked /></label>
+    <span id="export_targets"></span>
   </div>
   <div style="float:right;">
     <button id="export_confirm">confirm</button>

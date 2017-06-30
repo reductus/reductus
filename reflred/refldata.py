@@ -975,7 +975,7 @@ class ReflData(Group):
             export_string = export_string.decode('utf-8')
         name = getattr(self, "name", "default_name")
         entry = getattr(self, "entry", "default_entry")
-        return {"name": name, "entry": entry, "export_string": export_string}
+        return {"name": name, "entry": entry, "export_string": export_string, "file_suffix": ".refl"}
 
     
     

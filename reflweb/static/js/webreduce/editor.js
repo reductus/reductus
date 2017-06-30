@@ -500,7 +500,7 @@ webreduce.editor = webreduce.editor || {};
     return mychart
   }
   
-  function zip() {
+  function zip_arrays() {
     var args = [].slice.call(arguments);
     var shortest = args.length==0 ? [] : args.reduce(function(a,b){
         return a.length<b.length ? a : b
@@ -540,10 +540,9 @@ webreduce.editor = webreduce.editor || {};
             
             dataset[i] = [x[i], y[i], errorbar];
           }
-          //return zip(x, y, errorbars);
         }
         else {
-          dataset = zip(x,y);
+          dataset = zip_arrays(x,y);
         }
         return dataset;
       })
@@ -1077,6 +1076,69 @@ webreduce.editor = webreduce.editor || {};
     return r;
   }
   
+  var export_handlers = {
+    
+    singlefile: function(result, header, filename) {
+        var export_strings = result.values.map(function(v) { return v.export_string });
+        var header_string = '# ' + JSON.stringify(header).slice(1,-1) + '\n';
+        var file_suffix = (result.values[0] || {}).file_suffix || ".refl";
+        if (!(/\./.test(filename))) {
+          filename += file_suffix; // replace with instrument-specific ending?
+        }
+        webreduce.download(header_string + export_strings.join('\n\n'), filename);
+      },
+      
+    zipfile: function(result, header, filename) {
+        var multiple_entries = flag_multiple_entry(result.values);
+        var header_string = '# ' + JSON.stringify(header).slice(1,-1) + '\n';
+        var file_suffix = (result.values[0] || {}).file_suffix || ".refl";    
+        var filect = 0;
+        var write_next = function(writer, exports) {
+          if (filect < exports.length) {
+            var v = exports[filect++];
+            var to_export = header_string + v.export_string;
+            var subname = (v.name in multiple_entries) ? v.name + "_" + v.entry : v.name;
+            subname += file_suffix;
+            var reader = new zip.TextReader(to_export);
+            writer.add(subname, reader, function() { write_next(writer, exports); });
+          }
+          else { 
+            writer.close(function(blob) {
+              webreduce.download(blob, filename);
+            });
+          }
+        }
+        return zip.createWriter(new zip.BlobWriter("application/zip"), function(writer) {
+            write_next(writer, result.values);
+          }, function(error) {
+            console.log(error);
+          });
+      },
+      
+    webapi: function(result, header, filename, data) {
+        window.addEventListener("message", connection_callback, false);
+        var connection_id = Math.random().toString(36).replace(/[^a-z]+/g, '').substr(0, 5);
+        var webapp = window.open(data.url + "?connection_id=" + connection_id, "_blank");
+        var export_strings = result.values.map(function(v) { return v.export_string });
+        var header_string = '# ' + JSON.stringify(header).slice(1,-1) + '\n';
+        var file_suffix = (result.values[0] || {}).file_suffix || ".refl";
+        if (!(/\./.test(filename))) {
+          filename += file_suffix; // replace with instrument-specific ending?
+        }
+        var exported = header_string + export_strings.join('\n\n');
+        function connection_callback(event) {
+          // hoisting is required... 
+          var message = event.data;
+          if (message.connection_id == connection_id) {
+            window.removeEventListener("message", arguments.callee);
+            if (message.ready) {
+              webapp.postMessage({method: data.method, args: [exported], connection_id: connection_id}, "*");
+            }
+          }
+        }
+    }
+  }
+  
   webreduce.editor.export_data = function() {
     var w = webreduce.editor;
     if (w._active_terminal == null) { alert("no input or output selected to export"); }
@@ -1102,45 +1164,36 @@ webreduce.editor = webreduce.editor || {};
         }
       };
       var suggested_name = (result.values[0] || {}).name || "myfile.refl";
-      $("input#export_filename").val(suggested_name);
+      
+      
+      
       var dialog = $("div#export_data").dialog("open");
-      $("button#export_cancel").on("click", function() { dialog.dialog("close"); });
-      $("button#export_confirm").off("click"); // clear previous handler;
-      $("button#export_confirm").on("click", function() {
+      var d3_handle = d3.select(dialog[0]);
+      var export_targets = webreduce.instruments[w._instrument_id].export_targets || [];
+      //d3_handle.selectAll("span#export_targets label").remove();
+      var extra_choices = d3_handle.select("span#export_targets").selectAll("label")
+        .data(export_targets, function(d,i) { return w._instrument_id + d.id; })
+      extra_choices
+        .enter().append("label")
+          .text(function(d) { return d.label })
+          .append("input")
+            .attr("type", "radio")
+            .attr("data-handler", function(d) { return d.type })
+            .attr("name", "export_switcher")
+            .attr("class", "custom-export")
+            .attr("id", function(d) { return d.id })
+      extra_choices.exit().remove();
+        
+      d3_handle.select("input#export_filename").property("value", suggested_name);
+      d3_handle.select("button#export_cancel").on("click", function() { dialog.dialog("close"); });
+      d3_handle.select("button#export_confirm").on("click", function() {
         dialog.dialog("close");
-        var filename = $("input#export_filename").val();
-        var export_strings = result.values.map(function(v) { return v.export_string });
-        var header_string = '# ' + JSON.stringify(header).slice(1,-1) + '\n';
-        if ($("input#export_single_file").prop("checked")) {
-          if (!(/\./.test(filename))) {
-            filename += ".refl"; // replace with instrument-specific ending?
-          }
-          webreduce.download(header_string + export_strings.join('\n\n'), filename);
-        }
-        else {
-          var multiple_entries = flag_multiple_entry(result.values);      
-          var filect = 0;
-          var write_next = function(writer, exports) {
-            if (filect < exports.length) {
-              var v = exports[filect++];
-              var to_export = header_string + v.export_string;
-              var subname = (v.name in multiple_entries) ? v.name + "_" + v.entry : v.name;
-              subname += ".refl"; // replace with instrument-specific ending?
-              var reader = new zip.TextReader(to_export);
-              writer.add(subname, reader, function() { write_next(writer, exports); });
-            }
-            else { 
-              writer.close(function(blob) {
-                webreduce.download(blob, filename);
-              });
-            }
-          }
-          return zip.createWriter(new zip.BlobWriter("application/zip"), function(writer) {
-              write_next(writer, result.values);
-            }, function(error) {
-              console.log(error);
-            });
-        }
+        var filename = d3_handle.select("input#export_filename").node().value;
+        var selected_exporter = d3_handle.select('input[name="export_switcher"]:checked')
+        var handler = selected_exporter.attr("data-handler");
+        var data = (selected_exporter.datum) ? selected_exporter.datum() : {};
+        export_handlers[handler](result, header, filename, data);
+        console.log("export handler:", handler);
       });
     });      
   }
