@@ -381,16 +381,16 @@ def group_by_actual_angles(columns, Qtol, dQtol):
     L, dL = columns['L'], columns['dL']
     #print "joining", Qtol, dQtol, Ti, Td, dT
     groups = [list(range(len(Ti)))]
-    groups = _group_by_dim(groups, dL, dQtol*dL)
-    #print "dL groups", groups
-    groups = _group_by_dim(groups, dT, dQtol*dT)
-    #print "dT groups", groups
-    groups = _group_by_dim(groups, L, Qtol*dL)
-    #print "L groups", groups
-    groups = _group_by_dim(groups, Ti, Qtol*dT)
-    #print "Ti groups", groups
     groups = _group_by_dim(groups, Td, Qtol*dT)
-    #print "Td groups", groups
+    #print("Td groups", groups)
+    groups = _group_by_dim(groups, Ti, Qtol*dT)
+    #print("Ti groups", groups)
+    groups = _group_by_dim(groups, L, Qtol*dL)
+    #print("L groups", groups)
+    groups = _group_by_dim(groups, dT, dQtol*dT)
+    #print("dT groups", groups)
+    groups = _group_by_dim(groups, dL, dQtol*dL)
+    #print("dL groups", groups)
     return groups
 
 
