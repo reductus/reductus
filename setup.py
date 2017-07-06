@@ -27,7 +27,7 @@ server_mtime = subprocess.Popen(["git", "log", "-1", "--pretty=format:%ct"], std
 open("reflweb/git_version_mtime", "wb").write(server_mtime)
 
 
-packages = find_packages(exclude=['reflbin'])
+packages = find_packages(exclude=['reflbin', 'reflred-old*'])
 
 def module_config():
     source_root = joinpath('dataflow', 'lib', 'src')
@@ -67,6 +67,7 @@ dist = setup(
         'Topic :: Scientific/Engineering :: Chemistry',
         'Topic :: Scientific/Engineering :: Physics',
     ],
+    zip_safe=False,
     packages=packages,
     include_package_data=True,
     #data_files=[('reflweb', ['reflweb/git_version_hash'])],
