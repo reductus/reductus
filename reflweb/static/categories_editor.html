@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<head>
+  <title>Data sorting categories</title>
+</head>
+<style>
+  html, body {
+    height: 100%;
+    overflow: hidden;
+    font-family: Geneva, Arial, Helvetica, sans-serif;
+  }
+  
+  span.heading {
+    font-weight: bold;
+  }
+  
+  ul, ul li {
+    padding: 10px;
+    list-style: none;
+  }
+  
+  ul li input {
+    width: 5;
+  }
+
+</style>
+  <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/redmond/jquery-ui.css" />
+<body>
+  <script src="//code.jquery.com/jquery-1.11.1.min.js"></script>
+  <script src="//code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
+  <script src="https://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+  <script type="text/javascript" src="js/msgpack.min.js"></script>
+  <script type="text/javascript" src="js/webreduce/server_api/hug_msgpack.js"></script>
+<script>
+var default_categories = [
+  [{type: 'key', value: 'analysis.groupid'}],
+  [{type: 'key', value: 'run.configuration'}],
+  [{type: 'key', value: 'run.experimentScanID'}, {type: 'str', value: ':'}, {type: 'key', value: 'sample.description'}]
+]
+
+var all_keys = [
+  'analysis.groupid',
+  'run.configuration',
+  'run.experimentScanID',
+  'det.dis',
+  'sample.name',
+  'sample.description'
+]
+
+function draw(data, clearfirst) {
+  if (clearfirst) {
+    d3.select("ul#categories").selectAll("li").remove();
+    console.log(d3.selectAll("ul#categories li"));
+    
+  }
+  var selection = d3.select("ul#categories").selectAll("li")
+    .data(data, function(d,i) { 
+      console.log(d.reduce(function(a,b) { return a + b.value }, i.toFixed()));
+      return d.reduce(function(a,b) { return a + b.value }, i.toFixed()) })
+  
+  console.log(selection.enter(), selection.exit())
+  
+  selection.enter()
+    .append(categoryGenerator)
+    .classed('ui-state-default', true)
+    .classed('ui-corner-all', true)
+  
+  selection.exit().remove();
+
+  d3.select('button#add_category')
+    .on('click', function() {
+      data.push([{type: 'key', value: all_keys[0] || ''}]);
+      draw(data);
+    });
+}
+
+function categoryGenerator(d, i) {
+  var category = document.createElement('li');
+  d3.select(category).datum(d);
+  d3.select(category).selectAll('span').data(d)
+    .enter().append(itemGenerator);
+  return category;
+}
+
+function itemGenerator(dd,ii) {
+  var span = document.createElement('span');
+  var options = all_keys.concat('string');
+  d3.select(span).datum(dd);
+  var selector = d3.select(span).append('select');
+  selector.selectAll('option').data(options).enter()
+    .append('option')
+    .text(function(o) { return o });
+  if (dd.type == 'str') {
+    selector.property('value', 'string');
+    d3.select(span).append('input')
+      .attr('type', 'text')
+      .attr('size', '4')
+      .property('value', dd.value);
+  } else {
+    selector.property('value', dd.value);
+  }
+  
+  function onchange() {
+    var value = this.value;
+    if (value == 'string') {
+      dd.type = 'str';
+      dd.value = '';
+      d3.select(span).append('input')
+      .attr('type', 'text')
+      .attr('size', '4')
+      .property('value', '')
+      .on('change', function() {
+        dd.value = this.value;
+      });
+      
+    } else {
+      dd.type = 'key';
+      dd.value = value;
+      d3.select(span).select('input').remove();
+    }
+  }
+    
+  selector.on('change', onchange);
+  return span;
+}
+
+window.onload = function() {
+  draw($.extend(true, [], default_categories));
+  
+  $("ul").sortable();
+  d3.select('button#load_defaults').on('click', function() { 
+    var data = $.extend(true, [], default_categories);
+    draw(data, true);
+  });
+  var event = new Event('editor_ready');
+  window.dispatchEvent(event);
+}
+</script>
+<div id="controls">
+    <span class='heading'>Data sorting categories</span>
+    <button id="apply_changes">Apply changes</button>
+    <button id="load_defaults">Revert to default values</button>
+</div>
+<div id="editor_div">
+  <ul id="categories">
+  </ul>
+  <button id="add_category">+</button>
+</div>
+</body>
