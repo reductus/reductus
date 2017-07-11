@@ -32,9 +32,18 @@ from dataflow.core import Template, lookup_module
 from dataflow.calc import process_template
 from dataflow import fetch
 
-from reflweb import config
+try:
+    from reflweb import config
+except ImportError:
+    from reflweb import default_config as config
 
 IS_PY3 = sys.version_info[0] >= 3
+if IS_PY3:
+    def encode(s):
+        return s.encode('utf-8')
+else:
+    def encode(s):
+        return s
 
 # Match the following on the first line:
 # - initial comment ("#" or "//")
@@ -133,8 +142,8 @@ def replay_file(filename):
         # the regression tests
         new_path = os.path.join('/tmp', os.path.basename(filename))
         with open(new_path, 'wb') as fid:
-            fid.write(first_line)
-            fid.write(new_content)
+            fid.write(encode(first_line))
+            fid.write(encode(new_content))
         raise RuntimeError("File replay for %r differs; new file stored in %r"
                            % (filename, new_path))
 
@@ -165,6 +174,13 @@ def play_file(filename):
     retval = process_template(template, template_config, target=target)
     export = retval.get_export()
 
+    if export['values']:
+        basename = export['values'][0].get('name', 'replay')
+        ext = export['values'][0].get('file_suffix', '.refl') 
+        filename = basename + ext
+    else:
+        filename = 'replay.dat'
+
     template_data = {
         'template': template_json,
         'node': node,
@@ -175,11 +191,12 @@ def play_file(filename):
         #server_mtime: new Date((result.server_mtime || 0.0) * 1000).toISOString()
     }
     first_line = '# ' + json.dumps({'template_data': template_data})[1:-1]
-    with open('replay.dat', 'wb') as file:
-        print(first_line, file=file)
-        for section in export['values']:
-            print(section, file=file)
-            print(file=file)
+    new_content = '\n\n'.join(v['export_string'] for v in export['values'])
+    with open(filename, 'wb') as file:
+        print("writing", filename)
+        file.write(encode(first_line))
+        file.write(b'\n')
+        file.write(encode(new_content))
 
 
 def main():
