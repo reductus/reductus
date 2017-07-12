@@ -4,9 +4,9 @@
 (function () {
   var NEXUS_ZIP_REGEXP = /\.nxz\.[^\.\/]+$/
   var ZIP_REGEXP = /\.zip$/
-  var BRUKER_REGEXP = /\.raw$/
+  var BRUKER_REGEXP = /\.ra[ws]$/
   var PARALLEL_LOAD = true;
-  
+
   function make_range_icon(global_min_x, global_max_x, min_x, max_x) {
     var icon_width = 75;
     var rel_width = Math.abs((max_x - min_x) / (global_max_x - global_min_x));
@@ -42,9 +42,9 @@
     ////////////////////////////////////////////////////////////////////////////
     var load_params = datafiles.map(function(j) {
       return {
-        "source": datasource, 
+        "source": datasource,
         "path": path + "/" + j,
-        "mtime": files_metadata[j].mtime 
+        "mtime": files_metadata[j].mtime
       }
     });
     var p = loader(load_params, file_objs, false, 'metadata')
@@ -95,7 +95,7 @@
           target.jstree().toggle_node(e.currentTarget.id);
         }
       });
-      
+
       target.on("fileinfo.update", function(ev, info) {
         var jstree = target.jstree(true);
         jstree.uncheck_all();
@@ -109,7 +109,7 @@
                             leaf.li_attr.mtime == fi.mtime)
             return isMatch;
           });
-          // turn off the handler for a moment 
+          // turn off the handler for a moment
           // so it doesn't trigger for every check operation:
           target.off("check_node.jstree", handleChecked);
           jstree.check_node(matching);
@@ -121,7 +121,7 @@
       return ready;
     });
     return p;
-    
+
   }
 
   // categorizers are callbacks that take an info object and return category string
@@ -170,7 +170,7 @@
 
   webreduce.getAllTemplateSourcePaths = function(template) {
     // Generate a list of all sources/paths for getting needed info from server
-    var template = template || webreduce.editor._active_template;    
+    var template = template || webreduce.editor._active_template;
     var fsp = {}; // group by source and path
     template.modules.forEach(function(m, i) {
       var def = webreduce.editor._module_defs[m.module];
@@ -204,11 +204,11 @@
     if (/\/$/.test(path)) {path = path.slice(0,-1)}
     return path;
   }
-  
+
   var getDataSource = function(target) {
     return $(target).attr("datasource");
   }
-  
+
   function getAllBrowserSourcePaths(nav_div) {
     var nav_div = (nav_div == null) ? "#navigation" : nav_div;
     var sourcepaths = [];
@@ -217,7 +217,7 @@
     });
     return sourcepaths
   }
-  
+
   function updateHistory(target) {
     // call with id or object for nav pane
     var sourcepaths = getAllBrowserSourcePaths(target);
@@ -227,7 +227,7 @@
     }
     history.pushState({}, "", urlstr);
   }
-  
+
   function updateFileBrowserPane(target, datasource, pathlist, dirdata) {
     var buttons = $("<div />", {class: "buttons"});
     var clear_all = $("<button />", {text: "uncheck all"});
@@ -257,7 +257,7 @@
         dirlink.textContent = pathitem + "/";
         dirlink.onclick = function() {
           webreduce.server_api.get_file_metadata({source: datasource, pathlist: new_pathlist.slice(0, index+1)})
-          .then( function (metadata) {                
+          .then( function (metadata) {
             updateFileBrowserPane(target, datasource, new_pathlist.slice(0, index+1), metadata);
             //updateHistory($(target).parent());
           })
@@ -325,7 +325,7 @@
           return {path: li.filename, source: li.source, mtime: li.mtime, entries: [li.entryname]}
         });
         fileinfo = fileinfo.concat(new_fileinfo);
-        
+
       }
     });
     if (!stopPropagation) {
@@ -338,7 +338,7 @@
         var entry = values.find(function(e) { return e.entry == fi.entries[0] });
         if (datatype == null) { datatype = r.datatype }
         else if (datatype != r.datatype) {
-          console.log("warning: datatypes do not match in loaded files"); 
+          console.log("warning: datatypes do not match in loaded files");
         }
         return entry;
       });
