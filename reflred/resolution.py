@@ -222,7 +222,7 @@ def binedges(L):
     return hstack((E, E[-1]*last))
 
 def divergence(slits=None, distance=None, T=None,
-               sample_width=1e10, sample_broadening=0.,
+               sample_width=np.inf, sample_broadening=0.,
                use_sample=True):
     # type: (Tuple[np.ndarray, np.ndarray], Tuple[float, float], np.ndarray, float, float) -> np.ndarray
     r"""
@@ -300,7 +300,7 @@ def divergence(slits=None, distance=None, T=None,
     # Compute FWHM angular divergence dT from the slits in degrees
     dT_s1_s2 = 0.5*(s1+s2)/abs(d1-d2)
     # Sample can act as a slit according to the projection of its width
-    if use_sample:
+    if use_sample and np.isfinite(sample_width):
         sample = sample_width * abs(sin(radians(T)))
         dT_s1_sample = 0.5*(s1+sample)/abs(d1)
         dT_s2_sample = 0.5*(s2+sample)/abs(d2)

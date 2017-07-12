@@ -416,7 +416,7 @@ class Detector(Group):
     deadtime = None
     deadtime_error = None
     columns = {
-        "counts": {"units": "counts"}, 
+        "counts": {"units": "counts"},
         "angle_x": {"units": "degrees"}
     }
 
@@ -542,7 +542,7 @@ class Monitor(Group):
     source_power_variance = 0
     saturation = None
     columns = {
-        "counts": {"units": "counts"}, 
+        "counts": {"units": "counts"},
         "count_time": {"units": "seconds"}
     }
     deadtime = None
@@ -864,7 +864,7 @@ class ReflData(Group):
         T, dT = self.sample.angle_x, self.angular_resolution+self.sample.broadening
         L, dL = self.detector.wavelength, self.detector.wavelength_resolution
         return resolution.dTdL2dQ(T, dT, L, dL)
-    
+
     @property
     def columns(self):
         from copy import deepcopy
@@ -888,7 +888,7 @@ class ReflData(Group):
                     sub_col['label'] = label
                     data_columns[label] = sub_col
         return data_columns
-            
+
     def __init__(self, **kw):
         for attr, cls in ReflData._groups:
             setattr(self, attr, cls())
@@ -946,7 +946,8 @@ class ReflData(Group):
         from matplotlib import pyplot as plt
         if label is None:
             label = self.name+self.polarization
-        plt.errorbar(self.x, self.v, self.dv, label=label, fmt='.')
+        xerr = self.dx if self.angular_resolution is not None else None
+        plt.errorbar(self.x, self.v, yerr=self.dv, xerr=xerr, label=label, fmt='.')
         plt.xlabel("%s (%s)"%(self.xlabel, self.xunits) if self.xunits else self.xlabel)
         plt.ylabel("%s (%s)"%(self.vlabel, self.vunits) if self.vunits else self.vlabel)
         if not Intent.isslit(self.intent):
@@ -977,8 +978,8 @@ class ReflData(Group):
         entry = getattr(self, "entry", "default_entry")
         return {"name": name, "entry": entry, "export_string": export_string, "file_suffix": ".refl"}
 
-    
-    
+
+
     def get_plottable(self):
         return self.todict()
 

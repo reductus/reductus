@@ -231,8 +231,8 @@ class RigakuRefl(refldata.ReflData):
         self.slit1.distance = -275.5
         self.slit2.distance = -192.7
         self.slit3.distance = +175.0
-        self.slit1.x = data['axis']['IncidentSlitBox']
-        self.slit1.y = data['axis']['IncidentAxdSlit']
+        self.slit1.x = data['axis']['IncidentSlitBox'][2]
+        self.slit1.y = data['axis']['IncidentAxdSlit'][2]
         self.slit2.x = self.slit1.x  # TODO: xray resolution?
         self.slit2.y = self.slit1.y
 
@@ -286,6 +286,7 @@ class RigakuRefl(refldata.ReflData):
 
 def demo():
     from .scale import apply_norm
+    from .steps import divergence
     import sys
     if len(sys.argv) == 1:
         print("usage: python -m reflred.xrawref file...")
@@ -305,6 +306,7 @@ def demo():
         # plot all the entries
         #pylab.figure()
         for entry in entries:
+            entry = divergence(entry)
             apply_norm(entry, base='time')
             entry.plot()
             plotted_datasets += 1
