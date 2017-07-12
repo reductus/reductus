@@ -57,9 +57,18 @@ following::
 from __future__ import division, print_function
 import warnings
 import sys
+import traceback
+import logging
 from time import strptime
 
 import numpy as np
+
+if sys.version_info[0] >= 3:
+    def tostr(s):
+        return s.decode('ascii')
+else:
+    def tostr(s):
+        return s
 
 # Time format in Rigaku .ras files is "mm/dd/yy HH:MM:SS"
 TIME_FORMAT = "%m/%d/%y %H:%M:%S"
@@ -97,8 +106,8 @@ def loads(data):
     """
     Load Rigaku data from string.
     """
-    lines = data.split('\r\n')
-    if lines[0] != "*RAS_DATA_START":
+    lines = data.split(b'\r\n')
+    if lines[0] != b"*RAS_DATA_START":
         raise ValueError("not a Rigaku XRD RAS file")
     index = 1
     datasets = []
@@ -106,7 +115,7 @@ def loads(data):
         index, header, values = _parse(index, lines)
         data = _interpret(header, values)
         datasets.append(data)
-        if lines[index] == "*RAS_DATA_END":
+        if lines[index] == b"*RAS_DATA_END":
             break
     return datasets
 
@@ -133,7 +142,7 @@ def join(datasets):
     return R
 
 def _parse(index, lines):
-    if lines[index] != "*RAS_HEADER_START":
+    if lines[index] != b"*RAS_HEADER_START":
         raise ValueError("corrupt file: missing *RAS_HEADER_START")
     index += 1
     header = {}
@@ -142,18 +151,18 @@ def _parse(index, lines):
             raise ValueError("corrupt file: missing *RAS_HEADER_END")
         line = lines[index]
         index += 1
-        if line == '*RAS_HEADER_END':
+        if line == b'*RAS_HEADER_END':
             break
         #print(index, ":", line)
         try:
-            key, value = line.split(' ', 1)  # *KEY "value"
-            assert key[0] == "*"
-            assert value[0] == '"' and value[-1] == '"'
+            key, value = line.split(b' ', 1)  # *KEY "value"
+            # Note: py3 byte strings key[k] returns ord not byte string
+            assert key[0:1] == b"*"
+            assert value[0:1] == b'"' and value[-1:] == b'"'
         except Exception:
-            #print line
-            #print [ord(s) for s in line]
+            #traceback.print_exc()
             raise ValueError("corrupt file: line %d is not '*KEY value'"%index)
-        key = key[1:]
+        key = tostr(key[1:])
         value = value[1:-1] # strip quotes
 
         # auto convert values to int or float if possible
@@ -165,14 +174,15 @@ def _parse(index, lines):
                 value = float(value)
             except ValueError:
                 try:
-                    _, value = value.split('|')
+                    _, value = value.split(b'|')
                 except ValueError:
                     pass
+                value = tostr(value)
         # if all conversions fail, value should be an untouched string
 
         header[key] = value
 
-    if lines[index] != "*RAS_INT_START":
+    if lines[index] != b"*RAS_INT_START":
         raise ValueError("corrupt file: missing *RAS_INT_START")
     index += 1
     values = []
@@ -181,7 +191,7 @@ def _parse(index, lines):
             raise ValueError("corrupt file: missing *RAS_INT_END")
         line = lines[index]
         index += 1
-        if line == "*RAS_INT_END":
+        if line == b"*RAS_INT_END":
             break
         try:
             values.append([float(v) for v in line.split()])

@@ -7,6 +7,8 @@ from __future__ import print_function
 import os
 import datetime
 import time
+import logging
+import traceback
 from io import BytesIO
 
 import numpy as np
@@ -48,6 +50,7 @@ def load_entries(filename, file_obj=None, entries=None):
     """
     Load the entries from an X-ray file.
     """
+    #logging.info("loading X-ray file " + filename)
     if filename.endswith('.ras'):
         return load_rigaku_entries(filename, file_obj)
     else:
@@ -283,15 +286,16 @@ class RigakuRefl(refldata.ReflData):
 
 def demo():
     from .scale import apply_norm
-    import pylab
     import sys
     if len(sys.argv) == 1:
         print("usage: python -m reflred.xrawref file...")
         sys.exit(1)
+    plotted_datasets = 0
     for filename in sys.argv[1:]:
         try:
             entries = load_from_uri(filename)
         except Exception as exc:
+            #traceback.print_exc()
             print("**** "+str(exc)+" **** while reading "+filename)
             continue
 
@@ -303,8 +307,14 @@ def demo():
         for entry in entries:
             apply_norm(entry, base='time')
             entry.plot()
-    pylab.legend()
-    pylab.show()
+            plotted_datasets += 1
+
+    if plotted_datasets:
+        import pylab
+        pylab.legend()
+        pylab.show()
+    else:
+        print("no data to plot")
 
 if __name__ == "__main__":
     demo()

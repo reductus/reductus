@@ -1,9 +1,18 @@
 """
 Data loader for Bruker table-top X-ray source raw file format.
 """
+import sys
 import struct
+import logging
 
 import numpy
+
+if sys.version_info[0] >= 3:
+    def tostr(s):
+        return s.decode('ascii')
+else:
+    def tostr(s):
+        return s
 
 MEAS_FLAG = {
     0: 'unmeasured',
@@ -50,10 +59,10 @@ VARYING_BIT = (
     )
 
 def _make_struct(fields, data, offset=0):
-    names = zip(*fields)[0]
+    names = list(zip(*fields))[0]
     types = "<"+"".join(dtype for _, dtype in fields)
     values = struct.unpack_from(types, data, offset=offset)
-    values = [(v.strip('\0') if t.endswith('s') else v)
+    values = [(tostr(v).strip('\0') if t[-1] == 's' else v)
               for (_, t), v in zip(fields, values)]
     offset += struct.calcsize(types)
     return dict(zip(names, values)), offset
@@ -279,7 +288,7 @@ def load(filename):
     """
     with open(filename, 'rb') as f:
         data = f.read()
-    if data[:7] != "RAW1.01":
+    if data[:7] != b"RAW1.01":
         raise ValueError("Could not load %r: not a Bruker XRD RAW file"%
                          filename)
     return loads(data)
@@ -288,7 +297,7 @@ def loads(data):
     """
     Load Bruker X-ray data from the byte stream contained in *data*.
     """
-    if data[:7] != "RAW1.01":
+    if data[:7] != b"RAW1.01":
         raise ValueError("not a Bruker XRD RAW file")
 
     # process the main header
