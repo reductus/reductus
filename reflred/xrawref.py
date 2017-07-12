@@ -6,6 +6,7 @@ from __future__ import print_function
 
 import os
 import datetime
+import time
 from io import BytesIO
 
 import numpy as np
@@ -14,6 +15,7 @@ from dataflow.lib import unit
 from dataflow.lib import iso8601
 
 from . import bruker
+from . import rigaku
 from . import refldata
 
 
@@ -42,10 +44,19 @@ def load_from_uri(uri, entries=None, url_cache="/tmp"):
     else:
         return load_entries(uri, entries=entries)
 
-
 def load_entries(filename, file_obj=None, entries=None):
     """
-    Load the summary info for the entry in a Bruker file.
+    Load the entries from an X-ray file.
+    """
+    if filename.endswith('.ras'):
+        return load_rigaku_entries(filename, file_obj)
+    else:
+        return load_bruker_entries(filename, file_obj)
+
+
+def load_bruker_entries(filename, file_obj=None):
+    """
+    Load the entries from a Bruker file.
     """
     if file_obj is None:
         bruker_file = bruker.load(filename)
@@ -53,8 +64,22 @@ def load_entries(filename, file_obj=None, entries=None):
         bruker_file = bruker.loads(file_obj.read())
 
     entries = [BrukerRefl(bruker_file, entryid, filename)
-               for entryid in range(len(bruker_file['data']))]
+               for entryid, _ in enumerate(bruker_file['data'])]
     return entries
+
+def load_rigaku_entries(filename, file_obj=None):
+    """
+    Load the entries from a Rigaku file.
+    """
+    if file_obj is None:
+        datasets = rigaku.load(filename)
+    else:
+        datasets = rigaku.loads(file_obj.read())
+    joined_data = rigaku.join(datasets)
+
+    entries = [RigakuRefl(joined_data, filename)]
+    return entries
+
 
 TRAJECTORY_INTENTS = {
     'locked coupled': 'specular',
@@ -159,11 +184,109 @@ class BrukerRefl(refldata.ReflData):
             raise ValueError("Unknown sample angle in file")
         self.Qz_target = np.NaN
 
+class RigakuRefl(refldata.ReflData):
+    """
+    Bruker raw reflectometry file.
+
+    See :class:`refldata.ReflData` for details.
+    """
+    format = "BrukerRaw"
+
+    def __init__(self, dataset, filename):
+        super(RigakuRefl, self).__init__()
+        self.entry = "entry"
+        self.path = os.path.abspath(filename)
+        self.name = os.path.basename(filename).split('.')[0]
+        #import pprint; pprint.pprint(entry)
+        self._set_metadata(dataset)
+        self._set_data(dataset)
+
+    def _set_metadata(self, entry):
+        #print(entry['instrument'].values())
+        self.probe = 'xray'
+
+        # parse date into datetime object
+        self.date = datetime.datetime.fromtimestamp(time.mktime(entry['start_time']))
+
+        self.description = entry['comment']
+        self.instrument = 'RigakuXray'
+        self.detector.wavelength = np.array([entry['wavelength']], dtype='float')
+        self.detector.wavelength_resolution = 0.001*self.detector.wavelength.copy()
+        self.detector.deadtime = np.array([0.0]) # sorta true.
+        self.detector.deadtime_error = np.array([0.0]) # also kinda true.
+
+        self.sample.name = entry['sample']
+        self.sample.description = ""
+        self.monitor.base = 'TIME'
+        self.monitor.time_step = 0.001  # assume 1 ms accuracy on reported clock
+        self.monitor.deadtime = 0.0
+        self.polarization = "unpolarized"
+
+    def _set_data(self, data):
+        # Resolution info
+        # TODO: check
+        self.slit1.distance = -275.5
+        self.slit2.distance = -192.7
+        self.slit3.distance = +175.0
+        self.slit1.x = data['axis']['IncidentSlitBox']
+        self.slit1.y = data['axis']['IncidentAxdSlit']
+        self.slit2.x = self.slit1.x  # TODO: xray resolution?
+        self.slit2.y = self.slit1.y
+
+        self.detector.counts = data['y']
+        self.detector.counts_variance = data['y_err']**2
+        self.detector.dims = self.detector.counts.shape
+        attenuation = data['axis']['Attenuator'][2]
+        if attenuation != 0. and attenuation != 1.:
+            self.detector.counts /= attenuation
+            self.detector.counts_variance /= attenuation**2
+        n = self.detector.dims[0]
+        self.monitor.counts = np.zeros(n)
+        self.monitor.counts_variance = np.zeros(n)
+        self.monitor.count_time = data['count_time']
+        sample = data['axis']['Omega'][2]
+        detector = data['axis']['TwoTheta'][2]
+        offset = sample - detector/2
+        scan_axis = data['scan_axis']
+        if scan_axis in ["TwoThetaOmega", "TwoThetaTheta"]:
+            self.sample.angle_x = data['x']/2 + offset
+            self.detector.angle_x = data['x']
+            self.scan_value = [self.sample.angle_x, self.detector.angle_x]
+            self.scan_units = ['degrees', 'degrees']
+            self.scan_label = ['theta', 'two_theta']
+            if offset > 0:
+                self.intent = refldata.Intent.backp
+            elif offset < 0:
+                self.intent = refldata.Intent.backm
+            else:
+                self.intent = refldata.Intent.spec
+        elif scan_axis == 'Omega':
+            self.sample.angle_x = data['x']
+            self.detector.angle_x = np.ones(n) * detector
+            self.scan_value = [self.sample.angle_x]
+            self.scan_units = ['degrees']
+            self.scan_label = ['theta']
+            self.intent = refldata.Intent.rock3
+        elif scan_axis == 'TwoTheta':
+            self.sample.angle_x = np.ones(n) * sample
+            self.detector.angle_x = data['x']
+            self.scan_value = [self.sample.angle_x]
+            self.scan_units = ['degrees']
+            self.scan_label = ['theta']
+            self.intent = refldata.Intent.rock4
+        else:
+            raise ValueError("Unknown scan type " + scan_axis)
+        self.sample.angle_x_target = self.sample.angle_x
+        self.detector.angle_x_target = self.detector.angle_x
+        self.Qz_target = np.NaN
+
+
 def demo():
     from .scale import apply_norm
+    import pylab
     import sys
     if len(sys.argv) == 1:
-        print("usage: python -m reflred.steps.xrawref file...")
+        print("usage: python -m reflred.xrawref file...")
         sys.exit(1)
     for filename in sys.argv[1:]:
         try:
@@ -176,7 +299,6 @@ def demo():
         #print(entries[0])
 
         # plot all the entries
-        import pylab
         #pylab.figure()
         for entry in entries:
             apply_norm(entry, base='time')
