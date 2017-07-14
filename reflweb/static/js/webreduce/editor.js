@@ -679,7 +679,7 @@ webreduce.editor = webreduce.editor || {};
       var new_options = webreduce.editor._active_plot.options();
       new_options.axes.xaxis.label = xlabel;
       new_options.axes.yaxis.label = ylabel;
-      webreduce.editor._active_plot.options(new_options).source_data(new_data);  
+      webreduce.editor._active_plot.options(new_options).source_data(new_data).resetzoom();
     })
     
     return mychart
