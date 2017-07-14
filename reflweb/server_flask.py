@@ -38,7 +38,6 @@ def handle_error(e):
 
 def wrap_method(mfunc):
     def wrapper(*args, **kwargs):
-        #logging.warn("hello from "+mfunc.__name__)
         real_kwargs = request.get_json() if request.get_data() else {}
         content = mfunc(*args, **real_kwargs)
         response = make_response(msgpack_converter.dumps(content))
@@ -57,7 +56,7 @@ for method in api.api_methods:
     app.add_url_rule(shortpath, shortpath, wrapped, methods=["POST"])
 
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.WARNING)
     port = 8002
     if len(sys.argv) > 1:
         port = int(sys.argv[1])
