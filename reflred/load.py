@@ -23,7 +23,7 @@ def url_load(fileinfo):
     path, mtime, entries = fileinfo['path'], fileinfo['mtime'], fileinfo['entries']
     filename = basename(path)
     content = url_get(fileinfo)
-    if filename.endswith('.raw'):
+    if filename.endswith('.raw') or filename.endswith('.ras'):
         return xrawref.load_from_string(filename, content, entries=entries)
     else:
         return nexusref.load_from_string(filename, content, entries=entries)
