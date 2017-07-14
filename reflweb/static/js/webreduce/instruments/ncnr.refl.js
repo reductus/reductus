@@ -130,7 +130,8 @@ webreduce.instruments['ncnr.refl'] = webreduce.instruments['ncnr.refl'] || {};
           xaxis: {label: all_columns[xcol].label + "(" + all_columns[xcol].units + ")"}, 
           yaxis: {label: all_columns[ycol].label + "(" + all_columns[ycol].units + ")"}},
         xcol: xcol, 
-        ycol: ycol
+        ycol: ycol,
+        errorbar_width: 0,
       },
       data: datas
     }
