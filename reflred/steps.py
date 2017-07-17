@@ -382,7 +382,8 @@ def absolute_angle(data):
 @module
 def divergence(data, sample_width=None, sample_broadening=0):
     r"""
-    Estimate divergence from slit openings.
+    Estimate divergence from slit openings.  Does nothing if divergence
+    is already defined by the instrument.
 
     **Inputs**
 
@@ -404,8 +405,9 @@ def divergence(data, sample_width=None, sample_broadening=0):
     """
     from .angles import apply_divergence
     #data = copy(data)
-    data.log('divergence()')
-    apply_divergence(data, sample_width, sample_broadening)
+    if data.angular_resolution is None:
+        data.log('divergence()')
+        apply_divergence(data, sample_width, sample_broadening)
     return data
 
 
@@ -986,7 +988,7 @@ def fit_footprint(data, fit_range=[None, None], origin=False):
     **Inputs**
 
     data (refldata[]) : uncorrected measurement
-    
+
     fit_range (range?:x): x-region over which to fit
 
     origin (bool) : True if data should go through the origin

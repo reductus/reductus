@@ -213,8 +213,6 @@ class RigakuRefl(refldata.ReflData):
 
         self.description = entry['comment']
         self.instrument = 'RigakuXray'
-        self.detector.wavelength = np.array([entry['wavelength']], dtype='float')
-        self.detector.wavelength_resolution = 0.001*self.detector.wavelength.copy()
         self.detector.deadtime = np.array([0.0]) # sorta true.
         self.detector.deadtime_error = np.array([0.0]) # also kinda true.
 
@@ -227,14 +225,17 @@ class RigakuRefl(refldata.ReflData):
 
     def _set_data(self, data):
         # Resolution info
-        # TODO: check
-        self.slit1.distance = -275.5
-        self.slit2.distance = -192.7
-        self.slit3.distance = +175.0
-        self.slit1.x = data['axis']['IncidentSlitBox'][2]
-        self.slit1.y = data['axis']['IncidentAxdSlit'][2]
-        self.slit2.x = self.slit1.x  # TODO: xray resolution?
-        self.slit2.y = self.slit1.y
+        self.angular_resolution = data['angular_divergence']
+        self.detector.wavelength = data['wavelength']
+        self.detector.wavelength_resolution = data['wavelength_resolution']
+        self.slit1.distance = data['slit1_distance']
+        self.slit2.distance = data['slit2_distance']
+        self.slit3.distance = data['slit3_distance']
+        self.slit3.distance = data['slit4_distance']
+        self.slit2.x = data['axis']['IncidentSlitBox'][2]
+        self.slit2.y = data['axis']['IncidentAxdSlit'][2]
+        self.slit3.x = data['axis']['ReceivingSlitBox1'][2]
+        self.slit4.x = data['axis']['ReceivingSlitBox2'][2]
 
         self.detector.counts = data['y']
         self.detector.counts_variance = data['y_err']**2
@@ -296,8 +297,8 @@ def demo():
         try:
             entries = load_from_uri(filename)
         except Exception as exc:
-            #traceback.print_exc()
-            print("**** "+str(exc)+" **** while reading "+filename)
+            print("Error while loading", filename, ':', str(exc))
+            #traceback.print_exc(); raise
             continue
 
         # print the first entry
