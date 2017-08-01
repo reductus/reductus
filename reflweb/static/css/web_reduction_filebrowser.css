@@ -306,3 +306,11 @@ li.fileitem {
 div.ui-dialog {
     width: 450px;
 }
+
+li.ui-menu-item {
+    list-style-image: none !important;
+}
+
+li.ui-menu-item div.ui-menu-item-wrapper {
+    padding-left: 3px;
+}

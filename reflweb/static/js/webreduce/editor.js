@@ -1851,7 +1851,7 @@ webreduce.editor = webreduce.editor || {};
           var template_names = Object.keys(instrument_def.templates);
           $("#main_menu #predefined_templates ul").empty();
           template_names.forEach(function (t,i) {
-            $("#main_menu #predefined_templates ul").append($("<li />", {text: t}));
+            $("#main_menu #predefined_templates ul").append($("<li />").append($("<div />", {text: t})));
             $("#main_menu").menu("refresh");
           })
           var default_template = template_names[0];

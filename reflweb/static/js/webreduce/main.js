@@ -142,18 +142,18 @@ webreduce.instruments = webreduce.instruments || {};
       // Make a menu
       ////////////////////////////////////////////////////////////////////
       $("#main_menu")
-        .append($("<li />", {id: "file_menu", text: "Template"})
-          .append($("<ul />")
-            .append($("<li />", {text: "New"})
+        .append($("<li />", {id: "file_menu"})
+          .append($("<div />", {text: "Template"}), $("<ul />")
+            .append($("<li><div>New</div></li>")
               .on("click", function() {
                 hide_menu();
                 var empty_template = {modules: [], wires: []};
                 webreduce.editor.edit_template(empty_template)})
             )
-            .append($("<li />", {text: "Edit"})
+            .append($("<li><div>Edit</div></li>")
               .on("click", function() {hide_menu(); webreduce.editor.edit_template()})
             )
-            .append($("<li />", {text: "Download"})
+            .append($("<li><div>Download</div></ul>")
               .on("click", function() {
                 hide_menu();
                 var filename = prompt("Save template as:", "template.json");
@@ -161,17 +161,17 @@ webreduce.instruments = webreduce.instruments || {};
                 webreduce.download(JSON.stringify(webreduce.editor._active_template, null, 2), filename);
               })
             )
-            .append($("<li />", {text: "Upload"})
+            .append($("<li><div>Upload</div></li>")
               .on("click", function() {hide_menu(); upload_dialog.dialog("open")})
             )
-            .append($("<li />")
+            .append($("<li />").append($("<div />")
               .append($("<label />", {text: "Auto-accept changes"})
                 .append($("<input />", {type: "checkbox", id: "auto_accept_changes", checked: true}))
                 .on("change", function() {hide_menu();})
               )
-            )
-            .append($("<li />", {text: "Predefined", id: "predefined_templates"})
-              .append($("<ul />"))
+            ))
+            .append($("<li />", {id: "predefined_templates"})
+              .append($("<div>Predefined</div>"), $("<ul />"))
               .on("click", "ul li", function(ev) {
                 // delegated click handler, so it can get events on elements not added yet
                 // (added during instrument_load)
@@ -187,39 +187,39 @@ webreduce.instruments = webreduce.instruments || {};
                 })
             )  
           ))
-        .append($("<li />", {id: "data_menu", text: "Data"})
-          .append($("<ul />")
-            .append($("<li />", {text: "Stash"})
+        .append($("<li />", {id: "data_menu"})
+          .append($("<div>Data</div>"), $("<ul />")
+            .append($("<li><div>Stash</div></ul>")
               .on("click", function() {hide_menu(); webreduce.editor.stash_data()})
             )
-            .append($("<li />", {text: "Export"})
+            .append($("<li><div>Export</div></ul>")
               .on("click", function() {hide_menu(); webreduce.editor.export_data()})
             )
-            .append($("<li />", {text: "Reload Exported"})
+            .append($("<li><div>Reload Exported</div></ul>")
               .on("click", function() {hide_menu(); reload_exported_dialog.dialog("open")})
             )
-            .append($("<li />")
+            .append($("<li />").append($("<div />")
               .append($("<label />", {text: "Auto-reload mtimes"})
                 .append($("<input />", {type: "checkbox", id: "auto_reload_mtimes", checked: true}))
                 .on("change", function() {hide_menu();})
               )
-            )
-            .append($("<li />")
+            ))
+            .append($("<li />").append($("<div />")
               .append($("<label />", {text: "Cache calculations"})
                 .append($("<input />", {type: "checkbox", id: "cache_calculations", checked: true}))
                 .on("change", function() {hide_menu();})
               )
-            )
-            .append($("<li />", {text: "Clear Cache"})
+            ))
+            .append($("<li><div>Clear Cache</div></li>")
               .on("click", function() {hide_menu(); webreduce.editor.clear_cache()})
             )
-            .append($("<li />", {id: "data_menu_sources", text: "Add source"})
-              .append($("<ul />"))
+            .append($("<li />", {id: "data_menu_sources"})//, text: "Add source"})
+              .append($("<div>Add source</div>"), $("<ul />"))
             )
           )
         )
-        .append($("<li />", {id: "instrument_menu", text: "Instrument"})
-          .append($("<ul />"))
+        .append($("<li />", {id: "instrument_menu"})// , text: "Instrument"})
+          .append($("<div>Instrument</div>"), $("<ul />"))
           .on("click", "ul li", function(ev) {
             // delegated click handler, so it can get events on elements not added yet
             // (added during startup)
@@ -227,8 +227,10 @@ webreduce.instruments = webreduce.instruments || {};
               webreduce.editor.switch_instrument($(this).text());
             })
           )
-        .menu()
-        
+        .menu();// .unbind('mouseenter mouseleave');
+      
+      
+      
       function hide_menu() {
         $("#main_menu").menu("collapseAll", null, true).hide();
         $("body").off("click.not-menu");
@@ -290,14 +292,14 @@ webreduce.instruments = webreduce.instruments || {};
           webreduce._datasources = datasources; // should be a list now.
           datasources.forEach(function(dsource, i){
             var pathlist = (dsource.start_path || "").split("/");
-            $("#main_menu #data_menu_sources ul").append($("<li />", {
+            $("#main_menu #data_menu_sources ul").append($("<li />").append($("<div />", {
               text: dsource.name,
               start_path: dsource.start_path || "",
               click: function() {
                 hide_menu();
                 webreduce.addDataSource("navigation", dsource.name, pathlist);
               }
-            }));
+            })));
             $("#main_menu").menu("refresh");
           });
           return datasources[0].name;
@@ -306,7 +308,7 @@ webreduce.instruments = webreduce.instruments || {};
       var list_instruments = webreduce.server_api.list_instruments()
         .then(function(instruments) {
           instruments.forEach(function(d, i){
-            $("#main_menu #instrument_menu ul").append($("<li />", {text: d}));
+            $("#main_menu #instrument_menu ul").append($("<li />").append($("<div />", {text: d})));
               $("#main_menu").menu("refresh");
           });
           return instruments[0];
