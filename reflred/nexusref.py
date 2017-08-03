@@ -260,7 +260,7 @@ class NCNRNeXusRefl(refldata.ReflData):
 
     def load(self, entry):
         das = entry['DAS_logs']
-        self.detector.counts = np.asarray(das['pointDetector/counts'][:, 0], 'd')
+        self.detector.counts = np.asarray(data_as(das, 'counter/liveROI', ''), 'd')
         self.detector.counts_variance = self.detector.counts.copy()
         self.detector.dims = self.detector.counts.shape
         n = self.detector.dims[0]
