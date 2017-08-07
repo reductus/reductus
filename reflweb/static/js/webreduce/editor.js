@@ -223,7 +223,8 @@ webreduce.editor = webreduce.editor || {};
         .text("clear")
         .classed("clear config", true)
         .on("click", function() {
-          //console.log(config_target, active_module);
+          var we = webreduce.editor;
+          //console.log('clear: ', config_target, JSON.stringify(active_module, null, 2));
           if (active_module.config) { delete active_module.config }
           webreduce.editor.handle_module_clicked.call(elem,d,i,clicked_elem);
         })

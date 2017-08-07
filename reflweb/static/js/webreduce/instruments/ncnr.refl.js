@@ -144,7 +144,7 @@ webreduce.instruments['ncnr.refl'] = webreduce.instruments['ncnr.refl'] || {};
 		if (result == null) {
       return
     }
-    else if (result.datatype == 'ncnr.refl.refldata') {
+    else if (result.datatype == 'ncnr.refl.refldata' && result.values.length > 0) {
       plottable = plot_refl(result.values);
     }
     else if (result.datatype == 'ncnr.refl.footprint.params') {
