@@ -1,0 +1,17 @@
+sudo apt update
+sudo apt install apache2 libapache2-mod-proxy-uwsgi redis-server gcc g++-5 python3-dev uwsgi-plugin-python3
+wget https://bootstrap.pypa.io/get-pip.py
+python3 get-pip.py --user
+
+pip install --user hug pytz numpy h5py redis msgpack-python docutils
+
+git clone https://github.com/reflectometry/reductus
+cd reductus
+python3 setup.py develop --user
+
+
+sudo a2enmod headers proxy_balancer lbmethod_byrequests
+# copy the config.py from server...
+# set up vhosts file...
+# set up cron job to start uwsgi servers
+
