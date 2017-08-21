@@ -702,6 +702,8 @@ class ReflData(Group):
     #: Name of the dataset.  This may be a combination of filename and
     #: entry number.
     name = ""
+    #: Numeric ID of the dataset.  Using "fileNum" from trajectoryData
+    filenumber = 0
     #: Entry identifier if more than one entry per file
     entry = ""
     #: Description of the entry.

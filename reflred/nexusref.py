@@ -193,13 +193,14 @@ class NCNRNeXusRefl(refldata.ReflData):
         super(NCNRNeXusRefl, self).__init__()
         self.entry = entryname
         self.path = os.path.abspath(filename)
-        self.name = os.path.basename(filename).split('.')[0]
         self._set_metadata(entry)
 
     def _set_metadata(self, entry):
         #print(entry['instrument'].values())
         das = entry['DAS_logs']
         self.probe = 'neutron'
+        self.name = das['trajectoryData/fileName'][0] if 'fileName' in das['trajectoryData'] else 'unknown'
+        self.filenumber = das['trajectoryData/fileNum'][0] if 'fileNum' in das['trajectoryData'] else -999
         #self.date = iso8601.parse_date(entry['start_time'][0].decode('utf-8'))
         self.date = iso8601.parse_date(entry['start_time'][0])
         self.description = entry['experiment_description'][0]

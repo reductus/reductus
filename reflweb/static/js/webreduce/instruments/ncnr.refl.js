@@ -162,7 +162,7 @@ webreduce.instruments['ncnr.refl'] = webreduce.instruments['ncnr.refl'] || {};
   instrument.categorizers = [
     function(info) { return info.sample.name },
     function(info) { return info.intent || "unknown" },
-    function(info) { return info.name },
+    function(info) { return info.filenumber },
     function(info) { return info.polarization || "unpolarized" }
   ];
   
