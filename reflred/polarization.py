@@ -274,8 +274,13 @@ def _apply_correction(data, dtheta, Hinv, use_pm, use_mp):
         X[:, point], dX[:, point] = nominal_values(x).flat, std_devs(x).flat
 
     # Put the corrected intensities back into the datasets
+    # interpolate back to the original Qz in that dataset:
     for k, xs in enumerate(parts):
-        data[xs].v, data[xs].dv = X[k, :], dX[k, :]
+        x = data[xs].Qz
+        px = data['++'].Qz
+        py = U(X[k, :], dX[k, :])
+        y = interp(x, px, py, left=np.NaN, right=np.NaN)
+        data[xs].v, data[xs].dv = nominal_values(y), std_devs(y)
         data[xs].vlabel = 'counts per incident count'
         data[xs].vunits = None
 

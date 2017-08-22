@@ -1132,6 +1132,7 @@ def correct_polarization(data, polarization, spinflip=True):
     output (refldata[]) : polarization corrected data
 
     2015-12-18 Paul Kienzle
+    | 2017-08-22 Brian Maranville interpolate back to Qz-basis for that cross-section
     """
     from .polarization import apply_polarization_correction
     data = copy(data)
