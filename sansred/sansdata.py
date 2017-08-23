@@ -23,7 +23,8 @@ class SansData(object):
        q, qx, qy, theta all get updated with values throughout the reduction process
        Tsam and Temp are just used for storage across modules (in wireit)
     """
-    def __init__(self, data=None, metadata=None, q=None, qx=None, qy=None,
+    def __init__(self, data=None, metadata=None, q=None, qx=None, qy=None, aspect_ratio=1.0,
+                 xlabel="X", ylabel="Y",
                  theta=None, Tsam=None, Temp=None, attenuation_corrected=False):
         if isinstance(data, np.ndarray):
             self.data = Uncertainty(data, data)
@@ -35,6 +36,9 @@ class SansData(object):
         self.q = q
         self.qx = qx
         self.qy = qy
+        self.xlabel = xlabel
+        self.ylabel = ylabel
+        self.aspect_ratio = aspect_ratio
         self.theta = theta
         self.attenuation_corrected = attenuation_corrected
 
@@ -85,7 +89,8 @@ class SansData(object):
     def copy(self):
         return SansData(copy(self.data), deepcopy(self.metadata),
                         q=copy(self.q), qx=copy(self.qx), qy=copy(self.qy),
-                        theta=copy(self.theta),
+                        theta=copy(self.theta), aspect_ratio=self.aspect_ratio,
+                        xlabel=self.xlabel, ylabel=self.ylabel,
                         attenuation_corrected=self.attenuation_corrected)
 
     def __copy__(self):
@@ -116,15 +121,11 @@ class SansData(object):
             xmax = 128
             ymin = 0
             ymax = 128
-            xlabel = "X"
-            ylabel = "Y"
         else:
             xmin = self.qx.min()
             xmax = self.qx.max()
             ymin = self.qy.min()
             ymax = self.qy.max()
-            xlabel = "Qx (inv. Angstroms)"
-            ylabel = "Qy (inv. Angstroms)"
         plottable_data = {
             'entry': self.metadata['entry'],
             'type': '2d',
@@ -133,8 +134,8 @@ class SansData(object):
             #'metadata': self.metadata,
             'options': {
                 'fixedAspect': {
-                    'fixAspect': True,
-                    'aspectRatio': 1.0
+                    #'fixAspect': True,
+                    #'aspectRatio': 1.0
                 }
             },
             'dims': {
@@ -147,10 +148,15 @@ class SansData(object):
                 'zmin': zmin,
                 'zmax': zmax,
             },
-            'xlabel': xlabel,
-            'ylabel': ylabel,
+            'xlabel': self.xlabel,
+            'ylabel': self.ylabel,
             'zlabel': 'Intensity (I)',
         }
+        if self.aspect_ratio is not None:
+            plottable_data['options']['fixedAspect'] = {
+                'fixAspect': True,
+                'aspectRatio': self.aspect_ratio
+            }
         return plottable_data
 
     def get_metadata(self):
@@ -178,6 +184,8 @@ def pythonize(obj):
         elif isinstance(attr, datetime.datetime):
             attr = [attr.year, attr.month, attr.day,
                     attr.hour, attr.minute, attr.second]
+        elif isinstance(attr, dict):
+            attr = pythonize(attr)
         output[a] = attr
     return output
 
@@ -195,29 +203,30 @@ class Sans1dData(object):
         self.vunits = vunits
         self.metadata = metadata if metadata is not None else {}
 
-    def todict(self):
-        obj = self
-        props = {}
-        properties = self.properties
-        for a in properties:
-            attr = getattr(obj, a)
-            if isinstance(attr, np.integer):
-                attr = int(attr)
-            elif isinstance(attr, np.floating):
-                attr = float(attr)
-            elif isinstance(attr, np.ndarray):
-                attr = attr.tolist()
-            elif isinstance(attr, datetime.datetime):
-                attr = [attr.year, attr.month, attr.day,
-                        attr.hour, attr.minute, attr.second]
-            props[a] = attr
-        return props
+    def to_dict(self):
+        props = dict([(p, getattr(self, p, None)) for p in self.properties])
+        return pythonize(props)
+        #props = {}
+        #properties = self.properties
+        #for a in properties:
+        #    attr = getattr(obj, a)
+        #    if isinstance(attr, np.integer):
+        #        attr = int(attr)
+        #    elif isinstance(attr, np.floating):
+        #        attr = float(attr)
+        #    elif isinstance(attr, np.ndarray):
+        #        attr = attr.tolist()
+        #    elif isinstance(attr, datetime.datetime):
+        #        attr = [attr.year, attr.month, attr.day,
+        #                attr.hour, attr.minute, attr.second]
+        #    props[a] = attr
+        #return props
 
     def get_plottable(self):
-        return self.todict()
+        return self.to_dict()
 
     def get_metadata(self):
-        return self.todict()
+        return self.to_dict()
 
     def export(self):
         fid = BytesIO()

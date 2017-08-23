@@ -1,6 +1,6 @@
 from numpy import pi, arange, arctan2, sqrt, meshgrid, linspace, sin, cos, array, log, ones, histogram2d, logical_and, zeros_like, ones_like, degrees, mod
 
-def ConvertToCylindrical(array_in, x_min, x_max, y_min, y_max, theta_offset = 0.0, min_r = 1.0, oversample_th = 1.0, oversample_r = 1.0):
+def ConvertToCylindrical(array_in, x_min, x_max, y_min, y_max, theta_offset = 0.0, min_r = None, oversample_th = 1.0, oversample_r = 1.0):
     x_axis = linspace(x_min, x_max, array_in.shape[1])
     y_axis = linspace(y_min, y_max, array_in.shape[0])
     
@@ -23,6 +23,8 @@ def ConvertToCylindrical(array_in, x_min, x_max, y_min, y_max, theta_offset = 0.
     dr_min = (1.0/r_in[r_in>0] * ( abs(x[r_in>0] * x_stepsize) + abs(y[r_in>0] * y_stepsize) )).min()
     # dr is (1/r) * (x dx + y dy)
     r_step = dr_min / oversample_r
+    if min_r == None:
+        min_r = dr_min
     
     th_out_min = theta_offset
     th_out_max = theta_offset + 360.0 + th_step
@@ -55,6 +57,7 @@ def ConvertToCylindrical(array_in, x_min, x_max, y_min, y_max, theta_offset = 0.
     forward_norm = (1.0 / input_count).flatten()
     
     outshape = th_out.shape
+    #print('outshape: ', outshape)
     hist2d, xedges, yedges = histogram2d(forward_r_list,forward_th_list, \
         bins = (outshape[0],outshape[1]), range=((r_out_min,r_out_max+r_step),(th_out_min,th_out_max+th_step)), weights=forward_weights)
     output_grid += hist2d # counts in every pixel in input added to corresponding output pixel (forward)
