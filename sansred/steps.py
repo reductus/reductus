@@ -91,7 +91,7 @@ def LoadSANS(filelist=None, flip=False, transpose=False):
 
     output (sans2d[]): all the entries loaded.
 
-    2016-04-17 Brian Maranville
+    2017-04-17 Brian Maranville
     """
     from dataflow.fetch import url_get
     from .loader import readSANSNexuz
@@ -909,7 +909,7 @@ def SuperLoadSANS(filelist=None, do_det_eff=True, do_deadtime=True,
 
     output (sans2d[]): all the entries loaded.
 
-    2016-05-05 Brian Maranville
+    2017-05-05 Brian Maranville
     """
     data = LoadSANS(filelist, flip=False, transpose=False)
 
