@@ -1,5 +1,13 @@
 <!DOCTYPE html>
 <meta charset="utf-8">
+  <script src="//code.jquery.com/jquery-1.11.1.min.js"></script> 
+  <script type="text/javascript" src="js/jquery.blockUI.js"></script>
+  <script type="text/javascript" src="js/jquery.jsonrpc.js"></script>
+  <script src="https://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+  <script type="text/javascript" src="//www.ncnr.nist.gov/instruments/magik/d3-science/lib/jquery-extend.js"></script>
+  <script type="text/javascript" src="//www.ncnr.nist.gov/instruments/magik/d3-science/lib/dataflow-editor-streamline-new.js"></script>
+  <script type="text/javascript" src="js/msgpack.min.js"></script>
+  <script type="text/javascript" src="js/webreduce/server_api/hug_msgpack.js"></script>
 <style>
 html, body {
   height: 100%;
@@ -97,9 +105,9 @@ rect.terminal.input {
   
 svg.editor path.wire {
     fill: none;
-    stroke-dasharray: 2,2;
     stroke-width: 5px;
     stroke: red;
+    cursor: crosshair;
 }
 
 polygon.terminal.state {
@@ -107,17 +115,7 @@ polygon.terminal.state {
 }
 </style>
 <body>
-  <script src="//code.jquery.com/jquery-1.11.1.min.js"></script> 
-  <script type="text/javascript" src="js/jquery.blockUI.js"></script>
-  <script type="text/javascript" src="js/jquery.jsonrpc.js"></script>
-  <script src="https://d3js.org/d3.v3.min.js" charset="utf-8"></script>
-  <script type="text/javascript" src="//www.ncnr.nist.gov/instruments/magik/d3-science/lib/jquery-extend.js"></script>
-  <script type="text/javascript" src="//www.ncnr.nist.gov/instruments/magik/d3-science/lib/dataflow-editor-streamline-new.js"></script>
-  <script type="text/javascript" src="js/msgpack.min.js"></script>
-  <script type="text/javascript" src="js/webreduce/server_api/hug_msgpack.js"></script>
-<script>
-//  var event = new Event('editor_ready');
-</script>
+  
 <script>
 window.onload = function() {
 webreduce.server_api.__init__().then(function(api) {
