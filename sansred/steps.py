@@ -91,7 +91,7 @@ def LoadSANS(filelist=None, flip=False, transpose=False):
 
     output (sans2d[]): all the entries loaded.
 
-    2016-04-17 Brian Maranville
+    2017-04-17 Brian Maranville
     """
     from dataflow.fetch import url_get
     from .loader import readSANSNexuz
@@ -276,6 +276,8 @@ def PixelsToQ(data, correct_solid_angle=True):
     res.q = q
     res.qx = qx
     res.qy = qy
+    res.xlabel = "Qx (inv. Angstroms)"
+    res.ylabel = "Qy (inv. Angstroms)"
     res.theta = theta
     return res
 
@@ -912,7 +914,7 @@ def radialToCylindrical(data, theta_offset = 0.0, oversample_th = 2.0, oversampl
     
     mask (sans2d): normalization array
     
-    2017-05-25 Brian Maranville
+    2017-05-26 Brian Maranville
     """
     
     from cylindrical import ConvertToCylindrical
@@ -929,21 +931,25 @@ def radialToCylindrical(data, theta_offset = 0.0, oversample_th = 2.0, oversampl
         ymax = data.qy.max()
     
     print(xmin, xmax, ymin, ymax)
-    _, normalization, normalized, extent = ConvertToCylindrical(data.data.x, xmin, xmax, ymin, ymax, theta_offset=theta_offset, oversample_th=oversample_th, oversample_r=oversample_r)
+    _, normalization, normalized, extent = ConvertToCylindrical(data.data.x.T, xmin, xmax, ymin, ymax, theta_offset=theta_offset, oversample_th=oversample_th, oversample_r=oversample_r)
     
     output = data.copy()
+    output.aspect_ratio = None
     output.data = Uncertainty(normalized.T, normalized.T)
     
     mask = data.copy()
+    mask.aspect_ratio = None
     mask.data = Uncertainty(normalization.T, normalization.T)
     
-    #if data.qx is not None:
-    #    output.qx = np.linspace(extent[0], extent[1], cylindrical.shape[1])
-    #    mask.qx = output.qx.copy()
-    #    
-    #if data.qy is not None:
-    #    output.qy = np.linspace(extent[2], extent[3], cylindrical.shape[0])
-    #    mask.qy = output.qy.copy()
+    if data.qx is not None:
+        output.qx = np.linspace(extent[0], extent[1], normalized.shape[1])
+        mask.qx = output.qx.copy()
+        output.xlabel = mask.xlabel = "theta (degrees)"
+        
+    if data.qy is not None:
+        output.qy = np.linspace(extent[2], extent[3], normalized.shape[0])
+        mask.qy = output.qy.copy()
+        output.ylabel = mask.ylabel = "Q (inv. Angstrom)"
     
     return output, mask
     
@@ -976,7 +982,7 @@ def SuperLoadSANS(filelist=None, do_det_eff=True, do_deadtime=True,
 
     output (sans2d[]): all the entries loaded.
 
-    2016-05-05 Brian Maranville
+    2017-05-05 Brian Maranville
     """
     data = LoadSANS(filelist, flip=False, transpose=False)
 
