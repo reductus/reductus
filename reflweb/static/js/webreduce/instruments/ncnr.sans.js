@@ -64,7 +64,8 @@ webreduce.instruments['ncnr.sans'] = webreduce.instruments['ncnr.sans'] || {};
         xydata[i] = [x,y,{yupper: y+dy, ylower:y-dy,xupper:x,xlower:x}];
       }
       datas.push(xydata);
-      var name = entry.metadata['run.filePrefix'] + entry.metadata['run.experimentScanID'];
+      var name = entry.metadata['run.filePrefix'] + '_' + entry.metadata['run.experimentScanID'];
+      name += entry.metadata.extra_label || "";
       series.push({label: name});
 
     });

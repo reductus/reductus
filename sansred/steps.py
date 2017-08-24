@@ -367,7 +367,7 @@ def sector_cut(data, angle=0.0, width=90.0):
 
     output (sans1d): converted to I vs. Q
 
-    2016-04-10 Brian Maranville
+    2016-04-14 Brian Maranville
     """
     from .draw_annulus_aa import sector_cut_antialiased
 
@@ -418,6 +418,7 @@ def sector_cut(data, angle=0.0, width=90.0):
     output = Sans1dData(Q, I, dx=dx, dv=I_error, xlabel="Q", vlabel="I",
                         xunits="inv. A", vunits="neutrons")
     output.metadata = deepcopy(data.metadata)
+    output.metadata['extra_label'] = "_%.1f" % (angle,)
     return output
 
 @module

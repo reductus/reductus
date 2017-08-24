@@ -5,6 +5,7 @@ SANS data format
 Internal data representation for SANS data.
 """
 
+import sys
 import datetime
 from copy import copy, deepcopy
 import json
@@ -14,7 +15,15 @@ import numpy as np
 
 from dataflow.lib.uncertainty import Uncertainty
 
+IS_PY3 = sys.version_info[0] >= 3
+
 IGNORE_CORNER_PIXELS = True
+
+def _b(s):
+    if IS_PY3:
+        return s.encode('utf-8')
+    else:
+        return s
 
 class SansData(object):
     """SansData object used for storing values from a sample file (not div/mask).
@@ -230,16 +239,16 @@ class Sans1dData(object):
 
     def export(self):
         fid = BytesIO()
-        fid.write("# %s\n" % json.dumps(self.metadata).strip("{}"))
+        fid.write(_b("# %s\n" % json.dumps(pythonize(self.metadata)).strip("{}")))
         columns = {"columns": [self.xlabel, self.vlabel, "uncertainty", "resolution"]}
         units = {"units": [self.xunits, self.vunits, self.vunits, self.xunits]}
-        fid.write("# %s\n" % json.dumps(columns).strip("{}"))
-        fid.write("# %s\n" % json.dumps(units).strip("{}"))
+        fid.write(_b("# %s\n" % json.dumps(columns).strip("{}")))
+        fid.write(_b("# %s\n" % json.dumps(units).strip("{}")))
         np.savetxt(fid, np.vstack([self.x, self.v, self.dv, self.dx]).T, fmt="%.10e")
         fid.seek(0)
         name = getattr(self, "name", "default_name")
         entry = getattr(self.metadata, "entry", "default_entry")
-        return {"name": name, "entry": entry, "export_string": fid.read()}
+        return {"name": name, "entry": entry, "export_string": fid.read(), "file_suffix": ".sans1d.dat"}
 
 class Parameters(dict):
     def get_metadata(self):
