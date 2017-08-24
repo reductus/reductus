@@ -3,7 +3,7 @@ sudo apt install apache2 libapache2-mod-proxy-uwsgi redis-server gcc g++-5 pytho
 wget https://bootstrap.pypa.io/get-pip.py
 python3 get-pip.py --user
 
-pip install --user hug pytz numpy h5py redis msgpack-python docutils
+pip install --user hug pytz numpy h5py redis msgpack-python docutils pillow
 
 git clone https://github.com/reflectometry/reductus
 cd reductus
@@ -15,3 +15,8 @@ sudo a2enmod headers proxy_balancer lbmethod_byrequests
 # set up vhosts file...
 # set up cron job to start uwsgi servers
 
+# if available memory is low, you may need to change this setting
+# (e.g. if running on a small cloud instance with 1Gb mem)
+
+# in /etc/sysctl.conf, add the line
+vm.overcommit_memory = 1

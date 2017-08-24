@@ -176,6 +176,8 @@ webreduce.editor = webreduce.editor || {};
         // also mark title of module as selected:
         d3.select(elem).select("g.title").classed("selected", true);
       }
+      
+      var add_interactors = (data_to_show == (module_def.inputs[0] || {}).id)
       webreduce.editor._active_node = i;
       webreduce.editor._active_terminal = data_to_show;
 
@@ -284,7 +286,8 @@ webreduce.editor = webreduce.editor || {};
               module_def: module_def,
               target: config_target,
               datasets_in: datasets_in,
-              active_module: active_module
+              active_module: active_module,
+              add_interactors: add_interactors
             }
             var fieldUI = fieldUImaker.call(context);
             var auto_accept = function() {

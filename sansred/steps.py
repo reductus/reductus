@@ -345,6 +345,79 @@ def annular_av(data):
     output.metadata = deepcopy(data.metadata)
     return output
 
+@cache
+@module
+def sector_cut(data, angle=0.0, width=90.0):
+    """
+    Using annular averging, it converts data to 1D (Q vs. I)
+    over a particular angle range
+
+
+    **Inputs**
+
+    data (sans2d): data in
+    
+    angle (float): center angle of sector cut (degrees)
+    
+    width (float): width of cut (degrees)
+
+    **Returns**
+
+    output (sans1d): converted to I vs. Q
+
+    2016-04-10 Brian Maranville
+    """
+    from .draw_annulus_aa import sector_cut_antialiased
+
+    #annular_mask_antialiased(shape, center, inner_radius, outer_radius,
+    #                         background_value=0.0, mask_value=1.0, oversampling=8)
+
+    # calculate the change in q that corresponds to a change in pixel of 1
+    q_per_pixel = data.qx[1, 0]-data.qx[0, 0] / 1.0
+
+    # for now, we'll make the q-bins have the same width as a single pixel
+    step = q_per_pixel
+    shape1 = data.data.x.shape
+    x0 = data.metadata['det.beamx'] # should be close to 64
+    y0 = data.metadata['det.beamy'] # should be close to 64
+
+    center = (x0, y0)
+    Qmax = data.q.max()
+    Q = np.arange(0, Qmax, step)
+    I = []
+    I_error = []
+    dx = np.zeros_like(Q, dtype="float")
+    start_angle = np.radians(angle - width/2.0)
+    end_angle = np.radians(angle + width/2.0)
+    for i in Q:
+        # inner radius is the q we're at right now, converted to pixel dimensions:
+        inner_r = i * (1.0/q_per_pixel)
+        # outer radius is the q of the next bin, also converted to pixel dimensions:
+        outer_r = (i + step) * (1.0/q_per_pixel)
+        mask = sector_cut_antialiased(shape1, center, inner_r, outer_r, start_angle=start_angle, end_angle=end_angle)
+        if IGNORE_CORNER_PIXELS:
+            mask[0, 0] = mask[-1, 0] = mask[-1, -1] = mask[0, -1] = 0.0
+        #print("Mask: ", mask)
+        integrated_intensity = uncertainty.sum(data.data*mask.T)
+        #error = getPoissonUncertainty(integrated_intensity)
+        #error = np.sqrt(integrated_intensity)
+        mask_sum = np.sum(mask)
+        if integrated_intensity.x != 0.0:
+            norm_integrated_intensity = integrated_intensity / mask_sum
+            #error /= mask_sum
+        else:
+            norm_integrated_intensity = integrated_intensity
+
+        I.append(norm_integrated_intensity.x) # not multiplying by step anymore
+        I_error.append(norm_integrated_intensity.variance)
+
+    I = np.array(I, dtype="float")
+    I_error = np.array(I_error, dtype="float")
+    output = Sans1dData(Q, I, dx=dx, dv=I_error, xlabel="Q", vlabel="I",
+                        xunits="inv. A", vunits="neutrons")
+    output.metadata = deepcopy(data.metadata)
+    return output
+
 @module
 def correct_detector_efficiency(sansdata):
     """

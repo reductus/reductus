@@ -65,3 +65,84 @@ def annular_mask_antialiased(shape, center, inner_radius, outer_radius,
     output = numpy.asarray(im)
     output = output.reshape(shape[0], oversampling, shape[1], oversampling).mean(1).mean(2)
     return output
+
+def pie_bounding_box(center, radius, start_angle, end_angle):
+    # assumes Euclidean angles (CCW) - make sure to specify pieslice with negative angles (CW)
+    points = [
+        center,
+        [center[0] + numpy.cos(start_angle)*radius, center[1] + numpy.sin(start_angle)*radius],
+        [center[0] + numpy.cos(end_angle)*radius, center[1] + numpy.sin(end_angle)*radius]        
+    ]
+    pangle = numpy.pi/2.0 # angle of the cardinal points
+    for cardinal in numpy.arange(pangle*numpy.ceil(start_angle/pangle), end_angle, pangle):
+        points.append([center[0] + numpy.cos(cardinal)*radius, center[1] + numpy.sin(cardinal)*radius])
+        
+    points = numpy.array(points, dtype='float')
+    xmin = points[:,0].min()
+    xmax = points[:,0].max()
+    ymin = points[:,1].min()
+    ymax = points[:,1].max()
+    return [xmin, ymin, xmax, ymax]
+    
+def sector_cut_antialiased(shape, center, inner_radius, outer_radius, start_angle=0.0, end_angle=numpy.pi,
+                background_value=0.0, mask_value=1.0,
+                oversampling=8):
+    # type: (Tuple[int, int], Tuple[float, float], float, float, float, float, int)  -> numpy.ndarray
+    """
+    Takes the following:
+
+    * *shape* tuple: (x, y) - this is the size of the output image
+    * *center* tuple: (x, y)
+    * *inner_radius*: float
+    * *outer_radius*: float
+    * *start_angle*: float (radians) start of sector cut range
+    * *end_angle*: float (radians) end of sector cut range (with defaults, covers full circle)
+    * *background_value*: float (the image is initialized to this value)
+    * *mask_value*: float (the annulus is drawn with this value)
+    * *oversampling*: int (the mask is drawn on a canvas this many times bigger
+      than the final size, then resampled down to give smoother edges)
+    """
+    d_start = -numpy.degrees(start_angle)
+    d_end = -numpy.degrees(end_angle)
+    
+    # Create a 32-bit float image
+    intermediate_shape = (shape[0]*int(oversampling), shape[1]*int(oversampling))
+    im = Image.new('F', intermediate_shape, color=background_value)
+
+    # Making a handle to the drawing tool
+    draw = ImageDraw.Draw(im)
+
+    # Have to scale everything in the problem by the oversampling
+    outer_radius_r = outer_radius * oversampling
+    inner_radius_r = inner_radius * oversampling
+    center_r = (center[0] * oversampling, center[1] * oversampling)
+
+    # Calculate bounding box for the first outer slice
+    outer_bbox_1 = pie_bounding_box(center_r, outer_radius_r, start_angle, end_angle)
+    # Draw the circles:  outer one first
+    draw.pieslice(outer_bbox_1, d_start, d_end, fill=mask_value)
+    
+    # Calculate bounding box for the second outer slice
+    outer_bbox_2 = pie_bounding_box(center_r, outer_radius_r, start_angle+numpy.pi, end_angle+numpy.pi)
+    # Draw the circles:  outer one first
+    draw.pieslice(outer_bbox_2, d_start-180.0, d_end-180.0, fill=mask_value)
+    
+    # Calculate bounding box for the first inner slice
+    inner_bbox_1 = pie_bounding_box(center_r, inner_radius_r, start_angle, end_angle)
+    # Draw the slices:  inner one next
+    draw.pieslice(inner_bbox_1, d_start, d_end, fill=mask_value)
+    
+    # Calculate bounding box for the second inner slice
+    inner_bbox_2 = pie_bounding_box(center_r, inner_radius_r, start_angle+numpy.pi, end_angle+numpy.pi)
+    # Draw the slices:  inner one next
+    draw.pieslice(inner_bbox_2, d_start-180.0, d_end-180.0, fill=mask_value)
+
+    # Now bring it back to size, with antialiasing
+    #im.thumbnail(shape, Image.ANTIALIAS)
+    # This produced artifacts - output.max() was > mask_value by 10% or more!
+
+    # Using numpy reshape instead (rebinning) - see Scipy cookbook
+    output = numpy.asarray(im)
+    output = output.reshape(shape[0], oversampling, shape[1], oversampling).mean(1).mean(2)
+    return output
+
