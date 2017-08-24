@@ -918,7 +918,7 @@ def radialToCylindrical(data, theta_offset = 0.0, oversample_th = 2.0, oversampl
     2017-05-26 Brian Maranville
     """
     
-    from cylindrical import ConvertToCylindrical
+    from .cylindrical import ConvertToCylindrical
     
     if data.qx is None or data.qy is None:
         xmin = -data.metadata['det.beamx']
