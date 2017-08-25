@@ -24,6 +24,7 @@ def file_cache(cachedir="~/.reductus/cache"):
     from . import fakeredis
     return fakeredis.FileBasedCache(cachedir=cachedir)
 
+
 # port 6379 is the default port value for the python redis connection
 def redis_connect(host="localhost", port=6379, maxmemory=4.0, **kwargs):
     """
@@ -77,6 +78,21 @@ class CacheManager(object):
                 warning = "Redis connection failed with:\n\t" + str(exc)
                 warning += "\nFalling back to in-memory cache."
                 warnings.warn(warning)
+        elif self._diskcache_kwargs is not None:
+            try:
+                from diskcache import Cache
+                # patch the class so it has "exists" method
+                Cache.exists = Cache.__contains__
+                cachedir = self._diskcache_kwargs.pop("cachedir", "cache")
+                print('cacheargs:', self._diskcache_kwargs)
+                self._cache = Cache(cachedir, **self._diskcache_kwargs)
+                self._file_cache = self._cache
+                return
+            except Exception as exc:
+                warning = "diskcache connection failed with:\n\t" + str(exc)
+                warning += "\nFalling back to in-memory cache."
+                warnings.warn(warning)
+            
         self.set_test_cache()
 
     def set_test_cache(self):
@@ -86,6 +102,14 @@ class CacheManager(object):
         cachedir = os.path.join(tempfile.gettempdir(), "reductus_test")
         self._cache = memory_cache()
         self._file_cache = file_cache(cachedir=cachedir)
+        
+    def use_diskcache(self, **kwargs):
+        """
+        use the PyPi package 'diskcache' as the main store
+        """
+        if self._cache is not None:
+            raise RuntimeError("call use_diskcache() before cache is first used")
+        self._diskcache_kwargs = kwargs
 
     def use_redis(self, **kwargs):
         """
@@ -121,6 +145,7 @@ CACHE_MANAGER = CacheManager()
 
 # direct access to singleton methods
 use_redis = CACHE_MANAGER.use_redis
+use_diskcache = CACHE_MANAGER.use_diskcache
 get_cache = CACHE_MANAGER.get_cache
 get_file_cache = CACHE_MANAGER.get_file_cache
 set_test_cache = CACHE_MANAGER.set_test_cache

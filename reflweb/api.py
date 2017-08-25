@@ -14,7 +14,7 @@ except ImportError:
 
 import dataflow
 from dataflow.core import Template, lookup_instrument, _instrument_registry
-from dataflow.cache import use_redis
+from dataflow.cache import use_redis, use_diskcache
 from dataflow.calc import process_template
 import dataflow.core as df
 
@@ -229,9 +229,12 @@ def create_instruments():
 
     fetch.DATA_SOURCES = config.data_sources
 
-    if config.use_redis:
+    if getattr(config, 'use_redis', False):
         redis_params = getattr(config, "redis_params", {})
         use_redis(**redis_params)
+    elif getattr(config, 'use_diskcache', False):
+        diskcache_params = getattr(config, "diskcache_params", {})
+        use_diskcache(**diskcache_params)
 
     # load refl instrument if nothing specified in config
     instruments = getattr(config, 'instruments', ['refl'])
