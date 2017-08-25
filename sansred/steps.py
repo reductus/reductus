@@ -349,7 +349,7 @@ def annular_av(data):
 
 @cache
 @module
-def sector_cut(data, angle=0.0, width=90.0):
+def sector_cut(data, angle=0.0, width=90.0, mirror=True):
     """
     Using annular averging, it converts data to 1D (Q vs. I)
     over a particular angle range
@@ -362,6 +362,9 @@ def sector_cut(data, angle=0.0, width=90.0):
     angle (float): center angle of sector cut (degrees)
     
     width (float): width of cut (degrees)
+    
+    mirror (bool): extend sector cut on both sides of origin 
+        (when false, integrates over a single cone centered at angle)
 
     **Returns**
 
@@ -396,7 +399,7 @@ def sector_cut(data, angle=0.0, width=90.0):
         inner_r = i * (1.0/q_per_pixel)
         # outer radius is the q of the next bin, also converted to pixel dimensions:
         outer_r = (i + step) * (1.0/q_per_pixel)
-        mask = sector_cut_antialiased(shape1, center, inner_r, outer_r, start_angle=start_angle, end_angle=end_angle)
+        mask = sector_cut_antialiased(shape1, center, inner_r, outer_r, start_angle=start_angle, end_angle=end_angle, mirror=mirror)
         if IGNORE_CORNER_PIXELS:
             mask[0, 0] = mask[-1, 0] = mask[-1, -1] = mask[0, -1] = 0.0
         #print("Mask: ", mask)

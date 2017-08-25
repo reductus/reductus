@@ -85,7 +85,7 @@ def pie_bounding_box(center, radius, start_angle, end_angle):
     return [xmin, ymin, xmax, ymax]
     
 def sector_cut_antialiased(shape, center, inner_radius, outer_radius, start_angle=0.0, end_angle=numpy.pi,
-                background_value=0.0, mask_value=1.0,
+                mirror=True, background_value=0.0, mask_value=1.0,
                 oversampling=8):
     # type: (Tuple[int, int], Tuple[float, float], float, float, float, float, int)  -> numpy.ndarray
     """
@@ -97,6 +97,7 @@ def sector_cut_antialiased(shape, center, inner_radius, outer_radius, start_angl
     * *outer_radius*: float
     * *start_angle*: float (radians) start of sector cut range
     * *end_angle*: float (radians) end of sector cut range (with defaults, covers full circle)
+    * *mirror*: bool (take cut on both sides of origin)
     * *background_value*: float (the image is initialized to this value)
     * *mask_value*: float (the annulus is drawn with this value)
     * *oversampling*: int (the mask is drawn on a canvas this many times bigger
@@ -126,7 +127,8 @@ def sector_cut_antialiased(shape, center, inner_radius, outer_radius, start_angl
     
     # draw pie slices
     draw.pieslice(outer_bbox, d_end, d_start, fill=mask_value)
-    draw.pieslice(outer_bbox, d_end-180.0, d_start-180.0,  fill=mask_value)
+    if mirror:
+        draw.pieslice(outer_bbox, d_end-180.0, d_start-180.0,  fill=mask_value)
     
     # Calculate bounding box for inner circle
     x_inner_min = center_r[0] - inner_radius_r
@@ -148,7 +150,7 @@ def sector_cut_antialiased(shape, center, inner_radius, outer_radius, start_angl
     return output
 
 def test_sector_cut_antialiased(shape, center, inner_radius, outer_radius, start_angle=0.0, end_angle=numpy.pi,
-                background_value=0.0, mask_value=1.0,
+                mirror=True, background_value=0.0, mask_value=1.0,
                 oversampling=8):
     # type: (Tuple[int, int], Tuple[float, float], float, float, float, float, int)  -> numpy.ndarray
     """
@@ -187,7 +189,8 @@ def test_sector_cut_antialiased(shape, center, inner_radius, outer_radius, start
     y_outer_max = center_r[1] + outer_radius_r
     outer_bbox = [x_outer_min, y_outer_min, x_outer_max, y_outer_max]
     draw.pieslice(outer_bbox, d_end, d_start, fill=mask_value)
-    draw.pieslice(outer_bbox, d_end-180.0, d_start-180.0,  fill=mask_value)
+    if mirror:
+        draw.pieslice(outer_bbox, d_end-180.0, d_start-180.0,  fill=mask_value)
     
     # Calculate bounding box for inner circle
     x_inner_min = center_r[0] - inner_radius_r
@@ -207,7 +210,8 @@ def test():
         10, 
         20, 
         start_angle=numpy.pi/4, 
-        end_angle=numpy.pi/2, 
+        end_angle=numpy.pi/2,
+        mirror=False, 
         background_value=0.0, 
         mask_value=100.0,
         oversampling=8
