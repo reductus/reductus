@@ -13,8 +13,8 @@
       "y": 100
     },
     {
-      "module": "ncnr.sans.annular_av",
-      "title": "Annular Av",
+      "module": "ncnr.sans.circular_av",
+      "title": "Circular Av",
       "x": 380,
       "y": 100
     }

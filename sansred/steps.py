@@ -283,9 +283,9 @@ def PixelsToQ(data, correct_solid_angle=True):
 
 @cache
 @module
-def annular_av(data):
+def circular_av(data):
     """
-    Using annular averging, it converts data to 1D (Q vs. I)
+    Using a circular average, it converts data to 1D (Q vs. I)
 
 
     **Inputs**
@@ -296,7 +296,7 @@ def annular_av(data):
 
     output (sans1d): converted to I vs. Q
 
-    2016-04-10 Brian Maranville
+    2016-04-11 Brian Maranville
     """
     from .draw_annulus_aa import annular_mask_antialiased
 
