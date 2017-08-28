@@ -686,6 +686,23 @@ webreduce.editor = webreduce.editor || {};
       webreduce.editor._active_plot.options(new_options).source_data(new_data).resetzoom();
     })
     
+    var tooltip = d3.select("body").append("div").classed("tooltip", true);
+    var tip_prec = 4;
+    d3.select("#plotdiv").selectAll(".dot")
+      .on("mouseover", function(d) {
+       tooltip.transition()
+         .duration(200)
+         .style("opacity", .9);
+       tooltip.html("x: " + d[0].toPrecision(tip_prec) + "<br/>y: " + d[1].toPrecision(tip_prec))
+         .style("left", (d3.event.pageX + 10) + "px")
+         .style("top", (d3.event.pageY - 35) + "px");
+       })
+     .on("mouseout", function(d) {
+       tooltip.transition()
+         .duration(500)
+         .style("opacity", 0);
+       });
+    
     return mychart
   }
   
