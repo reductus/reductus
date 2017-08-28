@@ -96,10 +96,9 @@ svg.editor {
 }
 
 .dot {
-    /* consider the stroke-with the mouse detect radius? */
+    /* consider the stroke-width the mouse detect radius? */
     stroke: transparent;
     stroke-width: 10px;
-    cursor: pointer;
 }
 
 .dot:hover {

@@ -765,7 +765,7 @@ webreduce.editor = webreduce.editor || {};
       plot_controls
         .append("button")
           .attr("id", "download_svg")
-          .html("&darr; svg")
+          .html("get svg")
           .on("click", function() {
             var chart = webreduce.editor._active_plot;
             var svg = chart.export_svg();
@@ -1340,105 +1340,106 @@ webreduce.editor = webreduce.editor || {};
       //.text(JSON.stringify(datum.value, null, 2))
       .text(prettyJSON(datum.value))
       .on("change", function(d) {
-        //console.log("changing:", this, d);
         datum.value = JSON.parse(this.value);
         update_plot();
       });
-      
-    var drag_instance = webreduce.editor._active_plot.drag;
-    var selector = new rectangleSelect.default(drag_instance);
-    webreduce.editor._active_plot.interactors(selector);
-    var select_active = true;
     
-    var onselect = function(xmin, xmax, ymin, ymax) {
-      d3.selectAll("#plotdiv svg g.series").each(function(d,i) {
-        // i is index of dataset
-        var series_select = d3.select(this);
-        var index_list = datum.value[i];
-        series_select.selectAll(".dot").each(function(dd, ii) {
-          // ii is the index of the point in that dataset.
-          var x = dd[0], 
-              y = dd[1];
-          if (x >= xmin && x <= xmax && y >= ymin && y <= ymax) {
-            var dot = d3.select(this);
-            dot.classed("masked", select_active);
-            // manipulate data list directly:
-            var index_index = index_list.indexOf(ii);
-            if (index_index > -1 && !select_active) { 
-              // then the index exists, but we're deselecting:
-              index_list.splice(index_index, 1); 
+    // add interactors:
+    if (this.add_interactors) {
+      var drag_instance = webreduce.editor._active_plot.drag;
+      var selector = new rectangleSelect.default(drag_instance);
+      webreduce.editor._active_plot.interactors(selector);
+      var select_active = true;
+      
+      var onselect = function(xmin, xmax, ymin, ymax) {
+        d3.selectAll("#plotdiv svg g.series").each(function(d,i) {
+          // i is index of dataset
+          var series_select = d3.select(this);
+          var index_list = datum.value[i];
+          series_select.selectAll(".dot").each(function(dd, ii) {
+            // ii is the index of the point in that dataset.
+            var x = dd[0], 
+                y = dd[1];
+            if (x >= xmin && x <= xmax && y >= ymin && y <= ymax) {
+              var dot = d3.select(this);
+              dot.classed("masked", select_active);
+              // manipulate data list directly:
+              var index_index = index_list.indexOf(ii);
+              if (index_index > -1 && !select_active) { 
+                // then the index exists, but we're deselecting:
+                index_list.splice(index_index, 1); 
+              }
+              else if (index_index < 0 && select_active) {
+                // then the index doesn't exist and we're selecting
+                index_list.push(ii); 
+              }
             }
-            else if (index_index < 0 && select_active) {
-              // then the index doesn't exist and we're selecting
-              index_list.push(ii); 
-            }
-          }
+          });
+          index_list.sort();
         });
-        index_list.sort();
-      });
-      index_div.datum(datum);
-      input.text(prettyJSON(datum.value));
-      var event = document.createEvent('Event');
-      event.initEvent('input', true, true);
-      input.node().dispatchEvent(event);
-    }
-    
-    selector.callbacks(onselect);
-    
-    var select_select = target.append("div")
-      .style("background-color", "LightYellow")
-      .classed("zoom-select-select", true)
-      .append("form")
-    
-    select_select.append("span")
-      .text("left-click mouse:")
-      .append("br")
-    
-    select_select
-      .append("label")
-      .text("zoom")
-      .append("input")
-      .attr("name", "select_select")
-      .attr("type", "radio")
-      .attr("value", "zoom")
-      .property("checked", true)
-    
-    select_select
-      .append("label")
-      .text("select")
-      .append("input")
-      .attr("name", "select_select")
-      .attr("type", "radio")
-      .attr("value", "select")
+        index_div.datum(datum);
+        input.text(prettyJSON(datum.value));
+        var event = document.createEvent('Event');
+        event.initEvent('input', true, true);
+        input.node().dispatchEvent(event);
+      }
       
-    select_select
-      .append("label")
-      .text("deselect")
-      .append("input")
-      .attr("name", "select_select")
-      .attr("type", "radio")
-      .attr("value", "deselect")
+      selector.callbacks(onselect);
+      
+      var select_select = target.append("div")
+        .style("background-color", "LightYellow")
+        .classed("zoom-select-select", true)
+        .append("form")
+      
+      select_select.append("span")
+        .text("left-click mouse:")
+        .append("br")
+      
+      select_select
+        .append("label")
+        .text("zoom")
+        .append("input")
+        .attr("name", "select_select")
+        .attr("type", "radio")
+        .attr("value", "zoom")
+        .property("checked", true)
+      
+      select_select
+        .append("label")
+        .text("select")
+        .append("input")
+        .attr("name", "select_select")
+        .attr("type", "radio")
+        .attr("value", "select")
+        
+      select_select
+        .append("label")
+        .text("deselect")
+        .append("input")
+        .attr("name", "select_select")
+        .attr("type", "radio")
+        .attr("value", "deselect")
 
-    var selectorchange = function(ev) {
-      if (this.value == 'zoom') {
-        webreduce.editor._active_plot.zoomRect(true);
-        selector.selectRect(false);
+      var selectorchange = function(ev) {
+        if (this.value == 'zoom') {
+          webreduce.editor._active_plot.zoomRect(true);
+          selector.selectRect(false);
+        }
+        else if (this.value == 'select') {
+          select_active = true;
+          webreduce.editor._active_plot.zoomRect(false);
+          selector.selectRect(true);
+        }
+        else if (this.value == 'deselect') {
+          select_active = false;
+          webreduce.editor._active_plot.zoomRect(false);
+          selector.selectRect(true);
+        }
       }
-      else if (this.value == 'select') {
-        select_active = true;
-        webreduce.editor._active_plot.zoomRect(false);
-        selector.selectRect(true);
-      }
-      else if (this.value == 'deselect') {
-        select_active = false;
-        webreduce.editor._active_plot.zoomRect(false);
-        selector.selectRect(true);
-      }
+      
+      select_select.selectAll("input").on("change", selectorchange);
+      selectorchange.call({value: "zoom"});
     }
-    
-    select_select.selectAll("input").on("change", selectorchange);
-    selectorchange.call({value: "zoom"});
-    
     //webreduce.editor.show_plots(datasets);
     
     function update_plot() {
@@ -1526,21 +1527,14 @@ webreduce.editor = webreduce.editor || {};
       .on("change", function(d) { datum.value = JSON.parse(this.value) });
     
     unscaled_data = [];
-    d3.selectAll("#plotdiv .dot").on("click", null); // clear previous handlers
-    d3.selectAll("#plotdiv svg g.series").each(function(d,i) {
-      // i is index of dataset
-      // make a copy of the data:
-      unscaled_data[i] = $.extend(true, [], d);
-      var dragmove_point = function(dd,ii) {
-        var chart = webreduce.editor._active_plot;
-        var y = chart.y(),
-            x = chart.x();
-        var new_x = x.invert(d3.event.x),
-          new_y = chart.y().invert(d3.event.y),
-          old_point = unscaled_data[i][ii],
-          old_x = old_point[0],
-          old_y = old_point[1],
-          new_scale = new_y / old_y;
+    
+    if (this.add_interactors) {
+      d3.selectAll("#plotdiv .dot").on("click", null); // clear previous handlers
+      d3.selectAll("#plotdiv svg g.series").each(function(d,i) {
+        // i is index of dataset
+        // make a copy of the data:
+        unscaled_data[i] = $.extend(true, [], d);
+        var new_scale = datum.value[i];
         d.forEach(function(ddd, iii) {
           var old_point = unscaled_data[i][iii];
           ddd[1] = new_scale * old_point[1];
@@ -1551,21 +1545,44 @@ webreduce.editor = webreduce.editor || {};
             ddd[2].ylower = new_scale * old_point[2].ylower;
           }
         })
-        datum.value[i] = new_scale * original_datum[i];
-        input.text(JSON.stringify(datum.value, null, 2));
-        var event = document.createEvent('Event');
-        event.initEvent('input', true, true);
-        input.node().dispatchEvent(event);
-        chart.update();
-      }
-      var drag_point = d3.behavior.drag()
-        .on("drag", dragmove_point)
-        .on("dragstart", function() { d3.event.sourceEvent.stopPropagation(); });
-      var series_select = d3.select(this);
-      series_select.selectAll(".dot")
-        .attr("r", 5) // bigger for easier drag...
-        .call(drag_point)
-    });
+        var dragmove_point = function(dd,ii) {
+          var chart = webreduce.editor._active_plot;
+          var y = chart.y(),
+              x = chart.x();
+          var new_x = x.invert(d3.event.x),
+            new_y = chart.y().invert(d3.event.y),
+            old_point = unscaled_data[i][ii],
+            old_x = old_point[0],
+            old_y = old_point[1];
+          new_scale = new_y / old_y;
+          d.forEach(function(ddd, iii) {
+            var old_point = unscaled_data[i][iii];
+            ddd[1] = new_scale * old_point[1];
+            if (ddd[2] && ddd[2].yupper != null) {
+              ddd[2].yupper = new_scale * old_point[2].yupper;
+            }
+            if (ddd[2] && ddd[2].ylower != null) {
+              ddd[2].ylower = new_scale * old_point[2].ylower;
+            }
+          })
+          datum.value[i] = new_scale; // * original_datum[i];
+          input.text(JSON.stringify(datum.value, null, 2));
+          var event = document.createEvent('Event');
+          event.initEvent('input', true, true);
+          input.node().dispatchEvent(event);
+          chart.update();
+        }
+        var drag_point = d3.behavior.drag()
+          .on("drag", dragmove_point)
+          .on("dragstart", function() { d3.event.sourceEvent.stopPropagation(); });
+        var series_select = d3.select(this);
+        series_select.selectAll(".dot")
+          .attr("r", 7) // bigger for easier drag...
+          .call(drag_point)
+      });
+      webreduce.editor._active_plot.do_autoscale();
+      webreduce.editor._active_plot.resetzoom();
+    }
     return input;
   }
   
@@ -1602,91 +1619,91 @@ webreduce.editor = webreduce.editor || {};
       .attr("value", function(d,i) { return (datum.value) ? datum.value[i] : null })
       .property("value", function(d,i) { return (datum.value) ? datum.value[i] : null })
           
-    
-    if (axis == 'x' && 
-        webreduce.editor._active_plot && 
-        webreduce.editor._active_plot.interactors) {
-      // add x-range interactor
-      var xrange = webreduce.editor._active_plot.x().domain();
-      var value = datum.value || datum.default_value;
-      var value = [
-        (value[0] == null) ? xrange[0] : value[0],
-        (value[1] == null) ? xrange[1] : value[1]
-      ]
-      var opts = {
-        type: 'xrange',
-        name: 'xrange',
-        color1: 'blue',
-        show_lines: true,
-        x1: value[0],
-        x2: value[1]
+    if (this.add_interactors) {
+      if (axis == 'x' && 
+          webreduce.editor._active_plot && 
+          webreduce.editor._active_plot.interactors) {
+        // add x-range interactor
+        var xrange = webreduce.editor._active_plot.x().domain();
+        var value = datum.value || datum.default_value;
+        var value = [
+          (value[0] == null) ? xrange[0] : value[0],
+          (value[1] == null) ? xrange[1] : value[1]
+        ]
+        var opts = {
+          type: 'xrange',
+          name: 'xrange',
+          color1: 'blue',
+          show_lines: true,
+          x1: value[0],
+          x2: value[1]
+        }
+        var interactor = new xSliceInteractor.default(opts);
+        webreduce.editor._active_plot.interactors(interactor);
+        subinputs.on("change", function(d,i) { 
+          if (datum.value == null) { datum.value = datum.default_value }
+          var v = parseFloat(this.value);
+          v = (isNaN(v)) ? null : v;
+          datum.value[i] = v;
+          var xitem = ["x1", "x2"][i];
+          interactor.state[xitem] = (v == null) ? xrange[i] : v;
+          interactor.update(false);
+        });
+        interactor.dispatch.on("update", function() { 
+          var state = interactor.state;
+          datum.value = [state.x1, state.x2];
+          subinputs
+            .property("value", function(d,i) { return (datum.value) ? datum.value[i] : null })
+            .attr("value", function(d,i) { return (datum.value) ? datum.value[i] : null })
+          var event = document.createEvent('Event');
+          event.initEvent('input', true, true);
+          subinputs.node().dispatchEvent(event);
+        });
+        
       }
-      var interactor = new xSliceInteractor.default(opts);
-      webreduce.editor._active_plot.interactors(interactor);
-      subinputs.on("change", function(d,i) { 
-        if (datum.value == null) { datum.value = datum.default_value }
-        var v = parseFloat(this.value);
-        v = (isNaN(v)) ? null : v;
-        datum.value[i] = v;
-        var xitem = ["x1", "x2"][i];
-        interactor.state[xitem] = (v == null) ? xrange[i] : v;
-        interactor.update(false);
-      });
-      interactor.dispatch.on("update", function() { 
-        var state = interactor.state;
-        datum.value = [state.x1, state.x2];
-        subinputs
-          .property("value", function(d,i) { return (datum.value) ? datum.value[i] : null })
-          .attr("value", function(d,i) { return (datum.value) ? datum.value[i] : null })
-        var event = document.createEvent('Event');
-        event.initEvent('input', true, true);
-        subinputs.node().dispatchEvent(event);
-      });
-      
-    }
-    else if (axis == 'y') {
-      // add y-range interactor
-    }
-    else if (axis == 'xy' && 
-             webreduce.editor._active_plot && 
-             webreduce.editor._active_plot.interactors) {
-      // add box interactor
-      var xrange = webreduce.editor._active_plot.x().domain(),
-          yrange = webreduce.editor._active_plot.y().domain();
-      var value = datum.value || datum.default_value;
-      var value = [
-        (value[0] == null) ? xrange[0] : value[0],
-        (value[1] == null) ? xrange[1] : value[1],
-        (value[2] == null) ? yrange[0] : value[2],
-        (value[3] == null) ? yrange[1] : value[3]
-      ]
-      
-      var opts = {
-        type: 'Rectangle',
-        name: 'range',
-        color1: 'red',
-        color2: 'LightRed',
-        fill: "none",
-        show_center: false,
-        xmin: value[0],
-        xmax: value[1],
-        ymin: value[2], 
-        ymax: value[3]
+      else if (axis == 'y') {
+        // add y-range interactor
       }
-      var interactor = new rectangleInteractor.default(opts);
-      webreduce.editor._active_plot.interactors(interactor);
-      // bind the update after init, so that it doesn't alter the field at init.
-      interactor.dispatch.on("update", function() { 
-        var state = interactor.state;
-        datum.value = [state.xmin, state.xmax, state.ymin, state.ymax];
-        subinputs
-          .attr("value", function(d,i) { return (datum.value) ? datum.value[i] : null })
-        var event = document.createEvent('Event');
-        event.initEvent('input', true, true);
-        subinputs.node().dispatchEvent(event);
-      });
+      else if (axis == 'xy' && 
+               webreduce.editor._active_plot && 
+               webreduce.editor._active_plot.interactors) {
+        // add box interactor
+        var xrange = webreduce.editor._active_plot.x().domain(),
+            yrange = webreduce.editor._active_plot.y().domain();
+        var value = datum.value || datum.default_value;
+        var value = [
+          (value[0] == null) ? xrange[0] : value[0],
+          (value[1] == null) ? xrange[1] : value[1],
+          (value[2] == null) ? yrange[0] : value[2],
+          (value[3] == null) ? yrange[1] : value[3]
+        ]
+        
+        var opts = {
+          type: 'Rectangle',
+          name: 'range',
+          color1: 'red',
+          color2: 'LightRed',
+          fill: "none",
+          show_center: false,
+          xmin: value[0],
+          xmax: value[1],
+          ymin: value[2], 
+          ymax: value[3]
+        }
+        var interactor = new rectangleInteractor.default(opts);
+        webreduce.editor._active_plot.interactors(interactor);
+        // bind the update after init, so that it doesn't alter the field at init.
+        interactor.dispatch.on("update", function() { 
+          var state = interactor.state;
+          datum.value = [state.xmin, state.xmax, state.ymin, state.ymax];
+          subinputs
+            .attr("value", function(d,i) { return (datum.value) ? datum.value[i] : null })
+          var event = document.createEvent('Event');
+          event.initEvent('input', true, true);
+          subinputs.node().dispatchEvent(event);
+        });
+      }
     }
-    
     return input    
   }
   webreduce.editor.make_fieldUI.range = rangeUI;
