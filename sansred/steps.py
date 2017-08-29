@@ -305,7 +305,9 @@ def circular_av(data):
 
     **Returns**
 
-    output (sans1d): converted to I vs. Q
+    nominal_output (sans1d): converted to I vs. nominal Q
+    
+    mean_output (sans1d): converted to I vs. mean Q within integrated region
 
     2016-04-11 Brian Maranville
     """
@@ -325,42 +327,66 @@ def circular_av(data):
     shape1 = data.data.x.shape
     x0 = data.metadata['det.beamx'] # should be close to 64
     y0 = data.metadata['det.beamy'] # should be close to 64
+    L2 = data.metadata['det.dis']
+    wavelength = data.metadata['resolution.lmda']
 
     center = (x0, y0)
     Qmax = data.q.max()
-    Q = np.arange(0, Qmax, step)
+    Q = np.arange(step, Qmax, step) # start at first pixel out.
+    Q_edges = np.zeros((Q.shape[0] + 1,), dtype="float")
+    Q_edges[1:] = Q
+    Q_edges += step/2.0 # get a range from step/2.0 to (Qmax + step/2.0)
+    r_edges = L2 * np.tan(2.0*np.arcsin(Q_edges * wavelength/(4*np.pi))) / data.metadata['det.pixelsizex']
+    Q_mean = []
+    Q_mean_error = []
     I = []
     I_error = []
     dx = np.zeros_like(Q, dtype="float")
-    for i in Q:
+    for i, qq in enumerate(Q):
         # inner radius is the q we're at right now, converted to pixel dimensions:
-        inner_r = i * (1.0/q_per_pixel)
+        inner_r = r_edges[i]
         # outer radius is the q of the next bin, also converted to pixel dimensions:
-        outer_r = (i + step) * (1.0/q_per_pixel)
+        outer_r = r_edges[i+1]
+        #print(i, qq, inner_r, outer_r)
         mask = annular_mask_antialiased(shape1, center, inner_r, outer_r)
         if IGNORE_CORNER_PIXELS:
             mask[0, 0] = mask[-1, 0] = mask[-1, -1] = mask[0, -1] = 0.0
         #print("Mask: ", mask)
+        integrated_q = uncertainty.sum(data.q*mask.T)
         integrated_intensity = uncertainty.sum(data.data*mask.T)
         #error = getPoissonUncertainty(integrated_intensity)
         #error = np.sqrt(integrated_intensity)
         mask_sum = np.sum(mask)
-        if integrated_intensity.x != 0.0:
+        if mask_sum > 0.0:
             norm_integrated_intensity = integrated_intensity / mask_sum
+            norm_integrated_q = integrated_q / mask_sum
             #error /= mask_sum
         else:
             norm_integrated_intensity = integrated_intensity
+            norm_integrated_q = integrated_q
 
         I.append(norm_integrated_intensity.x) # not multiplying by step anymore
         I_error.append(norm_integrated_intensity.variance)
+        Q_mean.append(norm_integrated_q)
+        Q_mean_error.append(0.0)
 
     I = np.array(I, dtype="float")
     I_error = np.array(I_error, dtype="float")
-    output = Sans1dData(Q, I, dx=dx, dv=I_error, xlabel="Q", vlabel="I",
+    Q_mean = np.array(Q_mean, dtype="float")
+    Q_mean_error = np.array(Q_mean_error, dtype="float")
+    
+    nominal_output = Sans1dData(Q, I, dx=dx, dv=I_error, xlabel="Q", vlabel="I",
                         xunits="inv. A", vunits="neutrons")
-    output.metadata = deepcopy(data.metadata)
-    return output
-
+    nominal_output.metadata = deepcopy(data.metadata)
+    nominal_output.metadata['extra_label'] = "_circ"
+    
+    mean_output = Sans1dData(Q_mean, I, dx=Q_mean_error, dv=I_error, xlabel="Q", vlabel="I",
+                        xunits="inv. A", vunits="neutrons")
+    mean_output.metadata = deepcopy(data.metadata)
+    mean_output.metadata['extra_label'] = "_circ"
+    
+    return nominal_output, mean_output
+    
 @cache
 @module
 def sector_cut(data, angle=0.0, width=90.0, mirror=True):
@@ -382,9 +408,11 @@ def sector_cut(data, angle=0.0, width=90.0, mirror=True):
 
     **Returns**
 
-    output (sans1d): converted to I vs. Q
+    nominal_output (sans1d): converted to I vs. nominal Q
+    
+    mean_output (sans1d): converted to I vs. mean Q within integrated region
 
-    2016-04-14 Brian Maranville
+    2016-04-15 Brian Maranville
     """
     from .draw_annulus_aa import sector_cut_antialiased
 
@@ -399,44 +427,67 @@ def sector_cut(data, angle=0.0, width=90.0, mirror=True):
     shape1 = data.data.x.shape
     x0 = data.metadata['det.beamx'] # should be close to 64
     y0 = data.metadata['det.beamy'] # should be close to 64
-
+    L2 = data.metadata['det.dis']
+    wavelength = data.metadata['resolution.lmda']
+    
     center = (x0, y0)
     Qmax = data.q.max()
-    Q = np.arange(0, Qmax, step)
+    Q = np.arange(step, Qmax, step) # start at first pixel out.
+    Q_edges = np.zeros((Q.shape[0] + 1,), dtype="float")
+    Q_edges[1:] = Q
+    Q_edges += step/2.0 # get a range from step/2.0 to (Qmax + step/2.0)
+    r_edges = L2 * np.tan(2.0*np.arcsin(Q_edges * wavelength/(4*np.pi))) / data.metadata['det.pixelsizex']
+    Q_mean = []
+    Q_mean_error = []
     I = []
     I_error = []
     dx = np.zeros_like(Q, dtype="float")
     start_angle = np.radians(angle - width/2.0)
     end_angle = np.radians(angle + width/2.0)
-    for i in Q:
+    for i, qq in enumerate(Q):
         # inner radius is the q we're at right now, converted to pixel dimensions:
-        inner_r = i * (1.0/q_per_pixel)
+        inner_r = r_edges[i]
         # outer radius is the q of the next bin, also converted to pixel dimensions:
-        outer_r = (i + step) * (1.0/q_per_pixel)
+        outer_r = r_edges[i+1]
+        #print(i, qq, inner_r, outer_r)
         mask = sector_cut_antialiased(shape1, center, inner_r, outer_r, start_angle=start_angle, end_angle=end_angle, mirror=mirror)
         if IGNORE_CORNER_PIXELS:
             mask[0, 0] = mask[-1, 0] = mask[-1, -1] = mask[0, -1] = 0.0
         #print("Mask: ", mask)
+        integrated_q = uncertainty.sum(data.q*mask.T)
         integrated_intensity = uncertainty.sum(data.data*mask.T)
         #error = getPoissonUncertainty(integrated_intensity)
         #error = np.sqrt(integrated_intensity)
         mask_sum = np.sum(mask)
-        if integrated_intensity.x != 0.0:
+        if mask_sum > 0.0:
             norm_integrated_intensity = integrated_intensity / mask_sum
+            norm_integrated_q = integrated_q / mask_sum
             #error /= mask_sum
         else:
             norm_integrated_intensity = integrated_intensity
+            norm_integrated_q = integrated_q
 
         I.append(norm_integrated_intensity.x) # not multiplying by step anymore
         I_error.append(norm_integrated_intensity.variance)
+        Q_mean.append(norm_integrated_q)
+        Q_mean_error.append(0.0)
 
     I = np.array(I, dtype="float")
     I_error = np.array(I_error, dtype="float")
-    output = Sans1dData(Q, I, dx=dx, dv=I_error, xlabel="Q", vlabel="I",
+    Q_mean = np.array(Q_mean, dtype="float")
+    Q_mean_error = np.array(Q_mean_error, dtype="float")
+    
+    nominal_output = Sans1dData(Q, I, dx=dx, dv=I_error, xlabel="Q", vlabel="I",
                         xunits="inv. A", vunits="neutrons")
-    output.metadata = deepcopy(data.metadata)
-    output.metadata['extra_label'] = "_%.1f" % (angle,)
-    return output
+    nominal_output.metadata = deepcopy(data.metadata)
+    nominal_output.metadata['extra_label'] = "_%.1f" % (angle,)
+    
+    mean_output = Sans1dData(Q_mean, I, dx=Q_mean_error, dv=I_error, xlabel="Q", vlabel="I",
+                        xunits="inv. A", vunits="neutrons")
+    mean_output.metadata = deepcopy(data.metadata)
+    mean_output.metadata['extra_label'] = "_%.1f" % (angle,)
+    
+    return nominal_output, mean_output
 
 @module
 def correct_detector_efficiency(sansdata):
