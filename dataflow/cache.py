@@ -80,7 +80,7 @@ class CacheManager(object):
                 warnings.warn(warning)
         elif self._diskcache_kwargs is not None:
             try:
-                from diskcache import Cache
+                from diskcache import FanoutCache as Cache
                 # patch the class so it has "exists" method
                 Cache.exists = Cache.__contains__
                 cachedir = self._diskcache_kwargs.pop("cachedir", "cache")
