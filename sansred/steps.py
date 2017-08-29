@@ -233,7 +233,7 @@ def calculateDQ(data):
 
 @cache
 @module
-def PixelsToQ(data, correct_solid_angle=True):
+def PixelsToQ(data, beam_center=[None,None], correct_solid_angle=True):
     """
     generate a q_map for sansdata. Each pixel will have 4 values: (qx, qy, q, theta)
 
@@ -242,6 +242,8 @@ def PixelsToQ(data, correct_solid_angle=True):
 
     data (sans2d): data in
 
+    beam_center {Beam Center Override} (coordinate?): If not blank, will override the beamx and beamy from the datafile.
+    
     correct_solid_angle {Correct solid angle} (bool): Apply correction for mapping
         curved Ewald sphere to flat detector
 
@@ -249,18 +251,20 @@ def PixelsToQ(data, correct_solid_angle=True):
 
     output (sans2d): converted to I vs. Qx, Qy
 
-    2016-04-06 Brian Maranville
+    2016-04-16 Brian Maranville
     """
+    
     L2 = data.metadata['det.dis']
-    x0 = data.metadata['det.beamx'] #should be close to 64
-    y0 = data.metadata['det.beamy'] #should be close to 64
+    beamx_override, beamy_override = beam_center
+    x0 = beamx_override if beamx_override is not None else data.metadata['det.beamx'] #should be close to 64
+    y0 = beamy_override if beamy_override is not None else data.metadata['det.beamy'] #should be close to 64
     wavelength = data.metadata['resolution.lmda']
     shape = data.data.x.shape
 
     qx = np.empty(shape, 'float')
     qy = np.empty(shape, 'float')
 
-    x, y = np.indices(shape)
+    x, y = np.indices(shape) + 0.5 # left, bottom edge of first pixel is 0.5, 0.5 pix.
     X = data.metadata['det.pixelsizex']*(x-x0) # in mm in nexus, but converted by loader
     Y = data.metadata['det.pixelsizey']*(y-y0)
     r = np.sqrt(X**2+Y**2)
@@ -276,6 +280,13 @@ def PixelsToQ(data, correct_solid_angle=True):
     res.q = q
     res.qx = qx
     res.qy = qy
+    res.metadata['det.beamx'] = x0
+    res.metadata['det.beamy'] = y0
+    q0 = (4*np.pi/wavelength)
+    res.qx_min = q0 * data.metadata['det.pixelsizex']*(0.5 - x0)/ L2
+    res.qy_min = q0 * data.metadata['det.pixelsizex']*(0.5 - y0)/ L2
+    res.qx_max = q0 * data.metadata['det.pixelsizex']*(128.5 - x0)/ L2
+    res.qy_max = q0 * data.metadata['det.pixelsizex']*(128.5 - y0)/ L2
     res.xlabel = "Qx (inv. Angstroms)"
     res.ylabel = "Qy (inv. Angstroms)"
     res.theta = theta
@@ -304,6 +315,9 @@ def circular_av(data):
     #                         background_value=0.0, mask_value=1.0, oversampling=8)
 
     # calculate the change in q that corresponds to a change in pixel of 1
+    if data.qx is None:
+        raise ValueError("Q is not defined - convert pixels to Q first")
+        
     q_per_pixel = data.qx[1, 0]-data.qx[0, 0] / 1.0
 
     # for now, we'll make the q-bins have the same width as a single pixel

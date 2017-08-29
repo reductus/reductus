@@ -45,6 +45,10 @@ class SansData(object):
         self.q = q
         self.qx = qx
         self.qy = qy
+        self.qx_max = None
+        self.qy_max = None
+        self.qx_min = None
+        self.qy_min = None
         self.xlabel = xlabel
         self.ylabel = ylabel
         self.aspect_ratio = aspect_ratio
@@ -126,15 +130,15 @@ class SansData(object):
             else:
                 zmax = data.max()
         if self.qx is None or self.qy is None:
-            xmin = 0
-            xmax = 128
-            ymin = 0
-            ymax = 128
+            xmin = 0.5
+            xmax = 128.5
+            ymin = 0.5
+            ymax = 128.5
         else:
-            xmin = self.qx.min()
-            xmax = self.qx.max()
-            ymin = self.qy.min()
-            ymax = self.qy.max()
+            xmin = self.qx_min if self.qx_min is not None else self.qx.min()
+            xmax = self.qx_max if self.qx_max is not None else self.qx.max()
+            ymin = self.qy_min if self.qy_min is not None else self.qy.min()
+            ymax = self.qy_max if self.qy_max is not None else self.qy.max()
         plottable_data = {
             'entry': self.metadata['entry'],
             'type': '2d',
