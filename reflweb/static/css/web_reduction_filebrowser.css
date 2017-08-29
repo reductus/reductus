@@ -116,6 +116,14 @@ svg.editor {
   -moz-user-select: none;
 }
 
+path.x-slice.lines {
+  stroke-width: 5px !important;
+}
+
+path.x-slice.lines:hover {
+  stroke-width: 8px !important;
+}
+
 rect.zoom {
   stroke: steelblue;
   fill-opacity: 0.5;
@@ -133,6 +141,10 @@ div.tooltip {
   border-radius: 8px;
   pointer-events: none;
   z-index: 20;
+}
+
+div.fields .subfield {
+  padding-left: 1em;
 }
 
 .ui-layout-north {
