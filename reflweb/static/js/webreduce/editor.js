@@ -219,7 +219,7 @@ webreduce.editor = webreduce.editor || {};
             var first_output = module_def.outputs[0].id;
             clicked_elem = d3.select(elem).select('rect.terminal[terminal_id="'+first_output+'"]').node();          
           }
-          webreduce.editor.handle_module_clicked.call(elem,d,i,clicked_elem);
+          webreduce.editor.handle_module_clicked.call(elem,null,i,clicked_elem);
         })
       buttons_div.append("button")
         .text("clear")
@@ -228,7 +228,7 @@ webreduce.editor = webreduce.editor || {};
           var we = webreduce.editor;
           //console.log('clear: ', config_target, JSON.stringify(active_module, null, 2));
           if (active_module.config) { delete active_module.config }
-          webreduce.editor.handle_module_clicked.call(elem,d,i,clicked_elem);
+          webreduce.editor.handle_module_clicked.call(elem,null,i,clicked_elem);
         })
         
       $(buttons_div).buttonset();

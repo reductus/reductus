@@ -28,13 +28,15 @@ webreduce.editor.make_fieldUI = webreduce.editor.make_fieldUI || {};
       .attr("name", "fileinfo");
     radio.append("label")
       .attr("for", field.id)
-      .text(field.id + "(" + existing_count + ")");
+      .append("span")
+        .classed("fileinfo-label", true)
+        .text(field.id + "(" + existing_count + ")");
     
     // jquery events handler for communications  
     $(radio.node()).on("fileinfo.update", function(ev, info) {
       if (radio.select("input").property("checked")) {
           radio.datum({id: field.id, value: info});
-          radio.select("label span").text(field.id + "(" + info.length + ")");
+          radio.select("label span.fileinfo-label").text(field.id + "(" + info.length + ")");
           // auto-accept fileinfo clicks.
           webreduce.editor.accept_parameters(target, module);
       }
@@ -48,7 +50,7 @@ webreduce.editor.make_fieldUI = webreduce.editor.make_fieldUI || {};
     $("#fileinfo").buttonset();
     $(".remote-filebrowser").trigger("fileinfo.update", d3.select("div#fileinfo input").datum());
     // if there is data loaded, an output terminal is selected... and will be plotted instead
-    if (datasets_in == null) { webreduce.handleChecked() };
+    if (datasets_in == null) { webreduce.handleChecked(null, null, true) };
     return radio
   }
   fieldUI.fileinfo = fileinfoUI;
