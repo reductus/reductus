@@ -70,7 +70,6 @@ def nop(data):
     """
     return data
 
-@cache
 @module
 def ncnr_load(filelist=None):
     """
