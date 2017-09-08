@@ -231,7 +231,7 @@ def calculateDQ(data):
     data.dq_para = sig_para_new
     return data
 
-@cache
+@nocache
 @module
 def PixelsToQ(data, beam_center=[None,None], correct_solid_angle=True):
     """
@@ -283,10 +283,10 @@ def PixelsToQ(data, beam_center=[None,None], correct_solid_angle=True):
     res.metadata['det.beamx'] = x0
     res.metadata['det.beamy'] = y0
     q0 = (4*np.pi/wavelength)
-    res.qx_min = q0 * data.metadata['det.pixelsizex']*(0.5 - x0)/ L2
-    res.qy_min = q0 * data.metadata['det.pixelsizex']*(0.5 - y0)/ L2
-    res.qx_max = q0 * data.metadata['det.pixelsizex']*(128.5 - x0)/ L2
-    res.qy_max = q0 * data.metadata['det.pixelsizex']*(128.5 - y0)/ L2
+    res.qx_min = q0/2.0 * data.metadata['det.pixelsizex']*(0.5 - x0)/ L2
+    res.qy_min = q0/2.0 * data.metadata['det.pixelsizex']*(0.5 - y0)/ L2
+    res.qx_max = q0/2.0 * data.metadata['det.pixelsizex']*(128.5 - x0)/ L2
+    res.qy_max = q0/2.0 * data.metadata['det.pixelsizex']*(128.5 - y0)/ L2
     res.xlabel = "Qx (inv. Angstroms)"
     res.ylabel = "Qy (inv. Angstroms)"
     res.theta = theta
