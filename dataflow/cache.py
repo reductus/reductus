@@ -67,6 +67,7 @@ class CacheManager(object):
         self._cache = None
         self._file_cache = None
         self._redis_kwargs = None
+        self._diskcache_kwargs = None
 
     def _connect(self):
         if self._redis_kwargs is not None:
