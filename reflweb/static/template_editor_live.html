@@ -1,285 +1,438 @@
 <!DOCTYPE html>
 <meta charset="utf-8">
-  <script src="//code.jquery.com/jquery-1.11.1.min.js"></script> 
-  <script type="text/javascript" src="js/jquery.blockUI.js"></script>
-  <script type="text/javascript" src="js/jquery.jsonrpc.js"></script>
-  <script src="https://d3js.org/d3.v3.min.js" charset="utf-8"></script>
-  <script type="text/javascript" src="//www.ncnr.nist.gov/instruments/magik/d3-science/lib/jquery-extend.js"></script>
-  <script type="text/javascript" src="//www.ncnr.nist.gov/instruments/magik/d3-science/lib/dataflow-editor-streamline-new.js"></script>
+  <script src="https://d3js.org/d3.v4.min.js" charset="utf-8"></script>
+  <script type="text/javascript" src="//www.ncnr.nist.gov/instruments/magik/d3-science-v4/lib/jquery-extend.js"></script>
+  <script type="text/javascript" src="//www.ncnr.nist.gov/instruments/magik/d3-science-v4/lib/dataflow-editor.js"></script>
   <script type="text/javascript" src="js/msgpack.min.js"></script>
   <script type="text/javascript" src="js/webreduce/server_api/hug_msgpack.js"></script>
-<style>
-html, body {
-  height: 100%;
-  overflow: hidden;
-  font-family: Geneva, Arial, Helvetica, sans-serif;
-}
-svg {
-  width: 100%;
-  height: 100%;
-  float: left;
-  border-bottom: solid 1px #ccc;
-  border-right: solid 1px #ccc;
-  margin-right: -1px;
-  margin-bottom: -1px;
-}
-
-#editor_div { 
-  width: 100%;
-  height: 100%;
-}
-
-#field_editor_div {
-  width: 100%;
-  position: absolute;
-  padding: 10px;
-  bottom: 0;
-  left: 0;
-}
-
-path.wire {
-    stroke-width: 5px !important;
-}
-
-.highlight {
-  fill-opacity: 0.6 !important;
-}
-.popup {
-    position: absolute;
-    background-color: #fff;
-    /*width: 200px;*/
-    border: 1px #ccc solid;
-    border-radius: 6px;
-    box-shadow: #333 2px 2px 4px;
-    font-family: arial, helvetica, sans-serif;
-    margin: 5px 5px 2px 2px;
-}
-.popup ul, .popup ul ul {
-    padding: 5px;
-    list-style-type: none;
-    margin: 0;
-}
-
-.popup ul ul li {
-    padding-left: 5px;
-}
-
-.popup ul li {
-    margin-top: 2px;
-    margin-bottom: 2px;
-    margin-right: 0px;
-    margin-left: 0px;
-    cursor: pointer;
-}
-.popup ul li:hover {
-    background-color: LightGray;
-}
-
-.popup hr {
-    margin: 0;
-}
-
-.input.label, .output.label {
-    display: none;
-}
-
-g.module rect {
-  stroke-width: 2px;
-  stroke: blue;
-  cursor: pointer;
-  fill: white;
-}
-
-g.module rect.title {
-  fill-opacity: 0;
-}
-
-rect.terminal.output {
-    fill: #88FFFF;
-}
-
-rect.terminal.input {
-    fill: #88FF88;
-}
-
-  
-svg.editor path.wire {
-    fill: none;
-    stroke-width: 5px;
-    stroke: red;
-    cursor: crosshair;
-}
-
-polygon.terminal.state {
-  display: none;
-}
-</style>
+  <link rel="stylesheet" href="css/template_editor_live.css"/>
 <body>
   
 <script>
+var debug = false;
+var e;
+
 window.onload = function() {
 webreduce.server_api.__init__().then(function(api) {
 current_instrument = 'ncnr.ospec';
 
-function expand_module_defs(modules, instrument) {
-  var output = [],
-      module_defs = instruments[instrument].modules;
-  for (var i=0; i<modules.length; i++) {
-    var m = modules[i];
-    output[i] = m;
-    output[i].terminals = module_defs[m.module].terminals;
-    output[i].fields = module_defs[m.module].fields;
-  }
-  return output
-}
-
-//dataflow.module_defs = instruments[current_instrument].modules;
-e = new dataflowEditorStreamlineNew.editor(null, true);
-e.data([{modules: [], wires: []}]);
+e = new dataflowEditor.default(); //Class2.editorFactory();
+e._outer = []; // contexts for embedded templates;
+e._clipboard = null;
 d3.select("#editor_div").call(e);
 
+// brush stuff //
+var brush = d3.brush().on("end", brushended),
+  idleTimeout,
+  idleDelay = 350;
+
+e.svg().append("g")
+    .attr("class", "brush")
+    
+function idled() {
+  idleTimeout = null;
+}
+  
+function brushed(d,i) {
+  console.log('brushed', d, i, this);
+}
+function brushended(d, i) {
+  var s = d3.event.selection;
+  if (!s) {
+    if (!idleTimeout) return idleTimeout = setTimeout(idled, idleDelay);
+  } else {
+    var checker = insideChecker(s);
+    //console.log(s, e.svg().selectAll("g.module").filter(checker));
+    e.svg().selectAll("g.module").filter(checker).classed("highlight", true);
+    e.svg().select("g.brush").call(brush.move, null);
+  }
+}
+
+function insideChecker(s) {
+  var xmin = s[0][0],
+      ymin = s[0][1],
+      xmax = s[1][0],
+      ymax = s[1][1];
+      
+  var isInside = function(d,i) {
+    var ds = d3.select(this).select("rect.title");
+    var width = +ds.attr("width")
+    var height = +ds.attr("height")
+
+    var i = (
+      d.x >= xmin && 
+      d.x + width <= xmax &&
+      d.y >= ymin &&
+      d.y + height <= ymax
+    )
+    return i
+  }
+  return isInside
+}
+      
+
+function add_brush() {
+  e.svg().select("g.brush")
+    .call(brush)
+}
+// end brush stuff //
+
+e.add_brush = add_brush;
 
 var contextMenuShowing = false;
 
-e.svg().on('contextmenu',function (d,i) {
-    if (contextMenuShowing) {
-        d3.event.preventDefault();
-        d3.select(".popup").remove();
-        contextMenuShowing = false;
-    } else {
-        d3_target = d3.select(d3.event.target);
-        var popup;
-        if (d3_target.classed("wire")) {
-            d3.event.preventDefault();
-            contextMenuShowing = true;
-
-            // Build the popup            
-            popup = d3.select("#editor_div")
-            .append("div")
-            .attr("class", "popup")
-            .style("left", d3.event.x + "px")
-            .style("top", d3.event.y + "px")
-            .append("ul")
-            
-            popup.append("li").text("delete").on("click", function() {
-                var active_data = d3_target.datum();
-                var parentNode = d3_target.node().parentNode;
-                var wires = d3.select(parentNode).datum().wires;
-                for (var i=0; i<wires.length; i++) {
-                    var w = wires[i]; 
-                    if (w.source == active_data.source && w.target == active_data.target) {
-                        wires.splice(i,1);
-                        break;
-                    }
-                };
-                e.update();
-                d3.select(".popup").remove(); 
-                contextMenuShowing=false;
-                
-            });
-            console.log(popup);
-        }
-        else if (d3_target.classed("title")) {
-            d3.event.preventDefault();
-            contextMenuShowing = true;
-
-            // Build the popup
-            var module_id = d3_target.datum().module_id;
-            var module = e.svg().datum().modules.find(function(m) {return m.module_id == module_id});
-            var fields = [];
-            if (module && module_defs[module.module] && module_defs[module.module].fields) {
-                fields = module_defs[module.module].fields;
-            } 
-            
-            popup = d3.select("#editor_div")
-            .append("div")
-            .attr("class", "popup")
-            .style("left", d3.event.x + "px")
-            .style("top", d3.event.y + "px")
-            .append("ul")
-            
-            popup.append("li").text("Edit title")
-              .on("click", function() {
-                d3.select(".popup").remove();
-                contextMenuShowing=false;
-                var new_title = prompt("New title:", module.title);
-                if (new_title != null) {
-                  module.title = new_title;
-                  e.import(e.export());
-                  //d3.select(d3_target.node().parentNode).select('text').text(new_title);
-                }                  
-              });
-            if (fields.length > 0) {
-              popup.append("ul").text("Configure:").selectAll('li').data(fields)
-                  .enter()
-                  .append("li")
-                      .text(function(d) {return d.id})
-                      .on("click", edit_field(module))
-            }
-                    
-                    
-            popup.append("hr")
-            popup.append("li").text("delete").on("click", function() {
-                console.log(d3_target.datum().module_id);               
-                e.svg().datum().modules = e.svg().datum().modules.filter(function(d) { return d.module_id != module_id});
-                d3.select(".popup").remove(); 
-                e.update();
-                contextMenuShowing=false;
-            });
-        }
-                     
-    }
+e.dispatch.on("drag_module", function(module_data, dx, dy) {
+  var module = d3.select(this);
+  if (module.classed("highlight")) {
+    var other_modules = e.svg().selectAll("g.module.highlight")
+      .filter(function(d) { return d.module_id != module_data.module_id });
+      
+    other_modules
+      .each(function(d) { d.x += dx; d.y += dy })
+      .attr("transform", function(d) { 
+        return "translate(" + d.x.toFixed() + "," + d.y.toFixed() + ")"
+      })
+  }
 })
 
-function edit_field(module) {
-    var field_editor = function(d,i) {
-      // first, clean up the contextmenu that brought us here:
-      d3.select(".popup").remove(); 
-      contextMenuShowing=false;
-      
-      var field_id = d.id,
-          field_default = d.default;
-      var config = (module.config || {})[field_id];
-      if (config == null) {
-        config = field_default;
-      }        
-      var fe = d3.select("#field_editor_div")
-      fe.selectAll("div").remove();
-      fe.append("div")
-        .text("Editing: " + d.id);
-      var input = fe.append("div")
-        .append("textarea")
-        .attr("rows", "10")
-        .style("width", "95%")
-        .property("value", JSON.stringify(config))
-        //.text(JSON.stringify(config))
-      var feb = fe.append("div")
-      
-      feb.append("button")
-        .attr("value", "submit")
-        .text("submit")
-        .on("click", function() {
-          
-          var value = input.property("value");
-          try {
-            var parsed_val = JSON.parse(value);
-            if (!module.config) {module.config = {}};
-            module.config[field_id] = parsed_val;
-            d3.selectAll("#field_editor_div div").remove();
-          }
-          catch (error) {
-            alert("invalid JSON value: " + value);
-          }
+e.container.on('click.multiselect', function(d,i) {
+  var d3_target = d3.select(d3.event.target);
+  if (contextMenuShowing) {
+      d3.event.preventDefault();
+      d3.select(".popup").remove();
+      contextMenuShowing = false;
+  }
+  if (d3_target.classed("title") && (d3.event.shiftKey || d3.event.ctrlKey)) {
+    d3.event.preventDefault();
+    d3.event.stopPropagation();
+    var module = d3.select(d3.event.target.parentNode.parentNode);
+    module.classed("highlight", !module.classed("highlight"))
+    return
+  }
+  else {
+    e.container.selectAll("g.module").classed("highlight", false);
+  }
+})
+
+e.container.on('contextmenu',function (d,i) {
+  if (contextMenuShowing) {
+    d3.event.preventDefault();
+    d3.select(".popup").remove();
+    contextMenuShowing = false;
+  } 
+  else {
+    var d3_target = d3.select(d3.event.target);
+    var target_pos = [d3.event.x, d3.event.y];
+    var grandparent = d3.select(d3.event.target.parentNode.parentNode);
+    // case: wire selected
+    if (d3_target.classed("wire")) {
+        d3.event.preventDefault();
+        contextMenuShowing = true;
+
+        // Build the popup            
+        var popup = d3.select("body")
+          .append("div")
+          .attr("class", "popup")
+          .style("left", d3.event.x + "px")
+          .style("top", d3.event.y + "px")
+        
+        var ul = popup.append("ul")
+        
+        ul.append("li").text("delete").on("click", function() {
+            var active_data = d3_target.datum();
+            var parentNode = d3_target.node().parentNode;
+            var wires = d3.select(parentNode).datum().wires;
+            for (var i=0; i<wires.length; i++) {
+                var w = wires[i]; 
+                if (w.source == active_data.source && w.target == active_data.target) {
+                    wires.splice(i,1);
+                    break;
+                }
+            };
+            e.update();
+            popup.remove(); 
+            contextMenuShowing=false;
+            
         });
-      feb.append("button")
-        .attr("value", "cancel")
-        .text("cancel")
-        .on("click", function() {
-          d3.selectAll("#field_editor_div div").remove();
-        });
-          
     }
-    return field_editor;
+    else if (d3_target.classed("exposed-wire")) {
+      // case: wire to exposed terminal selected
+      d3.event.preventDefault();
+      contextMenuShowing = true;
+
+      // Build the popup            
+      var popup = d3.select("body")
+        .append("div")
+        .attr("class", "popup")
+        .style("left", d3.event.x + "px")
+        .style("top", d3.event.y + "px")
+      
+      var ul = popup.append("ul")
+      
+      ul.append("li").text("delete").on("click", function() {
+        var active_data = d3_target.datum();
+        if (active_data.source[0] == -1) {
+          e.svg().datum().inputs.forEach(function(f) { 
+            if (f.id == active_data.source[1]) {
+              f.target = null;
+            }
+          });
+        }
+        if (active_data.target[0] == -1) {
+          e.svg().datum().outputs.forEach(function(f) { 
+            if (f.id == active_data.target[1]) {
+              f.target = null;
+            }
+          });
+        }
+        e.update();
+        popup.remove(); 
+        contextMenuShowing=false;
+      });
+    }
+    else if (d3_target.classed("title")) {
+      // case: module title selected
+      d3.event.preventDefault();
+      if (grandparent.classed("highlight")) {
+        // bulk operation on modules
+        contextMenuShowing = true;
+
+        // Build the popup            
+        var popup = d3.select("body")
+          .append("div")
+          .attr("class", "popup")
+          .style("left", d3.event.x + "px")
+          .style("top", d3.event.y + "px")
+        
+        var ul = popup.append("ul");
+        
+        var copy = function() {
+          popup.remove();
+          var datum = e.svg().datum();
+          var modules_to_copy = []; 
+          var module_index_lookup = {};
+          e.svg().selectAll("g.module.highlight").each(function(d,i) {
+            modules_to_copy.push(d);
+            var old_index = this.getAttribute("index");
+            module_index_lookup[old_index] = i;
+          });
+          modules_to_copy = jqueryExtend.extend(true, [], modules_to_copy);
+          var wires_to_copy = [];
+          datum.wires.forEach(function(w,i) { 
+            var ks = w.source[0].toString(),
+                kt = w.target[0].toString();
+            if (ks in module_index_lookup && kt in module_index_lookup) {
+              var new_wire = jqueryExtend.extend(true, {}, w);
+              new_wire.source[0] = module_index_lookup[ks];
+              new_wire.target[0] = module_index_lookup[kt];
+              wires_to_copy.push(new_wire);
+            }
+          });
+          modules_to_copy.forEach(function(d) { delete d.module_id });
+          var content = {"modules": modules_to_copy, "wires": wires_to_copy}
+          e._clipboard = {reference_pos: target_pos, content: content};
+          e.update();
+          contextMenuShowing=false;
+        }
+        
+        var cut = function() {
+          copy();
+          var to_cut = [];
+          e.svg().selectAll("g.module.highlight").each(function(d,i) {
+            to_cut.push(d.module_id);
+          });
+          e._clipboard.to_cut = to_cut;
+        }
+        
+        var buttons = ul.append("li").style("text-align", "right")
+        buttons
+          .append("button").text("cut").on("click", cut);
+        buttons
+          .append("button").text("copy").on("click", copy);
+        buttons
+          .append("button").text("delete modules")
+            .on("click", function() {
+              var modules = e.svg().datum().modules || [];
+              e.svg().selectAll("g.module.highlight").each(function(d) { 
+                modules = modules.filter(function(m) { return m.module_id != d.module_id });
+              })
+              e.svg().datum().modules = modules;
+              popup.remove(); 
+              e.update();
+              contextMenuShowing=false;
+            });
+      } 
+      else {
+        // operation on single module
+        contextMenuShowing = true;
+
+        // Build the popup
+        var module = grandparent.datum();
+        var fields = [];
+        if (module && module_defs[module.module] && module_defs[module.module].fields) {
+            fields = module_defs[module.module].fields;
+        } 
+        
+        var popup = d3.select("body")
+          .append("div")
+          .attr("class", "popup")
+          .style("left", d3.event.x + "px")
+          .style("top", d3.event.y + "px")
+        
+        var ul = popup.append("ul")
+        
+        ul.append("li").text("Edit title")
+          .on("click", function() {
+            popup.remove();
+            contextMenuShowing=false;
+            var new_title = prompt("New title:", module.title);
+            if (new_title != null) {
+              module.title = new_title;
+              e.import(e.export());
+            }                  
+          });
+        if (fields.length > 0) {
+          ul.append("ul").text("Configure:").selectAll('li').data(fields)
+              .enter()
+              .append("li")
+                  .text(function(d) {return d.id})
+                  .on("click", function(d,i) {
+                    popup.remove();
+                    contextMenuShowing = false;
+                    edit_field(module, d, i);
+                  })
+        }
+        ul.append("hr")
+        ul.append("li").text("delete").on("click", function() {
+            console.log(d3_target.datum().module_id);               
+            e.svg().datum().modules = e.svg().datum().modules.filter(function(d) { return d.module_id != module_id});
+            popup.remove(); 
+            e.update();
+            contextMenuShowing=false;
+        });
+      }
+    }
+    else if ((d3_target.classed("input") || d3_target.classed("output")) && d3_target.classed("exposed")) {
+        d3.event.preventDefault();
+        contextMenuShowing = true;
+        
+        // Build the popup            
+        popup = d3.select("body")
+          .append("div")
+          .attr("class", "popup")
+          .style("left", d3.event.x + "px")
+          .style("top", d3.event.y + "px")
+          
+        var ul = popup.append("ul");
+        
+        var side = d3_target.classed("output") ? "inputs" : "outputs";
+        ul.append("li").text("delete").on("click", function() {
+            var term_id = grandparent.datum().id;
+            e.svg().datum()[side] = e.svg().datum()[side].filter(function(d) { 
+              return d.id != term_id
+            });
+            popup.remove(); 
+            e.update();
+            contextMenuShowing=false;
+        });
+
+    }
+    else if (e._clipboard != null) {
+      d3.event.preventDefault();
+      contextMenuShowing = true;
+      
+      var to_paste = jqueryExtend.extend(true, {}, e._clipboard.content);
+      var rx = e._clipboard.reference_pos[0];
+      var ry = e._clipboard.reference_pos[1];
+      // Build the popup            
+      popup = d3.select("body")
+        .append("div")
+        .attr("class", "popup")
+        .style("left", d3.event.x + "px")
+        .style("top", d3.event.y + "px")
+      
+      var ul = popup.append("ul")
+      
+      ul.append("li").text("paste").on("click", function() {
+          popup.remove();
+          var datum = e.svg().datum();
+          if (e._clipboard.to_cut) {
+            var modules = datum.modules || [];
+            modules = modules.filter(function(m) { return (e._clipboard.to_cut.indexOf(m.module_id) < 0) });
+            datum.modules = modules;
+            e.update();
+            e._clipboard.to_cut = null;
+          }
+          
+          var start_module_index = (datum.modules || []).length;
+          
+          to_paste.modules.forEach(function(m) {
+            m.x += d3.event.x - rx;
+            m.y += d3.event.y - ry;
+          });
+          to_paste.wires.forEach(function(w) {
+            w.source[0] += start_module_index;
+            w.target[0] += start_module_index;
+          })
+          
+          e.svg().selectAll("g.module.highlight").classed("highlight", false);              
+          datum.modules.push.apply(datum.modules, to_paste.modules);
+          e.update();
+          datum.wires.push.apply(datum.wires, to_paste.wires)
+          e.update();
+          e.svg().selectAll("g.module").filter(function(d,i) { return i >= start_module_index }).classed("highlight", true);
+          contextMenuShowing=false;
+      });
+    }
+  }
+})
+
+function edit_field(module, d, i) {
+  var field_id = d.id,
+      field_default = d.default;
+  var config = (module.config || {})[field_id];
+  if (config == null) {
+    config = field_default;
+  }        
+  var popup = d3.select("body")
+            .append("div")
+            .attr("class", "popup")
+            .style("left", "20px")
+            .style("top", "30px")
+  
+  popup.append("div")
+    .text("Editing: " + d.id);
+  var input = popup.append("div")
+    .append("textarea")
+    .attr("rows", "10")
+    .style("width", "95%")
+    .property("value", JSON.stringify(config))
+    //.text(JSON.stringify(config))
+  
+  var feb = popup.append("div")
+  
+  feb.append("button")
+    .attr("value", "submit")
+    .text("submit")
+    .on("click", function() {
+      
+      var value = input.property("value");
+      try {
+        var parsed_val = JSON.parse(value);
+        if (!module.config) {module.config = {}};
+        module.config[field_id] = parsed_val;
+        popup.remove();
+      }
+      catch (error) {
+        alert("invalid JSON value: " + value);
+      }
+    });
+  feb.append("button")
+    .attr("value", "cancel")
+    .text("cancel")
+    .on("click", function() {
+      popup.remove();
+    });
 }
 
 instruments = {};
@@ -287,8 +440,7 @@ module_defs = {};
 var module_names;
 
 load_instrument = function(instrument_id, update_selector) {
-  console.log(instrument_id, update_selector);
-  console.log('#select_instrument option[value="' + instrument_id + '"]', d3.select('#select_instrument option[value="' + instrument_id + '"]'));
+  if (debug) { console.log('#select_instrument option[value="' + instrument_id + '"]', d3.select('#select_instrument option[value="' + instrument_id + '"]'));}
   if (update_selector) {
     d3.select('#select_instrument option[value="' + instrument_id + '"]').property("selected", true);
   }
@@ -346,9 +498,10 @@ function loadDataFromFile() {
 
 webreduce.server_api.list_instruments()
   .then(function(instruments) {
-    instruments.forEach(function(d, i){
-      $("#select_instrument").append($("<option />", {text: d, value: d}));
-    });
+    d3.select("#select_instrument").selectAll("option").data(instruments)
+      .enter().append("option")
+        .attr("value", function(d) { return d })
+        .text(function(d) { return d });
     return instruments;
   })
   //.then(function() {load_instrument(window.current_instrument, true)});
@@ -366,7 +519,5 @@ webreduce.server_api.list_instruments()
     <button id="show_value">Show data</button>
     <button id="apply_changes">Apply changes</button>
 </div>
-<div id="editor_div">
-</div>
-<div id="field_editor_div"></div>
+<div id="editor_div"></div>
 </body>

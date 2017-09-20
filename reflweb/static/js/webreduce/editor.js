@@ -1333,7 +1333,8 @@ webreduce.editor = webreduce.editor || {};
       var te = webreduce.editor._active_template_editor;
       te.load_instrument(instrument_id)
           .then(function(){
-            te.e.import(template_def);
+            te.e.import(template_def, true);
+            te.e.add_brush();
           })
       d3.select(te.document.getElementById("apply_changes")).on('click', function() {
         webreduce.editor.load_template(te.e.export(), null, null, instrument_id);
