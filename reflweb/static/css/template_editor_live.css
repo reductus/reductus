@@ -1,0 +1,100 @@
+html, body {
+  height: 100%;
+  overflow: hidden;
+  font-family: Geneva, Arial, Helvetica, sans-serif;
+}
+svg {
+  width: 100%;
+  height: 100%;
+  float: left;
+  border-bottom: solid 1px #ccc;
+  border-right: solid 1px #ccc;
+  margin-right: -1px;
+  margin-bottom: -1px;
+}
+
+#editor_div { 
+  width: 100%;
+  height: 100%;
+}
+
+#field_editor_div {
+  width: 100%;
+  position: absolute;
+  padding: 10px;
+  bottom: 0;
+  left: 0;
+}
+
+.active-wiring {
+  fill-opacity: 0.2 !important;
+}
+.popup {
+    position: absolute;
+    background-color: #fff;
+    /*width: 200px;*/
+    border: 1px #ccc solid;
+    border-radius: 6px;
+    box-shadow: #333 2px 2px 4px;
+    font-family: arial, helvetica, sans-serif;
+    margin: 5px 5px 2px 2px;
+}
+.popup ul, .popup ul ul {
+    padding: 5px;
+    list-style-type: none;
+    margin: 0;
+}
+
+.popup ul ul li {
+    padding-left: 5px;
+}
+
+.popup ul li {
+    margin-top: 2px;
+    margin-bottom: 2px;
+    margin-right: 0px;
+    margin-left: 0px;
+    cursor: pointer;
+}
+.popup ul li:hover {
+    background-color: LightGray;
+}
+
+.popup hr {
+    margin: 0;
+}
+
+.input.label, .output.label {
+    display: none;
+}
+
+g.module rect {
+  stroke-width: 2px;
+  stroke: blue;
+  cursor: pointer;
+  fill: white;
+}
+
+g.module rect.title {
+  fill-opacity: 0;
+}
+
+rect.terminal.output {
+    fill: #88FFFF;
+}
+
+rect.terminal.input {
+    fill: #88FF88;
+}
+
+  
+svg.editor path.wire {
+    fill: none;
+    stroke-width: 9px;
+    stroke: red;
+    cursor: pointer;
+}
+
+polygon.terminal.state {
+  display: none;
+}
