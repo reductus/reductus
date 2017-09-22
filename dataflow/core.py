@@ -277,7 +277,7 @@ class Template(object):
         Template version number
     """
     def __init__(self, name=None, description=None, modules=None, wires=None,
-                 instrument="", version=TEMPLATE_VERSION):
+                 instrument="", version=TEMPLATE_VERSION, **kw):
         self.name = name
         self.description = description
         self.modules = modules
