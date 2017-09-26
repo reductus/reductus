@@ -91,7 +91,7 @@ g.module rect.border.embedded-indicator {
   stroke-width: 2px;
 }
 
-g.module rect.terminal { 
+g.module rect.terminal, g.exposed-terminals rect.terminal { 
   cursor: crosshair;
 }
 
