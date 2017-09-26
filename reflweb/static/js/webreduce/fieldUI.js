@@ -236,8 +236,10 @@ webreduce.editor.make_fieldUI = webreduce.editor.make_fieldUI || {};
         datum.value[i] = [];
         series_select.selectAll(".dot").each(function(ddd, iii) {if (d3.select(this).classed("masked")) {datum.value[i].push(iii)}});
         */
-        index_div.datum(datum);
         input.text(prettyJSON(datum.value));
+        var event = document.createEvent('Event');
+        event.initEvent('input', true, true);
+        input.node().dispatchEvent(event);
       });
     });
     return input;
@@ -258,13 +260,11 @@ webreduce.editor.make_fieldUI = webreduce.editor.make_fieldUI || {};
         .attr("id", "scalelist")
     
     var datasets = datasets_in.values;
-    var original_datum = [];
     var value = (datum.value == null) ? datum.default_value : datum.value;
     // now have a list of datasets.
     datum.value = value.slice(0,datasets.length);
     datasets.forEach(function(d,i) {
       datum.value[i] = (datum.value[i] == null) ? 1 : datum.value[i];
-      original_datum[i] = datum.value[i];
     });
     var scale_div = target.select("div#scalelist").append("div")
       .classed("fields", true)
