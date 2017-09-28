@@ -1,7 +1,7 @@
 {
   "modules": [
     {
-      "title": "load spec!",
+      "title": "load spec",
       "module": "ncnr.refl.super_load",
       "x": 30,
       "y": 10,

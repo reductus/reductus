@@ -70,6 +70,7 @@ svg.editor {
 
 .axis .axis-label {
     user-select: none;
+    fill: black;
     -webkit-user-select: none;
     -moz-user-select: none;
 }

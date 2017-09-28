@@ -76,7 +76,7 @@ webreduce.dependencies = webreduce.dependencies || {};
             // print "within",pairs
             // Find which items only occur on the right
             var independent = d3.set();
-            right.forEach(function(r) { if (!left.has(r)) { independent.add(r) } }); 
+            right.each(function(r) { if (!left.has(r)) { independent.add(r) } }); 
             if (independent.size() == 0) {
                 var cycleset = left.values().join(", ")
                 throw "Cyclic dependencies amongst " + cycleset
@@ -96,7 +96,7 @@ webreduce.dependencies = webreduce.dependencies || {};
                 right = d3.set(pairs.map(function(p) { return p[1] }));
                 //left, right = [set(s) for s in zip(*pairs)]
                 var resolved = d3.set();
-                dependent.forEach(function(d) { if(!left.has(d)) { resolved.add(d) } });
+                dependent.each(function(d) { if(!left.has(d)) { resolved.add(d) } });
             }
             //print "independent",independent,"dependent",dependent,"resolvable",resolved
             order = order.concat(resolved.values());

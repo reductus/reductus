@@ -30,9 +30,9 @@ webreduce.editor = webreduce.editor || {};
   webreduce.editor.create_instance = function(target_id) {
     // create an instance of the dataflow editor in
     // the html element referenced by target_id
-    this._instance = new dataflowEditorStreamlineNew.default(null, true);
+    this._instance = new dataflowEditor.default(null, true);
     this._target_id = target_id;
-    this._instance.data([{modules:[],wires: []}]);
+    //this._instance.data([{modules:[],wires: []}]);
     var target = d3.select("#" + target_id);
     target.call(this._instance);
     d3.select("body").on("keydown.accept", null);
@@ -107,7 +107,7 @@ webreduce.editor = webreduce.editor || {};
         .style("stroke-width", 3)
   }
   
-  webreduce.editor.handle_module_clicked = function(d,i,clicked_elem) {
+  webreduce.editor.handle_module_clicked = function(d,i,current_group,clicked_elem) {
     // d module data, i is module index, elem is registered to catch event
     //
     // Flow: 
@@ -219,7 +219,7 @@ webreduce.editor = webreduce.editor || {};
             var first_output = module_def.outputs[0].id;
             clicked_elem = d3.select(elem).select('rect.terminal[terminal_id="'+first_output+'"]').node();          
           }
-          webreduce.editor.handle_module_clicked.call(elem,null,i,clicked_elem);
+          webreduce.editor.handle_module_clicked.call(elem,null,i,null,clicked_elem);
         })
       buttons_div.append("button")
         .text("clear")
@@ -228,10 +228,10 @@ webreduce.editor = webreduce.editor || {};
           var we = webreduce.editor;
           //console.log('clear: ', config_target, JSON.stringify(active_module, null, 2));
           if (active_module.config) { delete active_module.config }
-          webreduce.editor.handle_module_clicked.call(elem,null,i,clicked_elem);
+          webreduce.editor.handle_module_clicked.call(elem,null,i,null,clicked_elem);
         })
         
-      $(buttons_div).buttonset();
+      $(buttons_div.node()).buttonset();
       
       var terminals_to_calculate = module_def.inputs.map(function(inp) {return inp.id});
       var fields_in = {};
@@ -1396,7 +1396,7 @@ webreduce.editor = webreduce.editor || {};
         }
         
         sources_loaded = sources_loaded.then(function() {
-          return webreduce.editor.handle_module_clicked.call(toselect.node(), toselect.datum(), autoselected, toselect_target); 
+          return webreduce.editor.handle_module_clicked.call(toselect.node(), toselect.datum(), autoselected, null, toselect_target); 
         }).then(function() {
           return webreduce.editor.update_completions();
         });

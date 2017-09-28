@@ -326,9 +326,9 @@ webreduce.editor.make_fieldUI = webreduce.editor.make_fieldUI || {};
           input.node().dispatchEvent(event);
           chart.update();
         }
-        var drag_point = d3.behavior.drag()
+        var drag_point = d3.drag()
           .on("drag", dragmove_point)
-          .on("dragstart", function() { d3.event.sourceEvent.stopPropagation(); });
+          .on("start", function() { d3.event.sourceEvent.stopPropagation(); });
         var series_select = d3.select(this);
         series_select.selectAll(".dot")
           .attr("r", 7) // bigger for easier drag...
