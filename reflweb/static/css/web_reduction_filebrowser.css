@@ -152,16 +152,16 @@ div.fields .subfield {
   background-color: yellow;
 }
 #plotdiv {
-  height: 100%;
-  display: flex;
-  text-align: start;
-  
+  flex: 1;
+  text-align: start;  
 }
+
 #plot_title {
-  /*height: 1em;*/
+  flex: 0 0 1em;
 }
 #plot_controls {
   min-height: 1em;
+  flex: 0 0 1em;
 }
 #controls {
   position: absolute;
