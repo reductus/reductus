@@ -459,6 +459,7 @@ webreduce.editor = webreduce.editor || {};
       mychart = new heatChart.default({margin: {left: 100}} );
       d3.selectAll("#plotdiv").data(datas[0].z).call(mychart);
       webreduce.callbacks.resize_center = function() {mychart.autofit()};
+      webreduce.callbacks.resize_center = function() {mychart.autofit()};
     }
         
     var update_plotselect = function() {
@@ -606,17 +607,15 @@ webreduce.editor = webreduce.editor || {};
           });
           
       plot_controls
-        .append("input")
-          .attr("type", "button")
+        .append("button")
           .attr("id", "export_data")
-          .attr("value", "export")
+          .html("export")
           .on("click", webreduce.editor.export_data)
       
       plot_controls
-        .append("input")
-          .attr("type", "button")
+        .append("button")
           .attr("id", "download_svg")
-          .attr("value", "\u2B63 svg")
+          .html("&darr; svg")
           .on("click", function() {
             var chart = webreduce.editor._active_plot;
             var svg = chart.export_svg();
