@@ -28,7 +28,6 @@
             ]
           }
         ],
-        "do_solid_angle": true,
         "do_det_eff": true,
         "do_deadtime": true,
         "deadtime": 0.0000034,
@@ -52,7 +51,6 @@
             ]
           }
         ],
-        "do_solid_angle": true,
         "do_det_eff": true,
         "do_deadtime": true,
         "deadtime": 0.0000034,
