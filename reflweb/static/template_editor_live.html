@@ -304,7 +304,7 @@ e.container.on('contextmenu',function (d,i) {
         }
         ul.append("hr")
         ul.append("li").text("delete").on("click", function() {
-            console.log(d3_target.datum().module_id);               
+            var module_id = d3_target.datum().module_id;
             e.svg().datum().modules = e.svg().datum().modules.filter(function(d) { return d.module_id != module_id});
             popup.remove(); 
             e.update();
