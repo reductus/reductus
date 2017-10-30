@@ -30,6 +30,7 @@ metadata_lookup = {
     "run.filename": "DAS_logs/trajectoryData/fileName",
     "run.filePrefix": "DAS_logs/trajectoryData/filePrefix",
     "run.experimentScanID": "DAS_logs/trajectory/experimentScanID",
+    "run.instrumentScanID": "DAS_logs/trajectory/instrumentScanID",
     "run.detcnt": "control/detector_counts",
     "run.rtime": "control/count_time",
     "run.moncnt": "control/monitor_counts",
@@ -42,7 +43,12 @@ metadata_lookup = {
     "resolution.ap1": "DAS_logs/geometry/sourceAperture",
     "resolution.ap2": "instrument/sample_aperture/size",
     "resolution.ap12dis": "instrument/source_aperture/distance",
-    "sample.position": "instrument/sample_aperture/distance"
+    "sample.position": "instrument/sample_aperture/distance",
+    "rfflipperpowersupply.voltage":  "DAS_logs/RFFlipperPowerSupply/actualVoltage/average_value",
+    "rfflipperpowersupply.frequency":  "DAS_logs/RFFlipperPowerSupply/frequency",
+    "huberRotation.softPosition":  "DAS_logs/huberRotation/softPosition",
+    "start_time":"start_time",
+    "end_time":"end_time",
 }
 
 unit_specifiers = {
@@ -54,6 +60,7 @@ unit_specifiers = {
     "sample.thk": "cm",
     "resolution.ap1": "cm",
     "resolution.ap2": "cm",
+    "sample.thk": "cm"
 }
 
 def process_sourceAperture(field, units):
