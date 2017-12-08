@@ -240,7 +240,7 @@ MONOCHROMATOR_WAVELENGTH_RESOLUTION = {
     'Ge(440)x4': 2.3e-5,
 }
 
-# From Rigaku manual, pg 131, converted from seconds of arc
+# From Rigaku manual, pg 131, converted from seconds of arc to degrees
 MONOCHROMATOR_ANGULAR_DIVERGENCE = {
     'mirror': 4.1e-2,
     'Ge(220)x2': 8.8e-3,
@@ -248,6 +248,7 @@ MONOCHROMATOR_ANGULAR_DIVERGENCE = {
     'Ge(220)x4': 3.4e-3,
     'Ge(440)x4': 1.5e-3,
 }
+DIRECT_ANGULAR_DIVERGENCE = 150./3600.
 # Note: receiving resolution (pg 17) is a factor of three lower than expected
 # from the equation 1/2 (s1 + s2) / |d1 - d2|.  If the manual is giving values
 # as 1-sigma, then they are 25% lower than expected.
@@ -285,7 +286,8 @@ def _interpret(header, values):
     monochromator = R['axis']['IncidentMonochromator'][2]
     #print("monochromator", monochromator)
     R['wavelength_resolution'] = MONOCHROMATOR_WAVELENGTH_RESOLUTION.get(monochromator, np.NaN)
-    R['angular_divergence'] = MONOCHROMATOR_ANGULAR_DIVERGENCE.get(monochromator, 0.0)
+    R['angular_divergence'] \
+        = MONOCHROMATOR_ANGULAR_DIVERGENCE.get(monochromator, DIRECT_ANGULAR_DIVERGENCE)
     if header['MEAS_COND_XG_WAVE_TYPE'] == "Ka1":
         R['wavelength'] = header['HW_XG_WAVE_LENGTH_ALPHA1']
     elif header['MEAS_COND_XG_WAVE_TYPE'] == "Ka2":
