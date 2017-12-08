@@ -19,6 +19,7 @@ from dataflow.lib import iso8601
 from . import bruker
 from . import rigaku
 from . import refldata
+from .util import fetch_url
 
 
 def load_from_string(filename, data, entries=None):
@@ -120,17 +121,26 @@ class BrukerRefl(refldata.ReflData):
 
         self.description = entry['comment']
         self.instrument = 'BrukerXray'
+        # 1-sigma angular resolution (degrees) reported by Bruker.  Our own
+        # measurements give a similar value (~ 0.033 degrees FWHM)
+        self.angular_resolution = 0.03/2.35
         self.slit1.distance = -275.5
         self.slit2.distance = -192.7
         self.slit3.distance = +175.0
         self.slit1.x = 0.03 # TODO: check
         self.slit2.x = 0.03 # TODO: check
-        self.slit1.y = self.slit2.y = 20.0 # TODO: doesn't matter
+        self.slit1.y = self.slit2.y = 20.0 # Note: back slits unused in reduction
         #self.slit4.distance = data_as(entry,'instrument/predetector_slit2/distance','mm')
         #self.detector.distance = data_as(entry,'instrument/detector/distance','mm')
         #self.detector.rotation = data_as(entry,'instrument/detector/rotation','degree')
-        self.detector.wavelength = np.array([entry['alpha_average']], dtype='float')
-        self.detector.wavelength_resolution = 0.001*self.detector.wavelength.copy()
+        # Assume that Kalpha1 and Kalpha2 are both present in 2:1 ratio;
+        # Normally we should check the value of fixed_inc_monochromator to
+        # determine the wavelength and resolution, but the instrument at the
+        # NCNR only has a Göbel mirror.
+        self.detector.wavelength = entry['alpha_average']
+        self.detector.wavelength_resolution = np.std([
+            entry['alpha_1'], entry['alpha_1'], entry['alpha_2']])
+        #print("res:", self.angular_resolution, self.detector.wavelength_resolution, self.detector.wavelength)
         self.detector.deadtime = np.array([0.0]) # sorta true.
         self.detector.deadtime_error = np.array([0.0]) # also kinda true.
 
@@ -142,6 +152,7 @@ class BrukerRefl(refldata.ReflData):
         self.polarization = "unpolarized"
 
     def _set_data(self, data):
+        #for k,v in sorted(data.items()): print(k, v)
         raw_intent = bruker.SCAN_TYPE.get(data['scan_type'], "")
         attenuator_state = data['detslit_code'].strip().lower()
         self.intent = TRAJECTORY_INTENTS.get(raw_intent, refldata.Intent.none)
