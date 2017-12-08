@@ -285,7 +285,7 @@ def _interpret(header, values):
     monochromator = R['axis']['IncidentMonochromator'][2]
     #print("monochromator", monochromator)
     R['wavelength_resolution'] = MONOCHROMATOR_WAVELENGTH_RESOLUTION.get(monochromator, np.NaN)
-    R['angular_divergence'] = MONOCHROMATOR_ANGULAR_DIVERGENCE.get(monochromator, np.NaN)
+    R['angular_divergence'] = MONOCHROMATOR_ANGULAR_DIVERGENCE.get(monochromator, 0.0)
     if header['MEAS_COND_XG_WAVE_TYPE'] == "Ka1":
         R['wavelength'] = header['HW_XG_WAVE_LENGTH_ALPHA1']
     elif header['MEAS_COND_XG_WAVE_TYPE'] == "Ka2":
