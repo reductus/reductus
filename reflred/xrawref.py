@@ -1,4 +1,5 @@
 # This program is public domain
+# -*- coding: UTF-8 -*-
 """
 Load a Bruker raw file into a reflectometry data structure.
 """
