@@ -740,7 +740,7 @@ class ReflData(Group):
     xscale = ''
     #: points excluded from reduction
     mask = None
-    #: Computed angular resolution
+    #: Computed 1-sigma angular resolution in degrees
     angular_resolution = None  # type: np.ndarray
     #: For background scans, the choice of Qz for the
     #: points according to theta (sample angle), 2theta (detector angle)
@@ -949,8 +949,10 @@ class ReflData(Group):
         if label is None:
             label = self.name+self.polarization
         xerr = self.dx if self.angular_resolution is not None else None
-        plt.errorbar(self.x, self.v, yerr=self.dv, xerr=xerr, label=label, fmt='.')
-        plt.xlabel("%s (%s)"%(self.xlabel, self.xunits) if self.xunits else self.xlabel)
+        x, dx, xunits, xlabel = self.x, xerr, self.xunits, self.xlabel
+        #x, dx, xunits, xlabel = self.detector.angle_x, self.angular_resolution, 'detector angle', 'deg'
+        plt.errorbar(x, self.v, yerr=self.dv, xerr=xerr, label=label, fmt='.')
+        plt.xlabel("%s (%s)"%(xlabel, xunits) if xunits else xlabel)
         plt.ylabel("%s (%s)"%(self.vlabel, self.vunits) if self.vunits else self.vlabel)
         if not Intent.isslit(self.intent):
             plt.yscale('log')
