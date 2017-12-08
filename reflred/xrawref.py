@@ -231,9 +231,9 @@ class RigakuRefl(refldata.ReflData):
         self.slit1.distance = data['slit1_distance']
         self.slit2.distance = data['slit2_distance']
         self.slit3.distance = data['slit3_distance']
-        self.slit3.distance = data['slit4_distance']
-        self.slit2.x = data['axis']['IncidentSlitBox'][2]
-        self.slit2.y = data['axis']['IncidentAxdSlit'][2]
+        self.slit4.distance = data['slit4_distance']
+        self.slit1.x = data['axis']['IncidentSlitBox'][2]
+        self.slit2.x = data['axis']['IncidentAxdSlit'][2]
         self.slit3.x = data['axis']['ReceivingSlitBox1'][2]
         self.slit4.x = data['axis']['ReceivingSlitBox2'][2]
 
