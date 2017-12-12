@@ -20,6 +20,7 @@ from dataflow.lib import iso8601
 from . import bruker
 from . import rigaku
 from . import refldata
+from .resolution import FWHM2sigma
 from .util import fetch_url
 
 
@@ -124,7 +125,7 @@ class BrukerRefl(refldata.ReflData):
         self.instrument = 'BrukerXray'
         # 1-sigma angular resolution (degrees) reported by Bruker.  Our own
         # measurements give a similar value (~ 0.033 degrees FWHM)
-        self.angular_resolution = 0.03/2.35
+        self.angular_resolution = FWHM2sigma(0.03)
         self.slit1.distance = -275.5
         self.slit2.distance = -192.7
         self.slit3.distance = +175.0
@@ -140,7 +141,7 @@ class BrukerRefl(refldata.ReflData):
         # NCNR only has a Göbel mirror.
         self.detector.wavelength = entry['alpha_average']
         self.detector.wavelength_resolution = np.std([
-            entry['alpha_1'], entry['alpha_1'], entry['alpha_2']])
+            entry['alpha_1'], entry['alpha_1'], entry['alpha_2']], ddof=1)
         #print("res:", self.angular_resolution, self.detector.wavelength_resolution, self.detector.wavelength)
         self.detector.deadtime = np.array([0.0]) # sorta true.
         self.detector.deadtime_error = np.array([0.0]) # also kinda true.
@@ -236,7 +237,7 @@ class RigakuRefl(refldata.ReflData):
         self.polarization = "unpolarized"
 
     def _set_data(self, data):
-        # Resolution info
+        # Resolution info (returned as 1-sigma from rigaku reader)
         self.angular_resolution = data['angular_divergence']
         self.detector.wavelength = data['wavelength']
         self.detector.wavelength_resolution = data['wavelength_resolution']
