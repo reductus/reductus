@@ -74,8 +74,7 @@ dist = setup(
     ext_modules=module_config(),
     # numpy and scipy are requirements, but don't install them with pip
     install_requires=[
-        'uncertainties', 'docutils', 'wheel', 'pytz', 'hug', 'h5py', 
-        'redis', 'msgpack-python',],
+        'uncertainties', 'docutils', 'wheel', 'pytz', 'msgpack-python', 'flask'],
     extras_require={
         'preinstalled': ['scipy', 'numpy'],
         'masked_curve_fit': ['numdifftools'],
