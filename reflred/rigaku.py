@@ -99,6 +99,7 @@ else:
 
 # Time format in Rigaku .ras files is "mm/dd/yy HH:MM:SS"
 TIME_FORMAT = "%m/%d/%y %H:%M:%S"
+FWHM = np.sqrt(np.log(256))
 
 # Copied from anno_exc so that rigaku.py is stand-alone
 def annotate_exception(msg, exc=None):
@@ -234,21 +235,21 @@ EMISSION_LINEWIDTH = 0.00021  # 0.05% dL/L FWHM as 1-sigma line width
 # From Rigaku manual, pg 17, pg 131
 MONOCHROMATOR_WAVELENGTH_RESOLUTION = {
     # 'mirror': Ka1 + Ka2 + Kb
-    'Ge(220)x2': 3.8e-4,
+    'Ge(220)x2': 3.8e-4/FWHM,
     'Ge(400)x2': np.NaN,  # Manual doesn't list the resolution for this config.
-    'Ge(220)x4': 1.5e-4,
-    'Ge(440)x4': 2.3e-5,
+    'Ge(220)x4': 1.5e-4/FWHM,
+    'Ge(440)x4': 2.3e-5/FWHM,
 }
 
 # From Rigaku manual, pg 131, converted from seconds of arc to degrees
 MONOCHROMATOR_ANGULAR_DIVERGENCE = {
-    'mirror': 4.1e-2,
-    'Ge(220)x2': 8.8e-3,
-    'Ge(400)x2': 1.2e-2,
-    'Ge(220)x4': 3.4e-3,
-    'Ge(440)x4': 1.5e-3,
+    'mirror': 4.1e-2/FWHM,
+    'Ge(220)x2': 8.8e-3/FWHM,
+    'Ge(400)x2': 1.2e-2/FWHM,
+    'Ge(220)x4': 3.4e-3/FWHM,
+    'Ge(440)x4': 1.5e-3/FWHM,
 }
-DIRECT_ANGULAR_DIVERGENCE = 150./3600.
+DIRECT_ANGULAR_DIVERGENCE = 150./3600./FWHM
 # Note: receiving resolution (pg 17) is a factor of three lower than expected
 # from the equation 1/2 (s1 + s2) / |d1 - d2|.  If the manual is giving values
 # as 1-sigma, then they are 25% lower than expected.
@@ -285,7 +286,8 @@ def _interpret(header, values):
 
     monochromator = R['axis']['IncidentMonochromator'][2]
     #print("monochromator", monochromator)
-    R['wavelength_resolution'] = MONOCHROMATOR_WAVELENGTH_RESOLUTION.get(monochromator, np.NaN)
+    R['wavelength_resolution'] \
+        = MONOCHROMATOR_WAVELENGTH_RESOLUTION.get(monochromator, np.NaN)
     R['angular_divergence'] \
         = MONOCHROMATOR_ANGULAR_DIVERGENCE.get(monochromator, DIRECT_ANGULAR_DIVERGENCE)
     if header['MEAS_COND_XG_WAVE_TYPE'] == "Ka1":
@@ -370,7 +372,7 @@ def plot(datasets, joined=True, label=None):
         plt.xlabel("%s (%s)" % (data['x_label'], data['x_unit']))
         plt.ylabel("%s (%s/%s)" % (data['y_label'], data['y_unit'], data['count_time_unit']))
     plt.yscale('log')
-    plt.legend()
+    plt.legend(loc='best')
 
 def show_header_diff(datasets):
     keys = set.union(*(set(data['full_header'].keys()) for data in datasets))
