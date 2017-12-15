@@ -9,7 +9,7 @@ wget https://bootstrap.pypa.io/get-pip.py
 python3 get-pip.py --user
 
 #pip install --user hug pytz numpy h5py redis msgpack-python docutils pillow
-pip install --user pytz numpy h5py msgpack-python docutils pillow flask diskcache
+$HOME/.local/bin/pip install --user pytz numpy h5py msgpack-python docutils pillow flask diskcache
 
 git clone https://github.com/reflectometry/reductus $REDUCTUS_HOME
 cd $REDUCTUS_HOME
@@ -18,7 +18,11 @@ python3 setup.py develop --user
 sudo a2enmod headers proxy_balancer lbmethod_byrequests
 
 sudo mkdir /var/www/html/reductus
-sudo chown $USER:$USER /var/www/html/reductus
+sudo cp -r $REDUCTUS_HOME/reflweb/static/* /var/www/html/reductus
+sudo chown -R $USER:$USER /var/www/html/reductus
+sudo chmod -R a+r /var/www/html/reductus
+sudo find /var/www/html -type d -exec chmod 755 {} \;
+
 
 echo -e '#!/bin/sh\ncp -r reflweb/static/* /var/www/html/reductus\n\necho "copied to web"' > $REDUCTUS_HOME/.git/hooks/post-merge
 
@@ -35,6 +39,9 @@ cd $REDUCTUS_HOME/reflweb && $REDUCTUS_HOME/reflweb/start_flask_many_py3.sh 8001
 
 # start the website
 sudo service apache2 reload
+
+sudo ufw allow http
+sudo ufw reload
 
 # set up cron job to start uwsgi servers on reboot
 echo -e "@reboot cd $REDUCTUS_HOME/reflweb && $REDUCTUS_HOME/reflweb/start_flask_many_py3.sh 8001 5" > $HOME/crontab.txt
