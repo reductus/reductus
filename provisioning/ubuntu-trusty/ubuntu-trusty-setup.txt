@@ -4,7 +4,7 @@ REDUCTUS_HOME=$HOME/reductus
 PROVISION_DIR=$REDUCTUS_HOME/provisioning/ubuntu-trusty
 
 sudo apt update
-sudo apt install apache2 libapache2-mod-proxy-uwsgi gcc g++ python3-dev uwsgi-plugin-python3 git
+sudo apt install -y apache2 libapache2-mod-proxy-uwsgi gcc g++ python3-dev uwsgi-plugin-python3 git
 wget https://bootstrap.pypa.io/get-pip.py
 python3 get-pip.py --user
 

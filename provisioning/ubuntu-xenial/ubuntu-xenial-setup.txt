@@ -4,7 +4,7 @@ REDUCTUS_HOME=$HOME/reductus
 PROVISION_DIR=$REDUCTUS_HOME/provisioning/ubuntu-trusty
 
 sudo apt update
-sudo apt install apache2 libapache2-mod-proxy-uwsgi gcc g++ g++-5 python3-dev uwsgi-plugin-python3 git
+sudo apt install -y apache2 libapache2-mod-proxy-uwsgi gcc g++ g++-5 python3-dev uwsgi-plugin-python3 git
 wget https://bootstrap.pypa.io/get-pip.py
 python3 get-pip.py --user
 
@@ -22,7 +22,6 @@ sudo cp -r $REDUCTUS_HOME/reflweb/static/* /var/www/html/reductus
 sudo chown -R $USER:$USER /var/www/html/reductus
 sudo chmod -R a+r /var/www/html/reductus
 sudo find /var/www/html -type d -exec chmod 755 {} \;
-
 
 echo -e '#!/bin/sh\ncp -r reflweb/static/* /var/www/html/reductus\n\necho "copied to web"' > $REDUCTUS_HOME/.git/hooks/post-merge
 
