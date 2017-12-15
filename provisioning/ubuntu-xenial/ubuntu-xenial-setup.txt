@@ -1,0 +1,34 @@
+#!/bin/bash
+
+REDUCTUS_HOME=$HOME/reductus
+PROVISION_DIR=$REDUCTUS_HOME/provisioning/ubuntu-trusty
+
+sudo apt update
+sudo apt install apache2 libapache2-mod-proxy-uwsgi gcc g++ g++-5 python3-dev uwsgi-plugin-python3 git
+wget https://bootstrap.pypa.io/get-pip.py
+python3 get-pip.py --user
+
+#pip install --user hug pytz numpy h5py redis msgpack-python docutils pillow
+pip install --user pytz numpy h5py msgpack-python docutils pillow flask diskcache
+
+git clone https://github.com/reflectometry/reductus $REDUCTUS_HOME
+cd $REDUCTUS_HOME
+python3 setup.py develop --user
+
+sudo a2enmod headers proxy_balancer lbmethod_byrequests
+
+sudo mkdir /var/www/html/reductus
+sudo chown $USER:$USER /var/www/html/reductus
+
+echo -e '#!/bin/sh\ncp -r reflweb/static/* /var/www/html/reductus\n\necho "copied to web"' > $REDUCTUS_HOME/.git/hooks/post-merge
+
+# copy the config.py from server...
+cp $PROVISION_DIR/config.py $REDUCTUS_HOME/reflweb/config.py
+
+# set up vhosts file...
+sudo cp $PROVISION_DIR/apache_vhosts /etc/apache2/sites-available/reductus_server
+sudo a2ensite reductus_server
+
+# set up cron job to start uwsgi servers
+echo -e "@reboot cd $REDUCTUS_HOME/reflweb && $REDUCTUS_HOME/reflweb/start_flask_many_py3.sh 8001 5" > $HOME/crontab.txt
+crontab $HOME/crontab.txt
