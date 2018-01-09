@@ -180,7 +180,6 @@ class NCNRNeXusRefl(refldata.ReflData):
 
     See :class:`refldata.ReflData` for details.
     """
-    fallback_id = -1
     format = "NeXus"
     trajectory_intents = {
         'SPEC': 'specular',
@@ -204,8 +203,9 @@ class NCNRNeXusRefl(refldata.ReflData):
         if 'fileNum' in das['trajectoryData']:
             self.filenumber = das['trajectoryData/filenum'][0]
         else:
-            self.filenumber = NCNRNeXusRefl.fallback_id
-            NCNRNeXusRefl.fallback_id -= 1
+            # fall back to randomly generated filenum
+            from random import randint
+            self.filenumber = -randint(10**9, (10**10) - 1)
         
         #self.date = iso8601.parse_date(entry['start_time'][0].decode('utf-8'))
         self.date = iso8601.parse_date(entry['start_time'][0])
