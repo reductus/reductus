@@ -180,6 +180,7 @@ class NCNRNeXusRefl(refldata.ReflData):
 
     See :class:`refldata.ReflData` for details.
     """
+    fallback_id = -1
     format = "NeXus"
     trajectory_intents = {
         'SPEC': 'specular',
@@ -200,7 +201,12 @@ class NCNRNeXusRefl(refldata.ReflData):
         das = entry['DAS_logs']
         self.probe = 'neutron'
         self.name = das['trajectoryData/fileName'][0] if 'fileName' in das['trajectoryData'] else 'unknown'
-        self.filenumber = das['trajectoryData/fileNum'][0] if 'fileNum' in das['trajectoryData'] else -999
+        if 'fileNum' in das['trajectoryData']:
+            self.filenumber = das['trajectoryData/filenum'][0]
+        else:
+            self.filenumber = NCNRNeXusRefl.fallback_id
+            NCNRNeXusRefl.fallback_id -= 1
+        
         #self.date = iso8601.parse_date(entry['start_time'][0].decode('utf-8'))
         self.date = iso8601.parse_date(entry['start_time'][0])
         self.description = entry['experiment_description'][0]
