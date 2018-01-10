@@ -201,7 +201,7 @@ class NCNRNeXusRefl(refldata.ReflData):
         self.probe = 'neutron'
         self.name = das['trajectoryData/fileName'][0] if 'fileName' in das['trajectoryData'] else 'unknown'
         if 'fileNum' in das['trajectoryData']:
-            self.filenumber = das['trajectoryData/filenum'][0]
+            self.filenumber = das['trajectoryData/fileNum'][0]
         else:
             # fall back to randomly generated filenum
             from random import randint
