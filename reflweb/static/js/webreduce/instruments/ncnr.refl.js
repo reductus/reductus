@@ -264,24 +264,30 @@ webreduce.instruments['ncnr.refl'] = webreduce.instruments['ncnr.refl'] || {};
         })
     // for refl, this will return a list of entries, but
     // we want to decorate the file that contains the entries.
+    var viewer_link = {
+      "ncnr": "https://ncnr.nist.gov/ipeek/nexus-zip-viewer.html",
+      "ncnr_DOI": "https://ncnr.nist.gov/ipeek/nexus-zip-viewer.html",
+      "charlotte": "https://charlotte.ncnr.nist.gov/ipeek/nexus-zip-viewer.html"
+    }
     to_decorate.forEach(function(leaf, i) {
       var parent_id = leaf.parent;
       // only add link once per file
       if (parent_id in parents_decorated) { return }
       var fullpath = leaf.li_attr.filename;
       var datasource = leaf.li_attr.source;
-      if (["ncnr", "ncnr_DOI"].indexOf(datasource) < 0) { return }
-      if (datasource == "ncnr_DOI") { fullpath = "ncnrdata" + fullpath; }
-      var pathsegments = fullpath.split("/");
-      var pathlist = pathsegments.slice(0, pathsegments.length-1).join("+");
-      var filename = pathsegments.slice(-1);
-      var link = "<a href=\"http://ncnr.nist.gov/ipeek/nexus-zip-viewer.html";
-      link += "?pathlist=" + pathlist;
-      link += "&filename=" + filename;
-      link += "\" style=\"text-decoration:none;\">&#9432;</a>";
-      var parent_actual = jstree._model.data[parent_id];
-      parent_actual.text += link;
-      parents_decorated[parent_id] = true;
+      if (viewer_link[datasource]) {
+        if (datasource == "ncnr_DOI") { fullpath = "ncnrdata" + fullpath; }
+        var pathsegments = fullpath.split("/");
+        var pathlist = pathsegments.slice(0, pathsegments.length-1).join("+");
+        var filename = pathsegments.slice(-1);
+        var link = "<a href=\"" + viewer_link[datasource];
+        link += "?pathlist=" + pathlist;
+        link += "&filename=" + filename;
+        link += "\" style=\"text-decoration:none;\">&#9432;</a>";
+        var parent_actual = jstree._model.data[parent_id];
+        parent_actual.text += link;
+        parents_decorated[parent_id] = true;
+      }
     })
   }
   
