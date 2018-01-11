@@ -199,8 +199,8 @@ class NCNRNeXusRefl(refldata.ReflData):
         #print(entry['instrument'].values())
         das = entry['DAS_logs']
         self.probe = 'neutron'
-        self.name = das['trajectoryData/fileName'][0] if 'fileName' in das['trajectoryData'] else 'unknown'
-        if 'fileNum' in das['trajectoryData']:
+        self.name = das['trajectoryData/fileName'][0] if 'trajectoryData/fileName' in das else 'unknown'
+        if 'trajectoryData/fileNum' in das:
             self.filenumber = das['trajectoryData/fileNum'][0]
         else:
             # fall back to randomly generated filenum
@@ -227,7 +227,7 @@ class NCNRNeXusRefl(refldata.ReflData):
 
         self.sample.name = entry['sample/name'][0] if 'name' in entry['sample'] else ""
         self.sample.description = entry['sample/description'][0] if 'description' in entry['sample'] else ""
-        raw_intent = das['trajectoryData/_scanType'][0] if '_scanType' in das['trajectoryData'] else ""
+        raw_intent = das['trajectoryData/_scanType'][0] if 'trajectoryData/_scanType' in das else ""
         if raw_intent in self.trajectory_intents:
             self.intent = self.trajectory_intents[raw_intent]
         self.monitor.base = das['counter/countAgainst'][0]
@@ -305,7 +305,7 @@ class NCNRNeXusRefl(refldata.ReflData):
         else:
             raise ValueError("Unknown sample angle in file")
         self.Qz_target = data_as(das, 'trajectoryData/_q', '', rep=n)
-        if '_theta_offset' in das['trajectoryData']:
+        if 'trajectoryData/_theta_offset' in das:
             self.background_offset = 'theta'
         self.scan_value = []
         self.scan_units = []
