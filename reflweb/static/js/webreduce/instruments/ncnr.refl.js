@@ -77,14 +77,32 @@ webreduce.instruments['ncnr.refl'] = webreduce.instruments['ncnr.refl'] || {};
   function plot_refl(refl_objs) {
     // entry_ids is list of {path: path, filename: filename, entryname: entryname} ids
     var series = new Array();
-    var column_sets = refl_objs.map(function(ro) {return ro.columns || {} });
+    var column_sets = refl_objs.map(function(ro) {
+      let columns = ro.columns || {};
+      var nscans = (ro.scan_value || []).length;
+      var sv = ro.scan_value || [];
+      var nscans = sv.length;
+      sv.forEach(function(s,i) {
+        var new_col = {};
+        var new_label = ro.scan_label[i];
+        new_col.label = new_label;
+        new_col.target = 'scan_value/' + i;
+        var new_units = ro.scan_units[i];
+        if (new_units) { new_col.units = new_units }
+        columns[new_label] = new_col
+      })
+      return columns;
+    });
     var datas = [], xcol;
     var ycol = "v";
     var xcol = "x";
     var all_columns = column_sets[0];
     column_sets.forEach(function(new_cols) {
+      // match by label.
+      var ncl = Object.keys(new_cols).map(function(nc) { return new_cols[nc].label })
       for (var c in all_columns) {
-        if (all_columns.hasOwnProperty(c) && !(c in new_cols)) {
+        var cl = all_columns[c].label;
+        if (ncl.indexOf(cl) < 0) {
           delete all_columns[c];
         }
       }
@@ -108,7 +126,8 @@ webreduce.instruments['ncnr.refl'] = webreduce.instruments['ncnr.refl'] || {};
       var colset = {}
       for (var col in all_columns) {
         if (all_columns.hasOwnProperty(col)) {
-          colset[col] = {"values": get_refl_item(entry, col)};
+          var target = all_columns[col].target || col;
+          colset[col] = {"values": get_refl_item(entry, target)};
           var errorbars_lookup = all_columns[col].errorbars;
           if (errorbars_lookup != null) {
             colset[col]["errorbars"] = get_refl_item(entry, errorbars_lookup);
