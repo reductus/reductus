@@ -86,7 +86,7 @@ webreduce.instruments['ncnr.refl'] = webreduce.instruments['ncnr.refl'] || {};
         var new_col = {};
         var new_label = ro.scan_label[i];
         new_col.label = new_label;
-        new_col.target = 'scan_value/' + i;
+        new_col.is_scan = true;
         var new_units = ro.scan_units[i];
         if (new_units) { new_col.units = new_units }
         columns[new_label] = new_col
@@ -126,7 +126,11 @@ webreduce.instruments['ncnr.refl'] = webreduce.instruments['ncnr.refl'] || {};
       var colset = {}
       for (var col in all_columns) {
         if (all_columns.hasOwnProperty(col)) {
-          var target = all_columns[col].target || col;
+          var target = col;
+          if (all_columns[col].is_scan) {
+            var target_index = entry.scan_label.indexOf(col);
+            target = 'scan_value/' + target_index;
+          }
           colset[col] = {"values": get_refl_item(entry, target)};
           var errorbars_lookup = all_columns[col].errorbars;
           if (errorbars_lookup != null) {
