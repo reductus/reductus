@@ -18,6 +18,9 @@
 
         ServerAdmin webmaster@localhost
         DocumentRoot /var/www/html/reductus
+        <Directory "/var/www/html/reductus">
+            Options -Indexes
+        </Directory>
         Header set Cache-Control "must-revalidate"
         ProxyPass "/RPC2" "balancer://mycluster"
         ProxyPassReverse "/RPC2" "balancer://mycluster"
