@@ -21,7 +21,9 @@ jsonrpc_port = 8001
 # ssl_args = {"keyfile": None, "certfile": None}
 http_port = 8000
 serve_staticfiles = True
-use_redis = True
+#use_redis = True
+use_diskcache = True
+diskcache_params = {"size_limit": int(4*2**30), "shards": 5}
 data_sources = [
     {
         "name": "ncnr_DOI",
