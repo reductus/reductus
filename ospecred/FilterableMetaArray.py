@@ -232,7 +232,7 @@ class FilterableMetaArray(MetaArray):
             dims[axis[index] + 'dim'] = len(arr)
         xlabel = self._info[0]['name']
         ylabel = self._info[1]['name']
-        zlabel = col
+        zlabel = counts_col
         #zlabel = self._info[2]['cols'][0]['name']
         title = 'MAGIK data' # That's creative enough, right?
         plot_type = '2d'
