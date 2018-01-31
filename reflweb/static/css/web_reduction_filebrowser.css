@@ -153,15 +153,15 @@ div.fields .subfield {
 }
 #plotdiv {
   flex: 1;
-  text-align: start;  
+  text-align: start;
+  overflow: hidden;
 }
 
 #plot_title {
-  flex: 0 0 1em;
+  min-height: 1em;
 }
 #plot_controls {
   min-height: 1em;
-  flex: 0 0 1em;
 }
 #controls {
   position: absolute;
@@ -218,7 +218,11 @@ svg.editor path.wire {
     stroke-width: 5px;
     stroke: red;
 }
-    
+
+svg.editor path.exposed-wire, svg.editor rect.exposed {
+  display: none;
+}
+
 @keyframes offset {
   from {
     stroke-dashoffset: 20;
