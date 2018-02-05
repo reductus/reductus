@@ -99,42 +99,51 @@ webreduce.editor.make_fieldUI = webreduce.editor.make_fieldUI || {};
     // add interactors:
     if (this.add_interactors) {
       var active_plot = this.active_plot;
-      var drag_instance = active_plot.drag;
+      var drag_instance = d3.drag();
+      active_plot.svg.call(drag_instance);
       var selector = new rectangleSelect.default(drag_instance);
       active_plot.interactors(selector);
       var select_active = true;
+      var zoom_active = true; // overrides select_active...
       
       var onselect = function(xmin, xmax, ymin, ymax) {
-        d3.selectAll("#plotdiv svg g.series").each(function(d,i) {
-          // i is index of dataset
-          var series_select = d3.select(this);
-          var index_list = datum.value[i];
-          series_select.selectAll(".dot").each(function(dd, ii) {
-            // ii is the index of the point in that dataset.
-            var x = dd[0], 
-                y = dd[1];
-            if (x >= xmin && x <= xmax && y >= ymin && y <= ymax) {
-              var dot = d3.select(this);
-              dot.classed("masked", select_active);
-              // manipulate data list directly:
-              var index_index = index_list.indexOf(ii);
-              if (index_index > -1 && !select_active) { 
-                // then the index exists, but we're deselecting:
-                index_list.splice(index_index, 1); 
+        if (zoom_active) {
+          active_plot.x().domain([xmin, xmax]);
+          active_plot.y().domain([ymin, ymax]);
+          active_plot.update();
+        }
+        else {  
+          d3.selectAll("#plotdiv svg g.series").each(function(d,i) {
+            // i is index of dataset
+            var series_select = d3.select(this);
+            var index_list = datum.value[i];
+            series_select.selectAll(".dot").each(function(dd, ii) {
+              // ii is the index of the point in that dataset.
+              var x = dd[0], 
+                  y = dd[1];
+              if (x >= xmin && x <= xmax && y >= ymin && y <= ymax) {
+                var dot = d3.select(this);
+                dot.classed("masked", select_active);
+                // manipulate data list directly:
+                var index_index = index_list.indexOf(ii);
+                if (index_index > -1 && !select_active) { 
+                  // then the index exists, but we're deselecting:
+                  index_list.splice(index_index, 1); 
+                }
+                else if (index_index < 0 && select_active) {
+                  // then the index doesn't exist and we're selecting
+                  index_list.push(ii); 
+                }
               }
-              else if (index_index < 0 && select_active) {
-                // then the index doesn't exist and we're selecting
-                index_list.push(ii); 
-              }
-            }
+            });
+            index_list.sort();
           });
-          index_list.sort();
-        });
-        index_div.datum(datum);
-        input.text(prettyJSON(datum.value));
-        var event = document.createEvent('Event');
-        event.initEvent('input', true, true);
-        input.node().dispatchEvent(event);
+          index_div.datum(datum);
+          input.text(prettyJSON(datum.value));
+          var event = document.createEvent('Event');
+          event.initEvent('input', true, true);
+          input.node().dispatchEvent(event);
+        }
       }
       
       selector.callbacks(onselect);
@@ -175,18 +184,15 @@ webreduce.editor.make_fieldUI = webreduce.editor.make_fieldUI || {};
 
       var selectorchange = function(ev) {
         if (this.value == 'zoom') {
-          active_plot.zoomRect(true);
-          selector.selectRect(false);
+          zoom_active = true;
         }
         else if (this.value == 'select') {
+          zoom_active = false;
           select_active = true;
-          active_plot.zoomRect(false);
-          selector.selectRect(true);
         }
         else if (this.value == 'deselect') {
+          zoom_active = false;
           select_active = false;
-          active_plot.zoomRect(false);
-          selector.selectRect(true);
         }
       }
       
