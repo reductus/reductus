@@ -22,6 +22,8 @@ sudo cp -r $REDUCTUS_HOME/reflweb/static/* /var/www/html/reductus
 sudo chown -R $USER:$USER /var/www/html/reductus
 sudo chmod -R a+r /var/www/html/reductus
 sudo find /var/www/html -type d -exec chmod 755 {} \;
+# only need this if ansible has set this to permissions 750:
+#sudo chmod a+x /var/spool/cron;
 
 echo -e '#!/bin/sh\ncp -r reflweb/static/* /var/www/html/reductus\n\necho "copied to web"' > $REDUCTUS_HOME/.git/hooks/post-merge
 
@@ -39,8 +41,14 @@ cd $REDUCTUS_HOME/reflweb && $REDUCTUS_HOME/reflweb/start_flask_many_py3.sh 8001
 # start the website
 sudo service apache2 reload
 
-sudo ufw allow http
-sudo ufw reload
+# use iptables directly if ansible script causes ufw to not work
+sudo iptables -A INPUT -p tcp --dport 80 -m conntrack --ctstate NEW,ESTABLISHED -j ACCEPT
+sudo netfilter-persistent save
+
+# use ufw if available/working
+#sudo systemctl enable ufw
+#sudo ufw allow http
+#sudo ufw reload
 
 # set up cron job to start uwsgi servers on reboot
 echo -e "@reboot cd $REDUCTUS_HOME/reflweb && $REDUCTUS_HOME/reflweb/start_flask_many_py3.sh 8001 5" > $HOME/crontab.txt
