@@ -8,11 +8,10 @@ sudo apt install -y apache2 libapache2-mod-proxy-uwsgi gcc g++ g++-5 python3-dev
 wget https://bootstrap.pypa.io/get-pip.py
 python3 get-pip.py --user
 
-#pip install --user hug pytz numpy h5py redis msgpack-python docutils pillow
-$HOME/.local/bin/pip install --user pytz numpy h5py msgpack-python docutils pillow flask diskcache
-
+# get the application code...
 git clone https://github.com/reflectometry/reductus $REDUCTUS_HOME
 cd $REDUCTUS_HOME
+$HOME/.local/bin/pip install --user -r requirements.txt
 python3 setup.py develop --user
 
 sudo a2enmod headers proxy_balancer lbmethod_byrequests
@@ -49,6 +48,14 @@ sudo netfilter-persistent save
 #sudo systemctl enable ufw
 #sudo ufw allow http
 #sudo ufw reload
+
+sudo aideinit
+# need to add these to root crontab?
+# 0 1 * * * nice -19 /usr/local/bin/aide --config=/home/username/aide.conf -C| mail you@domain -saide\ domain
+# 0 2 * * 0  nice -19 /usr/local/bin/aide --config=/home/username/aide.conf --init;mv -f /home/username/aide.db.out /home/username/aide.db.in
+
+# set up apache2 to keep log files longer
+sudo sed -i -e 's/rotate [0-9]\+/rotate 31/g' /etc/logrotate.d/apache2
 
 # set up cron job to start uwsgi servers on reboot
 echo -e "@reboot cd $REDUCTUS_HOME/reflweb && $REDUCTUS_HOME/reflweb/start_flask_many_py3.sh 8001 5" > $HOME/crontab.txt
