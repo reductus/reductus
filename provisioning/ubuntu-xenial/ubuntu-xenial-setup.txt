@@ -28,6 +28,8 @@ echo -e '#!/bin/sh\ncp -r reflweb/static/* /var/www/html/reductus\n\necho "copie
 
 # copy the config.py from server...
 cp $PROVISION_DIR/config.py $REDUCTUS_HOME/reflweb/config.py
+sudo cp $REDUCTUS_HOME/reflweb/ncnr_CA_chain.pem /usr/local/share/ca-certificates/
+sudo update-ca-certificates
 
 # set up vhosts file...
 sudo cp $PROVISION_DIR/apache_vhosts /etc/apache2/sites-available/reductus_server.conf
@@ -51,8 +53,8 @@ sudo netfilter-persistent save
 
 sudo aideinit
 # need to add these to root crontab?
-# 0 1 * * * nice -19 /usr/local/bin/aide --config=/home/username/aide.conf -C| mail you@domain -saide\ domain
-# 0 2 * * 0  nice -19 /usr/local/bin/aide --config=/home/username/aide.conf --init;mv -f /home/username/aide.db.out /home/username/aide.db.in
+# 0 1 * * * nice -19 /usr/bin/aide --config=/etc/aide/aide.conf -C| mail you@domain -saide\ domain
+# 0 2 * * 0  nice -19 /usr/bin/aide --config=/etc/aide/aide.conf --init;mv -f /var/lib/aide.db.new /var/lib/aide/aide.db
 
 # set up apache2 to keep log files longer
 sudo sed -i -e 's/rotate [0-9]\+/rotate 31/g' /etc/logrotate.d/apache2
