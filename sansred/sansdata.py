@@ -142,7 +142,7 @@ class SansData(object):
         plottable_data = {
             'entry': self.metadata['entry'],
             'type': '2d',
-            'z':  [data.T.tolist()],
+            'z':  [data.T.flatten().tolist()],
             'title': self.metadata['run.filename']+': ' + self.metadata['sample.labl'],
             #'metadata': self.metadata,
             'options': {
