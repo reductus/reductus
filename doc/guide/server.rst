@@ -3,14 +3,14 @@ Server Installation
 ===================
 
 If you do not have access to the internet, or if the files that you want
-to reduce are not available to `reductus`_ then you will need to run a
-local version of the server. The reductus *Data* menu will have an
-additional *Local* option to access the files on your computer.
+to reduce are not available to the online `reductus`_ server then you will
+need to run a local version of the server. The reductus *Data* menu will
+have an additional *Local* option to access the files on your computer.
 
 To run the server, you will first need to clone the repository
 using `git <https://git-scm.com/>`_::
 
-    git clone https://github.com/reflectometry/reduction
+    git clone https://github.com/reflectometry/reductus
 
 Running a server with Docker
 ----------------------------
@@ -25,10 +25,10 @@ Clone the repo, the change directories into the repository and run::
     docker-compose up -d
 
 This will result in a trio of docker containers being spun up, one with a
-web server for the interface ('reflweb'), one with the backend calculation
-RPC server ('reductus') and one with the Redis cache.
+web server for the interface (reflweb), one with the backend calculation
+RPC server (reductus) and one with the Redis cache.
 
-Files in ./reflweb/testdata/ will be mapped into the server at /data, for
+Files in `./reflweb/testdata/` will be mapped into the server at /data, for
 testing the local file handling. Changes to the python code can be
 incorporated into the containers by stopping them, then repeating
 the build and up commands above.
@@ -60,12 +60,12 @@ Setup using Anaconda
 
 Anaconda python from continuum.io provides packages for many of the numerical
 libraries needed by the reduction backend.  The program should run on python
-2.7, 3.4 and 3.5.
+2.7, 3.4+
 
 Simple setup is as follows::
 
-    conda create -n dataflow numpy scipy gevent nose docutils h5py pytz werkzeug
-    source activate dataflow
+    conda create -n reductus numpy scipy gevent nose docutils h5py pytz werkzeug
+    source activate reductus
     pip install uncertainties tinyrpc
     conda install sphinx  # if you need to build the docs
 
@@ -74,18 +74,18 @@ Simple setup is as follows::
 
 Build in place (if you need off-specular reduction)::
 
-    cd reduction
+    cd path/to/reductus
     python setup.py build_ext --inplace
 
 In the same directory, test that your environment is working::
 
-    # mac/linux console
+    # Mac/Linux console
     ./test.sh
 
-    # windows
+    # Windows
     nosetests --all-modules tests dataflow reflred sansred ospecred
 
-Optional redis server for caching downloaded files::
+Optional redis server (not available on Windows) for caching downloaded files::
 
     conda install redis redis-py
 
@@ -93,18 +93,18 @@ Note: setting up a usable compiler environment on Windows can be difficult
 (`MinGW compiler <http://mingw-w64.org/>` or
 `Microsoft Visual C++ Compiler <https://www.microsoft.com/en-us/download/details.aspx?id=44266>`)
 and updating distutils.cfg to point to the right place.  Setting up the
-docker containers may be a better option for windows users.  This is only
+docker containers may be a better option for Windows users.  This is only
 needed for rebinning in off-specular reduction, so maybe you can avoid it.
 
 Running the server
 ~~~~~~~~~~~~~~~~~~
 
-Redis server is used for caching data files and computations.
+The redis server is used for caching data files and computations.
 To start the redis server (optional)::
 
     # if using anaconda, the next line sets the anaconda path
-    source activate dataflow
-    cd path/to/reduction
+    source activate reductus
+    cd path/to/reductus
     redis-server
 
 If redis is not available, an in-memory cache will be used instead.
@@ -112,8 +112,8 @@ If redis is not available, an in-memory cache will be used instead.
 In a separate terminal, start the reflweb server::
 
     # if using anaconda, the next line sets the anaconda path
-    source activate dataflow
-    cd path/to/reduction/reflweb
+    source activate reductus
+    cd path/to/reductus/reflweb
 
     # python 3
     PYTHONPATH=.. hug -p 8000 -f server_hug.py
@@ -128,7 +128,7 @@ Updating the server
 
 To update to the latest version of the code::
 
-    cd path/to/reduction
+    cd path/to/reductus
     # show what you have changed locally
     git status
     # update to the latest version on the server
@@ -150,13 +150,14 @@ using server_tinyrpc (python2.7)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 * install mod_proxy_balancer
-* copy contents of reduction/reflweb/static to apache home somewhere (usually a folder called reductus)
-* enable a site with this configuration, e.g.:
+* copy contents of `reductus/reflweb/static` under apache home
+  (usually in a folder called `reductus`)
+* enable the site by adding the following to the apache configuration file
 
 ::
 
   <VirtualHost *:80>
-        ServerName h3.umd.edu
+        ServerName reduct.us
 
         ServerAdmin webmaster@localhost
         DocumentRoot /var/www/html
@@ -175,15 +176,20 @@ using server_tinyrpc (python2.7)
         CustomLog ${APACHE_LOG_DIR}/access.log combined
   </VirtualHost>
 
-* start a bunch of rpc servers with (in the reflweb folder)::
+* start a bunch of rpc servers (in the reflweb folder) with
 
-  start_tinyrpc_many.sh 8001 5
-
-* this runs `nohup python server_tinyrpc.py 8001 > /dev/null 2>&1&` etc.
-* a sample crontab entry is
 ::
 
-  @reboot cd /home/bbm/reduction/reflweb && /home/bbm/reduction/reflweb/start_tinyrpc_many.sh 8001 5
+    start_tinyrpc_many.sh 8001 5
+
+This runs `nohup python server_hug.py 8001 > /dev/null 2>&1&` for ports
+8001, 8002, *etc.*
+
+* put an entry into crontab such as
+
+::
+
+    @reboot cd path/to/reductus/reflweb && path/to/reductus/reflweb/start_tinyrpc_many.sh 8001 5
 
 
 
@@ -191,8 +197,9 @@ using hug (python3.4+)
 ~~~~~~~~~~~~~~~~~~~~~~
 
 * install mod_proxy_uwsgi
-* copy contents of reduction/reflweb/static to apache home somewhere (usually a folder called reductus)
-* enable a site with this configuration:
+* copy contents of `reductus/reflweb/static` to apache home
+  (usually in a folder called `reductus`)
+* enable the site by adding the following to the apache configuration file
 
 ::
 
@@ -214,12 +221,17 @@ using hug (python3.4+)
         CustomLog ${APACHE_LOG_DIR}/access.log combined
   </VirtualHost>
 
-* start a bunch of rpc servers using (in the reflweb folder)::
+* start a bunch of rpc servers (in the reflweb folder) using
 
-  start_hug_many.sh 8001 5
-
-* this runs `nohup python server_tinyrpc.py 8001 > /dev/null 2>&1&` etc.
-* a sample crontab entry looks like
 ::
 
-  @reboot cd /home/bbm/reduction/reflweb && /home/bbm/reduction/reflweb/start_hug_many.sh 8001 5
+    start_hug_many.sh 8001 5
+
+This runs `nohup python server_hug.py 8001 > /dev/null 2>&1&` for ports
+8001, 8002, *etc.*
+
+* put an entry into crontab such as
+
+::
+
+    @reboot cd path/to/reductus/reflweb && path/to/reductus/reflweb/start_hug_many.sh 8001 5

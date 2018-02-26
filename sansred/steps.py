@@ -119,7 +119,7 @@ def LoadSANS(filelist=None, flip=False, transpose=False):
 ////	//
 	Variable yg_d,acc,sdd,ssd,lambda0,DL_L,sig_l
 	Variable var_qlx,var_qly,var_ql,qx,qy,sig_perp,sig_para, sig_para_new
-	
+
 	G = 981.  //!	ACCELERATION OF GRAVITY, CM/SEC^2
 	acc = vz_1 		//	3.956E5 //!	CONVERT WAVELENGTH TO VELOCITY CM/SEC
 	SDD = L2		//1317
@@ -130,35 +130,35 @@ def LoadSANS(filelist=None, flip=False, transpose=False):
 	YG_d = -0.5*G*SDD*(SSD+SDD)*(LAMBDA0/acc)^2
 /////	Print "DISTANCE BEAM FALLS DUE TO GRAVITY (CM) = ",YG
 //		Print "Gravity q* = ",-2*pi/lambda0*2*yg_d/sdd
-	
+
 	sig_perp = kap*kap/12 * (3*(S1/L1)^2 + 3*(S2/LP)^2 + (proj_DDet/L2)^2)
 	sig_perp = sqrt(sig_perp)
-	
-	
+
+
 	FindQxQy(inQ,phi,qx,qy)
 
-// missing a factor of 2 here, and the form is different than the paper, so re-write	
+// missing a factor of 2 here, and the form is different than the paper, so re-write
 //	VAR_QLY = SIG_L^2 * (QY+4*PI*YG_d/(2*SDD*LAMBDA0))^2
 //	VAR_QLX = (SIG_L*QX)^2
 //	VAR_QL = VAR_QLY + VAR_QLX  //! WAVELENGTH CONTRIBUTION TO VARIANCE
 //	sig_para = (sig_perp^2 + VAR_QL)^0.5
-	
+
 	// r_dist is passed in, [=]cm
 	// from the paper
 	a_val = 0.5*G*SDD*(SSD+SDD)*m_h^2 * 1e-16		//units now are cm /(A^2)
-	
+
     r_dist = sqrt(  (pixSize*((p+1)-xctr))^2 +  (pixSize*((q+1)-yctr)+(2)*yg_d)^2 )		//radial distance from ctr to pt
-    
+
 	var_QL = 1/6*(kap/SDD)^2*(DL_L)^2*(r_dist^2 - 4*r_dist*a_val*lambda0^2*sin(phi) + 4*a_val^2*lambda0^4)
 	sig_para_new = (sig_perp^2 + VAR_QL)^0.5
-	
-	
-///// return values PBR	
+
+
+///// return values PBR
 	SigmaQX = sig_para_new
 	SigmaQy = sig_perp
-	
-////	
-	
+
+////
+
 	results = "success"
 	Return results
 End
@@ -170,23 +170,24 @@ def calculateDQ(data):
     """
     Add the dQ column to the data, based on slit apertures and gravity
     r_dist is the real-space distance from ctr of detector to QxQy pixel location
-    
-    From NCNR_Utils.ipf (Steve R. Kline) in which the math is in turn from 
-    "The effect of gravity on the resolution of small-angle neutron diffraction peaks"
-      D.F.R Mildner, J.G. Barker & S.R. Kline J. Appl. Cryst. (2011). 44, 1127-1129.
-      [ doi:10.1107/S0021889811033322 ]
+
+    From `NCNR_Utils.ipf` (Steve R. Kline) in which the math is in turn from:
+
+    | D.F.R Mildner, J.G. Barker & S.R. Kline J. Appl. Cryst. (2011). 44, 1127-1129.
+    | *The effect of gravity on the resolution of small-angle neutron diffraction peaks*
+    | [ doi:10.1107/S0021889811033322 ]
 
     **Inputs**
-    
+
     data (sans2d): data in
-    
+
     **Returns**
-    
+
     output (sans2d): data in with dQ column filled in
-    
+
     2017-06-16  Brian Maranville
     """
-    
+
     G = 981.  #!    ACCELERATION OF GRAVITY, CM/SEC^2
     acc = vz_1 = 3.956e5 # velocity [cm/s] of 1 A neutron
     m_h	= 252.8			# m/h [=] s/cm^2
@@ -197,12 +198,12 @@ def calculateDQ(data):
     y_offset = data.metadata["det.pixeloffsety"]
     xctr = data.metadata["det.beamx"]
     yctr = data.metadata["det.beamy"]
-    
+
     shape = data.data.x.shape
     x, y = np.indices(shape)
     X = DDetX * (x-xctr)
     Y = DDetY * (y-yctr)
-    
+
     apOff = data.metadata["sample.position"]
     S1 = data.metadata["resolution.ap1"]
     S2 = data.metadata["resolution.ap2"]
@@ -218,7 +219,7 @@ def calculateDQ(data):
     phi = np.mod(np.arctan2(Y + 2.0*YG_d, X), 2.0*np.pi) # from x-axis, from 0 to 2PI
     proj_DDet = np.abs(DDetX*np.cos(phi)) + np.abs(DDetY*np.sin(phi))
     r_dist = np.sqrt(X**2 + (Y + 2.0*YG_d)**2)  #radial distance from ctr to pt
-    
+
     sig_perp = kap*kap/12.0 * (3.0*(S1/L1)**2 + 3.0*(S2/LP)**2 + (proj_DDet/L2)**2)
     sig_perp = np.sqrt(sig_perp)
 
@@ -226,7 +227,7 @@ def calculateDQ(data):
 
     var_QL = 1.0/6.0*((kap/SDD)**2)*(DL_L**2)*(r_dist**2 - 4.0*r_dist*a_val*(lambda0**2)*np.sin(phi) + 4.0*(a_val**2)*(lambda0**4))
     sig_para_new = np.sqrt(sig_perp**2 + var_QL)
-    
+
     data.dq_perp = sig_perp
     data.dq_para = sig_para_new
     return data
@@ -243,7 +244,7 @@ def PixelsToQ(data, beam_center=[None,None], correct_solid_angle=True):
     data (sans2d): data in
 
     beam_center {Beam Center Override} (coordinate?): If not blank, will override the beamx and beamy from the datafile.
-    
+
     correct_solid_angle {Correct solid angle} (bool): Apply correction for mapping
         curved Ewald sphere to flat detector
 
@@ -253,7 +254,7 @@ def PixelsToQ(data, beam_center=[None,None], correct_solid_angle=True):
 
     2016-04-16 Brian Maranville
     """
-    
+
     L2 = data.metadata['det.dis']
     beamx_override, beamy_override = beam_center
     x0 = beamx_override if beamx_override is not None else data.metadata['det.beamx'] #should be close to 64
@@ -306,7 +307,7 @@ def circular_av(data):
     **Returns**
 
     nominal_output (sans1d): converted to I vs. nominal Q
-    
+
     mean_output (sans1d): converted to I vs. mean Q within integrated region
 
     2016-04-11 Brian Maranville
@@ -319,7 +320,7 @@ def circular_av(data):
     # calculate the change in q that corresponds to a change in pixel of 1
     if data.qx is None:
         raise ValueError("Q is not defined - convert pixels to Q first")
-        
+
     q_per_pixel = data.qx[1, 0]-data.qx[0, 0] / 1.0
 
     # for now, we'll make the q-bins have the same width as a single pixel
@@ -374,19 +375,19 @@ def circular_av(data):
     I_error = np.array(I_error, dtype="float")
     Q_mean = np.array(Q_mean, dtype="float")
     Q_mean_error = np.array(Q_mean_error, dtype="float")
-    
+
     nominal_output = Sans1dData(Q, I, dx=dx, dv=I_error, xlabel="Q", vlabel="I",
                         xunits="inv. A", vunits="neutrons")
     nominal_output.metadata = deepcopy(data.metadata)
     nominal_output.metadata['extra_label'] = "_circ"
-    
+
     mean_output = Sans1dData(Q_mean, I, dx=Q_mean_error, dv=I_error, xlabel="Q", vlabel="I",
                         xunits="inv. A", vunits="neutrons")
     mean_output.metadata = deepcopy(data.metadata)
     mean_output.metadata['extra_label'] = "_circ"
-    
+
     return nominal_output, mean_output
-    
+
 @cache
 @module
 def sector_cut(data, angle=0.0, width=90.0, mirror=True):
@@ -398,18 +399,18 @@ def sector_cut(data, angle=0.0, width=90.0, mirror=True):
     **Inputs**
 
     data (sans2d): data in
-    
+
     angle (float): center angle of sector cut (degrees)
-    
+
     width (float): width of cut (degrees)
-    
-    mirror (bool): extend sector cut on both sides of origin 
+
+    mirror (bool): extend sector cut on both sides of origin
         (when false, integrates over a single cone centered at angle)
 
     **Returns**
 
     nominal_output (sans1d): converted to I vs. nominal Q
-    
+
     mean_output (sans1d): converted to I vs. mean Q within integrated region
 
     2016-04-15 Brian Maranville
@@ -429,7 +430,7 @@ def sector_cut(data, angle=0.0, width=90.0, mirror=True):
     y0 = data.metadata['det.beamy'] # should be close to 64
     L2 = data.metadata['det.dis']
     wavelength = data.metadata['resolution.lmda']
-    
+
     center = (x0, y0)
     Qmax = data.q.max()
     Q = np.arange(step, Qmax, step) # start at first pixel out.
@@ -476,17 +477,17 @@ def sector_cut(data, angle=0.0, width=90.0, mirror=True):
     I_error = np.array(I_error, dtype="float")
     Q_mean = np.array(Q_mean, dtype="float")
     Q_mean_error = np.array(Q_mean_error, dtype="float")
-    
+
     nominal_output = Sans1dData(Q, I, dx=dx, dv=I_error, xlabel="Q", vlabel="I",
                         xunits="inv. A", vunits="neutrons")
     nominal_output.metadata = deepcopy(data.metadata)
     nominal_output.metadata['extra_label'] = "_%.1f" % (angle,)
-    
+
     mean_output = Sans1dData(Q_mean, I, dx=Q_mean_error, dv=I_error, xlabel="Q", vlabel="I",
                         xunits="inv. A", vunits="neutrons")
     mean_output.metadata = deepcopy(data.metadata)
     mean_output.metadata['extra_label'] = "_%.1f" % (angle,)
-    
+
     return nominal_output, mean_output
 
 @module
@@ -904,24 +905,24 @@ def patchData(data1, data2, xmin=55, xmax=74, ymin=53, ymax=72):
 def addSimple(data):
     """
     Naive addition of counts and monitor from different datasets,
-    assuming all datasets were taken under identical conditions 
+    assuming all datasets were taken under identical conditions
     (except for count time)
-    
+
     Just adds together count time, counts and monitor.
-    
+
     Use metadata from first dataset for output.
-    
+
     **Inputs**
-    
+
     data (sans2d[]): measurements to be added together
-    
+
     **Returns**
-    
+
     sum (sans2d): sum of inputs
-    
+
     2017-06-29  Brian Maranville
     """
-    
+
     output = data[0].copy()
     for d in data[1:]:
         output.data += d.data
@@ -929,7 +930,7 @@ def addSimple(data):
         output.metadata['run.rtime'] += d.metadata['run.rtime']
         output.metadata['run.detcnt'] += d.metadata['run.detcnt']
     return output
-    
+
 
 @cache
 @module
@@ -966,28 +967,28 @@ def makeDIV(data1, data2, patchbox=(55, 74, 53, 72)):
 def radialToCylindrical(data, theta_offset = 0.0, oversample_th = 2.0, oversample_r = 2.0):
     """
     Convert radial data to cylindrical coordinates
-    
+
     **Inputs**
-    
+
     data (sans2d): data to be transformed
-    
+
     theta_offset (float): move the bounds of the output from the default (0 to 360 deg)
-    
+
     oversample_th (float): oversampling in theta (to increase fidelity of output)
-    
+
     oversample_r (float): oversampling in r
-    
+
     **Returns**
-    
+
     cylindrical (sans2d): transformed data
-    
+
     mask (sans2d): normalization array
-    
+
     2017-05-26 Brian Maranville
     """
-    
+
     from .cylindrical import ConvertToCylindrical
-    
+
     if data.qx is None or data.qy is None:
         xmin = -data.metadata['det.beamx']
         xmax = xmin + 128
@@ -998,30 +999,30 @@ def radialToCylindrical(data, theta_offset = 0.0, oversample_th = 2.0, oversampl
         xmax = data.qx.max()
         ymin = data.qy.min()
         ymax = data.qy.max()
-    
+
     print(xmin, xmax, ymin, ymax)
     _, normalization, normalized, extent = ConvertToCylindrical(data.data.x.T, xmin, xmax, ymin, ymax, theta_offset=theta_offset, oversample_th=oversample_th, oversample_r=oversample_r)
-    
+
     output = data.copy()
     output.aspect_ratio = None
     output.data = Uncertainty(normalized.T, normalized.T)
-    
+
     mask = data.copy()
     mask.aspect_ratio = None
     mask.data = Uncertainty(normalization.T, normalization.T)
-    
+
     if data.qx is not None:
         output.qx = np.linspace(extent[0], extent[1], normalized.shape[1])
         mask.qx = output.qx.copy()
         output.xlabel = mask.xlabel = "theta (degrees)"
-        
+
     if data.qy is not None:
         output.qy = np.linspace(extent[2], extent[3], normalized.shape[0])
         mask.qy = output.qy.copy()
         output.ylabel = mask.ylabel = "Q (inv. Angstrom)"
-    
+
     return output, mask
-    
+
 @cache
 @module
 def SuperLoadSANS(filelist=None, do_det_eff=True, do_deadtime=True,

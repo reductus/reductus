@@ -139,7 +139,7 @@ References
 .. [Lebigot]
     Lebigot, Eric O. (2015).
     *Uncertainties: a Python package for calculations with uncertainties*,
-    `http://pythonhosted.org/uncertainties/`_.
+    `http://pythonhosted.org/uncertainties/ <http://pythonhosted.org/uncertainties/>`_.
 
 """
 from __future__ import division, print_function
