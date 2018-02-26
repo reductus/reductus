@@ -1,6 +1,7 @@
 Introduction
 ============
-The online data reduction system `reductus`_ is made up of two parts:
+The online data reduction system `reductus`_ is
+made up of two parts:
 
 * an HTML/Javascript client that runs in a web browser
 * a computation server

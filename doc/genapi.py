@@ -166,5 +166,5 @@ def sansred():
 
 dataflow()
 reflred()
-#ospecred()
-#sansred()
+ospecred()
+sansred()
