@@ -206,7 +206,8 @@ class FilterableMetaArray(MetaArray):
             z = [[0,0]]
             dump['binary_fp'] = binary_fp + ":" + str(colnum)
         else: # use the old way
-            z = [ma.masked_array(array_out.T, mask=isnan(array_out.T)).tolist(fill_value=None)]
+            af = array_out.ravel('F')
+            z = [ma.masked_array(af, mask=isnan(af)).tolist(fill_value=None)]
 
         #zbin_base64 = base64.b64encode(array_out.tostring())
         #z = [arr[:, 0].tolist() for arr in self]
