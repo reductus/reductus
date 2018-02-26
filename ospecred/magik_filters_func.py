@@ -1075,20 +1075,20 @@ def loadMAGIKPSD_helper(file_obj, name, path, collapse=True, collapse_axis='y', 
                 data = []
                 samp_angle =  entry['DAS_logs/sampleAngle/softPosition'].value.astype('float')
                 if samp_angle.shape[0] == 1:
-                    samp_angle = numpy.ones((frames,)) * samp_angle
+                    samp_angle = ones((frames,)) * samp_angle
                 det_angle = entry['DAS_logs/detectorAngle/softPosition'].value.astype('float')
                 if det_angle.shape[0] == 1:
-                    det_angle = numpy.ones((frames,)) * det_angle
+                    det_angle = ones((frames,)) * det_angle
                 count_time = entry['DAS_logs/counter/liveTime'].value
                 if count_time.shape[0] == 1:
-                    count_time = numpy.ones((frames,)) * count_time
+                    count_time = ones((frames,)) * count_time
                 mon =  entry['DAS_logs/counter/liveMonitor'].value
                 if mon.shape[0] == 1:
-                    mon = numpy.ones((frames,)) * mon
+                    mon = ones((frames,)) * mon
                 for i in range(frames):
                     info = []
-                    info.append({"name": "xpixel", "units": "pixels", "values": range(xpixels) })
-                    info.append({"name": "ypixel", "units": "pixels", "values": range(ypixels) })
+                    info.append({"name": "xpixel", "units": "pixels", "values": list(range(xpixels)) })
+                    info.append({"name": "ypixel", "units": "pixels", "values": list(range(ypixels)) })
                     info.extend([
                         {"name": "Measurements", "cols": [
                                 {"name": "counts"},
