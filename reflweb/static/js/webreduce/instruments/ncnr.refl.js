@@ -179,6 +179,9 @@ webreduce.instruments['ncnr.refl'] = webreduce.instruments['ncnr.refl'] || {};
     else if (result.datatype == 'ncnr.refl.poldata') {
       plottable = {"type": "params", "params": result.values}
     }
+    else if (result.datatype == 'ncnr.refl.flux.params') {
+      plottable = {"type": "params", "params": result.values}
+    }
     return plottable;
   };
   instrument.load_file = load_refl; 

@@ -1355,3 +1355,45 @@ def spin_asymmetry(data):
     # d(sa)/d(x) = 2*x/(x+y)**2, d(sa)/d(y) = -2*y/(x+y)**2
     output.dv = sqrt(((2.0*mmv*mmdv)/(denom**2))**2 + ((2.0*ppv*ppdv)/(denom**2))**2)
     return output
+
+@module
+def integrated_flux(data, base):
+    """
+    Calculate total flux on the sample (time-integrated).
+
+    Data is matched according to angular resolution, assuming all data with
+    the same angular resolution was subject to the same incident intensity.
+    Does not work on polarized beam data with multiple slit scans
+
+    **Inputs**
+
+    data (refldata[]) : specular, background or subtracted data
+
+    base (refldata) : intensity data
+
+    **Returns**
+
+    flux_totals (ncnr.refl.flux.params?) : integrated flux data
+
+    2018-02-23 Brian Maranville
+    """
+    from dataflow.modules import refl
+    if base is not None:
+        from .scale import calculate_flux
+        from dataflow.lib import err1d
+        import numpy as np
+
+        fluxes = []
+        total_flux = 0
+        total_flux_variance = 0
+        for datum in data:
+            datum = copy(datum)
+            F, varF = calculate_flux(datum, base)
+            S, varS = err1d.sum(F, varF)
+            fluxes.append({"name": datum.name, "flux": S, "flux_error": np.sqrt(varS), "units": "neutrons"})
+            total_flux += S
+            total_flux_variance += varS
+        output = refl.FluxData(fluxes, {"total_flux": total_flux, "total_flux_error": np.sqrt(total_flux_variance)})
+    else:
+        output = refl.FluxData([], None)
+    return output

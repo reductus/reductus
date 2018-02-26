@@ -33,6 +33,23 @@ class DataflowReflData(ReflData):
     def get_metadata(self):
         return self.todict()
 
+class FluxData(object):
+    def __init__(self, fluxes, total_flux):
+        self.fluxes = fluxes
+        self.total_flux = total_flux
+
+    def get_metadata(self):
+        return {
+            "fluxes": self.fluxes,
+            "total_flux": self.total_flux
+        }
+    def get_plottable(self):
+        return self.get_metadata()
+    def export(self):
+        import json
+        export_string = json.dumps(self.get_metadata(), indent=2)
+        return {"name": "fluxes", "entry": "", "export_string": export_string, "file_suffix": ".dat"}
+
 def make_cached_subloader_module(load_action, prefix=""):
     """
     This assumes that the load_action can be run with a single fileinfo
@@ -102,6 +119,7 @@ def define_instrument():
     poldata = df.DataType(INSTRUMENT+".poldata", PolarizationData)
     deadtime = df.DataType(INSTRUMENT+".deadtime", DeadTimeData)
     footprint = df.DataType(INSTRUMENT+".footprint.params", FootprintData)
+    flux = df.DataType(INSTRUMENT+".flux.params", FluxData)
 
     #import json
     #import os
@@ -117,7 +135,7 @@ def define_instrument():
         id=INSTRUMENT,
         name='NCNR reflectometer',
         menu=[('steps', modules)],
-        datatypes=[refldata, poldata, deadtime, footprint],
+        datatypes=[refldata, poldata, deadtime, footprint, flux],
         template_defs=templates.get_templates(INSTRUMENT),
         )
 
