@@ -1,8 +1,8 @@
 .. _reflred:
 
-#######################
+=======================
 Reflectometry Reduction
-#######################
+=======================
 
 The goal of reduction is to identify the scattered signal, its uncertainty
 and its resolution for the measured configurations.  For specular

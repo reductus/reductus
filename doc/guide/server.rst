@@ -3,9 +3,9 @@ Server Installation
 ===================
 
 If you do not have access to the internet, or if the files that you want
-to reduce are not available to `reductus`_ then you will need to run a
-local version of the server. The reductus *Data* menu will have an
-additional *Local* option to access the files on your computer.
+to reduce are not available to the online `reductus`_ server then you will
+need to run a local version of the server. The reductus *Data* menu will
+have an additional *Local* option to access the files on your computer.
 
 To run the server, you will first need to clone the repository
 using `git <https://git-scm.com/>`_::

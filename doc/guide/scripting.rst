@@ -1,4 +1,4 @@
-
+===============================
 Running a template from ipython
 ===============================
 
@@ -26,8 +26,8 @@ also need git (download and install git-bash for windows; mac comes with it).
 You will need to have a local copy of the sources on your machine::
 
      $ cd preferred/working/directory
-     $ git clone https://github.com/reflectometry/reduction.git
-     $ cd reduction
+     $ git clone https://github.com/reflectometry/reductus.git
+     $ cd reductus
      $ python setup.py build_ext --inplace
 
 With mingw, you will need to add "--ccompiler=mingw32" to the last line.
@@ -39,19 +39,17 @@ Preparing python
 
 Configure a python session to run the template::
 
-     $ cd ~/path/to/reduction
+     $ cd ~/path/to/reductus
      $ ipython --pylab
-     import reflweb.config
-
+     >>> import reflweb.config
 
 It either case, you first need to create the template and save it to
 your disk.  To load the template into python, type the following::
 
-    import json
-    from pprint import pprint
-
-    template = json.load(open('~/Downloads/some_template.json'))
-    pprint(json)
+    >>> import json
+    >>> from pprint import pprint
+    >>> template = json.load(open('~/Downloads/some_template.json'))
+    >>> pprint(json)
 
 Scan through the list of nodes to find the one containing the data of
 interest.  This could be tricky since different nodes sometimes have
