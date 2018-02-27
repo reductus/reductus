@@ -1,6 +1,7 @@
 #!/bin/bash
 
 UMASK="$(umask)"
+killall -q uwsgi
 
 for (( c=0; c<$2; c++))
 do
