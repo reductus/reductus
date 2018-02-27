@@ -66,7 +66,7 @@ Simple setup is as follows::
 
     conda create -n reductus numpy scipy gevent nose docutils h5py pytz werkzeug
     source activate reductus
-    pip install uncertainties tinyrpc
+    pip install uncertainties flask
     conda install sphinx  # if you need to build the docs
 
     # if you do not already have git installed
@@ -99,7 +99,19 @@ needed for rebinning in off-specular reduction, so maybe you can avoid it.
 Running the server
 ~~~~~~~~~~~~~~~~~~
 
-The redis server is used for caching data files and computations.
+To start the reflweb server::
+
+    # if using anaconda, the next line sets the anaconda path
+    source activate reductus
+    cd path/to/reductus
+
+    python run.py
+    # this will automatically browse to http://localhost:8002
+    
+
+In the default configuration, a disk-based cache is used
+but if you specify "use_redis" = True in a modified config.py, 
+a redis server is used for caching data files and computations.
 To start the redis server (optional)::
 
     # if using anaconda, the next line sets the anaconda path
@@ -107,21 +119,9 @@ To start the redis server (optional)::
     cd path/to/reductus
     redis-server
 
-If redis is not available, an in-memory cache will be used instead.
+If "use_redis" is True but redis is not available, 
+an in-memory cache will be used instead.
 
-In a separate terminal, start the reflweb server::
-
-    # if using anaconda, the next line sets the anaconda path
-    source activate reductus
-    cd path/to/reductus/reflweb
-
-    # python 3
-    PYTHONPATH=.. hug -p 8000 -f server_hug.py
-    # browse to http://localhost:8000/static/index.html
-
-    # python 2
-    PYTHONPATH=.. python server_tinyrpc.py
-    # this will automatically browse to http://localhost:8000
 
 Updating the server
 ~~~~~~~~~~~~~~~~~~~
@@ -142,96 +142,57 @@ Then repeat the build step.
 Running a production server
 ---------------------------
 
+(for detailed script that sets up an Ubuntu 16.04 server see reductus/provisioning/ubuntu-xenial/ubuntu-xenial-setup.txt)
 Build the package as usual for running a local server.
 
 Install Apache with load-balancing.
 
-using server_tinyrpc (python2.7)
+using flask (python2.7+, python3.4+)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-* install mod_proxy_balancer
+* install apache2, libapache2-mod-proxy-uwsgi (and uwsgi-plugin-python3 if using py3)
 * copy contents of `reductus/reflweb/static` under apache home
   (usually in a folder called `reductus`)
 * enable the site by adding the following to the apache configuration file
 
 ::
 
-  <VirtualHost *:80>
-        ServerName reduct.us
+  <Proxy "balancer://mycluster">
+        BalancerMember "uwsgi://localhost:8001"
+        BalancerMember "uwsgi://localhost:8002"
+        BalancerMember "uwsgi://localhost:8003"
+        BalancerMember "uwsgi://localhost:8004"
+        BalancerMember "uwsgi://localhost:8005"
+  </Proxy>
 
+  <VirtualHost *:80>
         ServerAdmin webmaster@localhost
-        DocumentRoot /var/www/html
+        DocumentRoot /var/www/html/reductus
+        <Directory "/var/www/html/reductus">
+            Options -Indexes
+        </Directory>
         Header set Cache-Control "must-revalidate"
-        <Proxy "balancer://mycluster">
-            BalancerMember "http://localhost:8001"
-            BalancerMember "http://localhost:8002"
-            BalancerMember "http://localhost:8003"
-            BalancerMember "http://localhost:8004"
-            BalancerMember "http://localhost:8005"
-        </Proxy>
         ProxyPass "/RPC2" "balancer://mycluster"
         ProxyPassReverse "/RPC2" "balancer://mycluster"
 
         ErrorLog ${APACHE_LOG_DIR}/error.log
         CustomLog ${APACHE_LOG_DIR}/access.log combined
   </VirtualHost>
+
 
 * start a bunch of rpc servers (in the reflweb folder) with
 
 ::
 
-    start_tinyrpc_many.sh 8001 5
+    start_flask_many.sh 8001 5
 
-This runs `nohup python server_hug.py 8001 > /dev/null 2>&1&` for ports
+This runs `uwsgi --umask "$UMASK" --socket "127.0.0.1:$p" --manage-script-name --mount /=server_flask:app --plugins-dir /usr/lib/uwsgi/plugins/ --plugin python -d /dev/null` for ports
 8001, 8002, *etc.*
+(if using python3, use start_flask_many_py3.sh in the same directory)
 
 * put an entry into crontab such as
 
 ::
 
-    @reboot cd path/to/reductus/reflweb && path/to/reductus/reflweb/start_tinyrpc_many.sh 8001 5
+    @reboot cd path/to/reductus/reflweb && path/to/reductus/reflweb/start_flask_many.sh 8001 5
 
-
-
-using hug (python3.4+)
-~~~~~~~~~~~~~~~~~~~~~~
-
-* install mod_proxy_uwsgi
-* copy contents of `reductus/reflweb/static` to apache home
-  (usually in a folder called `reductus`)
-* enable the site by adding the following to the apache configuration file
-
-::
-
-  <VirtualHost *:80>
-        ServerAdmin webmaster@localhost
-        DocumentRoot /var/www/html
-        Header set Cache-Control "must-revalidate"
-        <Proxy "balancer://mycluster">
-            BalancerMember "uwsgi://localhost:8001"
-            BalancerMember "uwsgi://localhost:8002"
-            BalancerMember "uwsgi://localhost:8003"
-            BalancerMember "uwsgi://localhost:8004"
-            BalancerMember "uwsgi://localhost:8005"
-        </Proxy>
-        ProxyPass "/RPC2" "balancer://mycluster"
-        ProxyPassReverse "/RPC2" "balancer://mycluster"
-
-        ErrorLog ${APACHE_LOG_DIR}/error.log
-        CustomLog ${APACHE_LOG_DIR}/access.log combined
-  </VirtualHost>
-
-* start a bunch of rpc servers (in the reflweb folder) using
-
-::
-
-    start_hug_many.sh 8001 5
-
-This runs `nohup python server_hug.py 8001 > /dev/null 2>&1&` for ports
-8001, 8002, *etc.*
-
-* put an entry into crontab such as
-
-::
-
-    @reboot cd path/to/reductus/reflweb && path/to/reductus/reflweb/start_hug_many.sh 8001 5
