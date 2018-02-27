@@ -25,9 +25,9 @@ import dataflow.modules.sans
 from dataflow import fetch
 
 try:
-    import config
+    from reflweb import config
 except ImportError:
-    import default_config as config
+    from reflweb import default_config as config
 
 IS_PY3 = sys.version_info[0] >= 3
 

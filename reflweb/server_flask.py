@@ -14,18 +14,22 @@ import os, sys, posixpath
 import traceback
 import logging
 
-from flask import Flask, request, make_response
+from flask import Flask, request, make_response, redirect
 from werkzeug.exceptions import HTTPException
 import msgpack as msgpack_converter
 
 try:
-    import config
+    from reflweb import config
 except ImportError:
-    import default_config as config
+    from reflweb import default_config as config
 
 RPC_ENDPOINT = '/RPC2'
 
 app = Flask(__name__)
+
+@app.route('/')
+def root():
+    return redirect("static/index.html")
 
 @app.errorhandler(Exception)
 def handle_error(e):
@@ -45,7 +49,7 @@ def wrap_method(mfunc):
         return response
     return wrapper
 
-import api
+from reflweb import api
 api.create_instruments()
 for method in api.api_methods:
     mfunc = getattr(api, method)
