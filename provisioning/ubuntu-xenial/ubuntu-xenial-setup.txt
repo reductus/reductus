@@ -28,8 +28,6 @@ echo -e '#!/bin/sh\ncp -r reflweb/static/* /var/www/html/reductus\n\necho "copie
 
 # copy the config.py from server...
 cp $PROVISION_DIR/config.py $REDUCTUS_HOME/reflweb/config.py
-sudo cp $REDUCTUS_HOME/reflweb/ncnr_CA_chain.pem /usr/local/share/ca-certificates/ncnr_CA_chain.crt
-sudo update-ca-certificates
 
 # set up vhosts file...
 sudo cp $PROVISION_DIR/apache_vhosts /etc/apache2/sites-available/reductus_server.conf
