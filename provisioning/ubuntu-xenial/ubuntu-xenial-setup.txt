@@ -4,7 +4,7 @@ REDUCTUS_HOME=$HOME/reductus
 PROVISION_DIR=$REDUCTUS_HOME/provisioning/ubuntu-trusty
 
 sudo apt update
-sudo apt install -y apache2 libapache2-mod-proxy-uwsgi gcc g++ g++-5 python3-dev uwsgi-plugin-python3 git
+sudo apt install -y apache2 apache2-dev libapache2-mod-proxy-uwsgi gcc g++ g++-5 python3-dev uwsgi-plugin-python3 git
 wget https://bootstrap.pypa.io/get-pip.py
 python3 get-pip.py --user
 
@@ -14,7 +14,16 @@ cd $REDUCTUS_HOME
 $HOME/.local/bin/pip install --user -r requirements.txt
 python3 setup.py develop --user
 
+# apache setup
 sudo a2enmod headers proxy_balancer lbmethod_byrequests
+# add mod_proxy_protocol
+# sudo apt install -y apache2-dev
+git clone git clone https://github.com/roadrunner2/mod-proxy-protocol $HOME/mod-proxy-protocol
+cd $HOME/mod-proxy-protocol
+sudo make
+sudo cp .libs/mod_proxy_protocol.so /usr/lib/apache2/modules/mod_proxy_protocol.so
+sudo echo "LoadModule proxy_protocol_module /usr/lib/apache2/modules/mod_proxy_protocol.so" > /etc/apache2/mods-available/proxy_protocol.load
+sudo a2enmod proxy_protocol
 
 sudo mkdir /var/www/html/reductus
 sudo cp -r $REDUCTUS_HOME/reflweb/static/* /var/www/html/reductus
