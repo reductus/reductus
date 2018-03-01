@@ -39,9 +39,10 @@ echo -e '#!/bin/sh\ncp -r reflweb/static/* /var/www/html/reductus\n\necho "copie
 cp $PROVISION_DIR/config.py $REDUCTUS_HOME/reflweb/config.py
 
 # set up vhosts file...
-sudo cp $PROVISION_DIR/apache_vhosts /etc/apache2/sites-available/reductus_server.conf
+#sudo cp $PROVISION_DIR/apache_vhosts /etc/apache2/sites-available/reductus_server.conf
+sudo cp $PROVISION_DIR/apache_vhosts_ssl /etc/apache2/sites-available/reductus_server_ssl.conf
 sudo a2dissite 000-default
-sudo a2ensite reductus_server
+sudo a2ensite reductus_server_ssl
 
 # start the workers
 cd $REDUCTUS_HOME/reflweb && $REDUCTUS_HOME/reflweb/start_flask_many_py3.sh 8001 5
