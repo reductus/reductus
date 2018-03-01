@@ -22,7 +22,8 @@ git clone git clone https://github.com/roadrunner2/mod-proxy-protocol $HOME/mod-
 cd $HOME/mod-proxy-protocol
 sudo make
 sudo cp .libs/mod_proxy_protocol.so /usr/lib/apache2/modules/mod_proxy_protocol.so
-sudo echo "LoadModule proxy_protocol_module /usr/lib/apache2/modules/mod_proxy_protocol.so" > /etc/apache2/mods-available/proxy_protocol.load
+echo "LoadModule proxy_protocol_module /usr/lib/apache2/modules/mod_proxy_protocol.so" > proxy_protocol.load
+sudo cp proxy_protocol.load /etc/apache2/mods-available/proxy_protocol.load
 sudo a2enmod proxy_protocol
 
 sudo mkdir /var/www/html/reductus
@@ -52,6 +53,7 @@ sudo service apache2 reload
 
 # use iptables directly if ansible script causes ufw to not work
 sudo iptables -A INPUT -p tcp --dport 80 -m conntrack --ctstate NEW,ESTABLISHED -j ACCEPT
+sudo iptables -A INPUT -p tcp --dport 443 -m conntrack --ctstate NEW,ESTABLISHED -j ACCEPT
 sudo netfilter-persistent save
 
 # use ufw if available/working
