@@ -43,6 +43,7 @@ cp $PROVISION_DIR/config.py $REDUCTUS_HOME/reflweb/config.py
 #sudo cp $PROVISION_DIR/apache_vhosts /etc/apache2/sites-available/reductus_server.conf
 sudo cp $PROVISION_DIR/apache_vhosts_ssl /etc/apache2/sites-available/reductus_server_ssl.conf
 sudo a2dissite 000-default
+sudo a2enmod ssl
 sudo a2ensite reductus_server_ssl
 
 # start the workers
