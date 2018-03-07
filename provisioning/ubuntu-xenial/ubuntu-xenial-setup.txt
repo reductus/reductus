@@ -73,3 +73,8 @@ sudo sed -i -e 's/rotate [0-9]\+/rotate 31/g' /etc/logrotate.d/apache2
 # set up cron job to start uwsgi servers on reboot
 echo -e "@reboot cd $REDUCTUS_HOME/reflweb && $REDUCTUS_HOME/reflweb/start_flask_many_py3.sh 8001 5" > $HOME/crontab.txt
 crontab $HOME/crontab.txt
+
+# set up the secondary, static IP:
+sudo echo -e "\nauto eth0:1\niface eth0:1 inet static\naddress 10.200.159.69" >> /etc/network/interfaces.d/50-cloud-init.cfg
+sudo systemctl restart networking
+
