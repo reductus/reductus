@@ -1412,7 +1412,7 @@ def average_flux(data, base, beam_height=25):
                 "number_incident_error": np.sqrt(varS), 
                 "number_incident_units": "neutrons",
                 "average_flux": F,
-                "average_flux_error": varF,
+                "average_flux_error": np.sqrt(varF),
                 "average_flux_units": "neutrons/(second * cm^2)",
                 "total_time": float(T),
                 "total_time_error": float(np.sqrt(varT))
