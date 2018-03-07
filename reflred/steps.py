@@ -1357,43 +1357,79 @@ def spin_asymmetry(data):
     return output
 
 @module
-def integrated_flux(data, base):
+def average_flux(data, base, beam_height=25):
     """
-    Calculate total flux on the sample (time-integrated).
+    Calculate time-averaged flux on the sample
 
     Data is matched according to angular resolution, assuming all data with
     the same angular resolution was subject to the same incident intensity.
     Does not work on polarized beam data with multiple slit scans
+    
+    Beam area is taken to be beam_height * slit2 aperture (from file)
 
     **Inputs**
 
     data (refldata[]) : specular, background or subtracted data
 
     base (refldata) : intensity data
+    
+    beam_height (float:mm): height of the beam at the sample position
 
     **Returns**
 
-    flux_totals (ncnr.refl.flux.params?) : integrated flux data
+    flux (ncnr.refl.flux.params?) : integrated flux data
 
-    2018-02-23 Brian Maranville
+    2018-03-01 Brian Maranville
     """
     from dataflow.modules import refl
+    TIME_RESOLUTION = 1e-6 # 1 microsecond for NCNR timers.
+    
     if base is not None:
-        from .scale import calculate_flux
+        from .scale import calculate_number
         from dataflow.lib import err1d
         import numpy as np
 
         fluxes = []
-        total_flux = 0
-        total_flux_variance = 0
+        total_number = 0.0
+        total_number_variance = 0.0
+        total_time = 0.0
+        total_time_variance = 0.0
+        sum_weighted_flux = 0.0
+        sum_weighted_flux_variance = 0.0
+        
         for datum in data:
             datum = copy(datum)
-            F, varF = calculate_flux(datum, base)
-            S, varS = err1d.sum(F, varF)
-            fluxes.append({"name": datum.name, "flux": S, "flux_error": np.sqrt(varS), "units": "neutrons"})
-            total_flux += S
-            total_flux_variance += varS
-        output = refl.FluxData(fluxes, {"total_flux": total_flux, "total_flux_error": np.sqrt(total_flux_variance)})
+            beam_area = datum.slit2.x * beam_height / 100.0 # both in mm, convert to cm
+            N, varN = calculate_number(datum, base, time_uncertainty=TIME_RESOLUTION)
+            S, varS = err1d.sum(N, varN)
+            P, varP = err1d.div(N, varN, beam_area, 0.0)
+            A, varA = err1d.sum(P, varP) # time-weighted average of Flux/Area
+            T, varT = err1d.sum(datum.monitor.count_time, TIME_RESOLUTION**2)
+            F, varF = err1d.div(A, varA, T, varT) # average Flux/(Area * Time)
+            fluxes.append({
+                "name": datum.name, 
+                "number_incident": S, 
+                "number_incident_error": np.sqrt(varS), 
+                "number_incident_units": "neutrons",
+                "average_flux": F,
+                "average_flux_error": varF,
+                "average_flux_units": "neutrons/(second * cm^2)",
+                "total_time": float(T),
+                "total_time_error": float(np.sqrt(varT))
+            })
+            total_number += S
+            total_number_variance += varS
+            total_time += T
+            total_time_variance += varT
+            sum_weighted_flux += A
+            sum_weighted_flux_variance += varA
+        aggregated_flux, aggregated_flux_variance = err1d.div(sum_weighted_flux, sum_weighted_flux_variance, total_time, total_time_variance)
+        output = refl.FluxData(fluxes, {
+            "aggregated_average_flux": aggregated_flux, 
+            "aggregated_average_flux_error": np.sqrt(aggregated_flux_variance),
+            "aggregated_time": total_time,
+            "aggregated_time_error": np.sqrt(total_time_variance)
+        })
     else:
         output = refl.FluxData([], None)
     return output

@@ -15,13 +15,12 @@ def apply_intensity_norm(data, base):
     I, varI = err1d.div(data.v, data.dv**2, S, varS)
     data.v, data.dv = I, np.sqrt(varI)
     
-def calculate_flux(data, base):
+def calculate_number(data, base, time_uncertainty=1e-6):
     """ returns the measured base flux * count time for each point """
     assert base.normbase == 'time', "can't calculate time-integrated flux from monitor-normalized base"
     S, varS = err1d.interp(data.angular_resolution,
                            base.angular_resolution, base.v, base.dv**2)
-    # count_time resolution is 1e-6, so variance is 1e-12
-    F, varF = err1d.mul(data.monitor.count_time, 1e-12, S, varS)
+    F, varF = err1d.mul(data.monitor.count_time, time_uncertainty**2, S, varS)
     return F, varF
 
 def estimate_attenuation(datasets):
