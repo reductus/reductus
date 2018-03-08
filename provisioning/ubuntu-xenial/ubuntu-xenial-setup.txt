@@ -75,6 +75,7 @@ echo -e "@reboot cd $REDUCTUS_HOME/reflweb && $REDUCTUS_HOME/reflweb/start_flask
 crontab $HOME/crontab.txt
 
 # set up the secondary, static IP:
-sudo echo -e "\nauto eth0:1\niface eth0:1 inet static\naddress 10.200.159.69" >> /etc/network/interfaces.d/50-cloud-init.cfg
+# it is important to copy the netmask and broadcast from the DHCP-assigned interface
+sudo echo -e "\nauto eth0:1\niface eth0:1 inet static\naddress 10.200.159.69\nnetmask 255.255.255.240\nbroadcast 10.200.159.79" >> /etc/network/interfaces.d/50-cloud-init.cfg
 sudo systemctl restart networking
 
