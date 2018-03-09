@@ -14,7 +14,7 @@ import os, sys, posixpath
 import traceback
 import logging
 
-from flask import Flask, request, make_response, redirect
+from flask import Flask, request, make_response, redirect, send_from_directory
 from werkzeug.exceptions import HTTPException
 import msgpack as msgpack_converter
 
@@ -30,6 +30,10 @@ app = Flask(__name__)
 @app.route('/')
 def root():
     return redirect("static/index.html")
+
+@app.route('/robots.txt')
+def static_from_root():
+    return send_from_directory(app.static_folder, request.path[1:])
 
 @app.errorhandler(Exception)
 def handle_error(e):
