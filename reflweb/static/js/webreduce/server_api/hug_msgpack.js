@@ -19,7 +19,7 @@ webreduce.server_api = webreduce.server_api || {};
             ((xhr.status == 200) ? resolve : reject)(decoded);
           }
         }
-        xhr.send(JSON.stringify(args));
+        xhr.send(JSON.stringify(args) || "");
       })
       .catch(function(error) {
         if (app.api_exception_handler) {
