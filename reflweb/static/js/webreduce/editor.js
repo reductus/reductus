@@ -13,7 +13,7 @@ webreduce.editor = webreduce.editor || {};
     return uuid;
   }
 
-  webreduce.editor._cache = new PouchDB("calculations");
+  webreduce.editor._cache = new PouchDB("calculations", {size: 100});
   webreduce.editor.clear_cache = function() {
     $.blockUI({message: "clearing cache", fadeIn: 100, fadeOut: 100});
     new PouchDB('calculations').destroy().then(function () {
@@ -458,7 +458,6 @@ webreduce.editor = webreduce.editor || {};
       d3.selectAll("#plotdiv").selectAll("svg, div").remove();
       mychart = new heatChart.default({margin: {left: 100}} );
       d3.selectAll("#plotdiv").data(datas[0].z).call(mychart);
-      webreduce.callbacks.resize_center = function() {mychart.autofit()};
       webreduce.callbacks.resize_center = function() {mychart.autofit()};
     }
         
