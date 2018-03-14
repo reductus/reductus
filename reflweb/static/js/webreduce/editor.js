@@ -426,7 +426,7 @@ webreduce.editor = webreduce.editor || {};
           .attr("type", "checkbox")
           .attr("checked", "checked")
           .on("change", function() {
-            mychart[this.id](this.checked);
+            webreduce.editor._active_plot[this.id](this.checked);
           });
       
       plot_controls
@@ -801,6 +801,7 @@ webreduce.editor = webreduce.editor || {};
     // currently active output.  Store the structure in the 
     // browser.
     if (!window.localStorage) {alert("localStorage not supported in your browser"); return }
+    if (webreduce.editor._active_terminal == null) {alert("please select an input or output terminal to stash"); return }
     
     var suggested_name = (suggested_name == null) ?  "processed" : suggested_name;
     var stashname = prompt("stash data as:", suggested_name);
