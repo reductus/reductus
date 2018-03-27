@@ -107,7 +107,7 @@ def load_entries(filename, file_obj=None, entries=None):
         file.close()
     return measurements
 
-def h5_open_zip(filename, file_obj=None, mode='r', **kw):
+def h5_open_zip(filename, file_obj=None, mode='rb', **kw):
     """
     Open a NeXus file, even if it is in a zip file,
     or if it is a NeXus-zip file.
@@ -123,7 +123,7 @@ def h5_open_zip(filename, file_obj=None, mode='r', **kw):
     Arguments are the same as for :func:`open`.
     """
     if file_obj is None:
-        file_obj = open(filename, mode=mode)
+        file_obj = open(filename, mode=mode, buffering=-1)
     is_zip = _EndRecData(file_obj) # is_zipfile(file_obj) doens't work in py2.6
     if is_zip and '.attrs' in ZipFile(file_obj).namelist():
         # then it's a nexus-zip file, rather than
