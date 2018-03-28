@@ -363,12 +363,12 @@ webreduce.instruments = webreduce.instruments || {};
       webreduce.api_exception_handler = function(exc) {
         console.log("api exception: ", exc);
         var message = exc.exception || "no error message";
-        alert("exception - error message: \n" + message);
+        notify("exception: " + message);
         console.log(exc.traceback);
         // catch the error that comes from stale timestamps for files
         if (message.indexOf("ValueError: Requested mtime is") > -1) {
           setTimeout(function() { 
-            alert("Newer version of data file(s) found in source...\n\n" + 
+            notify ("Newer version of data file(s) found in source...\n\n" + 
                   "updating template with new file-modified times\n\n" + 
                   "Please repeat your last request."); 
           }, 1);
@@ -377,6 +377,34 @@ webreduce.instruments = webreduce.instruments || {};
         else {
           throw(exc);
         }
+      }
+      
+      function notify(message) {
+        // Let's check if the browser supports notifications
+        if (!("Notification" in window)) {
+          alert(message);
+        }
+
+        // Let's check whether notification permissions have already been granted
+        else if (Notification.permission === "granted") {
+          // If it's okay let's create a notification
+          var notification = new Notification(message);
+          setTimeout(notification.close.bind(notification), 5000);
+        }
+
+        // Otherwise, we need to ask the user for permission
+        else if (Notification.permission !== 'denied') {
+          Notification.requestPermission(function (permission) {
+            // If the user accepts, let's create a notification
+            if (permission === "granted") {
+              var notification = new Notification(message);
+              setTimeout(notification.close.bind(notification), 5000);
+            }
+          });
+        }
+
+        // Finally, if the user has denied notifications and you 
+        // want to be respectful there is no need to bother them any more.
       }
 
       Promise.all([list_instruments, list_datasources]).then(function(results) {
