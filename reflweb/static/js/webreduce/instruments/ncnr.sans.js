@@ -105,6 +105,13 @@ webreduce.instruments['ncnr.sans'] = webreduce.instruments['ncnr.sans'] || {};
   };
   
   instrument.load_file = load_sans;
+  instrument.default_categories = [
+    [["analysis.groupid"]],
+    [["analysis.intent"]], 
+    [["run.configuration"]], 
+    [["run.experimentScanID"],["sample.description"]]
+  ];
+  instrument.categories = jQuery.extend(true, [], instrument.default_categories);
   instrument.categorizers = [
     function(info) { return (info['analysis.groupid']) },
     function(info) { return info['analysis.intent'] },

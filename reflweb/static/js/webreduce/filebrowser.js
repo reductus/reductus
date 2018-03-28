@@ -49,8 +49,10 @@
     });
     var p = loader(load_params, file_objs, false, 'metadata')
       .then(function(results) {
-        var categorizers = webreduce.instruments[instrument_id].categorizers;
-        var treeinfo = file_objs_to_tree(file_objs, categorizers, datasource);
+        //var categorizers = webreduce.instruments[instrument_id].categorizers;
+        webreduce.editor._datafiles = results;
+        var categories = webreduce.instruments[instrument_id].categories;
+        var treeinfo = file_objs_to_tree(file_objs, categories, datasource);
         // add decorators etc to the tree with postprocess:
         var postprocess = webreduce.instruments[instrument_id].postprocess;
         if (postprocess) { postprocess(treeinfo, file_objs) }
@@ -124,8 +126,15 @@
 
   }
 
+  function make_categorizer(category) {
+    // input is a list of names in a hierarchical namespace to look up
+    function categorizer(info) { 
+      return category.reduce(function(info, key) { return info[key] });
+    }
+    return categorizer
+  }
   // categorizers are callbacks that take an info object and return category string
-  function file_objs_to_tree(file_objs, categorizers, datasource) {
+  function file_objs_to_tree(file_objs, categories, datasource) {
     // file_obj should always be a list of entries
     var out = [], categories_obj = {}, fm;
 
@@ -139,8 +148,11 @@
         var parent = "root",
             cobj = categories_obj,
             category, id;
-        for (var c=0; c<categorizers.length; c++) {
-          category = categorizers[c](entry);
+        for (var c=0; c<categories.length; c++) {
+          category = categories[c]
+            .map(function(keylist) { 
+              return keylist.reduce(function(info, key) { return info[key] }, entry)
+            }).join(":");
           id = parent + ":" + category;
           if (!(category in cobj)) {
             cobj[category] = {};

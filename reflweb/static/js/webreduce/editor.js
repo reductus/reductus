@@ -1160,6 +1160,54 @@ webreduce.editor = webreduce.editor || {};
     }
   }
   
+  webreduce.editor.edit_categories = function() {
+    var instrument_id = webreduce.editor._instrument_id;
+    var categories = webreduce.instruments[instrument_id].categories;
+    var dialog = $("div#categories_editor").dialog("open");
+    var d3_handle = d3.select(dialog[0]);
+    var list = d3_handle.select("ol.categories");
+    list.empty();
+    list.selectAll("li.category").data(categories)
+      .enter().append("li")
+        .classed("category", true)
+        .text(function(d) { return JSON.stringify(d) })
+    
+    function isObject(val) { return typeof val === 'object' && !Array.isArray(val)};
+    function get_all_keys(obj) {
+      var keys = Object.keys(obj);
+      keys = keys.filter(function(k) { return !Array.isArray(obj[k]) });
+      var output_keys = [];
+      keys.forEach(function(k) {
+        if (obj[k] && isObject(obj[k])) {
+          output_keys.push([k, get_all_keys(obj[k])]);
+          //Array.prototype.push.apply(output_keys, get_all_keys(obj[k]));
+        }
+        else {
+          output_keys.push([k]);
+        }
+      });
+      return output_keys.sort();
+    }
+    
+    var category_keys = get_all_keys(webreduce.editor._datafiles[0]["values"][0]);
+    function selector() {
+      var sel = d3.create("select").classed("category", true);
+      sel.selectAll("option").data(category_keys)
+        .enter().append("option")
+          .text(function(d) { return d[0] })
+      sel.on("change", function() { 
+        console.log(this.value, category_keys, category_keys[this.value]);
+      });
+      return sel.node()
+    }
+    
+    console.log(get_all_keys(webreduce.editor._datafiles[0]["values"][0]));
+    list.append("li")
+      .classed("category", true)
+      .append(selector)
+    d3_handle.select("button.cancel").on("click", function() { dialog.dialog("close"); });
+  }
+  
   webreduce.editor.export_data = function() {
     var w = webreduce.editor;
     if (w._active_terminal == null) { alert("no input or output selected to export"); }

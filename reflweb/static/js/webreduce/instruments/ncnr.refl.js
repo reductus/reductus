@@ -47,6 +47,7 @@ webreduce.instruments['ncnr.refl'] = webreduce.instruments['ncnr.refl'] || {};
     var width = icon_width * rel_width;
     var rel_x = Math.abs((min_x - global_min_x) / (global_max_x - global_min_x));
     var x = icon_width * rel_x;
+      
     var output = "<svg class=\"range\" width=\"" + (icon_width + 2) + "\" height=\"12\">";
     output += "<rect width=\"" + width + "\" height=\"10\" x=\"" + x + "\" style=\"fill:IndianRed;stroke:none\"/>"
     output += "<rect width=\"" + icon_width + "\" height=\"10\" style=\"fill:none;stroke:black;stroke-width:1\"/>"
@@ -185,6 +186,13 @@ webreduce.instruments['ncnr.refl'] = webreduce.instruments['ncnr.refl'] || {};
     return plottable;
   };
   instrument.load_file = load_refl; 
+  instrument.default_categories = [
+    [["sample", "name"]],
+    [["intent"]], 
+    [["filenumber"]], 
+    [["polarization"]]
+  ];
+  instrument.categories = jQuery.extend(true, [], instrument.default_categories);
   instrument.categorizers = [
     function(info) { return info.sample.name || "unknown" },
     function(info) { return info.intent || "unknown intent" },
