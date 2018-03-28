@@ -49,7 +49,6 @@
     });
     var p = loader(load_params, file_objs, false, 'metadata')
       .then(function(results) {
-        //var categorizers = webreduce.instruments[instrument_id].categorizers;
         webreduce.editor._datafiles = results;
         var categories = webreduce.instruments[instrument_id].categories;
         var treeinfo = file_objs_to_tree(file_objs, categories, datasource);
@@ -126,19 +125,12 @@
 
   }
 
-  function make_categorizer(category) {
-    // input is a list of names in a hierarchical namespace to look up
-    function categorizer(info) { 
-      return category.reduce(function(info, key) { return info[key] });
-    }
-    return categorizer
-  }
   // categorizers are callbacks that take an info object and return category string
   function file_objs_to_tree(file_objs, categories, datasource) {
     // file_obj should always be a list of entries
     var out = [], categories_obj = {}, fm;
 
-    //var out = [], categories_obj = {}, file_obj;
+    //var out = [], categories_obj = {}, file_obj;      
     for (var p in file_objs) {
       //if (!p) { continue }
       fm = file_objs[p].values;

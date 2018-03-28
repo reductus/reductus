@@ -1190,19 +1190,29 @@ webreduce.editor = webreduce.editor || {};
     }
     
     var category_keys = get_all_keys(webreduce.editor._datafiles[0]["values"][0]);
-    function selector() {
-      var sel = d3.create("select").classed("category", true);
-      sel.selectAll("option").data(category_keys)
+    function selector(c) {
+      var container = d3.create("span");
+      var sel = container.append("select").classed("category", true);
+      sel.selectAll("option").data(c)
         .enter().append("option")
+          .attr("value", function(d) { return d[0] })
           .text(function(d) { return d[0] })
-      sel.on("change", function() { 
-        console.log(this.value, category_keys, category_keys[this.value]);
-      });
-      return sel.node()
+      function selection_change() {
+        container.selectAll("span").remove();
+        var x = sel.selectAll('option[value="' + this.value + '"]');
+        var cc = x.datum()[1];
+        if (cc && cc.length) {
+          //container.append("span").text(" : ");
+          container.datum(cc).append(selector);
+        }
+      }
+      sel.on("change", selection_change);
+      selection_change.call(sel.node());
+      return container.node()
     }
     
-    console.log(get_all_keys(webreduce.editor._datafiles[0]["values"][0]));
-    list.append("li")
+    //console.log(get_all_keys(webreduce.editor._datafiles[0]["values"][0]));
+    list.append("li").datum(category_keys)
       .classed("category", true)
       .append(selector)
     d3_handle.select("button.cancel").on("click", function() { dialog.dialog("close"); });

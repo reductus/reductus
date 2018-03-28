@@ -193,12 +193,6 @@ webreduce.instruments['ncnr.refl'] = webreduce.instruments['ncnr.refl'] || {};
     [["polarization"]]
   ];
   instrument.categories = jQuery.extend(true, [], instrument.default_categories);
-  instrument.categorizers = [
-    function(info) { return info.sample.name || "unknown" },
-    function(info) { return info.intent || "unknown intent" },
-    function(info) { return info.filenumber || info.name },
-    function(info) { return info.polarization || "unpolarized" }
-  ];
   
   function add_range_indicators(target, file_objs) {
     var propagate_up_levels = 2; // levels to push up xmin and xmax.
