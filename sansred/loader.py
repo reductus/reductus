@@ -21,7 +21,7 @@ metadata_lookup = {
     "det.pixeloffsety": "instrument/detector/y_offset",
     "det.pixelsizey": "instrument/detector/y_pixel_size",
     "analysis.intent": "DAS_logs/trajectoryData/intent",
-    "analysis.filepurpose": "DAS_logs/trajectoryData/filepurpose",
+    "analysis.filepurpose": "DAS_logs/trajectoryData/filePurpose",
     "sample.name": "DAS_logs/sample/name",
     "sample.description": "DAS_logs/sample/description",
     "sample.labl": "DAS_logs/sample/description", # compatibility
