@@ -1167,10 +1167,10 @@ webreduce.editor = webreduce.editor || {};
     var d3_handle = d3.select(dialog[0]);
     var list = d3_handle.select("ol.categories");
     list.empty();
-    list.selectAll("li.category").data(categories)
-      .enter().append("li")
-        .classed("category", true)
-        .text(function(d) { return JSON.stringify(d) })
+    //list.selectAll("li.category").data(categories)
+    //  .enter().append("li")
+    //    .classed("category", true)
+    //    .text(function(d) { return JSON.stringify(d) })
     
     function isObject(val) { return typeof val === 'object' && !Array.isArray(val)};
     function get_all_keys(obj) {
@@ -1191,30 +1191,97 @@ webreduce.editor = webreduce.editor || {};
     
     var category_keys = get_all_keys(webreduce.editor._datafiles[0]["values"][0]);
     function selector(c) {
-      var container = d3.create("span");
-      var sel = container.append("select").classed("category", true);
-      sel.selectAll("option").data(c)
+      c = c || {value: []};
+      c.value = c.value || [];
+      console.log(c.value);
+      var container = d3.create("span").classed("category", true);
+      var sel = container.append("select").classed("category", true)
+      sel.selectAll("option").data(c.choices)
         .enter().append("option")
           .attr("value", function(d) { return d[0] })
           .text(function(d) { return d[0] })
       function selection_change() {
+        if (this.value != c.value[0]) {
+          c.value[0] = this.value;
+          c.value.splice(1);
+          console.log(JSON.stringify(c));
+
+        }
         container.selectAll("span").remove();
         var x = sel.selectAll('option[value="' + this.value + '"]');
         var cc = x.datum()[1];
         if (cc && cc.length) {
-          //container.append("span").text(" : ");
-          container.datum(cc).append(selector);
+          var sv = (c.value && c.value.slice(1)) ? c.value.slice(1)[0] : null;
+          container.selectAll("span.selector").data([{value: sv, choices: cc}]).enter().append(selector);
         }
+      }
+      if (c.value && c.value[0]) {
+        sel.property("value", c.value[0]);
       }
       sel.on("change", selection_change);
       selection_change.call(sel.node());
       return container.node()
     }
     
-    //console.log(get_all_keys(webreduce.editor._datafiles[0]["values"][0]));
-    list.append("li").datum(category_keys)
-      .classed("category", true)
-      .append(selector)
+    var categories_nested = categories.map(function(cat) {
+      return cat.map(function(v) { 
+        return v.slice().reverse().reduce(function(a, s) { 
+          var b = [s]; if (a) { b.push(a) }; return b; }, null)
+      })
+    });
+
+    var citems = list.selectAll("li.category").data(categories_nested)
+      .enter().append("li").classed("category", true)
+        .style("border", "2px solid grey")
+        .style("border-radius", "6px")
+        .style("margin-bottom", "4px")
+        .style("padding", "2px")
+    d3_handle.select("ol.add-more").append("li").classed("add-category", true).style("list-style", "none")
+      .append("span").classed("ui-icon ui-icon-circle-plus", true)
+        .attr("title", "add category")
+        .on("click", function() { 
+          var new_data = [[]];
+          var new_category = list.insert("li").data([new_data]).classed("category", true);
+          add_selectors.call(new_category.node(), new_data);
+        })
+    
+    citems.each(add_selectors);
+    function add_selectors(cl) {
+      var citem = d3.select(this);
+      citem.selectAll("span.category").data(cl.map(function(c) { return {value: c, choices: category_keys}}))
+        .enter().append(selector)
+      citem.append("span").classed("ui-icon ui-icon-circle-plus", true)
+        .style("cursor", "pointer")
+        .attr("title", "adding keywords on the same row makes a category from\nthe concatenation of the values with a colon (:) separator")
+      citem.append("span").classed("ui-icon ui-icon-circle-close", true)
+        .style("cursor", "pointer")
+        .style("position", "absolute")
+        .style("right", "0")
+        .attr("title", "remove category")
+        .on("click", function() { citem.remove() })
+    }
+    $(list.node()).sortable();
+    d3_handle.select("button.apply").on("click", function() {
+      console.log(list.selectAll("li.category").data());
+      var rawc = list.selectAll("li.category").data();
+      function unpack(nested) {
+        var unpacked = [];
+        var residual = nested;
+        while (residual && residual.length > 0) {
+          unpacked.push(residual[0]);
+          residual = residual.slice(1)[0];
+        }
+        return unpacked;
+      }
+      var unpacked = rawc.map(function(row) {
+        return row.map(function(r) {
+          console.log(r);
+          return unpack(r) 
+        })
+      });
+      console.log(unpacked);
+      //dialog.dialog("close");
+    })
     d3_handle.select("button.cancel").on("click", function() { dialog.dialog("close"); });
   }
   

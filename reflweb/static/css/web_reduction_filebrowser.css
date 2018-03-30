@@ -345,3 +345,14 @@ li.ui-menu-item {
 li.ui-menu-item div.ui-menu-item-wrapper {
     padding-left: 3px;
 }
+
+ol.categories li.category {
+    border: 2px solid grey;
+    border-radius: 6px;
+    margin-bottom: 4px;
+    padding: 2px;
+}
+
+ol.categories li.category select {
+    border-radius: 4px;
+}
