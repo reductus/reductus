@@ -1161,16 +1161,28 @@ webreduce.editor = webreduce.editor || {};
   }
   
   webreduce.editor.edit_categories = function() {
+    if (!webreduce.editor._datafiles[0]) {
+      alert("no datafiles loaded");
+      return
+    }
     var instrument_id = webreduce.editor._instrument_id;
     var categories = webreduce.instruments[instrument_id].categories;
     var dialog = $("div#categories_editor").dialog("open");
     var d3_handle = d3.select(dialog[0]);
     var list = d3_handle.select("ol.categories");
-    list.empty();
-    //list.selectAll("li.category").data(categories)
-    //  .enter().append("li")
-    //    .classed("category", true)
-    //    .text(function(d) { return JSON.stringify(d) })
+    $(list.node()).sortable();
+    
+    d3_handle.select("ol.add-more").selectAll("li.add-category").data([1])
+      .enter().append("li").classed("add-category", true).style("list-style", "none")
+      .append("span").classed("ui-icon ui-icon-circle-plus", true)
+        .attr("title", "add category")
+    d3_handle.select("ol.add-more").selectAll("li.add-category")
+      .on("click", function() { 
+        var new_data = [[]];
+        var new_category = list.insert("li").data([new_data]).classed("category", true);
+        add_selectors.call(new_category.node(), new_data);
+      })
+    
     
     function isObject(val) { return typeof val === 'object' && !Array.isArray(val)};
     function get_all_keys(obj) {
@@ -1180,7 +1192,6 @@ webreduce.editor = webreduce.editor || {};
       keys.forEach(function(k) {
         if (obj[k] && isObject(obj[k])) {
           output_keys.push([k, get_all_keys(obj[k])]);
-          //Array.prototype.push.apply(output_keys, get_all_keys(obj[k]));
         }
         else {
           output_keys.push([k]);
@@ -1190,10 +1201,10 @@ webreduce.editor = webreduce.editor || {};
     }
     
     var category_keys = get_all_keys(webreduce.editor._datafiles[0]["values"][0]);
+    
     function selector(c) {
       c = c || {value: []};
       c.value = c.value || [];
-      console.log(c.value);
       var container = d3.create("span").classed("category", true);
       var sel = container.append("select").classed("category", true)
       sel.selectAll("option").data(c.choices)
@@ -1204,7 +1215,6 @@ webreduce.editor = webreduce.editor || {};
         if (this.value != c.value[0]) {
           c.value[0] = this.value;
           c.value.splice(1);
-          console.log(JSON.stringify(c));
 
         }
         container.selectAll("span").remove();
@@ -1223,29 +1233,7 @@ webreduce.editor = webreduce.editor || {};
       return container.node()
     }
     
-    var categories_nested = categories.map(function(cat) {
-      return cat.map(function(v) { 
-        return v.slice().reverse().reduce(function(a, s) { 
-          var b = [s]; if (a) { b.push(a) }; return b; }, null)
-      })
-    });
-
-    var citems = list.selectAll("li.category").data(categories_nested)
-      .enter().append("li").classed("category", true)
-        .style("border", "2px solid grey")
-        .style("border-radius", "6px")
-        .style("margin-bottom", "4px")
-        .style("padding", "2px")
-    d3_handle.select("ol.add-more").append("li").classed("add-category", true).style("list-style", "none")
-      .append("span").classed("ui-icon ui-icon-circle-plus", true)
-        .attr("title", "add category")
-        .on("click", function() { 
-          var new_data = [[]];
-          var new_category = list.insert("li").data([new_data]).classed("category", true);
-          add_selectors.call(new_category.node(), new_data);
-        })
     
-    citems.each(add_selectors);
     function add_selectors(cl) {
       var citem = d3.select(this);
       citem.selectAll("span.category").data(cl.map(function(c) { return {value: c, choices: category_keys}}))
@@ -1260,9 +1248,31 @@ webreduce.editor = webreduce.editor || {};
         .attr("title", "remove category")
         .on("click", function() { citem.remove() })
     }
-    $(list.node()).sortable();
+    
+    function set_data(categories) {
+      list.selectAll("li.category").remove();
+            
+      var categories_nested = categories.map(function(cat) {
+        return cat.map(function(v) { 
+          return v.slice().reverse().reduce(function(a, s) { 
+            var b = [s]; if (a) { b.push(a) }; return b; }, null)
+        })
+      });
+
+      var citems = list.selectAll("li.category").data(categories_nested)
+        .enter().append("li").classed("category", true)
+          .style("border", "2px solid grey")
+          .style("border-radius", "6px")
+          .style("margin-bottom", "4px")
+          .style("padding", "2px")
+      
+      citems.each(add_selectors);
+    }
+    
+    set_data(categories);
+    
+    // button handlers
     d3_handle.select("button.apply").on("click", function() {
-      console.log(list.selectAll("li.category").data());
       var rawc = list.selectAll("li.category").data();
       function unpack(nested) {
         var unpacked = [];
@@ -1275,14 +1285,15 @@ webreduce.editor = webreduce.editor || {};
       }
       var unpacked = rawc.map(function(row) {
         return row.map(function(r) {
-          console.log(r);
           return unpack(r) 
         })
       });
-      console.log(unpacked);
-      //dialog.dialog("close");
+      webreduce.instruments[instrument_id].categories = unpacked;
     })
-    d3_handle.select("button.cancel").on("click", function() { dialog.dialog("close"); });
+    d3_handle.select("button.close").on("click", function() { dialog.dialog("close"); });
+    d3_handle.select("button.load-defaults").on("click", function() { 
+      set_data(webreduce.instruments[instrument_id].default_categories);
+    });
   }
   
   webreduce.editor.export_data = function() {
