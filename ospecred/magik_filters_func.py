@@ -13,7 +13,7 @@ from numpy import (cos, pi, cumsum, arange, ndarray, ones, zeros, array,
                    newaxis, linspace, empty, resize, sin, allclose, zeros_like,
                    linalg, dot, arctan2, float64, histogram2d, sum, nansum,
                    sqrt, loadtxt, searchsorted, NaN, logical_not, fliplr,
-                   flipud, indices, polyfit, radians)
+                   flipud, indices, polyfit, radians, argsort)
 
 from numpy.ma import MaskedArray
 
@@ -67,6 +67,16 @@ def module(action):
 
     # This is a decorator, so return the original function
     return action
+
+def get_index(t, x):
+        if (x == "" or x == None):
+            return None
+        if float(x) > t.max():
+            return None
+        if float(x) < t.min():
+            return None
+        tord = argsort(t)
+        return tord[searchsorted(t, float(x), sorter=tord)]
 
 @module
 def fitPSDCalibration(calibration, minimum_peak_intensity=500.0):
@@ -217,17 +227,6 @@ def cropData(data, xmin=None, xmax=None, ymin=None, ymax=None):
     x_array = data._info[0]['values']
     y_array = data._info[1]['values']
 
-    print(xmin, xmax, ymin, ymax)
-
-    def get_index(t, x):
-        if (x == "" or x is None):
-            return None
-        if float(x) > t.max():
-            return None
-        if float(x) < t.min():
-            return None
-        return searchsorted(t, float(x))
-
     xslice = slice(get_index(x_array, xmin), get_index(x_array, xmax))
     yslice = slice(get_index(y_array, ymin), get_index(y_array, ymax))
     dataslice = (xslice, yslice)
@@ -236,6 +235,50 @@ def cropData(data, xmin=None, xmax=None, ymin=None, ymax=None):
     new_info[1]['values'] = y_array[yslice]
     result = MetaArray(output_array, info=new_info)
     return result
+
+@module
+def maskData(data, maskbox=[None,None,None,None], invert=False):
+    """
+    Set all data, normalization to zero within mask
+
+    **Inputs**
+
+    data (ospec2d) : data in
+    
+    maskbox (range?:xy): region over which to mask (in data coordinates)
+    
+    invert (bool): if True, mask everything not in the box
+
+    **Returns**
+
+    masked (ospec2d) : data out, with mask applied
+
+    2018-04-01 Brian Maranville
+    """
+    
+    if maskbox is None:
+        maskbox = [None, None, None, None]
+    xmin, xmax, ymin, ymax = maskbox
+    new_info = data.infoCopy()
+    x_axis = new_info[0]
+    y_axis = new_info[1]
+    col_info = new_info[2]
+    extra_info = new_info[3]
+
+    x_array = data._info[0]['values']
+    y_array = data._info[1]['values']
+
+    xslice = slice(get_index(x_array, xmin), get_index(x_array, xmax))
+    yslice = slice(get_index(y_array, ymin), get_index(y_array, ymax))
+    dataslice = (xslice, yslice)
+    if invert:
+        new_data = MetaArray(zeros_like(data.view(ndarray)), info=data.infoCopy())
+        new_data.view(ndarray)[dataslice] = data.view(ndarray).copy()[dataslice]
+    else:
+        new_data = MetaArray(data.view(ndarray).copy(), info=data.infoCopy())
+        new_data.view(ndarray)[dataslice] = 0
+
+    return new_data
 
 @module
 def sliceData(data, slicebox=[None,None,None,None]):
@@ -268,15 +311,6 @@ def sliceData(data, slicebox=[None,None,None,None]):
 
     x_array = data._info[0]['values']
     y_array = data._info[1]['values']
-
-    def get_index(t, x):
-        if (x == "" or x == None):
-            return None
-        if float(x) > t.max():
-            return None
-        if float(x) < t.min():
-            return None
-        return searchsorted(t, float(x))
 
     xslice = slice(get_index(x_array, xmin), get_index(x_array, xmax))
     yslice = slice(get_index(y_array, ymin), get_index(y_array, ymax))
