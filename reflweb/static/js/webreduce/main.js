@@ -134,6 +134,7 @@ webreduce.instruments = webreduce.instruments || {};
         };
       }());
       
+      var api_exception_dialog = $("div#api_exception").dialog({autoOpen: false, width: 600});
       var upload_dialog = $("#upload_template").dialog({autoOpen: false, width: 400});
       var reload_exported_dialog = $("#reload_exported").dialog({autoOpen: false, width: 400});
       var export_data = $("#export_data").dialog({autoOpen: false, width: 400});
@@ -363,12 +364,13 @@ webreduce.instruments = webreduce.instruments || {};
       webreduce.api_exception_handler = function(exc) {
         console.log("api exception: ", exc);
         var message = exc.exception || "no error message";
-        notify("exception: " + message);
+        notify("exception: " + message, exc.traceback);
         console.log(exc.traceback);
         // catch the error that comes from stale timestamps for files
         if (message.indexOf("ValueError: Requested mtime is") > -1) {
           setTimeout(function() { 
-            notify ("Newer version of data file(s) found in source...\n\n" + 
+            notify ("newer datafile found", 
+                  "Newer version of data file(s) found in source...\n\n" + 
                   "updating template with new file-modified times\n\n" + 
                   "Please repeat your last request."); 
           }, 1);
@@ -379,7 +381,7 @@ webreduce.instruments = webreduce.instruments || {};
         }
       }
       
-      function notify(message) {
+      function notify(message, longmessage) {
         // Let's check if the browser supports notifications
         if (!("Notification" in window)) {
           alert(message);
@@ -389,6 +391,12 @@ webreduce.instruments = webreduce.instruments || {};
         else if (Notification.permission === "granted") {
           // If it's okay let's create a notification
           var notification = new Notification(message);
+          notification.onclick = function(event) {
+            event.preventDefault();
+            var dialog_div = $("div#api_exception");
+            dialog_div.find("pre").text(longmessage);
+            dialog_div.dialog("open")
+          }
           setTimeout(notification.close.bind(notification), 5000);
         }
 
@@ -398,6 +406,12 @@ webreduce.instruments = webreduce.instruments || {};
             // If the user accepts, let's create a notification
             if (permission === "granted") {
               var notification = new Notification(message);
+              notification.onclick = function(event) {
+                event.preventDefault();
+                var dialog_div = $("div#api_exception");
+                dialog_div.find("pre").text(longmessage);
+                dialog_div.dialog("open")
+              }
               setTimeout(notification.close.bind(notification), 5000);
             }
           });
