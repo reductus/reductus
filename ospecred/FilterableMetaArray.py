@@ -228,8 +228,8 @@ class FilterableMetaArray(MetaArray):
         axis = ['x', 'y']
         for index, label in enumerate(axis):
             arr = self._info[index]['values']
-            dims[axis[index] + 'min'] = float(arr.min())
-            dims[axis[index] + 'max'] = float(arr.max())
+            dims[axis[index] + 'min'] = float(arr[0])
+            dims[axis[index] + 'max'] = float(arr[-1])
             dims[axis[index] + 'dim'] = len(arr)
         xlabel = self._info[0]['name']
         ylabel = self._info[1]['name']
