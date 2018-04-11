@@ -874,7 +874,9 @@ class ReflData(Group):
             'x': {'label': self.xlabel, 'units': self.xunits, 'errorbars': 'dx'},
             'v': {'label': self.vlabel, 'units': self.vunits, 'errorbars': 'dv'},
             'Qz': {'label': 'Qz', 'units': "1/Ang"},
-            'Qx': {'label': 'Qx', 'units': "1/Ang"}
+            'Qz_target': {'label': 'Target Qz', 'units': '1/Ang'},
+            'Qx': {'label': 'Qx', 'units': "1/Ang"},
+            'angular_resolution': {'label': 'Angular Resolution (1-sigma)', 'units': 'degrees'}
         }
         for subclsnm in ['sample', 'detector', 'monitor', 'slit1', 'slit2', 'slit3', 'slit4']:
             subcls = getattr(self, subclsnm, None)
@@ -890,6 +892,32 @@ class ReflData(Group):
                     sub_col['label'] = label
                     data_columns[label] = sub_col
         return data_columns
+
+    def apply_mask(self, mask_indices):
+        """in-place masking of all data that is maskable"""
+        def check_array(v):
+            return (v is not None and hasattr(v, 'size') and v.size > 0)
+
+        def make_mask(v, mask_indices):
+            mask = np.ones_like(v, dtype="bool")
+            mask[mask_indices] = False
+            return mask
+
+        for prop in ['_v', '_dv', 'angular_resolution', 'Qz_target']:
+            v = getattr(self, prop, None)
+            if check_array(v):
+                setattr(self, prop, v[make_mask(v, mask_indices)])
+
+        self.scan_value = [v[make_mask(v, mask_indices)] if check_array(v) else v for v in self.scan_value]
+
+        for subclsnm in ['sample', 'detector', 'monitor', 'slit1', 'slit2', 'slit3', 'slit4']:
+            subcls = getattr(self, subclsnm, None)
+            if subcls is None:
+                continue
+            sub_cols = getattr(subcls, 'columns', {})
+            for col in sub_cols.keys():
+                v = getattr(subcls, col, None)
+                if check_array(v): setattr(subcls, col, v[make_mask(v, mask_indices)])
 
     def __init__(self, **kw):
         for attr, cls in ReflData._groups:

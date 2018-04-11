@@ -411,7 +411,7 @@ def divergence(data, sample_width=None, sample_broadening=0):
     return data
 
 
-@module
+#@module
 def mask_specular(data):
     """
     Identify and mask out specular points.
@@ -438,12 +438,12 @@ def mask_specular(data):
 
 def mask_action(data=None, mask_indices=None, **kwargs):
     """
-    Set the data mask to the list of points, e.g. [0, 4, 5]
+    Remove data at the indicated indices
     """
     import numpy
     if mask_indices:
-        data.mask = numpy.ones(data.detector.counts.shape, dtype="bool")
-        data.mask[mask_indices] = False
+        data = copy(data)
+        data.apply_mask(mask_indices)
     return data
 
 @module
@@ -468,7 +468,7 @@ def mask_points(data, mask_indices=None):
 
     output (refldata) : masked data
 
-    2016-02-08 Brian Maranville
+    2016-02-10 Brian Maranville
     """
     data = copy(data)
     data.log('mask_points(%r)' % mask_indices)

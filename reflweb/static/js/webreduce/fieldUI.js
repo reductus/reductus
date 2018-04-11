@@ -92,8 +92,7 @@ webreduce.editor.make_fieldUI = webreduce.editor.make_fieldUI || {};
       //.text(JSON.stringify(datum.value, null, 2))
       .text(prettyJSON(datum.value))
       .on("change", function(d) {
-        datum.value = JSON.parse(this.value);
-        update_plot();
+        datum.value = JSON.parse(this.value)
       });
     
     // add interactors:
@@ -164,7 +163,6 @@ webreduce.editor.make_fieldUI = webreduce.editor.make_fieldUI || {};
         .attr("name", "select_select")
         .attr("type", "radio")
         .attr("value", "zoom")
-        .property("checked", true)
       
       select_select
         .append("label")
@@ -173,6 +171,7 @@ webreduce.editor.make_fieldUI = webreduce.editor.make_fieldUI || {};
         .attr("name", "select_select")
         .attr("type", "radio")
         .attr("value", "select")
+        .property("checked", true)
         
       select_select
         .append("label")
@@ -197,57 +196,63 @@ webreduce.editor.make_fieldUI = webreduce.editor.make_fieldUI || {};
       }
       
       select_select.selectAll("input").on("change", selectorchange);
-      selectorchange.call({value: "zoom"});
-    }
-    //webreduce.editor.show_plots(datasets);
+      selectorchange.call({value: "select"});
     
-    function update_plot() {
+      //webreduce.editor.show_plots(datasets);
+      
+      function update_plot() {
+        d3.selectAll("#plotdiv svg g.series").each(function(d,i) {
+          // i is index of dataset
+          var series_select = d3.select(this);
+          var index_list = datum.value[i];
+          series_select.selectAll("circle.dot")
+            .filter(function(dd,ii) {return (index_list.indexOf(ii) > -1)})
+            .classed("masked", true);
+        })
+      }
+      
+      input.on("change", function(d) {
+        datum.value = JSON.parse(this.value);
+        update_plot();
+      });
+      
+      update_plot();
+      
+      d3.selectAll("#plotdiv .dot").on("click", null); // clear previous handlers
       d3.selectAll("#plotdiv svg g.series").each(function(d,i) {
         // i is index of dataset
         var series_select = d3.select(this);
-        var index_list = datum.value[i];
-        series_select.selectAll("circle.dot")
-          .filter(function(dd,ii) {return (index_list.indexOf(ii) > -1)})
-          .classed("masked", true);
-      })
-    }
-    
-    update_plot();
-    
-    d3.selectAll("#plotdiv .dot").on("click", null); // clear previous handlers
-    d3.selectAll("#plotdiv svg g.series").each(function(d,i) {
-      // i is index of dataset
-      var series_select = d3.select(this);
-      series_select.selectAll(".dot").on("click", function(dd, ii) {
-        // ii is the index of the point in that dataset.
-        d3.event.stopPropagation();
-        d3.event.preventDefault();
-        var dot = d3.select(this);          
-        // manipulate data list directly:
-        var index_list = datum.value[i];
-        var index_index = index_list.indexOf(ii);
-        if (index_index > -1) { 
-          index_list.splice(index_index, 1); 
-          dot.classed("masked", false); 
-        }
-        else {
-          index_list.push(ii); 
-          dot.classed("masked", true);
-        }
-        index_list.sort();
-        // else, pull masked dot list from class:
-        // (this has the advantage of always being ordered inherently)
-        /*
-        dot.classed("masked", !dot.classed("masked")); // toggle selection
-        datum.value[i] = [];
-        series_select.selectAll(".dot").each(function(ddd, iii) {if (d3.select(this).classed("masked")) {datum.value[i].push(iii)}});
-        */
-        input.text(prettyJSON(datum.value));
-        var event = document.createEvent('Event');
-        event.initEvent('input', true, true);
-        input.node().dispatchEvent(event);
+        series_select.selectAll(".dot").on("click", function(dd, ii) {
+          // ii is the index of the point in that dataset.
+          d3.event.stopPropagation();
+          d3.event.preventDefault();
+          var dot = d3.select(this);          
+          // manipulate data list directly:
+          var index_list = datum.value[i];
+          var index_index = index_list.indexOf(ii);
+          if (index_index > -1) { 
+            index_list.splice(index_index, 1); 
+            dot.classed("masked", false); 
+          }
+          else {
+            index_list.push(ii); 
+            dot.classed("masked", true);
+          }
+          index_list.sort();
+          // else, pull masked dot list from class:
+          // (this has the advantage of always being ordered inherently)
+          /*
+          dot.classed("masked", !dot.classed("masked")); // toggle selection
+          datum.value[i] = [];
+          series_select.selectAll(".dot").each(function(ddd, iii) {if (d3.select(this).classed("masked")) {datum.value[i].push(iii)}});
+          */
+          input.text(prettyJSON(datum.value));
+          var event = document.createEvent('Event');
+          event.initEvent('input', true, true);
+          input.node().dispatchEvent(event);
+        });
       });
-    });
+    }
     return input;
   }
   fieldUI.index = indexUI;
