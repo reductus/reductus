@@ -196,7 +196,7 @@ def normalizeToMonitor(data):
     return result
 
 @module
-def cropData(data, xmin=None, xmax=None, ymin=None, ymax=None):
+def cropData(data, cropbox=[None,None,None,None]):
     """
     crop 2d data along both axes and return smaller dataset
 
@@ -204,20 +204,17 @@ def cropData(data, xmin=None, xmax=None, ymin=None, ymax=None):
 
     data (ospec2d) : data in
 
-    xmin (float): lower bound of xslice region, in data coordinates
-
-    xmax (float): upper bound of xslice region, in data coordinates
-
-    ymin (float): lower bound of yslice region, in data coordinates
-
-    ymax (float): upper bound of yslice region, in data coordinates
+    cropbox (range?:xy): region over which to mask (in data coordinates)
 
     **Returns**
 
     output (ospec2d) : data with normalization applied
 
-    2016-04-01 Brian Maranville
+    2018-04-10 Brian Maranville
     """
+    if cropbox is None:
+        cropbox = [None, None, None, None]
+    xmin, xmax, ymin, ymax = cropbox
     new_info = data.infoCopy()
     x_axis = new_info[0]
     y_axis = new_info[1]
