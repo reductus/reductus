@@ -466,7 +466,7 @@ def decompress(data):
     data[idx] = np.asarray((-data[idx]%base)*10**power, data.dtype)
 
     # Recast as 128x128 array
-    data.resize((128, 128))
+    data = data.reshape((128, 128), order='F')
     return data
 
 def compress(data):
