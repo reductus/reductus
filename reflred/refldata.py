@@ -896,7 +896,7 @@ class ReflData(Group):
     def apply_mask(self, mask_indices):
         """in-place masking of all data that is maskable"""
         def check_array(v):
-            return (v is not None and hasattr(v, 'size') and v.size > 0)
+            return isinstance(v, np.ndarray)
 
         def make_mask(v, mask_indices):
             mask = np.ones_like(v, dtype="bool")
