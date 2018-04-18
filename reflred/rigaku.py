@@ -136,16 +136,27 @@ def loads(data):
     Load Rigaku data from string.
     """
     lines = data.split(b'\r\n')
-    if lines[0] != b"*RAS_DATA_START":
-        raise ValueError("not a Rigaku XRD RAS file")
-    index = 1
-    datasets = []
-    while True:
-        index, header, values = _parse(index, lines)
-        data = _interpret(header, values)
-        datasets.append(data)
-        if lines[index] == b"*RAS_DATA_END":
-            break
+    sections = _split_sections(lines)
+
+    # skip sections that are not 'HEADER" or "INT"
+    sections = [(name, body, index) for name, body, index in sections
+                if name in set((b'HEADER', b'INT'))]
+
+    for name, body, index in sections[::2]:
+        if name != b'HEADER':
+            # Note: index-1 for *RAS_section_START and index+1 for 1-origin
+            raise ValueError("Expected *RAS_HEADER_START at %d"%index)
+    for name, body, index in sections[1::2]:
+        if name != b'INT':
+            # Note: index-1 for *RAS_section_START and index+1 for 1-origin
+            raise ValueError("Expected *RAS_INT_START at %d"%index)
+
+    head = [_parse_header(body, index+1) for name, body, index in sections[::2]]
+    vals = [_parse_data(body, index+1) for name, body, index in sections[1::2]]
+    if len(head) != len(vals):
+        raise ValueError("Missing data block for final section")
+    datasets = [_interpret(h, v) for h, v in zip(head, vals)]
+
     return datasets
 
 def join(datasets):
@@ -170,19 +181,52 @@ def join(datasets):
     R['end_time'] = max(data['end_time'] for data in datasets)
     return R
 
-def _parse(index, lines):
-    if lines[index] != b"*RAS_HEADER_START":
-        raise ValueError("corrupt file: missing *RAS_HEADER_START")
-    index += 1
+def _split_sections(lines):
+    """
+    Split rigaku file into sections
+
+    Returns a list of sections [(name, body, index)] where name is the section
+    type, body is the list of lines between *RAS_name_START and *RAS_name_END
+    and index is the 1-origin index of *RAS_name_START (or the 0-origin index
+    of the first line of the body).
+    """
+    if lines[0] != b"*RAS_DATA_START":
+        raise ValueError("not a Rigaku XRD RAS file")
+
+    last_index = len(lines) - 1
+    while last_index > 0 and lines[last_index] == "":
+        last_index -= 1
+    if lines[last_index] != b"*RAS_DATA_END":
+        raise ValueError("Rigake file does not end with *RAS_DATA_END")
+
+    sections = []
+    end_target = None
+    start_index = 1000000000 # initialize with int to keep linter happy
+    for index, line in enumerate(lines[1:last_index]):
+        if line == end_target:
+            # Note: index chosen so that the section includes
+            # "*RAS_section_START" but not "*RAS_section_END"
+            name = lines[start_index+1][5:-6]
+            body = lines[start_index+2:index+1]
+            sections.append((name, body, start_index+1))
+            end_target = None
+        elif end_target is None:
+            if not (line.startswith(b"*RAS_") and line.endswith(b"_START")):
+                raise ValueError("Rigaku expected section start at line %d"
+                                 %(index+2))
+            start_index = index
+            end_target = line[:-6] + b"_END"
+        #else: accumulate into current section
+    if end_target is not None:
+        raise ValueError("Rigaku file incomplete: final section is not closed")
+    return sections
+
+def _parse_header(lines, start_index):
+    """
+    Interpret the key-value pairs in the HEADER section.
+    """
     header = {}
-    while True:
-        if index >= len(lines):
-            raise ValueError("corrupt file: missing *RAS_HEADER_END")
-        line = lines[index]
-        index += 1
-        if line == b'*RAS_HEADER_END':
-            break
-        #print(index, ":", line)
+    for offset, line in enumerate(lines):
         try:
             key, value = line.split(b' ', 1)  # *KEY "value"
             # Note: py3 byte strings key[k] returns ord not byte string
@@ -190,7 +234,8 @@ def _parse(index, lines):
             assert value[0:1] == b'"' and value[-1:] == b'"'
         except Exception:
             #traceback.print_exc()
-            raise ValueError("corrupt file: line %d is not '*KEY value'"%index)
+            raise ValueError("corrupt file: line %d is not '*KEY value'"
+                             %(start_index + offset))
         key = tostr(key[1:])
         value = value[1:-1] # strip quotes
 
@@ -210,24 +255,21 @@ def _parse(index, lines):
         # if all conversions fail, value should be an untouched string
 
         header[key] = value
+    return header
 
-    if lines[index] != b"*RAS_INT_START":
-        raise ValueError("corrupt file: missing *RAS_INT_START")
-    index += 1
+def _parse_data(lines, start_index):
+    """
+    Interpret the list of column values in the INT section.
+    """
     values = []
-    while True:
-        if index >= len(lines):
-            raise ValueError("corrupt file: missing *RAS_INT_END")
-        line = lines[index]
-        index += 1
-        if line == b"*RAS_INT_END":
-            break
+    for offset, line in enumerate(lines):
         try:
             values.append([float(v) for v in line.split()])
         except Exception:
-            raise ValueError("corrupt file: line %d is not a set of values"%index)
+            raise ValueError("corrupt file: line %d is not a set of values"
+                             %(start_index + offset))
+    return values
 
-    return index, header, values
 
 # From https://wwwastro.msfc.nasa.gov/xraycal/linewidths.html
 EMISSION_LINEWIDTH = 0.00021  # 0.05% dL/L FWHM as 1-sigma line width
