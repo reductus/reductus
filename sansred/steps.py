@@ -1015,15 +1015,81 @@ def radialToCylindrical(data, theta_offset = 0.0, oversample_th = 2.0, oversampl
 
     if data.qx is not None:
         output.qx = np.linspace(extent[0], extent[1], normalized.shape[1])
+        # abusing the qx property here to mean "other x"
         mask.qx = output.qx.copy()
         output.xlabel = mask.xlabel = "theta (degrees)"
 
     if data.qy is not None:
         output.qy = np.linspace(extent[2], extent[3], normalized.shape[0])
+        # abusing the qy property here to mean "other y"
         mask.qy = output.qy.copy()
         output.ylabel = mask.ylabel = "Q (inv. Angstrom)"
 
     return output, mask
+
+@module
+def sliceData(data, slicebox=[None,None,None,None]):
+    """
+    Sum 2d data along both axes and return 1d datasets
+
+    **Inputs**
+
+    data (sans2d) : data in
+    
+    slicebox (range?:xy): region over which to integrate (in data coordinates)
+
+    **Returns**
+
+    xout (sans1d) : xslice
+
+    yout (sans1d) : yslice
+
+    2018-04-20 Brian Maranville
+    """
+    
+    if slicebox is None:
+        slicebox = [None, None, None, None]
+    xmin, xmax, ymin, ymax = slicebox
+    
+    res = data.copy()
+    if data.qx is None or data.qy is None:
+        # then use pixels
+        xslice = slice(int(np.ceil(xmin)) if xmin is not None else None, int(np.floor(xmax)) if xmax is not None else None)
+        yslice = slice(int(np.ceil(ymin)) if ymin is not None else None, int(np.floor(ymax)) if ymax is not None else None)
+        x_in = np.arange(data.data.x.shape[0])
+        y_in = np.arange(data.data.x.shape[1])
+        x_out = x_in[xslice]
+        y_out = y_in[yslice]
+        dx = np.zeros_like(x_out)
+        dy = np.zeros_like(y_out)
+        
+    else:
+        # then use q-values
+        qxmin = data.qx_min if data.qx_min is not None else data.qx.min()
+        qxmax = data.qx_max if data.qx_max is not None else data.qx.max()
+        qx_in = np.linspace(qxmin, qxmax, data.data.x.shape[0])
+        qymin = data.qy_min if data.qy_min is not None else data.qy.min()
+        qymax = data.qy_max if data.qy_max is not None else data.qy.max()
+        qy_in = np.linspace(qymin, qymax, data.data.x.shape[1])
+        
+        xslice = slice(get_index(qx_in, xmin), get_index(qx_in, xmax))
+        yslice = slice(get_index(qy_in, ymin), get_index(qy_in, ymax))
+        x_out = qx_in[xslice]
+        y_out = qy_in[yslice]
+        dx = np.zeros_like(x_out)
+        dy = np.zeros_like(y_out)
+        
+    dataslice = (xslice, yslice)
+    x_sum = uncertainty.sum(data.data[dataslice], axis=1)
+    y_sum = uncertainty.sum(data.data[dataslice], axis=0)
+    
+    x_output = Sans1dData(x_out, x_sum.x, dx=dx, dv=x_sum.variance, xlabel=data.xlabel, vlabel="I",
+                    xunits="", vunits="neutrons")
+    y_output = Sans1dData(y_out, y_sum.x, dx=dy, dv=y_sum.variance, xlabel=data.ylabel, vlabel="I",
+                    xunits="", vunits="neutrons")
+                        
+    return x_output, y_output
+
 
 @cache
 @module
@@ -1072,6 +1138,15 @@ def SuperLoadSANS(filelist=None, do_det_eff=True, do_deadtime=True,
 
     return data
 
+def get_index(t, x):
+    if (x == "" or x == None):
+        return None
+    if float(x) > t.max():
+        return None
+    if float(x) < t.min():
+        return None
+    tord = np.argsort(t)
+    return tord[np.searchsorted(t, float(x), sorter=tord)]
 
 def getPoissonUncertainty(y):
     """ for a poisson-distributed observable, get the range of
