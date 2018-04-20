@@ -74,7 +74,7 @@ def url_load(fileinfo):
 
 @cache
 @module
-def LoadSANS(filelist=None, flip=False, transpose=False):
+def LoadSANS(filelist=None, flip=False, transpose=False, check_timestamps=True):
     """
     loads a data file into a SansData obj and returns that.
     Checks to see if data being loaded is 2D; if not, quits
@@ -86,12 +86,14 @@ def LoadSANS(filelist=None, flip=False, transpose=False):
     flip (bool): flip the data up and down
 
     transpose (bool): transpose the data
+    
+    check_timestamps (bool): verify that timestamps on file match request
 
     **Returns**
 
     output (sans2d[]): all the entries loaded.
 
-    2017-04-17 Brian Maranville
+    2018-04-20 Brian Maranville
     """
     from dataflow.fetch import url_get
     from .loader import readSANSNexuz
@@ -99,16 +101,9 @@ def LoadSANS(filelist=None, flip=False, transpose=False):
         filelist = []
     data = []
     for fileinfo in filelist:
-        if isinstance(fileinfo, dict):
-            path, mtime, entries = fileinfo['path'], fileinfo['mtime'], fileinfo['entries']
-            name = basename(path)
-            fid = BytesIO(url_get(fileinfo))
-        elif isinstance(fileinfo, str):
-            # then it's just a local path
-            fid = None
-            name = fileinfo
-        else:
-            raise ValueError("fileinfo must be one of dict with path, mtime and entries or simple string path")
+        path, mtime, entries = fileinfo['path'], fileinfo.get('mtime', None), fileinfo.get('entries', None)
+        name = basename(path)
+        fid = BytesIO(url_get(fileinfo, mtime_check=check_timestamps))
         entries = readSANSNexuz(name, fid)
         for entry in entries:
             if flip:
@@ -1033,7 +1028,8 @@ def radialToCylindrical(data, theta_offset = 0.0, oversample_th = 2.0, oversampl
 @cache
 @module
 def SuperLoadSANS(filelist=None, do_det_eff=True, do_deadtime=True,
-                  deadtime=1.0e-6, do_mon_norm=True, do_atten_correct=False, mon0=1e8):
+                  deadtime=1.0e-6, do_mon_norm=True, do_atten_correct=False, mon0=1e8,
+                  check_timestamps=True):
     """
     loads a data file into a SansData obj, and performs common reduction steps
     Checks to see if data being loaded is 2D; if not, quits
@@ -1054,14 +1050,16 @@ def SuperLoadSANS(filelist=None, do_det_eff=True, do_deadtime=True,
     do_mon_norm {Monitor normalization} (bool): normalize data to a provided monitor value
 
     mon0 (float): provided monitor
+    
+    check_timestamps (bool): verify that timestamps on file match request
 
     **Returns**
 
     output (sans2d[]): all the entries loaded.
 
-    2017-05-05 Brian Maranville
+    2018-04-20 Brian Maranville
     """
-    data = LoadSANS(filelist, flip=False, transpose=False)
+    data = LoadSANS(filelist, flip=False, transpose=False, check_timestamps=check_timestamps)
 
     if do_det_eff:
         data = [correct_detector_efficiency(d) for d in data]

@@ -79,8 +79,8 @@ def check_datasource(source):
     return source_url
 
 
-def url_get(fileinfo):
-    path, mtime, entries = fileinfo['path'], fileinfo['mtime'], fileinfo['entries']
+def url_get(fileinfo, mtime_check=True):
+    path, mtime, entries = fileinfo['path'], fileinfo.get('mtime', None), fileinfo.get('entries', None)
     # fingerprint the get, leaving off entries information:
     cache = get_file_cache()
     fileinfo_minimal = {'path': path, 'mtime': mtime}
@@ -98,16 +98,19 @@ def url_get(fileinfo):
         print("loading", full_url, name)
         try:
             url = urllib2.urlopen(full_url)
-            url_mtime = url.headers['last-modified']
-            url_time_struct = time.strptime(url_mtime, '%a, %d %b %Y %H:%M:%S %Z')
-            t_repo = datetime.datetime(*url_time_struct[:6], tzinfo=pytz.utc)
-            t_request = datetime.datetime.fromtimestamp(mtime, pytz.utc)
-            if t_request > t_repo:
-                print("request mtime = %s, repo mtime = %s"%(t_request, t_repo))
-                raise ValueError("Requested mtime is newer than repository mtime for %r"%path)
-            elif t_request < t_repo:
-                print("request mtime = %s, repo mtime = %s"%(t_request, t_repo))
-                raise ValueError("Requested mtime is older than repository mtime for %r"%path)
+            if mtime_check:
+                url_mtime = url.headers['last-modified']
+                url_time_struct = time.strptime(url_mtime, '%a, %d %b %Y %H:%M:%S %Z')
+                t_repo = datetime.datetime(*url_time_struct[:6], tzinfo=pytz.utc)
+                t_request = datetime.datetime.fromtimestamp(mtime, pytz.utc)
+                if mtime is None:
+                    raise ValueError("timestamp checking enabled but no timestamp provided")
+                elif t_request > t_repo:
+                    print("request mtime = %s, repo mtime = %s"%(t_request, t_repo))
+                    raise ValueError("Requested mtime is newer than repository mtime for %r"%path)
+                elif t_request < t_repo:
+                    print("request mtime = %s, repo mtime = %s"%(t_request, t_repo))
+                    raise ValueError("Requested mtime is older than repository mtime for %r"%path)
 
             ret = url.read()
             print("caching " + path)
@@ -131,7 +134,6 @@ def find_mtime(path):
     timestamp = seconds_since_epoch(mtime_obj)
 
     return {'path': path, 'mtime': timestamp}
-
 
 def url_get_list(files=None):
     if files is None:
