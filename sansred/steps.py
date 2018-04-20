@@ -1084,9 +1084,9 @@ def sliceData(data, slicebox=[None,None,None,None]):
     y_sum = uncertainty.sum(data.data[dataslice], axis=0)
     
     x_output = Sans1dData(x_out, x_sum.x, dx=dx, dv=x_sum.variance, xlabel=data.xlabel, vlabel="I",
-                    xunits="", vunits="neutrons")
+                    xunits="", vunits="neutrons", metadata=data.metadata)
     y_output = Sans1dData(y_out, y_sum.x, dx=dy, dv=y_sum.variance, xlabel=data.ylabel, vlabel="I",
-                    xunits="", vunits="neutrons")
+                    xunits="", vunits="neutrons", metadata=data.metadata)
                         
     return x_output, y_output
 

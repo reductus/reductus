@@ -455,10 +455,21 @@ webreduce.editor.make_fieldUI = webreduce.editor.make_fieldUI || {};
         var interactor = new rectangleInteractor.default(opts);
         active_plot.interactors(interactor);
         // bind the update after init, so that it doesn't alter the field at init.
+        subinputs.on("change", function(d,i) { 
+          if (datum.value == null) { datum.value = datum.default_value }
+          var v = parseFloat(this.value);
+          v = (isNaN(v)) ? null : v;
+          datum.value[i] = v;
+          var item = ["xmin", "xmax", "ymin", "ymax"][i];
+          var default_value = (i<2) ? xrange[i] : yrange[i-2];
+          interactor.state[item] = (v == null) ? default_value : v;
+          interactor.update(false);
+        });
         interactor.dispatch.on("update", function() { 
           var state = interactor.state;
           datum.value = [state.xmin, state.xmax, state.ymin, state.ymax];
           subinputs
+            .property("value", function(d,i) { return (datum.value) ? datum.value[i] : null })
             .attr("value", function(d,i) { return (datum.value) ? datum.value[i] : null })
           var event = document.createEvent('Event');
           event.initEvent('input', true, true);
