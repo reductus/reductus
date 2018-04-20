@@ -99,9 +99,16 @@ def LoadSANS(filelist=None, flip=False, transpose=False):
         filelist = []
     data = []
     for fileinfo in filelist:
-        path, mtime, entries = fileinfo['path'], fileinfo['mtime'], fileinfo['entries']
-        name = basename(path)
-        fid = BytesIO(url_get(fileinfo))
+        if isinstance(fileinfo, dict):
+            path, mtime, entries = fileinfo['path'], fileinfo['mtime'], fileinfo['entries']
+            name = basename(path)
+            fid = BytesIO(url_get(fileinfo))
+        elif isinstance(fileinfo, str):
+            # then it's just a local path
+            fid = None
+            name = fileinfo
+        else:
+            raise ValueError("fileinfo must be one of dict with path, mtime and entries or simple string path")
         entries = readSANSNexuz(name, fid)
         for entry in entries:
             if flip:
