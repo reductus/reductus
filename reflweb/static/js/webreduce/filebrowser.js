@@ -64,6 +64,7 @@
             "tie_selection": false,
             "whole_node": false
           },
+          "sort": sortAlphaNumeric,
           "core": {"data": treeinfo}
         });
         return target
@@ -350,6 +351,50 @@
       webreduce.editor._active_plot = webreduce.editor.show_plots(result);
     });
   }
+
+  function sortAlphaNumeric(a,b) {
+    let asplit = a.match(/(\d+|[^\d]+)/g);
+    let bsplit = b.match(/(\d+|[^\d]+)/g);
+    
+    function comparePart(c,d) {
+      if (c == d) return null;
+      let c_isnum = c.match(/^\d+$/);
+      let d_isnum = d.match(/^\d+$/);
+      if (c_isnum && d_isnum) {
+        let ci = parseInt(c, 10);
+        let di = parseInt(d, 10);
+        if (ci == di) {
+          return (c > d) ? 1 : -1;
+        } else {
+          return (ci > di) ? 1 : -1;
+        }
+      } else {
+        return (c > d) ? 1 : -1;
+      }
+    }
+    
+    var na = asplit.length;
+    var nb = bsplit.length;
+    for (var i=0; i < na && i < nb; i++) {
+      let c = asplit[i];
+      let d = bsplit[i];
+      if (c === undefined) { 
+        return 1;
+      }
+      else if (d === undefined) { 
+        return -1;
+      }
+      else { 
+        var cmp = comparePart(c,d);
+        if (cmp != null) { 
+          return cmp;
+        }
+      }
+    }
+    // only get here if all checks return equality.
+    return 0
+  }
+
   webreduce = window.webreduce || {};
   webreduce.updateFileBrowserPane = updateFileBrowserPane;
   webreduce.handleChecked = handleChecked;
