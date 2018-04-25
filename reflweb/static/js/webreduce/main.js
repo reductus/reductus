@@ -138,6 +138,7 @@ webreduce.instruments = webreduce.instruments || {};
       var upload_dialog = $("#upload_template").dialog({autoOpen: false, width: 400});
       var reload_exported_dialog = $("#reload_exported").dialog({autoOpen: false, width: 400});
       var export_data = $("#export_data").dialog({autoOpen: false, width: 400});
+      var categories_editor = $("#categories_editor").dialog({autoOpen: false, width: 600});
       
       ////////////////////////////////////////////////////////////////////
       // Make a menu
@@ -192,6 +193,9 @@ webreduce.instruments = webreduce.instruments || {};
           .append($("<div>Data</div>"), $("<ul />")
             .append($("<li><div>Stash</div></ul>")
               .on("click", function() {hide_menu(); webreduce.editor.stash_data()})
+            )
+            .append($("<li><div>Edit Categories</div></li>")
+              .on("click", function() {hide_menu(); webreduce.editor.edit_categories()})
             )
             .append($("<li><div>Export</div></ul>")
               .on("click", function() {hide_menu(); webreduce.editor.export_data()})

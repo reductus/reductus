@@ -105,20 +105,13 @@ webreduce.instruments['ncnr.sans'] = webreduce.instruments['ncnr.sans'] || {};
   };
   
   instrument.load_file = load_sans;
-  instrument.categorizers = [
-    function(info) { return (info['analysis.groupid']) },
-    function(info) { return info['analysis.intent'] },
-    function(info) { return info['run.configuration'] },
-    //function(info) { return info['analysis.filepurpose'] },
-    //function(info) { return info['run.filename'] }
-    //*****************************************************************
-    //  Using filename is probably a good idea, long term... 
-    //  this is a temporary measure for identifying VAX files by name:
-    //*****************************************************************
-    //function(info) { return (info['run.filePrefix'] + info['run.experimentScanID']) }
-    function(info) { return (info['run.experimentScanID'] + ':' + info['sample.description']) }
+  instrument.default_categories = [
+    [["analysis.groupid"]],
+    [["analysis.intent"]], 
+    [["run.configuration"]], 
+    [["run.experimentScanID"],["sample.description"]]
   ];
-  
+  instrument.categories = jQuery.extend(true, [], instrument.default_categories);  
   
   function add_sample_description(target, file_objs) {
     var jstree = target.jstree(true);

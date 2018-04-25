@@ -114,11 +114,12 @@ webreduce.instruments['ncnr.ospec'] = webreduce.instruments['ncnr.ospec'] || {};
   };
   
   instrument.load_file = load_ospec;
-  instrument.categorizers = [
-    function(info) { return info.friendly_name },
-    function(info) { return info.path },
-    function(info) { return info.polarization || "unpolarized" }
+  instrument.default_categories = [
+    [["friendly_name"]],
+    [["path"]],
+    [["polarization"]]
   ];
+  instrument.categories = jQuery.extend(true, [], instrument.default_categories);
   
   function add_viewer_link(target, file_objs) {
     var jstree = target.jstree(true);
