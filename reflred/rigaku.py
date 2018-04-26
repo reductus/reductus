@@ -194,10 +194,10 @@ def _split_sections(lines):
         raise ValueError("not a Rigaku XRD RAS file")
 
     last_index = len(lines) - 1
-    while last_index > 0 and lines[last_index] == "":
+    while last_index > 0 and lines[last_index] == b"":
         last_index -= 1
     if lines[last_index] != b"*RAS_DATA_END":
-        raise ValueError("Rigake file does not end with *RAS_DATA_END")
+        raise ValueError("Rigaku file does not end with *RAS_DATA_END")
 
     sections = []
     end_target = None
