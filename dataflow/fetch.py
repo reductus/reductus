@@ -93,7 +93,7 @@ def url_get(fileinfo, mtime_check=True):
         source = fileinfo.get("source", DEFAULT_DATA_SOURCE)
         name = basename(path)
         source_url = check_datasource(source)
-        full_url = join(source_url, urllib2.quote(path.strip(sep)))
+        full_url = join(source_url, urllib2.quote(path.strip(sep), safe='/:'))
         url = None
         print("loading", full_url, name)
         try:
