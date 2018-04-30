@@ -416,7 +416,7 @@ class Detector(Group):
     deadtime = None
     deadtime_error = None
     columns = {
-        "counts": {"units": "counts"},
+        "counts": {"units": "counts", "variance": "counts_variance"},
         "angle_x": {"units": "degrees"}
     }
 
@@ -542,7 +542,7 @@ class Monitor(Group):
     source_power_variance = 0
     saturation = None
     columns = {
-        "counts": {"units": "counts"},
+        "counts": {"units": "counts", "variance": "counts_variance"},
         "count_time": {"units": "seconds"}
     }
     deadtime = None
@@ -918,6 +918,11 @@ class ReflData(Group):
             for col in sub_cols.keys():
                 v = getattr(subcls, col, None)
                 if check_array(v): setattr(subcls, col, v[make_mask(v, mask_indices)])
+                # handle variance
+                dv_name = sub_cols[col].get('variance', None)
+                if dv_name is not None:
+                    dv = getattr(subcls, dv_name, None)
+                    if check_array(dv): setattr(subcls, dv_name, dv[make_mask(dv, mask_indices)])
 
     def __init__(self, **kw):
         for attr, cls in ReflData._groups:
