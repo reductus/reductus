@@ -29,6 +29,9 @@ class DeadTimeData(object):
             "attenuators": self.attenuators,
         }
         return metadata
+    
+    def get_plottable(self):
+        return self.get_metadata()
 
     def log(self, msg):
         self.messages.append(msg)
