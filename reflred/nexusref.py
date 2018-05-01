@@ -336,7 +336,14 @@ class NCNRNeXusRefl(refldata.ReflData):
                 self.scan_value.append(scan_value)
                 self.scan_units.append(scan_units)
                 self.scan_label.append(scan_label)
-        # TODO: temperature, field
+        # TODO: field
+        if 'temp' in das:
+            temp_primaryControlLoop = das['temp/primaryControlLoop'].value
+            self.sample.temp_setpoint = data_as(das, 'temp/setpoint_%d' % (temp_primaryControlLoop), 'K')[0]
+            temp_values = data_as(das, 'temp/primaryNode/value', 'K')
+            temp_shape = temp_values.shape[0] if temp_values.shape[0] else 1.0;
+            # only include one significant figure for temperatures.
+            self.sample.temp_avg = round(np.sum(temp_values)/temp_shape, 1)
 
     def _load_slits(self, instrument):
         """

@@ -272,6 +272,10 @@ class Sample(Group):
     incident_sld = 0. # inv A (air)
     broadening = 0.
     environment = None  # type: Dict[str, Environment]
+    temp_setpoint = None
+    temp_avg = None
+    magnet_setpoint = None
+    magnet_avg = None
 
     def __init__(self, **kw):
         self.environment = {}
