@@ -1203,8 +1203,8 @@ webreduce.editor = webreduce.editor || {};
     var category_keys = get_all_keys(webreduce.editor._datafiles[0]["values"][0]);
     
     function selector(c) {
-      c = c || {value: []};
-      c.value = c.value || [];
+      //c = c || {value: []};
+      //c.value = c.value || [];
       var container = d3.create("span").classed("category", true);
       var sel = container.append("select").classed("category", true)
       sel.selectAll("option").data(c.choices)
@@ -1215,14 +1215,13 @@ webreduce.editor = webreduce.editor || {};
         if (this.value != c.value[0]) {
           c.value[0] = this.value;
           c.value.splice(1);
-
         }
         container.selectAll("span").remove();
         var x = sel.selectAll('option[value="' + this.value + '"]');
         var cc = x.datum()[1];
         if (cc && cc.length) {
-          var sv = (c.value && c.value.slice(1)) ? c.value.slice(1)[0] : null;
-          container.selectAll("span.selector").data([{value: sv, choices: cc}]).enter().append(selector);
+          c.value[1] = c.value[1] || [];
+          container.selectAll("span.selector").data([{value: c.value[1], choices: cc}]).enter().append(selector);
         }
       }
       if (c.value && c.value[0]) {
@@ -1236,7 +1235,7 @@ webreduce.editor = webreduce.editor || {};
     
     function add_selectors(cl) {
       var citem = d3.select(this);
-      citem.selectAll("span.category").data(cl.map(function(c) { return {value: c, choices: category_keys}}))
+      citem.selectAll("span.category").data(cl.map(function(c) { return {value: c, choices: category_keys.slice()}}))
         .enter().append(selector)
       citem.append("span").classed("ui-icon ui-icon-circle-plus", true)
         .style("cursor", "pointer")
@@ -1258,7 +1257,7 @@ webreduce.editor = webreduce.editor || {};
             var b = [s]; if (a) { b.push(a) }; return b; }, null)
         })
       });
-
+      
       var citems = list.selectAll("li.category").data(categories_nested)
         .enter().append("li").classed("category", true)
           .style("border", "2px solid grey")
