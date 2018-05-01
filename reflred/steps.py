@@ -1229,6 +1229,7 @@ def super_load(filelist=None,
     | 2017-01-13 Brian Maranville
     | 2017-02-15 Paul Kienzle: normalize by time if monitor is not present
     | 2017-08-21 Brian Maranville use fileName from trajectory
+    | 2018-05-01 Brian Maranville import temperature metadata
     """
     from .load import url_load_list
     #from .intent import apply_intent
