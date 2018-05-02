@@ -1205,8 +1205,8 @@ webreduce.editor = webreduce.editor || {};
     function selector(c) {
       //c = c || {value: []};
       //c.value = c.value || [];
-      var container = d3.create("span").classed("category", true);
-      var sel = container.append("select").classed("category", true)
+      var container = d3.create("span").classed("subcategory", true);
+      var sel = container.append("select").classed("subcategory", true);
       sel.selectAll("option").data(c.choices)
         .enter().append("option")
           .attr("value", function(d) { return d[0] })
@@ -1221,7 +1221,7 @@ webreduce.editor = webreduce.editor || {};
         var cc = x.datum()[1];
         if (cc && cc.length) {
           c.value[1] = c.value[1] || [];
-          container.selectAll("span.selector").data([{value: c.value[1], choices: cc}]).enter().append(selector);
+          container.selectAll("span.subcategory").data([{value: c.value[1], choices: cc}]).enter().append(selector);
         }
       }
       if (c.value && c.value[0]) {
@@ -1235,11 +1235,21 @@ webreduce.editor = webreduce.editor || {};
     
     function add_selectors(cl) {
       var citem = d3.select(this);
-      citem.selectAll("span.category").data(cl.map(function(c) { return {value: c, choices: category_keys.slice()}}))
-        .enter().append(selector)
+      var ccontainer = citem.append("span")
+        .classed("category-container", true);
+      var data = cl.map(function(c) { return {value: c, choices: category_keys.slice()}});
+      ccontainer.selectAll("span.category").data(data)
+        .enter().append("span").classed("category", true).append(selector)
       citem.append("span").classed("ui-icon ui-icon-circle-plus", true)
         .style("cursor", "pointer")
         .attr("title", "adding keywords on the same row makes a category from\nthe concatenation of the values with a colon (:) separator")
+        .on("click", function() {
+          cl.push([]);
+          var data = cl.map(function(c) { return {value: c, choices: category_keys.slice()}});
+          ccontainer.selectAll("span.category").data(data)
+            .enter().append("span").classed("category", true)
+            .append(selector)
+        });
       citem.append("span").classed("ui-icon ui-icon-circle-close", true)
         .style("cursor", "pointer")
         .style("position", "absolute")

@@ -356,3 +356,7 @@ ol.categories li.category {
 ol.categories li.category select {
     border-radius: 4px;
 }
+
+ol.categories span.category:nth-child(n+2):before {
+    content: " : ";
+}
