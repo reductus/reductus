@@ -338,8 +338,9 @@ class NCNRNeXusRefl(refldata.ReflData):
                 self.scan_label.append(scan_label)
         # TODO: field
         if 'temp' in das:
-            temp_primaryControlLoop = das['temp/primaryControlLoop'].value
-            self.sample.temp_setpoint = data_as(das, 'temp/setpoint_%d' % (temp_primaryControlLoop), 'K')[0]
+            if 'temp/primaryControlLoop' in das:
+                temp_primaryControlLoop = das['temp/primaryControlLoop'].value
+                self.sample.temp_setpoint = data_as(das, 'temp/setpoint_%d' % (temp_primaryControlLoop), 'K')[0]
             temp_values = data_as(das, 'temp/primaryNode/value', 'K')
             temp_shape = temp_values.shape[0] if temp_values.shape[0] else 1.0;
             # only include one significant figure for temperatures.
