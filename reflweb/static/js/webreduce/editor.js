@@ -339,6 +339,13 @@ webreduce.editor = webreduce.editor || {};
     var new_plotdata = webreduce.instruments[instrument_id].plot(result);
     var active_plot;
     d3.select("#plot_title").text("");
+    d3.select("#plotdiv").on("mouseover.setRawHandler", function() {
+      d3.select("body").on("keydown.triggerRawDump", function() {
+        if (d3.event.key.toLowerCase() == "r") {
+          console.log(result);
+        }
+      })
+    });
     if (new_plotdata == null) {
       active_plot = null;
       d3.select("#plotdiv").selectAll("svg, div").remove();
