@@ -1,5 +1,6 @@
 # This program is public domain
 import os
+import numpy as np
 from copy import copy
 
 # TODO: maybe bring back formula to show the math of each step
@@ -159,7 +160,6 @@ def monitor_dead_time(data, dead_time, nonparalyzing=0.0, paralyzing=0.0):
 
     2015-12-17 Paul Kienzle
     """
-    from numpy import isfinite
     from .deadtime import apply_monitor_dead_time
 
     data = copy(data)
@@ -174,7 +174,7 @@ def monitor_dead_time(data, dead_time, nonparalyzing=0.0, paralyzing=0.0):
         data.log_dependency('dead_time', dead_time)
         apply_monitor_dead_time(data, tau_NP=dead_time.tau_NP,
                                 tau_P=dead_time.tau_P)
-    elif data.monitor.deadtime is not None and isfinite(data.monitor.deadtime).all():
+    elif data.monitor.deadtime is not None and np.isfinite(data.monitor.deadtime).all():
         try:
             tau_NP, tau_P = data.monitor.deadtime
         except Exception:
@@ -228,7 +228,7 @@ def detector_dead_time(data, dead_time, nonparalyzing=0.0, paralyzing=0.0):
         data.log_dependency('dead_time', dead_time)
         apply_detector_dead_time(data, tau_NP=dead_time.tau_NP,
                                  tau_P=dead_time.tau_P)
-    elif data.detector.deadtime is not None:
+    elif data.detector.deadtime is not None and not np.all(np.isnan(data.detector.deadtime)):
         try:
             tau_NP, tau_P = data.detector.deadtime
         except Exception:
@@ -237,7 +237,7 @@ def detector_dead_time(data, dead_time, nonparalyzing=0.0, paralyzing=0.0):
                  % (tau_NP, tau_P))
         apply_detector_dead_time(data, tau_NP=tau_NP, tau_P=tau_P)
     else:
-        pass  # no deadtime correction parameters available.
+        raise ValueError("no valid deadtime provided in file or parameter")
 
     return data
 
@@ -440,7 +440,6 @@ def mask_action(data=None, mask_indices=None, **kwargs):
     """
     Remove data at the indicated indices
     """
-    import numpy
     if mask_indices:
         data = copy(data)
         data.apply_mask(mask_indices)
@@ -1037,7 +1036,6 @@ def correct_footprint(data, fitted_footprint, correction_range=[None, None],
 
     2017-06-29 Paul Kienzle
     """
-    import numpy as np
     from .footprint import apply_fitted_footprint, FootprintData
     if correction_range is None:
         correction_range = [None, None]
@@ -1174,7 +1172,7 @@ def save(data, name='auto', ext='auto', path='auto'):
 @cache
 @module
 def super_load(filelist=None,
-               detector_correction=False,
+               detector_correction=True,
                monitor_correction=False,
                intent='auto',
                Qz_basis='actual',
@@ -1230,6 +1228,7 @@ def super_load(filelist=None,
     | 2017-02-15 Paul Kienzle: normalize by time if monitor is not present
     | 2017-08-21 Brian Maranville use fileName from trajectory
     | 2018-05-01 Brian Maranville import temperature metadata
+    | 2018-05-07 Brian Maranville detector deadtime correction defaults to True
     """
     from .load import url_load_list
     #from .intent import apply_intent
@@ -1339,7 +1338,6 @@ def spin_asymmetry(data):
 
     2016-04-04 Brian Maranville
     """
-    from numpy import sqrt
     mm = [d for d in data if d.polarization == '--'][0]
     pp = [d for d in data if d.polarization == '++'][0]
     output = copy(mm)
@@ -1354,7 +1352,7 @@ def spin_asymmetry(data):
     denom = (mmv + ppv)
     output.v = (ppv - mmv) / denom
     # d(sa)/d(x) = 2*x/(x+y)**2, d(sa)/d(y) = -2*y/(x+y)**2
-    output.dv = sqrt(((2.0*mmv*mmdv)/(denom**2))**2 + ((2.0*ppv*ppdv)/(denom**2))**2)
+    output.dv = np.sqrt(((2.0*mmv*mmdv)/(denom**2))**2 + ((2.0*ppv*ppdv)/(denom**2))**2)
     return output
 
 @module
@@ -1388,7 +1386,6 @@ def average_flux(data, base, beam_height=25):
     if base is not None:
         from .scale import calculate_number
         from dataflow.lib import err1d
-        import numpy as np
 
         fluxes = []
         total_number = 0.0
