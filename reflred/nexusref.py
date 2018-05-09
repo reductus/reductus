@@ -271,6 +271,7 @@ class NCNRNeXusRefl(refldata.ReflData):
         self.detector.counts_variance = self.detector.counts.copy()
         self.detector.dims = self.detector.counts.shape
         n = self.detector.dims[0]
+        self.points = n
         self.monitor.counts = np.asarray(data_as(das, 'counter/liveMonitor', '', rep=n), 'd')
         self.monitor.counts_variance = self.monitor.counts.copy()
         self.monitor.count_time = data_as(das, 'counter/liveTime', 's', rep=n)

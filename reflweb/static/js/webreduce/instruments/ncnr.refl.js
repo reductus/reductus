@@ -83,6 +83,7 @@ webreduce.instruments['ncnr.refl'] = webreduce.instruments['ncnr.refl'] || {};
       var nscans = (ro.scan_value || []).length;
       var sv = ro.scan_value || [];
       var nscans = sv.length;
+      /*
       sv.forEach(function(s,i) {
         var new_col = {};
         var new_label = ro.scan_label[i];
@@ -92,6 +93,7 @@ webreduce.instruments['ncnr.refl'] = webreduce.instruments['ncnr.refl'] || {};
         if (new_units) { new_col.units = new_units }
         columns[new_label] = new_col
       })
+      */
       return columns;
     });
     var datas = [], xcol;

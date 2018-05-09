@@ -874,14 +874,15 @@ class ReflData(Group):
     @property
     def columns(self):
         from copy import deepcopy
-        data_columns = {
-            'x': {'label': self.xlabel, 'units': self.xunits, 'errorbars': 'dx'},
-            'v': {'label': self.vlabel, 'units': self.vunits, 'errorbars': 'dv'},
-            'Qz': {'label': 'Qz', 'units': "1/Ang"},
-            'Qz_target': {'label': 'Target Qz', 'units': '1/Ang'},
-            'Qx': {'label': 'Qx', 'units': "1/Ang"},
-            'angular_resolution': {'label': 'Angular Resolution (1-sigma)', 'units': 'degrees'}
-        }
+        from collections import OrderedDict
+        data_columns = OrderedDict([
+            ('x', {'label': self.xlabel, 'units': self.xunits, 'errorbars': 'dx'}),
+            ('v', {'label': self.vlabel, 'units': self.vunits, 'errorbars': 'dv'}),
+            ('Qz', {'label': 'Qz', 'units': "1/Ang"}),
+            ('Qz_target', {'label': 'Target Qz', 'units': '1/Ang'}),
+            ('Qx', {'label': 'Qx', 'units': "1/Ang"}),
+            ('angular_resolution', {'label': 'Angular Resolution (1-sigma)', 'units': 'degrees'})
+        ])
         for subclsnm in ['sample', 'detector', 'monitor', 'slit1', 'slit2', 'slit3', 'slit4']:
             subcls = getattr(self, subclsnm, None)
             if subcls is None:
@@ -895,6 +896,15 @@ class ReflData(Group):
                     label = "%s/%s" % (subclsnm, col)
                     sub_col['label'] = label
                     data_columns[label] = sub_col
+        if self.scan_value is not None:
+            for si, sv in enumerate(self.scan_value):
+                new_col = {};
+                new_label = self.scan_label[si]
+                new_col['label'] = new_label
+                new_col['is_scan'] = True
+                new_col['units'] = self.scan_units[si]
+                data_columns[new_label] = new_col
+            
         return data_columns
 
     def apply_mask(self, mask_indices):
