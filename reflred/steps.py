@@ -1229,6 +1229,7 @@ def super_load(filelist=None,
     | 2017-08-21 Brian Maranville use fileName from trajectory
     | 2018-05-01 Brian Maranville import temperature metadata
     | 2018-05-07 Brian Maranville detector deadtime correction defaults to True
+    | 2018-05-10 Brian Maranville export all columns if intent is scan
     """
     from .load import url_load_list
     #from .intent import apply_intent

@@ -334,9 +334,11 @@ class NCNRNeXusRefl(refldata.ReflData):
                     print(">>> unexpected error reading %s for %s"
                           % (node_id, os.path.basename(self.path)))
                     continue
-                self.scan_value.append(scan_value)
-                self.scan_units.append(scan_units)
-                self.scan_label.append(scan_label)
+                # check if numeric:
+                if scan_value.dtype.kind in ["f", "u", "i"]:
+                    self.scan_value.append(scan_value)
+                    self.scan_units.append(scan_units)
+                    self.scan_label.append(scan_label)
         # TODO: field
         if 'temp' in das:
             if 'temp/primaryControlLoop' in das:

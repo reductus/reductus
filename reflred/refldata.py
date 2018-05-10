@@ -1018,17 +1018,47 @@ class ReflData(Group):
             _write_key_value(fid, "wavelength", float(wavelength[0]))
         if wavelength_resolution is not None:
             _write_key_value(fid, "wavelength_resolution", float(wavelength_resolution[0]))
-        _write_key_value(fid, "columns", [self.xlabel, self.vlabel, "uncertainty", "resolution"])
-        _write_key_value(fid, "units", [self.xunits, self.vunits, self.vunits, self.xunits])
-        data = np.vstack([self.x, self.v, self.dv, self.dx]).T
-        np.savetxt(fid, data, fmt="%.10e")
-        export_string = fid.getvalue()
-        if IS_PY3:
-            export_string = export_string.decode('utf-8')
-        name = getattr(self, "name", "default_name")
-        entry = getattr(self, "entry", "default_entry")
-        return {"name": name, "entry": entry, "export_string": export_string, "file_suffix": ".refl"}
+        if Intent.isscan(self.intent):
+            _write_key_value(fid, "columns", list(self.columns.keys()))
+            _write_key_value(fid, "units", [c.get("units", "") for c in self.columns.values()])
+            # add column headers
+            header_string = "\t".join(list(self.columns.keys())) + "\n"
+            if IS_PY3:
+                header_string = header_string.encode('utf-8')
+            fid.write(header_string)
+            def get_item(obj, path):
+                result = obj
+                keylist = path.split("/")
+                while len(keylist) > 0:
+                    result = getattr(result, keylist.pop(0), {})
+                return result
+            data_arrays = [self.scan_value[self.scan_label.index(p)] if v.get('is_scan', False) else get_item(self, p) for p,v in self.columns.items()]
+            data_arrays = [np.resize(d, self.points) for d in data_arrays]
+            format_string = "\t".join(["%s" if d.dtype.kind in ["S", "U"] else "%.10e" for d in data_arrays]) + "\n"
+            for i in range(self.points):
+                datarow = format_string % tuple([d[i] for d in data_arrays])
+                if IS_PY3:
+                    datarow = datarow.encode('utf-8')
+                fid.write(datarow)
+            export_string = fid.getvalue()
+            if IS_PY3:
+                export_string = export_string.decode('utf-8')
+            name = getattr(self, "name", "default_name")
+            entry = getattr(self, "entry", "default_entry")
+            return {"name": name, "entry": entry, "export_string": export_string, "file_suffix": ".dat"}
+        else:
+            _write_key_value(fid, "columns", [self.xlabel, self.vlabel, "uncertainty", "resolution"])
+            _write_key_value(fid, "units", [self.xunits, self.vunits, self.vunits, self.xunits])
+            data = np.vstack([self.x, self.v, self.dv, self.dx]).T
+            np.savetxt(fid, data, fmt="%.10e")
+            export_string = fid.getvalue()
+            if IS_PY3:
+                export_string = export_string.decode('utf-8')
+            name = getattr(self, "name", "default_name")
+            entry = getattr(self, "entry", "default_entry")
+            return {"name": name, "entry": entry, "export_string": export_string, "file_suffix": ".refl"}
 
+    
 
 
     def get_plottable(self):
