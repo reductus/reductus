@@ -1172,7 +1172,7 @@ def save(data, name='auto', ext='auto', path='auto'):
 @cache
 @module
 def super_load(filelist=None,
-               detector_correction=True,
+               detector_correction=False,
                monitor_correction=False,
                intent='auto',
                Qz_basis='actual',
@@ -1230,6 +1230,7 @@ def super_load(filelist=None,
     | 2018-05-01 Brian Maranville import temperature metadata
     | 2018-05-07 Brian Maranville detector deadtime correction defaults to True
     | 2018-05-10 Brian Maranville export all columns if intent is scan
+    | 2018-05-11 Brian Maranville detector deadtime correction defaults to False
     """
     from .load import url_load_list
     #from .intent import apply_intent
