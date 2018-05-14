@@ -96,7 +96,8 @@ def join_datasets(group, Qtol, dQtol, by_Q=False):
     #    L : wavelength
     #    dL: wavelength dispersion
     isslit = Intent.isslit(group[0].intent)
-    if group[0].intent == Intent.rock4:
+    isrock = Intent.isrock(group[0].intent)
+    if isrock:
         # Sort detector rocking curves so that small deviations in sample
         # angle don't throw off the order in detector angle.
         keys = ('Qx', 'Qz', 'dQ')

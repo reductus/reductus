@@ -551,7 +551,7 @@ webreduce.editor.make_fieldUI = webreduce.editor.make_fieldUI || {};
         .text(field.label)
         .append("select")
           .attr("field_id", field.id)
-          .attr("value", datum.value)
+          .attr("value", (datum.value == null) ? datum.default_value : datum.value)
           .on("change", function(d) { datum.value = this.value })
     input
           .selectAll("option").data(field.typeattr.choices)
