@@ -13,6 +13,7 @@ python server_flask.py 8002
 import os, sys, posixpath
 import traceback
 import logging
+import pkg_resources
 
 from flask import Flask, request, make_response, redirect, send_from_directory
 from werkzeug.exceptions import HTTPException
@@ -24,8 +25,9 @@ except ImportError:
     from reflweb import default_config as config
 
 RPC_ENDPOINT = '/RPC2'
+STATIC_PATH = pkg_resources.resource_filename('reflweb', 'static/')
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder=STATIC_PATH)
 
 @app.route('/')
 def root():
