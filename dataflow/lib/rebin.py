@@ -99,10 +99,10 @@ def rebin2d(x, y, I, xo, yo, Io=None, dtype=None):
     TypeError.  This will allow you to rebin the slices of an appropriately
     ordered matrix without making copies.
     """
+    from .rebin_python import rebin_counts_2D
     # Coerce axes to float arrays
     x, y, xo, yo = [_input(v, dtype='d') for v in (x, y, xo, yo)]
     shape_in = np.array([x.shape[0]-1, y.shape[0]-1])
-    shape_out = np.array([xo.shape[0]-1, yo.shape[0]-1])
 
     # Coerce counts to correct type and check shape
     if dtype is None:
@@ -111,17 +111,7 @@ def rebin2d(x, y, I, xo, yo, Io=None, dtype=None):
     if (shape_in != I.shape).any():
         raise TypeError("input array incorrect shape %s"%str(I.shape))
 
-    # Create output vector
-    Io = _output(Io, shape_out, dtype=dtype)
-
-    # Call rebin on type if it is available
-    try:
-        rebincore = getattr(_reduction, 'rebin2d_'+I.dtype.name)
-    except AttributeError:
-        raise TypeError("rebin2d supports uint8 uint16 uint32 float32 float64, not "
-                        + I.dtype.name)
-    rebincore(x, y, I, xo, yo, Io)
-    return Io
+    return rebin_counts_2D(x, y, I, xo, yo)
 
 def _input(v, dtype='d'):
     # type: Sequence -> np.ndarray
@@ -244,7 +234,7 @@ def _test2d():
 
 def test():
     for t in _test1d(): yield t
-    #for t in _test2d(): yield t
+    for t in _test2d(): yield t
 
 def main():
     for t in test(): t()

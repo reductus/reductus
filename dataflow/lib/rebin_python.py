@@ -149,6 +149,8 @@ def rebin_counts_2D_indexing_newer(x, y, I, xo, yo, Io=None):
     #ixy = yintegral[:-1]
 
     return ixy
+    
+rebin_counts_2D = rebin_counts_2D_indexing_newer
 
 def test(sizex=101):
     sizexo = int(sizex/2)
