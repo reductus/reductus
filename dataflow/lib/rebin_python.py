@@ -37,8 +37,13 @@ def rebin_counts_portion(x, I, xo, Io, ND_portion=1.0):
     Io += np.diff(integral)
 
 def rebin_counts(x, I, xo, Io):
+    input_direction = np.sign(x[-1] - x[0])
+    output_direction = np.sign(xo[-1] - xo[0])
+    input_slice = slice(None, None, int(input_direction))
+    output_slice = slice(None, None, int(output_direction))
+
     Io[:] = 0.0
-    rebin_counts_portion(x, I, xo, Io, ND_portion=1.0)
+    rebin_counts_portion(x[input_slice], I[input_slice], xo[output_slice], Io[output_slice], ND_portion=1.0)
 
 def rebin_counts_2D_bruteforce(x, y, I, xo, yo, Io):
 
@@ -104,7 +109,7 @@ def rebin_counts_2D_indexing_new(x, y, I, xo, yo, Io):
 
     Io += ixy
 
-def rebin_counts_2D_indexing_newer(x, y, I, xo, yo, Io=None):
+def rebin_counts_2D_indexing_newer(x, y, I, xo, yo, Io):
     # use this one for 2D.
     csx = np.empty((len(x), len(y)-1))
     csx[0, :] = 0.0
@@ -148,9 +153,21 @@ def rebin_counts_2D_indexing_newer(x, y, I, xo, yo, Io=None):
     #yintegral[:-1] -= yintegral[1:]
     #ixy = yintegral[:-1]
 
-    return ixy
+    Io += ixy
     
-rebin_counts_2D = rebin_counts_2D_indexing_newer
+def rebin_counts_2D(x, y, I, xo, yo, Io): 
+    x_input_direction = np.sign(x[-1] - x[0])
+    y_input_direction = np.sign(y[-1] - y[0])
+    x_output_direction = np.sign(xo[-1] - xo[0])
+    y_output_direction = np.sign(yo[-1] - yo[0])
+    
+    x_s = slice(None, None, int(x_input_direction))
+    y_s = slice(None, None, int(y_input_direction))
+    xo_s = slice(None, None, int(x_output_direction))
+    yo_s = slice(None, None, int(y_output_direction))
+    
+    Io[:] = 0
+    rebin_counts_2D_indexing_newer(x[x_s], y[y_s], I[x_s, y_s], xo[xo_s], yo[yo_s], Io[xo_s, yo_s])
 
 def test(sizex=101):
     sizexo = int(sizex/2)
