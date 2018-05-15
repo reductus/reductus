@@ -21,12 +21,12 @@ open("reflweb/git_version_hash", "wb").write(git_version_hash)
 server_mtime = subprocess.Popen(["git", "log", "-1", "--pretty=format:%ct"], stdout=subprocess.PIPE).stdout.read()
 open("reflweb/git_version_mtime", "wb").write(server_mtime)
 
-packages = find_packages(exclude=['reflbin', 'reflred-old*'])
+packages = find_packages(exclude=['reflbin'])
 
 #sys.dont_write_bytecode = False
 dist = setup(
     name='reductus',
-    version='0.1a1',
+    version='0.1a4',
     author='Paul Kienzle',
     author_email='paul.kienzle@nist.gov',
     url='http://github.com/reductus/reductus',
@@ -48,7 +48,7 @@ dist = setup(
     packages=packages,
     include_package_data=True,
     entry_points = {
-        'console_scripts': ['reductus=run:main'],
+        'console_scripts': ['reductus=reflweb.run:main'],
     },
     install_requires=[
         'scipy', 'numpy', 'h5py', 'uncertainties', 'docutils', 'wheel', 'pytz', 'msgpack-python', 'flask'],
