@@ -26,8 +26,9 @@ use_diskcache = True
 diskcache_params = {"size_limit": int(4*2**30), "shards": 5}
 data_sources = [
     {
-        "name": "ncnr_DOI",
-        "DOI": "10.18434/T4201B",
+        "name": "local",
+        "url": "file:///",
+        "start_path": "",
     },
     {
         "name": "ncnr",
@@ -41,15 +42,14 @@ data_sources = [
     },
     # set start_path for local files to usr/local/nice/server_data/experiments
     # for instrument installs
-    {
-        "name": "local",
-        "url": "file:///",
-        "start_path": "",
-    },
+    #{
+    #    "name": "ncnr_DOI",
+    #    "DOI": "10.18434/T4201B",
+    #},
 ]
 file_helper_url = {
     "charlotte": "http://charlotte.ncnr.nist.gov/ipeek/listftpfiles.php",
     "ncnr": "https://ncnr.nist.gov/ipeek/listftpfiles.php",
     "ncnr_DOI": "https://ncnr.nist.gov/ipeek/listncnrdatafiles.php"
 }
-instruments = ["refl"]
+instruments = ["refl", "ospec", "sans"]

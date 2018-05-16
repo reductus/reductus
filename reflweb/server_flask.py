@@ -27,7 +27,7 @@ except ImportError:
 RPC_ENDPOINT = '/RPC2'
 STATIC_PATH = pkg_resources.resource_filename('reflweb', 'static/')
 
-app = Flask(__name__, static_folder=STATIC_PATH)
+app = Flask(__name__, static_folder=STATIC_PATH, static_url_path='/static')
 
 @app.route('/')
 def root():
