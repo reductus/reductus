@@ -1,6 +1,6 @@
-=======================
-Reflectometry Reduction
-=======================
+============================
+Neutron Scattering Reduction
+============================
 
 This project provides tools for reflectometry reduction.
 
@@ -8,9 +8,13 @@ reflred
 
     A python package for loading, modifying and saving reflectivity data sets.
 
-reflbin
+ospecred
 
-    A C program for rebinning NCNR 2-D ICP data sets.
+    A python package for loading, modifying and saving off-specular reflectivity data sets.
+
+sansred
+
+    A python package for loading, modifying and saving small-angle neutron scattering (SANS) data sets.
 
 reflweb
 
@@ -57,8 +61,7 @@ install and use that instead of localhost, e.g. ::
 
 Method 2: Run directly in console
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-You must have a C99 build environment set up before starting.
-Clone the repo, then install (might be a good ideat to make a virtualenv first),
+Clone the repo, then install (might be a good idea to make a virtualenv first),
 e.g.
 
 ::
