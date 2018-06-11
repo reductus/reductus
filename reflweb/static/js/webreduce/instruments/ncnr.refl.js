@@ -166,23 +166,15 @@ webreduce.instruments['ncnr.refl'] = webreduce.instruments['ncnr.refl'] || {};
   } 
   
   instrument.plot = function(result) {
-		var plottable;
-		if (result == null) {
+    var plottable;
+    var params_expression = /(\.params|\.poldata|\.deadtime)$/;
+    if (result == null || result.datatype == null) {
       return
     }
     else if (result.datatype == 'ncnr.refl.refldata' && result.values.length > 0) {
       plottable = plot_refl(result.values);
     }
-    else if (result.datatype == 'ncnr.refl.footprint.params') {
-      plottable = {"type": "params", "params": result.values}
-    }
-    else if (result.datatype == 'ncnr.refl.deadtime') {
-      plottable = {"type": "params", "params": result.values}
-    }
-    else if (result.datatype == 'ncnr.refl.poldata') {
-      plottable = {"type": "params", "params": result.values}
-    }
-    else if (result.datatype == 'ncnr.refl.flux.params') {
+    else if (result.datatype.match(params_expression)) {
       plottable = {"type": "params", "params": result.values}
     }
     return plottable;
