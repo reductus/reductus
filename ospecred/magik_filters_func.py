@@ -953,7 +953,7 @@ def LoadMAGIKPSD(fileinfo=None, collapse=True, collapse_axis='y', auto_PolState=
 
     output (ospec2d[]): all the entries loaded.
 
-    2016-04-02 Brian Maranville
+    2016-04-04 Brian Maranville
     """
 
     path, mtime, entries = fileinfo['path'], fileinfo['mtime'], fileinfo['entries']
@@ -1026,7 +1026,7 @@ def loadMAGIKPSD_helper(file_obj, name, path, collapse=True, collapse_axis='y', 
                             {"name": "pixels"},
                             {"name": "monitor"},
                             {"name": "count_time"}]},
-                    {"PolState": PolState, "filename": filename, "start_datetime": entry['start_time'].value[0], "friendly_name": entry['DAS_logs/sample/name'].value[0],
+                    {"PolState": PolState, "filename": name, "start_datetime": entry['start_time'].value[0], "friendly_name": entry['DAS_logs/sample/name'].value[0],
                      "entry": entryname, "path":path, "det_angle":entry['DAS_logs/detectorAngle/softPosition'].value,
                      "theta": entry['DAS_logs/sampleAngle/softPosition'].value}]
                 )
@@ -1080,6 +1080,7 @@ def loadMAGIKPSD_helper(file_obj, name, path, collapse=True, collapse_axis='y', 
                         {"PolState": PolState, "start_datetime": entry['start_time'].value[0], "path":path,
                          "det_angle": det_angle.tolist(),
                          "theta": samp_angle.tolist(),
+                         "filename": name,
                          "friendly_name": entry['DAS_logs/sample/name'].value[0], "entry": entryname}]
                     )
                 data_array = zeros((xdim, frames, 4))
@@ -1126,7 +1127,7 @@ def loadMAGIKPSD_helper(file_obj, name, path, collapse=True, collapse_axis='y', 
                                 {"name": "pixels"},
                                 {"name": "monitor"},
                                 {"name": "count_time"}]},
-                        {"PolState": PolState, "start_datetime": entry['start_time'].value[0], "friendly_name": entry['DAS_logs/sample/name'].value[0],
+                        {"PolState": PolState, "filename": name, "start_datetime": entry['start_time'].value[0], "friendly_name": entry['DAS_logs/sample/name'].value[0],
                          "entry": entryname, "path":path, "samp_angle": samp_angle[i], "det_angle": det_angle[i]}]
                     )
                     data_array = zeros((xpixels, ypixels, 4))

@@ -167,7 +167,7 @@ class FilterableMetaArray(MetaArray):
         plottable_data = {
             'type': 'nd',
             'title': self.extrainfo['path'],
-            'name': self._info[-1].get('friendly_name', '1d data'),
+            'name': self._info[-1].get('filename', '1d data'),
             'entry': self._info[-1].get('entry', ''),
             'columns': column_listing,
             'data': {xlabel: {'values': x}},
