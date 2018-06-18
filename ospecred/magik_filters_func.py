@@ -892,7 +892,7 @@ def LoadMAGIKPSDMany(fileinfo=None, collapse=True, collapse_axis='y', auto_PolSt
 
     output (ospec2d[]): all the entries loaded.
 
-    2016-04-01 Brian Maranville
+    2016-04-04 Brian Maranville
     """
     outputs = []
     kwconfig = {
