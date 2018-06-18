@@ -318,6 +318,7 @@ class NCNRNeXusRefl(refldata.ReflData):
             # elements separated by new lines...
             if len(scanned_variables) == 1:
                 scanned_variables = str(scanned_variables[0]).split('\n')
+            scanned_variables = [s for s in scanned_variables if not s.startswith("areaDetector")]
             for node_id in scanned_variables:
                 path = node_id.replace('.', '/')
                 try:

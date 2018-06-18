@@ -86,6 +86,7 @@ def ncnr_load(filelist=None):
 
     2016-06-29 Brian Maranville
     | 2017-08-21 Brian Maranville change to refldata, force cache invalidate
+    | 2018-06-18 Brian Maranville change to nexusref to ignore areaDetector
     """
     # NB: Fileinfo is a structure with
     #     { path: "location/on/server", mtime: timestamp }
@@ -1232,6 +1233,7 @@ def super_load(filelist=None,
     | 2018-05-07 Brian Maranville detector deadtime correction defaults to True
     | 2018-05-10 Brian Maranville export all columns if intent is scan
     | 2018-05-11 Brian Maranville detector deadtime correction defaults to False
+    | 2018-06-18 Brian Maranville change to nexusref to ignore areaDetector
     """
     from .load import url_load_list
     #from .intent import apply_intent
