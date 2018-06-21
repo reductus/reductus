@@ -1234,7 +1234,7 @@ def super_load(filelist=None,
     | 2018-05-10 Brian Maranville export all columns if intent is scan
     | 2018-05-11 Brian Maranville detector deadtime correction defaults to False
     | 2018-06-18 Brian Maranville change to nexusref to ignore areaDetector
-    | 2018-06-21 Brian Maranville promote detector.wavelength to column (and resolution)
+    | 2018-06-20 Brian Maranville promote detector.wavelength to column (and resolution)
     """
     from .load import url_load_list
     #from .intent import apply_intent

@@ -217,8 +217,6 @@ class NCNRNeXusRefl(refldata.ReflData):
         #self.slit4.distance = data_as(entry, 'instrument/predetector_slit2/distance','mm')
         #self.detector.distance = data_as(entry, 'instrument/detector/distance','mm')
         #self.detector.rotation = data_as(entry, 'instrument/detector/rotation','degree')
-        self.detector.wavelength = data_as(entry, 'instrument/monochromator/wavelength','Ang')
-        self.detector.wavelength_resolution = data_as(entry, 'instrument/monochromator/wavelength_error','Ang')
         self.detector.deadtime = data_as(entry, 'instrument/single_detector/dead_time', 'us')
         self.detector.deadtime_error = data_as(entry, 'instrument/single_detector/dead_time_error', 'us')
         monitor_device = entry.get('control/monitor', {})
@@ -275,6 +273,8 @@ class NCNRNeXusRefl(refldata.ReflData):
         self.monitor.counts = np.asarray(data_as(das, 'counter/liveMonitor', '', rep=n), 'd')
         self.monitor.counts_variance = self.monitor.counts.copy()
         self.monitor.count_time = data_as(das, 'counter/liveTime', 's', rep=n)
+        self.detector.wavelength = data_as(entry, 'instrument/monochromator/wavelength','Ang', rep=n)
+        self.detector.wavelength_resolution = data_as(entry, 'instrument/monochromator/wavelength_error','Ang', rep=n)
         for k, s in enumerate([self.slit1, self.slit2, self.slit3, self.slit4]):
             x = 'slitAperture%d/softPosition'%(k+1)
             y = 'vertSlitAperture%d/softPosition'%(k+1)
