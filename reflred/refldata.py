@@ -421,7 +421,8 @@ class Detector(Group):
     deadtime_error = None
     columns = {
         "counts": {"units": "counts", "variance": "counts_variance"},
-        "angle_x": {"units": "degrees"}
+        "angle_x": {"units": "degrees"},
+        "wavelength": {"units": "Angstroms", "variance": "wavelength_resolution"}
     }
 
     @property
@@ -931,7 +932,8 @@ class ReflData(Group):
             sub_cols = getattr(subcls, 'columns', {})
             for col in sub_cols.keys():
                 v = getattr(subcls, col, None)
-                if check_array(v): setattr(subcls, col, v[make_mask(v, mask_indices)])
+                if check_array(v):
+                    setattr(subcls, col, v[make_mask(v, mask_indices)])
                 # handle variance
                 dv_name = sub_cols[col].get('variance', None)
                 if dv_name is not None:
