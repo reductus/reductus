@@ -154,18 +154,18 @@ def rebin_counts_2D_indexing_newer(x, y, I, xo, yo, Io):
     #ixy = yintegral[:-1]
 
     Io += ixy
-    
-def rebin_counts_2D(x, y, I, xo, yo, Io): 
+
+def rebin_counts_2D(x, y, I, xo, yo, Io):
     x_input_direction = np.sign(x[-1] - x[0])
     y_input_direction = np.sign(y[-1] - y[0])
     x_output_direction = np.sign(xo[-1] - xo[0])
     y_output_direction = np.sign(yo[-1] - yo[0])
-    
+
     x_s = slice(None, None, int(x_input_direction))
     y_s = slice(None, None, int(y_input_direction))
     xo_s = slice(None, None, int(x_output_direction))
     yo_s = slice(None, None, int(y_output_direction))
-    
+
     Io[:] = 0
     rebin_counts_2D_indexing_newer(x[x_s], y[y_s], I[x_s, y_s], xo[xo_s], yo[yo_s], Io[xo_s, yo_s])
 
@@ -211,9 +211,9 @@ def test2D_newer(sizex=101, sizey=75):
     y = np.linspace(5.0, 50.0, sizey)
     yo = np.linspace(0.0, 60.0, sizeyo)
     I = np.ones((sizex-1, sizey-1), dtype="float")
-    #Io = np.zeros((sizexo-1, sizeyo-1), dtype="float")
+    Io = np.zeros((sizexo-1, sizeyo-1), dtype="float")
 
-    Io = rebin_counts_2D_indexing_newer(x, y, I, xo, yo)
+    rebin_counts_2D_indexing_newer(x, y, I, xo, yo, Io)
     return I, Io
 
 def test2D_c(sizex=101, sizey=75):

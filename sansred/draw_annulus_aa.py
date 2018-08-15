@@ -71,19 +71,19 @@ def pie_bounding_box(center, radius, start_angle, end_angle):
     points = [
         center,
         [center[0] + numpy.cos(start_angle)*radius, center[1] + numpy.sin(start_angle)*radius],
-        [center[0] + numpy.cos(end_angle)*radius, center[1] + numpy.sin(end_angle)*radius]        
+        [center[0] + numpy.cos(end_angle)*radius, center[1] + numpy.sin(end_angle)*radius]
     ]
     pangle = numpy.pi/2.0 # angle of the cardinal points
     for cardinal in numpy.arange(pangle*numpy.ceil(start_angle/pangle), end_angle, pangle):
         points.append([center[0] + numpy.cos(cardinal)*radius, center[1] + numpy.sin(cardinal)*radius])
-        
+
     points = numpy.array(points, dtype='float')
     xmin = points[:,0].min()
     xmax = points[:,0].max()
     ymin = points[:,1].min()
     ymax = points[:,1].max()
     return [xmin, ymin, xmax, ymax]
-    
+
 def sector_cut_antialiased(shape, center, inner_radius, outer_radius, start_angle=0.0, end_angle=numpy.pi,
                 mirror=True, background_value=0.0, mask_value=1.0,
                 oversampling=8):
@@ -105,7 +105,7 @@ def sector_cut_antialiased(shape, center, inner_radius, outer_radius, start_angl
     """
     d_start = -numpy.degrees(start_angle)
     d_end = -numpy.degrees(end_angle)
-    
+
     # Create a 32-bit float image
     intermediate_shape = (shape[0]*int(oversampling), shape[1]*int(oversampling))
     im = Image.new('F', intermediate_shape, color=background_value)
@@ -124,22 +124,22 @@ def sector_cut_antialiased(shape, center, inner_radius, outer_radius, start_angl
     y_outer_min = center_r[1] - outer_radius_r
     y_outer_max = center_r[1] + outer_radius_r
     outer_bbox = [x_outer_min, y_outer_min, x_outer_max, y_outer_max]
-    
+
     # draw pie slices
     draw.pieslice(outer_bbox, d_end, d_start, fill=mask_value)
     if mirror:
         draw.pieslice(outer_bbox, d_end-180.0, d_start-180.0,  fill=mask_value)
-    
+
     # Calculate bounding box for inner circle
     x_inner_min = center_r[0] - inner_radius_r
     x_inner_max = center_r[0] + inner_radius_r
     y_inner_min = center_r[1] - inner_radius_r
     y_inner_max = center_r[1] + inner_radius_r
     inner_bbox = [x_inner_min, y_inner_min, x_inner_max, y_inner_max]
-    
+
     # Now overlay the inner circle
     draw.ellipse(inner_bbox, fill=background_value)
-    
+
     # Now bring it back to size, with antialiasing
     #im.thumbnail(shape, Image.ANTIALIAS)
     # This produced artifacts - output.max() was > mask_value by 10% or more!
@@ -149,7 +149,7 @@ def sector_cut_antialiased(shape, center, inner_radius, outer_radius, start_angl
     output = output.reshape(shape[0], oversampling, shape[1], oversampling).mean(1).mean(2)
     return output
 
-def test_sector_cut_antialiased(shape, center, inner_radius, outer_radius, start_angle=0.0, end_angle=numpy.pi,
+def check_sector_cut_antialiased(shape, center, inner_radius, outer_radius, start_angle=0.0, end_angle=numpy.pi,
                 mirror=True, background_value=0.0, mask_value=1.0,
                 oversampling=8):
     # type: (Tuple[int, int], Tuple[float, float], float, float, float, float, int)  -> numpy.ndarray
@@ -169,7 +169,7 @@ def test_sector_cut_antialiased(shape, center, inner_radius, outer_radius, start
     """
     d_start = -numpy.degrees(start_angle)
     d_end = -numpy.degrees(end_angle)
-    
+
     # Create a 32-bit float image
     intermediate_shape = (shape[0]*int(oversampling), shape[1]*int(oversampling))
     im = Image.new('F', intermediate_shape, color=background_value)
@@ -191,28 +191,31 @@ def test_sector_cut_antialiased(shape, center, inner_radius, outer_radius, start
     draw.pieslice(outer_bbox, d_end, d_start, fill=mask_value)
     if mirror:
         draw.pieslice(outer_bbox, d_end-180.0, d_start-180.0,  fill=mask_value)
-    
+
     # Calculate bounding box for inner circle
     x_inner_min = center_r[0] - inner_radius_r
     x_inner_max = center_r[0] + inner_radius_r
     y_inner_min = center_r[1] - inner_radius_r
     y_inner_max = center_r[1] + inner_radius_r
     inner_bbox = [x_inner_min, y_inner_min, x_inner_max, y_inner_max]
-    
+
     # Now overlay the inner circle
     draw.ellipse(inner_bbox, fill=background_value)
     im.show()
-    
-def test():
-    test_sector_cut_antialiased(
-        (128,128), 
-        (64, 60), 
-        10, 
-        20, 
-        start_angle=numpy.pi/4, 
+
+def check():
+    check_sector_cut_antialiased(
+        (128,128),
+        (64, 60),
+        10,
+        20,
+        start_angle=numpy.pi/4,
         end_angle=numpy.pi/2,
-        mirror=False, 
-        background_value=0.0, 
+        mirror=False,
+        background_value=0.0,
         mask_value=100.0,
         oversampling=8
     )
+
+if __name__ == "__main__":
+    check()
