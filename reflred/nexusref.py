@@ -206,7 +206,7 @@ class NCNRNeXusRefl(refldata.ReflData):
             # fall back to randomly generated filenum
             from random import randint
             self.filenumber = -randint(10**9, (10**10) - 1)
-        
+
         #self.date = iso8601.parse_date(entry['start_time'][0].decode('utf-8'))
         self.date = iso8601.parse_date(entry['start_time'][0])
         self.description = entry['experiment_description'][0]
@@ -294,12 +294,16 @@ class NCNRNeXusRefl(refldata.ReflData):
             self.detector.angle_x_target = data_as(das, 'detectorAngle/desiredSoftPosition', 'degree', rep=n)
         elif 'q' in das:
             # selects NG7R which has only q device (qz) and sampleTilt
-            tilt = data_as(das, 'sampleTilt/softPosition', 'degree', rep=n)
+            # Ignore sampleTilt for now since it is arbitrary.  NG7 is not
+            # using zeros for the sampleTilt motor in a predictable way.
+            tilt = 0.
+            #tilt = data_as(das, 'sampleTilt/softPosition', 'degree', rep=n)
             theta = data_as(das, 'q/thetaIncident', 'degree', rep=n)
             self.sample.angle_x = theta + tilt
             self.detector.angle_x = 2*theta
             # NaN if not defined
-            tilt_target = data_as(das, 'sampleTilt/desiredSoftPosition', 'degree', rep=n)
+            tilt_target = 0.
+            #tilt_target = data_as(das, 'sampleTilt/desiredSoftPosition', 'degree', rep=n)
             theta_target = data_as(das, 'q/desiredThetaInident', 'degree', rep=n)
             self.sample.angle_x_target = theta_target + tilt_target
             self.detector.angle_x_target = 2*theta_target

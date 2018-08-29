@@ -1227,7 +1227,7 @@ def super_load(filelist=None,
     output (refldata[]): All entries of all files in the list.
 
     | 2017-01-13 Brian Maranville
-    | 2017-02-15 Paul Kienzle: normalize by time if monitor is not present
+    | 2017-02-15 Paul Kienzle normalize by time if monitor is not present
     | 2017-08-21 Brian Maranville use fileName from trajectory
     | 2018-05-01 Brian Maranville import temperature metadata
     | 2018-05-07 Brian Maranville detector deadtime correction defaults to True
@@ -1235,6 +1235,7 @@ def super_load(filelist=None,
     | 2018-05-11 Brian Maranville detector deadtime correction defaults to False
     | 2018-06-18 Brian Maranville change to nexusref to ignore areaDetector
     | 2018-06-20 Brian Maranville promote detector.wavelength to column (and resolution)
+    | 2018-08-29 Paul Kienzle ignore sampleTilt field for NG7
     """
     from .load import url_load_list
     #from .intent import apply_intent
@@ -1369,7 +1370,7 @@ def average_flux(data, base, beam_height=25):
     Data is matched according to angular resolution, assuming all data with
     the same angular resolution was subject to the same incident intensity.
     Does not work on polarized beam data with multiple slit scans
-    
+
     Beam area is taken to be beam_height * slit2 aperture (from file)
 
     **Inputs**
@@ -1377,7 +1378,7 @@ def average_flux(data, base, beam_height=25):
     data (refldata[]) : specular, background or subtracted data
 
     base (refldata) : intensity data
-    
+
     beam_height (float:mm): height of the beam at the sample position
 
     **Returns**
@@ -1388,7 +1389,7 @@ def average_flux(data, base, beam_height=25):
     """
     from dataflow.modules import refl
     TIME_RESOLUTION = 1e-6 # 1 microsecond for NCNR timers.
-    
+
     if base is not None:
         from .scale import calculate_number
         from dataflow.lib import err1d
@@ -1400,7 +1401,7 @@ def average_flux(data, base, beam_height=25):
         total_time_variance = 0.0
         sum_weighted_flux = 0.0
         sum_weighted_flux_variance = 0.0
-        
+
         for datum in data:
             datum = copy(datum)
             beam_area = datum.slit2.x * beam_height / 100.0 # both in mm, convert to cm
@@ -1411,9 +1412,9 @@ def average_flux(data, base, beam_height=25):
             T, varT = err1d.sum(datum.monitor.count_time, TIME_RESOLUTION**2)
             F, varF = err1d.div(A, varA, T, varT) # average Flux/(Area * Time)
             fluxes.append({
-                "name": datum.name, 
-                "number_incident": S, 
-                "number_incident_error": np.sqrt(varS), 
+                "name": datum.name,
+                "number_incident": S,
+                "number_incident_error": np.sqrt(varS),
                 "number_incident_units": "neutrons",
                 "average_flux": F,
                 "average_flux_error": np.sqrt(varF),
@@ -1429,7 +1430,7 @@ def average_flux(data, base, beam_height=25):
             sum_weighted_flux_variance += varA
         aggregated_flux, aggregated_flux_variance = err1d.div(sum_weighted_flux, sum_weighted_flux_variance, total_time, total_time_variance)
         output = refl.FluxData(fluxes, {
-            "aggregated_average_flux": aggregated_flux, 
+            "aggregated_average_flux": aggregated_flux,
             "aggregated_average_flux_error": np.sqrt(aggregated_flux_variance),
             "aggregated_time": total_time,
             "aggregated_time_error": np.sqrt(total_time_variance)

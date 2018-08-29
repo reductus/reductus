@@ -905,7 +905,7 @@ class ReflData(Group):
                 new_col['is_scan'] = True
                 new_col['units'] = self.scan_units[si]
                 data_columns[new_label] = new_col
-            
+
         return data_columns
 
     def apply_mask(self, mask_indices):
@@ -1060,7 +1060,7 @@ class ReflData(Group):
             entry = getattr(self, "entry", "default_entry")
             return {"name": name, "entry": entry, "export_string": export_string, "file_suffix": ".refl"}
 
-    
+
 
 
     def get_plottable(self):
