@@ -108,6 +108,7 @@ class BrukerRefl(refldata.ReflData):
         self.entry = "E"+str(entryid+1)  # 1-origin entry number for each entry
         self.path = os.path.abspath(filename)
         self.name = os.path.basename(filename).split('.')[0]
+        self.filenumber = self.name # since we don't have a real filenumber
         #import pprint; pprint.pprint(entry)
         self._set_metadata(bruker_file)
         self._set_data(bruker_file['data'][entryid])
@@ -213,6 +214,7 @@ class RigakuRefl(refldata.ReflData):
         self.entry = "entry"
         self.path = os.path.abspath(filename)
         self.name = os.path.basename(filename).split('.')[0]
+        self.filenumber = self.name # since we don't have a real filenumber
         #import pprint; pprint.pprint(entry)
         self._set_metadata(dataset)
         self._set_data(dataset)
