@@ -241,8 +241,6 @@ class RigakuRefl(refldata.ReflData):
     def _set_data(self, data):
         # Resolution info (returned as 1-sigma from rigaku reader)
         self.angular_resolution = data['angular_divergence']
-        self.detector.wavelength = np.array([data['wavelength']])
-        self.detector.wavelength_resolution = np.array([data['wavelength_resolution']])
         self.slit1.distance = data['slit1_distance']
         self.slit2.distance = data['slit2_distance']
         self.slit3.distance = data['slit3_distance']
@@ -260,6 +258,8 @@ class RigakuRefl(refldata.ReflData):
             self.detector.counts /= attenuation
             self.detector.counts_variance /= attenuation**2
         n = self.detector.dims[0]
+        self.detector.wavelength = np.ones(n) * data['wavelength']
+        self.detector.wavelength_resolution = np.ones(n) * data['wavelength_resolution']
         self.monitor.counts = np.zeros(n)
         self.monitor.counts_variance = np.zeros(n)
         self.monitor.count_time = data['count_time']
