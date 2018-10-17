@@ -94,9 +94,9 @@ def read_octave_binary(fd):
             ## into the array.  For now, the other works.
             #dtype = endian + NUMPY_TYPE_CODES[type_code]
             #data = np.fromfile(fd, dtype=dtype, count=count)
-            dtype = endian + str(count) + STRUCT_TYPE_CODES[type_code]
+            dtype = endian + STRUCT_TYPE_CODES[type_code]
             type_size = np.dtype(NUMPY_TYPE_CODES[type_code]).itemsize
-            data = np.array(unpack(dtype, fd.read(count*type_size)))
+            data = np.frombuffer(fd.read(count*type_size), dtype)
             table[name] = data.reshape(dims)
         elif type_str == "old_string":
             str_len = read_len()
