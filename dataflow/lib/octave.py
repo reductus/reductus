@@ -100,7 +100,7 @@ def read_octave_binary(fd):
             dtype = dtype.newbyteorder(endian)
             data = np.frombuffer(fd.read(count*dtype.itemsize), dtype)
             # Note: Use data.copy() to make a modifiable array.
-            table[name] = data.reshape(dims)
+            table[name] = data.reshape(dims, order='F')
         elif type_str == "old_string":
             str_len = read_len()
             data = decode(fd.read(str_len))
