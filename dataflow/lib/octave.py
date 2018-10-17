@@ -51,7 +51,6 @@ def read_octave_binary(fd):
     table = OrderedDict()
     while True:
         name_length = read_len()
-        print(name_length)
         if name_length is None:  # EOF
             break
         name = decode(fd.read(name_length))
@@ -65,12 +64,12 @@ def read_octave_binary(fd):
         else:
             type_str = DATA_TYPES[data_type]
         #print("reading", name, type_str)
-        if type_str == "scalar":
+        if type_str.endswith("scalar"):
             type_code = ord(fd.read(1))
             dtype = np.dtype(endian + NUMPY_TYPE_CODES[type_code])
             data = np.frombuffer(fd.read(dtype.itemsize), dtype)
             table[name] = data[0]
-        elif type_str == "matrix":
+        elif type_str.endswith("matrix"):
             ndims = read_len()
             if ndims < 0:
                 ndims = -ndims
