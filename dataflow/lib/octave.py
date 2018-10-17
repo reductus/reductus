@@ -38,7 +38,7 @@ NUMPY_TYPE_CODES = {
 def read_octave_binary(fd):
     magic = fd.read(10)
     assert(magic == b"Octave-1-L" or magic == b"Octave-1-B")
-    endian = ">" if magic[-1] == b"L" else "<"
+    endian = "<" if magic[-1:] == b"L" else ">"
     # Float type is 0: IEEE-LE, 1: IEEE-BE, 2: VAX-D, 3: VAX-G, 4: Cray
     # Not used since Octave assumes IEEE format floats.
     _float_format = fd.read(1)
@@ -51,6 +51,7 @@ def read_octave_binary(fd):
     table = OrderedDict()
     while True:
         name_length = read_len()
+        print(name_length)
         if name_length is None:  # EOF
             break
         name = decode(fd.read(name_length))
