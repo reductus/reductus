@@ -51,18 +51,21 @@ STRUCT_TYPE_CODES = {
 
 def read_octave_binary(fd):
     magic = fd.read(10)
-    assert(magic == b"Octave-1-L")
-    endian = ">" if fd.read(1) == 0 else "<"
+    assert(magic == b"Octave-1-L" or magic == b"Octave-1-B")
+    endian = "<" if magic == b"Octave-1-L" else ">"
+    # read this, then throw it away...
+    _mach_format_byte = fd.read(1)
     len_fmt = endian + "i"
     def read_len():
         len_bytes = fd.read(4)
         if not len_bytes:
-            return 0
+            return None
         return unpack(len_fmt, len_bytes)[0]
     table = OrderedDict()
     while True:
         name_length = read_len()
-        if name_length <= 0:
+        if name_length is None:
+            # EOF
             break
         name = decode(fd.read(name_length))
         doc_length = read_len()
