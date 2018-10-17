@@ -1,7 +1,6 @@
 from __future__ import print_function
 
 import sys
-from struct import unpack
 from collections import OrderedDict
 
 import numpy as np
@@ -36,36 +35,23 @@ NUMPY_TYPE_CODES = {
     9: "i8",
 }
 
-STRUCT_TYPE_CODES = {
-    0: "B",
-    1: "H",
-    2: "I",
-    3: "b",
-    4: "h",
-    5: "i",
-    6: "f",
-    7: "d",
-    8: "L",
-    9: "l",
-}
-
 def read_octave_binary(fd):
     magic = fd.read(10)
     assert(magic == b"Octave-1-L" or magic == b"Octave-1-B")
-    endian = "<" if magic == b"Octave-1-L" else ">"
-    # read this, then throw it away...
-    _mach_format_byte = fd.read(1)
-    len_fmt = endian + "i"
+    endian = ">" if magic[-1] == b"L" else "<"
+    # Float type is 0: IEEE-LE, 1: IEEE-BE, 2: VAX-D, 3: VAX-G, 4: Cray
+    # Not used since Octave assumes IEEE format floats.
+    _float_format = fd.read(1)
+    len_dtype = np.dtype(endian + "i4")
     def read_len():
         len_bytes = fd.read(4)
         if not len_bytes:
             return None
-        return unpack(len_fmt, len_bytes)[0]
+        return np.frombuffer(len_bytes, len_dtype)[0]
     table = OrderedDict()
     while True:
         name_length = read_len()
-        if name_length is None:
-            # EOF
+        if name_length is None:  # EOF
             break
         name = decode(fd.read(name_length))
         doc_length = read_len()
@@ -80,26 +66,21 @@ def read_octave_binary(fd):
         #print("reading", name, type_str)
         if type_str == "scalar":
             type_code = ord(fd.read(1))
-            dtype = endian + STRUCT_TYPE_CODES[type_code]
-            table[name] = unpack(dtype, fd.read(8))
+            dtype = np.dtype(endian + NUMPY_TYPE_CODES[type_code])
+            data = np.frombuffer(fd.read(dtype.itemsize), dtype)
+            table[name] = data[0]
         elif type_str == "matrix":
             ndims = read_len()
             if ndims < 0:
                 ndims = -ndims
-                dims = unpack(endian + "%di"%ndims, fd.read(4*ndims))
+                dims = np.frombuffer(fd.read(4*ndims), len_dtype)
             else:
                 dims = (ndims, read_len())
             count = np.prod(dims)
             type_code = ord(fd.read(1))
-            ## Don't know why np.fromfile isn't working.  Shouldn't have
-            ## to read the data into a string, unpack it into a tuple then
-            ## convert that to an array.  Should be able to directly read
-            ## into the array.  For now, the other works.
-            #dtype = endian + NUMPY_TYPE_CODES[type_code]
-            #data = np.fromfile(fd, dtype=dtype, count=count)
-            dtype = endian + STRUCT_TYPE_CODES[type_code]
-            type_size = np.dtype(NUMPY_TYPE_CODES[type_code]).itemsize
-            data = np.frombuffer(fd.read(count*type_size), dtype)
+            dtype = np.dtype(endian + NUMPY_TYPE_CODES[type_code])
+            data = np.frombuffer(fd.read(count*dtype.itemsize), dtype)
+            # Note: Use data.copy() to make a modifiable array.
             table[name] = data.reshape(dims)
         elif type_str == "old_string":
             str_len = read_len()
@@ -109,13 +90,15 @@ def read_octave_binary(fd):
             nrows = read_len()
             if nrows < 0:
                 ndims = -nrows
-                dims = unpack(endian + "%di"%ndims, fd.read(4*ndims))
+                dims = np.frombuffer(fd.read(4*ndims), len_dtype)
                 count = np.prod(dims[:-1])
-                ## Make str() rather than bytes() in python 3
-                ## Don't know how to do it through fromfile, so do it by hand
-                #dtype = "S%d"%dims[-1]
-                #data = np.fromfile(fd, dtype=dtype, count=count)
+                # Make str() rather than bytes() in python 3
                 data = np.array([decode(fd.read(dims[-1])) for _ in range(count)])
+                # If speed is an issue, can instead read in the entire array as
+                # one large buffer, but these will be byte arrays in python 3.
+                # If so, remove the decode on the 'else' condition as well.
+                #dtype = np.dtype('|S'+str(dims[-1])
+                #data = np.frombuffer(fd.read(count*dims[-1]), dtype)
                 table[name] = data.reshape(dims[:-1])
             else:
                 data = []
