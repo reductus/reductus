@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import sys
 from struct import unpack
 from collections import OrderedDict
@@ -72,7 +74,7 @@ def read_octave_binary(fd):
             type_str = decode(fd.read(type_length))
         else:
             type_str = DATA_TYPES[data_type]
-        print("reading", name, type_str)
+        #print("reading", name, type_str)
         if type_str == "scalar":
             type_code = ord(fd.read(1))
             dtype = endian + STRUCT_TYPE_CODES[type_code]
@@ -106,18 +108,21 @@ def read_octave_binary(fd):
                 ndims = -nrows
                 dims = unpack(endian + "%di"%ndims, fd.read(4*ndims))
                 count = np.prod(dims[:-1])
-                dtype = "S%d"%dims[-1]
-                data = np.fromfile(fd, dtype=dtype, count=count)
+                ## Make str() rather than bytes() in python 3
+                ## Don't know how to do it through fromfile, so do it by hand
+                #dtype = "S%d"%dims[-1]
+                #data = np.fromfile(fd, dtype=dtype, count=count)
+                data = np.array([decode(fd.read(dims[-1])) for _ in range(count)])
                 table[name] = data.reshape(dims[:-1])
             else:
                 data = []
                 for _ in range(nrows):
                     str_len = read_len()
-                    data.append(fd.read(str_len))
+                    data.append(decode(fd.read(str_len)))
                 table[name] = np.array(data)
         else:
             raise NotImplementedError("unknown octave type "+type_str)
-        print("read %s:%s"%(name, type_str), table[name])
+        #print("read %s:%s"%(name, type_str), table[name])
     return table
 
 def _dump(filename):
