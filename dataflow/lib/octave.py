@@ -22,7 +22,7 @@ DATA_TYPES = {
     7: "string",
 }
 
-NUMPY_TYPE_CODES = {
+TYPE_CODES = {
     0: "u1",
     1: "u2",
     2: "u4",
@@ -34,6 +34,7 @@ NUMPY_TYPE_CODES = {
     8: "u8",
     9: "i8",
 }
+DTYPES = {k: np.dtype(v) for k, v in TYPE_CODES.items()}
 
 def read_octave_binary(fd):
     magic = fd.read(10)
@@ -65,8 +66,17 @@ def read_octave_binary(fd):
             type_str = DATA_TYPES[data_type]
         #print("reading", name, type_str)
         if type_str.endswith("scalar"):
-            type_code = ord(fd.read(1))
-            dtype = np.dtype(endian + NUMPY_TYPE_CODES[type_code])
+            if type_str == "scalar":
+                dtype = DTYPES[ord(fd.read(1))]
+            elif type_str == "complex scalar":
+                _ = fd.read(1)
+                dtype = np.dtype('complex128')
+            elif type_str == "float complex scalar":
+                _ = fd.read(1)
+                dtype = np.dtype('complex64')
+            else:
+                dtype = np.dtype(type_str[:-7])
+            dtype = dtype.newbyteorder(endian)
             data = np.frombuffer(fd.read(dtype.itemsize), dtype)
             table[name] = data[0]
         elif type_str.endswith("matrix"):
@@ -77,8 +87,17 @@ def read_octave_binary(fd):
             else:
                 dims = (ndims, read_len())
             count = np.prod(dims)
-            type_code = ord(fd.read(1))
-            dtype = np.dtype(endian + NUMPY_TYPE_CODES[type_code])
+            if type_str == "matrix":
+                dtype = DTYPES[ord(fd.read(1))]
+            elif type_str == "complex matrix":
+                _ = fd.read(1)
+                dtype = np.dtype('complex128')
+            elif type_str == "float complex matrix":
+                _ = fd.read(1)
+                dtype = np.dtype('complex64')
+            else:
+                dtype = np.dtype(type_str[:-7])
+            dtype = dtype.newbyteorder(endian)
             data = np.frombuffer(fd.read(count*dtype.itemsize), dtype)
             # Note: Use data.copy() to make a modifiable array.
             table[name] = data.reshape(dims)
