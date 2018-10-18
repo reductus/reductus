@@ -16,6 +16,14 @@ import subprocess
 import time
 import tempfile
 
+try:
+    # CRUFT: use cPickle for python 2.7
+    import cPickle as pickle
+except ImportError:
+    import pickle
+
+PICKLE_PROTOCOL = pickle.HIGHEST_PROTOCOL # use the best
+
 def memory_cache():
     from . import fakeredis
     return fakeredis.MemoryCache()
@@ -68,6 +76,8 @@ class CacheManager(object):
         self._file_cache = None
         self._redis_kwargs = None
         self._diskcache_kwargs = None
+        self._use_compression = False
+        self._pickle_protocol = PICKLE_PROTOCOL
 
     def _connect(self):
         if self._redis_kwargs is not None:
@@ -93,7 +103,7 @@ class CacheManager(object):
                 warning = "diskcache connection failed with:\n\t" + str(exc)
                 warning += "\nFalling back to in-memory cache."
                 warnings.warn(warning)
-            
+  
         self.set_test_cache()
 
     def set_test_cache(self):
@@ -132,6 +142,15 @@ class CacheManager(object):
         if self._cache is None:
             self._connect()
         return self._cache
+    
+    def get_cache_manager(self):
+        """
+        Connect to the key-value cache, and return 
+        this manager class
+        """
+        if self._cache is None:
+            self._connect()
+        return self
 
     def get_file_cache(self):
         """
@@ -140,6 +159,29 @@ class CacheManager(object):
         if self._cache is None:
             self._connect()
         return self._file_cache
+    
+    def store(self, key, value):
+        string = pickle.dumps(value, protocol=self._pickle_protocol)
+        if self._use_compression:
+            import lz4.frame
+            string = lz4.frame.compress(string)
+        self._cache.set(key, string)
+    
+    def retrieve(self, key):
+        string = self._cache.get(key)
+        if self._use_compression:
+            import lz4.frame
+            string = lz4.frame.decompress(string)
+        value = pickle.loads(string)
+        return value
+
+    def delete(self, key):
+        self._cache.delete(key)
+
+    def exists(self, key):
+        return self._cache.exists(key)
+
+
 
 # Singleton cache manager if you only need one cache
 CACHE_MANAGER = CacheManager()
@@ -147,6 +189,6 @@ CACHE_MANAGER = CacheManager()
 # direct access to singleton methods
 use_redis = CACHE_MANAGER.use_redis
 use_diskcache = CACHE_MANAGER.use_diskcache
-get_cache = CACHE_MANAGER.get_cache
+get_cache = CACHE_MANAGER.get_cache_manager
 get_file_cache = CACHE_MANAGER.get_file_cache
 set_test_cache = CACHE_MANAGER.set_test_cache

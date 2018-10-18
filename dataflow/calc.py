@@ -16,11 +16,6 @@ import sys
 import hashlib
 import contextlib
 from inspect import getsource
-try:
-    # CRUFT: use cPickle for python 2.7
-    import cPickle as pickle
-except ImportError:
-    import pickle
 
 from .anno_exc import annotate_exception
 from .cache import get_cache
@@ -29,8 +24,6 @@ from .core import Bundle
 from .automod import validate
 
 IS_PY3 = sys.version_info[0] >= 3
-
-PICKLE_PROTOCOL = pickle.HIGHEST_PROTOCOL # use the best
 
 def find_calculated(template, config):
     """
@@ -96,13 +89,13 @@ def process_template(template, config, target=(None, None)):
                 if cache.exists(fingerprints[child]):
                     print("clearing cached value for node %d: %s"
                           %(child, fingerprints[child]))
-                    _clear(cache, fingerprints[child])
+                    cache.delete(fingerprints[child])
 
         # Use cached value if it exists, skipping to the next loop iteration.
         if cache.exists(fingerprints[node]):
             print("retrieving cached value for node %d: %s"
                   %(node, fingerprints[node]))
-            bundles = _retrieve(cache, fingerprints[node])
+            bundles = cache.retrieve(fingerprints[node])
             results.update((_key(node, k), v) for k, v in bundles.items())
             continue
 
@@ -123,7 +116,7 @@ def process_template(template, config, target=(None, None)):
         #print "caching",_serialize(bundles, module.outputs)
         if module.cached:
             print("caching %s %s %s"%(node, module.id, fingerprints[node]))
-            _store(cache, fingerprints[node], bundles)
+            cache.store(fingerprints[node], bundles)
         results.update((_key(node, k), v) for k, v in bundles.items())
 
     #print list(sorted(results.keys()))
@@ -303,49 +296,6 @@ def _do_action(module, **action_args):
     elif num_outputs == 0:
         result = []
     return result
-
-
-def _clear(cache, fp):
-    """
-    Clear the data associated with a node.
-    """
-    cache.delete(fp)
-
-def _store(cache, fp, data):
-    """
-    Store the output terminals associated with a node.
-
-    *cache* is the interface to the cache (which may be an in-memory
-    store, or may be a redis handle).
-
-    *fp* is the finger print of the node, which is based on the finger
-    print of its config plus the finger prints of all its inputs.
-
-    *data* is a dictionary of *{terminal: [dataset, dataset, ...]}*.
-    """
-    #stored = dict((k, v.todict()) for k,v in sorted(data.items()))
-    #string = json.dumps(sanitizeForJSON(stored))
-    string = pickle.dumps(data, protocol=PICKLE_PROTOCOL)
-    cache.set(fp, string)
-
-def _retrieve(cache, fp):
-    """
-    Retrieve data from the cache.
-
-    *cache* is the interface to the cache (which may be an in-memory
-    store, or may be a redis handle).
-
-    *fp* is the finger print of the node, which is based on the finger
-    print of its config plus the finger prints of all its inputs.
-
-    Returns *data* as a dictionary of *{ terminal: [dataset, dataset, ...]}*.
-    """
-    string = cache.get(fp)
-    #stored = sanitizeFromJSON(json.loads(string))
-    #data = dict((str(terminal), Bundle.fromdict(values))
-    #            for terminal,values in stored.items())
-    data = pickle.loads(string)
-    return data
 
 def fingerprint_template(template, config):
     """
