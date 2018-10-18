@@ -42,7 +42,7 @@ TYPE_CODES = {
 }
 DTYPES = {k: np.dtype(v) for k, v in TYPE_CODES.items()}
 
-def read_octave_binary(fd, encoding=STR_ENCODING):
+def loadoct(fd, encoding=STR_ENCODING):
     """
     Read an octave binary file from the file handle fd, returning
     an array of structures.  If encoding is not None then convert
@@ -73,8 +73,7 @@ def read_octave_binary(fd, encoding=STR_ENCODING):
         is_global = bool(ord(fd.read(1)))
         data_type = ord(fd.read(1))
         if data_type == 255:
-            type_length = read_len()
-            type_str = tostr(fd.read(type_length))
+            type_str = tostr(fd.read(read_len()))
         else:
             type_str = DATA_TYPES[data_type]
         #print("reading", name, type_str)
@@ -142,17 +141,17 @@ def read_octave_binary(fd, encoding=STR_ENCODING):
         #print("read %s:%s"%(name, type_str), table[name])
     return table
 
+read_octave_binary = loadoct  # CRUFT: deprecated name
+
 def _dump(filename, encoding=STR_ENCODING):
     import gzip
 
     if filename.endswith('.gz'):
         with gzip.open(filename, 'rb') as fd:
-            table = read_octave_binary(fd, encoding)
+            table = loadoct(fd, encoding)
     else:
         with open(filename, 'rb') as fd:
-            table = read_octave_binary(fd, encoding)
-    #for k, v in sorted(table.items()):
-    #    print(k, v)
+            table = loadoct(fd, encoding)
     for k, v in table.items():
         print(k, v)
 
