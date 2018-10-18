@@ -117,7 +117,7 @@ def read_octave_binary(fd, encoding=STR_ENCODING):
         elif type_str == "old_string":
             data = fd.read(read_len())
             if encoding is not None:
-                data = decode(s, encoding)
+                data = decode(data, encoding)
             table[name] = data
         elif type_str in ("string", "sq_string"):
             nrows = read_len()
