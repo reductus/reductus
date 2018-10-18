@@ -6,11 +6,17 @@ from collections import OrderedDict
 import numpy as np
 
 if sys.version_info[0] > 2:
-    def decode(s):
-        return s.decode('utf-8')
+    def tostr(s):
+        return s.decode('utf8')
+    def decode(s, encoding='utf8'):
+        return s.decode(encoding)
+    STR_ENCODING = 'utf8'
 else:
-    def decode(s):
+    def tostr(s):
         return s
+    def decode(s, encoding='utf8'):
+        return unicode(s, encoding)
+    STR_ENCODING = None
 
 DATA_TYPES = {
     1: "scalar",
@@ -36,7 +42,14 @@ TYPE_CODES = {
 }
 DTYPES = {k: np.dtype(v) for k, v in TYPE_CODES.items()}
 
-def read_octave_binary(fd):
+def read_octave_binary(fd, encoding=STR_ENCODING):
+    """
+    Read an octave binary file from the file handle fd, returning
+    an array of structures.  If encoding is not None then convert
+    strings from bytes to unicode.  Default is STR_ENCODING, which
+    is utf8 for python 3 and None for python 2, yielding arrays
+    of type str in each dialect.
+    """
     magic = fd.read(10)
     assert(magic == b"Octave-1-L" or magic == b"Octave-1-B")
     endian = "<" if magic[-1:] == b"L" else ">"
@@ -54,14 +67,14 @@ def read_octave_binary(fd):
         name_length = read_len()
         if name_length is None:  # EOF
             break
-        name = decode(fd.read(name_length))
+        name = tostr(fd.read(name_length))
         doc_length = read_len()
-        doc = decode(fd.read(doc_length)) if doc_length else ''
+        doc = tostr(fd.read(doc_length)) if doc_length else ''
         is_global = bool(ord(fd.read(1)))
         data_type = ord(fd.read(1))
         if data_type == 255:
             type_length = read_len()
-            type_str = decode(fd.read(type_length))
+            type_str = tostr(fd.read(type_length))
         else:
             type_str = DATA_TYPES[data_type]
         #print("reading", name, type_str)
@@ -102,47 +115,49 @@ def read_octave_binary(fd):
             # Note: Use data.copy() to make a modifiable array.
             table[name] = data.reshape(dims, order='F')
         elif type_str == "old_string":
-            str_len = read_len()
-            data = decode(fd.read(str_len))
+            data = fd.read(read_len())
+            if encoding is not None:
+                data = decode(s, encoding)
             table[name] = data
         elif type_str in ("string", "sq_string"):
             nrows = read_len()
             if nrows < 0:
                 ndims = -nrows
                 dims = np.frombuffer(fd.read(4*ndims), len_dtype)
-                count = np.prod(dims[:-1])
-                # Make str() rather than bytes() in python 3
-                data = np.array([decode(fd.read(dims[-1])) for _ in range(count)])
-                # If speed is an issue, can instead read in the entire array as
-                # one large buffer, but these will be byte arrays in python 3.
-                # If so, remove the decode on the 'else' condition as well.
-                #dtype = np.dtype('|S'+str(dims[-1])
-                #data = np.frombuffer(fd.read(count*dims[-1]), dtype)
+                count = np.prod(dims)
+                fortran_order = np.frombuffer(fd.read(count), dtype='uint8')
+                c_order = np.ascontiguousarray(fortran_order.reshape(dims, order='F'))
+                data = c_order.view(dtype='|S'+str(dims[-1]))
+                if encoding is not None:
+                    data = np.array([decode(s, encoding) for s in data.flat])
                 table[name] = data.reshape(dims[:-1])
             else:
-                data = []
-                for _ in range(nrows):
-                    str_len = read_len()
-                    data.append(decode(fd.read(str_len)))
+                data = [fd.read(read_len()) for _ in range(nrows)]
+                if encoding is not None:
+                    data = [decode(s, encoding) for s in data]
                 table[name] = np.array(data)
+
         else:
             raise NotImplementedError("unknown octave type "+type_str)
         #print("read %s:%s"%(name, type_str), table[name])
     return table
 
-def _dump(filename):
+def _dump(filename, encoding=STR_ENCODING):
     import gzip
 
     if filename.endswith('.gz'):
         with gzip.open(filename, 'rb') as fd:
-            table = read_octave_binary(fd)
+            table = read_octave_binary(fd, encoding)
     else:
         with open(filename, 'rb') as fd:
-            table = read_octave_binary(fd)
+            table = read_octave_binary(fd, encoding)
     #for k, v in sorted(table.items()):
     #    print(k, v)
     for k, v in table.items():
         print(k, v)
 
 if __name__ == "__main__":
-    _dump(sys.argv[1])
+    #_dump(sys.argv[1], encoding='utf8')  # unicode
+    #_dump(sys.argv[1], encoding=None)  # bytes
+    _dump(sys.argv[1])  # str, encoding=STR_ENCODING
+
