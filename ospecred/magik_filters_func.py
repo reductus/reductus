@@ -353,8 +353,9 @@ def pixelsToTwotheta(data, params, pixels_per_degree=50.0, qzero_pixel=149.0, in
     2016-04-01 Brian Maranville
     """
 
-    if 'pixels_per_degree' in params: pixels_per_degree = params['pixels_per_degree']
-    if 'qzero_pixel' in params: qzero_pixel = params['qzero_pixel']
+    if params is not None:
+        if 'pixels_per_degree' in params: pixels_per_degree = params['pixels_per_degree']
+        if 'qzero_pixel' in params: qzero_pixel = params['qzero_pixel']
     #kw = locals().keys()
     #print(kw, params)
     #for name in kw:
