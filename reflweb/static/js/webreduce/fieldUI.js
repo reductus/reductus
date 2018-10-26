@@ -115,6 +115,10 @@ webreduce.editor.make_fieldUI = webreduce.editor.make_fieldUI || {};
           d3.selectAll("#plotdiv svg g.series").each(function(d,i) {
             // i is index of dataset
             var series_select = d3.select(this);
+            if (series_select.classed("hidden")) {
+              // don't interact with hidden series.
+              return
+            }
             var index_list = datum.value[i];
             series_select.selectAll(".dot").each(function(dd, ii) {
               // ii is the index of the point in that dataset.
