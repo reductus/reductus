@@ -2,6 +2,7 @@ from __future__ import print_function
 
 import sys
 import os
+import importlib
 from pprint import pprint
 import traceback
 import json
@@ -18,10 +19,8 @@ from dataflow.cache import use_redis, use_diskcache, get_cache
 from dataflow.calc import process_template
 import dataflow.core as df
 
-import dataflow.modules.refl
-from dataflow.modules.refl import INSTRUMENT # default
-import dataflow.modules.ospec
-import dataflow.modules.sans
+import dataflow.modules
+
 from dataflow import fetch
 
 try:
@@ -113,7 +112,7 @@ def get_file_metadata(source="ncnr", pathlist=None):
     return metadata
 
 @expose
-def get_instrument(instrument_id=INSTRUMENT):
+def get_instrument(instrument_id="ncnr.refl"):
     """
     Make the instrument definition available to clients
     """
@@ -243,8 +242,8 @@ def create_instruments():
     # load refl instrument if nothing specified in config
     instruments = getattr(config, 'instruments', ['refl'])
     for instrument_id in instruments:
-        getattr(dataflow.modules, instrument_id).define_instrument()
-
+        instrument_module = importlib.import_module('dataflow.modules.{instr}'.format(instr=instrument_id))
+        instrument_module.define_instrument()
 
 if __name__ == '__main__':
     create_instruments()
