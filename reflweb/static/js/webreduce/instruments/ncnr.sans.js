@@ -104,6 +104,18 @@ webreduce.instruments['ncnr.sans'] = webreduce.instruments['ncnr.sans'] || {};
     return plottable
   };
   
+  var NEXUZ_REGEXP = /\.nxz\.[^\.\/]+$/
+  var NEXUS_REGEXP = /\.nxs\.[^\.\/]+(\.zip)?$/
+
+  instrument.files_filter = function(x) {
+    return (
+      (NEXUZ_REGEXP.test(x) &&
+         (/^(fp_)/.test(x) == false) &&
+         (/^rapidscan/.test(x) == false) &&
+         (/^scripted_findpeak/.test(x) == false))
+    )
+  }
+
   instrument.load_file = load_sans;
   instrument.default_categories = [
     [["analysis.groupid"]],

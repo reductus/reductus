@@ -174,6 +174,9 @@ webreduce.instruments['ncnr.refl'] = webreduce.instruments['ncnr.refl'] || {};
     else if (result.datatype == 'ncnr.refl.refldata' && result.values.length > 0) {
       plottable = plot_refl(result.values);
     }
+    else if (result.datatype == 'ncnr.refl.footprint.params'){
+      plottable = {"type": "functional", "data": result.values}
+    }
     else if (result.datatype.match(params_expression)) {
       plottable = {"type": "params", "params": result.values}
     }
@@ -331,6 +334,20 @@ webreduce.instruments['ncnr.refl'] = webreduce.instruments['ncnr.refl'] || {};
       "method": "set_data"
     }
   ]
+
+  var NEXUZ_REGEXP = /\.nxz\.[^\.\/]+$/
+  var NEXUS_REGEXP = /\.nxs\.[^\.\/]+(\.zip)?$/
+  var BRUKER_REGEXP = /\.ra[ws]$/
+
+  instrument.files_filter = function(x) {
+    return (
+      BRUKER_REGEXP.test(x) ||
+      ((NEXUZ_REGEXP.test(x) || NEXUS_REGEXP.test(x))&&
+         (/^(fp_)/.test(x) == false) &&
+         (/^rapidscan/.test(x) == false) &&
+         (/^scripted_findpeak/.test(x) == false))
+    )
+  }
     
 })(webreduce.instruments['ncnr.refl']);
 

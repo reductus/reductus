@@ -113,6 +113,18 @@ webreduce.instruments['ncnr.ospec'] = webreduce.instruments['ncnr.ospec'] || {};
     return plottable
   };
   
+  var NEXUZ_REGEXP = /\.nxz\.[^\.\/]+$/
+  var NEXUS_REGEXP = /\.nxs\.[^\.\/]+(\.zip)?$/
+
+  instrument.files_filter = function(x) {
+    return (
+      (NEXUZ_REGEXP.test(x) &&
+         (/^(fp_)/.test(x) == false) &&
+         (/^rapidscan/.test(x) == false) &&
+         (/^scripted_findpeak/.test(x) == false))
+    )
+  }
+
   instrument.load_file = load_ospec;
   instrument.default_categories = [
     [["friendly_name"]],
