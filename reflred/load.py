@@ -19,10 +19,10 @@ def check_datasource(source):
     if not source in DATA_SOURCES:
         raise RuntimeError("Need to set reflred.steps.load.DATA_SOURCES['" + source + "'] first!")
 
-def url_load(fileinfo):
-    path, mtime, entries = fileinfo['path'], fileinfo['mtime'], fileinfo['entries']
+def url_load(fileinfo, check_timestamps=True):
+    path, mtime, entries = fileinfo['path'], fileinfo.get('mtime', None), fileinfo.get('entries', None)
     filename = basename(path)
-    content = url_get(fileinfo)
+    content = url_get(fileinfo, mtime_check=check_timestamps)
     if filename.endswith('.raw') or filename.endswith('.ras'):
         return xrawref.load_from_string(filename, content, entries=entries)
     else:
@@ -41,8 +41,8 @@ def find_mtime(path, source="ncnr"):
     return {'path': path, 'mtime': timestamp, 'source': source, 'entries': None}
 
 
-def url_load_list(files=None):
+def url_load_list(files=None, check_timestamps=True):
     if files is None:
         return []
-    result = [entry for fileinfo in files for entry in url_load(fileinfo)]
+    result = [entry for fileinfo in files for entry in url_load(fileinfo, check_timestamps=check_timestamps)]
     return result
