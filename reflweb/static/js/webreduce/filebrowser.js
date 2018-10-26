@@ -2,9 +2,6 @@
 'use strict';
 
 (function () {
-  var NEXUS_ZIP_REGEXP = /\.nxz\.[^\.\/]+$/
-  var ZIP_REGEXP = /\.zip$/
-  var BRUKER_REGEXP = /\.ra[ws]$/
   var PARALLEL_LOAD = true;
 
   function make_range_icon(global_min_x, global_max_x, min_x, max_x) {
@@ -22,18 +19,13 @@
 
   function categorizeFiles(files, files_metadata, datasource, path, target_in) {
     var instrument_id = webreduce.editor._instrument_id;
+    var instrument = webreduce.instruments[instrument_id];
     var load_promises = [];
     var fileinfo = {};
     var file_objs = {};
-    var datafiles = files.filter(function(x) {return (
-      BRUKER_REGEXP.test(x) ||
-      ZIP_REGEXP.test(x) ||
-      (NEXUS_ZIP_REGEXP.test(x) &&
-       (/^(fp_)/.test(x) == false) &&
-       (/^rapidscan/.test(x) == false) &&
-       (/^scripted_findpeak/.test(x) == false))
-      )});
-    var loader = webreduce.instruments[instrument_id].load_file;
+    var loader = instrument.load_file;
+    var files_filter = instrument.files_filter || function(x) {return true};
+    var datafiles = files.filter(files_filter);
     var numloaded = 0;
     var numdatafiles = datafiles.length;
 
@@ -50,10 +42,10 @@
     var p = loader(load_params, file_objs, false, 'metadata')
       .then(function(results) {
         webreduce.editor._datafiles = results;
-        var categories = webreduce.instruments[instrument_id].categories;
+        var categories = instrument.categories;
         var treeinfo = file_objs_to_tree(file_objs, categories, datasource);
         // add decorators etc to the tree with postprocess:
-        var postprocess = webreduce.instruments[instrument_id].postprocess;
+        var postprocess = instrument.postprocess;
         if (postprocess) { postprocess(treeinfo, file_objs) }
         var target = $(target_in).find(".remote-filebrowser");
         var jstree = target.jstree({
@@ -73,9 +65,9 @@
     p.then(function(target) {
       var ready = new Promise(function(resolve, reject) {
         target.on("ready.jstree", function() {
-          if (webreduce.instruments[instrument_id].decorators) {
+          if (instrument.decorators) {
               var dp = Promise.resolve();
-              webreduce.instruments[instrument_id].decorators.forEach(function(d) {
+              instrument.decorators.forEach(function(d) {
                   dp = dp.then(function() { return d(target, file_objs) });
               });
             }
