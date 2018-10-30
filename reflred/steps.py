@@ -72,13 +72,15 @@ def nop(data):
     return data
 
 @module
-def ncnr_load(filelist=None):
+def ncnr_load(filelist=None, check_timestamps=True):
     """
     Load a list of nexus files from the NCNR data server.
 
     **Inputs**
 
     filelist (fileinfo[]): List of files to open.
+
+    check_timestamps (bool): verify that timestamps on file match request
 
     **Returns**
 
@@ -94,7 +96,7 @@ def ncnr_load(filelist=None):
     auto_divergence = True
 
     datasets = []
-    for data in url_load_list(filelist):
+    for data in url_load_list(filelist, check_timestamps=check_timestamps):
         if auto_divergence:
             data = divergence(data)
         datasets.append(data)
@@ -998,7 +1000,7 @@ def fit_footprint(data, fit_range=[None, None], origin=False):
 
     fitted_footprint (ncnr.refl.footprint.params?) : slope and intercept
 
-    2016-04-29 Paul Kienzle
+    2016-04-30 Paul Kienzle
     """
     from .footprint import fit_footprint
     if fit_range is None:
