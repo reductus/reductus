@@ -313,8 +313,10 @@ webreduce.instruments = webreduce.instruments || {};
       var list_instruments = webreduce.server_api.list_instruments()
         .then(function(instruments) {
           instruments.forEach(function(d, i){
-            $("#main_menu #instrument_menu ul").append($("<li />").append($("<div />", {text: d})));
-              $("#main_menu").menu("refresh");
+            jQuery.getScript("js/webreduce/instruments/" + d + ".js").then(function() {
+              $("#main_menu #instrument_menu ul").append($("<li />").append($("<div />", {text: d})));
+                $("#main_menu").menu("refresh");
+            });
           });
           return instruments[0];
         });
