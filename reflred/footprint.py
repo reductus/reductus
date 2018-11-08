@@ -22,7 +22,7 @@ class FootprintData(object):
             "intercept_fit_error": self.dp[1]
         }
     def get_plottable(self):
-        return self.get_metadata()
+        return {"params": self.get_metadata(), "type": "params"}
 
 def fit_footprint(data, low, high, kind='line'):
     """
