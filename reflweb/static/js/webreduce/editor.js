@@ -376,10 +376,11 @@ webreduce.editor = webreduce.editor || {};
   }
   
   webreduce.editor.show_plots_params = function(data) {
+    var params = data.values.map(function(v) { return v.params });
     d3.selectAll("#plotdiv").selectAll("svg, div").remove();
     d3.select("#plotdiv")
       .selectAll(".paramsDisplay")
-      .data(data.params).enter()
+      .data(params).enter()
         .append("div").append("pre")
         .classed("paramsDisplay", true)
         .text(function(d) {return JSON.stringify(d, null, 2)})
