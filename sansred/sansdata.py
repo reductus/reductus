@@ -177,13 +177,6 @@ class SansData(object):
         metadata.update(pythonize(self.metadata))
         return metadata
 
-    def dumps(self):
-        return pickle.dumps(self)
-
-    @classmethod
-    def loads(cls, str):
-        return pickle.loads(str)
-
 def pythonize(obj):
     output = {}
     for a in obj:
@@ -219,24 +212,25 @@ class Sans1dData(object):
     def to_dict(self):
         props = dict([(p, getattr(self, p, None)) for p in self.properties])
         return pythonize(props)
-        #props = {}
-        #properties = self.properties
-        #for a in properties:
-        #    attr = getattr(obj, a)
-        #    if isinstance(attr, np.integer):
-        #        attr = int(attr)
-        #    elif isinstance(attr, np.floating):
-        #        attr = float(attr)
-        #    elif isinstance(attr, np.ndarray):
-        #        attr = attr.tolist()
-        #    elif isinstance(attr, datetime.datetime):
-        #        attr = [attr.year, attr.month, attr.day,
-        #                attr.hour, attr.minute, attr.second]
-        #    props[a] = attr
-        #return props
 
     def get_plottable(self):
-        return self.to_dict()
+        label = "%s: %s" % (self.metadata['run.experimentScanID'], self.metadata['sample.labl'])
+        xdata = self.x.tolist()
+        ydata = self.v.tolist()
+        yerr = self.dv.tolist()
+        data = [[x, y, {"yupper": y+dy, "ylower": y-dy, "xupper": x, "xlower": x}] for x,y,dy in zip(xdata, ydata, yerr)]
+        plottable = {
+            "type": "1d",
+            "options": {
+                "axes": {
+                    "xaxis": {"label": self.xlabel},
+                    "yaxis": {"label": self.vlabel}
+                },
+                "series": [{"label": label}]
+            },
+            "data": [data]
+        }
+        return plottable
 
     def get_metadata(self):
         return self.to_dict()
