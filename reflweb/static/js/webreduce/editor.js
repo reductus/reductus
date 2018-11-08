@@ -261,7 +261,7 @@ webreduce.editor = webreduce.editor || {};
             $.extend(true, fields_in, v);
           });
         });
-        webreduce.editor.show_plots(datasets_in);
+        webreduce.editor.show_plots([datasets_in]);
         fields.forEach(function(field) {
           if (webreduce.editor.make_fieldUI[field.datatype]) {
             var value;
@@ -318,31 +318,35 @@ webreduce.editor = webreduce.editor || {};
         });
     return webreduce.editor.calculate(params_to_calc, recalc_mtimes)
       .then(function(results) {
-        var output;
-        if (results.length < 1) { 
-          output = {"datatype": "none", "values": []} 
-        }
-        else { 
-          output = results[0];
-          for (var i=1; i<results.length; i++) {
-            if (results[i].datatype == output.datatype) {
-              output.values = output.values.concat(results[i].values);
-            }
-          }
-        }
-        webreduce.editor.show_plots(output);
+        webreduce.editor.show_plots(results);
       });
   }
   
-  webreduce.editor.show_plots = function(result) {
-    var instrument_id = this._instrument_id;
-    var new_plotdata = webreduce.instruments[instrument_id].plot(result);
+  webreduce.editor.show_plots = function(results) {
+    var new_plotdata;
+    if (results.length == 0 || results[0] == null || results[0].values.length == 0) { 
+      new_plotdata = null; 
+    }
+    else { 
+      new_plotdata = {values: [], type: null, xcol: null, ycol: null}
+      new_plotdata.type = results[0].values[0].type;
+      results.forEach(function(r) {
+        var values = r.values || [];
+        values.forEach(function(v) {
+          if (new_plotdata.type == null && v.type) {
+            new_plotdata.type = v.type;
+          }
+          new_plotdata.values.push(v);
+        });
+      });
+    }
+
     var active_plot;
     d3.select("#plot_title").text("");
     d3.select("#plotdiv").on("mouseover.setRawHandler", function() {
       d3.select("body").on("keydown.triggerRawDump", function() {
         if (d3.event.key.toLowerCase() == "r") {
-          console.log(result);
+          console.log(results);
         }
       })
     });
@@ -384,7 +388,7 @@ webreduce.editor = webreduce.editor || {};
   
   webreduce.editor.show_plots_2d = function(plotdata) {
     var aspect_ratio = null,
-        datas = plotdata.datas,
+        values = plotdata.values,
         mychart = webreduce.editor._active_plot;
         
     // set up plot control buttons and options:
@@ -464,7 +468,7 @@ webreduce.editor = webreduce.editor || {};
     if (!(mychart && mychart.type && mychart.type == "heatmap_2d")) {
       d3.selectAll("#plotdiv").selectAll("svg, div").remove();
       mychart = new heatChart.default({margin: {left: 100}} );
-      d3.selectAll("#plotdiv").data(datas[0].z).call(mychart);
+      d3.selectAll("#plotdiv").data(values[0].z).call(mychart);
       webreduce.callbacks.resize_center = function() {mychart.autofit()};
     }
         
@@ -472,7 +476,7 @@ webreduce.editor = webreduce.editor || {};
       //d3.select(this).datum(parseInt(this.value));
       //console.log(d3.select(this), d3.select(this).datum(), this.value);
       var plotnum = (this.value != null) ? parseInt(this.value) : 0,
-          data = datas[plotnum];
+          data = values[plotnum];
       var title = data.title || "";
       d3.select("#plot_title").text(title);
       data.ztransform = $("#zscale").val();
@@ -501,7 +505,7 @@ webreduce.editor = webreduce.editor || {};
     }
     
     d3.select("#plot_controls .plot-select input")
-      .attr("max", datas.length-1)
+      .attr("max", values.length-1)
       .on("change", update_plotselect)
       .on("click", update_plotselect)
       .on("input", update_plotselect)
@@ -523,7 +527,62 @@ webreduce.editor = webreduce.editor || {};
     });
   }
   
+  function merge_nd_plotdata(plotdata) {
+    var values = plotdata.values;
+    var column_sets = values.map(function(pd) {
+      return pd.columns
+    });
+    var all_columns = column_sets[0];
+    column_sets.forEach(function(new_cols) {
+      // match by label.
+      var ncl = Object.keys(new_cols).map(function(nc) { return new_cols[nc].label })
+      for (var c in all_columns) {
+        var cl = all_columns[c].label;
+        if (ncl.indexOf(cl) < 0) {
+          delete all_columns[c];
+        }
+      }
+    });
+    var datas = [];
+    var series = [];
+    var xcol;
+    var ycol;
+
+    values.forEach(function(pd) {
+      var colset = {}
+      for (var col in all_columns) {
+        if (all_columns.hasOwnProperty(col)) {
+          colset[col] = pd.datas[col];
+        }
+      } 
+      datas.push(colset);
+      series.push({label: pd.title});
+      xcol = xcol || pd.options.xcol;
+      ycol = ycol || pd.options.ycol;
+    });
+
+    var plottable = {
+      type: "nd",
+      columns: all_columns,
+      
+      options: {
+        series: series,
+        axes: {
+          xaxis: {label: all_columns[xcol].label + "(" + all_columns[xcol].units + ")"}, 
+          yaxis: {label: all_columns[ycol].label + "(" + all_columns[ycol].units + ")"}},
+        xcol: xcol, 
+        ycol: ycol,
+        errorbar_width: 0
+      },
+      data: datas
+    }
+
+    return plottable
+    
+  }
+
   webreduce.editor.show_plots_nd = function(plotdata) {
+    var plotdata = merge_nd_plotdata(plotdata);
     var options = {
       series: [],
       legend: {show: true, left: 150},
@@ -531,8 +590,6 @@ webreduce.editor = webreduce.editor || {};
     };
     var cols = plotdata.columns || [];
     jQuery.extend(true, options, plotdata.options);
-    
-    
     
     var make_chartdata = function(xcol, ycol) { 
       var chartdata = plotdata.data.map(function(colset) {
@@ -712,7 +769,47 @@ webreduce.editor = webreduce.editor || {};
     return mychart
   }
   
+  function merge_1d_plotdata(plotdata) {
+    var values = plotdata.values;
+    var datas = [];
+    var series = [];
+    var xlabel, ylabel;
+    values.forEach(function(v) {
+      series = series.concat(v.options.series || [{}]);
+      datas = datas.concat(v.data);
+      if (v.options && v.options.axes) {
+        if (v.options.axes.xaxis && v.options.axes.xaxis.label != null) {
+          var new_xlabel = v.options.axes.xaxis.label;
+          if (xlabel != null && xlabel != new_xlabel) {
+            alert("inconsistent x-axis: " + xlabel + ", " + new_xlabel);
+          }
+          xlabel = new_xlabel;
+        }
+        if (v.options.axes.yaxis && v.options.axes.yaxis.label != null) {
+          var new_ylabel = v.options.axes.yaxis.label;
+          if (ylabel != null && ylabel != new_ylabel) {
+            alert("inconsistent y-axis: " + ylabel + ", " + new_ylabel);
+          }
+          ylabel = new_ylabel;
+        }
+      }
+    })
+    var output = {
+      options: {
+        series: series,
+        axes: {
+          xaxis: {label: xlabel},
+          yaxis: {label: ylabel}
+        }
+      },
+      data: datas,
+      type: "1d"
+    }
+    return output;
+  }
+
   webreduce.editor.show_plots_1d = function(plotdata) {
+    var plotdata = merge_1d_plotdata(plotdata);
     var options = {
       series: [],
       legend: {show: true, left: 150},
@@ -945,7 +1042,7 @@ webreduce.editor = webreduce.editor || {};
             first.values = first.values.concat(results[i].values);
           }
         }
-        webreduce.editor.show_plots(first);
+        webreduce.editor.show_plots([first]);
       });
   }
   
