@@ -39,40 +39,6 @@ webreduce.instruments['ncnr.dcs'] = webreduce.instruments['ncnr.dcs'] || {};
       return results;
     })
   }
-  
-  instrument.plot = function(results) {
-    var plottable;
-    var by_datatype = {};
-    results.forEach(function(r) {
-      if (r && r.datatype && r.values) {
-        by_datatype[r.datatype] = by_datatype[r.datatype] || [];
-        for (var iv=0; iv<r.values.length; iv++) {
-          by_datatype[r.datatype].push(r.values[iv]);
-        }
-      }
-    });
-    var datatypes = Object.keys(by_datatype);
-    var single_datatype = (datatypes.length == 1) ? datatypes[0] : null;
-    if (results == [null]) {
-      return
-    }
-    else if (single_datatype && (single_datatype == 'ncnr.dcs.eq' || single_datatype == 'ncnr.dcs.ef2th') && (by_datatype[single_datatype]).length > 0) {
-      //plottable = result.values.slice(-1)[0].plottable[0];
-      plottable = {
-        "type": "2d", 
-        "datas": by_datatype[single_datatype]
-      }
-    }
-    else if (single_datatype && single_datatype == 'ncnr.dcs.raw' && (by_datatype[single_datatype]).length > 0) {
-      //plottable = plot_1d(result.values);
-      //console.log(result.values);
-      plottable = null;
-    }
-    else if (single_datatype && single_datatype == 'ncnr.dcs.params' && (by_datatype[single_datatype]).length > 0) {
-      plottable = {"type": "params", "params": by_datatype[single_datatype]}
-    }
-    return plottable
-  };
 
   var DCS_REGEXP = /\.dcs\.gz$/
   instrument.files_filter = function(x) { return (DCS_REGEXP.test(x)) };
