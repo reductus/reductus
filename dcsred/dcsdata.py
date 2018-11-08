@@ -31,7 +31,7 @@ class RawData(object):
         return _toDictItem(self.metadata)
 
     def get_plottable(self):
-        return _toDictItem(self.metadata)
+        return {"entry": "entry", "type": "params", "params": {"name": self.name}}
 
     def get_metadata(self):
         return _toDictItem(self.metadata)
@@ -146,7 +146,24 @@ class DCS1dData(object):
         return _toDictItem(props)
 
     def get_plottable(self):
-        return self.to_dict()
+        label = "%s: %s" % (self.metadata['name'], self.metadata['entry'])
+        xdata = self.x.tolist()
+        ydata = self.v.tolist()
+        yerr = self.dv.tolist()
+        data = [[x, y, {"yupper": y+dy, "ylower": y-dy, "xupper": x, "xlower": x}] for x,y,dy in zip(xdata, ydata, yerr)]
+        plottable = {
+            "type": "1d",
+            "title": self.metadata.get("name", "DCS 1d data"),
+            "options": {
+                "axes": {
+                    "xaxis": {"label": self.xlabel},
+                    "yaxis": {"label": self.vlabel}
+                },
+                "series": [{"label": label}]
+            },
+            "data": [data]
+        }
+        return plottable
 
     def get_metadata(self):
         return self.to_dict()
