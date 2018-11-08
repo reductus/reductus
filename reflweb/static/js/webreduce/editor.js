@@ -258,7 +258,7 @@ webreduce.editor = webreduce.editor || {};
           .map(function(d) {return im[d.id]})
         field_inputs.forEach(function(d) {
           d.values.forEach(function(v) {
-            $.extend(true, fields_in, v);
+            $.extend(true, fields_in, v.params);
           });
         });
         webreduce.editor.show_plots([datasets_in]);
