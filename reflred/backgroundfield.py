@@ -38,11 +38,15 @@ def background_reservoir(ai, epsD, af, epssi, Fd, scale):
     """
     Calculates background from a reservoir surrounded by Si
     """
-    A = np.exp(-epsD * (1. / np.sin(ai) + 1. / np.sin(af)))
 
-    res = (1 - A) / (1. + np.sin(ai) / np.sin(af))
+    with np.errstate(divide='ignore'):
 
-    si = epssi * (Fd * np.sin(af) / np.sin(ai + af)) * (0.5 + 0.5 * A)
+
+        A = np.exp(-epsD * (1. / np.sin(ai) + 1. / np.sin(af)))
+
+        res = (1 - A) / (1. + np.sin(ai) / np.sin(af))
+
+        si = epssi * (Fd * np.sin(af) / np.sin(ai + af)) * (0.5 + 0.5 * A)
 
     # first term is the background value; the second contains intermediates used
     # in the Jacobian function and error calculation
@@ -54,9 +58,11 @@ def background_reservoir_jac(ai, epsD, af, epssi, Fd, scale):
     parameters (scale, epsD)
     """
     A, res, si = background_reservoir(ai, epsD, af, epssi, Fd, scale)[1]
-    dA_depsD = -(1. / np.sin(ai) + 1. / np.sin(af)) * A
-    dres_depsD = -dA_depsD / (1. + np.sin(ai) / np.sin(af))
-    dsi_depsD = epssi * (Fd * np.sin(af) / np.sin(ai + af)) * (0.5 * dA_depsD)
+
+    with np.errstate(divide='ignore'):
+        dA_depsD = -(1. / np.sin(ai) + 1. / np.sin(af)) * A
+        dres_depsD = -dA_depsD / (1. + np.sin(ai) / np.sin(af))
+        dsi_depsD = epssi * (Fd * np.sin(af) / np.sin(ai + af)) * (0.5 * dA_depsD)
 
     J = np.array([res + si, scale*(dres_depsD + dsi_depsD)])
 
@@ -68,11 +74,7 @@ def background_reservoir_error(ai, epsD, af, epssi, Fd, scale, pcov):
     """
     J = background_reservoir_jac(ai, epsD, af, epssi, Fd, scale)
 
-    df = list()
-    for j in J.T:
-        df.append(np.sqrt(j.T.dot(pcov.dot(j))))
-
-    return np.array(df)
+    return np.sqrt(np.array([j.T.dot(pcov.dot(j)) for j in J.T]))
 
 def fractional_solid_angle(s4, LS4, L4D, HD):
     """
@@ -181,7 +183,7 @@ def fit_background_field(back, epsD0, epssi, fit_scale, scale_value=1.0, LS3=380
         lenpout = len(pout)
 
     # Calculate fitting error (not used) and chi-squared (only reported)
-    perr, chisq = np.sqrt(np.diag(pcov)), np.sqrt(np.sum(minfunc(pout)**2) / (len(v) - lenpout))
+    perr, chisq = np.sqrt(np.diag(pcov)), np.sum(minfunc(pout)**2) / (len(v) - lenpout)
 
     # for testing purposes only
     if 0:
