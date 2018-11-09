@@ -170,7 +170,9 @@ class DCS1dData(object):
 
     def export(self):
         fid = io.BytesIO()
-        fid.write(_b("# %s\n" % json.dumps(_toDictItem(self.metadata)).strip("{}")))
+        #fid.write(_b("# %s\n" % json.dumps(_toDictItem(self.metadata)).strip("{}")))
+        metadata = {"name": self.metadata["name"]}
+        fid.write(_b("# %s\n" % json.dumps(metadata).strip("{}")))
         columns = {"columns": [self.xlabel, self.vlabel, "uncertainty", "resolution"]}
         units = {"units": [self.xunits, self.vunits, self.vunits, self.xunits]}
         fid.write(_b("# %s\n" % json.dumps(columns).strip("{}")))
