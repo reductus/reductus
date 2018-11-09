@@ -12,6 +12,32 @@ __all__ = [] # type: List[str]
 # Action methods
 ALL_ACTIONS = [] # type: List[Callable[Any, Any]]
 
+def cache(action):
+    """
+    Decorator which adds the *cached* attribute to the function.
+
+    Use *@cache* to force caching to always occur (for example, when
+    the function references remote resources, vastly reduces memory, or is
+    expensive to compute.  Use *@nocache* when debugging a function
+    so that it will be recomputed each time regardless of whether or not it
+    is seen again.
+    """
+    action.cached = True
+    return action
+
+def nocache(action):
+    """
+    Decorator which adds the *cached* attribute to the function.
+
+    Use *@cache* to force caching to always occur (for example, when
+    the function references remote resources, vastly reduces memory, or is
+    expensive to compute.  Use *@nocache* when debugging a function
+    so that it will be recomputed each time regardless of whether or not it
+    is seen again.
+    """
+    action.cached = False
+    return action
+
 def module(action):
     """
     Decorator which records the action in *ALL_ACTIONS*.
@@ -174,15 +200,15 @@ def sliceEQData(data, slicebox=[None,None,None,None]):
 
     yout (eq1d) : yslice
 
-    2018-04-20 Brian Maranville
+    2018-04-22 Brian Maranville
     """
-    
+
+    from .dcsdata import DCS1dData
+
     if slicebox is None:
         slicebox = [None, None, None, None]
     xmin, xmax, ymin, ymax = slicebox
     
-    res = data.copy()
-
     # then use q-values
     xdata = data.xaxis['values']
     ydata = data.yaxis['values']
@@ -191,9 +217,6 @@ def sliceEQData(data, slicebox=[None,None,None,None]):
     xmax = data.xaxis["max"]
     x_in = data.xaxis["values"]
     y_in = data.yaxis["values"]
-    qymin = data.qy_min if data.qy_min is not None else data.qy.min()
-    qymax = data.qy_max if data.qy_max is not None else data.qy.max()
-    qy_in = np.linspace(qymin, qymax, data.data.x.shape[1])
     
     xslice = slice(get_index(x_in, xmin), get_index(x_in, xmax))
     yslice = slice(get_index(y_in, ymin), get_index(y_in, ymax))
@@ -206,11 +229,11 @@ def sliceEQData(data, slicebox=[None,None,None,None]):
     x_sum = np.sum(data.data[dataslice], axis=1)
     y_sum = np.sum(data.data[dataslice], axis=0)
     
-    x_output = DCS1dData(x_out, x_sum.x, dx=dx, dv=x_sum.variance, xlabel=data.xaxis["label"], vlabel="I",
+    x_output = DCS1dData(x_out, x_sum, dx=dx, dv=dx, xlabel=data.xaxis["label"], vlabel="I",
                     xunits="", vunits="neutrons", metadata=data.metadata)
-    y_output = DCS1dData(y_out, y_sum.x, dx=dy, dv=y_sum.variance, xlabel=data.yaxis["label"], vlabel="I",
+    y_output = DCS1dData(y_out, y_sum, dx=dy, dv=dy, xlabel=data.yaxis["label"], vlabel="I",
                     xunits="", vunits="neutrons", metadata=data.metadata)
-                        
+
     return x_output, y_output
 
 def Elam(lam):
@@ -246,3 +269,12 @@ def Ef_from_timechannel(timeChannel, t_SD_min, speedRatDenom, masterSpeed):
     """
     return 8.41e7 / (t_SD_min + (timeChannel+1)*    (6e4 *(speedRatDenom/masterSpeed))   )**2
 
+def get_index(t, x):
+    if (x == "" or x == None):
+        return None
+    if float(x) > t.max():
+        return None
+    if float(x) < t.min():
+        return None
+    tord = np.argsort(t)
+    return tord[np.searchsorted(t, float(x), sorter=tord)]
