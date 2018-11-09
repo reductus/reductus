@@ -179,7 +179,7 @@ class DCS1dData(object):
         fid.seek(0)
         name = getattr(self, "name", "default_name")
         entry = getattr(self.metadata, "entry", "default_entry")
-        return {"name": name, "entry": entry, "export_string": fid.read(), "file_suffix": ".sans1d.dat"}
+        return {"name": name, "entry": entry, "export_string": fid.read(), "file_suffix": ".dcs.dat"}
 
 class Parameters(dict):
     def get_metadata(self):
