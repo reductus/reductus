@@ -899,7 +899,7 @@ class ReflData(Group):
                     data_columns[label] = sub_col
         if self.scan_value is not None:
             for si, sv in enumerate(self.scan_value):
-                new_col = {};
+                new_col = {}
                 new_label = self.scan_label[si]
                 new_col['label'] = new_label
                 new_col['is_scan'] = True
