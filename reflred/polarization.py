@@ -220,7 +220,7 @@ class PolarizationData:
         return output
         
     def get_plottable(self):
-        return self.get_metadata()
+        return {"params": self.get_metadata(), "type": "params"}
 
 def apply_polarization_correction(data, polarization, spinflip=True):
     polarization.apply(data, spinflip=spinflip)

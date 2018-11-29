@@ -333,14 +333,10 @@
         var values = r.values || [];
         var fi = fileinfo[i];
         var entry = values.find(function(e) { return e.entry == fi.entries[0] });
-        if (datatype == null) { datatype = r.datatype }
-        else if (datatype != r.datatype) {
-          console.log("warning: datatypes do not match in loaded files");
-        }
         return entry;
       });
-      var result = {"datatype": datatype, "values": entries}
-      webreduce.editor._active_plot = webreduce.editor.show_plots(result);
+      var result = {"values": entries}
+      webreduce.editor._active_plot = webreduce.editor.show_plots([result]);
     });
   }
 
