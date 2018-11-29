@@ -55,16 +55,6 @@ webreduce.instruments['ncnr.refl'] = webreduce.instruments['ncnr.refl'] || {};
     return output
   }
   
-  var primary_axis = {
-    "specular": "Qz_target",
-    "background+": "Qz_target",
-    "background-": "Qz_target",
-    "slit": "Qz_target",
-    "intensity": "Qz_target", // what slit scans are called in refldata
-    "rock qx": "Qx_target", // curve with fixed Qz
-    "rock sample": "sample/angle_x", // Rocking curve with fixed detector angle
-    "rock detector": "detector/angle_x" //Rocking curve with fixed sample angle
-  }
   
   var get_refl_item = function(obj, path) {
     var result = obj,
@@ -75,113 +65,6 @@ webreduce.instruments['ncnr.refl'] = webreduce.instruments['ncnr.refl'] || {};
     return result;
   }
   
-  function plot_refl(refl_objs) {
-    // entry_ids is list of {path: path, filename: filename, entryname: entryname} ids
-    var series = new Array();
-    var column_sets = refl_objs.map(function(ro) {
-      let columns = ro.columns || {};
-      var nscans = (ro.scan_value || []).length;
-      var sv = ro.scan_value || [];
-      var nscans = sv.length;
-      /*
-      sv.forEach(function(s,i) {
-        var new_col = {};
-        var new_label = ro.scan_label[i];
-        new_col.label = new_label;
-        new_col.is_scan = true;
-        var new_units = ro.scan_units[i];
-        if (new_units) { new_col.units = new_units }
-        columns[new_label] = new_col
-      })
-      */
-      return columns;
-    });
-    var datas = [], xcol;
-    var ycol = "v";
-    var xcol = "x";
-    var all_columns = column_sets[0];
-    column_sets.forEach(function(new_cols) {
-      // match by label.
-      var ncl = Object.keys(new_cols).map(function(nc) { return new_cols[nc].label })
-      for (var c in all_columns) {
-        var cl = all_columns[c].label;
-        if (ncl.indexOf(cl) < 0) {
-          delete all_columns[c];
-        }
-      }
-    });
-    /*
-    var all_columns = d3.set(column_names[0]); // start with the first set
-    column_names.forEach(function(new_cols) {
-      // if this has columns names that the previous do not, ignore;
-      // likewise, if it does not have column names that did exist, throw those out.
-      all_columns.forEach(function(cn) {
-        if (new_cols.indexOf(cn) < 0) {
-          this.remove(cn);
-        }
-      });
-    });
-    // ... then convert back to an array.
-    all_columns = all_columns.values();
-    */
-    refl_objs.forEach(function(entry) {
-      var intent = entry['intent'];
-      var colset = {}
-      for (var col in all_columns) {
-        if (all_columns.hasOwnProperty(col)) {
-          var target = col;
-          if (all_columns[col].is_scan) {
-            var target_index = entry.scan_label.indexOf(col);
-            target = 'scan_value/' + target_index;
-          }
-          colset[col] = {"values": get_refl_item(entry, target)};
-          var errorbars_lookup = all_columns[col].errorbars;
-          if (errorbars_lookup != null) {
-            colset[col]["errorbars"] = get_refl_item(entry, errorbars_lookup);
-          }
-        }
-      }
-      var xydata = [], x, y;
-      datas.push(colset);
-      series.push({label: entry.name + ":" + entry.entry});
-
-    });
-    var plottable = {
-      type: "nd",
-      columns: all_columns,
-      
-      options: {
-        series: series,
-        axes: {
-          xaxis: {label: all_columns[xcol].label + "(" + all_columns[xcol].units + ")"}, 
-          yaxis: {label: all_columns[ycol].label + "(" + all_columns[ycol].units + ")"}},
-        xcol: xcol, 
-        ycol: ycol,
-        errorbar_width: 0,
-      },
-      data: datas
-    }
-
-    return plottable
-  } 
-  
-  instrument.plot = function(result) {
-    var plottable;
-    var params_expression = /(\.params|\.poldata|\.deadtime)$/;
-    if (result == null || result.datatype == null) {
-      return
-    }
-    else if (result.datatype == 'ncnr.refl.refldata' && result.values.length > 0) {
-      plottable = plot_refl(result.values);
-    }
-    else if (result.datatype == 'ncnr.refl.footprint.params'){
-      plottable = {"type": "functional", "data": result.values}
-    }
-    else if (result.datatype.match(params_expression)) {
-      plottable = {"type": "params", "params": result.values}
-    }
-    return plottable;
-  };
   instrument.load_file = load_refl; 
   instrument.default_categories = [
     [["sample", "name"]],
