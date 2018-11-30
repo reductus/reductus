@@ -1,0 +1,12 @@
+{
+  "wires": [],
+    
+  "modules": [
+    {
+      "x": 100,
+      "title": "LoadTAS",
+      "module": "ncnr.tas.LoadTAS",
+      "y": 100
+    }
+  ]
+}
