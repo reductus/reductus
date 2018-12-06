@@ -17,7 +17,7 @@
     return output
   }
 
-  function categorizeFiles(files, files_metadata, datasource, path, target_in) {
+  function categorizeFiles(files_metadata, datasource, path, target_in) {
     var instrument_id = webreduce.editor._instrument_id;
     var instrument = webreduce.instruments[instrument_id];
     var load_promises = [];
@@ -25,6 +25,7 @@
     var file_objs = {};
     var loader = instrument.load_file;
     var files_filter = instrument.files_filter || function(x) {return true};
+    var files = Object.keys(files_metadata);
     var datafiles = files.filter(files_filter);
     var numloaded = 0;
     var numdatafiles = datafiles.length;
@@ -239,8 +240,8 @@
       .append(remove_datasource)
       .append('<span class="datasource">source: ' + datasource + '</span>');
 
-    var files = dirdata.files,
-        metadata = dirdata.files_metadata;
+    var metadata = dirdata.files_metadata;
+    var files = Object.keys(metadata);
     files.sort(function(a,b) { return dirdata.files_metadata[b].mtime - dirdata.files_metadata[a].mtime });
     // dirdata is {'subdirs': list_of_subdirs, 'files': list_of_files, 'pathlist': list_of_path
 
@@ -296,7 +297,7 @@
 
     // instrument-specific categorizers
     // webreduce.instruments[instrument_id].categorizeFiles(files, metadata, pathlist.join("/"), target_id);
-    return categorizeFiles(files, metadata, datasource, pathlist.join("/"), target);
+    return categorizeFiles(metadata, datasource, pathlist.join("/"), target);
   }
 
   function handleChecked(d, i, stopPropagation) {
