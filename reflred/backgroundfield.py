@@ -5,7 +5,6 @@ from __future__ import division
 
 import numpy as np
 import scipy.optimize as so
-import matplotlib.pyplot as plt
 from copy import copy
 
 #from dataflow.lib.uncertainty import Uncertainty as U, interp
@@ -187,6 +186,7 @@ def fit_background_field(back, epsD0, epssi, fit_scale, scale_value=1.0, LS3=380
 
     # for testing purposes only
     if 0:
+        import matplotlib.pyplot as plt
         plt.errorbar(np.arange(len(v)), v, dv, fmt='o')
         plt.plot(np.arange(len(v)), background_reservoir(ai, pout[1], af, epssi, Fd, pout[0])[0] * SA)
         plt.show()
