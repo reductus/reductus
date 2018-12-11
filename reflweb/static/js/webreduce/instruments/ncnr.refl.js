@@ -173,9 +173,9 @@ webreduce.instruments['ncnr.refl'] = webreduce.instruments['ncnr.refl'] || {};
     // for refl, this will return a list of entries, but
     // we want to decorate the file that contains the entries.
     var viewer_link = {
-      "ncnr": "https://ncnr.nist.gov/ipeek/nexus-zip-viewer.html",
-      "ncnr_DOI": "https://ncnr.nist.gov/ipeek/nexus-zip-viewer.html",
-      "charlotte": "https://charlotte.ncnr.nist.gov/ipeek/nexus-zip-viewer.html"
+      "ncnr": "https://ncnr.nist.gov/ncnrdata/view/nexus-zip-viewer.html",
+      "ncnr_DOI": "https://ncnr.nist.gov/ncnrdata/view/nexus-zip-viewer.html",
+      "charlotte": "https://charlotte.ncnr.nist.gov/ncnrdata/view/nexus-zip-viewer.html"
     }
     to_decorate.forEach(function(leaf, i) {
       var parent_id = leaf.parent;
