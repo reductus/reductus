@@ -89,6 +89,7 @@ def ncnr_load(filelist=None, check_timestamps=True):
     2016-06-29 Brian Maranville
     | 2017-08-21 Brian Maranville change to refldata, force cache invalidate
     | 2018-06-18 Brian Maranville change to nexusref to ignore areaDetector
+    | 2018-12-10 Brian Maranville get_plottable routines moved to python data container from js
     """
     # NB: Fileinfo is a structure with
     #     { path: "location/on/server", mtime: timestamp }
@@ -1364,6 +1365,7 @@ def super_load(filelist=None,
     | 2018-06-18 Brian Maranville change to nexusref to ignore areaDetector
     | 2018-06-20 Brian Maranville promote detector.wavelength to column (and resolution)
     | 2018-08-29 Paul Kienzle ignore sampleTilt field for NG7
+    | 2018-12-10 Brian Maranville get_plottable routines moved to python data container from js
     """
     from .load import url_load_list
     #from .intent import apply_intent
