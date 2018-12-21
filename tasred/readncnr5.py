@@ -35,7 +35,32 @@ class datareader(object):
         return self.metadata
 
     def get_plottable(self):
-        return [self.metadata, self.columnlist, self.columndict]
+        from collections import OrderedDict
+        metadata = self.metadata
+        series = [{"label": "%s" % (metadata['filename'])}]
+        columns = OrderedDict([(c, {'label': c, 'units': ''}) for c in self.columnlist])
+        xcol = self.columnlist[0]
+        ycol = "counts"
+        datas = dict([(c, {"values": d}) for c,d in self.columndict.items()])
+        datas['counts']['errorbars'] = N.sqrt(self.columndict['counts']).tolist()
+        plottable = {
+            "type": "nd",
+            "title": "Triple Axis data",
+            "entry": "entry",
+            "columns": columns,
+            "options": {
+                "series": series,
+                "axes": {
+                    "xaxis": {"label": xcol},
+                    "yaxis": {"label": ycol}
+                },
+                "xcol": xcol,
+                "ycol": ycol,
+                "errorbar_width": 0
+            },
+            "datas": datas
+        }
+        return plottable
 
     def data_abstraction_layer(self):
         self.metadata = {}
