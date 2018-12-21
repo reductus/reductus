@@ -30,7 +30,7 @@ class BackgroundFieldData(object):
             "fit_chi-squared": self.chisq
         }
     def get_plottable(self):
-        return self.get_metadata()
+        return {"params": self.get_metadata(), "type": "params"}
 
 
 def background_reservoir(ai, epsD, af, epssi, Fd, scale):
