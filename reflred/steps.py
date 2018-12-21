@@ -89,6 +89,7 @@ def ncnr_load(filelist=None, check_timestamps=True):
     2016-06-29 Brian Maranville
     | 2017-08-21 Brian Maranville change to refldata, force cache invalidate
     | 2018-06-18 Brian Maranville change to nexusref to ignore areaDetector
+    | 2018-12-10 Brian Maranville get_plottable routines moved to python data container from js
     """
     # NB: Fileinfo is a structure with
     #     { path: "location/on/server", mtime: timestamp }
@@ -873,6 +874,132 @@ def subtract_background(data, backp, backm, align="none"):
     apply_background_subtraction(data, backp, backm)
     return data
 
+@module
+def fit_background_field(back, fit_scale=True, scale=1.0, epsD0=0.01, epssi=2.857e-4, LS3=380, LS4=1269, LSD=1675, HD=150, maxF=75, Qcutoff=0.05):
+    """
+    Fit the background field from a thin liquid reservoir to background
+    datasets. Background datasets:
+
+     o Can be any at any (non-specular) condition
+
+     o Should already be normalized by incident intensity
+
+     o Can involve any number of scans
+
+    The background datasets are fit using a Levenberg-Marquardt algorithm to a model
+    involving a two parameters: epsD, the product of the incoherent attenuation coefficient
+    of the reservoir (eps) and the reservoir thickness D, and a scale factor that accounts for
+    uncertainty in the instrument geometry, i.e. the post-sample slit distances and/or the
+    solid angle subtended by the detector.
+
+    The uncertainty in the optimized parameters are estimated from the covariance matrix,
+    and the chi-squared value of the fit (typically 1.5 or less) is also calculated and available
+    in the parameter output. Note that the covariance matrix itself is passed to subract_background_field
+    because the parameters are correlated.
+
+    If the scale factor is not included in the fit, the accuracy of the calculation depends critically on
+    correct values for the instrument geometry. The geometry is inferred from the data files;
+    if it is missing, certain values can be overridden using the data entry boxes. These include the
+    slit4-detector distance (0 for instruments with no slit4) and the detector height (for horizontal
+    reflectometers, the width).
+
+    The calculation assumes a geometry like that of the NIST liquid flow cell, in which the liquid reservoir
+    is encased in silicon. For a different cell material (e.g. sapphire), the appropriate incoherent
+    extinction coefficient for the material should replace the default Si value.
+
+    **Inputs**
+
+    back (refldata[]) : group of background datasets
+
+    epsD0 {Reservoir extinction coefficient guess (mm^-1)} (float:mm^-1) : initial guess
+    for product of incoherent extinction coefficient of reservoir and reservoir thickness
+
+    epssi {Extinction coefficient of Si (mm^-1)} (float:mm^-1) : incoherent
+    extinction coefficient of Si or cell materials
+
+    fit_scale {Include scale factor in fit?} (bool) : True if scale factor on detector solid angle
+    should be included in fit (use if uncertain of the instrument geometry)
+
+    scale {Scale factor value} (float) : Value of scale factor. Initial guess if scale
+    factor is included in fit; otherwise fixed scale factor value.
+
+    Qcutoff {Target Qz cutoff (Ang^-1)} (float:Ang^-1) : Cutoff target Q_z value below which background data
+    are excluded from background fit
+
+    LS3 {sample-slit3 distance (mm)} (float:mm) : Distance from sample to slit3
+
+    LS4 {sample-slit4 distance (mm)} (float:mm) : Distance from sample to slit4
+
+    LSD {sample-detector distance (mm)} (float:mm) : Distance from sample to detector
+
+    HD {detector height (mm)} (float:mm) : Height of detector
+
+    maxF {maximum beam footprint (mm)} (float:mm) : Sample dimension in beam direction
+
+    **Returns**
+
+    fitparams (ncnr.refl.backgroundfield.params) : fit parameters, covariances, and chi-squared
+
+    fit (refldata[]) : ReflData structure containing fit outputs (for plotting against
+    background inputs to inspect background field fit)
+
+    2018-06-12 David P. Hoogerheide; last updated 2018-10-12
+    """
+
+    from .backgroundfield import fit_background_field
+
+    bff, outfitdata = fit_background_field(back, epsD0, epssi, fit_scale, scale, LS3, LS4, LSD, HD, Qcutoff, maxF)
+
+    return bff, outfitdata
+
+
+@module
+def subtract_background_field(data, bfparams, epsD=None, epsD_var=None, scale=None, scale_var=None, scale_epsD_covar=None):
+    """
+    Subtract the background field from a thin liquid reservoir from
+    a specular dataset, which should already be normalized by the incident intensity.
+    Applies the background field fit with the "Fit Background Field" module. See that
+    module's description for more details.
+
+    **Inputs**
+
+    data (refldata[]) : specular data
+
+    bfparams (ncnr.refl.backgroundfield.params) : background field parameters
+
+    epsD {epsD} (float) : p
+
+    epsD_var {epsD variance} (float) : dp2
+
+    scale {scale} (float) : s
+
+    scale_var {scale factor variance} : ds2
+
+    scale_epsD_covar {covariance of scale factor and epsD} : dsp
+
+    **Returns**
+
+    output (refldata[]) : background subtracted specular data
+
+    2018-06-12 David P. Hoogerheide; last updated 2018-10-12
+    """
+
+    from .backgroundfield import apply_background_field_subtraction
+
+    data = [copy(d) for d in data]
+
+    if epsD is None: epsD = bfparams.p
+    if epsD_var is None: epsD_var = bfparams.dp2
+    if scale is None: scale = bfparams.s
+    if scale_var is None: scale_var = bfparams.ds2
+    if scale_epsD_covar is None: scale_epsD_covar = bfparams.dsp
+
+    pcov = np.array([[scale_var, scale_epsD_covar],
+                     [scale_epsD_covar, epsD_var]])
+
+    apply_background_field_subtraction(data, epsD, bfparams.epssi, bfparams.LS3, bfparams.LS4, bfparams.L4D, bfparams.HD, bfparams.maxF, scale, pcov)
+
+    return data
 
 @module
 def divide_intensity(data, base):
@@ -1238,6 +1365,7 @@ def super_load(filelist=None,
     | 2018-06-18 Brian Maranville change to nexusref to ignore areaDetector
     | 2018-06-20 Brian Maranville promote detector.wavelength to column (and resolution)
     | 2018-08-29 Paul Kienzle ignore sampleTilt field for NG7
+    | 2018-12-10 Brian Maranville get_plottable routines moved to python data container from js
     """
     from .load import url_load_list
     #from .intent import apply_intent

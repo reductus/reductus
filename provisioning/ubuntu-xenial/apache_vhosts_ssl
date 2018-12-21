@@ -29,7 +29,7 @@
             Options -Indexes
         </Directory>
         
-        Header set Cache-Control "must-revalidate"
+        Header set Cache-Control "no-cache, must-revalidate"
         ProxyPass "/RPC2" "balancer://mycluster"
         ProxyPassReverse "/RPC2" "balancer://mycluster"
         
