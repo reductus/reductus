@@ -118,7 +118,7 @@ g.legend rect.hidden {
     fill-opacity: 0.1;
 }
 
-.mainview rect {
+.mainview > rect {
   fill: none;
   user-select: none;
   -webkit-user-select: none;
