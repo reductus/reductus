@@ -26,7 +26,7 @@ packages = find_packages(exclude=['reflbin'])
 #sys.dont_write_bytecode = False
 dist = setup(
     name='reductus',
-    version='0.1a4',
+    version='0.1b2',
     author='Paul Kienzle',
     author_email='paul.kienzle@nist.gov',
     url='http://github.com/reductus/reductus',
