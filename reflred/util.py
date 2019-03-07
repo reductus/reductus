@@ -412,43 +412,6 @@ def demo_error_prop(title, rate, monitors, attenuators=None,
         show("Gaussian", y2_g, "no monitor uncertainty")
 
 
-def _fetch_url_uncached(url):
-    # type: (str) -> str
-    import urllib2
-    try:
-        fd = urllib2.urlopen(url)
-        ret = fd.read()
-    finally:
-        fd.close()
-    return ret
-
-
-def fetch_url(url, url_cache="/tmp"):
-    """
-    Fetch a file from a url.
-
-    The content of the file will be cached in */tmp/_path_to_file.ext* for
-    the url *http://path/to/file.ext*.  If *url_cache* is None, then no caching
-    is performed.  Set *url_cache* to the private cache directory if you don't
-    want the files cleaned by the tmp reaper.
-    """
-    from urlparse import urlparse
-    import os
-
-    if url_cache is None:
-        return _fetch_url_uncached(url)
-
-    cached_path = os.path.join(url_cache, urlparse(url).path.replace('/', '_'))
-    if os.path.exists(cached_path):
-        with open(cached_path) as fd:
-            ret = fd.read()
-    else:
-        ret = _fetch_url_uncached(url)
-        with open(cached_path, 'wb') as fd:
-            fd.write(ret)
-    return ret
-
-
 if __name__ == "__main__":
     demo_error_prop("mixed monitor", 10.0, [2000, 2000, 4000])
     demo_error_prop("mixed monitor", 1.0, [2000, 2000, 4000])

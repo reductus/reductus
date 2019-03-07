@@ -21,33 +21,7 @@ from . import bruker
 from . import rigaku
 from . import refldata
 from .resolution import FWHM2sigma
-from .util import fetch_url
 
-
-def load_from_string(filename, data, entries=None):
-    """
-    Load a nexus file from a string, e.g., as returned from url.read().
-    """
-    fd = BytesIO(data)
-    entries = load_entries(filename, fd, entries=entries)
-    fd.close()
-    return entries
-
-
-def load_from_uri(uri, entries=None, url_cache="/tmp"):
-    """
-    Load a nexus file from disk or from http://, https:// or file://.
-
-    Remote files are cached in *url_cache*.  Use None to fetch without caching.
-    """
-    if uri.startswith('file://'):
-        return load_entries(uri[7:], entries=entries)
-    elif uri.startswith('http://') or uri.startswith('https://'):
-        filename = os.path.basename(uri)
-        data = fetch_url(uri, url_cache=url_cache)
-        return load_from_string(filename, data, entries=entries)
-    else:
-        return load_entries(uri, entries=entries)
 
 def load_entries(filename, file_obj=None, entries=None):
     """
@@ -313,6 +287,7 @@ class RigakuRefl(refldata.ReflData):
 def demo():
     from .scale import apply_norm
     from .steps import divergence
+    from .load import load_from_uri
     import sys
     if len(sys.argv) == 1:
         print("usage: python -m reflred.xrawref file...")
@@ -320,7 +295,7 @@ def demo():
     plotted_datasets = 0
     for filename in sys.argv[1:]:
         try:
-            entries = load_from_uri(filename)
+            entries = load_from_uri(filename, loader=load_entries)
         except Exception as exc:
             print("Error while loading", filename, ':', str(exc))
             #traceback.print_exc(); raise

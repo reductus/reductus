@@ -1,12 +1,12 @@
 # This program is public domain
-
 """
 Load a NeXus file into a reflectometry data structure.
 """
+from __future__ import division, print_function
+
 import os
 import tempfile
 from zipfile import ZipFile, _EndRecData
-from io import BytesIO
 
 import numpy as np
 import h5py as h5
@@ -18,7 +18,6 @@ from dataflow.lib import h5_open
 from dataflow.lib.strings import _s, _b
 
 from . import refldata
-from .util import fetch_url
 
 def data_as(group, fieldname, units, rep=1):
     """
@@ -52,32 +51,6 @@ def nxfind(group, nxclass):
             yield entry
 
 
-def load_from_string(filename, data, entries=None):
-    """
-    Load a nexus file from a string, e.g., as returned from url.read().
-    """
-    fd = BytesIO(data)
-    entries = load_entries(filename, fd, entries=entries)
-    fd.close()
-    return entries
-
-
-def load_from_uri(uri, entries=None, url_cache="/tmp"):
-    """
-    Load a nexus file from disk or from http://, https:// or file://.
-
-    Remote files are cached in *url_cache*.  Use None to fetch without caching.
-    """
-    if uri.startswith('file://'):
-        return load_entries(uri[7:], entries=entries)
-    elif uri.startswith('http://') or uri.startswith('https://'):
-        filename = os.path.basename(uri)
-        data = fetch_url(uri, url_cache=url_cache)
-        return load_from_string(filename, data, entries=entries)
-    else:
-        return load_entries(uri, entries=entries)
-
-
 def load_metadata(filename, file_obj=None):
     """
     Load the summary info for all entries in a NeXus file.
@@ -94,7 +67,21 @@ def load_metadata(filename, file_obj=None):
     return measurements
 
 
+def load_metadata(filename, file_obj=None):
+    """
+    Load the summary info for all entries in a NeXus file.
+    """
+    return load_entries(filename, file_obj=file_obj,
+                        meta_only=True, entry_loader=NCNRNeXusRefl)
+
+
 def load_entries(filename, file_obj=None, entries=None):
+    return load_nexus_entries(filename, file_obj=file_obj,
+                              meta_only=False, entry_loader=NCNRNeXusRefl)
+
+
+def load_nexus_entries(filename, file_obj=None, entries=None,
+                       meta_only=False, entry_loader=None):
     """
     Load the summary info for all entries in a NeXus file.
     """
@@ -105,8 +92,9 @@ def load_entries(filename, file_obj=None, entries=None):
         if entries is not None and name not in entries:
             continue
         if _s(entry.attrs.get('NX_class', None)) == 'NXentry':
-            data = NCNRNeXusRefl(entry, name, filename)
-            data.load(entry)
+            data = entry_loader(entry, name, filename)
+            if not meta_only:
+                data.load(entry)
             measurements.append(data)
     if file_obj is None:
         file.close()

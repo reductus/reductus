@@ -475,7 +475,7 @@ def mask_points(data, mask_indices=None):
     | 2019-07-02 Brian Maranville: change self.points after mask
     """
     data = copy(data)
-    data.log('mask_points(%r)' % mask_indices)
+    data.log('mask_points(%r)' % (mask_indices,))
     output = mask_action(data=data, mask_indices=mask_indices)
     return output
 
