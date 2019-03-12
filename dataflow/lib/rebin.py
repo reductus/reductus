@@ -8,8 +8,8 @@ try:
 except ImportError:
     pass
 
-def rebin(x, I, xo, dtype=np.float64, Io=None):
-    # type: (Sequence, Sequence, Sequence, Optional[np.ndarray], Union[str, type]) -> np.ndarray
+def rebin(x, I, xo, dtype=np.float64):
+    # type: (Sequence, Sequence, Sequence, Union[str, type]) -> np.ndarray
     """
     Rebin a vector.
 
@@ -18,11 +18,6 @@ def rebin(x, I, xo, dtype=np.float64, Io=None):
     *xo* are the new bin edges.
 
     *I* are the existing counts (one fewer than edges).
-
-    *Io* is a placeholder for the output.  If provided, be sure that it is
-    an array of the correct shape and size.  Note: there is no longer a space
-    advantage to supplying *Io* since an intermediate value is now used to
-    compose the answer.
 
     *dtype* is the type to use for the intensity vectors.  This can be
     integer (uint8, uint16, uint32) or real (float32 or f, float64 or d).
@@ -39,13 +34,7 @@ def rebin(x, I, xo, dtype=np.float64, Io=None):
         raise TypeError("input array incorrect shape %s"%I.shape)
 
     ix = _rebin_counts(x, I, xo, dtype=dtype)
-
-    # Fill Io if it was given, otherwise return ix
-    if Io is not None:
-        Io[:] = ix
-        return Io
-    else:
-        return ix
+    return ix
 
 
 def _rebin_counts(x, I, xo, dtype):
@@ -74,8 +63,8 @@ def _rebin_counts(x, I, xo, dtype):
     return ix[::-1] if reverse_xo else ix
 
 
-def rebin2d(x, y, I, xo, yo, dtype=None, Io=None):
-    # type: (Sequence, Sequence, Sequence, Sequence, Sequence, Optional[np.ndarray], Union[str, type]) -> np.ndarray
+def rebin2d(x, y, I, xo, yo, dtype=np.float64):
+    # type: (Sequence, Sequence, Sequence, Sequence, Sequence, Union[str, type]) -> np.ndarray
     """
     Rebin a matrix.
 
@@ -107,11 +96,6 @@ def rebin2d(x, y, I, xo, yo, dtype=None, Io=None):
     Note that total intensity is not preserved for integer rebinning.
     The algorithm uses truncation so total intensity will be down on
     average by half the total number of bins.
-
-    Io will be used if present, if it is contiguous and if it has the
-    correct shape and type for the input.  Otherwise it will raise a
-    TypeError.  This will allow you to rebin the slices of an appropriately
-    ordered matrix without making copies.
     """
     # Coerce inputs to arrays
     I = np.asarray(I)
@@ -120,12 +104,8 @@ def rebin2d(x, y, I, xo, yo, dtype=None, Io=None):
     if shape_in != I.shape or any(len(v.shape) != 1 for v in (x, y, xo, yo)):
         raise TypeError("input array incorrect shape %s"%str(I.shape))
 
-    ixy = _rebin_counts_2D(x, y, I, xo, yo, dtype=dtype)
-    if Io is not None:
-        Io[:, :] = ixy
-        return Io
-    else:
-        return ixy
+    Io = _rebin_counts_2D(x, y, I, xo, yo, dtype=dtype)
+    return Io
 
 
 def _rebin_counts_2D(x, y, I, xo, yo, dtype):
