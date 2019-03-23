@@ -4,7 +4,7 @@
   <title>reductus - data reduction from the web</title>
 <!--  <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">-->
   <link rel="icon" type="image/x-icon" href="favicon.ico">
-  <link rel="stylesheet" href="//www.ncnr.nist.gov/instruments/magik/jstree/dist/themes/default/style.min.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/vakata/jstree@3.3/dist/themes/default/style.min.css"/>
   <link rel="stylesheet" href="css/layout-default-latest.css" />
   <link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
   <link rel="stylesheet" href="css/web_reduction_filebrowser.css" />
@@ -17,7 +17,7 @@
   
 <!--  <script type="text/javascript" src="//ajax.googleapis.com/ajax/libs/jqueryui/1.10.3/jquery-ui.min.js"></script>-->
 
-  <script type="text/javascript" src="//www.ncnr.nist.gov/instruments/magik/jstree/dist/jstree.js"></script>
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/gh/vakata/jstree@3.3/dist/jstree.min.js"></script>
   <script type="text/javascript" src="js/pouchdb.min.js"></script>
   <script type="text/javascript" src="js/sha1.js"></script>
   <script type="text/javascript" src="js/jquery.layout-latest.js"></script>
@@ -30,23 +30,20 @@
   <script type="text/javascript" src="js/z-worker.js"></script>
 
   <script src="https://d3js.org/d3.v4.min.js" charset="utf-8"></script>
-  <script type="text/javascript" src="//www.ncnr.nist.gov/instruments/magik/d3-science-v4/lib/jquery-extend.js"></script>
-  <script type="text/javascript" src="//www.ncnr.nist.gov/instruments/magik/d3-science-v4/lib/xy-chart.js"></script>
-  <script type="text/javascript" src="//www.ncnr.nist.gov/instruments/magik/d3-science-v4/lib/rectangle-select.js"></script>
-  <script type="text/javascript" src="//www.ncnr.nist.gov/instruments/magik/d3-science-v4/lib/heat-chart.js"></script>
-  <script type="text/javascript" src="//www.ncnr.nist.gov/instruments/magik/d3-science-v4/lib/colormap.js" charset="utf-8"></script>
-  <script type="text/javascript" src="//www.ncnr.nist.gov/instruments/magik/d3-science-v4/lib/dataflow-editor.js"></script>
-  <script type="text/javascript" src="//www.ncnr.nist.gov/instruments/magik/d3-science-v4/lib/x-slice-interactor.js"></script>
-  <script type="text/javascript" src="//www.ncnr.nist.gov/instruments/magik/d3-science-v4/lib/rectangle-interactor.js"></script>
-  <script type="text/javascript" src="//www.ncnr.nist.gov/instruments/magik/d3-science-v4/lib/monotonic-function-interactor.js"></script>
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/gh/bmaranville/d3-science-v4@0.1.1/lib/jquery-extend.js"></script>
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/gh/bmaranville/d3-science-v4@0.1.1/lib/xy-chart.js"></script>
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/gh/bmaranville/d3-science-v4@0.1.1/lib/rectangle-select.js"></script>
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/gh/bmaranville/d3-science-v4@0.1.1/lib/heat-chart.js"></script>
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/gh/bmaranville/d3-science-v4@0.1.1/lib/colormap.js" charset="utf-8"></script>
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/gh/bmaranville/d3-science-v4@0.1.1/lib/dataflow-editor.js"></script>
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/gh/bmaranville/d3-science-v4@0.1.1/lib/x-slice-interactor.js"></script>
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/gh/bmaranville/d3-science-v4@0.1.1/lib/rectangle-interactor.js"></script>
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/gh/bmaranville/d3-science-v4@0.1.1/lib/monotonic-function-interactor.js"></script>
 
   <script type="text/javascript" src="js/array-find-polyfill.js"></script>
   <script type="text/javascript" src="js/es6-promise.min.js"></script>
   <script type="text/javascript" src="js/es6-findIndex.js"></script>
   <script type="text/javascript" src="js/webreduce/server_api/hug_msgpack.js"></script>
-  <script type="text/javascript" src="js/webreduce/instruments/ncnr.refl.js"></script>
-  <script type="text/javascript" src="js/webreduce/instruments/ncnr.ospec.js"></script>
-  <script type="text/javascript" src="js/webreduce/instruments/ncnr.sans.js"></script>
   <script type="text/javascript" src="js/webreduce/editor.js"></script>
   <script type="text/javascript" src="js/webreduce/fieldUI.js"></script>
   <script type="text/javascript" src="js/webreduce/editor.handle_module_contextmenu.js"></script>  
@@ -80,6 +77,14 @@
             citation</a></span>
         <span id="instrument_name" class="instrument-name"></span>
         <span id="statusline"></span>
+    </div>
+    <div id="branding" style="float:right;height:2em;">
+      <a href="https://www.nist.gov/ncnr" target="_blank">
+        <img src="NCNR_nonlogo.png" alt="NCNR logo" title="NIST Center for Neutron Research" style="height:2em;padding-right:1.5em;">
+      </a>
+      <a href="https://www.nist.gov" target="_blank">
+        <img src="nist-logo.svg" alt="NIST logo" title="National Institute of Standards and Technology" style="height:2em;">
+      </a>
     </div>
 </div>
  

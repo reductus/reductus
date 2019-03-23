@@ -8,6 +8,7 @@ from reflred.refldata import ReflData
 from reflred.polarization import PolarizationData
 from reflred.deadtime import DeadTimeData
 from reflred.footprint import FootprintData
+from reflred.backgroundfield import BackgroundFieldData
 
 INSTRUMENT = "ncnr.refl"
 
@@ -120,6 +121,7 @@ def define_instrument():
     deadtime = df.DataType(INSTRUMENT+".deadtime", DeadTimeData)
     footprint = df.DataType(INSTRUMENT+".footprint.params", FootprintData)
     flux = df.DataType(INSTRUMENT+".flux.params", FluxData)
+    backgroundfield = df.DataType(INSTRUMENT + ".backgroundfield.params", BackgroundFieldData)
 
     #import json
     #import os
@@ -135,7 +137,7 @@ def define_instrument():
         id=INSTRUMENT,
         name='NCNR reflectometer',
         menu=[('steps', modules)],
-        datatypes=[refldata, poldata, deadtime, footprint, flux],
+        datatypes=[refldata, poldata, deadtime, footprint, flux, backgroundfield],
         template_defs=templates.get_templates(INSTRUMENT),
         )
 

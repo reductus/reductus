@@ -201,6 +201,8 @@ def build_dataset(group, columns):
     data.detector.angle_x = columns['Td']
     data.slit1.x = columns['s1']
     data.slit2.x = columns['s2']
+    data.slit3.x = columns['s3']
+    data.slit4.x = columns['s4']
     data.detector.wavelength = columns['L']
     data.detector.wavelength_resolution = columns['dL']
     data.monitor.count_time = columns['time']
@@ -233,6 +235,8 @@ def get_fields(group):
     columns = dict(
         s1=[data.slit1.x for data in group],
         s2=[data.slit2.x for data in group],
+        s3=[data.slit3.x for data in group],
+        s4=[data.slit4.x for data in group],
         dT=[data.angular_resolution for data in group],
         Ti=[data.sample.angle_x for data in group],
         Td=[data.detector.angle_x for data in group],

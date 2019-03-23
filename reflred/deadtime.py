@@ -31,7 +31,7 @@ class DeadTimeData(object):
         return metadata
     
     def get_plottable(self):
-        return self.get_metadata()
+        return {"params": self.get_metadata(), "type": "params"}
 
     def log(self, msg):
         self.messages.append(msg)

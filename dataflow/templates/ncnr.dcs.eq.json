@@ -1,0 +1,28 @@
+{
+  "wires": [
+    {
+      "source": [
+        0,
+        "output"
+      ],
+      "target": [
+        1,
+        "rawdata"
+      ]
+    }
+  ],
+  "modules": [
+    {
+      "x": 100,
+      "title": "LoadDCS",
+      "module": "ncnr.dcs.LoadDCS",
+      "y": 100
+    },
+    {
+      "module": "ncnr.dcs.RawToEQ",
+      "title": "RawtoEQ",
+      "x": 255,
+      "y": 100
+    }
+  ]
+}

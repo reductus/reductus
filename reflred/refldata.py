@@ -899,7 +899,7 @@ class ReflData(Group):
                     data_columns[label] = sub_col
         if self.scan_value is not None:
             for si, sv in enumerate(self.scan_value):
-                new_col = {};
+                new_col = {}
                 new_label = self.scan_label[si]
                 new_col['label'] = new_label
                 new_col['is_scan'] = True
@@ -1060,14 +1060,51 @@ class ReflData(Group):
             entry = getattr(self, "entry", "default_entry")
             return {"name": name, "entry": entry, "export_string": export_string, "file_suffix": ".refl"}
 
-
-
-
     def get_plottable(self):
-        return self.todict()
+        columns = self.columns
+        data_arrays = [self.scan_value[self.scan_label.index(p)] if v.get('is_scan', False) else get_item(self, p) for p,v in columns.items()]
+        data_arrays = [np.resize(d, self.points).tolist() for d in data_arrays]
+        datas = dict([(c, {"values": d}) for c,d in zip(columns.keys(), data_arrays)])
+        # add errorbars:
+        for k in columns.keys():
+            if 'errorbars' in columns[k]:
+                print('errorbars found for column %s' % (k,))
+                errorbars = get_item(self, columns[k]['errorbars'])
+                datas[k]["errorbars"] = errorbars.tolist()
+        name = getattr(self, "name", "default_name")
+        entry = getattr(self, "entry", "default_entry")
+        series = [{"label": "%s:%s" % (name, entry)}]
+        xcol = "x"
+        ycol = "v"
+        plottable = {
+            "type": "nd",
+            "title": "%s:%s" % (name, entry),
+            "entry": entry,
+            "columns": columns,
+            "options": {
+                "series": series,
+                "axes": {
+                    "xaxis": {"label": "%s(%s)" % (columns[xcol]["label"], columns[xcol]["units"])},
+                    "yaxis": {"label": "%s(%s)" % (columns[ycol]["label"], columns[ycol]["units"])}
+                },
+                "xcol": xcol,
+                "ycol": ycol,
+                "errorbar_width": 0
+            },
+            "datas": datas
+        }
+        #print(plottable)
+        return plottable
 
     def get_metadata(self):
         return self.todict()
+
+def get_item(obj, path):
+    result = obj
+    keylist = path.split("/")
+    while len(keylist) > 0:
+        result = getattr(result, keylist.pop(0), {})
+    return result
 
 def _write_key_value(fid, key, value):
     value_str = json.dumps(value)

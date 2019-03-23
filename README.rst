@@ -29,7 +29,19 @@ with the local datastore enabled in config)
 Installation and use
 --------------------
 
-Method 1: Docker Compose
+Method 1: pypi install
+~~~~~~~~~~~~~~~~~~~~~~
+
+::
+
+    pip install reductus
+
+Then start the server with::
+
+    reductus
+
+
+Method 2: Docker Compose
 ~~~~~~~~~~~~~~~~~~~~~~~~
 This is the easiest way to get started.  Clone the repo, the change directories
 into the repository and run::
@@ -59,8 +71,8 @@ install and use that instead of localhost, e.g. ::
 
 *In my case it was http://192.168.99.100:8000/reflweb/web_reduction_filebrowser.html*
 
-Method 2: Run directly in console
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Method 3: Clone github repo and build, run directly in console
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Clone the repo, then install (might be a good idea to make a virtualenv first),
 e.g.
 

@@ -169,6 +169,7 @@ class BrukerRefl(refldata.ReflData):
             self.detector.counts_variance *= ATTENUATOR**2
         self.detector.dims = self.detector.counts.shape
         n = self.detector.dims[0]
+        self.points = n
         self.monitor.counts = np.zeros_like(self.detector.counts)
         self.monitor.counts_variance = np.zeros_like(self.detector.counts)
         self.monitor.count_time = np.ones_like(self.detector.counts) * data['step_time']
@@ -258,6 +259,7 @@ class RigakuRefl(refldata.ReflData):
             self.detector.counts /= attenuation
             self.detector.counts_variance /= attenuation**2
         n = self.detector.dims[0]
+        self.points = n
         self.detector.wavelength = np.ones(n) * data['wavelength']
         self.detector.wavelength_resolution = np.ones(n) * data['wavelength_resolution']
         self.monitor.counts = np.zeros(n)

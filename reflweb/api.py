@@ -34,9 +34,10 @@ IS_PY3 = sys.version_info[0] >= 3
 # will exist in parent (reduction) folder...
 if os.path.exists(os.path.join(os.path.dirname(__file__), "..", ".git")):
     import subprocess
-    server_git_hash = subprocess.Popen(["git", "rev-parse", "HEAD"], stdout=subprocess.PIPE).stdout.read().strip()
+    cwd = os.path.dirname(__file__)
+    server_git_hash = subprocess.Popen(["git", "rev-parse", "HEAD"], cwd=cwd, stdout=subprocess.PIPE).stdout.read().strip()
     if IS_PY3: server_git_hash = server_git_hash.decode('ascii')
-    server_mtime = int(subprocess.Popen(["git", "log", "-1", "--pretty=format:%ct"], stdout=subprocess.PIPE).stdout.read().strip())
+    server_mtime = int(subprocess.Popen(["git", "log", "-1", "--pretty=format:%ct"], cwd=cwd, stdout=subprocess.PIPE).stdout.read().strip())
     print("running git rev-parse HEAD", server_git_hash, server_mtime)
 else:
     # otherwise for prebuilt systems use the packaged file that was created in setup.py
