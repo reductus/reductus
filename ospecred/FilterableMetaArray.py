@@ -170,19 +170,20 @@ class FilterableMetaArray(MetaArray):
             'name': self._info[-1].get('filename', '1d data'),
             'entry': self._info[-1].get('entry', ''),
             'columns': column_listing,
-            'data': {xlabel: {'values': x}},
-            'clear_existing': False,
-            'xcol': xlabel,
-            'ycol': cols[0]['name'],
-            'series': [ {'label': self._info[-1].get('friendly_name', '1d data'),
+            "options": {
+                "series": [ 
+                    {
+                        'label': self._info[-1].get('friendly_name', '1d data'),
                         'color': 'Red',
                         'style': 'line',
-                        'data': { xlabel: {
-                                    'values': x,
-                                    'errors': [0,] * len(x),
-                                     },
-                                },
-                         },],
+                    }
+                ],
+                'xcol': xlabel,
+                'ycol': cols[0]['name'],
+                "errorbar_width": 0
+            },
+            'datas': {xlabel: {'values': x}},
+            'clear_existing': False,
         }
 
         for i, col in enumerate(data_cols):
@@ -191,7 +192,7 @@ class FilterableMetaArray(MetaArray):
             series_y = {'values': y}
             if error_col > 0:
                 series_y['errorbars'] = self['Measurements':'error_'+col].tolist()
-            plottable_data['data'][col] = series_y
+            plottable_data['datas'][col] = series_y
 
         return plottable_data
 
