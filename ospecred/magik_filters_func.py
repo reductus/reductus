@@ -794,7 +794,118 @@ def combine(datasets, grid, operation="union"):
         if key in grid._info[-1]: grid._info[-1].pop(key)
     return grid
 
-def add_to_grid(dataset, grid):
+def subtract(minuend, subtrahend):
+    """ 
+    Takes two data objects and subtracts them.
+    If no grid is provided, use Autogrid filter to generate one.
+
+    **Inputs**
+
+    minuend (ospec2d): input data
+
+    subtrahend (ospec2d): 
+
+    grid (ospec2d?): optional grid
+
+    operation (opt:union|intersection): make grid to cover all points (union) or only where overlapped (intersection) for autogridding
+
+    **Returns**
+
+    combined (ospec2d) : datasets added together
+    """
+    #subtrahend = subtrahend[0] # can only subtract one thing... but from many.
+    if len(minuend) == len(subtrahend): pass # go with it.
+    elif len(subtrahend) == 1: subtrahend = [subtrahend[0] for m in minuend] # broadcast
+    else: raise Exception("I don't know what to do with unmatched argument lengths")
+    results = []
+    for m, s in zip(minuend, subtrahend):
+        dim_m = len(m.shape) - 1
+        dim_s = len(s.shape) - 1
+        if dim_m == 2 and dim_s == 1:
+            print("subtract vector from matrix (broadcast subtrahend)")
+            s_units = s._info[0]['units']
+            m1_units = m._info[0]['units']
+            m2_units = m._info[1]['units']
+            if s_units == m1_units: active_axis = 0
+            elif s_units == m2_units: active_axis = 1
+            else: raise Exception("no matching units to subtract from") # bail out!
+
+            new_axisvals = [m._info[0]['values'].copy(), m._info[1]['values'].copy()]
+            update_axisvals = new_axisvals[active_axis]
+            s_axisvals = s._info[0]['values']
+            overlap = slice(get_index(update_axisvals, s_axisvals[0]), get_index(update_axisvals, s_axisvals[-1]))
+            print(overlap)
+            new_axisvals[active_axis] = update_axisvals[overlap]
+            full_overlap = [slice(None, None), slice(None, None)]
+            full_overlap[active_axis] = overlap
+            full_overlap = tuple(full_overlap)
+
+            output_array = []
+
+            dims = 2
+            data_edges = []
+            for dim in range(dims):
+                av = new_axisvals[dim].copy()
+                dspacing = (av.max() - av.min()) / (len(av) - 1)
+                edges = resize(av, len(av) + 1)
+                edges[-1] = av[-1] + dspacing
+                data_edges.append(edges)
+
+
+
+            #bin_edges = [[data_edges[0][0], data_edges[0][-1]],[data_edges[1][0], data_edges[1][-1]]]
+            av = s_axisvals #give the same treatment to the subtrahend asixvals
+            dspacing = (av.max() - av.min()) / (len(av) - 1)
+            edges = resize(av, len(av) + 1)
+            edges[-1] = av[-1] + dspacing
+            #bin_edges[active_axis] = edges
+
+            #new_s = reb.rebin(edges, s['Measurements':col], data_edges[active_axis])
+
+            #new_sshape = [1,1]
+            #new_sshape[active_axis] = len(new_saxisvals)
+            #new_saxisvals.shape = tuple(new_sshape)
+
+            #new_array = reb.rebin2d(data_edges[0], data_edges[1], array_to_rebin, bin_edges[0], bin_edges[1])
+
+            print(m._info[0]['units'], m._info[1]['units'], s._info[0]['units'])
+            data_array = m.view(ndarray).copy()[full_overlap]
+            new_info = m.infoCopy()
+            new_info[0]['values'] = new_axisvals[0]
+            new_info[1]['values'] = new_axisvals[1]
+            print(data_array.shape, new_axisvals[0].shape, new_axisvals[1].shape)
+            new_data = MetaArray(data_array, info=new_info)
+            subtractable_columns = [c['name'] for c in s._info[1]['cols'] if c['name'].startswith('counts')]
+            #subtractable_columns = dict(subtractable_columns)
+            print("subtractable columns:", subtractable_columns)
+            for i, col in enumerate(new_info[2]['cols']):
+                if col['name'].startswith('counts') and col['name'] in subtractable_columns:
+                    new_s = reb.rebin(edges, s['Measurements':col['name']], data_edges[active_axis])
+                    new_sshape = [1, 1]
+                    new_sshape[active_axis] = len(new_s)
+                    new_s.shape = tuple(new_sshape)
+                    new_data['Measurements':col['name']] -= new_s
+            results.append(new_data)
+        elif dim_m == 2 and dim_s == 2:
+            print("subtract matrix from matrix (in overlap)")
+            grid = Autogrid().apply([m, s], operation='intersection')
+            grid = self.add_to_grid(m, grid, counts_multiplier=1.0)
+            grid = self.add_to_grid(s, grid, counts_multiplier=-1.0)
+            print(grid._info[0]['units'], m._info[1]['units'], s._info[0]['units'], s._info[1]['units'])
+            results.append(grid)
+        elif dim_m == 1 and dim_s == 2:
+            print("can't do this.")
+            print(m._info[0]['units'], s._info[0]['units'], s._info[1]['units'])
+            results.append(m)
+        elif dim_m == 1 and dim_s == 1:
+            print("subtract vector from vector (in overlap)")
+            print(m._info[0]['units'], s._info[0]['units'])
+            results.append(m)
+
+    return results
+
+
+def add_to_grid(dataset, grid, counts_multiplier=1.0):
     dims = 2
     grid_slice = [slice(None, None, 1),] * dims
     bin_edges = []
@@ -823,10 +934,14 @@ def add_to_grid(dataset, grid):
     new_info = dataset.infoCopy()
     for i, col in enumerate(new_info[2]['cols']):
         #if col['name'] in cols_to_add:
+        if 'counts' in col['name']:
+            multiplier = counts_multiplier
+        else:
+            multiplier = 1.0  # add monitor counts and time always
         array_to_rebin = dataset[:, :, col['name']].view(ndarray)
         #print(data_edges, bin_edges)
         new_array = reb.rebin2d(data_edges[0], data_edges[1], array_to_rebin[data_slice], bin_edges[0], bin_edges[1])
-        grid[:, :, col['name']] += new_array[grid_slice]
+        grid[:, :, col['name']] += (multiplier * new_array[grid_slice])
 
     return grid
 
