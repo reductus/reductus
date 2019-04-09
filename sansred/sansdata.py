@@ -36,7 +36,8 @@ class SansData(object):
                  xlabel="X", ylabel="Y",
                  theta=None, Tsam=None, Temp=None, attenuation_corrected=False):
         if isinstance(data, np.ndarray):
-            self.data = Uncertainty(data, data)
+            # Data is counts, so variance is counts.  Set variance on zero counts to 1
+            self.data = Uncertainty(data, data + (data==0))
         else:
             self.data = data
         self.metadata = metadata
