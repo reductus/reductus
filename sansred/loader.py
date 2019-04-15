@@ -4,6 +4,9 @@ SANS data loader
 
 Load SANS NeXus file into :mod:`sansred.sansdata` data structure.
 """
+import io
+from zipfile import ZipFile, is_zipfile
+import h5py
 
 from dataflow.lib import hzf_readonly_stripped as hzf
 from dataflow.lib import unit
@@ -91,6 +94,51 @@ def data_as(field, units):
         converter = unit.Converter(units_in)
         value = converter(field.value, units)
         return value
+
+def h5_open_zip(filename, file_obj=None, mode='r', **kw):
+    """
+    Open a NeXus file, even if it is in a zip file,
+    or if it is a NeXus-zip file.
+
+    If the filename ends in '.zip', it will be unzipped to a temporary
+    directory before opening and deleted on :func:`closezip`.  If opened
+    for writing, then the file will be created in a temporary directory,
+    then zipped and deleted on :func:`closezip`.
+
+    If it is a zipfile but doesn't end in '.zip', it is assumed
+    to be a NeXus-zip file and is opened with that library.
+
+    Arguments are the same as for :func:`open`.
+    """
+    if file_obj is None:
+        file_obj = open(filename, mode=mode, buffering=-1)
+    is_zip = is_zipfile(file_obj) # is_zipfile(file_obj) doens't work in py2.6
+    if is_zip and '.attrs' in ZipFile(file_obj).namelist():
+        # then it's a nexus-zip file, rather than
+        # a zipped hdf5 nexus file
+        f = hzf.File(filename, file_obj)
+        f.delete_on_close = False
+        f.zip_on_close = False
+    else:
+        zip_on_close = None
+        if is_zip:
+            if mode == 'r':
+                zf = ZipFile(file_obj)
+                members = zf.namelist()
+                assert len(members) == 1
+                file_obj = io.BytesIO(zf.read(members[0]))
+                filename = os.path.join(path, members[0])
+            elif mode == 'w':
+                pass
+                #zip_on_close = filename
+                #filename = os.path.join(path, os.path.basename(filename)[:-4])
+            else:
+                raise TypeError("zipped nexus files only support mode r and w")
+        
+        f = h5py.File(file_obj, mode=mode, **kw)
+        f.delete_on_close = is_zip
+        f.zip_on_close = zip_on_close
+    return f
 
 def readSANSNexuz(input_file, file_obj=None):
     """
