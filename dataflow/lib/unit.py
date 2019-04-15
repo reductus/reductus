@@ -189,7 +189,7 @@ class Converter(object):
         try:
             return self.scalebase/self.scalemap[units]
         except KeyError:
-            raise KeyError("%s not in %s"%(units, " ".join(sorted(self.scalemap.keys()))))
+            raise KeyError("%s not in %s (base = %s)"%(units, " ".join(sorted(self.scalemap.keys())), self.base))
 
     def __call__(self, value, units=""):
         # Note: calculating value*1.0 rather than simply returning value
