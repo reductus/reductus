@@ -73,6 +73,8 @@ def process_sourceAperture(field, units):
     v0 = field.value[0].split()
     if len(v0) > 1:
         units_from = v0[1]
+    if type(units_from) == bytes:
+        units_from = units_from.decode('utf-8')
     converter = unit.Converter(units_from)
     return converter(value, units)    
 
@@ -83,7 +85,10 @@ def data_as(field, units):
     if field.name.split('/')[-1] == 'sourceAperture':
         return process_sourceAperture(field, units)
     else:
-        converter = unit.Converter(field.attrs.get('units', ''))
+        units_in = field.attrs.get('units', '')
+        if type(units_in) == bytes:
+            units_in = units_in.decode('utf-8')
+        converter = unit.Converter(units_in)
         value = converter(field.value, units)
         return value
 

@@ -25,6 +25,12 @@ def _b(s):
     else:
         return s
 
+def _s(b):
+    if IS_PY3:
+        return b.decode('utf-8')
+    else:
+        return b
+
 class SansData(object):
     """SansData object used for storing values from a sample file (not div/mask).
        Stores the array of data as a Uncertainty object (detailed in uncertainty.py)
@@ -144,7 +150,7 @@ class SansData(object):
             'entry': self.metadata['entry'],
             'type': '2d',
             'z':  [data.flatten().tolist()],
-            'title': self.metadata['run.filename']+': ' + self.metadata['sample.labl'],
+            'title': _s(self.metadata['run.filename'])+': ' + _s(self.metadata['sample.labl']),
             #'metadata': self.metadata,
             'options': {
                 'fixedAspect': {
