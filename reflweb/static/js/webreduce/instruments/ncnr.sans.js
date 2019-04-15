@@ -45,7 +45,7 @@ webreduce.instruments['ncnr.sans'] = webreduce.instruments['ncnr.sans'] || {};
 
   instrument.files_filter = function(x) {
     return (
-      (NEXUZ_REGEXP.test(x) &&
+      ((NEXUZ_REGEXP.test(x) || NEXUS_REGEXP) &&
          (/^(fp_)/.test(x) == false) &&
          (/^rapidscan/.test(x) == false) &&
          (/^scripted_findpeak/.test(x) == false))
