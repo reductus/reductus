@@ -25,7 +25,10 @@ def data_as(group, fieldname, units, rep=1):
     if fieldname not in group:
         return np.NaN
     field = group[fieldname]
-    converter = unit.Converter(field.attrs.get('units', ''))
+    units_in = field.attrs.get('units', '')
+    if type(units_in) == bytes:
+        units_in = units_in.decode('utf-8')
+    converter = unit.Converter(units_in)
     value = converter(field.value, units)
     if rep != 1:
         if value.shape[0] == 1:
