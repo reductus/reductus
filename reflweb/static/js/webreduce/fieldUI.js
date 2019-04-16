@@ -371,7 +371,11 @@ webreduce.editor.make_fieldUI = webreduce.editor.make_fieldUI || {};
       .classed("fields", true)
       .datum(datum)
     
-    var subfields = ((/x/.test(axis)) ? ["xmin", "xmax"] : []).concat((/y/.test(axis)) ? ["ymin", "ymax"] : []);
+    var subfields = []
+      .concat((/x/.test(axis)) ? ["xmin", "xmax"] : [])
+      .concat((/y/.test(axis)) ? ["ymin", "ymax"] : [])
+      .concat((/^ellipse$/.test(axis)) ? ["cx", "cy", "rx", "ry"] : []);
+
     var subinputs = input.selectAll("div.subfield").data(subfields).enter()
       .append("div")
       .classed("subfield", true)
@@ -429,8 +433,43 @@ webreduce.editor.make_fieldUI = webreduce.editor.make_fieldUI || {};
         });
         
       }
-      else if (axis == 'y') {
+      else if (axis == 'y' && active_plot &&  active_plot.interactors) {
         // add y-range interactor
+        var yrange = active_plot.y().domain();
+        var value = datum.value || datum.default_value;
+        var value = [
+          (value[0] == null) ? yrange[0] : value[0],
+          (value[1] == null) ? yrange[1] : value[1]
+        ]
+        var opts = {
+          type: 'yrange',
+          name: 'yrange',
+          color1: 'green',
+          show_lines: true,
+          y1: value[0],
+          y2: value[1]
+        }
+        var interactor = new ySliceInteractor.default(opts);
+        active_plot.interactors(interactor);
+        subinputs.on("change", function(d,i) { 
+          if (datum.value == null) { datum.value = datum.default_value }
+          var v = parseFloat(this.value);
+          v = (isNaN(v)) ? null : v;
+          datum.value[i] = v;
+          var yitem = ["y1", "y2"][i];
+          interactor.state[yitem] = (v == null) ? yrange[i] : v;
+          interactor.update(false);
+        });
+        interactor.dispatch.on("update", function() { 
+          var state = interactor.state;
+          datum.value = [state.y1, state.y2];
+          subinputs
+            .property("value", function(d,i) { return (datum.value) ? datum.value[i] : null })
+            .attr("value", function(d,i) { return (datum.value) ? datum.value[i] : null })
+          var event = document.createEvent('Event');
+          event.initEvent('input', true, true);
+          subinputs.node().dispatchEvent(event);
+        });
       }
       else if (axis == 'xy' && active_plot && active_plot.interactors) {
         // add box interactor
@@ -480,6 +519,55 @@ webreduce.editor.make_fieldUI = webreduce.editor.make_fieldUI || {};
           subinputs.node().dispatchEvent(event);
         });
       }
+      else if (axis == 'ellipse' && active_plot && active_plot.interactors) {
+        // add ellipse interactor
+        var xrange = active_plot.x().domain(),
+            yrange = active_plot.y().domain();
+        var value = datum.value || datum.default_value;
+        var value = [
+          (value[0] == null) ? (xrange[0] + xrange[1])/2 : value[0],
+          (value[1] == null) ? (yrange[0] + yrange[1])/2 : value[1],
+          (value[2] == null) ? (xrange[0] + xrange[1])/2 : value[2],
+          (value[3] == null) ? (yrange[0] + yrange[1])/2 : value[3]
+        ]
+        
+        var opts = {
+          type: 'Ellipse',
+          name: 'range',
+          color1: 'red',
+          color2: 'LightRed',
+          fill: "none",
+          show_center: true,
+          show_points: true,
+          cx: value[0],
+          cy: value[1],
+          rx: value[2], 
+          ry: value[3]
+        }
+        var interactor = new ellipseInteractor.default(opts);
+        active_plot.interactors(interactor);
+        // bind the update after init, so that it doesn't alter the field at init.
+        subinputs.on("change", function(d,i) { 
+          if (datum.value == null) { datum.value = datum.default_value }
+          var v = parseFloat(this.value);
+          v = (isNaN(v)) ? null : v;
+          datum.value[i] = v;
+          var item = ["cx", "cy", "rx", "ry"][i];
+          var default_value = (i == 0 || i == 2) ? (xrange[0] + xrange[1])/2 : (yrange[0] + yrange[1])/2;
+          interactor.state[item] = (v == null) ? default_value : v;
+          interactor.update(false);
+        });
+        interactor.dispatch.on("update", function() { 
+          var state = interactor.state;
+          datum.value = [state.cx, state.cy, state.rx, state.ry];
+          subinputs
+            .property("value", function(d,i) { return (datum.value) ? datum.value[i] : null })
+            .attr("value", function(d,i) { return (datum.value) ? datum.value[i] : null })
+          var event = document.createEvent('Event');
+          event.initEvent('input', true, true);
+          subinputs.node().dispatchEvent(event);
+        });
+      }  
     }
     return input    
   }

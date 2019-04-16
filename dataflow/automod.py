@@ -662,8 +662,8 @@ def parse_datatype(par):
         attr["pattern"] = attrstr
 
     elif type == "range":
-        if attrstr not in ("x", "y", "xy"):
-            raise ValueError("range must be one of x, y or xy for " + name)
+        if attrstr not in ("x", "y", "xy", "ellipse"):
+            raise ValueError("range must be one of x, y, xy or ellipse for " + name)
         attr["axis"] = attrstr
 
     else: # type in ["str", "bool", "fileinfo", "index", "coordinate"]:
@@ -752,7 +752,7 @@ def _validate_one(par, value, as_default):
 
     elif datatype == "range":
         range = par["typeattr"]["axis"]
-        n = 4 if range == "xy" else 2
+        n = 4 if (range == "xy" or range == "ellipse") else 2
         value = _list_check(name, value, n, float)
 
     elif datatype == "index":
