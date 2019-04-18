@@ -145,7 +145,7 @@ def readSANSNexuz(input_file, file_obj=None):
     Load all entries from the NeXus file into sans data sets.
     """
     datasets = []
-    file = hzf.File(input_file, file_obj)
+    file = h5_open_zip(input_file, file_obj)
     for entryname, entry in file.items():
         areaDetector = entry['data/areaDetector'].value
         shape = areaDetector.shape
