@@ -279,11 +279,11 @@ svg.editor polygon.terminal.state.calculating {
     100% {fill-opacity: 1.0;}
 }
     
-#navigation .buttons .ui-icon {
+#datasources .buttons .ui-icon {
     display: inline-block !important;
     vertical-align: middle;
 }
-#navigation .buttons .datasource {
+#datasources .buttons .datasource {
     font-weight: bold;
     font-style: italic;
     padding-left: 10px;

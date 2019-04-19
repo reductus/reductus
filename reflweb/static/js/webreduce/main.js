@@ -61,7 +61,7 @@ webreduce.instruments = webreduce.instruments || {};
       if (v[0] == 'pathlist' && v[1] && v[1].length) {
         start_path = v[1];
         var pathlist = start_path.split("/");
-        webreduce.addDataSource("navigation", source, pathlist);
+        webreduce.addDataSource("datasources", source, pathlist);
       }
       else if (v[0] == 'source' && v[1]) {
         source = v[1];
@@ -81,7 +81,7 @@ webreduce.instruments = webreduce.instruments || {};
         start_path = datasource['start_path'];
       }
       var pathlist = start_path.split("/");
-      webreduce.addDataSource("navigation", source, pathlist);
+      webreduce.addDataSource("datasources", source, pathlist);
     }
   }
 
@@ -302,7 +302,7 @@ webreduce.instruments = webreduce.instruments || {};
               start_path: dsource.start_path || "",
               click: function() {
                 hide_menu();
-                webreduce.addDataSource("navigation", dsource.name, pathlist);
+                webreduce.addDataSource("datasources", dsource.name, pathlist);
               }
             })));
             $("#main_menu").menu("refresh");
@@ -321,6 +321,14 @@ webreduce.instruments = webreduce.instruments || {};
           return instruments[0];
         });
       
+      function refreshAllSources(nav_div) {
+        var nav_div = (nav_div == null) ? "#datasources" : nav_div;
+        $(nav_div).find(".databrowser div.buttons button.refresh-button").each(function() {
+          $(this).trigger('click');
+        });
+      }
+      $("button#refresh_all").on("click", function() {refreshAllSources("#datasources")});
+
       webreduce.update_file_mtimes = function(template) {
         var template = template || webreduce.editor._active_template;
         // First, generate a list of all sources/paths for getting needed info from server
