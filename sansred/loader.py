@@ -52,6 +52,7 @@ metadata_lookup = {
     "huberRotation.softPosition":  "DAS_logs/huberRotation/softPosition",
     "start_time":"start_time",
     "end_time":"end_time",
+    "eventfile": "DAS_logs/areaDetector/eventFileName"
 }
 
 unit_specifiers = {
