@@ -4,6 +4,7 @@ numpy
 scipy
 h5py
 numdifftools
+uncertainties
 pillow
 docutils
 msgpack-python
