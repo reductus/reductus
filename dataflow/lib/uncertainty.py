@@ -5,12 +5,15 @@ addition, subtraction, multiplication, division, power, exp, log
 and trig.  Also includes mean, weighted average, and linear interpolation.
 
 Storage properties are determined by the numbers used to set the value
-and uncertainty.  Be sure to use floating point uncertainty vectors
-for inplace operations since numpy does not do automatic type conversion.
-Normal operations can use mixed integer and floating point.  In place
-operations (a*=b, etc.) create at most one extra copy for each operation.
-The copy operation c=a*b by contrast uses four intermediate vectors, so
-shouldn't be used for huge arrays.
+and uncertainty.  Inputs are coerced to floating point vectors since
+numpy does not do automatic type conversion for in-place operations.
+If you want single precision or extended precision floats be sure to
+set x and variance to one of the those types before calling.
+
+To save memory for huge arrays, the original data is used if it is a
+floating point type. In place operations (a*=b, etc.) create at most one
+extra copy for each operation. The out-of-place operation c=a*b by contrast
+uses four intermediate vectors, so shouldn't be used for huge arrays.
 """
 from __future__ import division
 
@@ -24,19 +27,64 @@ from . import err1d
 from .formatnum import format_uncertainty
 from . import wsolve
 
+def float_array(v):
+    """
+    Convert v to a floating point array if it is not one already.
+    """
+    if isinstance(v, np.ndarray) and np.issubdtype(v.dtype, np.inexact):
+        return v
+    if isinstance(v, int):
+        return float(v)
+    if isinstance(v, float):
+        return v
+    return np.asarray(v, np.float64)
+
+def _U(x, variance):
+    """
+    Create an uncertainty object without type-checking.
+    """
+    self = Uncertainty.__new__(Uncertainty)
+    self._x = x
+    self._variance = variance
+    return self
 
 # TODO: rename to Measurement and add support for units?
 # TODO: C implementation of *, /, **?
 class Uncertainty(object):
-    __slots__ = ('x', 'variance')
+    __slots__ = ('_x', '_variance')
     __array_priority__ = 20.   # force array*uncertainty to use our __rmul__
 
     # Constructor
-    def __init__(self, x, variance=None):
-        self.x, self.variance = x, variance
+    def __init__(self, x, variance=None, dx=None):
+        # Assign x first so that its type gets assigned properly.
+        self.x = x
+        # If standard deviation is given, turn it into variance.
+        if dx is not None:
+            if variance is not None:
+                raise TypeError("Only one of variance and dx can be specified")
+            variance = float_array(dx)**2
+        # If variance is not given, set it to zero of the correct shape.
+        if variance is None:
+            variance = np.zeros_like(self.x)
+        # Assign variance, possibly coercing its type.
+        self.variance = variance
 
     def __copy__(self):
-        return Uncertainty(copy(self.x), copy(self.variance))
+        return _U(copy(self.x), copy(self.variance))
+
+    @property
+    def x(self):
+        return self._x
+    @x.setter
+    def x(self, v):
+        self._x = float_array(v)
+
+    @property
+    def variance(self):
+        return self._variance
+    @variance.setter
+    def variance(self, v):
+        self._variance = float_array(v)
 
     @property
     def dtype(self):
@@ -94,12 +142,12 @@ class Uncertainty(object):
 
     # TODO: assuming real, imag are identically distributed.  Is that true?
     def conj(self):
-        return Uncertainty(self.x.conj(), self.variance)
+        return _U(self.x.conj(), self.variance+0.)
     conjugate = conj
     def real(self):
-        return Uncertainty(self.x.real(), self.variance)
+        return _U(self.x.real, self.variance)
     def imag(self):
-        return Uncertainty(self.x.imag(), self.variance)
+        return _U(self.x.imag, self.variance)
 
     def fill(self, a):
         if isinstance(a, Uncertainty):
@@ -112,39 +160,39 @@ class Uncertainty(object):
     # Array shaping/selection operations
     def compress(self, *args, **kw):
         # TODO: if out is supplied, then split it into out.x, out.variance
-        return Uncertainty(self.x.compress(*args, **kw),
-                           self.variance.compress(*args, **kw))
+        return _U(self.x.compress(*args, **kw),
+                  self.variance.compress(*args, **kw))
     copy = __copy__
     def diagonal(self, *args, **kw):
-        return Uncertainty(self.x.diagonal(*args, **kw),
-                           self.variance.diagonal(*args, **kw))
+        return _U(self.x.diagonal(*args, **kw),
+                  self.variance.diagonal(*args, **kw))
     def ravel(self, *args, **kw):
-        return Uncertainty(self.x.ravel(*args, **kw),
-                           self.variance.ravel(*args, **kw))
+        return _U(self.x.ravel(*args, **kw),
+                  self.variance.ravel(*args, **kw))
     def reshape(self, *args, **kw):
-        return Uncertainty(self.x.reshape(*args, **kw),
-                           self.variance.reshape(*args, **kw))
+        return _U(self.x.reshape(*args, **kw),
+                  self.variance.reshape(*args, **kw))
     def repeat(self, *args, **kw):
-        return Uncertainty(self.x.repeat(*args, **kw),
-                           self.variance.repeat(*args, **kw))
+        return _U(self.x.repeat(*args, **kw),
+                  self.variance.repeat(*args, **kw))
     def resize(self, *args, **kw):
-        return Uncertainty(self.x.resize(*args, **kw),
-                           self.variance.resize(*args, **kw))
+        return _U(self.x.resize(*args, **kw),
+                  self.variance.resize(*args, **kw))
     def squeeze(self, *args, **kw):
-        return Uncertainty(self.x.squeeze(*args, **kw),
-                           self.variance.squeeze(*args, **kw))
+        return _U(self.x.squeeze(*args, **kw),
+                  self.variance.squeeze(*args, **kw))
     def swapaxes(self, *args, **kw):
-        return Uncertainty(self.x.swapaxes(*args, **kw),
-                           self.variance.swapaxes(*args, **kw))
+        return _U(self.x.swapaxes(*args, **kw),
+                  self.variance.swapaxes(*args, **kw))
     def take(self, *args, **kw):
-        return Uncertainty(self.x.take(*args, **kw),
-                           self.variance.take(*args, **kw))
+        return _U(self.x.take(*args, **kw),
+                  self.variance.take(*args, **kw))
     def transpose(self, *args, **kw):
-        return Uncertainty(self.x.transpose(*args, **kw),
-                           self.variance.transpose(*args, **kw))
+        return _U(self.x.transpose(*args, **kw),
+                  self.variance.transpose(*args, **kw))
     def view(self, *args, **kw):
-        return Uncertainty(self.x.view(*args, **kw),
-                           self.variance.view(*args, **kw))
+        return _U(self.x.view(*args, **kw),
+                  self.variance.view(*args, **kw))
 
     # Make standard deviation available
     def _getdx(self):
@@ -152,7 +200,7 @@ class Uncertainty(object):
     def _setdx(self, dx):
         # Direct operation
         #    variance = dx**2
-        # Indirect operation to avoid temporaries
+        # Indirect operation to avoid temporary
         self.variance[:] = dx
         self.variance **= 2
     dx = property(_getdx, _setdx, doc="standard deviation")
@@ -164,7 +212,7 @@ class Uncertainty(object):
     def __len__(self):
         return len(self.x)
     def __getitem__(self, key):
-        return Uncertainty(self.x[key], self.variance[key])
+        return _U(self.x[key], self.variance[key])
     def __setitem__(self, key, value):
         self.x[key] = value.x
         self.variance[key] = value.variance
@@ -173,84 +221,87 @@ class Uncertainty(object):
         del self.variance[key]
     def __iter__(self):
         for x, variance in zip(self.x.flat, self.variance.flat):
-            yield Uncertainty(x, variance)
+            yield _U(x, variance)
 
     # Normal operations: may be of mixed type
     def __add__(self, other):
         if isinstance(other, Uncertainty):
-            return Uncertainty(*err1d.add(self.x, self.variance, other.x, other.variance))
+            return _U(*err1d.add(self.x, self.variance, other.x, other.variance))
         else:
-            return Uncertainty(self.x+other, self.variance+0) # Force copy
+            return _U(self.x+other, self.variance+0.)  # Force copy
     def __sub__(self, other):
         if isinstance(other, Uncertainty):
-            return Uncertainty(*err1d.sub(self.x, self.variance, other.x, other.variance))
+            return _U(*err1d.sub(self.x, self.variance, other.x, other.variance))
         else:
-            return Uncertainty(self.x-other, self.variance+0) # Force copy
+            return _U(self.x-other, self.variance+0.)  # Force copy
     def __mul__(self, other):
         if isinstance(other, Uncertainty):
-            return Uncertainty(*err1d.mul(self.x, self.variance, other.x, other.variance))
+            return _U(*err1d.mul(self.x, self.variance, other.x, other.variance))
         else:
-            return Uncertainty(self.x*other, self.variance*other**2)
+            return _U(self.x*other, self.variance*other**2)
     def __truediv__(self, other):
         if isinstance(other, Uncertainty):
-            return Uncertainty(*err1d.div(self.x, self.variance, other.x, other.variance))
+            return _U(*err1d.div(self.x, self.variance, other.x, other.variance))
         else:
-            return Uncertainty(self.x/other, self.variance/other**2)
+            return _U(self.x/other, self.variance/other**2)
     def __pow__(self, other):
         if isinstance(other, Uncertainty):
-            return Uncertainty(*err1d.pow2(self.x, self.variance, other.x, other.variance))
+            return _U(*err1d.pow2(self.x, self.variance, other.x, other.variance))
         else:
-            return Uncertainty(*err1d.pow(self.x, self.variance, other))
+            return _U(*err1d.pow(self.x, self.variance, other))
 
     # Reverse operations are definitely of mixed type
     def __radd__(self, other):
-        return Uncertainty(self.x+other, self.variance+0) # Force copy
+        return _U(self.x+other, self.variance+0.)  # Force copy
     def __rsub__(self, other):
-        return Uncertainty(other-self.x, self.variance+0)
+        return _U(other-self.x, self.variance+0.)  # Force copy
     def __rmul__(self, other):
-        return Uncertainty(self.x*other, self.variance*other**2)
+        return _U(self.x*other, self.variance*other**2)
     def __rtruediv__(self, other):
-        return Uncertainty(other/self.x, self.variance*other**2/self.x**4)
+        return _U(other/self.x, self.variance*other**2/self.x**4)
     def __rpow__(self, other):
         return exp(np.log(other)*self)
 
-    # In-place operations: may be of mixed type
+    # In-place operations: may not be of mixed type
+    # Note that the inplace operations are only inplace for numpy vectors.
+    # For scalars, need to assign the new value of the array.
     def __iadd__(self, other):
         if isinstance(other, Uncertainty):
-            self.x, self.variance \
-                = err1d.add_inplace(self.x, self.variance, other.x, other.variance)
+            self._x, self._variance = \
+                err1d.add_inplace(self.x, self.variance, other.x, other.variance)
         else:
             self.x += other
         return self
     def __isub__(self, other):
         if isinstance(other, Uncertainty):
-            self.x, self.variance \
-                = err1d.sub_inplace(self.x, self.variance, other.x, other.variance)
+            self._x, self._variance = \
+                err1d.sub_inplace(self.x, self.variance, other.x, other.variance)
         else:
             self.x -= other
         return self
     def __imul__(self, other):
         if isinstance(other, Uncertainty):
-            self.x, self.variance \
-                = err1d.mul_inplace(self.x, self.variance, other.x, other.variance)
+            self._x, self._variance = \
+                err1d.mul_inplace(self.x, self.variance, other.x, other.variance)
         else:
             self.x *= other
             self.variance *= other**2
         return self
     def __itruediv__(self, other):
         if isinstance(other, Uncertainty):
-            self.x, self.variance \
-                = err1d.div_inplace(self.x, self.variance, other.x, other.variance)
+            self._x, self._variance = \
+                err1d.div_inplace(self.x, self.variance, other.x, other.variance)
         else:
             self.x /= other
             self.variance /= other**2
         return self
     def __ipow__(self, other):
         if isinstance(other, Uncertainty):
-            self.x, self.variance \
-                = err1d.pow2_inplace(self.x, self.variance, other.x, other.variance)
+            self._x, self._variance = \
+                err1d.pow2_inplace(self.x, self.variance, other.x, other.variance)
         else:
-            self.x, self.variance = err1d.pow_inplace(self.x, self.variance, other)
+            self._x, self._variance = \
+                err1d.pow_inplace(self.x, self.variance, other)
         return self
 
     # always uses true division, even if division is not imported from future
@@ -263,19 +314,19 @@ class Uncertainty(object):
 
     # Unary ops
     def __neg__(self):
-        return Uncertainty(-self.x, self.variance)
+        return _U(-self.x, self.variance+0.)  # foce copy
     def __pos__(self):
         return self
     def __abs__(self):
-        return Uncertainty(np.abs(self.x), self.variance)
+        return _U(np.abs(self.x), self.variance+0.)  # force copy
 
     def __str__(self):
         #return str(self.x)+" +/- "+str(numpy.sqrt(self.variance))
         if np.isscalar(self.x):
-            return format_uncertainty(self.x, np.sqrt(self.variance))
+            return format_uncertainty(self.x, self.dx)
         else:
             content = ", ".join(format_uncertainty(v, dv)
-                                for v, dv in zip(self.x, np.sqrt(self.variance)))
+                                for v, dv in zip(self.x, self.dx))
             return "".join(("[", content, "]"))
     def __repr__(self):
         return "Uncertainty(%s,%s)"%(str(self.x), str(self.variance))
@@ -342,7 +393,7 @@ class Uncertainty(object):
         if out is not None:
             out = out.x, out.variance
         M, varM = err1d.mean(x.x, x.variance, *args, **kw)
-        return Uncertainty(M, varM)
+        return _U(M, varM)
 
     def sum(self, axis=None, dtype=None, out=None, keepdims=False):
         r"""
@@ -356,7 +407,7 @@ class Uncertainty(object):
             new_out = (None, None)
         M, varM = err1d.sum(self.x, self.variance, axis=axis,
                             dtype=dtype, out=new_out, keepdims=keepdims)
-        return Uncertainty(M, varM) if out is None else new_out
+        return _U(M, varM) if out is None else new_out
 
     def cumsum(self, axis=None, dtype=None, out=None, keepdims=False):
         r"""
@@ -370,7 +421,7 @@ class Uncertainty(object):
             new_out = (None, None)
         M, varM = err1d.cumsum(self.x, self.variance, axis=axis,
                                dtype=dtype, out=new_out, keepdims=keepdims)
-        return Uncertainty(M, varM) if out is None else new_out
+        return _U(M, varM) if out is None else new_out
 
     def std(self, *args, **kw):
         raise TypeError("Use mean() to compute the mean and variance of uncertainty items")
@@ -386,28 +437,28 @@ class Uncertainty(object):
         """
         # TODO: give difference between mean and average
         M, varM = err1d.average(self.x, self.variance, w, w.variance, axis=axis)
-        return Uncertainty(M, varM)
+        return _U(M, varM)
 
     # TODO: comparisons returning p-value?
 
     def log(self):
-        return Uncertainty(*err1d.log(self.x, self.variance))
+        return _U(*err1d.log(self.x, self.variance))
     def exp(self):
-        return Uncertainty(*err1d.exp(self.x, self.variance))
+        return _U(*err1d.exp(self.x, self.variance))
     def sin(self):
-        return Uncertainty(*err1d.sin(self.x, self.variance))
+        return _U(*err1d.sin(self.x, self.variance))
     def cos(self):
-        return Uncertainty(*err1d.cos(self.x, self.variance))
+        return _U(*err1d.cos(self.x, self.variance))
     def tan(self):
-        return Uncertainty(*err1d.tan(self.x, self.variance))
+        return _U(*err1d.tan(self.x, self.variance))
     def arcsin(self):
-        return Uncertainty(*err1d.arcsin(self.x, self.variance))
+        return _U(*err1d.arcsin(self.x, self.variance))
     def arccos(self):
-        return Uncertainty(*err1d.arccos(self.x, self.variance))
+        return _U(*err1d.arccos(self.x, self.variance))
     def arctan(self):
-        return Uncertainty(*err1d.arctan(self.x, self.variance))
+        return _U(*err1d.arctan(self.x, self.variance))
     def arctan2(self, other):
-        Uncertainty(*err1d.arctan2(self.x, self.variance, other.x, other.variance))
+        return _U(*err1d.arctan2(self.x, self.variance, other.x, other.variance))
 
 # numpy.method(x) calls x.method() if x has a method attribute, so just use
 # the names from the numpy namespace.
@@ -454,7 +505,7 @@ def interp(x, xp, fp, left=None, right=None):
     else:
         F, varF = err1d.interp([x], xp, fp.x, fp.variance, left, right)
         F, varF = F[0], varF[0]
-    return Uncertainty(F, varF)
+    return _U(F, varF)
 
 
 def smooth(x, xp, fp, degree=2, span=5):
@@ -463,7 +514,7 @@ def smooth(x, xp, fp, degree=2, span=5):
     """
     if span > 2:
         y, dy = wsolve.smooth(x, xp, fp, fp.dx, degree=degree, span=span)
-        return Uncertainty(y, dy**2)
+        return _U(y, dy**2)
     else:
         # TODO: smooth with extrapolate, but interp will not.
         return interp(x, xp, fp)
@@ -591,4 +642,5 @@ def test():
     assert np.linalg.norm(z.x - [2, 3, 2]) < 2e-15
     assert np.linalg.norm(z.variance - [0.05, 0.04, 0.05]) < 2e-15
 
-if __name__ == "__main__": test()
+if __name__ == "__main__":
+    test()

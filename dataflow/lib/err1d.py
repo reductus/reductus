@@ -272,13 +272,13 @@ def div_inplace(X, varX, Y, varY):
     """In-place division with error propagation"""
     # Z = X/Y
     # varZ = (varX + varY * (X/Y)**2) / Y**2 = (varX + varY * Z**2) / Y**2
-    X = X/Y     # X now has Z = X/Y
+    X /= Y     # X now has Z = X/Y
     T = X**2   # create T with Z**2
-    T = T * varY  # T now has varY * Z**2
-    varX = varX + T  # varX now has varX + varY*Z**2
-    del T   # may want to use T[:] = Y for vectors
+    T *= varY  # T now has varY * Z**2
+    varX += T  # varX now has varX + varY*Z**2
+    del T      # may want to use T[:] = Y for vectors
     T = Y**2   # reuse T for Y**2
-    varX = varX / T  # varX now has varZ
+    varX /= T  # varX now has varZ
     return X, varX
 
 
@@ -287,12 +287,12 @@ def mul_inplace(X, varX, Y, varY):
     # Z = X * Y
     # varZ = Y**2 * varX + X**2 * varY
     T = Y**2   # create T with Y**2
-    varX = varX * T  # varX now has Y**2 * varX
-    del T   # may want to use T[:] = X for vectors
+    varX *= T  # varX now has Y**2 * varX
+    del T      # may want to use T[:] = X for vectors
     T = X**2   # reuse T for X**2 * varY
-    T = T * varY  # T now has X**2 * varY
-    varX = varX + T  # varX now has varZ = X**2*varY + Y**2*varX
-    X = X * Y     # X now has Z = X*Y
+    T *= varY  # T now has X**2 * varY
+    varX += T  # varX now has varZ = X**2*varY + Y**2*varX
+    X *= Y     # X now has Z = X*Y
     return X, varX
 
 
