@@ -163,8 +163,11 @@ def sansred():
     package_name = 'SANS Reduction'
     genfiles(package, package_name, modules, dir=package)
 
+def main():
+    dataflow()
+    reflred()
+    ospecred()
+    sansred()
 
-dataflow()
-reflred()
-ospecred()
-sansred()
+if __name__ == "__main__":
+    main()
