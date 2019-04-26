@@ -43,6 +43,7 @@ from __future__ import print_function
 import datetime
 import time
 from posixpath import basename, join, sep
+import os
 import hashlib
 
 try:
@@ -92,6 +93,8 @@ def url_get(fileinfo, mtime_check=True):
     else:
         source = fileinfo.get("source", DEFAULT_DATA_SOURCE)
         name = basename(path)
+        if source == 'local':
+            path = urllib2.pathname2url(os.path.abspath(path))
         source_url = check_datasource(source)
         full_url = join(source_url, urllib2.quote(path.strip(sep), safe='/:'))
         url = None
