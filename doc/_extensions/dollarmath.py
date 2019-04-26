@@ -40,7 +40,6 @@ def setup(app):
     app.connect('source-read', rewrite_rst)
     app.connect('autodoc-process-docstring', rewrite_autodoc)
 
-
 def test_dollar():
     assert replace_dollar(u"no dollar")==u"no dollar"
     assert replace_dollar(u"$only$")==u":math:`only`"
@@ -48,9 +47,9 @@ def test_dollar():
     assert replace_dollar(u"so is $last$")==u"so is :math:`last`"
     assert replace_dollar(u"and $mid$ too")==u"and :math:`mid` too"
     assert replace_dollar(u"$first$, $mid$, $last$")==u":math:`first`, :math:`mid`, :math:`last`"
-    assert replace_dollar(u"dollar\$ escape")==u"dollar$ escape"
-    assert replace_dollar(u"dollar \$escape\$ too")==u"dollar $escape$ too"
-    assert replace_dollar(u"emb\ $ed$\ ed")==u"emb\ :math:`ed`\ ed"
+    assert replace_dollar(u"dollar\\$ escape")==u"dollar$ escape"
+    assert replace_dollar(u"dollar \\$escape\\$ too")==u"dollar $escape$ too"
+    assert replace_dollar(u"emb\\ $ed$\\ ed")==u"emb\\ :math:`ed`\\ ed"
     assert replace_dollar(u"$first$a")==u"$first$a"
     assert replace_dollar(u"a$last$")==u"a$last$"
     assert replace_dollar(u"a $mid$dle a")==u"a $mid$dle a"
