@@ -6,10 +6,10 @@ import re
 if len(sys.argv) == 1:
     sys.argv.append('install')
 
-# Use our own nose-based test harness
 if sys.argv[1] == 'test':
     from subprocess import call
-    sys.exit(call([sys.executable, 'test.py'] + sys.argv[2:]))
+    sys.exit(call([sys.executable, '-m', 'pytest'] + sys.argv[2:]))
+#    #sys.exit(call(['test.sh'] + sys.argv[2:]))
 
 #sys.dont_write_bytecode = True
 
@@ -55,6 +55,7 @@ dist = setup(
     extras_require={
         'masked_curve_fit': ['numdifftools'],
         },
+    tests_require = ['pytest'],
     )
 
 # End of file
