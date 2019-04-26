@@ -2,7 +2,17 @@
 Neutron Scattering Reduction
 ============================
 
-This project provides tools for reflectometry reduction.
+
+.. image:: https://img.shields.io/pypi/v/reductus.svg
+    :target: https://pypi.org/project/reductus/
+
+.. image:: https://img.shields.io/pypi/pyversions/reductus.svg
+    :target: https://pypi.org/project/reductus/
+
+.. image:: https://travis-ci.org/reductus/reductus.svg?branch=master
+    :target: https://travis-ci.org/reductus/reductus
+
+This project provides tools for data reduction for neutron and xray scattering.
 
 reflred
 
@@ -84,5 +94,6 @@ Then start the server with::
 
     cd reflweb
     python server_flask.py 8002
-    
+
 and visit the page http://localhost:8002/static/index.html
+
