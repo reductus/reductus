@@ -1,5 +1,6 @@
 setuptools
 pytz
+dateutil
 numpy
 scipy
 h5py
