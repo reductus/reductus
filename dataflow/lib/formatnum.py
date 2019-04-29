@@ -31,11 +31,12 @@ Example::
     757.236 +/- 0.010
     >>> print(format_uncertainty_compact(v,dv))
     757.236(10)
-    >>> print(format_uncertainty(v,dv))
-    757.236(10)
     >>> format_uncertainty.compact = False
     >>> print(format_uncertainty(v,dv))
     757.236 +/- 0.010
+    >>> format_uncertainty.compact = True
+    >>> print(format_uncertainty(v,dv))
+    757.236(10)
 """
 from __future__ import division
 import math

@@ -7,14 +7,14 @@ ISO 8601 date time support
 
 Basic usage::
 
-    >>> import iso8601
+    >>> from dataflow.lib import iso8601
     >>> iso8601.parse_date("2007-01-25T12:34:56Z")
     datetime.datetime(2007, 1, 25, 12, 34, 56, tzinfo=<TimeZone 'UTC'>)
     >>> iso8601.parse_date("2007-01-25T12:34:56-0500")
     datetime.datetime(2007, 1, 25, 12, 34, 56, tzinfo=<TimeZone '-0500'>)
     >>> iso8601.seconds_since_epoch("2007-01-25T12:00:00Z")
     1169726400.0
-    >>> print(iso8601.format_date(1169726400.0))
+    >>> print(iso8601.format_date(1169726400.0)) # doctest: +SKIP
     2007-01-25T07:00:00-0500
 
 The above examples assume US Eastern Standard Time, and may be different
@@ -333,7 +333,7 @@ def test(): # pragma: no cover
     # Determine local time offset
     hrs = abs(time.timezone)//3600
     mins = (abs(time.timezone)%3600)//60
-    utcoffset = "%s%02d%02d"%('-' if time.timezone >= 0 else '+', hrs, mins)
+    utcoffset = "%s%02d%02d"%('-' if time.timezone > 0 else '+', hrs, mins)
 
     # Check format from naive datetime object
     _check_format("2007-01-24T05:27:23"+utcoffset,

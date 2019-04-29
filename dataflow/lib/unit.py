@@ -18,9 +18,9 @@ transforming values.
 
 Usage example::
 
-    from nxs import unit
-    u = unit.Converter('mili*metre')  # Units stored in mm
-    v = u(3000, 'm')  # Convert the value 3000 mm into meters
+    >>> from dataflow.lib import unit
+    >>> u = unit.Converter('mili*metre')  # Units stored in mm
+    >>> v = u(3000, 'm')  # Convert the value 3000 mm into meters
 
 NeXus example::
 
@@ -32,14 +32,14 @@ NeXus example::
     # 2. scan the attributes, retrieving 'units'
     units = [for attr, value in file.attrs() if attr == 'units']
     # 3. set up the converter (assumes that units actually exists)
-    u = nxs.unit.Converter(units[0])
+    u = unit.Converter(units[0])
     # 4. read the data and convert to the correct units
     v = u(file.read(), 'radians')
 
 NeXus example using h5py, and a private version of unit::
 
     import h5py
-    from . import unit
+    from dataflow.lib import unit
     file = h5py.File(filename)
     field = file['/entry1/sample/sample_orientation']
     u = unit.Converter(field.attrs.get('units', ''))
@@ -189,7 +189,7 @@ class Converter(object):
         try:
             return self.scalebase/self.scalemap[units]
         except KeyError:
-            raise KeyError("%s not in %s"%(units, " ".join(sorted(self.scalemap.keys()))))
+            raise KeyError("%s not in %s (base = %s)"%(units, " ".join(sorted(self.scalemap.keys())), self.base))
 
     def __call__(self, value, units=""):
         # Note: calculating value*1.0 rather than simply returning value

@@ -4,6 +4,9 @@ SANS data loader
 
 Load SANS NeXus file into :mod:`sansred.sansdata` data structure.
 """
+import io
+from zipfile import ZipFile, is_zipfile
+import h5py
 
 from dataflow.lib import hzf_readonly_stripped as hzf
 from dataflow.lib import unit
@@ -31,6 +34,8 @@ metadata_lookup = {
     "run.filePrefix": "DAS_logs/trajectoryData/filePrefix",
     "run.experimentScanID": "DAS_logs/trajectory/experimentScanID",
     "run.instrumentScanID": "DAS_logs/trajectory/instrumentScanID",
+    "run.experimentPointID": "DAS_logs/trajectory/experimentPointID",
+    "run.pointnum": "DAS_logs/trajectoryData/pointNum",
     "run.detcnt": "control/detector_counts",
     "run.rtime": "control/count_time",
     "run.moncnt": "control/monitor_counts",
@@ -44,11 +49,16 @@ metadata_lookup = {
     "resolution.ap2": "instrument/sample_aperture/size",
     "resolution.ap12dis": "instrument/source_aperture/distance",
     "sample.position": "instrument/sample_aperture/distance",
+    "electromagnet_lrm.field":"DAS_logs/electromagnet_lrm/field",
+    "mag.value":"DAS_logs/mag/value",
+    "acamplitude.voltage":  "DAS_logs/acAmplitude/voltage",
+    "waveformgenerator.frequency":  "DAS_logs/waveformGenerator/frequency",
     "rfflipperpowersupply.voltage":  "DAS_logs/RFFlipperPowerSupply/actualVoltage/average_value",
     "rfflipperpowersupply.frequency":  "DAS_logs/RFFlipperPowerSupply/frequency",
     "huberRotation.softPosition":  "DAS_logs/huberRotation/softPosition",
     "start_time":"start_time",
     "end_time":"end_time",
+    "eventfile": "DAS_logs/areaDetector/eventFileName"
 }
 
 unit_specifiers = {
@@ -73,6 +83,8 @@ def process_sourceAperture(field, units):
     v0 = field.value[0].split()
     if len(v0) > 1:
         units_from = v0[1]
+    if type(units_from) == bytes:
+        units_from = units_from.decode('utf-8')
     converter = unit.Converter(units_from)
     return converter(value, units)    
 
@@ -83,16 +95,64 @@ def data_as(field, units):
     if field.name.split('/')[-1] == 'sourceAperture':
         return process_sourceAperture(field, units)
     else:
-        converter = unit.Converter(field.attrs.get('units', ''))
+        units_in = field.attrs.get('units', '')
+        if type(units_in) == bytes:
+            units_in = units_in.decode('utf-8')
+        converter = unit.Converter(units_in)
         value = converter(field.value, units)
         return value
+
+def h5_open_zip(filename, file_obj=None, mode='r', **kw):
+    """
+    Open a NeXus file, even if it is in a zip file,
+    or if it is a NeXus-zip file.
+
+    If the filename ends in '.zip', it will be unzipped to a temporary
+    directory before opening and deleted on :func:`closezip`.  If opened
+    for writing, then the file will be created in a temporary directory,
+    then zipped and deleted on :func:`closezip`.
+
+    If it is a zipfile but doesn't end in '.zip', it is assumed
+    to be a NeXus-zip file and is opened with that library.
+
+    Arguments are the same as for :func:`open`.
+    """
+    if file_obj is None:
+        file_obj = open(filename, mode=mode, buffering=-1)
+    is_zip = is_zipfile(file_obj) # is_zipfile(file_obj) doens't work in py2.6
+    if is_zip and '.attrs' in ZipFile(file_obj).namelist():
+        # then it's a nexus-zip file, rather than
+        # a zipped hdf5 nexus file
+        f = hzf.File(filename, file_obj)
+        f.delete_on_close = False
+        f.zip_on_close = False
+    else:
+        zip_on_close = None
+        if is_zip:
+            if mode == 'r':
+                zf = ZipFile(file_obj)
+                members = zf.namelist()
+                assert len(members) == 1
+                file_obj = io.BytesIO(zf.read(members[0]))
+                filename = os.path.join(path, members[0])
+            elif mode == 'w':
+                pass
+                #zip_on_close = filename
+                #filename = os.path.join(path, os.path.basename(filename)[:-4])
+            else:
+                raise TypeError("zipped nexus files only support mode r and w")
+        
+        f = h5py.File(file_obj, mode=mode, **kw)
+        f.delete_on_close = is_zip
+        f.zip_on_close = zip_on_close
+    return f
 
 def readSANSNexuz(input_file, file_obj=None):
     """
     Load all entries from the NeXus file into sans data sets.
     """
     datasets = []
-    file = hzf.File(input_file, file_obj)
+    file = h5_open_zip(input_file, file_obj)
     for entryname, entry in file.items():
         areaDetector = entry['data/areaDetector'].value
         shape = areaDetector.shape

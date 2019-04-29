@@ -62,7 +62,7 @@ def annular_mask_antialiased(shape, center, inner_radius, outer_radius,
     # This produced artifacts - output.max() was > mask_value by 10% or more!
 
     # Using numpy reshape instead (rebinning) - see Scipy cookbook
-    output = numpy.asarray(im)
+    output = numpy.asarray(im).T
     output = output.reshape(shape[0], oversampling, shape[1], oversampling).mean(1).mean(2)
     return output
 

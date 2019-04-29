@@ -76,17 +76,17 @@ def rebin2d(x, y, I, xo, yo, dtype=np.float64):
     y representing the row edges in each column, the following
     represents a uniform field::
 
-        >>> from reflred.rebin import rebin2d
+        >>> from dataflow.lib.rebin import rebin2d
         >>> x, y = [0, 2, 4, 5], [0, 1, 3]
         >>> z = [[2, 2, 1], [4, 4, 2]]
 
     We can check this by rebinning with uniform size bins::
 
         >>> xo, yo = range(6), range(4)
-        >>> rebin2d(y, x, z, yo, xo)
-        array([[ 1.,  1.,  1.,  1.,  1.],
-               [ 1.,  1.,  1.,  1.,  1.],
-               [ 1.,  1.,  1.,  1.,  1.]])
+        >>> rebin2d(y, x, z, yo, xo) # doctest: +SKIP
+        array([[1., 1., 1., 1., 1.],
+               [1., 1., 1., 1., 1.],
+               [1., 1., 1., 1., 1.]])
 
     dtype is the type to use for the output intensity.  This can be
     integer (uint8, uint16, uint32) or real (float32 or f, float64 or d).
@@ -217,27 +217,27 @@ def _test1d():
     # Split a value
     for t in _check1d([1, 2, 3, 4], [10, 20, 30],
                       [1, 2.5, 4], [20, 40]):
-        yield t
+        t()
 
     # bin is a superset of rebin
     for t in _check1d([0, 1, 2, 3, 4], [5, 10, 20, 30],
                       [1, 2.5, 3], [20, 10]):
-        yield t
+        t()
 
     # bin is a subset of rebin
     for t in _check1d([1, 2, 3, 4, 5, 6], [10, 20, 30, 40, 50],
                       [2.5, 3.5], [25]):
-        yield t
+        t()
 
-    # bin one to many
+    # one bin to many
     for t in _check1d([1, 2, 3, 4, 5, 6], [10, 20, 30, 40, 50],
                       [2.1, 2.2, 2.3, 2.4], [2, 2, 2]):
-        yield t
+        t()
 
-    # bin many to one
+    # many bins to one
     for t in _check1d([1, 2, 3, 4, 5, 6], [10, 20, 30, 40, 50],
                       [2.5, 4.5], [60]):
-        yield t
+        t()
 
 
 def _check2d(x, y, z, xo, yo, zo):
@@ -267,39 +267,36 @@ def _test2d():
     x, y, I, xo, yo, Io = [np.array(A, 'd') for A in [x, y, I, xo, yo, Io]]
 
     # Try various types and orders on a non-square matrix
-    yield lambda: _check2d(x, y, I, xo, yo, Io)
-    yield lambda: _check2d(x[::-1], y, I[::-1, :], xo, yo, Io)
-    yield lambda: _check2d(x, y[::-1], I[:, ::-1], xo, yo, Io)
-    yield lambda: _check2d(x, y, I, [7, 3, 0], yo, [[4]*3, [3]*3])
-    yield lambda: _check2d(x, y, I, xo, [3, 2, 0], [[1, 2]]*7)
-    yield lambda: _check2d(y, x, I.T, yo, xo, Io.T)  # C vs. Fortran ordering
+    _check2d(x, y, I, xo, yo, Io)
+    _check2d(x[::-1], y, I[::-1, :], xo, yo, Io)
+    _check2d(x, y[::-1], I[:, ::-1], xo, yo, Io)
+    _check2d(x, y, I, [7, 3, 0], yo, [[4]*3, [3]*3])
+    _check2d(x, y, I, xo, [3, 2, 0], [[1, 2]]*7)
+    _check2d(y, x, I.T, yo, xo, Io.T)  # C vs. Fortran ordering
 
     # Test smallest possible result
-    yield lambda: _check2d([-1, 2, 4], [0, 1, 3],
-                           [[3, 6], [2, 4]], [1, 2], [1, 2], [1])
+    _check2d([-1, 2, 4], [0, 1, 3],
+             [[3, 6], [2, 4]], [1, 2], [1, 2], [1])
     # subset/superset
-    yield lambda: _check2d([0, 1, 2, 3], [0, 1, 2, 3],
-                           [[1]*3]*3, [0.5, 1.5, 2.5], [0.5, 1.5, 2.5], [[1]*2]*2)
+    _check2d([0, 1, 2, 3], [0, 1, 2, 3],
+             [[1]*3]*3, [0.5, 1.5, 2.5], [0.5, 1.5, 2.5], [[1]*2]*2)
     for dtype in ['uint8', 'uint16', 'uint32', 'uint64', 'float32', 'float64']:
-        yield lambda: _check2d(
+        _check2d(
             [0, 1, 2, 3, 4], [0, 1, 2, 3, 4],
             np.array([[1]*4]*4, dtype=dtype),
             [-2, -1, 2, 5, 6], [-2, -1, 2, 5, 6],
-            np.array([[0, 0, 0, 0], [0, 4, 4, 0], [0, 4, 4, 0], [0, 0, 0, 0]], dtype=dtype)
+            np.array([[0, 0, 0, 0], [0, 4, 4, 0], [0, 4, 4, 0], [0, 0, 0, 0]],
+                      dtype=dtype)
             )
     # non-square test
-    yield lambda: _uniform_test([1, 2.5, 4, 0.5], [3, 1, 2.5, 1, 3.5])
-    yield lambda: _uniform_test([3, 2], [1, 2])
+    _uniform_test([1, 2.5, 4, 0.5], [3, 1, 2.5, 1, 3.5])
+    _uniform_test([3, 2], [1, 2])
 
 
 def test():
-    for t in _test1d(): yield t
-    for t in _test2d(): yield t
-
-
-def main():
-    for t in test(): t()
+    _test1d()
+    _test2d()
 
 
 if __name__ == "__main__":
-    main()
+    test()

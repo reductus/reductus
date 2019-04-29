@@ -43,13 +43,16 @@ def processing_order(pairs, n=0):
 
 
 def _dependencies(pairs):
-    #print "order_dependencies",pairs
+    # type: (List[Tuple[int, int]]) -> List[int]
     emptyset = set()
-    order = []
+    order = []  # type: List[int]
+    pairs = [(a, b) for a, b in pairs]
+    if not pairs:
+        return order
 
     # Break pairs into left set and right set
-    left, right = [set(s) for s in zip(*pairs)] if pairs != [] else ([], [])
-    while pairs != []:
+    left, right = (set(s) for s in zip(*pairs))
+    while pairs:
         #print "within",pairs
         # Find which items only occur on the right
         independent = right - left
@@ -58,16 +61,16 @@ def _dependencies(pairs):
             raise ValueError("Cyclic dependencies amongst %s" % cycleset)
 
         # The possibly resolvable items are those that depend on the independents
-        dependent = set([a for a, b in pairs if b in independent])
+        dependent = set(a for a, b in pairs if b in independent)
         pairs = [(a, b) for a, b in pairs if b not in independent]
         if not pairs:
             resolved = dependent
         else:
-            left, right = [set(s) for s in zip(*pairs)]
+            left, right = (set(s) for s in zip(*pairs))
             resolved = dependent - left
         #print "independent",independent,"dependent",dependent,"resolvable",resolved
         order += resolved
-        #print "new order",order
+        #print("new order",order)
     order.reverse()
     return order
 

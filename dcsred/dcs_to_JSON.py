@@ -1,65 +1,65 @@
 # -*- coding: utf-8 -*-
-#import h5py
 import re
 import simplejson
 import os
-import numpy as np
+from time import time, strftime
+
 #import matplotlib.pyplot as plt
-from time import time,strftime
+import numpy as np
 
 class dcsData(object):
-    badbrd = 0 
-    baddet = 0 
-    ch_bid = 0 
-    ch_delay = 0 
-    ch_dis = 0 
-    ch_input = 0 
-    ch_ms = 0 
-    ch_phase = 0 
-    ch_res = 0 
-    ch_slots = 0 
-    ch_srdenom = 0 
-    ch_srmode = 0 
-    ch_wl = 0 
-    coll_amp = 0 
-    coll_mean = 0 
-    coll_osc = 0 
-    command = 0 
-    comments = 0 
-    datamax = 0 
-    det_dis = 0 
-    detsum = 0 
-    duration = 0 
-    duration_csum = 0 
-    fc_dis = 0 
-    grandsum = 0 
-    he3_csum = 0 
-    high_csum = 0 
-    highmax = 0 
-    highsource = 0 
-    histodata = 0 
-    histohigh = 0 
-    motor_pos = 0 
-    ncycles = 0 
-    nframes = 0 
-    repeats = 0 
-    resets = 0 
-    runinfo = 0 
-    sample_desc = 0 
-    shutter_stat = 0 
-    start_date = 0 
-    startchoice = 0 
-    stop_date = 0 
-    tchanlook = 0 
-    temp_control = 0 
-    temp_sample = 0 
-    temp_setpoint = 0 
-    timsum = 0 
-    totals = 0 
-    tsdmin = 0 
+    badbrd = 0
+    baddet = 0
+    ch_bid = 0
+    ch_delay = 0
+    ch_dis = 0
+    ch_input = 0
+    ch_ms = 0
+    ch_phase = 0
+    ch_res = 0
+    ch_slots = 0
+    ch_srdenom = 0
+    ch_srmode = 0
+    ch_wl = 0
+    coll_amp = 0
+    coll_mean = 0
+    coll_osc = 0
+    command = 0
+    comments = 0
+    datamax = 0
+    det_dis = 0
+    detsum = 0
+    duration = 0
+    duration_csum = 0
+    fc_dis = 0
+    grandsum = 0
+    he3_csum = 0
+    high_csum = 0
+    highmax = 0
+    highsource = 0
+    histodata = 0
+    histohigh = 0
+    motor_pos = 0
+    ncycles = 0
+    nframes = 0
+    repeats = 0
+    resets = 0
+    runinfo = 0
+    sample_desc = 0
+    shutter_stat = 0
+    start_date = 0
+    startchoice = 0
+    stop_date = 0
+    tchanlook = 0
+    temp_control = 0
+    temp_sample = 0
+    temp_setpoint = 0
+    timsum = 0
+    totals = 0
+    tsdmin = 0
     user = 0
 
-    # The class "constructor" - It's actually an initializer 
+    # The class "constructor" - It's actually an initializer
     def __init__(self, badbrd, baddet, ch_bid, ch_delay, ch_dis, ch_input, ch_ms, ch_phase, ch_res, ch_slots, ch_srdenom, ch_srmode, ch_wl, coll_amp, coll_mean, coll_osc, command, comments, datamax, det_dis, detsum, duration, duration_csum, fc_dis, grandsum, he3_csum, high_csum, highmax, highsource, histodata, histohigh, motor_pos, ncycles, nframes, repeats, resets, runinfo, sample_desc, shutter_stat, start_date, startchoice, stop_date, tchanlook, temp_control, temp_sample, temp_setpoint, timsum, totals, tsdmin, user ):
         self.badbrd = badbrd
         self.baddet = baddet
@@ -197,7 +197,7 @@ def process_raw_dcs(data_path):
     thisDcsData.start_date = np.genfromtxt('start_date.txt', dtype=str)
     thisDcsData.user = str(np.genfromtxt('user.txt', dtype=str))
     thisDcsData.comments = str(np.genfromtxt('comments.txt', dtype=str))
-    
+
     data = np.transpose(thisDcsData.histodata)
 
     ch_wl = thisDcsData.ch_wl
@@ -236,7 +236,7 @@ def process_raw_dcs(data_path):
 
     stop_date = thisDcsData.stop_date
     start_date = thisDcsData.start_date
-            
+
     output = {
         "title": "DCS snapshot",
         "dims": {
@@ -289,5 +289,9 @@ def process_raw_dcs(data_path):
     return simplejson.dumps([output])
 
 
-open(r'/home/NIST/ncnr/livedata/live_data.json.new', 'w').write(process_raw_dcs(r"/home/NIST/ncnr/livedata/"))
-os.rename('live_data.json.new', 'live_data.json')
+def main():
+    open(r'/home/NIST/ncnr/livedata/live_data.json.new', 'w').write(process_raw_dcs(r"/home/NIST/ncnr/livedata/"))
+    os.rename('live_data.json.new', 'live_data.json')
+
+if __name__ == "__main__":
+    main()
