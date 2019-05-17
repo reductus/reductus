@@ -17,7 +17,7 @@
     return output
   }
 
-  function categorizeFiles(files_metadata, datasource, path, target_in) {
+  async function categorizeFiles(files_metadata, datasource, path, target_in) {
     var instrument_id = webreduce.editor._instrument_id;
     var instrument = webreduce.instruments[instrument_id];
     var load_promises = [];
@@ -40,83 +40,101 @@
         "mtime": files_metadata[j].mtime
       }
     });
-    var p = loader(load_params, file_objs, false, 'metadata')
-      .then(function(results) {
-        webreduce.editor._datafiles = results;
-        var categories = instrument.categories;
-        var treeinfo = file_objs_to_tree(file_objs, categories, datasource);
-        // add decorators etc to the tree with postprocess:
-        var postprocess = instrument.postprocess;
-        if (postprocess) { postprocess(treeinfo, file_objs) }
-        var target = $(target_in).find(".remote-filebrowser");
-        var jstree = target.jstree({
-          "plugins": ["checkbox", "changed", "sort"],
-          "checkbox" : {
-            "three_state": true,
-            //"cascade": "down",
-            "tie_selection": false,
-            "whole_node": false
-          },
-          "sort": sortAlphaNumeric,
-          "core": {"data": treeinfo}
-        });
-        return target
-      });
 
-    p.then(function(target) {
-      var ready = new Promise(function(resolve, reject) {
-        target.on("ready.jstree", function() {
+    let results = await loader(load_params, file_objs, false, 'metadata');
+    
+    webreduce.editor._datafiles = results;
+    var categories = instrument.categories;
+    var treeinfo = file_objs_to_tree(file_objs, categories, datasource);
+    // add decorators etc to the tree with postprocess:
+    var postprocess = instrument.postprocess;
+    if (postprocess) { postprocess(treeinfo, file_objs) }
+    var target = $(target_in).find(".remote-filebrowser");
+    var ready;
+    if (!target.jstree(true)) {
+      target.jstree({
+        "plugins": ["checkbox", "changed", "sort"],
+        "checkbox" : {
+          "three_state": true,
+          //"cascade": "down",
+          "tie_selection": false,
+          "whole_node": false
+        },
+        "sort": sortAlphaNumeric,
+        "core": {"data": treeinfo}
+      });
+      ready = new Promise(function(resolve, reject) {
+        target.on("ready.jstree", async function() {
           if (instrument.decorators) {
-              var dp = Promise.resolve();
-              instrument.decorators.forEach(function(d) {
-                  dp = dp.then(function() { return d(target, file_objs) });
+              instrument.decorators.forEach(async function(d) {
+                  await d(target, file_objs);
               });
             }
           resolve();
         });
       });
-
+    }
+    else {
+      //target.off("refresh.jstree");
       target
-        .on("check_node.jstree", handleChecked)
-        .on("uncheck_node.jstree", handleChecked);
-      target.on("click", "a:not(.jstree-anchor)", function(e) {
-        window.open(e.target.href, "_blank");
-        e.preventDefault();
-        e.stopPropagation();
-      });
-      target.on("click", "a.jstree-anchor", function(e) {
-        if (!(e.target.classList.contains("jstree-checkbox"))) {
-          //console.log(e.target, e.target.tagName.toLowerCase());
-          target.jstree().toggle_node(e.currentTarget.id);
-        }
-      });
-
-      target.on("fileinfo.update", function(ev, info) {
-        var jstree = target.jstree(true);
-        jstree.uncheck_all();
-        var keys = Object.keys(jstree._model.data);
-        info.value.forEach(function(fi) {
-          var matching = keys.filter(function(k) {
-            var leaf = jstree._model.data[k];
-            var isMatch = ((leaf.li_attr) &&
-                            leaf.li_attr.entryname == fi.entries[0] &&
-                            leaf.li_attr.filename == fi.path &&
-                            leaf.li_attr.mtime == fi.mtime)
-            return isMatch;
-          });
-          // turn off the handler for a moment
-          // so it doesn't trigger for every check operation:
-          target.off("check_node.jstree", handleChecked);
-          jstree.check_node(matching);
-          // then turn it back on.
-          target.on("check_node.jstree", handleChecked);
+        .off("check_node.jstree", handleChecked)
+        .off("uncheck_node.jstree", handleChecked);
+      ready = new Promise(function(resolve, reject) {
+        target.one("refresh.jstree", async function(ev, tree) {
+          if (instrument.decorators) {
+            instrument.decorators.forEach(async function(d) {
+                await d(target, file_objs);
+            });
+            tree.instance.redraw(true);
+          }
+          
+          resolve();
         });
-        //handleChecked(null, null, true);
       });
-      return ready;
-    });
-    return p;
+      target.jstree(true).settings.core.data = treeinfo;
+      target.jstree(true).refresh();
+    }
 
+    await ready;
+
+    target
+      .on("check_node.jstree", handleChecked)
+      .on("uncheck_node.jstree", handleChecked);
+    target.on("click", "a:not(.jstree-anchor)", function(e) {
+      window.open(e.target.href, "_blank");
+      e.preventDefault();
+      e.stopPropagation();
+    });
+    target.on("click", "a.jstree-anchor", function(e) {
+      if (!(e.target.classList.contains("jstree-checkbox"))) {
+        //console.log(e.target, e.target.tagName.toLowerCase());
+        target.jstree().toggle_node(e.currentTarget.id);
+      }
+    });
+
+    target.on("fileinfo.update", function(ev, info) {
+      var jstree = target.jstree(true);
+      jstree.uncheck_all();
+      var keys = Object.keys(jstree._model.data);
+      info.value.forEach(function(fi) {
+        var matching = keys.filter(function(k) {
+          var leaf = jstree._model.data[k];
+          var isMatch = ((leaf.li_attr) &&
+                          leaf.li_attr.entryname == fi.entries[0] &&
+                          leaf.li_attr.filename == fi.path &&
+                          leaf.li_attr.mtime == fi.mtime)
+          return isMatch;
+        });
+        // turn off the handler for a moment
+        // so it doesn't trigger for every check operation:
+        target.off("check_node.jstree", handleChecked);
+        jstree.check_node(matching);
+        // then turn it back on.
+        target.on("check_node.jstree", handleChecked);
+      });
+      //handleChecked(null, null, true);
+    });
+    return;
   }
 
   // categorizers are callbacks that take an info object and return category string
@@ -208,7 +226,7 @@
   }
 
   function getAllBrowserSourcePaths(nav_div) {
-    var nav_div = (nav_div == null) ? "#navigation" : nav_div;
+    var nav_div = (nav_div == null) ? "#datasources" : nav_div;
     var sourcepaths = [];
     $(nav_div).find(".databrowser").each(function(i,d) {
       sourcepaths.push({source: getDataSource(d), path: getCurrentPath(d)})
@@ -234,10 +252,19 @@
     });
     var remove_datasource = $("<button />", {text: "remove"});
     remove_datasource.click(function() { var nav=$(target).parent(); $(target).empty().remove(); updateHistory(nav);});
+    var refresh = $("<button />", {text: "refresh", class: "refresh-button"});
+    refresh.click(function() {
+      webreduce.server_api.get_file_metadata({source: datasource, pathlist: pathlist})
+        .then(function(metadata) {
+          categorizeFiles(metadata.files_metadata, datasource, pathlist.join("/"), target);
+        })
+    });
+
     buttons
       //.append($("<span />", {class: "ui-icon ui-icon-circle-close"}))
       .append(clear_all)
       .append(remove_datasource)
+      .append(refresh)
       .append('<span class="datasource">source: ' + datasource + '</span>');
 
     var metadata = dirdata.files_metadata;

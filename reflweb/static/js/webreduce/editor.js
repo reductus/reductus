@@ -107,6 +107,167 @@ webreduce.editor = webreduce.editor || {};
         .style("stroke-width", 3)
   }
   
+  function module_clicked_multiple() {
+    webreduce.layout.close("east");
+    var config_target = d3.select(".ui-layout-pane-east");
+    config_target.selectAll("div").remove();
+    var to_compare = [];
+    editor.selectAll("g.module").each(function(dd, ii) {
+      d3.select(this).selectAll("g.selected rect.terminal").each(function(ddd,iii) {
+        var tid = d3.select(this).attr("terminal_id");
+        to_compare.push({"node": ii, "terminal": tid})
+      });
+    });
+    compare_in_template(to_compare, active_template);
+  }
+
+  function module_clicked_single() {
+    var active_template = webreduce.editor._active_template;
+    let i = webreduce.editor._active_node;
+    let active_module = active_template.modules[i];
+    let module_def = webreduce.editor._module_defs[active_module.module];
+    let fields = module_def.fields || [];
+    let data_to_show = webreduce.editor._active_terminal;
+    var add_interactors = (data_to_show == (module_def.inputs[0] || {}).id);
+
+    webreduce.layout.open("east");
+    var config_target = d3.select(".ui-layout-pane-east");
+    config_target.selectAll("div").remove();
+    var header = config_target
+      .append("div")
+      .style("display", "block");
+    header
+      .append("h3")
+      .style("margin", "5px")
+      .style("display", "inline-block")
+      .text(module_def.name);
+    header
+      .append("button")
+      .text("help")
+      .on("click", function() {
+        var helpwindow = window.open("", "help", "location=0,toolbar=no,menubar=no,scrollbars=yes,resizable=yes,width=960,height=480");
+        helpwindow.document.title = "Web reduction help";
+        helpwindow.document.write(module_def.description);
+        helpwindow.document.close();
+        if (helpwindow.MathJax) {
+          helpwindow.MathJax.Hub.Queue(["Typeset", helpwindow.MathJax.Hub]);
+        }
+      });
+    
+    var buttons_div = config_target.append("div")
+      .classed("control-buttons", true)
+      .style("position", "absolute")
+      .style("bottom", "10px")
+    buttons_div.append("button")
+      .text( $("#auto_accept_changes").prop("checked") ? "replot": "accept")
+      .classed("accept config", true)
+      .on("click", function() {
+        webreduce.editor.accept_parameters(config_target, active_module);
+        if (!(d3.select(clicked_elem).classed("output"))) {
+          // find the first output and select that one...
+          var first_output = module_def.outputs[0].id;
+          clicked_elem = d3.select(elem).select('rect.terminal[terminal_id="'+first_output+'"]').node();          
+        }
+        webreduce.editor.handle_module_clicked.call(elem,null,i,null,clicked_elem);
+      })
+    buttons_div.append("button")
+      .text("clear")
+      .classed("clear config", true)
+      .on("click", function() {
+        var we = webreduce.editor;
+        //console.log('clear: ', config_target, JSON.stringify(active_module, null, 2));
+        if (active_module.config) { delete active_module.config }
+        module_clicked();
+      })
+      
+    $(buttons_div.node()).buttonset();
+    
+    var terminals_to_calculate = module_def.inputs.map(function(inp) {return inp.id});
+    var fields_in = {};
+    if (data_to_show != null && terminals_to_calculate.indexOf(data_to_show) < 0) {
+      terminals_to_calculate.push(data_to_show);
+    }
+    var recalc_mtimes = $("#auto_reload_mtimes").prop("checked"),
+        params_to_calc = terminals_to_calculate.map(function(terminal_id) {
+          return {template: active_template, config: {}, node: i, terminal: terminal_id, return_type: "plottable"}
+        })
+    webreduce.editor.calculate(params_to_calc, recalc_mtimes)
+      .then(function(results) {
+      var inputs_map = {};
+      var id;
+      results.forEach(function(r, ii) {
+        id = terminals_to_calculate[ii];
+        inputs_map[id] = r;
+      })
+      return inputs_map
+    }).then(function(im) {
+      var datasets_in = im[data_to_show];
+      var field_inputs = module_def.inputs
+        .filter(function(d) {return /\.params$/.test(d.datatype)})
+        .map(function(d) {return im[d.id]})
+      field_inputs.forEach(function(d) {
+        d.values.forEach(function(v) {
+          $.extend(true, fields_in, v.params);
+        });
+      });
+      webreduce.editor.show_plots([datasets_in]);
+      fields.forEach(function(field) {
+        if (webreduce.editor.make_fieldUI[field.datatype]) {
+          var value;
+          var passthrough = false;
+          var field_copy =  $.extend(true, {}, field);
+          var default_value = field_copy.default;
+          if (field.id in fields_in) {
+            //value = fields_in[field.id];
+            default_value = fields_in[field.id];
+            passthrough = true;
+          }
+          if (active_module.config && field.id in active_module.config) {
+            value = active_module.config[field.id];
+          }
+          
+          var datum = {"id": field.id, "value": value, "default_value": default_value, "passthrough": passthrough};
+          var fieldUImaker = webreduce.editor.make_fieldUI[field.datatype];
+          var context = {
+            field: field,
+            active_template: active_template,
+            datum: datum,
+            module_def: module_def,
+            target: config_target,
+            datasets_in: datasets_in,
+            active_module: active_module,
+            add_interactors: add_interactors,
+            active_plot: webreduce.editor._active_plot
+          }
+          var fieldUI = fieldUImaker.call(context);
+          var auto_accept = function() {
+            //console.log(this, d3.select(this).datum(), 'changing!');
+            if ($("#auto_accept_changes").prop("checked")) {
+              webreduce.editor.accept_parameters(config_target, active_module);
+            }
+          }
+          //if (passthrough) {fieldUI.property("disabled", true)};
+          fieldUI
+            .on("input.auto_accept", auto_accept)
+            .on("change.auto_accept", auto_accept)
+          // add tooltip with description of parameter
+          d3.select(fieldUI.node().parentNode).attr("title", field.description);
+            
+        }
+      });
+    });
+  }
+
+  function module_clicked() {
+    var editor = d3.select("#" + webreduce.editor._target_id);
+    if (editor.selectAll("g.terminal.selected rect.terminal").size() > 1) {
+      module_clicked_multiple();
+    }
+    else {
+      module_clicked_single();
+    }
+  }
+  webreduce.editor.module_clicked = module_clicked;
   webreduce.editor.handle_module_clicked = function(d,i,current_group,clicked_elem) {
     // d module data, i is module index, elem is registered to catch event
     //
@@ -135,18 +296,9 @@ webreduce.editor = webreduce.editor || {};
       var parent = d3.select(clicked_elem.parentNode);
       parent.classed("selected", !(parent.classed("selected")));
       editor.selectAll("g.module, g.module g.title").classed("selected", false);
-      webreduce.layout.close("east");
-      var config_target = d3.select(".ui-layout-pane-east");
-      config_target.selectAll("div").remove();
-      var to_compare = [];
-      editor.selectAll("g.module").each(function(dd, ii) {
-        d3.select(this).selectAll("g.selected rect.terminal").each(function(ddd,iii) {
-          var tid = d3.select(this).attr("terminal_id");
-          to_compare.push({"node": ii, "terminal": tid})
-        });
-      });
-      compare_in_template(to_compare, active_template);
+      module_clicked();   
     }
+
     else {
       editor.selectAll(".module .selected").classed("selected", false);
       d3.select(clicked_elem.parentNode).classed("selected", true);
@@ -156,7 +308,7 @@ webreduce.editor = webreduce.editor || {};
       var module_def = webreduce.editor._module_defs[active_module.module];
       var fields = module_def.fields || [];
       if (fields.filter(function(d) {return d.datatype == 'fileinfo'}).length == 0) {
-          var nav = $("#navigation");
+          var nav = $("#datasources");
           nav.block({message: null, fadeIn:0, overlayCSS: {opacity: 0.25, cursor: 'not-allowed', height: nav.prop("scrollHeight")}});
       }
       
@@ -177,136 +329,12 @@ webreduce.editor = webreduce.editor || {};
         d3.select(elem).select("g.title").classed("selected", true);
       }
       
-      var add_interactors = (data_to_show == (module_def.inputs[0] || {}).id)
+      
       webreduce.editor._active_node = i;
       webreduce.editor._active_terminal = data_to_show;
 
-      webreduce.layout.open("east");
-      var config_target = d3.select(".ui-layout-pane-east");
-      config_target.selectAll("div").remove();
-      var header = config_target
-        .append("div")
-        .style("display", "block");
-      header
-        .append("h3")
-        .style("margin", "5px")
-        .style("display", "inline-block")
-        .text(module_def.name);
-      header
-        .append("button")
-        .text("help")
-        .on("click", function() {
-          var helpwindow = window.open("", "help", "location=0,toolbar=no,menubar=no,scrollbars=yes,resizable=yes,width=960,height=480");
-          helpwindow.document.title = "Web reduction help";
-          helpwindow.document.write(module_def.description);
-          helpwindow.document.close();
-          if (helpwindow.MathJax) {
-            helpwindow.MathJax.Hub.Queue(["Typeset", helpwindow.MathJax.Hub]);
-          }
-        });
+      module_clicked();
       
-      var buttons_div = config_target.append("div")
-        .classed("control-buttons", true)
-        .style("position", "absolute")
-        .style("bottom", "10px")
-      buttons_div.append("button")
-        .text( $("#auto_accept_changes").prop("checked") ? "replot": "accept")
-        .classed("accept config", true)
-        .on("click", function() {
-          webreduce.editor.accept_parameters(config_target, active_module);
-          if (!(d3.select(clicked_elem).classed("output"))) {
-            // find the first output and select that one...
-            var first_output = module_def.outputs[0].id;
-            clicked_elem = d3.select(elem).select('rect.terminal[terminal_id="'+first_output+'"]').node();          
-          }
-          webreduce.editor.handle_module_clicked.call(elem,null,i,null,clicked_elem);
-        })
-      buttons_div.append("button")
-        .text("clear")
-        .classed("clear config", true)
-        .on("click", function() {
-          var we = webreduce.editor;
-          //console.log('clear: ', config_target, JSON.stringify(active_module, null, 2));
-          if (active_module.config) { delete active_module.config }
-          webreduce.editor.handle_module_clicked.call(elem,null,i,null,clicked_elem);
-        })
-        
-      $(buttons_div.node()).buttonset();
-      
-      var terminals_to_calculate = module_def.inputs.map(function(inp) {return inp.id});
-      var fields_in = {};
-      if (data_to_show != null && terminals_to_calculate.indexOf(data_to_show) < 0) {
-        terminals_to_calculate.push(data_to_show);
-      }
-      var recalc_mtimes = $("#auto_reload_mtimes").prop("checked"),
-          params_to_calc = terminals_to_calculate.map(function(terminal_id) {
-            return {template: active_template, config: {}, node: i, terminal: terminal_id, return_type: "plottable"}
-          })
-      webreduce.editor.calculate(params_to_calc, recalc_mtimes)
-        .then(function(results) {
-        var inputs_map = {};
-        var id;
-        results.forEach(function(r, ii) {
-          id = terminals_to_calculate[ii];
-          inputs_map[id] = r;
-        })
-        return inputs_map
-      }).then(function(im) {
-        var datasets_in = im[data_to_show];
-        var field_inputs = module_def.inputs
-          .filter(function(d) {return /\.params$/.test(d.datatype)})
-          .map(function(d) {return im[d.id]})
-        field_inputs.forEach(function(d) {
-          d.values.forEach(function(v) {
-            $.extend(true, fields_in, v.params);
-          });
-        });
-        webreduce.editor.show_plots([datasets_in]);
-        fields.forEach(function(field) {
-          if (webreduce.editor.make_fieldUI[field.datatype]) {
-            var value;
-            var passthrough = false;
-            var field_copy =  $.extend(true, {}, field);
-            var default_value = field_copy.default;
-            if (field.id in fields_in) {
-              //value = fields_in[field.id];
-              default_value = fields_in[field.id];
-              passthrough = true;
-            }
-            if (active_module.config && field.id in active_module.config) {
-              value = active_module.config[field.id];
-            }
-            
-            var datum = {"id": field.id, "value": value, "default_value": default_value, "passthrough": passthrough};
-            var fieldUImaker = webreduce.editor.make_fieldUI[field.datatype];
-            var context = {
-              field: field,
-              active_template: active_template,
-              datum: datum,
-              module_def: module_def,
-              target: config_target,
-              datasets_in: datasets_in,
-              active_module: active_module,
-              add_interactors: add_interactors,
-              active_plot: webreduce.editor._active_plot
-            }
-            var fieldUI = fieldUImaker.call(context);
-            var auto_accept = function() {
-              //console.log(this, d3.select(this).datum(), 'changing!');
-              if ($("#auto_accept_changes").prop("checked")) {
-                webreduce.editor.accept_parameters(config_target, active_module);
-              }
-            }
-            //if (passthrough) {fieldUI.property("disabled", true)};
-            fieldUI
-              .on("input.auto_accept", auto_accept)
-              .on("change.auto_accept", auto_accept)
-            // add tooltip with description of parameter
-            d3.select(fieldUI.node().parentNode).attr("title", field.description);
-              
-          }
-        });
-      });
     }
   }
   
@@ -906,7 +934,10 @@ webreduce.editor = webreduce.editor || {};
     // currently active output.  Store the structure in the 
     // browser.
     if (!window.localStorage) {alert("localStorage not supported in your browser"); return }
-    if (webreduce.editor._active_terminal == null) {alert("please select an input or output terminal to stash"); return }
+    if (webreduce.editor._active_terminal == null) {
+            alert("please select one input or output terminal to stash"); 
+            return 
+    }
     
     var suggested_name = (suggested_name == null) ?  "processed" : suggested_name;
     var stashname = prompt("stash data as:", suggested_name);
@@ -1610,7 +1641,7 @@ webreduce.editor = webreduce.editor || {};
         paths.forEach(function(path,i) {
           if (browser_sourcepaths.findIndex(function(sp) {return sp.source == source && sp.path == path}) < 0) {
             sources_loaded = sources_loaded.then(function() {
-              return webreduce.addDataSource("navigation", source, path.split("/"));
+              return webreduce.addDataSource("datasources", source, path.split("/"));
             });
           }
         });
