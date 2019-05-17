@@ -102,7 +102,7 @@ def data_as(field, units):
         value = converter(field.value, units)
         return value
 
-def h5_open_zip(filename, file_obj=None, mode='r', **kw):
+def h5_open_zip(filename, file_obj=None, **kw):
     """
     Open a NeXus file, even if it is in a zip file,
     or if it is a NeXus-zip file.
@@ -118,7 +118,7 @@ def h5_open_zip(filename, file_obj=None, mode='r', **kw):
     Arguments are the same as for :func:`open`.
     """
     if file_obj is None:
-        file_obj = open(filename, mode=mode, buffering=-1)
+        file_obj = io.BytesIO(open(filename, mode='rb', buffering=-1).read())
     is_zip = is_zipfile(file_obj) # is_zipfile(file_obj) doens't work in py2.6
     if is_zip and '.attrs' in ZipFile(file_obj).namelist():
         # then it's a nexus-zip file, rather than
@@ -129,20 +129,13 @@ def h5_open_zip(filename, file_obj=None, mode='r', **kw):
     else:
         zip_on_close = None
         if is_zip:
-            if mode == 'r':
-                zf = ZipFile(file_obj)
-                members = zf.namelist()
-                assert len(members) == 1
-                file_obj = io.BytesIO(zf.read(members[0]))
-                filename = os.path.join(path, members[0])
-            elif mode == 'w':
-                pass
-                #zip_on_close = filename
-                #filename = os.path.join(path, os.path.basename(filename)[:-4])
-            else:
-                raise TypeError("zipped nexus files only support mode r and w")
+            zf = ZipFile(file_obj)
+            members = zf.namelist()
+            assert len(members) == 1
+            file_obj = io.BytesIO(zf.read(members[0]))
+            filename = os.path.join(path, members[0])
         
-        f = h5py.File(file_obj, mode=mode, **kw)
+        f = h5py.File(file_obj, **kw)
         f.delete_on_close = is_zip
         f.zip_on_close = zip_on_close
     return f
