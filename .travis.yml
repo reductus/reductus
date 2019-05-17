@@ -1,0 +1,17 @@
+language: python
+sudo: false
+matrix:
+  include:
+  - os: linux
+    env:
+    - PY=3.6
+  - os: linux
+    env:
+    - PY=2.7
+branches:
+  only:
+  - master
+install:
+  - pip install -r requirements.txt
+script:
+  - pytest

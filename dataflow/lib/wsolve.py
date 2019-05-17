@@ -27,11 +27,11 @@ The returned model object *s* provides:
 Weighted system::
 
     >>> import numpy as np
-    >>> import wsolve
-    >>> A = np.matrix("1,2,3;2,1,3;1,1,1", 'd').A
+    >>> from dataflow.lib.wsolve import wsolve
+    >>> A = np.array([[1,2,3],[2,1,3],[1,1,1]], 'd')
     >>> dy = [0.2, 0.01, 0.1]
     >>> y = [ 14.16, 13.01, 6.15]
-    >>> s = wsolve.wsolve(A, y, dy)
+    >>> s = wsolve(A, y, dy)
     >>> print(", ".join("%0.2f +/- %0.2f"%(a, b) for a, b in zip(s.x, s.std)))
     1.05 +/- 0.17, 2.20 +/- 0.12, 2.91 +/- 0.12
 

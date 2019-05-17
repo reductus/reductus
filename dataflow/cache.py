@@ -103,17 +103,18 @@ class CacheManager(object):
                 warning = "diskcache connection failed with:\n\t" + str(exc)
                 warning += "\nFalling back to in-memory cache."
                 warnings.warn(warning)
-  
+
         self.set_test_cache()
 
     def set_test_cache(self):
         """
         Set up cache for testing.
         """
-        cachedir = os.path.join(tempfile.gettempdir(), "reductus_test")
-        self._cache = memory_cache()
-        self._file_cache = file_cache(cachedir=cachedir)
-        
+        if self._cache is None:
+            cachedir = os.path.join(tempfile.gettempdir(), "reductus_test")
+            self._cache = memory_cache()
+            self._file_cache = file_cache(cachedir=cachedir)
+
     def use_diskcache(self, **kwargs):
         """
         use the PyPi package 'diskcache' as the main store
@@ -142,10 +143,10 @@ class CacheManager(object):
         if self._cache is None:
             self._connect()
         return self._cache
-    
+
     def get_cache_manager(self):
         """
-        Connect to the key-value cache, and return 
+        Connect to the key-value cache, and return
         this manager class
         """
         if self._cache is None:
@@ -159,14 +160,14 @@ class CacheManager(object):
         if self._cache is None:
             self._connect()
         return self._file_cache
-    
+
     def store(self, key, value):
         string = pickle.dumps(value, protocol=self._pickle_protocol)
         if self._use_compression:
             import lz4.frame
             string = lz4.frame.compress(string)
         self._cache.set(key, string)
-    
+
     def retrieve(self, key):
         string = self._cache.get(key)
         if self._use_compression:
