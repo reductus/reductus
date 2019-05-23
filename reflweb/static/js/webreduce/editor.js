@@ -108,6 +108,8 @@ webreduce.editor = webreduce.editor || {};
   }
   
   function module_clicked_multiple() {
+    var editor = d3.select("#" + webreduce.editor._target_id);
+    var active_template = webreduce.editor._active_template;
     webreduce.layout.close("east");
     var config_target = d3.select(".ui-layout-pane-east");
     config_target.selectAll("div").remove();
@@ -123,11 +125,14 @@ webreduce.editor = webreduce.editor || {};
 
   function module_clicked_single() {
     var active_template = webreduce.editor._active_template;
+    var editor = d3.select("#" + webreduce.editor._target_id);
+    var selected_terminal = editor.select("g.module g.selected rect.terminal");
+    let data_to_show = selected_terminal.attr("terminal_id");
+    webreduce.editor._active_terminal = data_to_show;
     let i = webreduce.editor._active_node;
     let active_module = active_template.modules[i];
     let module_def = webreduce.editor._module_defs[active_module.module];
     let fields = module_def.fields || [];
-    let data_to_show = webreduce.editor._active_terminal;
     var add_interactors = (data_to_show == (module_def.inputs[0] || {}).id);
 
     webreduce.layout.open("east");
@@ -163,6 +168,12 @@ webreduce.editor = webreduce.editor || {};
       .classed("accept config", true)
       .on("click", function() {
         webreduce.editor.accept_parameters(config_target, active_module);
+        if (!(selected_terminal.classed("output"))) {
+          // find the first output and select that one...
+          let first_output = module_def.outputs[0].id;
+          let module_elem = d3.select(selected_terminal.node().parentNode.parentNode);
+          module_elem.selectAll("g.terminals").classed('selected', function(d) { return d.id == first_output });
+        }
         webreduce.editor.module_clicked();
       })
     buttons_div.append("button")
@@ -255,7 +266,7 @@ webreduce.editor = webreduce.editor || {};
 
   function module_clicked() {
     var editor = d3.select("#" + webreduce.editor._target_id);
-    if (editor.selectAll("g.terminal.selected rect.terminal").size() > 1) {
+    if (editor.selectAll("g.module g.selected rect.terminal").size() > 1) {
       module_clicked_multiple();
     }
     else {
