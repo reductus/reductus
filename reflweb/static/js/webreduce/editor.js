@@ -163,12 +163,7 @@ webreduce.editor = webreduce.editor || {};
       .classed("accept config", true)
       .on("click", function() {
         webreduce.editor.accept_parameters(config_target, active_module);
-        if (!(d3.select(clicked_elem).classed("output"))) {
-          // find the first output and select that one...
-          var first_output = module_def.outputs[0].id;
-          clicked_elem = d3.select(elem).select('rect.terminal[terminal_id="'+first_output+'"]').node();          
-        }
-        webreduce.editor.handle_module_clicked.call(elem,null,i,null,clicked_elem);
+        webreduce.editor.module_clicked();
       })
     buttons_div.append("button")
       .text("clear")
