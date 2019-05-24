@@ -45,7 +45,7 @@ webreduce.instruments['ncnr.sans'] = webreduce.instruments['ncnr.sans'] || {};
 
   instrument.files_filter = function(x) {
     return (
-      ((NEXUZ_REGEXP.test(x) || NEXUS_REGEXP) &&
+      ((NEXUS_REGEXP.test(x)) &&
          (/^(fp_)/.test(x) == false) &&
          (/^rapidscan/.test(x) == false) &&
          (/^scripted_findpeak/.test(x) == false))
@@ -135,7 +135,7 @@ webreduce.instruments['ncnr.sans'] = webreduce.instruments['ncnr.sans'] || {};
       var pathsegments = fullpath.split("/");
       var pathlist = pathsegments.slice(0, pathsegments.length-1).join("+");
       var filename = pathsegments.slice(-1);
-      var link = "<a href=\"http://ncnr.nist.gov/ipeek/nexus-zip-viewer.html";
+      var link = "<a href=\"https://ncnr.nist.gov/ncnrdata/view/nexus-hdf-viewer.html";
       link += "?pathlist=" + pathlist;
       link += "&filename=" + filename;
       link += "\" style=\"text-decoration:none;\">&#9432;</a>";
