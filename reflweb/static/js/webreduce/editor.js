@@ -1440,6 +1440,7 @@ webreduce.editor = webreduce.editor || {};
         })
       });
       webreduce.instruments[instrument_id].categories = unpacked;
+      $("button#refresh_all").trigger("click");
     })
     d3_handle.select("button.close").on("click", function() { dialog.dialog("close"); });
     d3_handle.select("button.load-defaults").on("click", function() { 
