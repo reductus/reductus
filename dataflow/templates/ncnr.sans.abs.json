@@ -123,8 +123,8 @@
       "config": {
         "filelist": [
           {
-            "path": "ncnrdata/ng7sans/201702/nonims1/data/sans28191.zip",
-            "mtime": 1487250250,
+            "path": "ncnrdata/ng7sans/201702/nonims1/data/sans28191.nxs.ng7",
+            "mtime": 1487250249,
             "source": "ncnr",
             "entries": [
               "entry"
@@ -141,7 +141,7 @@
       "config": {
         "filelist": [
           {
-            "path": "ncnrdata/ng7sans/201702/nonims1/data/sans28190.zip",
+            "path": "ncnrdata/ng7sans/201702/nonims1/data/sans28190.nxs.ng7",
             "mtime": 1487248423,
             "source": "ncnr",
             "entries": [

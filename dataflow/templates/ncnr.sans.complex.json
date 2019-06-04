@@ -20,7 +20,7 @@
       "config": {
         "filelist": [
           {
-            "path": "ncnrdata/ng7sans/201606/nonims19/data/sans13131.nxz.ng7",
+            "path": "ncnrdata/ng7sans/201606/nonims19/data/sans13131.nxs.ng7",
             "source": "ncnr",
             "mtime": 1469624648,
             "entries": [
@@ -43,9 +43,9 @@
       "config": {
         "filelist": [
           {
-            "path": "ncnrdata/ng7sans/201606/nonims19/data/sans13111.nxz.ng7",
+            "path": "ncnrdata/ng7sans/201606/nonims19/data/sans13111.nxs.ng7",
             "source": "ncnr",
-            "mtime": 1469587575,
+            "mtime": 1469587574,
             "entries": [
               "entry"
             ]
