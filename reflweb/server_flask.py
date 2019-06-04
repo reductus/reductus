@@ -28,6 +28,7 @@ RPC_ENDPOINT = '/RPC2'
 STATIC_PATH = pkg_resources.resource_filename('reflweb', 'static/')
 
 app = Flask(__name__, static_folder=STATIC_PATH, static_url_path='/static')
+app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 
 @app.route('/')
 def root():
