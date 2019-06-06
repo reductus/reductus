@@ -168,13 +168,20 @@ webreduce.editor = webreduce.editor || {};
       .classed("accept config", true)
       .on("click", function() {
         webreduce.editor.accept_parameters(config_target, active_module);
-        if (!(selected_terminal.classed("output"))) {
+        if (selected_terminal.empty()) {
+          // then it's a loader that's clicked, with no output selected;
+          let first_output = module_def.outputs[0].id;
+          let selected_title = editor.select("g.module g.title.selected");
+          let module_elem = d3.select(selected_title.node().parentNode);
+          module_elem.selectAll("g.terminals").classed('selected', function(d) { return d.id == first_output });
+        }
+        else if (!(selected_terminal.classed("output"))) {
           // find the first output and select that one...
           let first_output = module_def.outputs[0].id;
           let module_elem = d3.select(selected_terminal.node().parentNode.parentNode);
           module_elem.selectAll("g.terminals").classed('selected', function(d) { return d.id == first_output });
         }
-        webreduce.editor.module_clicked();
+        module_clicked_single();
       })
     buttons_div.append("button")
       .text("clear")
@@ -183,7 +190,7 @@ webreduce.editor = webreduce.editor || {};
         var we = webreduce.editor;
         //console.log('clear: ', config_target, JSON.stringify(active_module, null, 2));
         if (active_module.config) { delete active_module.config }
-        module_clicked();
+        module_clicked_single();
       })
       
     $(buttons_div.node()).buttonset();
@@ -302,7 +309,7 @@ webreduce.editor = webreduce.editor || {};
       var parent = d3.select(clicked_elem.parentNode);
       parent.classed("selected", !(parent.classed("selected")));
       editor.selectAll("g.module, g.module g.title").classed("selected", false);
-      module_clicked();   
+      module_clicked_multiple();
     }
 
     else {
