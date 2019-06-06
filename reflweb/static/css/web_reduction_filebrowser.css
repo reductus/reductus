@@ -278,7 +278,23 @@ svg.editor polygon.terminal.state.calculating {
     0%   {fill-opacity: 0;}
     100% {fill-opacity: 1.0;}
 }
-    
+
+div#navigation {
+    position: relative;
+    width: fit-content;
+}
+
+div.block-overlay {
+    position: absolute;
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+    background:rgba(128,128,128,0.5);
+    left: 0;
+    top: 0;
+    display: none;
+}
+
 #datasources .buttons .ui-icon {
     display: inline-block !important;
     vertical-align: middle;

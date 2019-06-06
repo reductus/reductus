@@ -1,10 +1,14 @@
 // require(d3.js, webreduce.server_api, dataflow)
 // require(d3, dataflow)
 import {app} from './main.js';
-import {server_api} from './server_api/hug_msgpack.js';
+import {server_api} from './server_api/api_msgpack.js';
 import {filebrowser} from './filebrowser.js';
 import {make_fieldUI} from './fieldUI.js';
 import {dependencies} from './deps.js';
+import {Sha1} from '../sha1.mjs';
+import {d3} from './libraries.js';
+import {heatChart, xyChart, dataflowEditor} from '../web_modules/d3-science.js';
+import {default as PouchDB} from '../web_modules/pouchdb-browser.js';
 const editor = {};
 export {editor};
 
@@ -34,7 +38,7 @@ editor.clear_cache = function() {
 editor.create_instance = function(target_id) {
   // create an instance of the dataflow editor in
   // the html element referenced by target_id
-  this._instance = new dataflowEditor.default(null, true);
+  this._instance = new dataflowEditor(null, true);
   this._target_id = target_id;
   //this._instance.data([{modules:[],wires: []}]);
   var target = d3.select("#" + target_id);
@@ -505,7 +509,7 @@ editor.show_plots_2d = function(plotdata) {
   
   if (!(mychart && mychart.type && mychart.type == "heatmap_2d")) {
     d3.selectAll("#plotdiv").selectAll("svg, div").remove();
-    mychart = new heatChart.default({margin: {left: 100}} );
+    mychart = new heatChart({margin: {left: 100}} );
     d3.selectAll("#plotdiv").data(values[0].z).call(mychart);
     app.callbacks.resize_center = function() {mychart.autofit()};
   }
@@ -768,7 +772,7 @@ editor.show_plots_nd = function(plotdata) {
   
   var chartdata = make_chartdata(xcol, ycol);
   // create the nd chart:
-  var mychart = new xyChart.default(options);
+  var mychart = new xyChart(options);
   d3.selectAll("#plotdiv").selectAll("svg, div").remove();
   d3.selectAll("#plotdiv").data([chartdata]).call(mychart);
   mychart.zoomRect(true);
@@ -869,7 +873,7 @@ editor.show_plots_1d = function(plotdata) {
   options.show_line = $("#show_line").prop("checked");
   
   // create the 1d chart:
-  var mychart = new xyChart.default(options);
+  var mychart = new xyChart(options);
   d3.selectAll("#plotdiv").selectAll("svg, div").remove();
   d3.selectAll("#plotdiv").data([plotdata.data]).call(mychart);
   mychart.zoomRect(true);

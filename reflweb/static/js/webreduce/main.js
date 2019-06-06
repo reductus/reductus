@@ -4,7 +4,7 @@
 //const webreduce = {};
 //export {webreduce};
 import {editor} from './editor.js';
-import {server_api} from './server_api/hug_msgpack.js';
+import {server_api} from './server_api/api_msgpack.js';
 import {filebrowser} from './filebrowser.js';
 const app = {}; // put state here.
 export {app};
@@ -93,7 +93,10 @@ window.onload = function() {
   window.editor = editor;
   zip.workerScriptsPath = "js/";
   zip.useWebWorkers = true;
-  server_api.__init__().then(function(api) {
+  window.my_server_api = server_api;
+  server_api.__init__().then(function() {
+    server_api.exception_handler = api_exception_handler;
+    app.server_api = server_api;
     var layout = $('body').layout({
           west__size:          350
       ,  east__size:          300
@@ -379,7 +382,7 @@ window.onload = function() {
       return times_promise;
     }
     
-    app.api_exception_handler = function(exc) {
+    function api_exception_handler(exc) {
       console.log("api exception: ", exc);
       var message = exc.exception || "no error message";
       notify("exception: " + message, exc.traceback);

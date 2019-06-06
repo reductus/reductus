@@ -1,5 +1,15 @@
 import {editor} from './editor.js';
 import {filebrowser} from './filebrowser.js';
+import {d3} from './libraries.js';
+import {
+  extend,
+  rectangleSelect,
+  xSliceInteractor,
+  ySliceInteractor,
+  rectangleInteractor,
+  ellipseInteractor,
+  monotonicFunctionInteractor 
+} from '../web_modules/d3-science.js';
 const fieldUI = {};
 export {fieldUI as make_fieldUI};
 
@@ -69,7 +79,7 @@ var indexUI = function() {
   
   var datasets = datasets_in.values;
   // now have a list of datasets.
-  var datum = jQuery.extend(true, {}, datum_in);
+  var datum = extend(true, {}, datum_in);
   datum.value = datum.value || datum.default_value;
   datasets.forEach(function(d,i) {
     datum.value[i] = datum.value[i] || [];
@@ -302,7 +312,7 @@ var scaleUI = function() {
     d3.selectAll("#plotdiv svg g.series").each(function(d,i) {
       // i is index of dataset
       // make a copy of the data:
-      unscaled_data[i] = $.extend(true, [], d);
+      unscaled_data[i] = extend(true, [], d);
       var new_scale = datum.value[i];
       d.forEach(function(ddd, iii) {
         var old_point = unscaled_data[i][iii];

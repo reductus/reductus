@@ -3,7 +3,7 @@
 const filebrowser = {};
 export {filebrowser};
 import {editor} from './editor.js';
-import {server_api} from './server_api/hug_msgpack.js';
+import {server_api} from './server_api/api_msgpack.js';
 
 var PARALLEL_LOAD = true;
 
@@ -44,7 +44,15 @@ async function categorizeFiles(files_metadata, datasource, path, target_in) {
     }
   });
 
-  let results = await loader(load_params, file_objs, false, 'metadata');
+  let loader_template = loader(load_params, file_objs, false, 'metadata');
+  let results = await editor.calculate(loader_template, false, false);
+  results.forEach(function(result, i) {
+    var lp = load_params[i];
+    if (result && result.values) {
+      result.values.forEach(function(v) {v.mtime = lp.mtime});
+      file_objs[lp.path] = result;
+    }
+  });
   
   editor._datafiles = results;
   var categories = instrument.categories;
@@ -330,15 +338,10 @@ function updateFileBrowserPane(target, datasource, pathlist, dirdata) {
   return categorizeFiles(metadata, datasource, pathlist.join("/"), target);
 }
 
-function handleChecked(d, i, stopPropagation) {
+async function handleChecked(d, i, stopPropagation) {
   var instrument_id = editor._instrument_id;
   var loader = editor.instruments[instrument_id].load_file;
-  var xlabel, ylabel,
-      datas = [],
-      options={series: [], axes: {xaxis: {label: "x-axis"}, yaxis: {label: "y-axis"}}},
-      fileinfo = [],
-      datatype = null,
-      entries = []
+  var fileinfo = [];
   var loaded_promise = Promise.resolve();
   $(".remote-filebrowser").each(function() {
     var jstree = $(this).jstree(true);
@@ -359,16 +362,16 @@ function handleChecked(d, i, stopPropagation) {
   if (!stopPropagation) {
     $("div.fields").trigger("fileinfo.update", [fileinfo]);
   }
-  loader(fileinfo, null, false, 'plottable').then(function(results) {
-    var entries = results.map(function(r,i) {
-      var values = r.values || [];
-      var fi = fileinfo[i];
-      var entry = values.find(function(e) { return e.entry == fi.entries[0] });
-      return entry;
-    });
-    var result = {"values": entries}
-    editor._active_plot = editor.show_plots([result]);
+  let loader_template = loader(fileinfo, null, false, 'plottable');
+  let results = await editor.calculate(loader_template, false, false);
+  let entries = results.map(function(r,i) {
+    var values = r.values || [];
+    var fi = fileinfo[i];
+    var entry = values.find(function(e) { return e.entry == fi.entries[0] });
+    return entry;
   });
+  let result = {"values": entries}
+  editor._active_plot = editor.show_plots([result]);
 }
 
 function sortAlphaNumeric(a,b) {

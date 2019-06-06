@@ -1,4 +1,3 @@
-import {editor} from '../editor.js';
 const instrument = {};
 export default instrument;
 
@@ -26,16 +25,7 @@ function load_dcs(load_params, db, noblock, return_type) {
       return_type: return_type
     }
   });
-  return editor.calculate(calc_params, false, noblock).then(function(results) {
-    results.forEach(function(result, i) {
-      var lp = load_params[i];
-      if (result && result.values) {
-        result.values.forEach(function(v) {v.mtime = lp.mtime});
-        if (db) { db[lp.path] = result; }
-      }
-    });
-    return results;
-  })
+  return calc_params;
 }
 
 var DCS_REGEXP = /\.dcs\.gz$/

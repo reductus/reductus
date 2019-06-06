@@ -1,10 +1,7 @@
-import {editor} from '../editor.js';
 const instrument = {};
 export default instrument;
 
 // define the loader and categorizers for ncnr.refl instrument
-
-//function load_refl(datasource, path, mtime, db){
 function load_refl(load_params, db, noblock, return_type) {
   // load params is a list of: 
   // {datasource: "ncnr", path: "ncnrdata/cgd/...", mtime: 12319123109}
@@ -28,16 +25,7 @@ function load_refl(load_params, db, noblock, return_type) {
       return_type: return_type
     }
   });
-  return editor.calculate(calc_params, false, noblock).then(function(results) {
-    results.forEach(function(result, i) {
-      var lp = load_params[i];
-      if (result && result.values) {
-        result.values.forEach(function(v) {v.mtime = lp.mtime});
-        if (db) { db[lp.path] = result; }
-      }
-    });
-    return results;
-  })
+  return calc_params;
 }
 
 function make_range_icon(global_min_x, global_max_x, min_x, max_x) {
@@ -96,7 +84,7 @@ function add_range_indicators(target, file_objs) {
       var e = entry[0];
       var xaxis = 'x'; // primary_axis[e.intent || 'specular'];
       if (!(get_refl_item(entry[0], xaxis))) { console.log(entry[0]); throw "error: no such axis " + xaxis + " in entry for intent " + e.intent }
-      var extent = d3.extent(get_refl_item(entry[0], xaxis));
+      var extent = get_extent(get_refl_item(entry[0], xaxis));
       var leaf_actual = jstree._model.data[leaf.id];
       leaf_actual.li_attr.xmin = extent[0];
       leaf_actual.li_attr.xmax = extent[1];
@@ -229,6 +217,18 @@ instrument.files_filter = function(x) {
         (/^rapidscan/.test(x) == false) &&
         (/^scripted_findpeak/.test(x) == false))
   )
+}
+
+function get_extent(arr) {
+  let len = arr.length;
+  let max = -Infinity;
+  let min = +Infinity;
+
+  while (len--) {
+    max = arr[len] > max ? arr[len] : max;
+    min = arr[len] < min ? arr[len] : min;
+  }
+  return [min, max];
 }
   
 
