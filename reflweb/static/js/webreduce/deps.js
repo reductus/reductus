@@ -1,4 +1,7 @@
-import {set as d3_set, range as d3_range} from '../web_modules/d3.js';
+//import {d3} from './libraries.js';
+//var d3_range = d3.range;
+//var d3_set = d3.set;
+
 const dependencies = {};
 export {dependencies};
 
@@ -47,12 +50,12 @@ function processing_order(pairs, n) {
             //if any(id >= n for id in order):
             throw "Not all dependencies are in the set";
         }
-        var order_set = d3_set(order);
-        var rest = d3_set(d3_range(n).filter(function(r) { return (!order_set.has(r)) }));
+        var order_set = d3.set(order);
+        var rest = d3.set(d3.range(n).filter(function(r) { return (!order_set.has(r)) }));
         //set(range(n)) - set(order)
     }
     else {
-        var rest = d3_set();
+        var rest = d3.set();
         pairs.forEach(function(p) { p.forEach(function(pp) { rest.add(pp) }) });
         //set(k for p in pairs for k in p) - set(order)
     }
@@ -63,20 +66,20 @@ function processing_order(pairs, n) {
 
 function _dependencies(pairs) {
     //print "order_dependencies",pairs
-    var emptyset = d3_set();
+    var emptyset = d3.set();
     var order = []
 
     // Break pairs into left set and right set
-    var left = d3_set();
-    var right = d3_set();
+    var left = d3.set();
+    var right = d3.set();
     if (pairs.length > 0) {
-        left = d3_set(pairs.map(function(p) { return p[0] }));
-        right = d3_set(pairs.map(function(p) { return p[1] }));
+        left = d3.set(pairs.map(function(p) { return p[0] }));
+        right = d3.set(pairs.map(function(p) { return p[1] }));
     }
     while (pairs.length > 0) {
         // print "within",pairs
         // Find which items only occur on the right
-        var independent = d3_set();
+        var independent = d3.set();
         right.each(function(r) { if (!left.has(r)) { independent.add(r) } }); 
         if (independent.size() == 0) {
             var cycleset = left.values().join(", ")
@@ -85,7 +88,7 @@ function _dependencies(pairs) {
 
         // The possibly resolvable items are those that depend on the independents
         
-        var dependent = d3_set(pairs.filter(function(p) { return independent.has(p[1]) }).map(function(p) {return p[0]}))
+        var dependent = d3.set(pairs.filter(function(p) { return independent.has(p[1]) }).map(function(p) {return p[0]}))
         //set([a for a, b in pairs if b in independent])
         pairs = pairs.filter(function(p) { return (!independent.has(p[1])) });
         //[(a, b) for a, b in pairs if b not in independent]
@@ -93,10 +96,10 @@ function _dependencies(pairs) {
             var resolved = dependent;
         }
         else {
-            left = d3_set(pairs.map(function(p) { return p[0] }));
-            right = d3_set(pairs.map(function(p) { return p[1] }));
+            left = d3.set(pairs.map(function(p) { return p[0] }));
+            right = d3.set(pairs.map(function(p) { return p[1] }));
             //left, right = [set(s) for s in zip(*pairs)]
-            var resolved = d3_set();
+            var resolved = d3.set();
             dependent.each(function(d) { if(!left.has(d)) { resolved.add(d) } });
         }
         //print "independent",independent,"dependent",dependent,"resolvable",resolved
@@ -110,10 +113,10 @@ function _dependencies(pairs) {
 function mark_satisfied(template, module_defs) {
     var nodes_ordered = order(template);
     var modules_visited = template.modules.map(function(m) { return false; });
-    var modules_satisfied = d3_set();
-    var modules_unsatisfied = d3_set();
-    var wires_satisfied = d3_set();
-    var wires_unsatisfied = d3_set();
+    var modules_satisfied = d3.set();
+    var modules_unsatisfied = d3.set();
+    var wires_satisfied = d3.set();
+    var wires_unsatisfied = d3.set();
     
     function get_module_satisfied(node) {
         var module = template.modules[node];

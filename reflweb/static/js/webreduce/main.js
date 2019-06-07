@@ -3,9 +3,13 @@
 //import * as webreduce from './webreduce';
 //const webreduce = {};
 //export {webreduce};
+//import {d3} from './libraries.js';
+// create a new global d3 object;
+//window.d3 = d3;
 import {editor} from './editor.js';
 import {server_api} from './server_api/api_msgpack.js';
 import {filebrowser} from './filebrowser.js';
+
 const app = {}; // put state here.
 export {app};
 
@@ -318,12 +322,9 @@ window.onload = function() {
       
     var list_instruments = server_api.list_instruments()
       .then(async function(instruments) {
-        editor.instruments = [];
-        await Promise.all(instruments.map(async function(d,i) {
-          let instr = await import("./instruments/" + d + ".js");
-          editor.instruments[d] = instr.default;
+        instruments.map(function(d,i) {
           $("#main_menu #instrument_menu ul").append($("<li />").append($("<div />", {text: d})));
-        }));
+        });
         $("#main_menu").menu("refresh");
         return instruments[0];
       });

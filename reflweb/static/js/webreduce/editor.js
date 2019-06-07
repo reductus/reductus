@@ -1,16 +1,20 @@
 // require(d3.js, webreduce.server_api, dataflow)
 // require(d3, dataflow)
+export var editor = {};
+
 import {app} from './main.js';
 import {server_api} from './server_api/api_msgpack.js';
+import {dependencies} from './deps.js';
+import {Sha1} from '../sha1.es.js';
+import {instruments} from './instruments/index.js';
+// now a global...
+//import {d3} from './libraries.js';
+import {heatChart, xyChart, dataflowEditor} from './libraries.js';
+import {PouchDB} from './libraries.js';
 import {filebrowser} from './filebrowser.js';
 import {make_fieldUI} from './fieldUI.js';
-import {dependencies} from './deps.js';
-import {Sha1} from '../sha1.mjs';
-import {d3} from './libraries.js';
-import {heatChart, xyChart, dataflowEditor} from '../web_modules/d3-science.js';
-import {default as PouchDB} from '../web_modules/pouchdb-browser.js';
-const editor = {};
-export {editor};
+
+editor.instruments = instruments;
 
 editor.dispatch = d3.dispatch("accept", "field_update");
 

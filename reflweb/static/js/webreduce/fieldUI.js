@@ -1,6 +1,7 @@
 import {editor} from './editor.js';
 import {filebrowser} from './filebrowser.js';
-import {d3} from './libraries.js';
+// now a global...
+//import {d3} from './libraries.js';
 import {
   extend,
   rectangleSelect,
