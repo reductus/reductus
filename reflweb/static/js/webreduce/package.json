@@ -7,27 +7,30 @@
     "babel-polyfill": "^6.26.0",
     "block-ui": "^2.70.1",
     "bower": "^1.8.0",
-    "d3": "^5.7",
+    "d3": "^5.9.2",
     "d3-science": "github:bmaranville/d3-science-v4#npm",
-    "jquery": "^1.12.4",
+    "jquery": "^3.4.1",
     "jstree": "^3.3.7",
     "messagepack": "^1.1.10",
-    "msgpack-lite": "^0.1.26",
+    "msgpack-lite": "~0.1.26",
+    "npm": "^6.9.0",
     "pouchdb-browser": "^7.0.0",
     "unistore": "^3.4.1",
     "webpack": "^4.27.1",
     "webpack-cli": "^3.1.2"
   },
   "devDependencies": {
-    "@pika/web": "^0.3.2",
+    "@jspm/core": "^1.0.4",
+    "@pika/web": "~0.3.2",
     "cssnano": "^4.1.10",
+    "rollup": "^1.14.3",
     "rollup-plugin-node-builtins": "^2.1.2",
-    "rollup-plugin-node-globals": "^1.4.0"
+    "rollup-plugin-node-globals": "^1.4.0",
+    "rollup-plugin-node-resolve": "^5.0.1"
   },
   "@pika/web": {
     "webDependencies": [
-      "d3",
-      "d3-science/src/xy-chart.js",
+      "d3-science",
       "messagepack",
       "pouchdb-browser"
     ]
@@ -48,5 +51,6 @@
   "bugs": {
     "url": "https://github.com/reductus/reductus/issues"
   },
-  "homepage": "https://github.com/reductus/reductus#readme"
+  "homepage": "https://github.com/reductus/reductus#readme",
+  "type": "module"
 }
