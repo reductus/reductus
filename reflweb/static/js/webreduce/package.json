@@ -10,7 +10,7 @@
     "d3": "^5.9.2",
     "d3-science": "github:bmaranville/d3-science-v4#npm",
     "jquery": "^3.4.1",
-    "jstree": "^3.3.7",
+    "jstree": "^3.3.8",
     "messagepack": "^1.1.10",
     "msgpack-lite": "~0.1.26",
     "npm": "^6.9.0",
