@@ -8,7 +8,7 @@
     "block-ui": "^2.70.1",
     "bower": "^1.8.0",
     "d3": "^5.9.2",
-    "d3-science": "github:bmaranville/d3-science-v4#npm",
+    "d3-science": "github:bmaranville/d3-science-v4#es_modules",
     "jquery": "^3.4.1",
     "jstree": "^3.3.8",
     "messagepack": "^1.1.10",

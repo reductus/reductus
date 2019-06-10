@@ -1,5 +1,6 @@
 //import * as d3 from "./web_modules/d3.js";
-//export {d3};
+import * as d3 from 'd3';
+export {d3};
 import * as messagepack from 'messagepack';
 export {messagepack};
 import PouchDB from 'pouchdb-browser';

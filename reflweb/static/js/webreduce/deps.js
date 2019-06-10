@@ -1,4 +1,4 @@
-//import {d3} from './libraries.js';
+import {d3} from './libraries.js';
 //var d3_range = d3.range;
 //var d3_set = d3.set;
 

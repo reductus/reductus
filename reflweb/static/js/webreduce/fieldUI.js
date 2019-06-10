@@ -1,7 +1,7 @@
 import {editor} from './editor.js';
 import {filebrowser} from './filebrowser.js';
 // now a global...
-//import {d3} from './libraries.js';
+import {d3} from './libraries.js';
 import {
   extend,
   rectangleSelect,
@@ -9,8 +9,8 @@ import {
   ySliceInteractor,
   rectangleInteractor,
   ellipseInteractor,
-  monotonicFunctionInteractor 
-} from '../web_modules/d3-science.js';
+  monotonicFunctionInteractor
+} from './libraries.js';
 const fieldUI = {};
 export {fieldUI as make_fieldUI};
 

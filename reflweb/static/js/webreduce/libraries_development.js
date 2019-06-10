@@ -1,11 +1,19 @@
-import {default as d3} from "https://dev.jspm.io/d3@5";
-export {d3};
-import {default as messagepack} from "https://dev.jspm.io/npm:messagepack@1.1";
-export {messagepack};
-import {default as PouchDB} from "https://dev.jspm.io/npm:pouchdb-browser@7"
-export {PouchDB}
-export {default as xyChart} from "https://cdn.jsdelivr.net/gh/bmaranville/d3-science-v4@es_modules/src/xy-chart.js"
-export {default as heatChart} from "https://cdn.jsdelivr.net/gh/bmaranville/d3-science-v4@es_modules/src/heat-chart.js"
-export {default as dataflowEditor} from "https://cdn.jsdelivr.net/gh/bmaranville/d3-science-v4@es_modules/src/dataflow-editor.js"
+import { default as d3 } from "https://dev.jspm.io/d3@5";
+export { d3 };
+import { default as messagepack } from "https://dev.jspm.io/npm:messagepack@1.1";
+export { messagepack };
+import { default as PouchDB } from "https://dev.jspm.io/npm:pouchdb-browser@7";
+export { PouchDB };
+export {xyChart, heatChart, dataflowEditor} from 'https://cdn.jsdelivr.net/gh/bmaranville/d3-science-v4@es_modules/src/index.js';
+export {
+    extend,
+    rectangleSelect,
+    xSliceInteractor,
+    ySliceInteractor,
+    rectangleInteractor,
+    ellipseInteractor,
+    monotonicFunctionInteractor 
+}  from 'https://cdn.jsdelivr.net/gh/bmaranville/d3-science-v4@es_modules/src/index.js';
+
 //import * as jquery from "//dev.jspm.io/jquery@1.12";
 //export {jquery};
