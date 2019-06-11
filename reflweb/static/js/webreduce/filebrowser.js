@@ -2,6 +2,8 @@
 'use strict';
 const filebrowser = {};
 export {filebrowser};
+//import {jstree} from './libraries.js';
+//import {jquery as $} from './libraries.js';
 import {editor} from './editor.js';
 import {server_api} from './server_api/api_msgpack.js';
 

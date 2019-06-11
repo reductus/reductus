@@ -1,3 +1,4 @@
+import {extend} from '../libraries.js';
 const instrument = {};
 export default instrument;
 
@@ -60,7 +61,7 @@ instrument.default_categories = [
   [["path"]],
   [["polarization"]]
 ];
-instrument.categories = jQuery.extend(true, [], instrument.default_categories);
+instrument.categories = extend(true, [], instrument.default_categories);
 
 function add_viewer_link(target, file_objs) {
   var jstree = target.jstree(true);

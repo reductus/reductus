@@ -1,3 +1,4 @@
+import {extend} from '../libraries.js';
 const instrument = {};
 export default instrument;
 
@@ -47,7 +48,7 @@ instrument.default_categories = [
   [["run.configuration"]], 
   [["run.experimentScanID"],["sample.description"]]
 ];
-instrument.categories = jQuery.extend(true, [], instrument.default_categories);  
+instrument.categories = extend(true, [], instrument.default_categories);  
 
 function add_sample_description(target, file_objs) {
   var jstree = target.jstree(true);

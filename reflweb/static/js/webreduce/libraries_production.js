@@ -5,8 +5,6 @@ import * as messagepack from 'messagepack';
 export {messagepack};
 import PouchDB from 'pouchdb-browser';
 export {PouchDB};
-//import * as jquery from "//dev.jspm.io/jquery@1.12";
-//export {jquery};
 export {xyChart, heatChart, dataflowEditor} from './node_modules/d3-science/src/index.js';
 export {
     extend,
@@ -17,3 +15,12 @@ export {
     ellipseInteractor,
     monotonicFunctionInteractor 
 }  from './node_modules/d3-science/src/index.js';
+export {default as Split} from 'split.js';
+//import {default as _jstree} from 'jstree';
+//window.jstree = _jstree
+//import './node_modules/jstree/dist/themes/default/style.css';
+//import {default as jquery} from 'jquery';
+//window.jQuery = jquery;
+//import {default as _jquery_ui} from 'jquery-ui-dist';
+//window.jqui = _jquery_ui;
+//export {jquery, jquery as jQuery};

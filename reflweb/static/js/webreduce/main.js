@@ -6,6 +6,9 @@
 //import {d3} from './libraries.js';
 // create a new global d3 object;
 //window.d3 = d3;
+import {extend} from './libraries.js';
+import {Split} from './libraries.js';
+//import {jquery as $} from './libraries.js';
 import {editor} from './editor.js';
 import {server_api} from './server_api/api_msgpack.js';
 import {filebrowser} from './filebrowser.js';
@@ -101,6 +104,12 @@ window.onload = function() {
   server_api.__init__().then(function() {
     server_api.exception_handler = api_exception_handler;
     app.server_api = server_api;
+    var middle_layout = Split(['.ui-layout-west', '.ui-layout-center', '.ui-layout-east'], {
+      sizes: [25,50,25],
+      minSize: 0
+    });
+    app.layout = middle_layout;
+    /*
     var layout = $('body').layout({
           west__size:          350
       ,  east__size:          300
@@ -114,12 +123,13 @@ window.onload = function() {
 
     layout.toggle('east');
     layout.allowOverflow('north');
+    */
     //$("#menu").menu({width: '200px;', position: {my: "left top", at: "left+15 bottom"}});
     $(".ui-layout-west")
       .tabs()
 
   
-    app.layout = layout;
+    //app.layout = layout;
     app.download = (function () {
       var a = document.createElement("a");
       document.body.appendChild(a);
@@ -190,7 +200,7 @@ window.onload = function() {
                 hide_menu();
                 var template_id = $(this).text();
                 var instrument_id = editor._instrument_id;
-                var template_copy = jQuery.extend(true, {}, editor._instrument_def.templates[template_id]);
+                var template_copy = extend(true, {}, editor._instrument_def.templates[template_id]);
                 editor.load_template(template_copy, null, null, instrument_id);
                 if (localStorage && localStorage.setItem) {
                   var lookup_id = "webreduce.instruments." + instrument_id + ".last_used_template";

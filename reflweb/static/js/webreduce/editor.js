@@ -122,8 +122,8 @@ editor.create_instance = function(target_id) {
 function module_clicked_multiple() {
   var editor = d3.select("#" + editor._target_id);
   var active_template = editor._active_template;
-  app.layout.close("east");
-  var config_target = d3.select(".ui-layout-pane-east");
+  app.layout.collapse(2);
+  var config_target = d3.select(".ui-layout-east");
   config_target.selectAll("div").remove();
   var to_compare = [];
   editor.selectAll("g.module").each(function(dd, ii) {
@@ -147,8 +147,9 @@ function module_clicked_single() {
   let fields = module_def.fields || [];
   var add_interactors = (data_to_show == (module_def.inputs[0] || {}).id);
 
-  app.layout.open("east");
-  var config_target = d3.select(".ui-layout-pane-east");
+  let current_sizes = app.layout.getSizes();
+  app.layout.setSizes([current_sizes[0], 100-(current_sizes[0] + 25), 25]);
+  var config_target = d3.select(".ui-layout-east");
   config_target.selectAll("div").remove();
   var header = config_target
     .append("div")
@@ -180,13 +181,20 @@ function module_clicked_single() {
     .classed("accept config", true)
     .on("click", function() {
       editor.accept_parameters(config_target, active_module);
-      if (!(selected_terminal.classed("output"))) {
+      if (selected_terminal.empty()) {
+        // then it's a loader that's clicked, with no output selected;
+        let first_output = module_def.outputs[0].id;
+        let selected_title = editor.select("g.module g.title.selected");
+        let module_elem = d3.select(selected_title.node().parentNode);
+        module_elem.selectAll("g.terminals").classed('selected', function(d) { return d.id == first_output });
+      }
+      else if (!(selected_terminal.classed("output"))) {
         // find the first output and select that one...
         let first_output = module_def.outputs[0].id;
         let module_elem = d3.select(selected_terminal.node().parentNode.parentNode);
         module_elem.selectAll("g.terminals").classed('selected', function(d) { return d.id == first_output });
       }
-      editor.module_clicked();
+      module_clicked_single();
     })
   buttons_div.append("button")
     .text("clear")
@@ -313,7 +321,7 @@ editor.handle_module_clicked = function(d,i,current_group,clicked_elem) {
     var parent = d3.select(clicked_elem.parentNode);
     parent.classed("selected", !(parent.classed("selected")));
     editor_select.selectAll("g.module, g.module g.title").classed("selected", false);
-    module_clicked();   
+    module_clicked_multiple();   
   }
 
   else {

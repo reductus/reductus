@@ -1,1 +1,1 @@
-libraries_development.js
+libraries_production.js

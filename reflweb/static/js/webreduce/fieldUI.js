@@ -1,7 +1,7 @@
-import {editor} from './editor.js';
-import {filebrowser} from './filebrowser.js';
+import { editor } from './editor.js';
+import { filebrowser } from './filebrowser.js';
 // now a global...
-import {d3} from './libraries.js';
+import { d3 } from './libraries.js';
 import {
   extend,
   rectangleSelect,
@@ -12,15 +12,15 @@ import {
   monotonicFunctionInteractor
 } from './libraries.js';
 const fieldUI = {};
-export {fieldUI as make_fieldUI};
+export { fieldUI as make_fieldUI };
 
-var fileinfoUI = function() {
+var fileinfoUI = function () {
   // call with context defined:
   var datum = this.datum,
-      field = this.field,
-      target = this.target,
-      datasets_in = this.datasets_in,
-      module = this.active_module;
+    field = this.field,
+    target = this.target,
+    datasets_in = this.datasets_in,
+    module = this.active_module;
 
   $("#datasources").unblock();
   if (target.select("div#fileinfo").empty()) {
@@ -40,22 +40,22 @@ var fileinfoUI = function() {
   radio.append("label")
     .attr("for", field.id)
     .append("span")
-      .classed("fileinfo-label", true)
-      .text(field.id + "(" + existing_count + ")");
-  
+    .classed("fileinfo-label", true)
+    .text(field.id + "(" + existing_count + ")");
+
   // jquery events handler for communications  
-  $(radio.node()).on("fileinfo.update", function(ev, info) {
+  $(radio.node()).on("fileinfo.update", function (ev, info) {
     if (radio.select("input").property("checked")) {
-        radio.datum({id: field.id, value: info});
-        radio.select("label span.fileinfo-label").text(field.id + "(" + info.length + ")");
-        // auto-accept fileinfo clicks.
-        editor.accept_parameters(target, module);
+      radio.datum({ id: field.id, value: info });
+      radio.select("label span.fileinfo-label").text(field.id + "(" + info.length + ")");
+      // auto-accept fileinfo clicks.
+      editor.accept_parameters(target, module);
     }
   });
 
   target.select("#fileinfo input").property("checked", true); // first one
   target.selectAll("div#fileinfo input")
-    .on("click", function() {
+    .on("click", function () {
       $(".remote-filebrowser").trigger("fileinfo.update", d3.select(this).datum());
     });
   $("#fileinfo").buttonset();
@@ -66,30 +66,30 @@ var fileinfoUI = function() {
 }
 fieldUI.fileinfo = fileinfoUI;
 
-var indexUI = function() {
+var indexUI = function () {
   var datum_in = this.datum,
-      field = this.field,
-      target = this.target,
-      datasets_in = this.datasets_in,
-      module = this.active_module;
+    field = this.field,
+    target = this.target,
+    datasets_in = this.datasets_in,
+    module = this.active_module;
 
   if (target.select("div#indexlist").empty()) {
     target.append("div")
       .attr("id", "indexlist")
   }
-  
+
   var datasets = datasets_in.values;
   // now have a list of datasets.
   var datum = extend(true, {}, datum_in);
   datum.value = datum.value || datum.default_value;
-  datasets.forEach(function(d,i) {
+  datasets.forEach(function (d, i) {
     datum.value[i] = datum.value[i] || [];
   });
-  
+
   function prettyJSON(d) {
     return "[\n  " + d.map(JSON.stringify).join(",\n  ") + "\n]"
   }
-  
+
   var index_div = target.select("div#indexlist").append("div")
     .classed("fields", true)
     .datum(datum)
@@ -102,28 +102,28 @@ var indexUI = function() {
     .style("vertical-align", "middle")
     //.text(JSON.stringify(datum.value, null, 2))
     .text(prettyJSON(datum.value))
-    .on("change", function(d) {
+    .on("change", function (d) {
       datum.value = JSON.parse(this.value)
     });
-  
+
   // add interactors:
   if (this.add_interactors) {
     var active_plot = this.active_plot;
     var drag_instance = d3.drag();
     active_plot.svg.call(drag_instance);
-    var selector = new rectangleSelect.default(drag_instance);
+    var selector = new rectangleSelect(drag_instance, null, null, d3);
     active_plot.interactors(selector);
     var select_active = true;
     var zoom_active = true; // overrides select_active...
-    
-    var onselect = function(xmin, xmax, ymin, ymax) {
+
+    var onselect = function (xmin, xmax, ymin, ymax) {
       if (zoom_active) {
         active_plot.x().domain([xmin, xmax]);
         active_plot.y().domain([ymin, ymax]);
         active_plot.update();
       }
-      else {  
-        d3.selectAll("#plotdiv svg g.series").each(function(d,i) {
+      else {
+        d3.selectAll("#plotdiv svg g.series").each(function (d, i) {
           // i is index of dataset
           var series_select = d3.select(this);
           if (series_select.classed("hidden")) {
@@ -131,22 +131,22 @@ var indexUI = function() {
             return
           }
           var index_list = datum.value[i];
-          series_select.selectAll(".dot").each(function(dd, ii) {
+          series_select.selectAll(".dot").each(function (dd, ii) {
             // ii is the index of the point in that dataset.
-            var x = dd[0], 
-                y = dd[1];
+            var x = dd[0],
+              y = dd[1];
             if (x >= xmin && x <= xmax && y >= ymin && y <= ymax) {
               var dot = d3.select(this);
               dot.classed("masked", select_active);
               // manipulate data list directly:
               var index_index = index_list.indexOf(ii);
-              if (index_index > -1 && !select_active) { 
+              if (index_index > -1 && !select_active) {
                 // then the index exists, but we're deselecting:
-                index_list.splice(index_index, 1); 
+                index_list.splice(index_index, 1);
               }
               else if (index_index < 0 && select_active) {
                 // then the index doesn't exist and we're selecting
-                index_list.push(ii); 
+                index_list.push(ii);
               }
             }
           });
@@ -159,18 +159,18 @@ var indexUI = function() {
         input.node().dispatchEvent(event);
       }
     }
-    
+
     selector.callbacks(onselect);
-    
+
     var select_select = target.append("div")
       .style("background-color", "LightYellow")
       .classed("zoom-select-select", true)
       .append("form")
-    
+
     select_select.append("span")
       .text("left-click mouse:")
       .append("br")
-    
+
     select_select
       .append("label")
       .text("zoom")
@@ -178,7 +178,7 @@ var indexUI = function() {
       .attr("name", "select_select")
       .attr("type", "radio")
       .attr("value", "zoom")
-    
+
     select_select
       .append("label")
       .text("select")
@@ -187,7 +187,7 @@ var indexUI = function() {
       .attr("type", "radio")
       .attr("value", "select")
       .property("checked", true)
-      
+
     select_select
       .append("label")
       .text("deselect")
@@ -196,7 +196,7 @@ var indexUI = function() {
       .attr("type", "radio")
       .attr("value", "deselect")
 
-    var selectorchange = function(ev) {
+    var selectorchange = function (ev) {
       if (this.value == 'zoom') {
         zoom_active = true;
       }
@@ -209,48 +209,48 @@ var indexUI = function() {
         select_active = false;
       }
     }
-    
+
     select_select.selectAll("input").on("change", selectorchange);
-    selectorchange.call({value: "select"});
-  
+    selectorchange.call({ value: "select" });
+
     //webreduce.editor.show_plots(datasets);
-    
+
     function update_plot() {
-      d3.selectAll("#plotdiv svg g.series").each(function(d,i) {
+      d3.selectAll("#plotdiv svg g.series").each(function (d, i) {
         // i is index of dataset
         var series_select = d3.select(this);
         var index_list = datum.value[i];
         series_select.selectAll("circle.dot")
-          .filter(function(dd,ii) {return (index_list.indexOf(ii) > -1)})
+          .filter(function (dd, ii) { return (index_list.indexOf(ii) > -1) })
           .classed("masked", true);
       })
     }
-    
-    input.on("change", function(d) {
+
+    input.on("change", function (d) {
       datum.value = JSON.parse(this.value);
       update_plot();
     });
-    
+
     update_plot();
-    
+
     d3.selectAll("#plotdiv .dot").on("click", null); // clear previous handlers
-    d3.selectAll("#plotdiv svg g.series").each(function(d,i) {
+    d3.selectAll("#plotdiv svg g.series").each(function (d, i) {
       // i is index of dataset
       var series_select = d3.select(this);
-      series_select.selectAll(".dot").on("click", function(dd, ii) {
+      series_select.selectAll(".dot").on("click", function (dd, ii) {
         // ii is the index of the point in that dataset.
         d3.event.stopPropagation();
         d3.event.preventDefault();
-        var dot = d3.select(this);          
+        var dot = d3.select(this);
         // manipulate data list directly:
         var index_list = datum.value[i];
         var index_index = index_list.indexOf(ii);
-        if (index_index > -1) { 
-          index_list.splice(index_index, 1); 
-          dot.classed("masked", false); 
+        if (index_index > -1) {
+          index_list.splice(index_index, 1);
+          dot.classed("masked", false);
         }
         else {
-          index_list.push(ii); 
+          index_list.push(ii);
           dot.classed("masked", true);
         }
         index_list.sort();
@@ -272,24 +272,24 @@ var indexUI = function() {
 }
 fieldUI.index = indexUI;
 
-var scaleUI = function() {
+var scaleUI = function () {
   var datum = this.datum,
-      field = this.field,
-      target = this.target,
-      datasets_in = this.datasets_in,
-      module = this.active_module;
-      
+    field = this.field,
+    target = this.target,
+    datasets_in = this.datasets_in,
+    module = this.active_module;
+
 
   target.selectAll("div#scalelist").data([0])
     .enter()
-      .append("div")
-      .attr("id", "scalelist")
-  
+    .append("div")
+    .attr("id", "scalelist")
+
   var datasets = datasets_in.values;
   var value = (datum.value == null) ? datum.default_value : datum.value;
   // now have a list of datasets.
-  datum.value = value.slice(0,datasets.length);
-  datasets.forEach(function(d,i) {
+  datum.value = value.slice(0, datasets.length);
+  datasets.forEach(function (d, i) {
     datum.value[i] = (datum.value[i] == null) ? 1 : datum.value[i];
   });
   var scale_div = target.select("div#scalelist").append("div")
@@ -303,19 +303,19 @@ var scaleUI = function() {
     .attr("field_id", field.id)
     .style("vertical-align", "middle")
     .text(JSON.stringify(datum.value, null, 2))
-    .on("change", function(d) { datum.value = JSON.parse(this.value) });
-  
+    .on("change", function (d) { datum.value = JSON.parse(this.value) });
+
   unscaled_data = [];
-  
+
   if (this.add_interactors) {
     var active_plot = this.active_plot;
     d3.selectAll("#plotdiv .dot").on("click", null); // clear previous handlers
-    d3.selectAll("#plotdiv svg g.series").each(function(d,i) {
+    d3.selectAll("#plotdiv svg g.series").each(function (d, i) {
       // i is index of dataset
       // make a copy of the data:
       unscaled_data[i] = extend(true, [], d);
       var new_scale = datum.value[i];
-      d.forEach(function(ddd, iii) {
+      d.forEach(function (ddd, iii) {
         var old_point = unscaled_data[i][iii];
         ddd[1] = new_scale * old_point[1];
         if (ddd[2] && ddd[2].yupper != null) {
@@ -325,17 +325,17 @@ var scaleUI = function() {
           ddd[2].ylower = new_scale * old_point[2].ylower;
         }
       })
-      var dragmove_point = function(dd,ii) {
+      var dragmove_point = function (dd, ii) {
         var chart = active_plot;
         var y = chart.y(),
-            x = chart.x();
+          x = chart.x();
         var new_x = x.invert(d3.event.x),
           new_y = chart.y().invert(d3.event.y),
           old_point = unscaled_data[i][ii],
           old_x = old_point[0],
           old_y = old_point[1];
         new_scale = new_y / old_y;
-        d.forEach(function(ddd, iii) {
+        d.forEach(function (ddd, iii) {
           var old_point = unscaled_data[i][iii];
           ddd[1] = new_scale * old_point[1];
           if (ddd[2] && ddd[2].yupper != null) {
@@ -354,7 +354,7 @@ var scaleUI = function() {
       }
       var drag_point = d3.drag()
         .on("drag", dragmove_point)
-        .on("start", function() { d3.event.sourceEvent.stopPropagation(); });
+        .on("start", function () { d3.event.sourceEvent.stopPropagation(); });
       var series_select = d3.select(this);
       series_select.selectAll(".dot")
         .attr("r", 7) // bigger for easier drag...
@@ -369,19 +369,19 @@ var scaleUI = function() {
 fieldUI.scale = scaleUI;
 //function(field, active_template, datum, module_def, target, datasets_in) {
 
-var rangeUI = function() {
+var rangeUI = function () {
   var datum = this.datum,
-      field = this.field,
-      axis = this.field.typeattr['axis'] || "?",
-      target = this.target,
-      datasets_in = this.datasets_in,
-      module = this.active_module;
-  
+    field = this.field,
+    axis = this.field.typeattr['axis'] || "?",
+    target = this.target,
+    datasets_in = this.datasets_in,
+    module = this.active_module;
+
   target.append("div").append("label").text(field.label);
   var input = target.append("div")
     .classed("fields", true)
     .datum(datum)
-  
+
   var subfields = []
     .concat((/x/.test(axis)) ? ["xmin", "xmax"] : [])
     .concat((/y/.test(axis)) ? ["ymin", "ymax"] : [])
@@ -391,21 +391,21 @@ var rangeUI = function() {
     .append("div")
     .classed("subfield", true)
     .append("label")
-    .text(function(d) {return d})
-      .append("input")
-        .attr("type", "text")
-        .attr("placeholder", function(d,i) { return (datum.default_value || [])[i] })
-        .on("change", function(d,i) { 
-          if (datum.value == null) { datum.value = datum.default_value }
-          datum.value[i] = parseFloat(this.value);
-        });
+    .text(function (d) { return d })
+    .append("input")
+    .attr("type", "text")
+    .attr("placeholder", function (d, i) { return (datum.default_value || [])[i] })
+    .on("change", function (d, i) {
+      if (datum.value == null) { datum.value = datum.default_value }
+      datum.value[i] = parseFloat(this.value);
+    });
   subinputs
-    .attr("value", function(d,i) { return (datum.value) ? datum.value[i] : null })
-    .property("value", function(d,i) { return (datum.value) ? datum.value[i] : null })
-        
+    .attr("value", function (d, i) { return (datum.value) ? datum.value[i] : null })
+    .property("value", function (d, i) { return (datum.value) ? datum.value[i] : null })
+
   if (this.add_interactors) {
     var active_plot = this.active_plot;
-    if (axis == 'x' && active_plot &&  active_plot.interactors) {
+    if (axis == 'x' && active_plot && active_plot.interactors) {
       // add x-range interactor
       var xrange = active_plot.x().domain();
       var value = datum.value || datum.default_value;
@@ -421,9 +421,9 @@ var rangeUI = function() {
         x1: value[0],
         x2: value[1]
       }
-      var interactor = new xSliceInteractor.default(opts);
+      var interactor = new xSliceInteractor(opts, null, null, d3);
       active_plot.interactors(interactor);
-      subinputs.on("change", function(d,i) { 
+      subinputs.on("change", function (d, i) {
         if (datum.value == null) { datum.value = datum.default_value }
         var v = parseFloat(this.value);
         v = (isNaN(v)) ? null : v;
@@ -432,19 +432,19 @@ var rangeUI = function() {
         interactor.state[xitem] = (v == null) ? xrange[i] : v;
         interactor.update(false);
       });
-      interactor.dispatch.on("update", function() { 
+      interactor.dispatch.on("update", function () {
         var state = interactor.state;
         datum.value = [state.x1, state.x2];
         subinputs
-          .property("value", function(d,i) { return (datum.value) ? datum.value[i] : null })
-          .attr("value", function(d,i) { return (datum.value) ? datum.value[i] : null })
+          .property("value", function (d, i) { return (datum.value) ? datum.value[i] : null })
+          .attr("value", function (d, i) { return (datum.value) ? datum.value[i] : null })
         var event = document.createEvent('Event');
         event.initEvent('input', true, true);
         subinputs.node().dispatchEvent(event);
       });
-      
+
     }
-    else if (axis == 'y' && active_plot &&  active_plot.interactors) {
+    else if (axis == 'y' && active_plot && active_plot.interactors) {
       // add y-range interactor
       var yrange = active_plot.y().domain();
       var value = datum.value || datum.default_value;
@@ -460,9 +460,9 @@ var rangeUI = function() {
         y1: value[0],
         y2: value[1]
       }
-      var interactor = new ySliceInteractor.default(opts);
+      var interactor = new ySliceInteractor(opts, null, null, d3);
       active_plot.interactors(interactor);
-      subinputs.on("change", function(d,i) { 
+      subinputs.on("change", function (d, i) {
         if (datum.value == null) { datum.value = datum.default_value }
         var v = parseFloat(this.value);
         v = (isNaN(v)) ? null : v;
@@ -471,12 +471,12 @@ var rangeUI = function() {
         interactor.state[yitem] = (v == null) ? yrange[i] : v;
         interactor.update(false);
       });
-      interactor.dispatch.on("update", function() { 
+      interactor.dispatch.on("update", function () {
         var state = interactor.state;
         datum.value = [state.y1, state.y2];
         subinputs
-          .property("value", function(d,i) { return (datum.value) ? datum.value[i] : null })
-          .attr("value", function(d,i) { return (datum.value) ? datum.value[i] : null })
+          .property("value", function (d, i) { return (datum.value) ? datum.value[i] : null })
+          .attr("value", function (d, i) { return (datum.value) ? datum.value[i] : null })
         var event = document.createEvent('Event');
         event.initEvent('input', true, true);
         subinputs.node().dispatchEvent(event);
@@ -485,7 +485,7 @@ var rangeUI = function() {
     else if (axis == 'xy' && active_plot && active_plot.interactors) {
       // add box interactor
       var xrange = active_plot.x().domain(),
-          yrange = active_plot.y().domain();
+        yrange = active_plot.y().domain();
       var value = datum.value || datum.default_value;
       var value = [
         (value[0] == null) ? xrange[0] : value[0],
@@ -493,7 +493,7 @@ var rangeUI = function() {
         (value[2] == null) ? yrange[0] : value[2],
         (value[3] == null) ? yrange[1] : value[3]
       ]
-      
+
       var opts = {
         type: 'Rectangle',
         name: 'range',
@@ -503,28 +503,28 @@ var rangeUI = function() {
         show_center: false,
         xmin: value[0],
         xmax: value[1],
-        ymin: value[2], 
+        ymin: value[2],
         ymax: value[3]
       }
-      var interactor = new rectangleInteractor.default(opts);
+      var interactor = new rectangleInteractor(opts, null, null, d3);
       active_plot.interactors(interactor);
       // bind the update after init, so that it doesn't alter the field at init.
-      subinputs.on("change", function(d,i) { 
+      subinputs.on("change", function (d, i) {
         if (datum.value == null) { datum.value = datum.default_value }
         var v = parseFloat(this.value);
         v = (isNaN(v)) ? null : v;
         datum.value[i] = v;
         var item = ["xmin", "xmax", "ymin", "ymax"][i];
-        var default_value = (i<2) ? xrange[i] : yrange[i-2];
+        var default_value = (i < 2) ? xrange[i] : yrange[i - 2];
         interactor.state[item] = (v == null) ? default_value : v;
         interactor.update(false);
       });
-      interactor.dispatch.on("update", function() { 
+      interactor.dispatch.on("update", function () {
         var state = interactor.state;
         datum.value = [state.xmin, state.xmax, state.ymin, state.ymax];
         subinputs
-          .property("value", function(d,i) { return (datum.value) ? datum.value[i] : null })
-          .attr("value", function(d,i) { return (datum.value) ? datum.value[i] : null })
+          .property("value", function (d, i) { return (datum.value) ? datum.value[i] : null })
+          .attr("value", function (d, i) { return (datum.value) ? datum.value[i] : null })
         var event = document.createEvent('Event');
         event.initEvent('input', true, true);
         subinputs.node().dispatchEvent(event);
@@ -533,15 +533,15 @@ var rangeUI = function() {
     else if (axis == 'ellipse' && active_plot && active_plot.interactors) {
       // add ellipse interactor
       var xrange = active_plot.x().domain(),
-          yrange = active_plot.y().domain();
+        yrange = active_plot.y().domain();
       var value = datum.value || datum.default_value;
       var value = [
-        (value[0] == null) ? (xrange[0] + xrange[1])/2 : value[0],
-        (value[1] == null) ? (yrange[0] + yrange[1])/2 : value[1],
-        (value[2] == null) ? (xrange[0] + xrange[1])/2 : value[2],
-        (value[3] == null) ? (yrange[0] + yrange[1])/2 : value[3]
+        (value[0] == null) ? (xrange[0] + xrange[1]) / 2 : value[0],
+        (value[1] == null) ? (yrange[0] + yrange[1]) / 2 : value[1],
+        (value[2] == null) ? (xrange[0] + xrange[1]) / 2 : value[2],
+        (value[3] == null) ? (yrange[0] + yrange[1]) / 2 : value[3]
       ]
-      
+
       var opts = {
         type: 'Ellipse',
         name: 'range',
@@ -552,195 +552,195 @@ var rangeUI = function() {
         show_points: true,
         cx: value[0],
         cy: value[1],
-        rx: value[2], 
+        rx: value[2],
         ry: value[3]
       }
-      var interactor = new ellipseInteractor.default(opts);
+      var interactor = new ellipseInteractor(opts, null,null, d3);
       active_plot.interactors(interactor);
       // bind the update after init, so that it doesn't alter the field at init.
-      subinputs.on("change", function(d,i) { 
+      subinputs.on("change", function (d, i) {
         if (datum.value == null) { datum.value = datum.default_value }
         var v = parseFloat(this.value);
         v = (isNaN(v)) ? null : v;
         datum.value[i] = v;
         var item = ["cx", "cy", "rx", "ry"][i];
-        var default_value = (i == 0 || i == 2) ? (xrange[0] + xrange[1])/2 : (yrange[0] + yrange[1])/2;
+        var default_value = (i == 0 || i == 2) ? (xrange[0] + xrange[1]) / 2 : (yrange[0] + yrange[1]) / 2;
         interactor.state[item] = (v == null) ? default_value : v;
         interactor.update(false);
       });
-      interactor.dispatch.on("update", function() { 
+      interactor.dispatch.on("update", function () {
         var state = interactor.state;
         datum.value = [state.cx, state.cy, state.rx, state.ry];
         subinputs
-          .property("value", function(d,i) { return (datum.value) ? datum.value[i] : null })
-          .attr("value", function(d,i) { return (datum.value) ? datum.value[i] : null })
+          .property("value", function (d, i) { return (datum.value) ? datum.value[i] : null })
+          .attr("value", function (d, i) { return (datum.value) ? datum.value[i] : null })
         var event = document.createEvent('Event');
         event.initEvent('input', true, true);
         subinputs.node().dispatchEvent(event);
       });
-    }  
+    }
   }
-  return input    
+  return input
 }
 fieldUI.range = rangeUI;
 
-var coordinateUI = function() {
+var coordinateUI = function () {
   var datum = this.datum,
-      field = this.field,
-      axis = this.field.typeattr['axis'] || "?",
-      target = this.target,
-      datasets_in = this.datasets_in,
-      module = this.active_module;
-  
+    field = this.field,
+    axis = this.field.typeattr['axis'] || "?",
+    target = this.target,
+    datasets_in = this.datasets_in,
+    module = this.active_module;
+
   target.append("div").append("label").text(field.label);
   var input = target.append("div")
     .classed("fields", true)
     .datum(datum)
-  
+
   var subfields = ["x", "y"];
   var subinputs = input.selectAll("div.subfield").data(subfields).enter()
     .append("div")
     .classed("subfield", true)
     .append("label")
-    .text(function(d) {return d})
-      .append("input")
-        .attr("type", "text")
-        .attr("placeholder", function(d,i) { return (datum.default_value || [])[i] })
-        .on("change", function(d,i) { 
-          if (datum.value == null) { datum.value = datum.default_value }
-          datum.value[i] = parseFloat(this.value);
-        });
+    .text(function (d) { return d })
+    .append("input")
+    .attr("type", "text")
+    .attr("placeholder", function (d, i) { return (datum.default_value || [])[i] })
+    .on("change", function (d, i) {
+      if (datum.value == null) { datum.value = datum.default_value }
+      datum.value[i] = parseFloat(this.value);
+    });
   subinputs
-    .attr("value", function(d,i) { return (datum.value) ? datum.value[i] : null })
-    .property("value", function(d,i) { return (datum.value) ? datum.value[i] : null })
-    
+    .attr("value", function (d, i) { return (datum.value) ? datum.value[i] : null })
+    .property("value", function (d, i) { return (datum.value) ? datum.value[i] : null })
+
   return input;
 }
 fieldUI.coordinate = coordinateUI;
 
-var strUI = function() {
+var strUI = function () {
   var datum = this.datum,
-      field = this.field,
-      target = this.target,
-      datasets_in = this.datasets_in,
-      module = this.active_module;
+    field = this.field,
+    target = this.target,
+    datasets_in = this.datasets_in,
+    module = this.active_module;
 
   var input = target.append("div")
     .classed("fields", true)
     .datum(datum)
     .append("label")
-      .text(field.label)
-      .append("input")
-        .attr("type", "text")
-        .attr("field_id", field.id)
-        .attr("value", datum.value)
-        .attr("placeholder", datum.default_value)
-        .on("change", function(d) { datum.value = this.value });
+    .text(field.label)
+    .append("input")
+    .attr("type", "text")
+    .attr("field_id", field.id)
+    .attr("value", datum.value)
+    .attr("placeholder", datum.default_value)
+    .on("change", function (d) { datum.value = this.value });
   return input;
 }
 fieldUI.str = strUI;
 
-var optUI = function() {
+var optUI = function () {
   var datum = this.datum,
-      field = this.field,
-      target = this.target,
-      datasets_in = this.datasets_in,
-      module = this.active_module;
+    field = this.field,
+    target = this.target,
+    datasets_in = this.datasets_in,
+    module = this.active_module;
 
   var input = target.append("div")
     .classed("fields", true)
     .datum(datum)
     .append("label")
-      .text(field.label)
-      .append("select")
-        .attr("field_id", field.id)
-        .attr("value", (datum.value == null) ? datum.default_value : datum.value)
-        .on("change", function(d) { datum.value = this.value })
+    .text(field.label)
+    .append("select")
+    .attr("field_id", field.id)
+    .attr("value", (datum.value == null) ? datum.default_value : datum.value)
+    .on("change", function (d) { datum.value = this.value })
   input
-        .selectAll("option").data(field.typeattr.choices)
-          .enter().append("option")
-          .attr("value", function(d) {return d[1]})
-          .property("selected", function(d) {return d[1] == datum.value})
-          .text(function(d) {return d[0]})
+    .selectAll("option").data(field.typeattr.choices)
+    .enter().append("option")
+    .attr("value", function (d) { return d[1] })
+    .property("selected", function (d) { return d[1] == datum.value })
+    .text(function (d) { return d[0] })
   return input;
 }
 fieldUI.opt = optUI;
 
-var floatUI = function() {
+var floatUI = function () {
   var datum = this.datum,
-      field = this.field,
-      target = this.target,
-      datasets_in = this.datasets_in,
-      module = this.active_module;
+    field = this.field,
+    target = this.target,
+    datasets_in = this.datasets_in,
+    module = this.active_module;
   var input;
-  if (field.multiple) { 
+  if (field.multiple) {
     //datum.value = [datum.value]; 
     input = target.append("div")
       .classed("fields", true)
       .datum(datum)
-      .append("label")           
-        .text(field.label)
-        .append("input")
-          .attr("type", "text")
-          .attr("field_id", field.id)
-          .attr("value", JSON.stringify(datum.value))
-          .attr("placeholder", JSON.stringify(datum.default_value))
-          .on("change", function(d) { datum.value = JSON.parse(this.value) });
+      .append("label")
+      .text(field.label)
+      .append("input")
+      .attr("type", "text")
+      .attr("field_id", field.id)
+      .attr("value", JSON.stringify(datum.value))
+      .attr("placeholder", JSON.stringify(datum.default_value))
+      .on("change", function (d) { datum.value = JSON.parse(this.value) });
   } else {
     input = target.append("div")
       .classed("fields", true)
       .datum(datum)
       .append("label")
-        .text(field.label)
-        .append("input")
-          .attr("type", "text")
-          .attr("field_id", field.id)
-          .attr("value", datum.value)
-          .attr("placeholder", JSON.stringify(datum.default_value))
-          .on("input", function(d) { datum.value = (this.value == "") ? null : parseFloat(this.value) });
+      .text(field.label)
+      .append("input")
+      .attr("type", "text")
+      .attr("field_id", field.id)
+      .attr("value", datum.value)
+      .attr("placeholder", JSON.stringify(datum.default_value))
+      .on("input", function (d) { datum.value = (this.value == "") ? null : parseFloat(this.value) });
   }
   return input;
 }
 fieldUI.float = floatUI;
 
-var intUI = function() {
+var intUI = function () {
   var datum = this.datum,
-      field = this.field,
-      target = this.target,
-      datasets_in = this.datasets_in,
-      module = this.active_module;
+    field = this.field,
+    target = this.target,
+    datasets_in = this.datasets_in,
+    module = this.active_module;
   var input = target.append("div")
     .classed("fields", true)
     .datum(datum)
     .append("label")
-      .text(field.label)
-      .append("input")
-        .attr("type", "number")
-        .attr("field_id", field.id)
-        .attr("value", datum.value)
-        .attr("placeholder", JSON.stringify(datum.default_value))
-        .on("input", function(d) { datum.value = (this.value == "") ? null : parseInt(this.value) });
+    .text(field.label)
+    .append("input")
+    .attr("type", "number")
+    .attr("field_id", field.id)
+    .attr("value", datum.value)
+    .attr("placeholder", JSON.stringify(datum.default_value))
+    .on("input", function (d) { datum.value = (this.value == "") ? null : parseInt(this.value) });
   return input;
 }
 fieldUI.int = intUI;
 
-var boolUI = function() {
+var boolUI = function () {
   var datum = this.datum,
-      field = this.field,
-      target = this.target,
-      datasets_in = this.datasets_in,
-      module = this.active_module,
-      initial_value = (datum.value == null) ? datum.default_value : datum.value;
+    field = this.field,
+    target = this.target,
+    datasets_in = this.datasets_in,
+    module = this.active_module,
+    initial_value = (datum.value == null) ? datum.default_value : datum.value;
   var input = target.append("div")
     .classed("fields", true)
     .datum(datum)
     .append("label")
-      .text(field.label)
-      .append("input")
-        .attr("type", "checkbox")
-        .attr("field_id", field.id)
-        .property("checked", initial_value)
-        .on("change", function(d) { datum.value = this.checked });
+    .text(field.label)
+    .append("input")
+    .attr("type", "checkbox")
+    .attr("field_id", field.id)
+    .property("checked", initial_value)
+    .on("change", function (d) { datum.value = this.checked });
   return input;
 }
 fieldUI.bool = boolUI;

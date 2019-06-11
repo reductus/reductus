@@ -14,6 +14,6 @@ export {
     ellipseInteractor,
     monotonicFunctionInteractor 
 }  from 'https://cdn.jsdelivr.net/gh/bmaranville/d3-science-v4@es_modules/src/index.js';
-
-//import * as jquery from "//dev.jspm.io/jquery@1.12";
-//export {jquery};
+import {default as _jstree} from "https://dev.jspm.io/npm:jstree@3.3";
+import {default as jquery} from "https://dev.jspm.io/npm:jquery@latest";
+export {jquery};

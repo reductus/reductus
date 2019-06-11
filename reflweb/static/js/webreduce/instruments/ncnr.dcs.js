@@ -1,3 +1,4 @@
+import {extend} from '../libraries.js';
 const instrument = {};
 export default instrument;
 
@@ -36,6 +37,6 @@ instrument.default_categories = [
   [["temp_setpoint"], ["field_setpoint"]],
   [["name"]]
 ];
-instrument.categories = jQuery.extend(true, [], instrument.default_categories);  
+instrument.categories = extend(true, [], instrument.default_categories);  
 
 instrument.decorators = [];
