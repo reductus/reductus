@@ -27,7 +27,7 @@ def _b(s):
 
 def _s(b):
     if IS_PY3:
-        return b.decode('utf-8')
+        return b.decode('utf-8') if hasattr(b, 'decode') else b
     else:
         return b
 
@@ -46,7 +46,7 @@ class SansData(object):
             self.data = Uncertainty(data, data + (data==0))
         else:
             self.data = data
-        self.metadata = metadata
+        self.metadata = metadata if metadata is not None else {}
         # There are many places where q was not set, i think i fixed most,
         # but there might be more; be wary
         self.q = q

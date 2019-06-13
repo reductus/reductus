@@ -42,10 +42,11 @@ webreduce.instruments['ncnr.sans'] = webreduce.instruments['ncnr.sans'] || {};
   
   var NEXUZ_REGEXP = /\.nxz\.[^\.\/]+$/
   var NEXUS_REGEXP = /\.nxs\.[^\.\/]+(\.zip)?$/
+  var DIV_REGEXP = /\.DIV$/
 
   instrument.files_filter = function(x) {
     return (
-      ((NEXUS_REGEXP.test(x)) &&
+      ((NEXUS_REGEXP.test(x) || DIV_REGEXP.test(x)) &&
          (/^(fp_)/.test(x) == false) &&
          (/^rapidscan/.test(x) == false) &&
          (/^scripted_findpeak/.test(x) == false))
@@ -55,9 +56,17 @@ webreduce.instruments['ncnr.sans'] = webreduce.instruments['ncnr.sans'] || {};
   instrument.load_file = load_sans;
   instrument.default_categories = [
     [["analysis.groupid"]],
-    [["analysis.intent"]], 
-    [["run.configuration"]], 
-    [["run.experimentScanID"],["sample.description"]]
+    [
+      [
+        "analysis.intent"
+      ],
+      [
+        "run.experimentScanID"
+      ],
+      [
+        "sample.description"
+      ]
+    ]
   ];
   instrument.categories = jQuery.extend(true, [], instrument.default_categories);  
   

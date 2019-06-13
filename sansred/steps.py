@@ -17,6 +17,7 @@ from dataflow.lib.uncertainty import Uncertainty
 from dataflow.lib import uncertainty
 
 from .sansdata import SansData, Sans1dData, Parameters
+from .sans_vaxformat import readNCNRSensitivity
 
 ALL_ACTIONS = []
 IGNORE_CORNER_PIXELS = True
@@ -74,6 +75,49 @@ def url_load(fileinfo):
 
 @cache
 @module
+def LoadDIV(filelist=None, variance=0.0001):
+    """
+    loads a DIV file (VAX format) into a SansData obj and returns that.
+
+    **Inputs**
+
+    filelist (fileinfo[]): Files to open.
+
+    variance (float): Target variance of DIV measurement (default 0.0001, i.e. 1% error)
+    
+    **Returns**
+
+    output (sans2d[]): all the entries loaded.
+
+    2018-04-21 Brian Maranville
+    """
+    from dataflow.fetch import url_get
+    from .sans_vaxformat import readNCNRSensitivity
+
+    output = []
+    if filelist is not None:
+        for fileinfo in filelist:
+            path, mtime, entries = fileinfo['path'], fileinfo.get('mtime', None), fileinfo.get('entries', None)
+            name = basename(path)
+            fid = BytesIO(url_get(fileinfo, mtime_check=False))
+            sens_raw = readNCNRSensitivity(fid)
+            sens = SansData(Uncertainty(sens_raw, sens_raw * variance))
+            sens.metadata = {
+                "analysis.groupid": -1,
+                "analysis.intent": "DIV",
+                "analysis.filepurpose": "Sensitivity",
+                "run.experimentScanID": name, 
+                "sample.description": "PLEX",
+                "entry": "entry",
+                "run.filename": name,
+                "sample.labl": "PLEX",
+                "run.configuration": "DIV"
+            }
+            output.append(sens)
+    return output
+
+@cache
+@module
 def LoadSANS(filelist=None, flip=False, transpose=False, check_timestamps=True):
     """
     loads a data file into a SansData obj and returns that.
@@ -93,7 +137,7 @@ def LoadSANS(filelist=None, flip=False, transpose=False, check_timestamps=True):
 
     output (sans2d[]): all the entries loaded.
 
-    2018-04-20 Brian Maranville
+    2018-04-21 Brian Maranville
     """
     from dataflow.fetch import url_get
     from .loader import readSANSNexuz
@@ -104,7 +148,25 @@ def LoadSANS(filelist=None, flip=False, transpose=False, check_timestamps=True):
         path, mtime, entries = fileinfo['path'], fileinfo.get('mtime', None), fileinfo.get('entries', None)
         name = basename(path)
         fid = BytesIO(url_get(fileinfo, mtime_check=check_timestamps))
-        entries = readSANSNexuz(name, fid)
+        if name.upper().endswith(".DIV"):
+            sens_raw = readNCNRSensitivity(fid)
+            print(sens_raw)
+            sens = SansData(Uncertainty(sens_raw, sens_raw * 0.0001))
+            print(sens, sens.metadata)
+            sens.metadata = {
+                "analysis.groupid": -1,
+                "analysis.intent": "DIV",
+                "analysis.filepurpose": "Sensitivity",
+                "run.experimentScanID": name, 
+                "sample.description": "PLEX",
+                "entry": "entry",
+                "run.filename": name,
+                "sample.labl": "PLEX",
+                "run.configuration": "DIV"
+            }
+            entries = [sens]
+        else:
+            entries = readSANSNexuz(name, fid)
         for entry in entries:
             if flip:
                 entry.data.x = np.fliplr(entry.data.x)
@@ -795,7 +857,7 @@ def correct_attenuation(sample, instrument="NG7"):
 
 @cache
 @module
-def absolute_scaling(sample, empty, div, Tsam, instrument="NG7", integration_box=[55, 74, 53, 72]):
+def absolute_scaling(sample, empty, Tsam, div, instrument="NG7", integration_box=[55, 74, 53, 72]):
     """
     Calculate absolute scaling
 
@@ -807,9 +869,9 @@ def absolute_scaling(sample, empty, div, Tsam, instrument="NG7", integration_box
 
     empty (sans2d): measurement with no sample in the beam
 
-    div (sans2d): DIV measurement
-
     Tsam (params): sample transmission
+
+    div (sans2d): DIV measurement
 
     instrument (opt:NG7|NGB|NGB30): instrument name, should be NG7 or NG3
 

@@ -19,16 +19,10 @@
       "title": "empty cell"
     },
     {
-      "x": 5,
+      "x": 10,
       "module": "ncnr.sans.SuperLoadSANS",
       "config": {
-        "do_deadtime": true,
-        "do_solid_angle": true,
-        "do_mon_norm": true,
-        "mon0": 100000000,
-        "do_det_eff": true,
         "filelist": [],
-        "deadtime": 0.0000034
       },
       "y": 140,
       "title": "empty trans"
@@ -37,21 +31,15 @@
       "x": 5,
       "module": "ncnr.sans.SuperLoadSANS",
       "config": {
-        "do_deadtime": true,
-        "do_solid_angle": true,
-        "do_mon_norm": true,
-        "mon0": 100000000,
-        "do_det_eff": true,
-        "filelist": [],
-        "deadtime": 0.0000034
+        "filelist": []
       },
-      "y": 105,
+      "y": 110,
       "title": "sample trans"
     },
     {
-      "x": 155,
+      "x": 195,
       "module": "ncnr.sans.generate_transmission",
-      "y": 150,
+      "y": 135,
       "title": "Gen trans"
     },
     {
@@ -72,13 +60,13 @@
     {
       "x": 230,
       "module": "ncnr.sans.subtract",
-      "y": 65,
+      "y": 55,
       "title": "Subtract"
     },
     {
-      "x": 370,
+      "x": 380,
       "module": "ncnr.sans.product",
-      "y": 65,
+      "y": 30,
       "title": "Product"
     },
     {
@@ -96,74 +84,38 @@
     {
       "x": 385,
       "module": "ncnr.sans.LoadSANS",
-      "y": 210,
+      "y": 130,
       "title": "empty"
     },
     {
-      "x": 665,
+      "x": 520,
       "module": "ncnr.sans.generate_transmission",
-      "y": 175,
+      "y": 75,
       "title": "Gen trans"
     },
     {
-      "x": 940,
+      "x": 935,
       "module": "ncnr.sans.absolute_scaling",
-      "y": 70,
+      "y": 50,
       "title": "Abs Scale"
     },
     {
-      "x": 690,
-      "module": "ncnr.sans.makeDIV",
-      "title": "Makediv",
-      "y": 95
-    },
-    {
-      "x": 410,
-      "module": "ncnr.sans.LoadSANS",
+      "module": "ncnr.sans.LoadDIV",
+      "title": "DIV",
+      "x": 385,
+      "y": 160,
       "config": {
         "filelist": [
           {
-            "path": "ncnrdata/ng7sans/201702/nonims1/data/sans28191.nxs.ng7",
-            "mtime": 1487250249,
+            "path": "ncnrdata/ancillary/ng7sans/DIV/PLEX_20190315_NG7.DIV",
             "source": "ncnr",
+            "mtime": 1552662424,
             "entries": [
               "entry"
             ]
           }
         ]
-      },
-      "title": "base plex",
-      "y": 115
-    },
-    {
-      "x": 410,
-      "module": "ncnr.sans.LoadSANS",
-      "config": {
-        "filelist": [
-          {
-            "path": "ncnrdata/ng7sans/201702/nonims1/data/sans28190.nxs.ng7",
-            "mtime": 1487248423,
-            "source": "ncnr",
-            "entries": [
-              "entry"
-            ]
-          }
-        ]
-      },
-      "title": "offset plex",
-      "y": 145
-    },
-    {
-      "module": "ncnr.sans.addSimple",
-      "title": "sum",
-      "x": 550,
-      "y": 95
-    },
-    {
-      "module": "ncnr.sans.addSimple",
-      "title": "sum",
-      "x": 550,
-      "y": 125
+      }
     }
   ],
   "wires": [
@@ -328,63 +280,13 @@
       ]
     },
     {
+      "source": [
+        14,
+        "output"
+      ],
       "target": [
         13,
         "div"
-      ],
-      "source": [
-        14,
-        "DIV"
-      ]
-    },
-    {
-      "target": [
-        10,
-        "sensitivity"
-      ],
-      "source": [
-        14,
-        "DIV"
-      ]
-    },
-    {
-      "source": [
-        16,
-        "output"
-      ],
-      "target": [
-        18,
-        "data"
-      ]
-    },
-    {
-      "source": [
-        18,
-        "sum"
-      ],
-      "target": [
-        14,
-        "data2"
-      ]
-    },
-    {
-      "source": [
-        15,
-        "output"
-      ],
-      "target": [
-        17,
-        "data"
-      ]
-    },
-    {
-      "source": [
-        17,
-        "sum"
-      ],
-      "target": [
-        14,
-        "data1"
       ]
     }
   ]
