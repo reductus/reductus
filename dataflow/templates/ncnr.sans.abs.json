@@ -22,7 +22,7 @@
       "x": 10,
       "module": "ncnr.sans.SuperLoadSANS",
       "config": {
-        "filelist": [],
+        "filelist": []
       },
       "y": 140,
       "title": "empty trans"
