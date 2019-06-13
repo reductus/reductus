@@ -49,7 +49,7 @@ data_sources = [
 ]
 file_helper_url = {
     "charlotte": "http://charlotte.ncnr.nist.gov/ipeek/listftpfiles.php",
-    "ncnr": "https://ncnr.nist.gov/ipeek/listftpfiles.php",
-    "ncnr_DOI": "https://ncnr.nist.gov/ipeek/listncnrdatafiles.php"
+    "ncnr": "ncnr": "https://ncnr.nist.gov/ncnrdata/listftpfiles.php",
+    "ncnr_DOI": "https://ncnr.nist.gov/ncnrdata/listncnrdatafiles.php"
 }
 instruments = ["refl", "ospec", "sans"]
