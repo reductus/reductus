@@ -875,7 +875,7 @@ def subtract_background(data, backp, backm, align="none"):
     return data
 
 @module
-def fit_background_field(back, fit_scale=True, scale=1.0, epsD0=0.01, epssi=2.857e-4, LS3=380, LS4=1269, LSD=1675, HD=150, maxF=75, Qcutoff=0.05):
+def fit_background_field(back, fit_scale=True, scale=1.0, epsD0=0.01, epssi=1.109e-4, LS3=380, LS4=1269, LSD=1675, HD=150, maxF=76.2, Qcutoff=0.05):
     """
     Fit the background field from a thin liquid reservoir to background
     datasets. Background datasets:
