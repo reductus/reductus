@@ -28,16 +28,7 @@ webreduce.instruments['ncnr.dcs'] = webreduce.instruments['ncnr.dcs'] || {};
         return_type: return_type
       }
     });
-    return webreduce.editor.calculate(calc_params, false, noblock).then(function(results) {
-      results.forEach(function(result, i) {
-        var lp = load_params[i];
-        if (result && result.values) {
-          result.values.forEach(function(v) {v.mtime = lp.mtime});
-          if (db) { db[lp.path] = result; }
-        }
-      });
-      return results;
-    })
+    return calc_params;
   }
 
   var DCS_REGEXP = /\.dcs\.gz$/

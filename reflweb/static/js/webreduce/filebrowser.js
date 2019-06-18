@@ -40,9 +40,17 @@
         "mtime": files_metadata[j].mtime
       }
     });
-
-    let results = await loader(load_params, file_objs, false, 'metadata');
     
+    let loader_template = loader(load_params, file_objs, false, 'metadata');
+    let results = await editor.calculate(loader_template, false, false);
+    results.forEach(function(result, i) {
+      var lp = load_params[i];
+      if (result && result.values) {
+        result.values.forEach(function(v) {v.mtime = lp.mtime});
+        file_objs[lp.path] = result;
+      }
+    });
+
     webreduce.editor._datafiles = results;
     var categories = instrument.categories;
     var treeinfo = file_objs_to_tree(file_objs, categories, datasource);
