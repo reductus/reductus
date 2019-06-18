@@ -10,6 +10,7 @@ import h5py
 
 from dataflow.lib import hzf_readonly_stripped as hzf
 from dataflow.lib import unit
+from dataflow.lib.h5_open import h5_open_zip
 
 from .sansdata import SansData
 
@@ -69,8 +70,7 @@ unit_specifiers = {
     "det.pixeloffsety": "cm",
     "sample.thk": "cm",
     "resolution.ap1": "cm",
-    "resolution.ap2": "cm",
-    "sample.thk": "cm"
+    "resolution.ap2": "cm"
 }
 
 def process_sourceAperture(field, units):
@@ -101,44 +101,6 @@ def data_as(field, units):
         converter = unit.Converter(units_in)
         value = converter(field.value, units)
         return value
-
-def h5_open_zip(filename, file_obj=None, **kw):
-    """
-    Open a NeXus file, even if it is in a zip file,
-    or if it is a NeXus-zip file.
-
-    If the filename ends in '.zip', it will be unzipped to a temporary
-    directory before opening and deleted on :func:`closezip`.  If opened
-    for writing, then the file will be created in a temporary directory,
-    then zipped and deleted on :func:`closezip`.
-
-    If it is a zipfile but doesn't end in '.zip', it is assumed
-    to be a NeXus-zip file and is opened with that library.
-
-    Arguments are the same as for :func:`open`.
-    """
-    if file_obj is None:
-        file_obj = io.BytesIO(open(filename, mode='rb', buffering=-1).read())
-    is_zip = is_zipfile(file_obj) # is_zipfile(file_obj) doens't work in py2.6
-    if is_zip and '.attrs' in ZipFile(file_obj).namelist():
-        # then it's a nexus-zip file, rather than
-        # a zipped hdf5 nexus file
-        f = hzf.File(filename, file_obj)
-        f.delete_on_close = False
-        f.zip_on_close = False
-    else:
-        zip_on_close = None
-        if is_zip:
-            zf = ZipFile(file_obj)
-            members = zf.namelist()
-            assert len(members) == 1
-            file_obj = io.BytesIO(zf.read(members[0]))
-            filename = os.path.join(path, members[0])
-        
-        f = h5py.File(file_obj, **kw)
-        f.delete_on_close = is_zip
-        f.zip_on_close = zip_on_close
-    return f
 
 def readSANSNexuz(input_file, file_obj=None):
     """
