@@ -368,3 +368,8 @@ ol.categories li.category select {
 ol.categories span.category:nth-child(n+2):before {
     content: " : ";
 }
+
+div.export-types label {
+    border: 1px solid grey;
+    border-radius: 3px;
+}
