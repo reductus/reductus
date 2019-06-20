@@ -1,4 +1,4 @@
-svg, canvas {
+svg.mainplot, canvas {
   position: absolute;
   image-rendering: optimizeSpeed;
   image-rendering: crisp-edges;
@@ -278,7 +278,22 @@ svg.editor polygon.terminal.state.calculating {
     0%   {fill-opacity: 0;}
     100% {fill-opacity: 1.0;}
 }
-    
+
+div#navigation {
+    position: relative;
+}
+
+div.block-overlay {
+    position: absolute;
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+    background:rgba(128,128,128,0.5);
+    left: 0;
+    top: 0;
+    display: none;
+}  
+
 #datasources .buttons .ui-icon {
     display: inline-block !important;
     vertical-align: middle;
@@ -373,3 +388,38 @@ div.export-types label {
     border: 1px solid grey;
     border-radius: 3px;
 }
+
+div#body_wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+
+}
+
+div#middle_content {
+  width: 100%;
+  flex: 1;
+  padding: 8px;
+  background-color: #F6F6F6;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  overflow-y: hidden;
+}
+
+div#west_panel {
+  overflow-y: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+div#bottom_panel {
+  min-height: 300px;
+  display: flex;
+  flex-direction: column;
+   }
+
+div#top_panel {
+  min-height: 3em;
+}
+  
