@@ -421,7 +421,7 @@ div#west_panel {
 }
 
 div#bottom_panel {
-  min-height: 250px;
+  min-height: 200px;
   display: flex;
   flex-direction: column;
 }

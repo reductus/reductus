@@ -101,22 +101,7 @@ webreduce.instruments = webreduce.instruments || {};
         }),
         minSize: 0
       });
-      /*
-      var layout = $('body').layout({
-           west__size:          350
-        ,  east__size:          300
-        ,  south__size:         200
-          // RESIZE Accordion widget when panes resize
-        ,  west__onresize:	    $.layout.callbacks.resizePaneAccordions
-        ,  east__onresize:	    $.layout.callbacks.resizePaneAccordions
-        ,  south__onresize:     $.layout.callbacks.resizePaneAccordions
-        ,  center__onresize:    function() {webreduce.callbacks.resize_center()}
-      });
-      */
-
-      //layout.toggle('east');
-      //layout.allowOverflow('north');
-      //$("#menu").menu({width: '200px;', position: {my: "left top", at: "left+15 bottom"}});
+      
       $(".ui-layout-west")
 				.tabs()
 

@@ -110,8 +110,8 @@ webreduce.editor = webreduce.editor || {};
   function module_clicked_multiple() {
     var editor = d3.select("#" + webreduce.editor._target_id);
     var active_template = webreduce.editor._active_template;
-    webreduce.layout.close("east");
-    var config_target = d3.select(".ui-layout-pane-east");
+    //webreduce.layout.close("east");
+    var config_target = d3.select(".ui-layout-east");
     config_target.selectAll("div").remove();
     var to_compare = [];
     editor.selectAll("g.module").each(function(dd, ii) {
