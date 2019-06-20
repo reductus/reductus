@@ -36,6 +36,22 @@ webreduce.instruments = webreduce.instruments || {};
   webreduce.callbacks = {};
   webreduce.callbacks.resize_center = function() {};
   
+  webreduce.blockUI = function(message, duration) {
+    var duration = duration || 0;
+    if (message != null) {
+      $("div#fullscreen_modal .overlay-message").html(message).show();
+    }
+    else {
+      $("div#fullscreen_modal .overlay-message").hide();
+    }
+    $("div#fullscreen_modal").fadeIn(duration);
+  }
+
+  webreduce.unblockUI = function(duration) {
+    var duration = duration || 0;
+    $("div#fullscreen_modal").fadeOut(duration);
+  }
+
   window.onbeforeunload = function (e) {
     var e = e || window.event;
     var msg = "Do you really want to leave this page?"

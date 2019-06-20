@@ -15,14 +15,14 @@ webreduce.editor = webreduce.editor || {};
 
   webreduce.editor._cache = new PouchDB("calculations", {size: 100});
   webreduce.editor.clear_cache = function() {
-    $.blockUI({message: "clearing cache", fadeIn: 100, fadeOut: 100});
+    webreduce.blockUI("clearing cache...", 1000);
     new PouchDB('calculations').destroy().then(function () {
       // database destroyed      
       webreduce.editor._cache = new PouchDB("calculations");
-      $.unblockUI();
+      webreduce.unblockUI(1000);
     }).catch(function (err) {
       // error occurred
-      $.unblockUI();
+      webreduce.unblockUI(1000);
       alert(err + "could not destroy cache");
     });
   }
@@ -324,7 +324,6 @@ webreduce.editor = webreduce.editor || {};
       if (fields.filter(function(d) {return d.datatype == 'fileinfo'}).length == 0) {
           var nav = $("#datasources");
           nav.find("div.block-overlay").show();
-          //nav.block({message: null, fadeIn:0, overlayCSS: {opacity: 0.25, cursor: 'not-allowed', height: nav.prop("scrollHeight")}});
       }
       
       if (d3.select(clicked_elem).classed("title")) {
@@ -1187,20 +1186,18 @@ webreduce.editor = webreduce.editor || {};
     // call result_callback on each result individually (this function will return all results
     // if you want to act on the aggregate after)
     var caching = $("#cache_calculations").prop("checked");
-    if (webreduce.editor._calc_status_message == null) {
-      var status_message = $("<div />");
-      status_message.append($("<h1 />", {text: "Processing..."}));
-      status_message.append($("<progress />"));
-      status_message.append($("<span />"));
-      status_message.append($("<button />", {text: "cancel", class: "cancel"}));
-      webreduce.editor._calc_status_message = status_message;
-    }
+    var status_message = $("<div />");
+    status_message.append($("<h1 />", {text: "Processing..."}));
+    status_message.append($("<progress />"));
+    status_message.append($("<span />"));
+    status_message.append($("<button />", {text: "cancel", class: "cancel"}));
+    
     webreduce.editor._calculation_cancelled = false;
     var calculation_finished = false;
-    var status_message = webreduce.editor._calc_status_message;
+    //var status_message = webreduce.editor._calc_status_message;
     var r = new Promise(function(resolve, reject) {resolve()});
-    var cancel_promise = new Promise(function(resolve, reject) { 
-      status_message.find("button").on("click", function() {
+    var cancel_promise = new Promise(function(resolve, reject) {
+      status_message.find("button").off("click").on("click", function() {
         webreduce.editor._calculation_cancelled = true;
         calculation_finished = true;
         resolve({"cancelled": true})
@@ -1210,7 +1207,7 @@ webreduce.editor = webreduce.editor || {};
     if (!noblock) {
       r = r.then(function() { 
         window.setTimeout(function() {
-          if (!calculation_finished) {$.blockUI({message: status_message, fadeIn: 100, fadeOut: 100})}
+          if (!calculation_finished) {webreduce.blockUI(status_message)}
           }, 200)
       })
     }
@@ -1242,8 +1239,8 @@ webreduce.editor = webreduce.editor || {};
       r = r.then(function() {return Promise.race([cancel_promise, calculate_one(params, caching)])})
     }
     if (!noblock) {
-      r = r.then(function(result) { calculation_finished = true; $.unblockUI(); return result; })
-       .catch(function(err) { calculation_finished = true; $.unblockUI(); throw err });
+      r = r.then(function(result) { calculation_finished = true; webreduce.unblockUI(); return result; })
+       .catch(function(err) { calculation_finished = true; webreduce.unblockUI(); throw err });
     }
     return r;
   }

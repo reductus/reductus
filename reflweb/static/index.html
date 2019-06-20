@@ -16,7 +16,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/split.js/1.5.11/split.min.js"></script>
   <script type="text/javascript" src="js/pouchdb.min.js"></script>
   <script type="text/javascript" src="js/sha1.js"></script>
-  <script type="text/javascript" src="js/jquery.blockUI.js"></script>
   <script type="text/javascript" src="js/msgpack.min.js"></script>
   
   <script type="text/javascript" src="js/zip.js"></script>
@@ -51,7 +50,11 @@
 
 <body>
   <div id="body_wrapper">
-    <div id="fullscreen_block_overlay" class="block-overlay"></div>
+    <div id="fullscreen_modal" class="block-overlay">
+      <div class="overlay-positioner">
+        <div class="overlay-message"></div>
+      </div>
+    </div>
       <div id="top_panel" class="ui-layout-north">
           <div id="main_menu_div" style="display:inline-block;">
             <input type="button" id="show_main_menu" value="Menu">
@@ -137,6 +140,7 @@
 <div id="reload_exported" title="Reload Exported">
   <p>to upload: <input type="file" multiple="false" id="exported_file" name="exported_file" /></p>
 </div>
+  
 </body>
 </html>
 
