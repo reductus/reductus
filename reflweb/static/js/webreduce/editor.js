@@ -323,7 +323,8 @@ webreduce.editor = webreduce.editor || {};
       var fields = module_def.fields || [];
       if (fields.filter(function(d) {return d.datatype == 'fileinfo'}).length == 0) {
           var nav = $("#datasources");
-          nav.block({message: null, fadeIn:0, overlayCSS: {opacity: 0.25, cursor: 'not-allowed', height: nav.prop("scrollHeight")}});
+          nav.find("div.block-overlay").show();
+          //nav.block({message: null, fadeIn:0, overlayCSS: {opacity: 0.25, cursor: 'not-allowed', height: nav.prop("scrollHeight")}});
       }
       
       if (d3.select(clicked_elem).classed("title")) {

@@ -286,7 +286,8 @@
     if (pathlist.length > 0) {
       var new_pathlist = $.extend(true, [], pathlist);
       $.each(new_pathlist, function(index, pathitem) {
-        dirlink = document.createElement('span');
+        dirlink = document.createElement('div');
+        dirlink.classList.add("pathitem")
         dirlink.textContent = pathitem + "/";
         dirlink.onclick = function() {
           webreduce.server_api.get_file_metadata({source: datasource, pathlist: new_pathlist.slice(0, index+1)})

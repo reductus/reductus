@@ -290,6 +290,7 @@ svg.editor polygon.terminal.state.calculating {
 
 div#navigation {
     position: relative;
+    overflow-x: auto;
 }
 
 div.block-overlay {
@@ -301,7 +302,12 @@ div.block-overlay {
     left: 0;
     top: 0;
     display: none;
+    z-index: 500;
 }  
+
+#datasources {
+    position: relative;
+}
 
 #datasources .buttons .ui-icon {
     display: inline-block !important;
@@ -316,10 +322,19 @@ div.block-overlay {
 #dirbrowser { list-style-type: none; margin: 0; padding: 0; }
 #dirbrowser li { margin: 3px; padding: 0em 0.4em; font-size: 1.2em; }
 
+div.remote-filebrowser {
+  overflow-x: auto;
+}
+
 .patheditor { 
     color: blue;
     cursor: pointer;
 }
+
+.patheditor .pathitem {
+    display: inline-block;
+}
+
 li.subdiritem { 
     list-style-type: none; 
     cursor: pointer;
