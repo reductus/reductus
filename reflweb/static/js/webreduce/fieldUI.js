@@ -11,7 +11,7 @@ webreduce.editor.make_fieldUI = webreduce.editor.make_fieldUI || {};
         datasets_in = this.datasets_in,
         module = this.active_module;
 
-    $("#datasources").unblock();
+    $("#datasources .block-overlay").hide();
     if (target.select("div#fileinfo").empty()) {
       target.append("div")
         .attr("id", "fileinfo")

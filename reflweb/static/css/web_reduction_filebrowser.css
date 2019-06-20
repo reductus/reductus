@@ -291,6 +291,7 @@ svg.editor polygon.terminal.state.calculating {
 div#navigation {
     position: relative;
     overflow-x: auto;
+    padding: 0.5em;
 }
 
 div.block-overlay {
