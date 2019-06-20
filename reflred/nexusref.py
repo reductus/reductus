@@ -178,7 +178,7 @@ class NCNRNeXusRefl(refldata.ReflData):
         #self.detector.rotation = data_as(entry, 'instrument/detector/rotation','degree')
         self.detector.deadtime = data_as(entry, 'instrument/single_detector/dead_time', 'us')
         self.detector.deadtime_error = data_as(entry, 'instrument/single_detector/dead_time_error', 'us')
-        monitor_device = entry.get('control/monitor', {})
+        monitor_device = entry.get('instrument/monitor', {})
         self.monitor.deadtime = data_as(monitor_device, 'dead_time','us')
         self.monitor.deadtime_error = data_as(monitor_device, 'dead_time_error', 'us')
 
