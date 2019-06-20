@@ -26,6 +26,7 @@
     
     .gutter.gutter-vertical {
         cursor: row-resize;
+        background-color: #F6F6F6;
         /* background-image: url('../grips/horizontal.png'); */
     }
     

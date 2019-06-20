@@ -135,8 +135,9 @@ webreduce.editor = webreduce.editor || {};
     let fields = module_def.fields || [];
     var add_interactors = (data_to_show == (module_def.inputs[0] || {}).id);
 
-    webreduce.layout.open("east");
-    var config_target = d3.select(".ui-layout-pane-east");
+    // TODO: fix for split layout
+    //webreduce.layout.open("east");
+    var config_target = d3.select(".ui-layout-east");
     config_target.selectAll("div").remove();
     var header = config_target
       .append("div")
@@ -395,7 +396,7 @@ webreduce.editor = webreduce.editor || {};
       active_plot = null;
       d3.select("#plotdiv").selectAll("svg, div").remove();
       d3.select("#plotdiv").append("div")
-        .style("position", "absolute")
+        //.style("position", "absolute")
         .style("top", "0px")
         .style("text-align", "center")
         .append("h1").html("&#8709;")

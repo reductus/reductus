@@ -91,6 +91,17 @@ webreduce.instruments = webreduce.instruments || {};
     zip.workerScriptsPath = "js/";
     zip.useWebWorkers = true;
     webreduce.server_api.__init__().then(function(api) {
+      var middle_layout = Split(['.ui-layout-west', '.ui-layout-center', '.ui-layout-east'], {
+        sizes: [25,50,25],
+        elementStyle: (dimension, size, gutterSize) => ({
+          'flex-basis': `calc(${size}% - ${gutterSize}px)`,
+        }),
+        gutterStyle: (dimension, gutterSize) => ({
+            'flex-basis':  `${gutterSize}px`,
+        }),
+        minSize: 0
+      });
+      /*
       var layout = $('body').layout({
            west__size:          350
         ,  east__size:          300
@@ -101,15 +112,27 @@ webreduce.instruments = webreduce.instruments || {};
         ,  south__onresize:     $.layout.callbacks.resizePaneAccordions
         ,  center__onresize:    function() {webreduce.callbacks.resize_center()}
       });
+      */
 
-      layout.toggle('east');
-      layout.allowOverflow('north');
+      //layout.toggle('east');
+      //layout.allowOverflow('north');
       //$("#menu").menu({width: '200px;', position: {my: "left top", at: "left+15 bottom"}});
       $(".ui-layout-west")
 				.tabs()
 
-	  
-      webreduce.layout = layout;
+      
+      var layout = Split(["#middle_content", "#bottom_panel"], {
+        sizes: [95, 5],
+        elementStyle: (dimension, size, gutterSize) => ({
+          'flex-basis': `calc(${size}% - ${gutterSize}px)`,
+        }),
+        gutterStyle: (dimension, gutterSize) => ({
+            'flex-basis':  `${gutterSize}px`,
+        }),
+        direction: 'vertical'
+      })
+
+      webreduce.layout = middle_layout;
       webreduce.download = (function () {
         var a = document.createElement("a");
         document.body.appendChild(a);

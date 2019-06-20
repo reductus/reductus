@@ -1,3 +1,12 @@
+html, body, div#body_wrapper {
+   height: 100%;
+   font-family: Arial, Helvetica, sans-serif;
+}
+
+body {
+    margin: 0;
+}
+
 svg.mainplot, canvas {
   position: absolute;
   image-rendering: optimizeSpeed;
@@ -181,7 +190,7 @@ div.fields .subfield {
 .ui-layout-center {
   /* adding padding to hold controls, title */
   /*padding-bottom: 80px;*/
-  height: 100%;
+  /* height: 100%; */
   display: -webkit-flex !important;
   display: flex !important;
   -webkit-flex-direction: column;
@@ -398,8 +407,7 @@ div#body_wrapper {
 
 div#middle_content {
   width: 100%;
-  flex: 1;
-  padding: 8px;
+  padding: 8px 8px 0px 8px;
   background-color: #F6F6F6;
   box-sizing: border-box;
   display: flex;
@@ -408,18 +416,30 @@ div#middle_content {
 }
 
 div#west_panel {
-  overflow-y: hidden;
   display: flex;
   flex-direction: column;
 }
 
 div#bottom_panel {
-  min-height: 300px;
+  min-height: 250px;
   display: flex;
   flex-direction: column;
-   }
+}
 
 div#top_panel {
-  min-height: 3em;
+  min-height: 2em;
+  max-height: 2em;
+  padding: 1em;
+  overflow: visible;
+  z-index: 100;
 }
-  
+
+div#east_panel {
+  padding: 1em;
+}
+
+div#all_content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
