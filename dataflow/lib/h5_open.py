@@ -1,7 +1,8 @@
 import io
 import os
-import h5py
 from zipfile import ZipFile, is_zipfile
+
+import h5py
 
 from . import hzf_readonly_stripped as hzf
 
@@ -27,18 +28,13 @@ def h5_open_zip(filename, file_obj=None, **kw):
         # then it's a nexus-zip file, rather than
         # a zipped hdf5 nexus file
         f = hzf.File(filename, file_obj)
-        f.delete_on_close = False
-        f.zip_on_close = False
     else:
-        zip_on_close = None
         if is_zip:
             zf = ZipFile(file_obj)
             members = zf.namelist()
             assert len(members) == 1
             file_obj = io.BytesIO(zf.read(members[0]))
             filename = members[0]
-        
+
         f = h5py.File(file_obj, **kw)
-        f.delete_on_close = is_zip
-        f.zip_on_close = zip_on_close
     return f

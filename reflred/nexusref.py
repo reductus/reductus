@@ -111,27 +111,6 @@ def load_entries(filename, file_obj=None, entries=None):
         file.close()
     return measurements
 
-def h5_close_zip(f):
-    """
-    Close a NeXus file opened by :func:`open_zip`.
-
-    If the file was zipped and opened for reading, delete the temporary
-    file that was created
-    If opened for writing, create a zip file containing the file
-    before closing.
-
-    Delete the file after closing.
-    """
-    path = f.filename
-    delete_on_close = getattr(f, 'delete_on_close', False)
-    zip_on_close = getattr(f, 'zip_on_close', None)
-    f.close()
-    if zip_on_close is not None:
-        with ZipFile(f.zip_on_close, 'w') as zf:
-            zf.write(path, os.path.basename(path))
-    if delete_on_close:
-        os.unlink(path)
-
 
 class NCNRNeXusRefl(refldata.ReflData):
     """
