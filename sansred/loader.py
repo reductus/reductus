@@ -31,6 +31,7 @@ metadata_lookup = {
     "sample.labl": "DAS_logs/sample/description", # compatibility
     "polarization.front": "DAS_logs/frontPolarization/direction",
     "polarization.back": "DAS_logs/backPolarization/direction",
+    "polarization.backname": "DAS_logs/backPolarization/name",
     "run.filename": "DAS_logs/trajectoryData/fileName",
     "run.filePrefix": "DAS_logs/trajectoryData/filePrefix",
     "run.experimentScanID": "DAS_logs/trajectory/experimentScanID",

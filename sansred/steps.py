@@ -1152,7 +1152,85 @@ def sliceData(data, slicebox=[None,None,None,None]):
                         
     return x_output, y_output
 
+@nocache
+@module
+def transmissionDecay(data, slicebox=[None,None,None,None], autosort=True):
+    """
+    Sum 2d data along in the box and return intensity vs time
 
+    **Inputs**
+
+    data (sans2d[]) : data in
+    
+    slicebox (range?:xy): region over which to integrate (in data coordinates)
+
+    autosort (bool): sort results by time
+
+    **Returns**
+
+    sum (sans1d) : integrated counts vs. middle of count time (average of start and end times)
+
+    2018-04-24 Brian Maranville
+    """
+    import datetime, iso8601
+    if slicebox is None:
+        slicebox = [None, None, None, None]
+    xmin, xmax, ymin, ymax = slicebox
+    
+    times = []
+    sums = []
+    sums_variance = []
+    for dataset in data:
+        box_sum = sumBox(dataset, xmin, xmax, ymin, ymax)
+        sums.append(box_sum.x)
+        sums_variance.append(box_sum.variance)
+        start_time = iso8601.parse_date(dataset.metadata['start_time'])
+        end_time = iso8601.parse_date(dataset.metadata['end_time'])
+        avg_time = (end_time - start_time)/2.0 + start_time
+        times.append(avg_time.timestamp())
+    
+    xdata = np.array(times)
+    dxdata = np.zeros_like(xdata)
+
+    ydata = np.array(sums)
+    dydata = np.array(sums_variance)
+    if autosort:
+        sorting_indices = np.argsort(xdata)
+        xdata = xdata[sorting_indices]
+        dxdata = dxdata[sorting_indices]
+        ydata = ydata[sorting_indices]
+        dydata = dydata[sorting_indices]
+
+
+    output = Sans1dData(xdata, ydata, dx=dxdata, dv=dydata, xlabel='time', vlabel="I",
+                    xunits="s", vunits="neutrons", xscale="time", metadata=data[0].metadata)
+    
+    return output
+    
+
+def sumBox(data, xmin, xmax, ymin, ymax):
+    res = data.copy()
+    if data.qx is None or data.qy is None:
+        # then use pixels
+        xslice = slice(int(np.ceil(xmin)) if xmin is not None else None, int(np.floor(xmax)) if xmax is not None else None)
+        yslice = slice(int(np.ceil(ymin)) if ymin is not None else None, int(np.floor(ymax)) if ymax is not None else None)
+        
+    else:
+        # then use q-values
+        qxmin = data.qx_min if data.qx_min is not None else data.qx.min()
+        qxmax = data.qx_max if data.qx_max is not None else data.qx.max()
+        qx_in = np.linspace(qxmin, qxmax, data.data.x.shape[0])
+        qymin = data.qy_min if data.qy_min is not None else data.qy.min()
+        qymax = data.qy_max if data.qy_max is not None else data.qy.max()
+        qy_in = np.linspace(qymin, qymax, data.data.x.shape[1])
+        
+        xslice = slice(get_index(qx_in, xmin), get_index(qx_in, xmax))
+        yslice = slice(get_index(qy_in, ymin), get_index(qy_in, ymax))
+        
+    dataslice = (xslice, yslice)
+    box_sum = uncertainty.sum(data.data[dataslice])
+    return box_sum
+    
 @cache
 @module
 def SuperLoadSANS(filelist=None, do_det_eff=True, do_deadtime=True,
