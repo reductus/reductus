@@ -16,7 +16,7 @@ import numpy as np
 from dataflow.lib.uncertainty import Uncertainty
 from dataflow.lib import uncertainty
 
-from .sansdata import SansData, Sans1dData, Parameters
+from .sansdata import SansData, Sans1dData, Parameters, _s
 from .sans_vaxformat import readNCNRSensitivity
 
 ALL_ACTIONS = []
@@ -1184,8 +1184,8 @@ def transmissionDecay(data, slicebox=[None,None,None,None], autosort=True):
         box_sum = sumBox(dataset, xmin, xmax, ymin, ymax)
         sums.append(box_sum.x)
         sums_variance.append(box_sum.variance)
-        start_time = iso8601.parse_date(dataset.metadata['start_time'])
-        end_time = iso8601.parse_date(dataset.metadata['end_time'])
+        start_time = iso8601.parse_date(_s(dataset.metadata['start_time']))
+        end_time = iso8601.parse_date(_s(dataset.metadata['end_time']))
         avg_time = (end_time - start_time)/2.0 + start_time
         times.append(avg_time.timestamp())
     
