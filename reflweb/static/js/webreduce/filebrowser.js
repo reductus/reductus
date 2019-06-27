@@ -222,7 +222,7 @@
     // get the path from a specified path browser element
     var target_id = (target_id == null) ? "body" : target_id;
     var path = "";
-    $(target_id).find(".patheditor span").each(function(i,v) {
+    $(target_id).find(".patheditor .pathitem").each(function(i,v) {
       path += $(v).text();
     });
     if (/\/$/.test(path)) {path = path.slice(0,-1)}
