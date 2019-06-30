@@ -65,7 +65,7 @@ def LoadVSANS(filelist=None, check_timestamps=True):
 
     output (raw[]): all the entries loaded.
 
-    2018-04-25 Brian Maranville
+    2018-04-27 Brian Maranville
     """
     from dataflow.fetch import url_get
     from .loader import readVSANSNexuz
@@ -76,7 +76,7 @@ def LoadVSANS(filelist=None, check_timestamps=True):
         path, mtime, entries = fileinfo['path'], fileinfo.get('mtime', None), fileinfo.get('entries', None)
         name = basename(path)
         fid = BytesIO(url_get(fileinfo, mtime_check=check_timestamps))
-        entry = readVSANSNexuz(name, fid)
-        data.append(entry)
+        entries = readVSANSNexuz(name, fid)
+        data.extend(entries)
 
     return data

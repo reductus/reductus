@@ -424,6 +424,7 @@ webreduce.editor = webreduce.editor || {};
       .selectAll(".paramsDisplay")
       .data(params).enter()
         .append("div").append("pre")
+        .style("overflow", "auto")
         .classed("paramsDisplay", true)
         .text(function(d) {return JSON.stringify(d, null, 2)})
     return data
