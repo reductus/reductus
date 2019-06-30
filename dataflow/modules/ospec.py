@@ -11,7 +11,7 @@ class Parameters(dict):
     def get_metadata(self):
         return self
     def get_plottable(self):
-        return self
+        return {"params": self.get_metadata(), "type": "params"}
 
 def define_instrument():
     # Define modules
