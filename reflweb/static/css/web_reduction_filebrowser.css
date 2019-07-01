@@ -15,6 +15,9 @@ svg.mainplot, canvas {
   image-rendering: -webkit-optimize-contrast;
   image-rendering: optimize-contrast;
   -ms-interpolation-mode: nearest-neighbor;
+}
+
+canvas.colorbar {
   pointer-events: none;
 }
 
