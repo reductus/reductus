@@ -921,7 +921,9 @@ class ReflData(Group):
         for prop in ['_v', '_dv', 'angular_resolution', 'Qz_target']:
             v = getattr(self, prop, None)
             if check_array(v):
-                setattr(self, prop, v[make_mask(v, mask_indices)])
+                masked_v = v[make_mask(v, mask_indices)]
+                setattr(self, prop, masked_v)
+                self.points = len(masked_v)
 
         self.scan_value = [v[make_mask(v, mask_indices)] if check_array(v) else v for v in self.scan_value]
 
