@@ -471,7 +471,8 @@ def mask_points(data, mask_indices=None):
 
     output (refldata) : masked data
 
-    2018-04-30 Brian Maranville
+    | 2018-04-30 Brian Maranville
+    | 2019-07-02 Brian Maranville: change self.points after mask
     """
     data = copy(data)
     data.log('mask_points(%r)' % mask_indices)
