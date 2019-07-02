@@ -1,0 +1,12 @@
+{
+  "wires": [
+  ],
+  "modules": [
+    {
+      "x": 100,
+      "title": "LoadVSANS",
+      "module": "ncnr.vsans.LoadVSANS",
+      "y": 100
+    }
+  ]
+}
