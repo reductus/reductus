@@ -467,7 +467,7 @@ div#top_panel {
   max-height: 2em;
   padding: 1em;
   overflow: visible;
-  z-index: 100;
+  z-index: 1000;
 }
 
 div#east_panel {
