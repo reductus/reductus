@@ -175,7 +175,12 @@ div.fields .subfield {
 #plotdiv {
   flex: 1;
   text-align: start;
+  overflow: auto;
   /* overflow: hidden; */
+}
+
+#plotdiv.plot {
+  overflow: hidden;
 }
 
 #plot_title {

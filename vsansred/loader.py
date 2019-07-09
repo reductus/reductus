@@ -16,8 +16,7 @@ from .vsansdata import VSansData, RawVSANSData
 
 metadata_lookup = {
     #"det.dis": "DAS_logs/detectorPosition/softPosition",
-    "resolution.lmda" : "instrument/monochromator/wavelength",
-    "resolution.dlmda": "instrument/monochromator/wavelength_error",
+    
     #"det.beamx": "instrument/detector/beam_center_x",
     #"det.beamy": "instrument/detector/beam_center_y",
     #"det.pixeloffsetx": "instrument/detector/x_offset",
@@ -28,6 +27,8 @@ metadata_lookup = {
     "analysis.filepurpose": "DAS_logs/trajectoryData/filePurpose",
     "sample.name": "DAS_logs/sample/name",
     "sample.description": "DAS_logs/sample/description",
+    "resolution.lmda" : "instrument/beam/monochromator/wavelength",
+    "resolution.dlmda": "instrument/beam/monochromator/wavelength_spread",
     "sample.labl": "DAS_logs/sample/description", # compatibility
     "polarization.front": "DAS_logs/frontPolarization/direction",
     "polarization.back": "DAS_logs/backPolarization/direction",

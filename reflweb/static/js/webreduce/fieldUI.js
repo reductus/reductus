@@ -607,6 +607,42 @@ webreduce.editor.make_fieldUI = webreduce.editor.make_fieldUI || {};
   }
   fieldUI.coordinate = coordinateUI;
   
+  var patchUI = function() {
+    var datum = this.datum,
+        field = this.field,
+        target = this.target,
+        datasets_in = this.datasets_in,
+        module = this.active_module;
+    
+    var input = target.append("div")
+      .classed("fields", true)
+      .datum(datum)
+      .append("label")
+        .text(field.label)
+        .append("ul")
+          .append("li").text("/sans37032/analysis.intent :: SCATTERING")
+
+    if (this.add_interactors) {
+      var active_plot = this.active_plot;
+      cols = active_plot.selectAll("th.colHeader").data();
+      active_plot.selectAll(".metadata-row")
+        .each(function(d,i) { 
+          console.log(d,i);
+          d3.select(this).selectAll("pre")
+            .attr("contenteditable", true)
+            .on("input", function(dd, ii) {
+              let c = cols[ii];
+              let new_text = this.innerText;
+              let old_text = String(d[c]);
+              let dirty = (old_text != new_text);
+              d3.select(this.parentNode).classed("dirty", dirty);
+            }) 
+        });
+    }
+    return input
+  }
+  fieldUI.patch_metadata = patchUI;
+
   var strUI = function() {
     var datum = this.datum,
         field = this.field,

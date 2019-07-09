@@ -1,0 +1,11 @@
+table.metadata {
+    border-collapse: collapse;
+}
+
+table.metadata th, table.metadata td {
+    border: 1px solid blue;
+}
+
+table.metadata td.dirty {
+    background-color: orange;
+}

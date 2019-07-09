@@ -80,3 +80,38 @@ def LoadVSANS(filelist=None, check_timestamps=True):
         data.extend(entries)
 
     return data
+
+@module
+def patch(data, key="filename", patches=None):
+    """
+    loads a data file into a VSansData obj and returns that.
+
+    **Inputs**
+
+    data (raw[]): datafiles with metadata to patch
+
+    key (str): unique field for identifying a metadata dict from a list
+
+    patches (patch_metadata[]): patches to be applied
+
+    **Returns**
+
+    patched (raw[]): datafiles with patched metadata
+
+    2018-04-27 Brian Maranville
+    """
+    if patches is None:
+        return data
+    
+    from jsonpatch import JsonPatch
+
+    # make a master dict of metadata from provided key:
+    from collections import OrderedDict
+    master = OrderedDict([(d.metadata[key], d.metadata) for d in data])
+
+    to_apply = JsonPatch(patches)
+
+    patched_master = to_apply.apply(master)
+    patched = list(patched_master.values())
+
+    return patched

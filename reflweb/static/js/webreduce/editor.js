@@ -395,6 +395,7 @@ webreduce.editor = webreduce.editor || {};
     if (new_plotdata == null) {
       active_plot = null;
       d3.select("#plotdiv").selectAll("svg, div").remove();
+      d3.select("#plotdiv").classed("plot", false);
       d3.select("#plotdiv").append("div")
         //.style("position", "absolute")
         .style("top", "0px")
@@ -413,6 +414,9 @@ webreduce.editor = webreduce.editor || {};
     else if (new_plotdata.type == 'params') {
       active_plot = this.show_plots_params(new_plotdata);
     }
+    else if (new_plotdata.type == 'metadata') {
+      active_plot = this.show_plots_metadata(new_plotdata);
+    }
     this._active_plot = active_plot;
     return active_plot;
   }
@@ -420,6 +424,7 @@ webreduce.editor = webreduce.editor || {};
   webreduce.editor.show_plots_params = function(data) {
     var params = data.values.map(function(v) { return v.params });
     d3.selectAll("#plotdiv").selectAll("svg, div").remove();
+    d3.select("#plotdiv").classed("plot", false);
     d3.select("#plotdiv")
       .selectAll(".paramsDisplay")
       .data(params).enter()
@@ -428,6 +433,53 @@ webreduce.editor = webreduce.editor || {};
         .classed("paramsDisplay", true)
         .text(function(d) {return JSON.stringify(d, null, 2)})
     return data
+  }
+
+  webreduce.editor.show_plots_metadata = function(data) {
+    var metadata = data.values.map(function(v) { return v.values });
+    var m0 = metadata[0] || {};
+    var colset = new Set(Object.keys(m0));
+    for (var nm of metadata.slice(1)) {
+      for (var c of colset) {
+        if (!(c in nm)) {
+          colset.delete(c);
+        }
+      }
+    }
+    var cols = Array.from(colset);
+    d3.selectAll("#plotdiv").selectAll("svg, div").remove();
+    d3.select("#plotdiv").classed("plot", false);
+    let metadata_table = d3.select("#plotdiv").append("div").append("table").classed("metadata", true)
+    metadata_table
+      .append("thead").append("tr")
+      .selectAll(".colHeader")
+      .data(cols).enter()
+        .append("th")
+        .classed("colHeader", true)
+        .text(function(d) { return String(d) })
+    
+    metadata_table
+      .append("tbody")
+      .selectAll("metadata-row")
+      .data(metadata).enter()
+        .append("tr")
+        .classed("metadata-row", true)
+        .each(function(d) { 
+          let row = d3.select(this);
+          cols.forEach(function(c) {
+            row.append("td").append("pre")
+              //.attr("contenteditable", true)
+              //.on("input", function(dd, ii) { 
+              //  let new_text = this.innerText;
+              //  let old_text = String(d[c]);
+              //  let dirty = (old_text != new_text);
+              //  d3.select(this.parentNode).classed("dirty", dirty);
+              //})
+              .text(String(d[c]));
+          })
+        });
+    
+    return metadata_table
   }
   
   webreduce.editor.show_plots_2d = function(plotdata) {
@@ -511,6 +563,7 @@ webreduce.editor = webreduce.editor || {};
     
     if (!(mychart && mychart.type && mychart.type == "heatmap_2d")) {
       d3.selectAll("#plotdiv").selectAll("svg, div").remove();
+      d3.select("#plotdiv").classed("plot", true);
       mychart = new heatChart.default({margin: {left: 100}} );
       d3.selectAll("#plotdiv").data(values[0].z).call(mychart);
       webreduce.callbacks.resize_center = function() {mychart.autofit()};
@@ -776,6 +829,7 @@ webreduce.editor = webreduce.editor || {};
     // create the nd chart:
     var mychart = new xyChart.default(options);
     d3.selectAll("#plotdiv").selectAll("svg, div").remove();
+    d3.select("#plotdiv").classed("plot", true);
     d3.selectAll("#plotdiv").data([chartdata]).call(mychart);
     mychart.zoomRect(true);
     webreduce.callbacks.resize_center = mychart.autofit;
@@ -877,6 +931,7 @@ webreduce.editor = webreduce.editor || {};
     // create the 1d chart:
     var mychart = new xyChart.default(options);
     d3.selectAll("#plotdiv").selectAll("svg, div").remove();
+    d3.select("#plotdiv").classed("plot", true);
     d3.selectAll("#plotdiv").data([plotdata.data]).call(mychart);
     mychart.zoomRect(true);
     webreduce.callbacks.resize_center = mychart.autofit;

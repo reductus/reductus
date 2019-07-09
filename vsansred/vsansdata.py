@@ -40,7 +40,9 @@ class RawVSANSData(object):
         return _toDictItem(self.metadata)
 
     def get_plottable(self):
-        return {"entry": "entry", "type": "params", "params": _toDictItem(self.metadata)}
+        #return {"entry": "entry", "type": "params", "params": _toDictItem(self.metadata)}
+        return {"entry": "entry", "type": "metadata", "values": _toDictItem(self.metadata)}
+
 
     def get_metadata(self):
         return _toDictItem(self.metadata)
