@@ -604,6 +604,10 @@ webreduce.editor = webreduce.editor || {};
       ycol = ycol || pd.options.ycol;
     });
 
+    if (!(ycol in all_columns)) {
+      ycol = Object.keys(all_columns)[1];
+    }
+
     var plottable = {
       type: "nd",
       columns: all_columns,
