@@ -45,6 +45,7 @@ webreduce.instruments['ncnr.vsans'] = webreduce.instruments['ncnr.vsans'] || {};
 
   instrument.load_file = load_vsans;
   instrument.default_categories = [
+    [["analysis.filepurpose"]],
     [["analysis.groupid"]],
     [
       [
@@ -101,11 +102,27 @@ webreduce.instruments['ncnr.vsans'] = webreduce.instruments['ncnr.vsans'] || {};
     to_decorate.forEach(function(leaf, i) {
       var fullpath = leaf.li_attr.filename;
       var datasource = leaf.li_attr.source;
-      if (["ncnr", "ncnr_DOI"].indexOf(datasource) < 0) { return }
-      if (datasource == "ncnr_DOI") { fullpath = "ncnrdata" + fullpath; }
-      var pathsegments = fullpath.split("/");
+      var link;
+      var base_path;
+      if (datasource == "ncnr") {
+        link = "<a href=\"https://ncnr.nist.gov/ncnrdata/view/nexus-hdf-viewer.html";
+        base_path = "";
+      }
+      else if (datasource == "ncnr_DOI") {
+        link = "<a href=\"https://ncnr.nist.gov/ncnrdata/view/nexus-hdf-viewer.html";
+        base_path = "ncnrdata";
+      }
+      else if (datasource == "charlotte") {
+        link = "<a href=\"https://charlotte.ncnr.nist.gov/ncnrdata/view/nexus-hdf-viewer.html";
+        base_path = "";
+      }
+      else {
+        return
+      }
+      var pathsegments = (base_path + fullpath).split("/");
       var pathlist = pathsegments.slice(0, pathsegments.length-1).join("+");
       var filename = pathsegments.slice(-1);
+      
       var link = "<a href=\"https://ncnr.nist.gov/ncnrdata/view/nexus-hdf-viewer.html";
       link += "?pathlist=" + pathlist;
       link += "&filename=" + filename;
