@@ -106,12 +106,14 @@ def patch(data, key="filename", patches=None):
     from jsonpatch import JsonPatch
 
     # make a master dict of metadata from provided key:
-    from collections import OrderedDict
-    master = OrderedDict([(d.metadata[key], d.metadata) for d in data])
-
+    #from collections import OrderedDict
+    #master = OrderedDict([(d.metadata[key], d.metadata) for d in data])
+    metadatas = [d.metadata for d in data]
     to_apply = JsonPatch(patches)
 
-    patched_master = to_apply.apply(master)
-    patched = list(patched_master.values())
+    new_metadatas = to_apply.apply(metadatas, in_place=True)
 
-    return patched
+    #patched_master = to_apply.apply(master)
+    #patched = list(patched_master.values())
+
+    return data

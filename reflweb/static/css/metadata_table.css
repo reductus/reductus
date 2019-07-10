@@ -9,3 +9,9 @@ table.metadata th, table.metadata td {
 table.metadata td.dirty {
     background-color: orange;
 }
+
+div.fields ul.metadata-patches {
+    list-style-type: none;
+    margin: 0; 
+    padding: 0;
+}

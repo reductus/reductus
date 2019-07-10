@@ -614,29 +614,76 @@ webreduce.editor.make_fieldUI = webreduce.editor.make_fieldUI || {};
         datasets_in = this.datasets_in,
         module = this.active_module;
     
+    datum.value = datum.value || [];
     var input = target.append("div")
       .classed("fields", true)
       .datum(datum)
       .append("label")
         .text(field.label)
         .append("ul")
-          .append("li").text("/sans37032/analysis.intent :: SCATTERING")
+        .classed("metadata-patches", true)
+    
+    input.selectAll("li.patches").data(datum.value).enter()
+      .append("li")
+      .classed("patches", true)
+    
+    input.selectAll("li.patches")
+      .text(function(d) { return JSON.stringify(d)})
+
+    var op = "replace";
 
     if (this.add_interactors) {
       var active_plot = this.active_plot;
       cols = active_plot.selectAll("th.colHeader").data();
       active_plot.selectAll(".metadata-row")
         .each(function(d,i) { 
-          console.log(d,i);
           d3.select(this).selectAll("pre")
             .attr("contenteditable", true)
+            .attr("title", function(dd, ii) {
+              let c = cols[ii];
+              return "was: " + d[c];
+            })
             .on("input", function(dd, ii) {
               let c = cols[ii];
               let new_text = this.innerText;
               let old_text = String(d[c]);
               let dirty = (old_text != new_text);
               d3.select(this.parentNode).classed("dirty", dirty);
-            }) 
+              let path = "/" + i.toFixed() + "/" + c;
+              var p = {path: path, value: new_text, op: op}
+              let update_existing = false;
+              if (dirty) {
+                for (var po of datum.value) {
+                  if (po.path == path) {
+                    po.value = new_text;
+                    update_existing = true;
+                    break;
+                  }
+                }
+                if (!update_existing) {
+                  datum.value.push(p);
+                }
+                input.selectAll("li.patches").data(datum.value).enter()
+                  .append("li")
+                  .classed("patches", true)
+                
+                input.selectAll("li.patches")
+                  .text(function(d) { return JSON.stringify(d)})
+
+                var event = document.createEvent('Event');
+                event.initEvent('input', true, true);
+                input.node().dispatchEvent(event);
+              }
+            })
+            .each(function(dd, ii) {
+              let c = cols[ii];
+              let path = "/" + i.toFixed() + "/" + c;
+              let match_patch = datum.value.find(function(v) { return v.path == path });
+              if (match_patch) {
+                d3.select(this).text(String(match_patch.value))
+                d3.select(this.parentNode).classed("dirty", true);
+              }
+            })
         });
     }
     return input
