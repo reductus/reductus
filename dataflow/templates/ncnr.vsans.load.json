@@ -26,15 +26,7 @@
       "title": "Patch",
       "x": 255,
       "y": 100,
-      "config": {
-        "patches": [
-          {
-            "path": "/4/analysis.intent",
-            "value": "Samplesd",
-            "op": "replace"
-          }
-        ]
-      }
+      "config": {}
     }
   ]
 }
