@@ -6,8 +6,23 @@ table.metadata th, table.metadata td {
     border: 1px solid blue;
 }
 
+table.metadata th {
+    color: white;
+    background-color: lightslategrey;
+}
+
+table.metadata tr:nth-child(even){background-color: #f2f2f2;}
+
+table.metadata tr.active {
+    background-color: yellow;
+}
+
 table.metadata td.dirty {
     background-color: orange;
+}
+
+table.metadata td pre {
+    margin: 2px;
 }
 
 div.fields ul.metadata-patches {

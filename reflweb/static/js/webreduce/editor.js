@@ -460,10 +460,15 @@ webreduce.editor = webreduce.editor || {};
     
     metadata_table
       .append("tbody")
-      .selectAll("metadata-row")
+      .selectAll(".metadata-row")
       .data(metadata).enter()
         .append("tr")
         .classed("metadata-row", true)
+        .on("click", function() {
+          metadata_table.selectAll(".metadata-row")
+            .classed("active", false);
+          d3.select(this).classed("active", true);
+        })
         .each(function(d) { 
           let row = d3.select(this);
           cols.forEach(function(c) {
