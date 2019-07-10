@@ -61,14 +61,14 @@
     var ready;
     if (!target.jstree(true)) {
       target.jstree({
-        "plugins": ["checkbox", "changed"],
+        "plugins": ["checkbox", "changed", "sort"],
         "checkbox" : {
           "three_state": true,
           //"cascade": "down",
           "tie_selection": false,
           "whole_node": false
         },
-        //"sort": sortAlphaNumeric,
+        "sort": sortAlphaNumeric,
         "core": {"data": treeinfo}
       });
       ready = new Promise(function(resolve, reject) {
