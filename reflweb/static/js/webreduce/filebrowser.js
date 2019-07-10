@@ -61,7 +61,7 @@
     var ready;
     if (!target.jstree(true)) {
       target.jstree({
-        "plugins": ["checkbox", "changed", "sort"],
+        "plugins": ["sort", "checkbox", "changed"],
         "checkbox" : {
           "three_state": true,
           //"cascade": "down",
@@ -87,6 +87,7 @@
       target
         .off("check_node.jstree", handleChecked)
         .off("uncheck_node.jstree", handleChecked);
+      
       ready = new Promise(function(resolve, reject) {
         target.one("refresh.jstree", async function(ev, tree) {
           if (instrument.decorators) {
@@ -178,8 +179,10 @@
         leaf['li_attr'] = {"filename": p, "entryname": entryname, "mtime": entry.mtime, "source": datasource};
       }
     }
+    out.sort(function(aa, bb) { return sortAlphaNumeric(aa.id, bb.id) });
+
     // if not empty, push in the root node:
-    if (out.length > 0) { out.push({'id': "root", 'parent': "#", 'text': "", 'state': {'opened': true}}); }
+    if (out.length > 0) { out.unshift({'id': "root", 'parent': "#", 'text': "", 'state': {'opened': true}}); }
     return out
   }
 
