@@ -65,7 +65,7 @@ def LoadVSANS(filelist=None, check_timestamps=True):
 
     output (raw[]): all the entries loaded.
 
-    2018-04-27 Brian Maranville
+    2018-04-28 Brian Maranville
     """
     from dataflow.fetch import url_get
     from .loader import readVSANSNexuz
