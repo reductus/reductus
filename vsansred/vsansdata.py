@@ -34,7 +34,7 @@ def _s(b):
 class RawVSANSData(object):
     def __init__(self, metadata):
         self.metadata = metadata
-        self.metadata['name'] = metadata['run.experimentScanID']
+        self.metadata['name'] = metadata['run.filename']
 
     def todict(self):
         return _toDictItem(self.metadata)
@@ -43,11 +43,16 @@ class RawVSANSData(object):
         #return {"entry": "entry", "type": "params", "params": _toDictItem(self.metadata)}
         return {"entry": "entry", "type": "metadata", "values": _toDictItem(self.metadata)}
 
-
     def get_metadata(self):
         return _toDictItem(self.metadata)
 
-def _toDictItem(obj):
+    def export(self):
+        output = json.dumps(_toDictItem(self.metadata, convert_bytes=True))
+        name = getattr(self.metadata, "name", "default_name")
+        entry = getattr(self.metadata, "entry", "default_entry")
+        return {"name": name, "entry": entry, "export_string": output, "file_suffix": ".vsans.metadata.json"}
+
+def _toDictItem(obj, convert_bytes=False):
     if isinstance(obj, np.integer):
         obj = int(obj)
     elif isinstance(obj, np.floating):
@@ -57,9 +62,11 @@ def _toDictItem(obj):
     elif isinstance(obj, datetime.datetime):
         obj = [obj.year, obj.month, obj.day, obj.hour, obj.minute, obj.second]
     elif isinstance(obj, list):
-        obj = [_toDictItem(a) for a in obj]
+        obj = [_toDictItem(a, convert_bytes=convert_bytes) for a in obj]
     elif isinstance(obj, dict):
-        obj = dict([(k, _toDictItem(v)) for k, v in obj.items()])
+        obj = dict([(k, _toDictItem(v, convert_bytes=convert_bytes)) for k, v in obj.items()])
+    elif isinstance(obj, bytes) and convert_bytes == True:
+        obj = obj.decode()
     return obj
 
 class VSansData(object):
