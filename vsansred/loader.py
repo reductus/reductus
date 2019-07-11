@@ -124,7 +124,7 @@ def readVSANSNexuz(input_file, file_obj=None):
         
         multiplicity = 1
         for i in range(multiplicity):
-            metadata = {}
+            metadata = OrderedDict()
             for mkey in metadata_lookup:
                 field = entry.get(metadata_lookup[mkey], None)
                 if field is not None:
