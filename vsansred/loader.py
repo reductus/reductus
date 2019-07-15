@@ -7,7 +7,9 @@ Load VSANS NeXus file into :mod:`vsansred.vsansdata` data structure.
 import io
 from zipfile import ZipFile, is_zipfile
 from collections import OrderedDict
+import datetime
 import h5py
+import numpy as np
 
 from dataflow.lib import hzf_readonly_stripped as hzf
 from dataflow.lib import unit
@@ -28,10 +30,16 @@ metadata_lookup = OrderedDict([
     ("analysis.intent", "DAS_logs/trajectoryData/intent"),
     ("analysis.filepurpose", "DAS_logs/trajectoryData/filePurpose"),
     ("sample.name", "DAS_logs/sample/name"),
-    ("sample.description", "DAS_logs/sample/description"),
+    #("sample.description", "DAS_logs/sample/description"),
+    ("sample.labl", "DAS_logs/sample/description"), # compatibility
     ("resolution.lmda" , "instrument/beam/monochromator/wavelength"),
     ("resolution.dlmda", "instrument/beam/monochromator/wavelength_spread"),
-    ("sample.labl", "DAS_logs/sample/description"), # compatibility
+    ("m_det.beamx", "DAS_logs/middleRightAreaDetector/beamCenterX"),
+    ("m_det.beamy", "DAS_logs/middleRightAreaDetector/beamCenterY"),
+    ("m_det.dis", "DAS_logs/geometry/sampleToMiddleRightDetector"),
+    ("f_det.beamx", "DAS_logs/frontRightAreaDetector/beamCenterX"),
+    ("f_det.beamy", "DAS_logs/frontRightAreaDetector/beamCenterY"),
+    ("f_det.dis", "DAS_logs/geometry/sampleToFrontRightDetector"),
     ("polarization.front", "DAS_logs/frontPolarization/direction"),
     ("polarization.back", "DAS_logs/backPolarization/direction"),
     ("polarization.backname", "DAS_logs/backPolarization/name"),
@@ -105,6 +113,40 @@ def data_as(field, units):
         value = converter(field.value, units)
         return value
 
+def load_detector(dobj):
+    # load detector information from a NeXuS group
+    detector = OrderedDict()
+    for k in dobj:
+        subobj = dobj[k]
+        detector[k] = OrderedDict(value=subobj[()], attrs=OrderedDict(_toDictItem(subobj.attrs)))
+        if hasattr(subobj, 'shape'):
+            detector[k]['attrs']['shape'] = subobj.shape
+        if hasattr(subobj, 'dtype'):
+            detector[k]['attrs']['dtype'] = subobj.dtype
+    return detector
+
+def load_metadata(entry, multiplicity=1, i=1):
+    metadata = OrderedDict()
+    for mkey in metadata_lookup:
+        field = entry.get(metadata_lookup[mkey], None)
+        if field is not None:
+            if mkey in unit_specifiers:
+                field = data_as(field, unit_specifiers[mkey])
+            else:
+                field = field.value
+            if field.dtype.kind == 'f':
+                field = field.astype("float")
+            elif field.dtype.kind == 'i':
+                field = field.astype("int")
+        
+            if len(field) == multiplicity:
+                metadata[mkey] = field[i]
+            else:
+                metadata[mkey] = field
+        else:
+            metadata[mkey] = field
+    return metadata
+
 def readVSANSNexuz(input_file, file_obj=None):
     """
     Load all entries from the NeXus file into sans data sets.
@@ -124,28 +166,28 @@ def readVSANSNexuz(input_file, file_obj=None):
         
         multiplicity = 1
         for i in range(multiplicity):
-            metadata = OrderedDict()
-            for mkey in metadata_lookup:
-                field = entry.get(metadata_lookup[mkey], None)
-                if field is not None:
-                    if mkey in unit_specifiers:
-                        field = data_as(field, unit_specifiers[mkey])
-                    else:
-                        field = field.value
-                    if field.dtype.kind == 'f':
-                        field = field.astype("float")
-                    elif field.dtype.kind == 'i':
-                        field = field.astype("int")
-                
-                    if len(field) == multiplicity:
-                        metadata[mkey] = field[i]
-                    else:
-                        metadata[mkey] = field
-                else:
-                    metadata[mkey] = field
-
+            metadata = load_metadata(entry, multiplicity, i)
+            detector_keys = [n for n in entry['instrument'] if n.startswith('detector_')]
+            detectors = dict([(k, load_detector(entry['instrument'][k])) for k in detector_keys])
             metadata['entry'] = entryname
-            dataset = RawVSANSData(metadata=metadata)
+            dataset = RawVSANSData(metadata=metadata, detectors=detectors)
             datasets.append(dataset)            
 
     return datasets
+
+def _toDictItem(obj, convert_bytes=False):
+    if isinstance(obj, np.integer):
+        obj = int(obj)
+    elif isinstance(obj, np.floating):
+        obj = float(obj)
+    elif isinstance(obj, np.ndarray):
+        obj = obj.tolist()
+    elif isinstance(obj, datetime.datetime):
+        obj = [obj.year, obj.month, obj.day, obj.hour, obj.minute, obj.second]
+    elif isinstance(obj, list):
+        obj = [_toDictItem(a, convert_bytes=convert_bytes) for a in obj]
+    elif isinstance(obj, dict):
+        obj = dict([(k, _toDictItem(v, convert_bytes=convert_bytes)) for k, v in obj.items()])
+    elif isinstance(obj, bytes) and convert_bytes == True:
+        obj = obj.decode()
+    return obj

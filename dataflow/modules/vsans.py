@@ -3,7 +3,7 @@ from dataflow.automod import make_modules
 from dataflow import templates
 
 from vsansred import steps
-from vsansred.vsansdata import RawVSANSData
+from vsansred.vsansdata import RawVSANSData, VSansData
 
 INSTRUMENT = "ncnr.vsans"
 
@@ -13,6 +13,7 @@ def define_instrument():
 
     # Define data types
     vsansraw = df.DataType(INSTRUMENT+".raw", RawVSANSData)
+    vsansdata = df.DataType(INSTRUMENT+".vsansdata", VSansData)
     #params = df.DataType(INSTRUMENT+".params", Parameters)
 
     # Define instrument
@@ -20,7 +21,7 @@ def define_instrument():
         id=INSTRUMENT,
         name='NCNR Very Small Angle Neutron Scattering (VSANS) instrument',
         menu=[('steps', modules)],
-        datatypes=[vsansraw], # params],
+        datatypes=[vsansraw, vsansdata], # params],
         template_defs=templates.get_templates(INSTRUMENT),
         )
 

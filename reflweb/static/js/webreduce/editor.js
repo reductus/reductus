@@ -486,7 +486,7 @@ webreduce.editor = webreduce.editor || {};
     
     return metadata_table
   }
-  
+
   webreduce.editor.show_plots_2d = function(plotdata) {
     var aspect_ratio = null,
         values = plotdata.values,
@@ -567,6 +567,137 @@ webreduce.editor = webreduce.editor || {};
     }
     
     if (!(mychart && mychart.type && mychart.type == "heatmap_2d")) {
+      d3.selectAll("#plotdiv").selectAll("svg, div").remove();
+      d3.select("#plotdiv").classed("plot", true);
+      mychart = new heatChart.default({margin: {left: 100}} );
+      d3.selectAll("#plotdiv").data(values[0].z).call(mychart);
+      webreduce.callbacks.resize_center = function() {mychart.autofit()};
+    }
+        
+    var update_plotselect = function() {
+      //d3.select(this).datum(parseInt(this.value));
+      //console.log(d3.select(this), d3.select(this).datum(), this.value);
+      var plotnum = (this.value != null) ? parseInt(this.value) : 0,
+          data = values[plotnum];
+      var title = data.title || "";
+      d3.select("#plot_title").text(title);
+      data.ztransform = $("#zscale").val();
+      if ((((data.options || {}).fixedAspect || {}).fixAspect || null) == true) {
+        aspect_ratio = ((data.options || {}).fixedAspect || {}).aspectRatio || null;
+      }
+      
+      //mychart = new heatChart();
+      mychart
+        //.ztransform($("#zscale").val())
+        //.colormap(cm.get_colormap(current_instr == "NGBSANS" ? "spectral" : "jet"))
+        .autoscale(true)
+        .aspect_ratio(aspect_ratio)
+        .dims(data.dims)
+        .xlabel(data.xlabel)
+        .ylabel(data.ylabel);
+      //d3.selectAll("#plotdiv").selectAll("svg, div").remove();
+      //d3.selectAll("#plotdiv").data(data.z).call(mychart);
+      var new_colormap = colormap.get_colormap($("select#colormap_select").val());
+      mychart.colormap(new_colormap);
+      mychart.source_data(data.z[0]);
+      mychart.zoomScroll(true);
+      mychart.ztransform($("#zscale").val())
+      
+      
+    }
+    
+    d3.select("#plot_controls .plot-select input")
+      .attr("max", values.length-1)
+      .on("change", update_plotselect)
+      .on("click", update_plotselect)
+      .on("input", update_plotselect)
+    
+    update_plotselect();
+    mychart.interactors(null);
+    mychart.autofit();
+    return mychart
+  }
+  
+  webreduce.editor.show_plots_2d_multi = function(plotdata) {
+    var aspect_ratio = null,
+        values = plotdata.values,
+        mychart = webreduce.editor._active_plot;
+        
+    // set up plot control buttons and options:
+    if (d3.select("#plot_controls").attr("plot_type") != "2d_multi") {
+      // then make the controls:
+      var plot_controls = d3.select("#plot_controls")
+      plot_controls.attr("plot_type", "2d_multi")
+      plot_controls.selectAll("select,input,button,label").remove();
+      var plot_select = plot_controls.selectAll(".plot-select")
+        .data([0])
+        .enter().append("label")
+        .classed("plot-select", true)
+        .text("dataset")
+      plot_select
+        .append("input")
+          .attr("type", "number")
+          .attr("min", "0")
+          .style("width", "4em")
+          .attr("value", 0)
+          
+      plot_controls.selectAll(".scale-select")
+        .data(["zscale"])
+        .enter().append("label")
+        .classed("scale-select", true)
+        .text(function(d) {return d})
+        .append("select")
+          .attr("id", function(d) {return d})
+          .attr("axis", function(d) {return d[0]})
+          .on("change", function() {
+            var axis = d3.select(this).attr("axis") + "transform",
+                transform = this.value;
+            webreduce.editor._active_plot[axis](transform);  
+          })
+          .selectAll("option").data(["linear", "log"])
+            .enter().append("option")
+            .attr("value", function(d) {return d})
+            .text(function(d) {return d})
+            
+      plot_controls.selectAll(".show-boxes")
+        .data(["grid"])
+        .enter().append("label")
+        .classed("show-boxes", true)
+        .text(function(d) {return d})
+        .append("input")
+          .attr("id", function(d) {return "show_" + d})
+          .attr("type", "checkbox")
+          .attr("checked", "checked")
+          .on("change", function() {
+            webreduce.editor._active_plot[this.id](this.checked);
+          });
+      
+      plot_controls
+        .append("input")
+          .attr("type", "button")
+          .attr("id", "export_data")
+          .attr("value", "export")
+          .on("click", webreduce.editor.export_data)
+          
+      var colormap_select = plot_controls
+        .append("label")
+          .text("colormap")
+        .append("select")
+        .attr("id", "colormap_select")
+        .on("change", function() {
+          var new_colormap = colormap.get_colormap(this.value);
+          webreduce.editor._active_plot.colormap(new_colormap).redrawImage();
+          webreduce.editor._active_plot.colorbar.update();
+        })
+      colormap_select
+        .selectAll("option").data(colormap.colormap_names)
+          .enter().append("option")
+          .attr("value", function(d) {return d})
+          .property("selected", function(d) {return d == 'jet'})
+          .text(function(d) {return d})
+    }
+    
+    if (!(mychart && mychart.type && mychart.type == "heatmap_2d_multi")) {
       d3.selectAll("#plotdiv").selectAll("svg, div").remove();
       d3.select("#plotdiv").classed("plot", true);
       mychart = new heatChart.default({margin: {left: 100}} );

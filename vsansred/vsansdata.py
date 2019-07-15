@@ -32,9 +32,10 @@ def _s(b):
         return b
 
 class RawVSANSData(object):
-    def __init__(self, metadata):
+    def __init__(self, metadata, detectors=None):
         self.metadata = metadata
         self.metadata['name'] = metadata['run.filename']
+        self.detectors = detectors
 
     def todict(self):
         return _toDictItem(self.metadata)
@@ -44,7 +45,7 @@ class RawVSANSData(object):
         return {"entry": "entry", "type": "metadata", "values": _toDictItem(self.metadata)}
 
     def get_metadata(self):
-        return _toDictItem(self.metadata)
+        return _toDictItem(self.metadata)        
 
     def export(self):
         output = json.dumps(_toDictItem(self.metadata, convert_bytes=True))
@@ -70,45 +71,18 @@ def _toDictItem(obj, convert_bytes=False):
     return obj
 
 class VSansData(object):
-    """SansData object used for storing values from a sample file (not div/mask).
+    """VSansData object used for storing values from a sample file (not div/mask).
        Stores the array of data as a Uncertainty object (detailed in uncertainty.py)
        Stores all metadata
        q, qx, qy, theta all get updated with values throughout the reduction process
        Tsam and Temp are just used for storage across modules (in wireit)
     """
-    def __init__(self, data=None, metadata=None, q=None, qx=None, qy=None, aspect_ratio=1.0,
-                 xlabel="X", ylabel="Y",
-                 theta=None, Tsam=None, Temp=None, attenuation_corrected=False):
-        if isinstance(data, np.ndarray):
-            # Data is counts, so variance is counts.  Set variance on zero counts to 1
-            self.data = Uncertainty(data, data + (data==0))
-        else:
-            self.data = data
+    def __init__(self, metadata=None, detectors=None):
         self.metadata = metadata if metadata is not None else {}
-        # There are many places where q was not set, i think i fixed most,
-        # but there might be more; be wary
-        self.q = q
-        self.qx = qx
-        self.qy = qy
-        self.qx_max = None
-        self.qy_max = None
-        self.qx_min = None
-        self.qy_min = None
-        self.xlabel = xlabel
-        self.ylabel = ylabel
-        self.aspect_ratio = aspect_ratio
-        self.theta = theta
-        self.attenuation_corrected = attenuation_corrected
-
-        self.Tsam = None #Tsam and Temp are used to store the transmissions for later use
-        self.Temp = None
+        self.detectors = detectors if detectors is not None else {}
     
     def copy(self):
-        return SansData(copy(self.data), deepcopy(self.metadata),
-                        q=copy(self.q), qx=copy(self.qx), qy=copy(self.qy),
-                        theta=copy(self.theta), aspect_ratio=self.aspect_ratio,
-                        xlabel=self.xlabel, ylabel=self.ylabel,
-                        attenuation_corrected=self.attenuation_corrected)
+        return VSansData(deepcopy(self.metadata), deepcopy(self.detectors))
 
     def __copy__(self):
         return self.copy()
@@ -119,6 +93,10 @@ class VSansData(object):
         #return self.__str__()
 
     def get_plottable(self):
+        #return {"entry": "entry", "type": "params", "params": _toDictItem(self.metadata)}
+        return {"entry": "entry", "type": "metadata", "values": _toDictItem(self.metadata)}
+
+    def get_plottable_old(self):
         data = self.data.x.astype("float")
         xdim = data.shape[0]
         ydim = data.shape[1]
