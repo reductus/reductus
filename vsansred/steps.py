@@ -1,6 +1,9 @@
 from posixpath import basename, join
 from copy import copy, deepcopy
 from io import BytesIO
+import numpy as np
+
+from dataflow.lib.uncertainty import Uncertainty
 
 # Action names
 __all__ = [] # type: List[str]
@@ -120,9 +123,9 @@ def patch(data, key="filename", patches=None):
 
 @nocache
 @module
-def calculate_Q(raw_data):
+def calculate_XY(raw_data):
     """
-    from embedded detector metadata, calculates the Qx, Qy and Qz values for each detector.
+    from embedded detector metadata, calculates the x,y,z values for each detector.
 
     **Inputs**
 
@@ -130,23 +133,20 @@ def calculate_Q(raw_data):
 
     **Returns**
 
-    vsansdata (vsansdata[]): datafiles with Q information
+    realspace_data (realspace[]): datafiles with realspace information
 
     2018-04-27 Brian Maranville
     """
-    from .vsansdata import VSansData
+    from .vsansdata import VSansDataRealSpace, short_detectors
     from collections import OrderedDict
 
     output = []
     for r in raw_data:
         metadata = deepcopy(r.metadata)
         new_detectors = OrderedDict()
-        for dname in r.detectors:
-            short_name = dname.replace('detector_', '')
-            if dname == 'detector_B':
-                # don't process the back detector
-                continue
-            det = deepcopy(r.detectors[dname])
+        for sn in short_detectors:
+            detname = 'detector_{short_name}'.format(short_name=sn)
+            det = deepcopy(r.detectors[detname])
             z_offset = det.get('setback', {"value": [0.0]})['value'][0]
             orientation = det['tube_orientation']['value'][0].decode().upper()
             coeffs = det['spatial_calibration']['value']
@@ -167,14 +167,12 @@ def calculate_Q(raw_data):
 
             dimX = int(det['pixel_num_x']['value'][0])
             dimY = int(det['pixel_num_y']['value'][0])
-            size_x = dimX * x_pixel_size
-            size_y = dimY * y_pixel_size
             z = det['distance']['value'][0] + z_offset
             #solid_angle_correction = z*z / 1e6
             data = det['data']['value']
+            udata = Uncertainty(data, data)
             
-            
-            position_key = dname[-1]
+            position_key = sn[-1]
             if position_key == 'T':
                 # FROM IGOR: (q,p = 0 for lower-left pixel) 
                 # if(cmpstr("T",detStr[1]) == 0)
@@ -213,10 +211,80 @@ def calculate_Q(raw_data):
 
             #metadata['det_' + short_name + '_x0_pos'] = x0_pos
             #metadata['det_' + short_name + '_y0_pos'] = y0_pos
-            
-            new_detectors[dname] = det
-        output.append(VSansData(metadata=metadata, detectors=new_detectors))
+            X,Y = np.indices((dimX, dimY))
+            X = X * x_pixel_size + x0_pos
+            Y = Y * y_pixel_size + y0_pos
+            det['data'] = udata
+            det['X'] = X
+            det['Y'] = Y
+            det['Z'] = z
+            det['norm'] = x_pixel_size * y_pixel_size / z**2
+
+            new_detectors[detname] = det
+        output.append(VSansDataRealSpace(metadata=metadata, detectors=new_detectors))
 
     return output
-    
 
+@nocache
+@module   
+def calculate_Q(realspace_data):
+    """
+    Calculates Q values (Qx, Qy) from realspace coordinates and wavelength
+     **Inputs**
+
+    realspace_data (realspace[]): datafiles in realspace X,Y coordinates
+
+    **Returns**
+
+    QxQy_data (qspace[]): datafiles with Q information
+
+    2018-04-27 Brian Maranville
+    """
+    from .vsansdata import VSansDataQSpace, short_detectors
+    from collections import OrderedDict
+
+    output = []
+    print(realspace_data)
+    for rd in realspace_data:
+        metadata = deepcopy(rd.metadata)
+        wavelength = metadata['resolution.lmda']
+        delta_wavelength = metadata['resolution.dlmda']
+        new_detectors = OrderedDict()
+        #print(r.detectors)
+        for sn in short_detectors:
+            detname = 'detector_{short_name}'.format(short_name=sn)
+            det = deepcopy(rd.detectors[detname])
+            X = det['X']
+            Y = det['Y']
+            z = det['Z']
+            r = np.sqrt(X**2+Y**2)
+            theta = np.arctan2(r, z)/2 #remember to convert L2 to cm from meters
+            q = (4*np.pi/wavelength)*np.sin(theta)
+            alpha = np.arctan2(Y, X)
+            qx = q*np.cos(alpha)
+            qy = q*np.sin(alpha)
+
+            det['Qx'] = qx
+            det['Qy'] = qy
+            det['Q'] = q
+            new_detectors[detname] = det
+
+        output.append(VSansDataQSpace(metadata=metadata, detectors=new_detectors))
+
+    return output
+
+def circular_average(qspace_data):
+    """
+    Calculates I vs Q from qpace coordinate data
+     **Inputs**
+
+    qspace_data (qspace[]): datafiles in qspace X,Y coordinates
+
+    **Returns**
+
+    QxQy_data (qspace[]): datafiles with Q information
+
+    2018-04-27 Brian Maranville
+    """
+    from sansred.sansdata import Sans1dData
+    from collections import OrderedDict

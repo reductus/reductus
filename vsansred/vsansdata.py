@@ -19,6 +19,8 @@ IS_PY3 = sys.version_info[0] >= 3
 
 IGNORE_CORNER_PIXELS = True
 
+short_detectors = ["MB", "MT", "ML", "MR", "FT", "FB", "FL", "FR"]
+
 def _b(s):
     if IS_PY3:
         return s.encode('utf-8')
@@ -82,7 +84,7 @@ class VSansData(object):
         self.detectors = detectors if detectors is not None else {}
     
     def copy(self):
-        return VSansData(deepcopy(self.metadata), deepcopy(self.detectors))
+        return self.__class__(deepcopy(self.metadata), deepcopy(self.detectors))
 
     def __copy__(self):
         return self.copy()
@@ -93,71 +95,139 @@ class VSansData(object):
         #return self.__str__()
 
     def get_plottable(self):
-        #return {"entry": "entry", "type": "params", "params": _toDictItem(self.metadata)}
-        return {"entry": "entry", "type": "metadata", "values": _toDictItem(self.metadata)}
+        datasets = []
+        zmin = +np.inf
+        zmax = -np.inf
+        for sn in short_detectors:
+            detname = 'detector_{short_name}'.format(short_name=sn)
+            det = self.detectors[detname]
+            corrected = det['data'].x / det['norm']
+            dimX, dimY = corrected.shape
+            xaxis = det[self.xaxisname]
+            yaxis = det[self.yaxisname]
+            xmax = xaxis.max()
+            xmin = xaxis.min()
+            ymax = yaxis.max()
+            ymin = yaxis.min()
+            zmax = np.max([corrected.max(), zmax])
+            zmin = np.min([corrected.min(), zmin])
 
-    def get_plottable_old(self):
-        data = self.data.x.astype("float")
-        xdim = data.shape[0]
-        ydim = data.shape[1]
-        if not (np.abs(data) > 1e-10).any():
-            zmin = 0.0
-            zmax = 1.0
-        else:
-            zmin = data[data > 1e-10].min()
-            if IGNORE_CORNER_PIXELS:
-                mask = np.ones(data.shape, dtype='bool')
-                mask[0, 0] = mask[-1, 0] = mask[-1, -1] = mask[0, -1] = 0.0
-                zmax = data[mask].max()
-            else:
-                zmax = data.max()
-        if self.qx is None or self.qy is None:
-            xmin = 0.5
-            xmax = 128.5
-            ymin = 0.5
-            ymax = 128.5
-        else:
-            xmin = self.qx_min if self.qx_min is not None else self.qx.min()
-            xmax = self.qx_max if self.qx_max is not None else self.qx.max()
-            ymin = self.qy_min if self.qy_min is not None else self.qy.min()
-            ymax = self.qy_max if self.qy_max is not None else self.qy.max()
-        plottable_data = {
-            'entry': self.metadata['entry'],
-            'type': '2d',
-            'z':  [data.flatten().tolist()],
-            'title': _s(self.metadata['run.filename'])+': ' + _s(self.metadata['sample.labl']),
-            #'metadata': self.metadata,
-            'options': {
-                'fixedAspect': {
-                    #'fixAspect': True,
-                    #'aspectRatio': 1.0
+            datasets.append({
+                "data": corrected.ravel('C').tolist(),
+                "dims": {
+                    "xmin": xmin,
+                    "xmax": xmax,
+                    "xdim": dimX,
+                    "ymin": ymin,
+                    "ymax": ymax,
+                    "ydim": dimY,
+                }
+            })
+        
+        data_2d = {
+            "dims": {
+                "zmin": zmin,
+                "zmax": zmax,
+            },
+            "type": "2d_multi",
+            "title": self.metadata["run.filename"] + b":" + self.metadata["sample.labl"],
+            #"z": [output_grid.T.tolist()],
+            "datasets": datasets,
+            "ztransform": "log",
+            "xlabel": self.xaxisname,
+            "ylabel": self.yaxisname,
+            "zlabel": "intensity",
+            "options": {
+                "fixedAspect": {
+                    "fixAspect": True,
+                    "aspectRatio": 1.0
                 }
             },
-            'dims': {
-                'xmax': xmax,
-                'xmin': xmin,
-                'ymin': ymin,
-                'ymax': ymax,
-                'xdim': xdim,
-                'ydim': ydim,
-                'zmin': zmin,
-                'zmax': zmax,
-            },
-            'xlabel': self.xlabel,
-            'ylabel': self.ylabel,
-            'zlabel': 'Intensity (I)',
+            "metadata": self.metadata.copy()
         }
-        if self.aspect_ratio is not None:
-            plottable_data['options']['fixedAspect'] = {
-                'fixAspect': True,
-                'aspectRatio': self.aspect_ratio
-            }
-        return plottable_data
+
+        return _toDictItem(data_2d)
+
+        #return {"entry": "entry", "type": "metadata", "values": _toDictItem(self.metadata)}
 
     def get_metadata(self):
         metadata = {}
         metadata.update(pythonize(self.metadata))
         return metadata
+
+class VSansDataRealSpace(VSansData):
+    def __init__(self, metadata=None, detectors=None):
+        self.xaxisname = 'X'
+        self.yaxisname = 'Y'
+        VSansData.__init__(self, metadata=metadata, detectors=detectors)
+
+class VSansDataAngleSpace(VSansData):
+    def __init__(self, metadata=None, detectors=None):
+        self.xaxisname = 'thetaX'
+        self.yaxisname = 'thetaY'
+        VSansData.__init__(self, metadata=metadata, detectors=detectors)
+
+class VSansDataQSpace(VSansData):
+    def __init__(self, metadata=None, detectors=None):
+        self.xaxisname = 'Qx'
+        self.yaxisname = 'Qy'
+        VSansData.__init__(self, metadata=metadata, detectors=detectors)
+
+class Sans1dData(object):
+    properties = ['x', 'v', 'dx', 'dv', 'xlabel', 'vlabel', 'xunits', 'vunits', 'xscale', 'vscale', 'metadata', 'fit_function']
+
+    def __init__(self, x, v, dx=0, dv=0, xlabel="", vlabel="", xunits="", vunits="", xscale="linear", vscale="linear", metadata=None, fit_function=None):
+        self.x = x
+        self.v = v
+        self.dx = dx
+        self.dv = dv
+        self.xlabel = xlabel
+        self.vlabel = vlabel
+        self.xunits = xunits
+        self.vunits = vunits
+        self.xscale = xscale
+        self.vscale = vscale
+        self.metadata = metadata if metadata is not None else {}
+        self.fit_function = fit_function
+
+    def to_dict(self):
+        props = dict([(p, getattr(self, p, None)) for p in self.properties])
+        return pythonize(props)
+
+    def get_plottable(self):
+        label = "%s: %s" % (self.metadata['run.experimentScanID'], self.metadata['sample.labl'])
+        xdata = self.x.tolist()
+        ydata = self.v.tolist()
+        yerr = self.dv.tolist()
+        data = [[x, y, {"yupper": y+dy, "ylower": y-dy, "xupper": x, "xlower": x}] for x,y,dy in zip(xdata, ydata, yerr)]
+        plottable = {
+            "type": "1d",
+            "options": {
+                "axes": {
+                    "xaxis": {"label": self.xlabel},
+                    "yaxis": {"label": self.vlabel}
+                },
+                "series": [{"label": label}]
+            },
+            "data": [data]
+        }
+        return plottable
+
+    def get_metadata(self):
+        return self.to_dict()
+
+    def export(self):
+        fid = BytesIO()
+        fid.write(_b("# %s\n" % json.dumps(pythonize(self.metadata)).strip("{}")))
+        columns = {"columns": [self.xlabel, self.vlabel, "uncertainty", "resolution"]}
+        units = {"units": [self.xunits, self.vunits, self.vunits, self.xunits]}
+        fid.write(_b("# %s\n" % json.dumps(columns).strip("{}")))
+        fid.write(_b("# %s\n" % json.dumps(units).strip("{}")))
+        np.savetxt(fid, np.vstack([self.x, self.v, self.dv, self.dx]).T, fmt="%.10e")
+        fid.seek(0)
+        name = getattr(self, "name", "default_name")
+        entry = getattr(self.metadata, "entry", "default_entry")
+        return {"name": name, "entry": entry, "export_string": fid.read(), "file_suffix": ".sans1d.dat"}
 
 def pythonize(obj):
     output = {}

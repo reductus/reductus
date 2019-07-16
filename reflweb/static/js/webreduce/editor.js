@@ -411,6 +411,9 @@ webreduce.editor = webreduce.editor || {};
     else if (new_plotdata.type == '2d') {
       active_plot = this.show_plots_2d(new_plotdata);
     }
+    else if (new_plotdata.type == '2d_multi') {
+      active_plot = this.show_plots_2d_multi(new_plotdata);
+    }
     else if (new_plotdata.type == 'params') {
       active_plot = this.show_plots_params(new_plotdata);
     }
@@ -700,8 +703,9 @@ webreduce.editor = webreduce.editor || {};
     if (!(mychart && mychart.type && mychart.type == "heatmap_2d_multi")) {
       d3.selectAll("#plotdiv").selectAll("svg, div").remove();
       d3.select("#plotdiv").classed("plot", true);
-      mychart = new heatChart.default({margin: {left: 100}} );
-      d3.selectAll("#plotdiv").data(values[0].z).call(mychart);
+      mychart = new heatChartMulti.default({margin: {left: 100}} );
+      var data = values[0];
+      d3.selectAll("#plotdiv").data([values[0].datasets]).call(mychart);
       webreduce.callbacks.resize_center = function() {mychart.autofit()};
     }
         
@@ -713,24 +717,25 @@ webreduce.editor = webreduce.editor || {};
       var title = data.title || "";
       d3.select("#plot_title").text(title);
       data.ztransform = $("#zscale").val();
+      var aspect_ratio = null;
       if ((((data.options || {}).fixedAspect || {}).fixAspect || null) == true) {
         aspect_ratio = ((data.options || {}).fixedAspect || {}).aspectRatio || null;
       }
-      
+    
       //mychart = new heatChart();
       mychart
         //.ztransform($("#zscale").val())
         //.colormap(cm.get_colormap(current_instr == "NGBSANS" ? "spectral" : "jet"))
-        .autoscale(true)
+        //.autoscale(true)
         .aspect_ratio(aspect_ratio)
-        .dims(data.dims)
+        //.dims(data.dims)
         .xlabel(data.xlabel)
         .ylabel(data.ylabel);
       //d3.selectAll("#plotdiv").selectAll("svg, div").remove();
       //d3.selectAll("#plotdiv").data(data.z).call(mychart);
       var new_colormap = colormap.get_colormap($("select#colormap_select").val());
       mychart.colormap(new_colormap);
-      mychart.source_data(data.z[0]);
+      mychart.source_data(data.datasets);
       mychart.zoomScroll(true);
       mychart.ztransform($("#zscale").val())
       
