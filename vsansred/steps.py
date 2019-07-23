@@ -216,7 +216,9 @@ def calculate_XY(raw_data):
             Y = Y * y_pixel_size + y0_pos
             det['data'] = udata
             det['X'] = X
+            det['dX'] = x_pixel_size
             det['Y'] = Y
+            det['dY'] = y_pixel_size
             det['Z'] = z
             det['norm'] = x_pixel_size * y_pixel_size / z**2
 
