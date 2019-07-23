@@ -1,6 +1,7 @@
 from posixpath import basename, join
 from copy import copy, deepcopy
 from io import BytesIO
+import sys
 import numpy as np
 
 from dataflow.lib.uncertainty import Uncertainty
@@ -10,6 +11,20 @@ __all__ = [] # type: List[str]
 
 # Action methods
 ALL_ACTIONS = [] # type: List[Callable[Any, Any]]
+
+IS_PY3 = sys.version_info[0] >= 3
+
+def _b(s):
+    if IS_PY3:
+        return s.encode('utf-8')
+    else:
+        return s
+
+def _s(b):
+    if IS_PY3:
+        return b.decode('utf-8') if hasattr(b, 'decode') else b
+    else:
+        return b
 
 def cache(action):
     """
@@ -53,6 +68,7 @@ def module(action):
     # This is a decorator, so return the original function
     return action
 
+@cache
 @module
 def LoadVSANS(filelist=None, check_timestamps=True):
     """
@@ -83,6 +99,143 @@ def LoadVSANS(filelist=None, check_timestamps=True):
         data.extend(entries)
 
     return data
+
+@module
+def LoadVSANSHe3(filelist=None, check_timestamps=True):
+    """
+    loads a data file into a VSansData obj and returns that.
+
+    **Inputs**
+
+    filelist (fileinfo[]): Files to open.
+    
+    check_timestamps (bool): verify that timestamps on file match request
+
+    **Returns**
+
+    output (raw[]): all the entries loaded.
+
+    2018-04-29 Brian Maranville
+    """
+    from dataflow.fetch import url_get
+    from .loader import readVSANSNexuz, he3_metadata_lookup
+    if filelist is None:
+        filelist = []
+    data = []
+    for fileinfo in filelist:
+        path, mtime, entries = fileinfo['path'], fileinfo.get('mtime', None), fileinfo.get('entries', None)
+        name = basename(path)
+        fid = BytesIO(url_get(fileinfo, mtime_check=check_timestamps))
+        entries = readVSANSNexuz(name, fid, metadata_lookup=he3_metadata_lookup)
+        data.extend(entries)
+
+    return data
+
+def He3_transmission(he3data, trans_panel="auto"):
+    """
+    Calculate transmissions
+
+    **Inputs**
+
+    he3data (raw[]): datafiles with he3 transmissions
+
+    trans_panel (opt:MB|MT|ML|MR|FT|FB|FL|FR|auto): panel to use for transmissions
+
+    **Returns**
+
+    annotated (raw[]): datafiles grouped by cell
+
+    mappings (params[]): cell parameters
+
+    2018-04-27 Brian Maranville
+    """
+    from .vsansdata import short_detectors
+    import dateutil
+    
+    BlockedBeams = {}
+    for d in he3data:
+        filename = d.get("run.filename", "unknown_file")
+        if _s(d.metadata.get('analysis.intent', '')).lower().startswith('bl'):
+            m_det_dis_desired = d.metadata.get("m_det.dis_des", 0)
+            f_det_dis_desired = d.metadata.get("f_det.dis_des", 0)
+            num_attenuators = d.metadata.get("run.atten", 0)
+            count_time = d.metadata['run.rtime']
+            if count_time == 0: count_time = 1
+            trans_counts = get_transmission_sum(d.detectors, panel_name=trans_panel)
+            BlockedBeams[(m_det_dis_desired, f_det_dis_desired, num_attenuators)] = {
+                "filename": filename,
+                "counts_per_second": trans_counts / count_time
+            }
+
+    mappings = {}
+    previous_transmission = {}
+    for d in he3data:
+        tstart = d.metadata.get("he3_back.starttime", 0)
+        tend = dateutil.parser.parse(d.metadata.get("end_time", "1969")).timestamp()
+        count_time =  d.metadata['run.rtime']
+        monitor_counts = d.metadata['run.moncnt']
+        detector_counts = get_transmission_sum(d.detectors, panel_name=trans_panel)
+        filename = d.metadata.get("run.filename", "unknown_file")
+        m_det_dis_desired = d.metadata.get("m_det.dis_des", 0)
+        f_det_dis_desired = d.metadata.get("f_det.dis_des", 0)
+        num_attenuators = d.metadata.get("run.atten", 0)
+        Elapsed_time = (tend - (count_time * 1000.0 / 2.0)) # in milliseconds
+        mappings.setdefault(tstart, {
+            "Insert_time": tstart,
+            "Cell_name": d.metadata.get("he3_back.name", "unknown"),
+            "Transmissions": []
+        })
+
+        # assume that He3 OUT is measured before He3 IN
+        mapping_trans = mappings[tstart]["Transmissions"]
+        t_key = (m_det_dis_desired, f_det_dis_desired, num_attenuators)
+        if d.metadata.get("he3_back.inbeam", 0) > 0:
+            p = previous_transmission
+            if p.get("CellTimeIdentifier", None) == tstart and \
+                    p.get("m_det_dis_desired", None) == m_det_dis_desired and \
+                    p.get("f_det_dis_desired", None) == f_det_dis_desired and \
+                    p.get("num_attenuators", None) == num_attenuators:
+                p["HE3_IN_file"] = filename
+                p["HE3_IN_counts"] = detector_counts
+                p["HE3_IN_mon"] = monitor_counts
+            
+            blocked_beam = BlockedBeams.get((m_det_dis_desired, f_det_dis_desired, num_attenuators), {})
+
+            mapping_trans[t_key]["HE3_IN_file"].append(filename)
+        else:
+            previous_transmission = {
+                "CellTimeIndentifier": tstart,
+                "HE3_OUT_file": filename,
+                "HE3_OUT_counts": detector_counts,
+                "HE3_OUT_mon": monitor_counts,
+                "m_det_dis_desired": m_det_dis_desired,
+                "f_det_dis_desired": f_det_dis_desired,
+                "num_attenuators": num_attenuators
+            }
+        if "HE3_IN_file" in mapping_trans[t_key] and "HE3_IN_file" in mapping_trans[t_key]:
+
+            mapping_trans
+        
+        blocked_beam = BlockedBeams.get((m_det_dis_desired, f_det_dis_desired, num_attenuators), {})
+        mappings[tstart]["BlockedBeam_file"].append(blocked_beam.get("filename", "unknown"))
+        mappings[tstart]["Elapsed_time"].append(Elapsed_time)
+        mappings[tstart]["Transmission"].append()
+        # catch back-to-back 
+
+    return he3data
+
+def get_transmission_sum(detectors, panel_name="auto"):
+    from .vsansdata import short_detectors
+    total_counts = -np.inf
+    if panel_name == 'auto':
+        for sn in short_detectors:
+            detname = "detector_{sn}".format(sn=sn)
+            counts = detectors[detname]['data'].sum()
+            if counts > total_counts:
+                total_counts = counts
+    else:
+        total_counts = detectors[panel_name]['data'].sum()
+    return total_counts
 
 @module
 def patch(data, key="filename", patches=None):
@@ -120,6 +273,27 @@ def patch(data, key="filename", patches=None):
     #patched = list(patched_master.values())
 
     return data
+
+@nocache
+@module
+def sort_sample(raw_data):
+    """
+    categorize data files
+
+    **Inputs**
+
+    raw_data (raw[]): datafiles in
+
+    **Returns**
+
+    blocked_beam (raw[]): datafiles with "blocked beam" intent
+
+    2018-04-27 Brian Maranville
+    """
+
+    blocked_beam = [f for f in raw_data if _s(f.metadata.get('analysis.intent', '')).lower().startswith('bl')]
+
+    return blocked_beam
 
 @nocache
 @module
@@ -246,7 +420,6 @@ def calculate_Q(realspace_data):
     from collections import OrderedDict
 
     output = []
-    print(realspace_data)
     for rd in realspace_data:
         metadata = deepcopy(rd.metadata)
         wavelength = metadata['resolution.lmda']

@@ -8,6 +8,7 @@ Internal data representation for SANS data.
 import sys
 import datetime
 from copy import copy, deepcopy
+from collections import OrderedDict
 import json
 from io import BytesIO
 
@@ -54,6 +55,9 @@ class RawVSANSData(object):
         name = getattr(self.metadata, "name", "default_name")
         entry = getattr(self.metadata, "entry", "default_entry")
         return {"name": name, "entry": entry, "export_string": output, "file_suffix": ".vsans.metadata.json"}
+
+class RawVSANSHe3Data(RawVSANSData):
+    pass
 
 def _toDictItem(obj, convert_bytes=False):
     if isinstance(obj, np.integer):
@@ -308,4 +312,19 @@ class Parameters(dict):
         return self
 
     def get_plottable(self):
-        return self
+        #return {"entry": "entry", "type": "params", "params": _toDictItem(self.metadata)}
+        return {"entry": "entry", "type": "parameters", "values": _toDictItem(self)}
+
+class Metadata(OrderedDict):
+    def get_plottable(self):
+        #return {"entry": "entry", "type": "params", "params": _toDictItem(self.metadata)}
+        return {"entry": "entry", "type": "metadata", "values": _toDictItem(self)}
+
+    def get_metadata(self):
+        return _toDictItem(self)        
+
+    def export(self):
+        output = json.dumps(_toDictItem(self, convert_bytes=True))
+        name = getattr(self, "name", "default_name")
+        entry = getattr(self, "entry", "default_entry")
+        return {"name": name, "entry": entry, "export_string": output, "file_suffix": ".vsans.metadata.json"}
