@@ -40,6 +40,8 @@ metadata_lookup = OrderedDict([
     ("f_det.beamx", "DAS_logs/frontRightAreaDetector/beamCenterX"),
     ("f_det.beamy", "DAS_logs/frontRightAreaDetector/beamCenterY"),
     ("f_det.dis", "DAS_logs/geometry/sampleToFrontRightDetector"),
+    ("m_det_des.dis", "DAS_logs/carriage2Trans/desiredSoftPosition"),
+    ("f_det_des.dis", "DAS_logs/carriage1Trans/desiredSoftPosition"),
     ("polarization.front", "DAS_logs/frontPolarization/direction"),
     ("polarization.back", "DAS_logs/backPolarization/direction"),
     ("polarization.backname", "DAS_logs/backPolarization/name"),
@@ -51,7 +53,7 @@ metadata_lookup = OrderedDict([
     #("run.detcnt", "control/detector_counts"),
     ("run.rtime", "control/count_time"),
     ("run.moncnt", "control/monitor_counts"),
-    ("run.atten", "instrument/attenuator/index"),
+    ("run.atten", "instrument/attenuator/num_atten_dropped"),
     ("analysis.groupid", "DAS_logs/trajectoryData/groupid"),
     ("run.configuration", "DAS_logs/configuration/key"),
     ("sample.thk", "DAS_logs/sample/thickness"),
@@ -68,6 +70,27 @@ metadata_lookup = OrderedDict([
     ("rfflipperpowersupply.voltage",  "DAS_logs/RFFlipperPowerSupply/actualVoltage/average_value"),
     ("rfflipperpowersupply.frequency",  "DAS_logs/RFFlipperPowerSupply/frequency"),
     ("huberRotation.softPosition",  "DAS_logs/huberRotation/softPosition"),
+    ("start_time","start_time"),
+    ("end_time","end_time"),
+    ("eventfile", "DAS_logs/areaDetector/eventFileName")
+])
+
+he3_metadata_lookup = OrderedDict([
+    ("run.filename", "DAS_logs/trajectoryData/fileName"),
+    ("analysis.intent", "DAS_logs/trajectoryData/intent"),
+    ("analysis.filepurpose", "DAS_logs/trajectoryData/filePurpose"),
+    ("he3_back.starttime", "DAS_logs/backPolarization/timestamp"),
+    ("he3_back.name", "DAS_logs/backPolarization/name"),
+    ("he3_back.inbeam", "DAS_logs/backPolarization/inBeam"),
+    ("run.rtime", "control/count_time"),
+    ("run.moncnt", "control/monitor_counts"),
+    ("run.atten", "instrument/attenuator/num_atten_dropped"),
+    ("sample.name", "DAS_logs/sample/name"),
+    ("sample.labl", "DAS_logs/sample/description"), # compatibility
+    ("resolution.lmda" , "instrument/beam/monochromator/wavelength"),
+    ("resolution.dlmda", "instrument/beam/monochromator/wavelength_spread"),
+    ("m_det.dis_des", "DAS_logs/carriage2Trans/desiredSoftPosition"),
+    ("f_det.dis_des", "DAS_logs/carriage1Trans/desiredSoftPosition"),
     ("start_time","start_time"),
     ("end_time","end_time"),
     ("eventfile", "DAS_logs/areaDetector/eventFileName")
@@ -125,7 +148,7 @@ def load_detector(dobj):
             detector[k]['attrs']['dtype'] = subobj.dtype
     return detector
 
-def load_metadata(entry, multiplicity=1, i=1):
+def load_metadata(entry, multiplicity=1, i=1, metadata_lookup=metadata_lookup):
     metadata = OrderedDict()
     for mkey in metadata_lookup:
         field = entry.get(metadata_lookup[mkey], None)
@@ -147,7 +170,7 @@ def load_metadata(entry, multiplicity=1, i=1):
             metadata[mkey] = field
     return metadata
 
-def readVSANSNexuz(input_file, file_obj=None):
+def readVSANSNexuz(input_file, file_obj=None, metadata_lookup=metadata_lookup):
     """
     Load all entries from the NeXus file into sans data sets.
     """
@@ -166,7 +189,8 @@ def readVSANSNexuz(input_file, file_obj=None):
         
         multiplicity = 1
         for i in range(multiplicity):
-            metadata = load_metadata(entry, multiplicity, i)
+            metadata = load_metadata(entry, multiplicity, i, metadata_lookup=metadata_lookup)
+            print(metadata)
             detector_keys = [n for n in entry['instrument'] if n.startswith('detector_')]
             detectors = dict([(k, load_detector(entry['instrument'][k])) for k in detector_keys])
             metadata['entry'] = entryname
