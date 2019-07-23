@@ -663,17 +663,28 @@ webreduce.editor.make_fieldUI = webreduce.editor.make_fieldUI || {};
                 if (!update_existing) {
                   datum.value.push(p);
                 }
-                input.selectAll("li.patches").data(datum.value).enter()
-                  .append("li")
-                  .classed("patches", true)
-                
-                input.selectAll("li.patches")
-                  .text(function(d) { return JSON.stringify(d)})
-
-                var event = document.createEvent('Event');
-                event.initEvent('input', true, true);
-                input.node().dispatchEvent(event);
               }
+              else {
+                for (var vi in datum.value) {
+                  let po = datum.value[vi];
+                  if (po.path == path) {
+                    datum.value.splice(vi, 1);
+                    break;
+                  }
+                }
+              }
+              input.selectAll("li.patches").data(datum.value).enter()
+                .append("li")
+                .classed("patches", true)
+                
+              input.selectAll("li.patches").data(datum.value).exit().remove()
+              
+              input.selectAll("li.patches")
+                .text(function(d) { return JSON.stringify(d)})
+
+              var event = document.createEvent('Event');
+              event.initEvent('input', true, true);
+              input.node().dispatchEvent(event);
             })
             .each(function(dd, ii) {
               let c = cols[ii];
