@@ -100,6 +100,7 @@ def LoadVSANS(filelist=None, check_timestamps=True):
 
     return data
 
+@cache
 @module
 def LoadVSANSHe3(filelist=None, check_timestamps=True):
     """
@@ -252,6 +253,7 @@ def get_transmission_sum(detectors, panel_name="auto"):
         total_counts = detectors[detname]['data']['value'].sum()
     return total_counts
 
+@cache
 @module
 def patch(data, key="filename", patches=None):
     """

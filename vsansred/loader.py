@@ -211,7 +211,7 @@ def _toDictItem(obj, convert_bytes=False):
     elif isinstance(obj, list):
         obj = [_toDictItem(a, convert_bytes=convert_bytes) for a in obj]
     elif isinstance(obj, dict):
-        obj = dict([(k, _toDictItem(v, convert_bytes=convert_bytes)) for k, v in obj.items()])
+        obj = OrderedDict([(k, _toDictItem(v, convert_bytes=convert_bytes)) for k, v in obj.items()])
     elif isinstance(obj, bytes) and convert_bytes == True:
         obj = obj.decode()
     return obj
