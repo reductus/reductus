@@ -132,7 +132,7 @@ def LoadVSANSHe3(filelist=None, check_timestamps=True):
 
     return data
 
-@nocache
+@cache
 @module
 def He3_transmission(he3data, trans_panel="auto"):
     """
@@ -152,29 +152,36 @@ def He3_transmission(he3data, trans_panel="auto"):
 
     2018-04-27 Brian Maranville
     """
-    from .vsansdata import short_detectors, Parameters
+    from .vsansdata import short_detectors, Parameters, _toDictItem
     import dateutil.parser
     from collections import OrderedDict
     
-    BlockedBeams = {}
+    BlockedBeams = OrderedDict()
     for d in he3data:
         filename = d.metadata.get("run.filename", "unknown_file")
         if _s(d.metadata.get('analysis.intent', '')).lower().startswith('bl'):
-            m_det_dis_desired = d.metadata.get("m_det.dis_des", 0)
-            f_det_dis_desired = d.metadata.get("f_det.dis_des", 0)
-            num_attenuators = d.metadata.get("run.atten", 0)
+            m_det_dis_desired = int(d.metadata.get("m_det.dis_des", 0))
+            f_det_dis_desired = int(d.metadata.get("f_det.dis_des", 0))
+            num_attenuators = int(d.metadata.get("run.atten", 0))
+            #t_key = "{:d}_{:d}_{:d}".format(m_det_dis_desired, f_det_dis_desired, num_attenuators)
             count_time = d.metadata['run.rtime']
             if count_time == 0: count_time = 1
             trans_counts = get_transmission_sum(d.detectors, panel_name=trans_panel)
-            BlockedBeams[(m_det_dis_desired, f_det_dis_desired, num_attenuators)] = {
-                "filename": filename,
-                "counts_per_second": trans_counts / count_time
-            }
+            BlockedBeams[(m_det_dis_desired, f_det_dis_desired, num_attenuators)] = OrderedDict([
+                ("filename", filename),
+                ("counts_per_second", trans_counts / count_time),
+                ("middle_detector_distance", m_det_dis_desired),
+                ("front_detector_distance", f_det_dis_desired),
+                ("attenuators", num_attenuators),
+            ])
 
     mappings = OrderedDict()
     previous_transmission = {}
     for d in he3data:
-        tstart = d.metadata.get("he3_back.starttime", 0)
+        tstart = d.metadata.get("he3_back.starttime", None)
+        if tstart is None:
+            tstart = 0
+        tstart = int(tstart) # coerce strings
         tstartstr = "{ts:d}".format(ts=tstart)
         tend = dateutil.parser.parse(d.metadata.get("end_time", "1969")).timestamp()
         count_time =  d.metadata['run.rtime']
@@ -237,7 +244,8 @@ def He3_transmission(he3data, trans_panel="auto"):
             }
         # catch back-to-back 
 
-    return he3data, [Parameters(mappings)]
+    bb_out = _toDictItem(list(BlockedBeams.values()))
+    return he3data, [Parameters({"cells": mappings, "blocked_beams": bb_out})]
 
 def get_transmission_sum(detectors, panel_name="auto"):
     from .vsansdata import short_detectors
