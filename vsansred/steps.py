@@ -195,11 +195,11 @@ def He3_transmission(he3data, trans_panel="auto"):
         t_key = (m_det_dis_desired, f_det_dis_desired, num_attenuators)
         if d.metadata.get("he3_back.inbeam", 0) > 0:
             p = previous_transmission
-            print('previous transmission: ', p)
-            print(p.get("CellTimeIdentifier", None), tstart,
-                    p.get("m_det_dis_desired", None),  m_det_dis_desired, 
-                    p.get("f_det_dis_desired", None), f_det_dis_desired,
-                    p.get("num_attenuators", None),  num_attenuators)
+            #print('previous transmission: ', p)
+            #print(p.get("CellTimeIdentifier", None), tstart,
+            #        p.get("m_det_dis_desired", None),  m_det_dis_desired, 
+            #        p.get("f_det_dis_desired", None), f_det_dis_desired,
+            #        p.get("num_attenuators", None),  num_attenuators)
             if p.get("CellTimeIdentifier", None) == tstart and \
                     p.get("m_det_dis_desired", None) == m_det_dis_desired and \
                     p.get("f_det_dis_desired", None) == f_det_dis_desired and \

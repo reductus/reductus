@@ -77,6 +77,7 @@ metadata_lookup = OrderedDict([
 
 he3_metadata_lookup = OrderedDict([
     ("run.filename", "DAS_logs/trajectoryData/fileName"),
+    ("sample.labl", "DAS_logs/sample/description"), # compatibility
     ("analysis.intent", "DAS_logs/trajectoryData/intent"),
     ("analysis.filepurpose", "DAS_logs/trajectoryData/filePurpose"),
     ("he3_back.starttime", "DAS_logs/backPolarization/timestamp"),
@@ -86,7 +87,6 @@ he3_metadata_lookup = OrderedDict([
     ("run.moncnt", "control/monitor_counts"),
     ("run.atten", "instrument/attenuator/num_atten_dropped"),
     ("sample.name", "DAS_logs/sample/name"),
-    ("sample.labl", "DAS_logs/sample/description"), # compatibility
     ("resolution.lmda" , "instrument/beam/monochromator/wavelength"),
     ("resolution.dlmda", "instrument/beam/monochromator/wavelength_spread"),
     ("m_det.dis_des", "DAS_logs/carriage2Trans/desiredSoftPosition"),
@@ -190,7 +190,7 @@ def readVSANSNexuz(input_file, file_obj=None, metadata_lookup=metadata_lookup):
         multiplicity = 1
         for i in range(multiplicity):
             metadata = load_metadata(entry, multiplicity, i, metadata_lookup=metadata_lookup)
-            print(metadata)
+            #print(metadata)
             detector_keys = [n for n in entry['instrument'] if n.startswith('detector_')]
             detectors = dict([(k, load_detector(entry['instrument'][k])) for k in detector_keys])
             metadata['entry'] = entryname
