@@ -307,13 +307,16 @@ class Sans1dData(object):
         entry = getattr(self.metadata, "entry", "default_entry")
         return {"name": name, "entry": entry, "export_string": fid.read(), "file_suffix": ".sans1d.dat"}
 
-class Parameters(dict):
+class Parameters(object):
+    def __init__(self, params=None):
+        self.params = params
+
     def get_metadata(self):
-        return self
+        return self.params
 
     def get_plottable(self):
         #return {"entry": "entry", "type": "params", "params": _toDictItem(self.metadata)}
-        return {"entry": "entry", "type": "parameters", "values": _toDictItem(self)}
+        return {"entry": "entry", "type": "params", "params": _toDictItem(self.params)}
 
 class Metadata(OrderedDict):
     def get_plottable(self):

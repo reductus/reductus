@@ -131,6 +131,8 @@ def LoadVSANSHe3(filelist=None, check_timestamps=True):
 
     return data
 
+@nocache
+@module
 def He3_transmission(he3data, trans_panel="auto"):
     """
     Calculate transmissions
@@ -149,12 +151,13 @@ def He3_transmission(he3data, trans_panel="auto"):
 
     2018-04-27 Brian Maranville
     """
-    from .vsansdata import short_detectors
-    import dateutil
+    from .vsansdata import short_detectors, Parameters
+    import dateutil.parser
+    from collections import OrderedDict
     
     BlockedBeams = {}
     for d in he3data:
-        filename = d.get("run.filename", "unknown_file")
+        filename = d.metadata.get("run.filename", "unknown_file")
         if _s(d.metadata.get('analysis.intent', '')).lower().startswith('bl'):
             m_det_dis_desired = d.metadata.get("m_det.dis_des", 0)
             f_det_dis_desired = d.metadata.get("f_det.dis_des", 0)
@@ -167,10 +170,11 @@ def He3_transmission(he3data, trans_panel="auto"):
                 "counts_per_second": trans_counts / count_time
             }
 
-    mappings = {}
+    mappings = OrderedDict()
     previous_transmission = {}
     for d in he3data:
         tstart = d.metadata.get("he3_back.starttime", 0)
+        tstartstr = "{ts:d}".format(ts=tstart)
         tend = dateutil.parser.parse(d.metadata.get("end_time", "1969")).timestamp()
         count_time =  d.metadata['run.rtime']
         monitor_counts = d.metadata['run.moncnt']
@@ -180,49 +184,59 @@ def He3_transmission(he3data, trans_panel="auto"):
         f_det_dis_desired = d.metadata.get("f_det.dis_des", 0)
         num_attenuators = d.metadata.get("run.atten", 0)
         Elapsed_time = (tend - (count_time * 1000.0 / 2.0)) # in milliseconds
-        mappings.setdefault(tstart, {
+        mappings.setdefault(tstartstr, {
             "Insert_time": tstart,
             "Cell_name": d.metadata.get("he3_back.name", "unknown"),
             "Transmissions": []
         })
 
         # assume that He3 OUT is measured before He3 IN
-        mapping_trans = mappings[tstart]["Transmissions"]
+        mapping_trans = mappings[tstartstr]["Transmissions"]
         t_key = (m_det_dis_desired, f_det_dis_desired, num_attenuators)
         if d.metadata.get("he3_back.inbeam", 0) > 0:
             p = previous_transmission
+            print('previous transmission: ', p)
+            print(p.get("CellTimeIdentifier", None), tstart,
+                    p.get("m_det_dis_desired", None),  m_det_dis_desired, 
+                    p.get("f_det_dis_desired", None), f_det_dis_desired,
+                    p.get("num_attenuators", None),  num_attenuators)
             if p.get("CellTimeIdentifier", None) == tstart and \
                     p.get("m_det_dis_desired", None) == m_det_dis_desired and \
                     p.get("f_det_dis_desired", None) == f_det_dis_desired and \
                     p.get("num_attenuators", None) == num_attenuators:
                 p["HE3_IN_file"] = filename
                 p["HE3_IN_counts"] = detector_counts
+                p["HE3_IN_count_time"] = count_time
                 p["HE3_IN_mon"] = monitor_counts
-            
-            blocked_beam = BlockedBeams.get((m_det_dis_desired, f_det_dis_desired, num_attenuators), {})
 
-            mapping_trans[t_key]["HE3_IN_file"].append(filename)
+                if t_key in BlockedBeams:
+                    bb = BlockedBeams[t_key]
+                    BlockBeamRate = bb['counts_per_second']
+                    BlockBeam_filename = bb['filename']
+                else:
+                    BlockBeamRate = 0
+                    BlockBeam_filename = "missing"
+                
+                p["BlockedBeam_filename"] = BlockBeam_filename
+                HE3_transmission_IN = (p["HE3_IN_counts"] - BlockBeamRate*p["HE3_IN_count_time"])/p["HE3_IN_mon"]
+                HE3_transmission_OUT = (p["HE3_OUT_counts"] - BlockBeamRate*p["HE3_OUT_count_time"])/p["HE3_OUT_mon"]
+                HE3_transmission = HE3_transmission_IN / HE3_transmission_OUT
+                p['transmission'] = HE3_transmission
+                mapping_trans.append(deepcopy(p))
         else:
             previous_transmission = {
-                "CellTimeIndentifier": tstart,
+                "CellTimeIdentifier": tstart,
                 "HE3_OUT_file": filename,
                 "HE3_OUT_counts": detector_counts,
+                "HE3_OUT_count_time": count_time,
                 "HE3_OUT_mon": monitor_counts,
                 "m_det_dis_desired": m_det_dis_desired,
                 "f_det_dis_desired": f_det_dis_desired,
                 "num_attenuators": num_attenuators
             }
-        if "HE3_IN_file" in mapping_trans[t_key] and "HE3_IN_file" in mapping_trans[t_key]:
-
-            mapping_trans
-        
-        blocked_beam = BlockedBeams.get((m_det_dis_desired, f_det_dis_desired, num_attenuators), {})
-        mappings[tstart]["BlockedBeam_file"].append(blocked_beam.get("filename", "unknown"))
-        mappings[tstart]["Elapsed_time"].append(Elapsed_time)
-        mappings[tstart]["Transmission"].append()
         # catch back-to-back 
 
-    return he3data
+    return he3data, [Parameters(mappings)]
 
 def get_transmission_sum(detectors, panel_name="auto"):
     from .vsansdata import short_detectors
@@ -230,11 +244,12 @@ def get_transmission_sum(detectors, panel_name="auto"):
     if panel_name == 'auto':
         for sn in short_detectors:
             detname = "detector_{sn}".format(sn=sn)
-            counts = detectors[detname]['data'].sum()
+            counts = detectors[detname]['data']['value'].sum()
             if counts > total_counts:
                 total_counts = counts
     else:
-        total_counts = detectors[panel_name]['data'].sum()
+        detname = "detector_{sn}".format(sn=panel_name)
+        total_counts = detectors[detname]['data']['value'].sum()
     return total_counts
 
 @module
