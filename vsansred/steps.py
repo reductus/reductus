@@ -134,6 +134,50 @@ def LoadVSANSHe3(filelist=None, check_timestamps=True):
 
 @cache
 @module
+def LoadVSANSHe3Parallel(filelist=None, check_timestamps=True):
+    """
+    loads a data file into a VSansData obj and returns that.
+
+    **Inputs**
+
+    filelist (fileinfo[]): Files to open.
+    
+    check_timestamps (bool): verify that timestamps on file match request
+
+    **Returns**
+
+    output (raw[]): all the entries loaded.
+
+    2018-04-29 Brian Maranville
+    """
+
+    from dataflow.calc import process_template
+    from dataflow.core import Template
+
+    template_def = {
+        "name": "loader_template",
+        "description": "VSANS remote loader",
+        "modules": [
+        {"module": "ncnr.vsans.LoadVSANSHe3", "version": "0.1", "config": {}}
+        ],
+        "wires": [],
+        "instrument": "ncnr.vsans",
+        "version": "0.0"
+    }
+
+    template = Template(**template_def)
+    output = []
+    for fi in filelist:
+        config = {"0": {"filelist": [{"path": fi["path"], "source": fi["source"], "mtime": fi["mtime"]}]}}
+        nodenum = 0
+        terminal_id = "output"
+        retval = process_template(template, config, target=(nodenum, terminal_id))
+        output.extend(retval.values)
+
+    return output
+
+@cache
+@module
 def He3_transmission(he3data, trans_panel="auto"):
     """
     Calculate transmissions
@@ -252,7 +296,6 @@ def He3_transmission(he3data, trans_panel="auto"):
     for m in mappings.values():
         transmissions = []
         timestamps = []
-        print(m)
         for c in m["Transmissions"]:
             t = c['transmission']
             if t > 0:
@@ -263,8 +306,6 @@ def He3_transmission(he3data, trans_panel="auto"):
         v = np.array(transmissions)
         dv = np.zeros_like(v)
         trans_1d.append(VSans1dData(x, v, dx=dx, dv=dv, xlabel="timestamp", vlabel="Transmission", metadata={"title": m["Cell_name"]}))
-
-    print(trans_1d, trans_1d[0].get_plottable())
 
     return he3data, trans_1d, [Parameters({"cells": mappings, "blocked_beams": bb_out})]
 
