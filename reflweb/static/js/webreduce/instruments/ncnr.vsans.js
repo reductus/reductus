@@ -55,7 +55,7 @@ webreduce.instruments['ncnr.vsans'] = webreduce.instruments['ncnr.vsans'] || {};
         "run.experimentScanID"
       ],
       [
-        "sample.description"
+        "sample.labl"
       ]
     ]
   ];
