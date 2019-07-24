@@ -177,7 +177,7 @@ class VSansDataQSpace(VSansData):
         self.yaxisname = 'Qy'
         VSansData.__init__(self, metadata=metadata, detectors=detectors)
 
-class Sans1dData(object):
+class VSans1dData(object):
     properties = ['x', 'v', 'dx', 'dv', 'xlabel', 'vlabel', 'xunits', 'vunits', 'xscale', 'vscale', 'metadata', 'fit_function']
 
     def __init__(self, x, v, dx=0, dv=0, xlabel="", vlabel="", xunits="", vunits="", xscale="linear", vscale="linear", metadata=None, fit_function=None):
@@ -199,7 +199,7 @@ class Sans1dData(object):
         return pythonize(props)
 
     def get_plottable(self):
-        label = "%s: %s" % (self.metadata['run.experimentScanID'], self.metadata['sample.labl'])
+        label = self.metadata['title'],
         xdata = self.x.tolist()
         ydata = self.v.tolist()
         yerr = self.dv.tolist()
@@ -218,7 +218,7 @@ class Sans1dData(object):
         return plottable
 
     def get_metadata(self):
-        return self.to_dict()
+        return _toDictItem(self.metadata)
 
     def export(self):
         fid = BytesIO()
@@ -231,7 +231,7 @@ class Sans1dData(object):
         fid.seek(0)
         name = getattr(self, "name", "default_name")
         entry = getattr(self.metadata, "entry", "default_entry")
-        return {"name": name, "entry": entry, "export_string": fid.read(), "file_suffix": ".sans1d.dat"}
+        return {"name": name, "entry": entry, "export_string": fid.read(), "file_suffix": ".vsans1d.dat"}
 
 def pythonize(obj):
     output = {}

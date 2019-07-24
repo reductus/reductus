@@ -148,11 +148,13 @@ def He3_transmission(he3data, trans_panel="auto"):
 
     annotated (raw[]): datafiles grouped by cell
 
+    transmissions (v1d[]): 1d transmissions per cell
+
     mappings (params[]): cell parameters
 
-    2018-04-27 Brian Maranville
+    2018-04-30 Brian Maranville
     """
-    from .vsansdata import short_detectors, Parameters, _toDictItem
+    from .vsansdata import short_detectors, Parameters, VSans1dData,  _toDictItem
     import dateutil.parser
     from collections import OrderedDict
     
@@ -191,7 +193,7 @@ def He3_transmission(he3data, trans_panel="auto"):
         m_det_dis_desired = d.metadata.get("m_det.dis_des", 0)
         f_det_dis_desired = d.metadata.get("f_det.dis_des", 0)
         num_attenuators = d.metadata.get("run.atten", 0)
-        Elapsed_time = (tend - (count_time * 1000.0 / 2.0)) # in milliseconds
+        middle_timestamp = (tend - (count_time * 1000.0 / 2.0)) # in milliseconds
         mappings.setdefault(tstartstr, {
             "Insert_time": tstart,
             "Cell_name": d.metadata.get("he3_back.name", "unknown"),
@@ -216,6 +218,7 @@ def He3_transmission(he3data, trans_panel="auto"):
                 p["HE3_IN_counts"] = detector_counts
                 p["HE3_IN_count_time"] = count_time
                 p["HE3_IN_mon"] = monitor_counts
+                p["HE3_IN_timestamp"] = middle_timestamp
 
                 if t_key in BlockedBeams:
                     bb = BlockedBeams[t_key]
@@ -245,7 +248,25 @@ def He3_transmission(he3data, trans_panel="auto"):
         # catch back-to-back 
 
     bb_out = _toDictItem(list(BlockedBeams.values()))
-    return he3data, [Parameters({"cells": mappings, "blocked_beams": bb_out})]
+    trans_1d = []
+    for m in mappings.values():
+        transmissions = []
+        timestamps = []
+        print(m)
+        for c in m["Transmissions"]:
+            t = c['transmission']
+            if t > 0:
+                transmissions.append(t)
+                timestamps.append(c['HE3_IN_timestamp'])
+        x = np.array(timestamps)
+        dx = np.zeros_like(x)
+        v = np.array(transmissions)
+        dv = np.zeros_like(v)
+        trans_1d.append(VSans1dData(x, v, dx=dx, dv=dv, xlabel="timestamp", vlabel="Transmission", metadata={"title": m["Cell_name"]}))
+
+    print(trans_1d, trans_1d[0].get_plottable())
+
+    return he3data, trans_1d, [Parameters({"cells": mappings, "blocked_beams": bb_out})]
 
 def get_transmission_sum(detectors, panel_name="auto"):
     from .vsansdata import short_detectors
@@ -263,7 +284,7 @@ def get_transmission_sum(detectors, panel_name="auto"):
 
 @cache
 @module
-def patch(data, key="filename", patches=None):
+def patch(data, key="run.filename", patches=None):
     """
     loads a data file into a VSansData obj and returns that.
 
@@ -289,6 +310,7 @@ def patch(data, key="filename", patches=None):
     # make a master dict of metadata from provided key:
     #from collections import OrderedDict
     #master = OrderedDict([(d.metadata[key], d.metadata) for d in data])
+    
     metadatas = [d.metadata for d in data]
     to_apply = JsonPatch(patches)
 

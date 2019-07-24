@@ -71,4 +71,4 @@ if __name__ == '__main__':
     port = 8002
     if len(sys.argv) > 1:
         port = int(sys.argv[1])
-    app.run(port=port)
+    app.run(port=port, host="offspec.campus.nist.gov")
