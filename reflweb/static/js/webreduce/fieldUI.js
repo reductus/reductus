@@ -614,6 +614,8 @@ webreduce.editor.make_fieldUI = webreduce.editor.make_fieldUI || {};
         datasets_in = this.datasets_in,
         module = this.active_module;
     
+    let key = field.typeattr.key;
+
     datum.value = datum.value || [];
     var input = target.append("div")
       .classed("fields", true)
@@ -623,6 +625,10 @@ webreduce.editor.make_fieldUI = webreduce.editor.make_fieldUI || {};
         .append("ul")
         .classed("metadata-patches", true)
     
+    input.append("div")
+      .classed("patch_key", true)
+      .text("Key: " + field.typeattr.key)
+
     input.selectAll("li.patches").data(datum.value).enter()
       .append("li")
       .classed("patches", true)
@@ -635,10 +641,14 @@ webreduce.editor.make_fieldUI = webreduce.editor.make_fieldUI || {};
     if (this.add_interactors) {
       var active_plot = this.active_plot;
       cols = active_plot.selectAll("th.colHeader").data();
+      key_col = cols.indexOf(key);
       active_plot.selectAll(".metadata-row")
         .each(function(d,i) { 
+
           d3.select(this).selectAll("pre")
-            .attr("contenteditable", true)
+            .attr("contenteditable", function(dd, ii) {
+              return ii != key_col;
+            })
             .attr("title", function(dd, ii) {
               let c = cols[ii];
               return "was: " + d[c];
@@ -649,7 +659,7 @@ webreduce.editor.make_fieldUI = webreduce.editor.make_fieldUI || {};
               let old_text = String(d[c]);
               let dirty = (old_text != new_text);
               d3.select(this.parentNode).classed("dirty", dirty);
-              let path = "/" + i.toFixed() + "/" + c;
+              let path = "/" + d[key] + "/" + c;
               var p = {path: path, value: new_text, op: op}
               let update_existing = false;
               if (dirty) {
@@ -688,7 +698,7 @@ webreduce.editor.make_fieldUI = webreduce.editor.make_fieldUI || {};
             })
             .each(function(dd, ii) {
               let c = cols[ii];
-              let path = "/" + i.toFixed() + "/" + c;
+              let path = "/" + d[key] + "/" + c;
               let match_patch = datum.value.find(function(v) { return v.path == path });
               if (match_patch) {
                 d3.select(this).text(String(match_patch.value))

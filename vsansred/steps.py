@@ -186,7 +186,7 @@ def He3_transmission(he3data, trans_panel="auto"):
 
     he3data (raw[]): datafiles with he3 transmissions
 
-    trans_panel (opt:MB|MT|ML|MR|FT|FB|FL|FR|auto): panel to use for transmissions
+    trans_panel (opt:auto|MB|MT|ML|MR|FT|FB|FL|FR): panel to use for transmissions
 
     **Returns**
 
@@ -196,7 +196,7 @@ def He3_transmission(he3data, trans_panel="auto"):
 
     mappings (params[]): cell parameters
 
-    2018-04-30 Brian Maranville
+    2018-05-01 Brian Maranville
     """
     from .vsansdata import short_detectors, Parameters, VSans1dData,  _toDictItem
     import dateutil.parser
@@ -305,7 +305,8 @@ def He3_transmission(he3data, trans_panel="auto"):
         dx = np.zeros_like(x)
         v = np.array(transmissions)
         dv = np.zeros_like(v)
-        trans_1d.append(VSans1dData(x, v, dx=dx, dv=dv, xlabel="timestamp", vlabel="Transmission", metadata={"title": m["Cell_name"]}))
+        ordering = np.argsort(x)
+        trans_1d.append(VSans1dData(x[ordering], v[ordering], dx=dx, dv=dv, xlabel="timestamp", vlabel="Transmission", metadata={"title": m["Cell_name"]}))
 
     return he3data, trans_1d, [Parameters({"cells": mappings, "blocked_beams": bb_out})]
 
@@ -325,7 +326,7 @@ def get_transmission_sum(detectors, panel_name="auto"):
 
 @cache
 @module
-def patch(data, key="run.filename", patches=None):
+def patch(data, patches=None):
     """
     loads a data file into a VSansData obj and returns that.
 
@@ -333,9 +334,7 @@ def patch(data, key="run.filename", patches=None):
 
     data (raw[]): datafiles with metadata to patch
 
-    key (str): unique field for identifying a metadata dict from a list
-
-    patches (patch_metadata[]): patches to be applied
+    patches (patch_metadata[]:run.filename): patches to be applied, with run.filename used as unique key
 
     **Returns**
 
@@ -349,13 +348,15 @@ def patch(data, key="run.filename", patches=None):
     from jsonpatch import JsonPatch
 
     # make a master dict of metadata from provided key:
-    #from collections import OrderedDict
-    #master = OrderedDict([(d.metadata[key], d.metadata) for d in data])
-    
-    metadatas = [d.metadata for d in data]
+    from collections import OrderedDict
+
+    key="run.filename"
+    master = OrderedDict([(_s(d.metadata[key]), d.metadata) for d in data])
+    #metadatas = [d.metadata for d in data]
     to_apply = JsonPatch(patches)
 
-    to_apply.apply(metadatas, in_place=True)
+    #to_apply.apply(metadatas, in_place=True)
+    to_apply.apply(master, in_place=True)
 
     #patched_master = to_apply.apply(master)
     #patched = list(patched_master.values())

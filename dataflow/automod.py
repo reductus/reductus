@@ -666,6 +666,9 @@ def parse_datatype(par):
             raise ValueError("range must be one of x, y, xy or ellipse for " + name)
         attr["axis"] = attrstr
 
+    elif type == "patch_metadata":
+        attr["key"] = attrstr
+
     else: # type in ["str", "bool", "fileinfo", "index", "coordinate"]:
         if par["typeattr"] is not None:
             raise ValueError("No restrictions on type %s for parameter %s"
