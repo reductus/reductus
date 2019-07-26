@@ -16,7 +16,7 @@ webreduce.instruments['ncnr.sans'] = webreduce.instruments['ncnr.sans'] || {};
           "name": "loader_template",
           "description": "SANS remote loader",
           "modules": [
-            {"module": "ncnr.sans.LoadSANS", "version": "0.1", "config": {}}
+            {"module": "ncnr.sans.LoadRawSANS", "version": "0.1", "config": {}}
           ],
           "wires": [],
           "instrument": "ncnr.sans",

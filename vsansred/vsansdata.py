@@ -35,6 +35,7 @@ def _s(b):
         return b
 
 class RawVSANSData(object):
+    suffix = ".vsans"
     def __init__(self, metadata, detectors=None):
         self.metadata = metadata
         self.metadata['name'] = metadata['run.filename']
@@ -54,7 +55,7 @@ class RawVSANSData(object):
         output = json.dumps(_toDictItem(self.metadata, convert_bytes=True))
         name = getattr(self.metadata, "name", "default_name")
         entry = getattr(self.metadata, "entry", "default_entry")
-        return {"name": name, "entry": entry, "export_string": output, "file_suffix": ".vsans.metadata.json"}
+        return {"name": name, "entry": entry, "export_string": output, "file_suffix": self.suffix + ".metadata.json"}
 
 class RawVSANSHe3Data(RawVSANSData):
     pass

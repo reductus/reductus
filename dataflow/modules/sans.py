@@ -3,7 +3,7 @@ from dataflow.automod import make_modules
 from dataflow import templates
 
 from sansred import steps
-from sansred.sansdata import SansData, Sans1dData, Parameters
+from sansred.sansdata import RawSANSData, SansData, Sans1dData, Parameters
 
 INSTRUMENT = "ncnr.sans"
 
@@ -12,6 +12,7 @@ def define_instrument():
     modules = make_modules(steps.ALL_ACTIONS, prefix=INSTRUMENT+'.')
 
     # Define data types
+    sansraw = df.DataType(INSTRUMENT+".raw", RawSANSData)
     sans2d = df.DataType(INSTRUMENT+".sans2d", SansData)
     sans1d = df.DataType(INSTRUMENT+".sans1d", Sans1dData)
     params = df.DataType(INSTRUMENT+".params", Parameters)
@@ -22,7 +23,7 @@ def define_instrument():
         id=INSTRUMENT,
         name='NCNR SANS',
         menu=[('steps', modules)],
-        datatypes=[sans2d, sans1d, params],
+        datatypes=[sansraw, sans2d, sans1d, params],
         template_defs=templates.get_templates(INSTRUMENT),
         )
 

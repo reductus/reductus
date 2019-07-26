@@ -10,10 +10,12 @@ import datetime
 from copy import copy, deepcopy
 import json
 from io import BytesIO
+from collections import OrderedDict
 
 import numpy as np
 
 from dataflow.lib.uncertainty import Uncertainty
+from vsansred.vsansdata import RawVSANSData, _toDictItem
 
 IS_PY3 = sys.version_info[0] >= 3
 
@@ -30,6 +32,9 @@ def _s(b):
         return b.decode('utf-8') if hasattr(b, 'decode') else b
     else:
         return b
+
+class RawSANSData(RawVSANSData):
+    suffix = ".sans"
 
 class SansData(object):
     """SansData object used for storing values from a sample file (not div/mask).
@@ -227,8 +232,12 @@ class Sans1dData(object):
         label = "%s: %s" % (self.metadata['run.experimentScanID'], self.metadata['sample.labl'])
         xdata = self.x.tolist()
         ydata = self.v.tolist()
-        yerr = self.dv.tolist()
-        data = [[x, y, {"yupper": y+dy, "ylower": y-dy, "xupper": x, "xlower": x}] for x,y,dy in zip(xdata, ydata, yerr)]
+        if not hasattr(self.dx, 'tolist'):
+            xerr = np.zeros_like(xdata).tolist()
+        else:
+            xerr = np.sqrt(self.dx).tolist()
+        yerr = np.sqrt(self.dv).tolist()
+        data = [[x, y, {"yupper": y+dy, "ylower": y-dy, "xupper": x+dx, "xlower": x-dx}] for x,y,dx,dy in zip(xdata, ydata, xerr, yerr)]
         plottable = {
             "type": "1d",
             "options": {
@@ -247,7 +256,7 @@ class Sans1dData(object):
 
     def export(self):
         fid = BytesIO()
-        fid.write(_b("# %s\n" % json.dumps(pythonize(self.metadata)).strip("{}")))
+        fid.write(_b("# %s\n" % json.dumps(_toDictItem(self.metadata, convert_bytes=True)).strip("{}")))
         columns = {"columns": [self.xlabel, self.vlabel, "uncertainty", "resolution"]}
         units = {"units": [self.xunits, self.vunits, self.vunits, self.xunits]}
         fid.write(_b("# %s\n" % json.dumps(columns).strip("{}")))
@@ -258,9 +267,13 @@ class Sans1dData(object):
         entry = getattr(self.metadata, "entry", "default_entry")
         return {"name": name, "entry": entry, "export_string": fid.read(), "file_suffix": ".sans1d.dat"}
 
-class Parameters(dict):
+class Parameters(object):
+    def __init__(self, params=None):
+        self.params = params
+
     def get_metadata(self):
-        return self
+        return self.params
 
     def get_plottable(self):
-        return self
+        #return {"entry": "entry", "type": "params", "params": _toDictItem(self.metadata)}
+        return {"entry": "entry", "type": "params", "params": _toDictItem(self.params)}

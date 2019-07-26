@@ -340,26 +340,21 @@ def patch(data, patches=None):
 
     patched (raw[]): datafiles with patched metadata
 
-    2018-04-27 Brian Maranville
+    2019-07-26 Brian Maranville
     """
     if patches is None:
         return data
     
     from jsonpatch import JsonPatch
-
-    # make a master dict of metadata from provided key:
     from collections import OrderedDict
 
+    # make a master dict of metadata from provided key:
+
     key="run.filename"
+
     master = OrderedDict([(_s(d.metadata[key]), d.metadata) for d in data])
-    #metadatas = [d.metadata for d in data]
     to_apply = JsonPatch(patches)
-
-    #to_apply.apply(metadatas, in_place=True)
     to_apply.apply(master, in_place=True)
-
-    #patched_master = to_apply.apply(master)
-    #patched = list(patched_master.values())
 
     return data
 

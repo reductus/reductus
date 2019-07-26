@@ -16,8 +16,10 @@ import numpy as np
 from dataflow.lib.uncertainty import Uncertainty
 from dataflow.lib import uncertainty
 
-from .sansdata import SansData, Sans1dData, Parameters, _s
+from .sansdata import RawSANSData, SansData, Sans1dData, Parameters, _s
 from .sans_vaxformat import readNCNRSensitivity
+
+from vsansred.steps import _s, _b
 
 ALL_ACTIONS = []
 IGNORE_CORNER_PIXELS = True
@@ -91,6 +93,7 @@ def LoadDIV(filelist=None, variance=0.0001):
 
     2018-04-21 Brian Maranville
     """
+    from collections import OrderedDict
     from dataflow.fetch import url_get
     from .sans_vaxformat import readNCNRSensitivity
 
@@ -102,19 +105,154 @@ def LoadDIV(filelist=None, variance=0.0001):
             fid = BytesIO(url_get(fileinfo, mtime_check=False))
             sens_raw = readNCNRSensitivity(fid)
             sens = SansData(Uncertainty(sens_raw, sens_raw * variance))
-            sens.metadata = {
-                "analysis.groupid": -1,
-                "analysis.intent": "DIV",
-                "analysis.filepurpose": "Sensitivity",
-                "run.experimentScanID": name, 
-                "sample.description": "PLEX",
-                "entry": "entry",
-                "run.filename": name,
-                "sample.labl": "PLEX",
-                "run.configuration": "DIV"
-            }
+            sens.metadata = OrderedDict([
+                ("run.filename", name),
+                ("analysis.groupid", -1),
+                ("analysis.intent", "DIV"),
+                ("analysis.filepurpose", "Sensitivity"),
+                ("run.experimentScanID", name), 
+                ("sample.description", "PLEX"),
+                ("entry", "entry"),
+                ("sample.labl", "PLEX"),
+                ("run.configuration", "DIV"),
+            ])
             output.append(sens)
     return output
+
+@cache
+@module
+def LoadRawSANS(filelist=None, check_timestamps=True):
+    """
+    loads a data file into a RawSansData obj and returns that.
+
+    **Inputs**
+
+    filelist (fileinfo[]): Files to open.
+    
+    check_timestamps (bool): verify that timestamps on file match request
+
+    **Returns**
+
+    output (raw[]): all the entries loaded.
+
+    2018-04-23 Brian Maranville
+    """
+    from collections import OrderedDict
+    from dataflow.fetch import url_get
+    from .loader import readSANSNexuz
+    if filelist is None:
+        filelist = []
+    data = []
+    for fileinfo in filelist:
+        path, mtime, entries = fileinfo['path'], fileinfo.get('mtime', None), fileinfo.get('entries', None)
+        name = basename(path)
+        fid = BytesIO(url_get(fileinfo, mtime_check=check_timestamps))
+        if name.upper().endswith(".DIV"):
+            sens_raw = readNCNRSensitivity(fid)
+            detectors = [{"detector": {"data": {"value": Uncertainty(sens_raw, sens_raw * 0.0001)}}}]
+            metadata = OrderedDict([
+                ("run.filename", name),
+                ("analysis.groupid", -1),
+                ("analysis.intent", "DIV"),
+                ("analysis.filepurpose", "Sensitivity"),
+                ("run.experimentScanID", name), 
+                ("sample.description", "PLEX"),
+                ("entry", "entry"),
+                ("sample.labl", "PLEX"),
+                ("run.configuration", "DIV"),
+            ])
+            sens = RawSANSData(metadata=metadata, detectors=detectors)
+            entries = [sens]
+        else:
+            entries = readSANSNexuz(name, fid)
+        
+        data.extend(entries)
+
+    return data
+
+@cache
+@module
+def patch(data, patches=None):
+    """
+    loads a data file into a VSansData obj and returns that.
+
+    **Inputs**
+
+    data (raw[]): datafiles with metadata to patch
+
+    patches (patch_metadata[]:run.filename): patches to be applied, with run.filename used as unique key
+
+    **Returns**
+
+    patched (raw[]): datafiles with patched metadata
+
+    2019-07-26 Brian Maranville
+    """
+    if patches is None:
+        return data
+    
+    from jsonpatch import JsonPatch
+    from collections import OrderedDict
+
+    # make a master dict of metadata from provided key:
+
+    key="run.filename"
+
+    master = OrderedDict([(_s(d.metadata[key]), d.metadata) for d in data])
+    to_apply = JsonPatch(patches)
+    to_apply.apply(master, in_place=True)
+
+    return data
+
+@cache
+@module
+def autosort(rawdata):
+    """
+    redirects a batch of files to different outputs based on metadata in the files
+
+    **Inputs**
+
+    rawdata (raw[]): datafiles with metadata to allow sorting
+
+    **Returns**
+
+    sample_scatt (sans2d[]): Sample Scattering
+
+    blocked_beam (sans2d[]): Blocked Beam
+
+    empty_scatt (sans2d[]): Empty Cell Scattering
+
+    sample_trans (sans2d[]): Sample Transmission
+
+    empty_trans (sans2d[]): Empty Cell Transmission
+
+    2019-07-25 Brian Maranville
+    """
+
+    sample_scatt = []
+    blocked_beam = []
+    empty_scatt = []
+    sample_trans = []
+    empty_trans = []
+
+    print(rawdata)
+
+    for r in rawdata:
+        purpose = _s(r.metadata['analysis.filepurpose'])
+        intent = _s(r.metadata['analysis.intent'])
+        if intent.lower().strip().startswith('blo'):
+            blocked_beam.extend(to_sansdata(r))
+        elif purpose.lower() == 'scattering' and intent.lower() == 'sample':
+            sample_scatt.extend(to_sansdata(r))
+        elif purpose.lower() == 'scattering' and intent.lower().startswith('empty'):
+            empty_scatt.extend(to_sansdata(r))
+        elif purpose.lower() == 'transmission' and intent.lower() == 'sample':
+            sample_trans.extend(to_sansdata(r))
+        elif purpose.lower() == 'transmission' and intent.lower().startswith('empty'):
+            empty_trans.extend(to_sansdata(r))
+
+    return sample_scatt, blocked_beam, empty_scatt, sample_trans, empty_trans
+
 
 @cache
 @module
@@ -135,46 +273,36 @@ def LoadSANS(filelist=None, flip=False, transpose=False, check_timestamps=True):
 
     **Returns**
 
-    output (sans2d[]): all the entries loaded.
+    output (raw[]): all the entries loaded.
 
-    2018-04-21 Brian Maranville
+    2019-07-26 Brian Maranville
     """
-    from dataflow.fetch import url_get
-    from .loader import readSANSNexuz
-    if filelist is None:
-        filelist = []
-    data = []
-    for fileinfo in filelist:
-        path, mtime, entries = fileinfo['path'], fileinfo.get('mtime', None), fileinfo.get('entries', None)
-        name = basename(path)
-        fid = BytesIO(url_get(fileinfo, mtime_check=check_timestamps))
-        if name.upper().endswith(".DIV"):
-            sens_raw = readNCNRSensitivity(fid)
-            print(sens_raw)
-            sens = SansData(Uncertainty(sens_raw, sens_raw * 0.0001))
-            print(sens, sens.metadata)
-            sens.metadata = {
-                "analysis.groupid": -1,
-                "analysis.intent": "DIV",
-                "analysis.filepurpose": "Sensitivity",
-                "run.experimentScanID": name, 
-                "sample.description": "PLEX",
-                "entry": "entry",
-                "run.filename": name,
-                "sample.labl": "PLEX",
-                "run.configuration": "DIV"
-            }
-            entries = [sens]
-        else:
-            entries = readSANSNexuz(name, fid)
-        for entry in entries:
-            if flip:
-                entry.data.x = np.fliplr(entry.data.x)
-            if transpose:
-                entry.data.x = entry.data.x.T
-        data.extend(entries)
 
-    return data
+    rawdata = LoadRawSANS(filelist, check_timestamps=check_timestamps)
+    sansdata = []
+    for r in rawdata:
+        sansdata.extend(to_sansdata(r, flip=flip, transpose=transpose))
+    return sansdata
+
+def to_sansdata(rawdata, flip=False, transpose=False):
+    areaDetector = rawdata.detectors['detector']['data']['value']
+    shape = areaDetector.shape
+    if len(shape) < 2 or len(shape) > 3:
+        raise ValueError("areaDetector data must have dimension 2 or 3")
+        return
+    if len(shape) == 2:
+        # add another dimension at the front
+        shape = (1,) + shape
+        areaDetector = areaDetector.reshape(shape)
+    datasets = []
+    for i in range(shape[0]):
+        subset = areaDetector[i].copy()
+        if flip:
+            subset = np.fliplr(subset)
+        if transpose:
+            subset = subset.T
+        datasets.append(SansData(data=subset, metadata=rawdata.metadata))
+    return datasets
 
 """
     Variable vz_1 = 3.956e5		//velocity [cm/s] of 1 A neutron
@@ -374,7 +502,7 @@ def circular_av(data):
 
     mean_output (sans1d): converted to I vs. mean Q within integrated region
 
-    2016-04-11 Brian Maranville
+    2016-04-12 Brian Maranville
     """
     from .draw_annulus_aa import annular_mask_antialiased
 
@@ -685,8 +813,8 @@ def generate_transmission(in_beam, empty_beam, integration_box=[55, 74, 53, 72])
     I_empty_beam = np.sum(empty_beam.data[xmin:xmax+1, ymin:ymax+1])
 
     ratio = I_in_beam/I_empty_beam
-    result = Parameters(factor=ratio.x, factor_variance=ratio.variance,
-                        factor_err=np.sqrt(ratio.variance))
+    result = Parameters(dict(factor=ratio.x, factor_variance=ratio.variance,
+                        factor_err=np.sqrt(ratio.variance)))
 
     return result
 
@@ -719,24 +847,39 @@ def product(data, factor_param, propagate_error=True):
 
     **Inputs**
 
-    data (sans2d): data in (a)
+    data (sans2d[]): data in (a)
 
-    factor_param (params?): multiplication factor (b), defaults to 1
+    factor_param (params[]): multiplication factor (b), defaults to 1
 
     propagate_error {Propagate error} (bool): if factor_error is passed in, use it
 
     **Returns**
 
-    output (sans2d): result (c in a*b = c)
+    output (sans2d[]): result (c in a*b = c)
 
-    2010-01-02 unknown
+    | 2010-01-02 unknown
+    | 2019-07-26 Brian Maranville
     """
-    if factor_param is not None:
-        if propagate_error:
-            variance = factor_param.get('factor_variance', 0.0)
-        return data * Uncertainty(factor_param.get('factor', 1.0), variance)
-    else:
-        return data
+    # follow broadcast rules:
+    import itertools
+    if len(data) != len(factor_param):
+        if len(data) == 1 and len(factor_param) > 0:
+            data = itertools.repeat(data[0])
+        elif len(data) > 0 and len(factor_param) == 1:
+            factor_param = itertools.repeat(factor_param[0])
+        else:
+            raise IndexError("lengths of factors and data don't match")
+
+    output = []
+    for d,f in zip(data, factor_param):
+        print(d, f.params)
+        if f is not None:
+            if propagate_error:
+                variance = f.params.get('factor_variance', 0.0)
+            output.append(d * Uncertainty(f.params.get('factor', 1.0), variance))
+        else:
+            output.append(d)
+    return output
 
 @module
 def divide(data, factor_param):
@@ -756,7 +899,7 @@ def divide(data, factor_param):
     2010-01-01 unknown
     """
     if factor_param is not None:
-        return data.__truediv__(factor_param['factor'])
+        return data.__truediv__(factor_param.params['factor'])
     else:
         return data
 
@@ -881,7 +1024,8 @@ def absolute_scaling(sample, empty, Tsam, div, instrument="NG7", integration_box
 
     abs (sans2d): data on absolute scale
 
-    2017-01-13 Andrew Jackson
+    | 2017-01-13 Andrew Jackson
+    | 2019-07-04 Brian Maranville
     """
     # data (that is going through reduction), empty beam,
     # div, Transmission of the sample, instrument(NG3.NG5, NG7)
@@ -913,18 +1057,21 @@ def absolute_scaling(sample, empty, Tsam, div, instrument="NG7", integration_box
     xmin, xmax, ymin, ymax = map(int, integration_box)
     detCnt = np.sum(data.data[xmin:xmax+1, ymin:ymax+1])
     print("DETCNT: ", detCnt)
+    print('attentrans: ', attenTrans)
+    print('monCnt: ', monCnt)
 
     #------End Result-------#
     # This assumes that the data is has not been normalized at all.
     # Thus either fix this or pass un-normalized data.
     # Compute kappa = incident intensity * solid angle of the pixel
     kappa = detCnt / attenTrans * 1.0e8 / monCnt * (pixel/sdd)**2
-    #print("Kappa: ", kappa)
+    print("Kappa: ", kappa)
 
     #utc_datetime = date.datetime.utcnow()
     #print(utc_datetime.strftime("%Y-%m-%d %H:%M:%S"))
 
-    Tsam_factor = Uncertainty(Tsam['factor'], Tsam['factor_variance'])
+    Tsam_factor = Uncertainty(Tsam.params['factor'], Tsam.params['factor_variance'])
+    print('Tsam_factor: ', Tsam_factor)
 
     #-----Using Kappa to Scale data-----#
     Dsam = sample.metadata['sample.thk']

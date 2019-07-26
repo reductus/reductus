@@ -148,7 +148,7 @@ def load_detector(dobj):
             detector[k]['attrs']['dtype'] = subobj.dtype
     return detector
 
-def load_metadata(entry, multiplicity=1, i=1, metadata_lookup=metadata_lookup):
+def load_metadata(entry, multiplicity=1, i=1, metadata_lookup=metadata_lookup, unit_specifiers=unit_specifiers):
     metadata = OrderedDict()
     for mkey in metadata_lookup:
         field = entry.get(metadata_lookup[mkey], None)
