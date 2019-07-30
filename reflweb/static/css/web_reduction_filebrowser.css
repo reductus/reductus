@@ -146,6 +146,11 @@ path.x-slice.lines:hover {
   stroke-width: 8px !important;
 }
 
+g.interactor-sector path.centerline {
+    stroke: orange;
+    stroke-dasharray: 10,2;
+}
+
 rect.zoom {
   stroke: steelblue;
   fill-opacity: 0.5;

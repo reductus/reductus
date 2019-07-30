@@ -374,7 +374,8 @@ webreduce.editor.make_fieldUI = webreduce.editor.make_fieldUI || {};
     var subfields = []
       .concat((/x/.test(axis)) ? ["xmin", "xmax"] : [])
       .concat((/y/.test(axis)) ? ["ymin", "ymax"] : [])
-      .concat((/^ellipse$/.test(axis)) ? ["cx", "cy", "rx", "ry"] : []);
+      .concat((/^ellipse$/.test(axis)) ? ["cx", "cy", "rx", "ry"] : [])
+      .concat((/^sector_centered$/.test(axis)) ? ["angle_offset", "angle_width"] : []);
 
     var subinputs = input.selectAll("div.subfield").data(subfields).enter()
       .append("div")
@@ -567,7 +568,53 @@ webreduce.editor.make_fieldUI = webreduce.editor.make_fieldUI || {};
           event.initEvent('input', true, true);
           subinputs.node().dispatchEvent(event);
         });
-      }  
+      }
+      else if (axis == 'sector_centered' && active_plot && active_plot.interactors) {
+        // add angleSlice interactor
+        var value = datum.value || datum.default_value;
+        var value = [
+          (value[0] == null) ? 0.0 : value[0],
+          (value[1] == null) ? 90.0 : value[1]
+        ]
+        
+        var opts = {
+          type: 'Sector',
+          name: 'sector',
+          color1: 'red',
+          color2: 'orange',
+          show_lines: true,
+          show_center: false,
+          mirror: true,
+          cx: 0,
+          cy: 0,
+          angle_offset: value[0] * Math.PI/180.0,
+          angle_range: value[1] * Math.PI/180.0
+        }
+
+        var interactor = new angleSliceInteractor.default(opts);
+        active_plot.interactors(interactor);
+        // bind the update after init, so that it doesn't alter the field at init.
+        subinputs.on("change", function(d,i) { 
+          if (datum.value == null) { datum.value = datum.default_value }
+          var v = parseFloat(this.value);
+          v = (isNaN(v)) ? null : v;
+          datum.value[i] = v;
+          var item = ["angle_offset", "angle_range"][i];
+          var default_value = [0.0, Math.PI/2.0][i];
+          interactor.state[item] = (v == null) ? default_value : v * Math.PI/180.0;
+          interactor.update(false);
+        });
+        interactor.dispatch.on("update", function() { 
+          var state = interactor.state;
+          datum.value = [state.angle_offset * 180.0/Math.PI, state.angle_range * 180.0/Math.PI];
+          subinputs
+            .property("value", function(d,i) { return (datum.value) ? datum.value[i] : null })
+            .attr("value", function(d,i) { return (datum.value) ? datum.value[i] : null })
+          var event = document.createEvent('Event');
+          event.initEvent('input', true, true);
+          subinputs.node().dispatchEvent(event);
+        });
+      } 
     }
     return input    
   }
