@@ -662,8 +662,8 @@ def parse_datatype(par):
         attr["pattern"] = attrstr
 
     elif type == "range":
-        if attrstr not in ("x", "y", "xy", "ellipse"):
-            raise ValueError("range must be one of x, y, xy or ellipse for " + name)
+        if attrstr not in ("x", "y", "xy", "ellipse", "sector_centered"):
+            raise ValueError("range must be one of x, y, xy, ellipse or sector_centered for " + name)
         attr["axis"] = attrstr
 
     elif type == "patch_metadata":
