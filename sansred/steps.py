@@ -206,13 +206,18 @@ def patch(data, patches=None):
 
 @cache
 @module
-def autosort(rawdata):
+def autosort(rawdata, subsort="det.des_dis", add_scattering=True):
     """
     redirects a batch of files to different outputs based on metadata in the files
 
     **Inputs**
 
     rawdata (raw[]): datafiles with metadata to allow sorting
+
+    subsort (str): key on which to order subitems within output lists
+
+    add_scattering {Add sample scatterings together} (bool): Add sample scatterings, within
+    group defined by subsort key
 
     **Returns**
 
@@ -226,8 +231,10 @@ def autosort(rawdata):
 
     empty_trans (sans2d[]): Empty Cell Transmission
 
-    2019-07-25 Brian Maranville
+    2019-07-24 Brian Maranville
     """
+
+    from collections import OrderedDict
 
     sample_scatt = []
     blocked_beam = []
@@ -250,6 +257,22 @@ def autosort(rawdata):
             sample_trans.extend(to_sansdata(r))
         elif purpose.lower() == 'transmission' and intent.lower().startswith('empty'):
             empty_trans.extend(to_sansdata(r))
+
+    def keyFunc(l):
+        return l.metadata.get(subsort, 0)
+
+    for output in [sample_scatt, blocked_beam, empty_scatt, sample_trans, empty_trans]:
+        output.sort(key=keyFunc)
+    
+    if add_scattering:
+        added_samples = OrderedDict()
+        for s in sample_scatt:
+            key = keyFunc(s)
+            added_samples.setdefault(key, [])
+            added_samples[key].append(s)
+        for key in added_samples:
+            added_samples[key] = addSimple(added_samples[key])
+        sample_scatt = list(added_samples.values())
 
     return sample_scatt, blocked_beam, empty_scatt, sample_trans, empty_trans
 
@@ -582,7 +605,7 @@ def circular_av(data):
 
 @cache
 @module
-def sector_cut(data, angle=0.0, width=90.0, mirror=True):
+def sector_cut(data, sector=[0.0, 90.0], mirror=True):
     """
     Using annular averging, it converts data to 1D (Q vs. I)
     over a particular angle range
@@ -592,9 +615,7 @@ def sector_cut(data, angle=0.0, width=90.0, mirror=True):
 
     data (sans2d): data in
 
-    angle (float): center angle of sector cut (degrees)
-
-    width (float): width of cut (degrees)
+    sector (range:sector_centered): angle and opening of sector cut (radians)
 
     mirror (bool): extend sector cut on both sides of origin
         (when false, integrates over a single cone centered at angle)
@@ -608,6 +629,9 @@ def sector_cut(data, angle=0.0, width=90.0, mirror=True):
     2016-04-15 Brian Maranville
     """
     from .draw_annulus_aa import sector_cut_antialiased
+
+    if sector is None:
+        sector = [0.0, 90.0]
 
     #annular_mask_antialiased(shape, center, inner_radius, outer_radius,
     #                         background_value=0.0, mask_value=1.0, oversampling=8)
@@ -635,6 +659,7 @@ def sector_cut(data, angle=0.0, width=90.0, mirror=True):
     I = []
     I_error = []
     dx = np.zeros_like(Q, dtype="float")
+    angle, width = sector
     start_angle = np.radians(angle - width/2.0)
     end_angle = np.radians(angle + width/2.0)
     for i, qq in enumerate(Q):
@@ -681,6 +706,32 @@ def sector_cut(data, angle=0.0, width=90.0, mirror=True):
     mean_output.metadata['extra_label'] = "_%.1f" % (angle,)
 
     return nominal_output, mean_output
+
+@module
+def rescale_1d(data, scale=1.0, dscale=0.0):
+    """
+    Multiply 1d data by a scale factor
+
+    **Inputs**
+
+    data (sans1d): data in
+
+    scale (scale*) : amount to scale, one for each dataset
+
+    dscale {Scale err} (float*:<0,inf>) : scale uncertainty for gaussian error propagation
+
+    **Returns**
+
+    output (sans1d) : scaled data
+
+    2016-04-17 Brian Maranville
+    """
+    from dataflow.lib import err1d
+
+    I, varI = err1d.mul(data.v, data.dv, scale, dscale**2)
+    data.v, data.dv = I, varI
+    
+    return data
 
 @module
 def correct_detector_efficiency(sansdata):
@@ -1000,7 +1051,7 @@ def correct_attenuation(sample, instrument="NG7"):
 
 @cache
 @module
-def absolute_scaling(sample, empty, Tsam, div, instrument="NG7", integration_box=[55, 74, 53, 72]):
+def absolute_scaling(empty, sample, Tsam, div, instrument="NG7", integration_box=[55, 74, 53, 72]):
     """
     Calculate absolute scaling
 
@@ -1008,9 +1059,9 @@ def absolute_scaling(sample, empty, Tsam, div, instrument="NG7", integration_box
 
     **Inputs**
 
-    sample (sans2d): measurement with sample in the beam
-
     empty (sans2d): measurement with no sample in the beam
+
+    sample (sans2d): measurement with sample in the beam
 
     Tsam (params): sample transmission
 
@@ -1026,6 +1077,7 @@ def absolute_scaling(sample, empty, Tsam, div, instrument="NG7", integration_box
 
     | 2017-01-13 Andrew Jackson
     | 2019-07-04 Brian Maranville
+    | 2019-07-10 Brian Maranville
     """
     # data (that is going through reduction), empty beam,
     # div, Transmission of the sample, instrument(NG3.NG5, NG7)
