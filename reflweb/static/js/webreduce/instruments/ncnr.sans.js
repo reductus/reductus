@@ -47,15 +47,13 @@ webreduce.instruments['ncnr.sans'] = webreduce.instruments['ncnr.sans'] || {};
   instrument.load_file = load_sans;
   instrument.default_categories = [
     [["analysis.groupid"]],
+    [["analysis.intent"]],
     [
       [
-        "analysis.intent"
+        "sample.labl"
       ],
       [
         "run.experimentScanID"
-      ],
-      [
-        "sample.description"
       ]
     ]
   ];
