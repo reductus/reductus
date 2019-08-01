@@ -20,7 +20,7 @@ IS_PY3 = sys.version_info[0] >= 3
 
 IGNORE_CORNER_PIXELS = True
 
-short_detectors = ["MB", "MT", "ML", "MR", "FT", "FB", "FL", "FR"]
+short_detectors = ["B", "MB", "MT", "ML", "MR", "FT", "FB", "FL", "FR"]
 
 def _b(s):
     if IS_PY3:
@@ -105,7 +105,9 @@ class VSansData(object):
         zmax = -np.inf
         for sn in short_detectors:
             detname = 'detector_{short_name}'.format(short_name=sn)
-            det = self.detectors[detname]
+            det = self.detectors.get(detname, None)
+            if det is None:
+                continue
             corrected = det['data'].x / det['norm']
             dimX, dimY = corrected.shape
             xaxis = det[self.xaxisname]

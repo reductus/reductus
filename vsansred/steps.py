@@ -393,7 +393,7 @@ def calculate_XY(raw_data):
 
     realspace_data (realspace[]): datafiles with realspace information
 
-    2018-04-27 Brian Maranville
+    2018-04-28 Brian Maranville
     """
     from .vsansdata import VSansDataRealSpace, short_detectors
     from collections import OrderedDict
@@ -405,62 +405,91 @@ def calculate_XY(raw_data):
         for sn in short_detectors:
             detname = 'detector_{short_name}'.format(short_name=sn)
             det = deepcopy(r.detectors[detname])
-            z_offset = det.get('setback', {"value": [0.0]})['value'][0]
-            orientation = det['tube_orientation']['value'][0].decode().upper()
-            coeffs = det['spatial_calibration']['value']
-            lateral_offset = 0
-            vertical_offset = 0
-            beam_center_x = det['beam_center_x']['value'][0]
-            beam_center_y = det['beam_center_y']['value'][0]
-            panel_gap = det['panel_gap']['value'][0]/10.0 # mm to cm
-            if (orientation == "VERTICAL"):
-                x_pixel_size = det['x_pixel_size']['value'][0] / 10.0 # mm to cm
-                y_pixel_size = coeffs[1][0] / 10.0 # mm to cm 
-                lateral_offset = det['lateral_offset']['value'][0] # # already cm
-
-            else:
-                x_pixel_size = coeffs[1][0] / 10.0
-                y_pixel_size = det['y_pixel_size']['value'][0] / 10.0 # mm to cm
-                vertical_offset = det['vertical_offset']['value'][0] # already cm
 
             dimX = int(det['pixel_num_x']['value'][0])
             dimY = int(det['pixel_num_y']['value'][0])
+            z_offset = det.get('setback', {"value": [0.0]})['value'][0]
             z = det['distance']['value'][0] + z_offset
-            #solid_angle_correction = z*z / 1e6
-            data = det['data']['value']
-            udata = Uncertainty(data, data)
-            
-            position_key = sn[-1]
-            if position_key == 'T':
-                # FROM IGOR: (q,p = 0 for lower-left pixel) 
-                # if(cmpstr("T",detStr[1]) == 0)
-                #   data_realDistY[][] = tube_width*(q+1/2) + offset + gap/2		
-                #   data_realDistX[][] = coefW[0][q] + coefW[1][q]*p + coefW[2][q]*p*p
-                realDistX =  coeffs[0][0]/10.0 # to cm
-                realDistY =  0.5 * y_pixel_size + vertical_offset + panel_gap/2.0
-            
-            elif position_key == 'B':
-                # FROM IGOR: (q,p = 0 for lower-left pixel) 
-                # if(cmpstr("B",detStr[1]) == 0)
-                #   data_realDistY[][] = offset - (dimY - q - 1/2)*tube_width - gap/2
-                #   data_realDistX[][] = coefW[0][q] + coefW[1][q]*p + coefW[2][q]*p*p
-                realDistX =  coeffs[0][0]/10.0
-                realDistY =  vertical_offset - (dimY - 0.5)*y_pixel_size - panel_gap/2.0
+
+            if sn == "B":
+                # special handling for back detector
+                total = det['integrated_count']['value'][0]
+                if total < 1:
+                    # don't load the back detector if it has no counts (turned off)
+                    continue
+                beam_center_x_pixels = det['beam_center_x']['value'][0] # in pixels
+                beam_center_y_pixels = det['beam_center_y']['value'][0]
+
+                cal_x = det['cal_x']['value'] # in cm
+                cal_y = det['cal_y']['value']
+
+                x_pixel_size = cal_x[0] # cm
+                y_pixel_size = cal_y[0] # cm
+
+                beam_center_x = x_pixel_size * beam_center_x_pixels
+                beam_center_y = y_pixel_size * beam_center_y_pixels
+
+                # lateral_offset = det['lateral_offset']['value'][0] # # already cm
+                realDistX =  0.5 * x_pixel_size
+                realDistY =  0.5 * y_pixel_size
+
+                data = det['data']['value']
+                udata = Uncertainty(data, data)
+
+            else:
                 
-            elif position_key == 'L':
-                # FROM IGOR: (q,p = 0 for lower-left pixel) 
-                # if(cmpstr("L",detStr[1]) == 0)
-                #   data_realDistY[][] = coefW[0][p] + coefW[1][p]*q + coefW[2][p]*q*q
-                #   data_realDistX[][] = offset - (dimX - p - 1/2)*tube_width - gap/2
-                realDistX =  lateral_offset - (dimX - 0.5)*x_pixel_size - panel_gap/2.0
-                realDistY =  coeffs[0][0]/10.0
+                orientation = det['tube_orientation']['value'][0].decode().upper()
+                coeffs = det['spatial_calibration']['value']
+                lateral_offset = 0
+                vertical_offset = 0
+                beam_center_x = det['beam_center_x']['value'][0]
+                beam_center_y = det['beam_center_y']['value'][0]
+                panel_gap = det['panel_gap']['value'][0]/10.0 # mm to cm
+                if (orientation == "VERTICAL"):
+                    x_pixel_size = det['x_pixel_size']['value'][0] / 10.0 # mm to cm
+                    y_pixel_size = coeffs[1][0] / 10.0 # mm to cm 
+                    lateral_offset = det['lateral_offset']['value'][0] # # already cm
+
+                else:
+                    x_pixel_size = coeffs[1][0] / 10.0
+                    y_pixel_size = det['y_pixel_size']['value'][0] / 10.0 # mm to cm
+                    vertical_offset = det['vertical_offset']['value'][0] # already cm
+
+                #solid_angle_correction = z*z / 1e6
+                data = det['data']['value']
+                udata = Uncertainty(data, data)
                 
-            elif position_key == 'R':
-                # FROM IGOR: (q,p = 0 for lower-left pixel) 
-                #   data_realDistY[][] = coefW[0][p] + coefW[1][p]*q + coefW[2][p]*q*q
-                #   data_realDistX[][] = tube_width*(p+1/2) + offset + gap/2
-                realDistX =  x_pixel_size*(0.5) + lateral_offset + panel_gap/2.0
-                realDistY =  coeffs[0][0]/10.0
+                position_key = sn[-1]
+                if position_key == 'T':
+                    # FROM IGOR: (q,p = 0 for lower-left pixel) 
+                    # if(cmpstr("T",detStr[1]) == 0)
+                    #   data_realDistY[][] = tube_width*(q+1/2) + offset + gap/2		
+                    #   data_realDistX[][] = coefW[0][q] + coefW[1][q]*p + coefW[2][q]*p*p
+                    realDistX =  coeffs[0][0]/10.0 # to cm
+                    realDistY =  0.5 * y_pixel_size + vertical_offset + panel_gap/2.0
+                
+                elif position_key == 'B':
+                    # FROM IGOR: (q,p = 0 for lower-left pixel) 
+                    # if(cmpstr("B",detStr[1]) == 0)
+                    #   data_realDistY[][] = offset - (dimY - q - 1/2)*tube_width - gap/2
+                    #   data_realDistX[][] = coefW[0][q] + coefW[1][q]*p + coefW[2][q]*p*p
+                    realDistX =  coeffs[0][0]/10.0
+                    realDistY =  vertical_offset - (dimY - 0.5)*y_pixel_size - panel_gap/2.0
+                    
+                elif position_key == 'L':
+                    # FROM IGOR: (q,p = 0 for lower-left pixel) 
+                    # if(cmpstr("L",detStr[1]) == 0)
+                    #   data_realDistY[][] = coefW[0][p] + coefW[1][p]*q + coefW[2][p]*q*q
+                    #   data_realDistX[][] = offset - (dimX - p - 1/2)*tube_width - gap/2
+                    realDistX =  lateral_offset - (dimX - 0.5)*x_pixel_size - panel_gap/2.0
+                    realDistY =  coeffs[0][0]/10.0
+                    
+                elif position_key == 'R':
+                    # FROM IGOR: (q,p = 0 for lower-left pixel) 
+                    #   data_realDistY[][] = coefW[0][p] + coefW[1][p]*q + coefW[2][p]*q*q
+                    #   data_realDistX[][] = tube_width*(p+1/2) + offset + gap/2
+                    realDistX =  x_pixel_size*(0.5) + lateral_offset + panel_gap/2.0
+                    realDistY =  coeffs[0][0]/10.0
 
             #x_pos = size_x/2.0 # place panel with lower-right corner at center of view
             #y_pos = size_y/2.0 # 
