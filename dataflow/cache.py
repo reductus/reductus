@@ -97,7 +97,8 @@ class CacheManager(object):
                 cachedir = self._diskcache_kwargs.pop("cachedir", "cache")
                 print('cacheargs:', self._diskcache_kwargs)
                 self._cache = Cache(cachedir, **self._diskcache_kwargs)
-                self._file_cache = self._cache
+                file_cachedir = self._diskcache_kwargs.pop("file_cachedir", "file_cache")
+                self._file_cache = Cache(file_cachedir, **self._diskcache_kwargs)
                 return
             except Exception as exc:
                 warning = "diskcache connection failed with:\n\t" + str(exc)
