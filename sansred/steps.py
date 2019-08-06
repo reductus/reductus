@@ -379,6 +379,26 @@ def to_sansdata(rawdata, flip=False, transpose=False):
 End
 """
 
+#@module
+def draw_ellipse(data, ellipse=[0,0,0.01,0.01]):
+    """
+    draw an ellipse on the data
+
+    **Inputs**
+
+    data (sans2d): data in
+
+    ellipse (range:ellipse): ellipse to draw
+
+    **Returns**
+
+    output (sans2d): the same data
+
+    2019-07-31  Brian Maranville
+    """
+
+    return data
+
 #@cache
 #@module
 def calculateDQ(data):
