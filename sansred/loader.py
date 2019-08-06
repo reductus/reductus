@@ -54,7 +54,7 @@ metadata_lookup = OrderedDict([
     ("resolution.ap1", "DAS_logs/geometry/sourceAperture"),
     ("resolution.ap2", "instrument/sample_aperture/size"),
     ("resolution.ap12dis", "instrument/source_aperture/distance"),
-    ("sample.position", "instrument/sample_aperture/distance"),
+    ("sample.position", "DAS_logs/geometry/samplePositionOffset"),
     ("electromagnet_lrm.field","DAS_logs/electromagnet_lrm/field"),
     ("mag.value","DAS_logs/mag/value"),
     ("acamplitude.voltage",  "DAS_logs/acAmplitude/voltage"),

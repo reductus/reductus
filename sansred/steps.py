@@ -467,10 +467,11 @@ def PixelsToQ(data, beam_center=[None,None], correct_solid_angle=True):
 
     output (sans2d): converted to I vs. Qx, Qy
 
-    2016-04-16 Brian Maranville
+    2016-04-17 Brian Maranville
     """
 
-    L2 = data.metadata['det.dis']
+    apOff = data.metadata["sample.position"]
+    L2 = data.metadata["det.dis"] + apOff
     beamx_override, beamy_override = beam_center
     x0 = beamx_override if beamx_override is not None else data.metadata['det.beamx'] #should be close to 64
     y0 = beamy_override if beamy_override is not None else data.metadata['det.beamy'] #should be close to 64
@@ -525,7 +526,7 @@ def circular_av(data):
 
     mean_output (sans1d): converted to I vs. mean Q within integrated region
 
-    2016-04-12 Brian Maranville
+    2016-04-13 Brian Maranville
     """
     from .draw_annulus_aa import annular_mask_antialiased
 
@@ -543,7 +544,8 @@ def circular_av(data):
     shape1 = data.data.x.shape
     x0 = data.metadata['det.beamx'] # should be close to 64
     y0 = data.metadata['det.beamy'] # should be close to 64
-    L2 = data.metadata['det.dis']
+    apOff = data.metadata["sample.position"]
+    L2 = data.metadata["det.dis"] + apOff
     wavelength = data.metadata['resolution.lmda']
 
     center = (x0, y0)
@@ -644,7 +646,8 @@ def sector_cut(data, sector=[0.0, 90.0], mirror=True):
     shape1 = data.data.x.shape
     x0 = data.metadata['det.beamx'] # should be close to 64
     y0 = data.metadata['det.beamy'] # should be close to 64
-    L2 = data.metadata['det.dis']
+    apOff = data.metadata["sample.position"]
+    L2 = data.metadata["det.dis"] + apOff
     wavelength = data.metadata['resolution.lmda']
 
     center = (x0, y0)
@@ -749,7 +752,8 @@ def correct_detector_efficiency(sansdata):
     2016-08-04 Brian Maranville and Andrew Jackson
     """
 
-    L2 = sansdata.metadata['det.dis']
+    apOff = sansdata.metadata["sample.position"]
+    L2 = sansdata.metadata["det.dis"] + apOff
     lambd = sansdata.metadata["resolution.lmda"]
     shape = sansdata.data.x.shape
     (x0, y0) = np.shape(sansdata.data.x)
@@ -1085,7 +1089,8 @@ def absolute_scaling(empty, sample, Tsam, div, instrument="NG7", integration_box
     detCnt = empty.metadata['run.detcnt']
     countTime = empty.metadata['run.rtime']
     monCnt = empty.metadata['run.moncnt']
-    sdd = empty.metadata['det.dis'] # already in cm
+    apOff = empty.metadata["sample.position"]
+    sdd = empty.metadata["det.dis"] + apOff # already in cm
     pixel = empty.metadata['det.pixelsizex'] # already in cm
     lambd = wavelength = empty.metadata['resolution.lmda']
 
@@ -1462,7 +1467,7 @@ def SuperLoadSANS(filelist=None, do_det_eff=True, do_deadtime=True,
 
     output (sans2d[]): all the entries loaded.
 
-    2018-04-20 Brian Maranville
+    2018-04-21 Brian Maranville
     """
     data = LoadSANS(filelist, flip=False, transpose=False, check_timestamps=check_timestamps)
 
