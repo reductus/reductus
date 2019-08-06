@@ -847,7 +847,7 @@ def monitor_normalize(sansdata, mon0=1e8):
     return res
 
 @module
-def generate_transmission(in_beam, empty_beam, integration_box=[55, 74, 53, 72]):
+def generate_transmission(in_beam, empty_beam, integration_box=[55, 74, 53, 72], auto_integrate=True, margin=5):
     """
     To calculate the transmission, we integrate the intensity in a box
     for a measurement with the substance in the beam and with the substance
@@ -864,11 +864,17 @@ def generate_transmission(in_beam, empty_beam, integration_box=[55, 74, 53, 72])
 
     integration_box (range:xy): region over which to integrate
 
+    auto_integrate (bool): automatically select integration region
+
+    margin {Box margin, width = 4*gauss_width + 2*margin:} (int): Extra margin 
+    to add to automatically calculated peak width in x and y
+
     **Returns**
 
     output (params): calculated transmission for the integration area
 
-    2017-02-29 Brian Maranville
+    | 2017-02-29 Brian Maranville
+    | 2019-06-03 Adding auto-integrate, Brian Maranville
     """
     #I_in_beam = 0.0
     #I_empty_beam = 0.0
@@ -882,16 +888,48 @@ def generate_transmission(in_beam, empty_beam, integration_box=[55, 74, 53, 72])
     #    for y in range(ymax-coords_upper_right[1], ymax-coords_bottom_left[1]+1):
     #        I_in_beam = I_in_beam+in_beam.data.x[x, y]
     #        I_empty_beam = I_empty_beam+empty_beam.data.x[x, y]
+    from collections import OrderedDict
 
-    xmin, xmax, ymin, ymax = map(int, integration_box)
+    if auto_integrate:
+        height, x, y, width_x, width_y = moments(empty_beam.data.x)
+        center_x = x + 0.5
+        center_y = y + 0.5
+
+        xmin = int(max(0, np.floor(center_x - width_x*2.0) - margin))
+        xmax = int(min(empty_beam.data.shape[0], np.ceil(center_x + width_x*2.0) + margin))
+        ymin = int(max(0, np.floor(center_y - width_y*2.0) - margin))
+        ymax = int(min(empty_beam.data.shape[1], np.ceil(center_y + width_y*2.0) + margin))
+    
+    else:
+        xmin, xmax, ymin, ymax = map(int, integration_box)
+    
     I_in_beam = np.sum(in_beam.data[xmin:xmax+1, ymin:ymax+1])
     I_empty_beam = np.sum(empty_beam.data[xmin:xmax+1, ymin:ymax+1])
 
     ratio = I_in_beam/I_empty_beam
-    result = Parameters(dict(factor=ratio.x, factor_variance=ratio.variance,
-                        factor_err=np.sqrt(ratio.variance)))
+    result = Parameters(OrderedDict([
+        ("factor", ratio.x), 
+        ("factor_variance", ratio.variance),
+        ("factor_err", np.sqrt(ratio.variance)),
+        ("box_used", {"xmin": xmin, "xmax": xmax, "ymin": ymin, "ymax": ymax})
+    ]))
 
     return result
+
+def moments(data):
+    """Returns (height, x, y, width_x, width_y)
+    the gaussian parameters of a 2D distribution by calculating its
+    moments """
+    total = data.sum()
+    X, Y = np.indices(data.shape)
+    x = (X*data).sum()/total
+    y = (Y*data).sum()/total
+    col = data[:, int(round(y))]
+    width_x = np.sqrt(np.abs((np.arange(col.size)-x)**2*col).sum()/col.sum())
+    row = data[int(round(x)), :]
+    width_y = np.sqrt(np.abs((np.arange(row.size)-y)**2*row).sum()/row.sum())
+    height = data.max()
+    return height, x, y, width_x, width_y
 
 @module
 def subtract(subtrahend, minuend):
@@ -1075,7 +1113,7 @@ def correct_attenuation(sample, instrument="NG7"):
 
 @cache
 @module
-def absolute_scaling(empty, sample, Tsam, div, instrument="NG7", integration_box=[55, 74, 53, 72]):
+def absolute_scaling(empty, sample, Tsam, div, instrument="NG7", integration_box=[55, 74, 53, 72], auto_box=True, margin=5):
     """
     Calculate absolute scaling
 
@@ -1095,14 +1133,22 @@ def absolute_scaling(empty, sample, Tsam, div, instrument="NG7", integration_box
 
     integration_box (range:xy): region over which to integrate
 
+    auto_box (bool): automatically select integration region
+
+    margin {Box margin, width = 4*gauss_width + 2*margin:} (int): Extra margin 
+    to add to automatically calculated peak width in x and y
+
     **Returns**
 
     abs (sans2d): data on absolute scale
 
+    params (params): parameter outputs
+
     | 2017-01-13 Andrew Jackson
     | 2019-07-04 Brian Maranville
-    | 2019-07-10 Brian Maranville
+    | 2019-07-14 Brian Maranville
     """
+    from collections import OrderedDict
     # data (that is going through reduction), empty beam,
     # div, Transmission of the sample, instrument(NG3.NG5, NG7)
     # ALL from metadata
@@ -1131,7 +1177,19 @@ def absolute_scaling(empty, sample, Tsam, div, instrument="NG7", integration_box
     # Correct empty beam by the sensitivity
     data = empty.__truediv__(div.data)
     # Then take the sum in XY box, including stat. error
-    xmin, xmax, ymin, ymax = map(int, integration_box)
+    if auto_box:
+        height, x, y, width_x, width_y = moments(empty.data.x)
+        center_x = x + 0.5
+        center_y = y + 0.5
+
+        xmin = int(max(0, np.floor(center_x - width_x*2.0) - margin))
+        xmax = int(min(empty.data.shape[0], np.ceil(center_x + width_x*2.0) + margin))
+        ymin = int(max(0, np.floor(center_y - width_y*2.0) - margin))
+        ymax = int(min(empty.data.shape[1], np.ceil(center_y + width_y*2.0) + margin))
+    
+    else:
+        xmin, xmax, ymin, ymax = map(int, integration_box)
+
     detCnt = np.sum(data.data[xmin:xmax+1, ymin:ymax+1])
     print("DETCNT: ", detCnt)
     print('attentrans: ', attenTrans)
@@ -1153,8 +1211,17 @@ def absolute_scaling(empty, sample, Tsam, div, instrument="NG7", integration_box
     #-----Using Kappa to Scale data-----#
     Dsam = sample.metadata['sample.thk']
     ABS = sample.__mul__(1/(kappa*Dsam*Tsam_factor))
+
+    params = OrderedDict([
+        ("DETCNT", detCnt.x),
+        ("attentrans", attenTrans.x),
+        ("monCnt", monCnt),
+        ("kappa", kappa.x),
+        ("Dsam", Dsam),
+        ("box_used", {"xmin": xmin, "xmax": xmax, "ymin": ymin, "ymax": ymax})
+    ])
     #------------------------------------
-    return ABS
+    return ABS, Parameters(params)
 
 @cache
 @module
