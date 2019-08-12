@@ -142,10 +142,10 @@ class SansData(object):
             else:
                 zmax = data.max()
         if self.qx is None or self.qy is None:
-            xmin = 0.5
-            xmax = 128.5
-            ymin = 0.5
-            ymax = 128.5
+            xmin = 0.0
+            xmax = 128
+            ymin = 0.0
+            ymax = 128
         else:
             xmin = self.qx_min if self.qx_min is not None else self.qx.min()
             xmax = self.qx_max if self.qx_max is not None else self.qx.max()
