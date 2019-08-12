@@ -14,6 +14,7 @@ from dataflow.lib import unit
 from dataflow.lib.h5_open import h5_open_zip
 
 from vsansred.loader import load_detector, load_metadata
+from vsansred.steps import _s, _b
 
 from .sansdata import SansData, RawSANSData
 
@@ -33,7 +34,7 @@ metadata_lookup = OrderedDict([
     ("det.pixeloffsety", "instrument/detector/y_offset"),
     ("det.pixelsizey", "instrument/detector/y_pixel_size"),
     ("sample.name", "DAS_logs/sample/name"),
-    ("sample.description", "DAS_logs/sample/description"),
+    #("sample.description", "DAS_logs/sample/description"),
     ("polarization.front", "DAS_logs/frontPolarization/direction"),
     ("polarization.back", "DAS_logs/backPolarization/direction"),
     ("polarization.backname", "DAS_logs/backPolarization/name"),
@@ -121,6 +122,7 @@ def readSANSNexuz(input_file, file_obj=None, metadata_lookup=metadata_lookup):
             detector_keys = ['detector']
             detectors = dict([(k, load_detector(entry['instrument'][k])) for k in detector_keys])
             metadata['entry'] = entryname
+            metadata['sample.description'] = _s(metadata["sample.labl"]).replace(_s(metadata["run.configuration"]), "")
             dataset = RawSANSData(metadata=metadata, detectors=detectors)
             datasets.append(dataset)            
 

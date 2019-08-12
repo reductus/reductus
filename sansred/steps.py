@@ -298,7 +298,8 @@ def LoadSANS(filelist=None, flip=False, transpose=False, check_timestamps=True):
 
     output (raw[]): all the entries loaded.
 
-    2019-07-26 Brian Maranville
+    | 2019-07-26 Brian Maranville
+    | 2019-08-09 Brian Maranville adding new stripped sample description
     """
 
     rawdata = LoadRawSANS(filelist, check_timestamps=check_timestamps)
