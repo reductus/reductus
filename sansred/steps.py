@@ -65,16 +65,6 @@ def module(action):
 # Loader stuff
 #################
 
-def url_load(fileinfo):
-    from dataflow.fetch import url_get
-
-    path, mtime, entries = fileinfo['path'], fileinfo['mtime'], fileinfo['entries']
-    name = basename(path)
-    fid = BytesIO(url_get(fileinfo))
-    nx_entries = LoadMAGIKPSD.load_entries(name, fid, entries=entries)
-    fid.close()
-    return nx_entries
-
 @cache
 @module
 def LoadDIV(filelist=None, variance=0.0001):
@@ -626,6 +616,77 @@ def circular_av(data):
 
     return nominal_output, mean_output
 
+@nocache
+@module
+def circular_av_new(data, q_min=None, q_max=None, q_step=None):
+    """
+    Using a circular average, it converts data to 1D (Q vs. I)
+
+
+    **Inputs**
+
+    data (sans2d): data in
+
+    q_min (float): minimum Q value for binning (defaults to q_step)
+
+    q_max (float): maxiumum Q value for binning (defaults to max of q values in data)
+
+    q_step (float): step size for Q bins (defaults to minimum qx step)
+
+    **Returns**
+
+    nominal_output (sans1d): converted to I vs. nominal Q
+
+    mean_output (sans1d): converted to I vs. mean Q within integrated region
+
+    2019-01-01 Brian Maranville
+    """
+    from scipy import interpolate
+    from dataflow.lib import rebin
+
+    # calculate the change in q that corresponds to a change in pixel of 1
+    if data.qx is None:
+        raise ValueError("Q is not defined - convert pixels to Q first")
+
+    if q_step is None:
+        q_step = data.qx[1, 0]-data.qx[0, 0] / 1.0
+
+    if q_min is None:
+        q_min = q_step
+    
+    if q_max is None:
+        q_max = data.q.max()
+
+    q_bins = np.arange(q_min, q_max+q_step, q_step)
+    Q = (q_bins[:-1] + q_bins[1:])/2.0
+    dx = np.zeros_like(Q)
+    Q_mean_error = dx.copy()
+
+    # dq = data.dq_para if hasattr(data, 'dqpara') else np.ones_like(data.q) * q_step
+    I, _bins_used = np.histogram(data.q, bins=q_bins, weights=data.data.x)
+    I_norm, _ = np.histogram(data.q, bins=q_bins, weights=np.ones_like(data.data.x))
+    I_var, _ = np.histogram(data.q, bins=q_bins, weights=data.data.variance)
+    Q_mean, _ = np.histogram(data.q, bins=q_bins, weights=data.q)
+
+    nonzero_mask = I_norm > 0
+
+    I[nonzero_mask] /= I_norm[nonzero_mask]
+    I_var[nonzero_mask] /= (I_norm[nonzero_mask]**2)
+    Q_mean[nonzero_mask] /= I_norm[nonzero_mask]
+    I_err = np.sqrt(I_var)
+
+    nominal_output = Sans1dData(Q, I, dx=dx, dv=I_var, xlabel="Q", vlabel="I",
+                        xunits="inv. A", vunits="neutrons")
+    nominal_output.metadata = deepcopy(data.metadata)
+    nominal_output.metadata['extra_label'] = "_circ"
+
+    mean_output = Sans1dData(Q_mean, I, dx=Q_mean_error, dv=I_var, xlabel="Q", vlabel="I",
+                        xunits="inv. A", vunits="neutrons")
+    mean_output.metadata = deepcopy(data.metadata)
+    mean_output.metadata['extra_label'] = "_circ"
+
+    return nominal_output, mean_output
+
 @cache
 @module
 def sector_cut(data, sector=[0.0, 90.0], mirror=True):
@@ -876,6 +937,7 @@ def generate_transmission(in_beam, empty_beam, integration_box=[55, 74, 53, 72],
 
     | 2017-02-29 Brian Maranville
     | 2019-06-03 Adding auto-integrate, Brian Maranville
+    | 2019-08-14 Adding metadata for grouping later, Brian Maranville
     """
     #I_in_beam = 0.0
     #I_empty_beam = 0.0
@@ -912,6 +974,8 @@ def generate_transmission(in_beam, empty_beam, integration_box=[55, 74, 53, 72],
         ("factor", ratio.x), 
         ("factor_variance", ratio.variance),
         ("factor_err", np.sqrt(ratio.variance)),
+        ("run.configuration", in_beam.metadata['run.configuration']),
+        ("sample.description", in_beam.metadata['sample.description']),
         ("box_used", {"xmin": xmin, "xmax": xmax, "ymin": ymin, "ymax": ymax})
     ]))
 
@@ -933,29 +997,41 @@ def moments(data):
     return height, x, y, width_x, width_y
 
 @module
-def subtract(subtrahend, minuend):
+def subtract(subtrahend, minuend, align_by='run.configuration'):
     """
     Algebraic subtraction of datasets pixel by pixel
 
     **Inputs**
 
-    subtrahend (sans2d): a in (a-b) = c
+    subtrahend (sans2d[]): a in (a-b) = c
 
-    minuend (sans2d?): b in (a-b) = c, defaults to zero
+    minuend (sans2d[]?): b in (a-b) = c, defaults to zero
+
+    align_by (str): for multiple inputs, subtract minuend that matches subtrahend
+    for this metadata value 
+    (use "none" to align each subtrahend and minuend by position in the data list)
 
     **Returns**
 
-    output (sans2d): c in (a-b) = c
+    output (sans2d[]): c in (a-b) = c
 
-    2010-01-01 unknown
+    | 2010-01-01 unknown
+    | 2019-08-14 Brian Maranville adding group by config
     """
-    if minuend is not None:
-        return subtrahend - minuend
-    else:
+
+    if not minuend or len(minuend) == 0:
         return subtrahend
+    elif len(minuend) == 1:
+        return [s - minuend[0] for s in subtrahend]
+    elif align_by.lower() != "none":
+        # make lookup:
+        align_lookup = dict([(m.metadata[align_by], m) for m in minuend])
+        return [(s - align_lookup[s.metadata[align_by]]) for s in subtrahend]
+    else:
+        return [(s - m) for s,m in zip(subtrahend, minuend)]
 
 @module
-def product(data, factor_param, propagate_error=True):
+def product(data, factor_param, align_by="run.configuration", propagate_error=True):
     """
     Algebraic multiplication of dataset
 
@@ -964,6 +1040,9 @@ def product(data, factor_param, propagate_error=True):
     data (sans2d[]): data in (a)
 
     factor_param (params[]): multiplication factor (b), defaults to 1
+
+    align_by (str): for multiple inputs, multiply data that matches factor_param with this 
+    metadata value
 
     propagate_error {Propagate error} (bool): if factor_error is passed in, use it
 
