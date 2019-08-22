@@ -272,10 +272,10 @@ def check_sector_cut_antialiased(shape, center, inner_radius, outer_radius, star
 # prefer cairo version because it doesn't require oversampling, and is GPU accelerated!
 try:
     import cairo
-    annular_ellipse_mask_antialiased = annular_ellipse_mask_antialiased_cairo
+    annular_mask_antialiased = annular_ellipse_mask_antialiased_cairo
     rectangular_mask_antialiased = rectangular_mask_antialiased_cairo
 except ImportError:
-    annular_ellipse_mask_antialiased = annular_mask_antialiased_pillow
+    annular_mask_antialiased = annular_mask_antialiased_pillow
     rectangular_mask_antialiased = rectangular_mask_antialiased_pillow
 def check():
     check_sector_cut_antialiased(
