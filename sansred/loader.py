@@ -24,17 +24,18 @@ metadata_lookup = OrderedDict([
     ("analysis.filepurpose", "DAS_logs/trajectoryData/filePurpose"),
     ("det.des_dis", "DAS_logs/detectorPosition/desiredSoftPosition"),
     ("det.dis", "DAS_logs/detectorPosition/softPosition"),
+    ("run.guide", "DAS_logs/guide/guide"),
+    ("sample.description", "DAS_logs/sample/description"), # overwritten on load
     ("sample.labl", "DAS_logs/sample/description"), # compatibility
     ("resolution.lmda", "instrument/monochromator/wavelength"),
     ("resolution.dlmda", "instrument/monochromator/wavelength_error"),
     ("det.beamx", "instrument/detector/beam_center_x"),
     ("det.beamy", "instrument/detector/beam_center_y"),
-    ("det.pixeloffsetx", "instrument/detector/x_offset"),
+    #("det.pixeloffsetx", "instrument/detector/x_offset"), # this is useless
     ("det.pixelsizex", "instrument/detector/x_pixel_size"),
-    ("det.pixeloffsety", "instrument/detector/y_offset"),
+    #("det.pixeloffsety", "instrument/detector/y_offset"), # this is also useless
     ("det.pixelsizey", "instrument/detector/y_pixel_size"),
     ("sample.name", "DAS_logs/sample/name"),
-    #("sample.description", "DAS_logs/sample/description"),
     ("polarization.front", "DAS_logs/frontPolarization/direction"),
     ("polarization.back", "DAS_logs/backPolarization/direction"),
     ("polarization.backname", "DAS_logs/backPolarization/name"),
