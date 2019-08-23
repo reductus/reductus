@@ -10,6 +10,7 @@ from __future__ import print_function
 from posixpath import basename, join
 from copy import copy, deepcopy
 from io import BytesIO
+from collections import OrderedDict
 
 import numpy as np
 
@@ -83,7 +84,6 @@ def LoadDIV(filelist=None, variance=0.0001):
 
     2018-04-21 Brian Maranville
     """
-    from collections import OrderedDict
     from dataflow.fetch import url_get
     from .sans_vaxformat import readNCNRSensitivity
 
@@ -127,7 +127,6 @@ def LoadRawSANS(filelist=None, check_timestamps=True):
 
     2018-04-23 Brian Maranville
     """
-    from collections import OrderedDict
     from dataflow.fetch import url_get
     from .loader import readSANSNexuz
     if filelist is None:
@@ -182,9 +181,7 @@ def patch(data, patches=None):
         return data
     
     from jsonpatch import JsonPatch
-    from collections import OrderedDict
-
-    # make a master dict of metadata from provided key:
+        # make a master dict of metadata from provided key:
 
     key="run.filename"
 
@@ -223,8 +220,6 @@ def autosort(rawdata, subsort="det.des_dis", add_scattering=True):
 
     2019-07-24 Brian Maranville
     """
-
-    from collections import OrderedDict
 
     sample_scatt = []
     blocked_beam = []
@@ -673,7 +668,6 @@ def circular_av_new(data, q_min=None, q_max=None, q_step=None):
     I[nonzero_mask] /= I_norm[nonzero_mask]
     I_var[nonzero_mask] /= (I_norm[nonzero_mask]**2)
     Q_mean[nonzero_mask] /= I_norm[nonzero_mask]
-    I_err = np.sqrt(I_var)
 
     nominal_output = Sans1dData(Q, I, dx=dx, dv=I_var, xlabel="Q", vlabel="I",
                         xunits="inv. A", vunits="neutrons")
@@ -909,7 +903,7 @@ def monitor_normalize(sansdata, mon0=1e8):
     return res
 
 @module
-def generate_transmission(in_beam, empty_beam, integration_box=[55, 74, 53, 72], auto_integrate=True, margin=5):
+def generate_transmission(in_beam, empty_beam, integration_box=[55, 74, 53, 72], align_by="run.configuration", auto_integrate=True, margin=5):
     """
     To calculate the transmission, we integrate the intensity in a box
     for a measurement with the substance in the beam and with the substance
@@ -920,11 +914,14 @@ def generate_transmission(in_beam, empty_beam, integration_box=[55, 74, 53, 72],
 
     **Inputs**
 
-    in_beam (sans2d): measurement with sample in the beam
+    in_beam (sans2d[]): measurement with sample in the beam
 
-    empty_beam (sans2d): measurement with no sample in the beam
+    empty_beam (sans2d[]): measurement with no sample in the beam
 
     integration_box (range:xy): region over which to integrate
+
+    align_by (str): for multiple in_beam and empty_beam, line up by this metadata key
+    use "none" to align by positional order
 
     auto_integrate (bool): automatically select integration region
 
@@ -933,26 +930,32 @@ def generate_transmission(in_beam, empty_beam, integration_box=[55, 74, 53, 72],
 
     **Returns**
 
-    output (params): calculated transmission for the integration area
+    output (params[]): calculated transmission for the integration area
 
     | 2017-02-29 Brian Maranville
     | 2019-06-03 Adding auto-integrate, Brian Maranville
     | 2019-08-14 Adding metadata for grouping later, Brian Maranville
+    | 2019-08-22 Adding align_by for inputs, Brian Maranville
     """
-    #I_in_beam = 0.0
-    #I_empty_beam = 0.0
-    #xmax, ymax = np.shape(in_beam.data.x)
-    #print(xmax, ymax)
-    # Vectorize this loop, it's quick, but could be quicker
-    # test against this simple minded implementation
-    #print(ymax-coords_bottom_left[1], ymax-coords_upper_right[1])
-
-    #for x in range(coords_bottom_left[0], coords_upper_right[0]+1):
-    #    for y in range(ymax-coords_upper_right[1], ymax-coords_bottom_left[1]+1):
-    #        I_in_beam = I_in_beam+in_beam.data.x[x, y]
-    #        I_empty_beam = I_empty_beam+empty_beam.data.x[x, y]
-    from collections import OrderedDict
-
+    
+    if align_by == "none":
+        if len(in_beam) != len(empty_beam):
+            raise ValueError("number of in_beam must match number of empty_beam when align_by is none")
+        output = []
+        for ib, eb in zip(in_beam, empty_beam):
+            output.append(_generate_transmission(ib, eb, integration_box=integration_box, auto_integrate=auto_integrate, margin=margin))
+        return output
+    else:
+        eb_lookup = dict([(get_compound_key(eb.metadata, align_by), eb) for eb in empty_beam])
+        output = []
+        for ib in in_beam:
+            eb = eb_lookup.get(get_compound_key(ib.metadata, align_by), None)
+            if eb is None:
+                raise ValueError("no matching empty was found for configuration: " + get_compound_key(ib.metadata, align_by))
+            output.append(_generate_transmission(ib, eb, integration_box=integration_box, auto_integrate=auto_integrate, margin=margin))
+        return output        
+        
+def _generate_transmission(in_beam, empty_beam, integration_box=None, auto_integrate=True, margin=5):
     if auto_integrate:
         height, x, y, width_x, width_y = moments(empty_beam.data.x)
         center_x = x + 0.5
@@ -976,6 +979,9 @@ def generate_transmission(in_beam, empty_beam, integration_box=[55, 74, 53, 72],
         ("factor_err", np.sqrt(ratio.variance)),
         ("run.configuration", in_beam.metadata['run.configuration']),
         ("sample.description", in_beam.metadata['sample.description']),
+        ("det.des_dis", in_beam.metadata['det.des_dis']),
+        ("resolution.lmda", in_beam.metadata['resolution.lmda']),
+        ("run.guide", in_beam.metadata['run.guide']),
         ("box_used", {"xmin": xmin, "xmax": xmax, "ymin": ymin, "ymax": ymax})
     ]))
 
@@ -1025,13 +1031,13 @@ def subtract(subtrahend, minuend, align_by='run.configuration'):
         return [s - minuend[0] for s in subtrahend]
     elif align_by.lower() != "none":
         # make lookup:
-        align_lookup = dict([(m.metadata[align_by], m) for m in minuend])
-        return [(s - align_lookup[s.metadata[align_by]]) for s in subtrahend]
+        align_lookup = dict([(get_compound_key(m.metadata, align_by), m) for m in minuend])
+        return [(s - align_lookup[get_compound_key(s.metadata, align_by)]) for s in subtrahend]
     else:
         return [(s - m) for s,m in zip(subtrahend, minuend)]
 
 @module
-def product(data, factor_param, align_by="run.configuration", propagate_error=True):
+def product(data, factor_param, align_by="det.des_dis,resolution.lmda,run.guide"):
     """
     Algebraic multiplication of dataset
 
@@ -1039,40 +1045,30 @@ def product(data, factor_param, align_by="run.configuration", propagate_error=Tr
 
     data (sans2d[]): data in (a)
 
-    factor_param (params[]): multiplication factor (b), defaults to 1
+    factor_param (params[]?): multiplication factor (b), defaults to 1
 
     align_by (str): for multiple inputs, multiply data that matches factor_param with this 
     metadata value
-
-    propagate_error {Propagate error} (bool): if factor_error is passed in, use it
 
     **Returns**
 
     output (sans2d[]): result (c in a*b = c)
 
     | 2010-01-02 unknown
-    | 2019-07-26 Brian Maranville
+    | 2019-07-27 Brian Maranville
     """
     # follow broadcast rules:
-    import itertools
-    if len(data) != len(factor_param):
-        if len(data) == 1 and len(factor_param) > 0:
-            data = itertools.repeat(data[0])
-        elif len(data) > 0 and len(factor_param) == 1:
-            factor_param = itertools.repeat(factor_param[0])
-        else:
-            raise IndexError("lengths of factors and data don't match")
-
-    output = []
-    for d,f in zip(data, factor_param):
-        print(d, f.params)
-        if f is not None:
-            if propagate_error:
-                variance = f.params.get('factor_variance', 0.0)
-            output.append(d * Uncertainty(f.params.get('factor', 1.0), variance))
-        else:
-            output.append(d)
-    return output
+    if not factor_param or len(factor_param) == 0:
+        return data
+    elif len(factor_param) == 1:
+        f = factor_param[0]
+        return [(d * Uncertainty(f.params.get('factor', 1.0), f.params.get('factor_variance', 0.0))) for d in data]
+    elif align_by.lower() != "none":
+        # make lookup:
+        align_lookup = dict([(get_compound_key(f.params, align_by), Uncertainty(f.params.get('factor', 1.0), f.params.get('factor_variance', 0.0))) for f in factor_param])
+        return [(d * align_lookup[get_compound_key(d.metadata, align_by)]) for d in data]
+    else:
+        return [d * Uncertainty(f.params.get('factor', 1.0), f.params.get('factor_variance', 0.0)) for d,f in zip(data, factor_param)]
 
 @module
 def divide(data, factor_param):
@@ -1228,8 +1224,7 @@ def absolute_scaling(empty, sample, Tsam, div, instrument="NG7", integration_box
     | 2019-07-04 Brian Maranville
     | 2019-07-14 Brian Maranville
     """
-    from collections import OrderedDict
-    # data (that is going through reduction), empty beam,
+        # data (that is going through reduction), empty beam,
     # div, Transmission of the sample, instrument(NG3.NG5, NG7)
     # ALL from metadata
     detCnt = empty.metadata['run.detcnt']
@@ -1366,6 +1361,47 @@ def addSimple(data):
         output.metadata['run.detcnt'] += d.metadata['run.detcnt']
     return output
 
+def get_compound_key(data_dict, compound_key, separator=","):
+    subkeys = [s.strip() for s in compound_key.split(separator)]
+    key = separator.join([_s(data_dict.get(sk, 'unknown')) for sk in subkeys])
+    return key
+
+@module
+def groupAddData(data, group_by="run.configuration,sample.description"):
+    """
+    Addition of counts and monitor from different datasets,
+    assuming all datasets were taken under identical conditions
+    (except for count time)
+
+    Groups by the metadata fields in "group_by" (comma-separated)
+    e.g. all data with the same sample.description and run.configuration
+    will be added together for group_by="run.configuration,sample.description"
+
+    Use "group_by" = "none" to just add all together (like addSimple)
+
+    Use metadata from first dataset in each group for output.
+
+    **Inputs**
+
+    data (sans2d[]): measurements to be added together
+
+    group_by {Group by} (str): grouping key from metadata
+
+    **Returns**
+
+    sum (sans2d[]): sum of inputs, grouped
+
+    2017-06-29  Brian Maranville
+    """
+
+    groups = OrderedDict()
+    for d in data:
+        key = get_compound_key(d.metadata, group_by)
+        groups.setdefault(key, [])
+        groups[key].append(d)
+    
+    output = [addSimple(g) for g in groups.values()]
+    return output
 
 @cache
 @module
@@ -1605,7 +1641,7 @@ def sumBox(data, xmin, xmax, ymin, ymax):
 @cache
 @module
 def SuperLoadSANS(filelist=None, do_det_eff=True, do_deadtime=True,
-                  deadtime=1.0e-6, do_mon_norm=True, do_atten_correct=False, mon0=1e8,
+                  deadtime=1.0e-6, do_mon_norm=True, do_atten_correct=True, mon0=1e8,
                   check_timestamps=True):
     """
     loads a data file into a SansData obj, and performs common reduction steps
