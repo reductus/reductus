@@ -415,8 +415,6 @@ def calculateDQ(data):
     # the detector pixel is square, so correct for phi
     DDetX = data.metadata["det.pixelsizex"]
     DDetY = data.metadata["det.pixelsizey"]
-    x_offset = data.metadata["det.pixeloffsetx"]
-    y_offset = data.metadata["det.pixeloffsety"]
     xctr = data.metadata["det.beamx"]
     yctr = data.metadata["det.beamy"]
 
