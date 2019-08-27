@@ -186,26 +186,8 @@ class SansData(object):
 
     def get_metadata(self):
         metadata = {}
-        metadata.update(pythonize(self.metadata))
+        metadata.update(_toDictItem(self.metadata))
         return metadata
-
-def pythonize(obj):
-    output = {}
-    for a in obj:
-        attr = obj.get(a, None)
-        if isinstance(attr, np.integer):
-            attr = int(attr)
-        elif isinstance(attr, np.floating):
-            attr = float(attr)
-        elif isinstance(attr, np.ndarray):
-            attr = attr.tolist()
-        elif isinstance(attr, datetime.datetime):
-            attr = [attr.year, attr.month, attr.day,
-                    attr.hour, attr.minute, attr.second]
-        elif isinstance(attr, dict):
-            attr = pythonize(attr)
-        output[a] = attr
-    return output
 
 class Sans1dData(object):
     properties = ['x', 'v', 'dx', 'dv', 'xlabel', 'vlabel', 'xunits', 'vunits', 'xscale', 'vscale', 'metadata', 'fit_function']
@@ -226,7 +208,7 @@ class Sans1dData(object):
 
     def to_dict(self):
         props = dict([(p, getattr(self, p, None)) for p in self.properties])
-        return pythonize(props)
+        return _toDictItem(props)
 
     def get_plottable(self):
         label = "%s: %s" % (self.metadata['run.experimentScanID'], self.metadata['sample.labl'])
@@ -264,8 +246,81 @@ class Sans1dData(object):
         np.savetxt(fid, np.vstack([self.x, self.v, self.dv, self.dx]).T, fmt="%.10e")
         fid.seek(0)
         name = getattr(self, "name", "default_name")
-        entry = getattr(self.metadata, "entry", "default_entry")
+        entry = self.metadata.get("entry", "default_entry")
         return {"name": name, "entry": entry, "export_string": fid.read(), "file_suffix": ".sans1d.dat"}
+
+class SansIQData(object):
+    def __init__(self, I=None, dI=None, Q=None, dQ=None, meanQ=None, ShadowFactor=None, label='', metadata=None):
+        self.I = I
+        self.dI = dI
+        self.Q = Q
+        self.dQ = dQ
+        self.meanQ = meanQ
+        self.ShadowFactor = ShadowFactor
+        self.label = label
+        self.metadata = metadata if metadata is not None else {}
+    
+    def get_plottable(self):
+        columns = OrderedDict([
+            ('Q', {'label': "Q", 'units': "1/Ang", 'errorbars': 'dQ'}),
+            ('I', {'label': "I(Q)", 'units': "1/cm", 'errorbars': 'dI'}),
+            ('meanQ', {'label': 'Mean Q', 'units': "1/Ang"}),
+            ('Q^4', {'label': 'Q^4', 'units': '1/Ang**4'}),
+            ('I*Q^4', {'label': 'I * Q^4', 'units': '1/cm * 1/Ang**4'}),
+            ('I*Q^2', {'label': 'I * Q^2', 'units': '1/cm * 1/Ang**2'}),
+        ])
+        datas = OrderedDict([
+            ("Q", {"values": self.Q.tolist(), "errorbars": self.dQ.tolist()}),
+            ("I", {"values": self.I.tolist(), "errorbars": self.dI.tolist()}),
+            ("meanQ", {"values": self.meanQ.tolist(), "errorbars": self.dQ.tolist()}),
+            ("Q^4", {"values": (self.meanQ**4).tolist()}),
+            ("I*Q^4", {"values": (self.I * self.meanQ**4).tolist()}),
+            ("I*Q^2", {"values": (self.I * self.meanQ**2).tolist()}),
+        ])
+        
+        name = self.metadata.get("name", "default_name")
+        entry = self.metadata.get("entry", "default_entry")
+        series = [{"label": "%s:%s" % (name, entry)}]
+        xcol = "Q"
+        ycol = "I"
+        plottable = {
+            "type": "nd",
+            "title": "%s:%s" % (name, entry),
+            "entry": entry,
+            "columns": columns,
+            "options": {
+                "series": series,
+                "xtransform": "log",
+                "ytransform": "log",
+                "axes": {
+                    "xaxis": {"label": "%s(%s)" % (columns[xcol]["label"], columns[xcol]["units"])},
+                    "yaxis": {"label": "%s(%s)" % (columns[ycol]["label"], columns[ycol]["units"])}
+                },
+                "xcol": xcol,
+                "ycol": ycol,
+                "errorbar_width": 0
+            },
+            "datas": datas
+        }
+        #print(plottable)
+        return plottable
+
+    def export(self):
+        # export to 6-column format compatible with SASVIEW
+        # The 6 columns are | Q (1/A) | I(Q) (1/cm) | std. dev. I(Q) (1/cm) | sigmaQ | meanQ | ShadowFactor|
+        column_names = ["Q", "I", "dI", "dQ", "meanQ", "ShadowFactor"]
+        column_values = [getattr(self, cn) for cn in column_names]
+        labels = ["Q (1/A)", "I(Q) (1/cm)", "std. dev. I(Q) (1/cm)", "sigmaQ", "meanQ", "ShadowFactor"]
+
+        fid = BytesIO()
+        fid.write(_b("# %s\n" % json.dumps(_toDictItem(self.metadata, convert_bytes=True)).strip("{}")))
+        fid.write(_b("# %s\n" % json.dumps({"columns": labels}).strip("{}")))
+        np.savetxt(fid, np.vstack([self.x, self.v, self.dv, self.dx]).T, fmt="%.10e")
+        fid.seek(0)
+        name = getattr(self, "name", "default_name")
+        entry = getattr(self.metadata, "entry", "default_entry")
+        return {"name": name, "entry": entry, "export_string": fid.read(), "file_suffix": ".sansIQ.dat"}
+
 
 class Parameters(object):
     def __init__(self, params=None):

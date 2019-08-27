@@ -17,7 +17,7 @@ import numpy as np
 from dataflow.lib.uncertainty import Uncertainty
 from dataflow.lib import uncertainty
 
-from .sansdata import RawSANSData, SansData, Sans1dData, Parameters, _s
+from .sansdata import RawSANSData, SansData, Sans1dData, SansIQData, Parameters, _s
 from .sans_vaxformat import readNCNRSensitivity
 
 from vsansred.steps import _s, _b
@@ -632,6 +632,8 @@ def circular_av_new(data, q_min=None, q_max=None, q_step=None):
 
     mean_output (sans1d): converted to I vs. mean Q within integrated region
 
+    output (sansIQ): canonical I vs Q output for sans data.
+
     2019-01-01 Brian Maranville
     """
     from scipy import interpolate
@@ -677,7 +679,9 @@ def circular_av_new(data, q_min=None, q_max=None, q_step=None):
     mean_output.metadata = deepcopy(data.metadata)
     mean_output.metadata['extra_label'] = "_circ"
 
-    return nominal_output, mean_output
+    canonical_output = SansIQData(I, np.sqrt(I_var), Q, np.zeros_like(Q), Q_mean, np.zeros_like(Q), metadata=deepcopy(data.metadata))
+    
+    return nominal_output, mean_output, canonical_output
 
 @cache
 @module
