@@ -785,6 +785,8 @@ webreduce.editor = webreduce.editor || {};
     var series = [];
     var xcol;
     var ycol;
+    var xtransform;
+    var ytransform;
 
     values.forEach(function(pd) {
       var colset = {}
@@ -797,6 +799,8 @@ webreduce.editor = webreduce.editor || {};
       series.push({label: pd.title});
       xcol = xcol || pd.options.xcol;
       ycol = ycol || pd.options.ycol;
+      xtransform = xtransform || pd.options.xtransform;
+      ytransform = ytransform || pd.options.ytransform;
     });
 
     var plottable = {
@@ -813,6 +817,13 @@ webreduce.editor = webreduce.editor || {};
         errorbar_width: 0
       },
       data: datas
+    }
+
+    if (xtransform != null) {
+      plottable.options.xtransform = xtransform;
+    }
+    if (ytransform != null) {
+      plottable.options.ytransform = ytransform;
     }
 
     return plottable
