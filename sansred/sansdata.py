@@ -315,7 +315,7 @@ class SansIQData(object):
         fid = BytesIO()
         fid.write(_b("# %s\n" % json.dumps(_toDictItem(self.metadata, convert_bytes=True)).strip("{}")))
         fid.write(_b("# %s\n" % json.dumps({"columns": labels}).strip("{}")))
-        np.savetxt(fid, np.vstack([self.x, self.v, self.dv, self.dx]).T, fmt="%.10e")
+        np.savetxt(fid, np.vstack(column_values).T, fmt="%.10e")
         fid.seek(0)
         name = getattr(self, "name", "default_name")
         entry = getattr(self.metadata, "entry", "default_entry")
