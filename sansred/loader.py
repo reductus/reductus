@@ -31,6 +31,7 @@ metadata_lookup = OrderedDict([
     ("resolution.dlmda", "instrument/monochromator/wavelength_error"),
     ("det.beamx", "instrument/detector/beam_center_x"),
     ("det.beamy", "instrument/detector/beam_center_y"),
+    ("det.bstop", "DAS_logs/beamStop/size"),
     #("det.pixeloffsetx", "instrument/detector/x_offset"), # this is useless
     ("det.pixelsizex", "instrument/detector/x_pixel_size"),
     #("det.pixeloffsety", "instrument/detector/y_offset"), # this is also useless
