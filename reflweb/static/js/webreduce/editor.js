@@ -895,7 +895,7 @@ webreduce.editor = webreduce.editor || {};
                 transform = this.value;
             webreduce.editor._active_plot[axis](transform);  
           })
-          .selectAll("option").data(["linear", "log"])
+          .selectAll("option").data(["linear", "log", "ln", "pow(2)", "pow(4)"])
             .enter().append("option")
             .attr("value", function(d) {return d})
             .text(function(d) {return d})
