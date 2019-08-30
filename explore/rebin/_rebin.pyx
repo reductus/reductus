@@ -30,4 +30,3 @@ def rebin_counts_2D_wrapper(double[:] x, double[:] y, scalar[:,:] I,
                              double[:] xo, double[:] yo, scalar[:,:] Io):
     rebin_counts_2D(x.size-1, &x[0], y.size-1, &y[0], &I[0,0],
                     xo.size-1, &xo[0], yo.size-1, &yo[0], &Io[0,0])
-

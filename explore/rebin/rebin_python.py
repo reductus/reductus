@@ -152,6 +152,7 @@ def rebin_counts_2D_indexing_newer(x, y, I, xo, yo, Io):
     ixy = np.diff(yintegral, axis=1)
     #yintegral[:-1] -= yintegral[1:]
     #ixy = yintegral[:-1]
+    #print("ixy", ixy.shape)
 
     Io += ixy
 
