@@ -451,6 +451,78 @@ def calculateDQ(data):
     data.dq_para = sig_para_new
     return data
 
+def calculateMeanQ(data):
+    """ calculate the overlap of the beamstop with the pixel """
+    from scipy.special import erf
+
+    BS = data.metadata['det.bstop'] / 2.0 # diameter to radius, already in cm
+
+    DDetX = data.metadata["det.pixelsizex"]
+    DDetY = data.metadata["det.pixelsizey"]
+    apOff = data.metadata["sample.position"]
+    wavelength = data.metadata['resolution.lmda']
+    L1 = data.metadata["resolution.ap12dis"] - apOff
+    L2 = data.metadata["det.dis"] + apOff
+    LB = 20.1 + 1.61*BS # empirical formula from NCNR_Utils.ipf, line 123 in "getResolution"
+    BS_prime = BS + (BS * LB / (L2 - LB)) # adding triangular shadow from LB to L2
+
+    r0 = data.r
+    r0_mean = r0.copy()
+    # width of the resolution function, on average
+    # could be corrected for phi if taking into account non-square pixels...
+    v_d = ((DDetX + DDetY) / (2.0 * np.sqrt(np.log(256.0))))**2
+
+    # cutoff_weight ~ integral[-inf, r0-BS_prime]1/sqrt(2*pi*dq**2) * exp(-r**2 / (2*dq**2))
+    #               = 0.5 * (1.0 + erf((r0 - BS_prime)/(2.0 * dq)))
+    shadow_factor = 0.5 * (1.0 + erf((r0 - BS_prime) / np.sqrt(2.0 * v_d)))
+    shadow_factor[shadow_factor<1e-16] = 1e-16
+
+    #inside_mask = (r0 <= BS_prime)
+    #outside_mask = np.logical_not(inside_mask)
+    # inside the beamstop, the center of mass of the distribution is displaced by 
+    # the center of the cutoff tail (relative to r0) on the high side, approx. 
+    # cutoff_weighted_integral ~ integral[BS_prime - r0, inf] 1/sqrt(2*pi*dq**2) * r * exp(-r**2 / (2*dq**2))
+    #               = 1.0/sqrt(2*pi*dq**2) * 1.0/dq**2 * exp(-(BS_prime - r0)**2 / (2 * dq**2))
+    #  
+    # then new_center = r0 + cutoff_weighted_integral / cutoff_integral
+    # but the cutoff_integral = shadow_factor, so :
+    #
+    # cutoff_weighted_integral_inside = 1.0/(np.sqrt(2.0 * np.pi) * dq[inside_mask]**3) * np.exp(-(BS_prime - r0[inside_mask])**2 / (2 * dq[inside_mask]**2))
+    # cutoff_center_inside = cutoff_weighted_integral_inside / shadow_factor[inside_mask]
+    # r0_mean[inside_mask] += cutoff_center_inside
+
+    # outside the beamstop, the center of mass of the distribution is displaced by the center
+    # of what is left after subtracting the cutoff tail, but the weighted sum of 
+    # cutoff_center * cutoff_integral + remainder_center * remainder_integral == 0!
+    # (equivalent to saying cutoff_weighted_integral + remainder_weighted_integral = 0)
+    # and also we know that cutoff_integral + remainder_integral = 1 (normalized gaussian)
+    # cutoff_weighted_integral ~ integral[-inf, r0-BS_prime] 1/sqrt(2*pi*dq**2) r exp(-r**2 / (2*dq**2))
+    #               = -1.0/sqrt(2*pi*dq**2) * 1.0/dq**2 * exp(-(r0 - BS_prime)**2 / (2 * dq**2))
+    # remainder_weighted_integral = -(cutoff_weighted_integral)
+    # 
+    # remainder_center = remainder_weighted_integral / remainder_integral
+    #                  = remainder_weighted_integral / (1 - cutoff_integral)
+    #                  = -cutoff_weighted_integral / (1 - cutoff_integral)
+    # then new_center *  = r0 - cutoff_weighted_integral / shadow_factor
+    # but the cutoff_weight = shadow_factor and total_weight = 1.0, so:
+    #
+    ## cutoff_weighted_integral_outside = -1.0/(np.sqrt(2.0 * np.pi) * dq[outside_mask]**3) * np.exp(-(r0[outside_mask] - BS_prime)**2 / (2 * dq[outside_mask]**2))
+
+    # but noticing that the expression for cutoff_weighted_integral_inside is the same numerically 
+    # (swapping positions of r0 and BS_prime has no effect) then this gets easier:
+
+    cutoff_weighted_integral = np.sqrt(v_d / (2.0 * np.pi)) * np.exp(-(r0 - BS_prime)**2 / (2 * v_d))
+    r0_mean += cutoff_weighted_integral / shadow_factor
+    
+    meanTheta = np.arctan2(r0_mean, L2)/2.0 #remember to convert L2 to cm from meters
+    data.meanQ = (4*np.pi/wavelength)*np.sin(meanTheta)
+    # TODO: shadow factor is calculated, but shouldn't the normalization to solid angle
+    # include the reduction from the shadow factor?  This will greatly increase the intensity
+    # of pixels near or below the beam stop!
+    data.shadow_factor = shadow_factor
+    return data
+
+
 @nocache
 @module
 def PixelsToQ(data, beam_center=[None,None], correct_solid_angle=True):
@@ -501,6 +573,9 @@ def PixelsToQ(data, beam_center=[None,None], correct_solid_angle=True):
     res.q = q
     res.qx = qx
     res.qy = qy
+    res.X = X
+    res.Y = Y
+    res.r = r
     res.metadata['det.beamx'] = x0
     res.metadata['det.beamy'] = y0
     q0 = (4*np.pi/wavelength)
@@ -511,6 +586,9 @@ def PixelsToQ(data, beam_center=[None,None], correct_solid_angle=True):
     res.xlabel = "Qx (inv. Angstroms)"
     res.ylabel = "Qy (inv. Angstroms)"
     res.theta = theta
+
+    calculateDQ(res)
+    calculateMeanQ(res)
     return res
 
 @cache
@@ -661,13 +739,32 @@ def circular_av_new(data, q_min=None, q_max=None, q_step=None):
     I, _bins_used = np.histogram(data.q, bins=q_bins, weights=data.data.x)
     I_norm, _ = np.histogram(data.q, bins=q_bins, weights=np.ones_like(data.data.x))
     I_var, _ = np.histogram(data.q, bins=q_bins, weights=data.data.variance)
-    Q_mean, _ = np.histogram(data.q, bins=q_bins, weights=data.q)
+    #Q_ave, _ = np.histogram(data.q, bins=q_bins, weights=data.q)
+    #Q_var, _ = np.histogram(data.q, bins=q_bins, weights=data.dq_para**2)
+    Q_mean, _ = np.histogram(data.meanQ, bins=q_bins, weights=data.meanQ)
+    Q_mean_lookup = np.digitize(data.meanQ, bins=q_bins)
+    Q_mean_norm, _ = np.histogram(data.meanQ, bins=q_bins, weights=np.ones_like(data.data.x))
+    ShadowFactor, _ = np.histogram(data.meanQ, bins=q_bins, weights=data.shadow_factor)
 
     nonzero_mask = I_norm > 0
 
     I[nonzero_mask] /= I_norm[nonzero_mask]
     I_var[nonzero_mask] /= (I_norm[nonzero_mask]**2)
-    Q_mean[nonzero_mask] /= I_norm[nonzero_mask]
+    Q_mean[Q_mean_norm > 0] /= Q_mean_norm[Q_mean_norm > 0]
+    ShadowFactor[Q_mean_norm > 0] /= Q_mean_norm[Q_mean_norm > 0]
+
+    # calculate Q_var...
+    # remarkably, the variance of a sum of normalized gaussians 
+    # with variances v_i, displaced from the mean center by xc_i
+    # is the sum of (xc_i**2 + v_i).   Gaussians are weird.
+
+    # exclude Q_mean_lookups that overflow the length of the calculated Q_mean:
+    Q_var_mask = (Q_mean_lookup < len(Q_mean))
+    Q_mean_center = Q_mean[Q_mean_lookup[Q_var_mask]]
+    Q_var_contrib = (data.meanQ[Q_var_mask] - Q_mean_center)**2 + (data.dq_para[Q_var_mask])**2
+    Q_var, _ = np.histogram(data.meanQ[Q_var_mask], bins=q_bins, weights=Q_var_contrib)
+    Q_var[Q_mean_norm > 0] /= Q_mean_norm[Q_mean_norm > 0]
+
 
     nominal_output = Sans1dData(Q, I, dx=dx, dv=I_var, xlabel="Q", vlabel="I",
                         xunits="inv. A", vunits="neutrons")
@@ -679,7 +776,7 @@ def circular_av_new(data, q_min=None, q_max=None, q_step=None):
     mean_output.metadata = deepcopy(data.metadata)
     mean_output.metadata['extra_label'] = "_circ"
 
-    canonical_output = SansIQData(I, np.sqrt(I_var), Q, np.zeros_like(Q), Q_mean, np.zeros_like(Q), metadata=deepcopy(data.metadata))
+    canonical_output = SansIQData(I, np.sqrt(I_var), Q, np.sqrt(Q_var), Q_mean, ShadowFactor, metadata=deepcopy(data.metadata))
     
     return nominal_output, mean_output, canonical_output
 
