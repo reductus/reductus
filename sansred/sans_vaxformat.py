@@ -31,6 +31,17 @@ else:
             ieeeasstring = vaxasstring[2]+vaxasstring[3]+vaxasstring[0]+chr(ord(vaxasstring[1])-1)
             return struct.unpack('<f',ieeeasstring)[0]
 
+def readMask(inputfile):
+    if hasattr(inputfile, 'read'):
+        data = inputfile.read()
+    else:
+        data = open(inputfile, 'rb').read()
+
+    dataformatstring = '<16384B'
+    output = numpy.array(struct.unpack(dataformatstring, data[4:16388]), dtype="float")
+    output = numpy.flipud(output.reshape(128,128))
+    return output
+
 def readNCNRSensitivity(inputfile):
     
     if hasattr(inputfile, 'read'):
