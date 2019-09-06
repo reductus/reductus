@@ -523,6 +523,98 @@ def calculateMeanQ(data):
     return data
 
 
+def calculateDQ_IGOR(data, inQ, del_r=None):
+    """
+    Add the dQ column to the data, based on slit apertures and gravity
+    r_dist is the real-space distance from ctr of detector to QxQy pixel location
+
+    From `NCNR_Utils.ipf` (Steve R. Kline) in which the math is in turn from:
+
+    | D.F.R Mildner, J.G. Barker & S.R. Kline J. Appl. Cryst. (2011). 44, 1127-1129.
+    | *The effect of gravity on the resolution of small-angle neutron diffraction peaks*
+    | [ doi:10.1107/S0021889811033322 ]
+
+    **Inputs**
+
+    data (sans2d): data in
+
+    del_r (float): width of circular slice in realspace (cm)
+
+    **Returns**
+
+    output (sans2d): data in with dQ column filled in
+
+    2017-06-16  Brian Maranville
+    """
+    from scipy.special import gammaln, gammainc, erf
+
+    G = 981.  #!    ACCELERATION OF GRAVITY, CM/SEC^2
+    vz_1 = 3.956e5 # velocity [cm/s] of 1 A neutron
+    # the detector pixel is square, so correct for phi
+    DDet = data.metadata["det.pixelsizex"]
+    if del_r is None:
+        del_r = DDet
+
+    apOff = data.metadata["sample.position"]
+    S1 = data.metadata["resolution.ap1"]
+    S2 = data.metadata["resolution.ap2"]
+    L1 = data.metadata["resolution.ap12dis"] - apOff
+    L2 = data.metadata["det.dis"] + apOff
+    LP = 1.0/( 1.0/L1 + 1.0/L2)
+    
+    BS = data.metadata['det.bstop'] / 2.0 # diameter to radius, already in cm
+    LB = 20.1 + 1.61*BS # empirical formula from NCNR_Utils.ipf, line 123 in "getResolution"
+    BS_prime = BS + (BS * LB / (L2 - LB)) # adding triangular shadow from LB to L2
+
+    lambda0 = data.metadata["resolution.lmda"]    #  15
+    labmdaWidth = data.metadata["resolution.dlmda"]    # 0.236
+
+    # these are defined in the IGOR code, but never get used therein...
+    ##a2 = S1*L2/L1 + S2*(L1+L2)/L1
+    ##q_small = 2.0*np.pi*(BS_prime-a2)*(1.0-lambdaWidth)/(lambda*L2)
+    LP = 1.0/( 1.0/L1 + 1.0/L2)
+    v_lambda = labmdaWidth**2/6.0
+
+    if 'LENS' in data.metadata['run.guide'].upper():
+        # NOTE: this might need adjustment.  Ticket #677 filed in trac to change to:
+        # v_b = 0.25*(S1*L2/L1)**2 +0.25*(2/3)*(labmdaWidth)**2*(S2*L2/LP)**2	
+        v_b = 0.25*(S1*L2/L1)**2 +0.25*(2/3)*(labmdaWidth/lambda0)**2*(S2*L2/LP)**2		# correction to 2nd term
+    else:
+        v_b = 0.25*(S1*L2/L1)**2 +0.25*(S2*L2/LP)**2		# original form
+
+    v_d = (DDet/2.3548)**2 + del_r**2/12.0	# the 2.3548 is a conversion from FWHM->Gauss, see http://mathworld.wolfram.com/GaussianFunction.html
+    vz = vz_1 / lambda0
+    yg = 0.5*G*L2*(L1+L2)/vz**2
+    v_g = 2.0*(2.0*yg**2*v_lambda)					# factor of 2 correction, B. Hammouda, 2007
+
+    r0 = L2*np.tan(2.0*np.arcsin(lambda0*inQ/(4.0*np.pi) ))
+    delta = 0.5*(BS_prime - r0)**2/v_d
+
+    if (r0 < BS_prime):
+        inc_gamma=np.exp(gammaln(1.5))*(1-gammainc(1.5,delta))
+    else:
+        inc_gamma=np.exp(gammaln(1.5))*(1+gammainc(1.5,delta))
+
+    fSubS = 0.5*(1.0+erf( (r0-BS_prime)/np.sqrt(2.0*v_d) ) )
+    if (fSubS <= 0.0):
+        fSubS = 1.e-10
+
+    fr = 1.0 + np.sqrt(v_d)*np.exp(-1.0*delta) /(r0*fSubS*np.sqrt(2.0*np.pi))
+    fv = inc_gamma/(fSubS*np.sqrt(np.pi)) - r0**2*(fr-1.0)**2/v_d
+
+    rmd = fr*r0
+    v_r1 = v_b + fv*v_d +v_g
+
+    rm = rmd + 0.5*v_r1/rmd
+    v_r = v_r1 - 0.5*(v_r1/rmd)^2
+    if (v_r < 0.0):
+        v_r = 0.0
+    
+    QBar = (4.0*np.pi/lambda0)*np.sin(0.5*np.arctan(rm/L2))
+    SigmaQ = QBar*np.sqrt(v_r/rmd**2 + v_lambda)
+
+    return QBar, SigmaQ
+
 @nocache
 @module
 def PixelsToQ(data, beam_center=[None,None], correct_solid_angle=True):
