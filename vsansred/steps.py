@@ -541,6 +541,8 @@ def calculate_Q(realspace_data):
         #print(r.detectors)
         for sn in short_detectors:
             detname = 'detector_{short_name}'.format(short_name=sn)
+            if not detname in rd.detectors:
+                continue
             det = deepcopy(rd.detectors[detname])
             X = det['X']
             Y = det['Y']
@@ -548,12 +550,15 @@ def calculate_Q(realspace_data):
             r = np.sqrt(X**2+Y**2)
             theta = np.arctan2(r, z)/2 #remember to convert L2 to cm from meters
             q = (4*np.pi/wavelength)*np.sin(theta)
-            alpha = np.arctan2(Y, X)
-            qx = q*np.cos(alpha)
-            qy = q*np.sin(alpha)
-
+            phi = np.arctan2(Y, X)
+            # need to add qz... and qx and qy are really e.g. q*cos(theta)*sin(alpha)...
+            # qz = q * sin(theta)
+            qx = q * np.cos(theta) * np.cos(phi)
+            qy = q * np.cos(theta) * np.sin(phi)
+            qz = q * np.sin(theta)
             det['Qx'] = qx
             det['Qy'] = qy
+            det['Qz'] = qz
             det['Q'] = q
             new_detectors[detname] = det
 
