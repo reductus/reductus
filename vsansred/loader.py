@@ -15,7 +15,7 @@ from dataflow.lib import hzf_readonly_stripped as hzf
 from dataflow.lib import unit
 from dataflow.lib.h5_open import h5_open_zip
 
-from .vsansdata import VSansData, RawVSANSData
+from .vsansdata import VSansData, RawVSANSData, _s, _b
 
 metadata_lookup = OrderedDict([
     #"det.dis", "DAS_logs/detectorPosition/softPosition",
@@ -110,11 +110,16 @@ unit_specifiers = {
 def process_sourceAperture(field, units):
     import numpy as np
     def handler(v):
-        return np.float(v.split()[0])
+        if _s(v) == 'OUT':
+            return v
+        else:
+            return np.float(v.split()[0])
     handle_values = np.vectorize(handler)
     value = handle_values(field.value)
     units_from = ""
     v0 = field.value[0].split()
+    if _s(value[0]) == 'OUT':
+        return value
     if len(v0) > 1:
         units_from = v0[1]
     if type(units_from) == bytes:
