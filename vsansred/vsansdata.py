@@ -162,6 +162,7 @@ class VSansData(object):
         metadata.update(pythonize(self.metadata))
         return metadata
 
+
 class VSansDataRealSpace(VSansData):
     def __init__(self, metadata=None, detectors=None):
         self.xaxisname = 'X'
@@ -179,6 +180,38 @@ class VSansDataQSpace(VSansData):
         self.xaxisname = 'Qx'
         self.yaxisname = 'Qy'
         VSansData.__init__(self, metadata=metadata, detectors=detectors)
+
+    def export(self):
+        # export to 6-column format compatible with SASVIEW
+        # Data columns are Qx - Qy - I(Qx,Qy) - err(I) - Qz - SigmaQ_parall - SigmaQ_perp - fSubS(beam stop shadow)
+        column_names = ["Qx", "Qy", "I", "dI", "Qz", "SigmaQ_para", "SigmaQ_perp", "ShadowFactor", "detector_id"]
+        labels = ["Qx (1/A)", "Qy (1/A)", "I(Q) (1/cm)", "std. dev. I(Q) (1/cm)", "sigmaQ_para", "sigmaQ_perp", "ShadowFactor", "detector_id"]
+
+        fid = BytesIO()
+        fid.write(_b("# %s\n" % json.dumps(_toDictItem(self.metadata, convert_bytes=True)).strip("{}")))
+        fid.write(_b('# detector_id: {"0":"B","1":"MB","2":"MT","3":"ML","4":"MR","5":"FT","6":"FB","7":"FL","8":FR"}\n'))
+        fid.write(_b("# %s\n" % json.dumps({"columns": labels}).strip("{}")))
+        for d_id, sn in enumerate(short_detectors):
+            detname = 'detector_{short_name}'.format(short_name=sn)
+            det = self.detectors.get(detname, None)
+            if det is None:
+                continue
+            column_length = det['Qx'].size
+            column_values = [
+                det['Qx'].ravel('C'),
+                det['Qx'].ravel('C'),
+                (det['data'] / det['norm']).x.ravel('C'),
+                np.sqrt((det['data'] / det['norm']).variance).ravel('C'),
+                np.zeros(column_length, dtype='float'), # not yet calculated
+                np.zeros(column_length, dtype='float'), # not yet calculated
+                np.zeros(column_length, dtype='float'), # not yet calculated
+                np.ones(column_length, dtype='float') * d_id
+            ]
+            np.savetxt(fid, np.vstack(column_values).T, fmt="%.10e")
+        fid.seek(0)
+        name = _s(self.metadata["run.filename"])
+        entry = _s(self.metadata.get("entry", "default_entry"))
+        return {"name": name, "entry": entry, "export_string": fid.read(), "file_suffix": ".vsans2d.dat"}        
 
 class VSans1dData(object):
     properties = ['x', 'v', 'dx', 'dv', 'xlabel', 'vlabel', 'xunits', 'vunits', 'xscale', 'vscale', 'metadata', 'fit_function']
