@@ -381,7 +381,7 @@ def sort_sample(raw_data):
 
 @nocache
 @module
-def calculate_XY(raw_data):
+def calculate_XY(raw_data, normalize=True, mon0=1.0):
     """
     from embedded detector metadata, calculates the x,y,z values for each detector.
 
@@ -389,11 +389,16 @@ def calculate_XY(raw_data):
 
     raw_data (raw[]): raw datafiles
 
+    normalize (bool): Normalize to monitor in addition to solid angle
+
+    mon0 (float): number of monitor counts in denominator (results in counts per mon0 monitor)
+
     **Returns**
 
     realspace_data (realspace[]): datafiles with realspace information
 
-    2018-04-28 Brian Maranville
+    | 2018-04-28 Brian Maranville
+    | 2019-09-19 Added monitor normalization
     """
     from .vsansdata import VSansDataRealSpace, short_detectors
     from collections import OrderedDict
@@ -401,6 +406,7 @@ def calculate_XY(raw_data):
     output = []
     for r in raw_data:
         metadata = deepcopy(r.metadata)
+        monitor_counts = metadata['run.moncnt']
         new_detectors = OrderedDict()
         for sn in short_detectors:
             detname = 'detector_{short_name}'.format(short_name=sn)
@@ -458,7 +464,6 @@ def calculate_XY(raw_data):
                 #solid_angle_correction = z*z / 1e6
                 data = det['data']['value']
                 udata = Uncertainty(data, data)
-                
                 position_key = sn[-1]
                 if position_key == 'T':
                     # FROM IGOR: (q,p = 0 for lower-left pixel) 
@@ -508,11 +513,35 @@ def calculate_XY(raw_data):
             det['dY'] = y_pixel_size
             det['Z'] = z
             det['norm'] = x_pixel_size * y_pixel_size / z**2
+            if normalize:
+                det['norm'] *= monitor_counts/mon0
 
             new_detectors[detname] = det
         output.append(VSansDataRealSpace(metadata=metadata, detectors=new_detectors))
 
     return output
+
+@module
+def monitor_normalize(qdata, mon0=1e8):
+    """"
+    Given a SansData object, normalize the data to the provided monitor
+
+    **Inputs**
+
+    qdata (qspace): data in
+
+    mon0 (float): provided monitor
+
+    **Returns**
+
+    output (qspace): corrected for dead time
+
+    2019-09-19  Brian Maranville
+    """
+    monitor = qdata.metadata['run.moncnt']
+    for d in qdata.detectors:
+        d.res.data *= mon0/monitor
+    return res
 
 @nocache
 @module   
