@@ -185,7 +185,7 @@ class VSansDataQSpace(VSansData):
         # export to 6-column format compatible with SASVIEW
         # Data columns are Qx - Qy - I(Qx,Qy) - err(I) - Qz - SigmaQ_parall - SigmaQ_perp - fSubS(beam stop shadow)
         column_names = ["Qx", "Qy", "I", "dI", "Qz", "SigmaQ_para", "SigmaQ_perp", "ShadowFactor", "detector_id"]
-        labels = ["Qx (1/A)", "Qy (1/A)", "I(Q) (1/cm)", "std. dev. I(Q) (1/cm)", "sigmaQ_para", "sigmaQ_perp", "ShadowFactor", "detector_id"]
+        labels = ["Qx (1/A)", "Qy (1/A)", "I(Q) (1/cm)", "std. dev. I(Q) (1/cm)", "Qz (1/A)", "sigmaQ_para", "sigmaQ_perp", "ShadowFactor", "detector_id"]
 
         fid = BytesIO()
         fid.write(_b("# %s\n" % json.dumps(_toDictItem(self.metadata, convert_bytes=True)).strip("{}")))
@@ -202,6 +202,7 @@ class VSansDataQSpace(VSansData):
                 det['Qx'].ravel('C'),
                 (det['data'] / det['norm']).x.ravel('C'),
                 np.sqrt((det['data'] / det['norm']).variance).ravel('C'),
+                det['Qz'].ravel('C'),
                 np.zeros(column_length, dtype='float'), # not yet calculated
                 np.zeros(column_length, dtype='float'), # not yet calculated
                 np.zeros(column_length, dtype='float'), # not yet calculated
