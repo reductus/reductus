@@ -199,7 +199,7 @@ class VSansDataQSpace(VSansData):
             column_length = det['Qx'].size
             column_values = [
                 det['Qx'].ravel('C'),
-                det['Qx'].ravel('C'),
+                det['Qy'].ravel('C'),
                 (det['data'] / det['norm']).x.ravel('C'),
                 np.sqrt((det['data'] / det['norm']).variance).ravel('C'),
                 det['Qz'].ravel('C'),
