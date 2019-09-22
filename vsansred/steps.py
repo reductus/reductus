@@ -102,6 +102,39 @@ def LoadVSANS(filelist=None, check_timestamps=True):
 
 @cache
 @module
+def addSimple(data):
+    """
+    Naive addition of counts and monitor from different datasets,
+    assuming all datasets were taken under identical conditions
+    (except for count time)
+
+    Just adds together count time, counts and monitor.
+
+    Use metadata from first dataset for output.
+
+    **Inputs**
+
+    data (realspace[]): measurements to be added together
+
+    **Returns**
+
+    sum (realspace): sum of inputs
+
+    2019-09-22  Brian Maranville
+    """
+
+    output = data[0].copy()
+    for d in data[1:]:
+        for detname in output.detectors:
+            if detname in d.detectors:
+                output.detectors[detname]['data'] += d.detectors[detname]['data']
+        output.metadata['run.moncnt'] += d.metadata['run.moncnt']
+        output.metadata['run.rtime'] += d.metadata['run.rtime']
+        #output.metadata['run.detcnt'] += d.metadata['run.detcnt']
+    return output
+
+@cache
+@module
 def LoadVSANSHe3(filelist=None, check_timestamps=True):
     """
     loads a data file into a VSansData obj and returns that.
