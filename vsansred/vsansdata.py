@@ -108,7 +108,7 @@ class VSansData(object):
             det = self.detectors.get(detname, None)
             if det is None:
                 continue
-            corrected = det['data'].x / det['norm']
+            corrected = det['data'].x 
             dimX, dimY = corrected.shape
             xaxis = det[self.xaxisname]
             yaxis = det[self.yaxisname]
@@ -200,8 +200,8 @@ class VSansDataQSpace(VSansData):
             column_values = [
                 det['Qx'].ravel('C'),
                 det['Qy'].ravel('C'),
-                (det['data'] / det['norm']).x.ravel('C'),
-                np.sqrt((det['data'] / det['norm']).variance).ravel('C'),
+                (det['data']).x.ravel('C'),
+                np.sqrt((det['data']).variance).ravel('C'),
                 det['Qz'].ravel('C'),
                 np.zeros(column_length, dtype='float'), # not yet calculated
                 np.zeros(column_length, dtype='float'), # not yet calculated

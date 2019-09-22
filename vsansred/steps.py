@@ -414,7 +414,7 @@ def sort_sample(raw_data):
 
 @nocache
 @module
-def calculate_XY(raw_data, normalize=True, mon0=1.0):
+def calculate_XY(raw_data, solid_angle_correction=True):
     """
     from embedded detector metadata, calculates the x,y,z values for each detector.
 
@@ -422,9 +422,7 @@ def calculate_XY(raw_data, normalize=True, mon0=1.0):
 
     raw_data (raw[]): raw datafiles
 
-    normalize (bool): Normalize to monitor in addition to solid angle
-
-    mon0 (float): number of monitor counts in denominator (results in counts per mon0 monitor)
+    solid_angle_correction (bool): Divide by solid angle
 
     **Returns**
 
@@ -432,6 +430,7 @@ def calculate_XY(raw_data, normalize=True, mon0=1.0):
 
     | 2018-04-28 Brian Maranville
     | 2019-09-19 Added monitor normalization
+    | 2019-09-22 Separated monitor and dOmega norm
     """
     from .vsansdata import VSansDataRealSpace, short_detectors
     from collections import OrderedDict
@@ -545,9 +544,9 @@ def calculate_XY(raw_data, normalize=True, mon0=1.0):
             det['Y'] = Y
             det['dY'] = y_pixel_size
             det['Z'] = z
-            det['norm'] = x_pixel_size * y_pixel_size / z**2
-            if normalize:
-                det['norm'] *= monitor_counts/mon0
+            det['dOmega'] = x_pixel_size * y_pixel_size / z**2
+            if solid_angle_correction:
+                det['data'] /= det['dOmega']
 
             new_detectors[detname] = det
         output.append(VSansDataRealSpace(metadata=metadata, detectors=new_detectors))
@@ -567,14 +566,15 @@ def monitor_normalize(qdata, mon0=1e8):
 
     **Returns**
 
-    output (qspace): corrected for dead time
-
+    output (qspace): corrected for monitor counts
     2019-09-19  Brian Maranville
     """
-    monitor = qdata.metadata['run.moncnt']
-    for d in qdata.detectors:
-        d.res.data *= mon0/monitor
-    return res
+    output = qdata.copy()
+    monitor = output.metadata['run.moncnt']
+    umon = Uncertainty(monitor, monitor)
+    for d in output.detectors:
+        output.detectors[d]['data'] *= mon0/umon
+    return output
 
 @nocache
 @module   
