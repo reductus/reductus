@@ -220,10 +220,14 @@ class Module(object):
     def cached(self):
         return not hasattr(self.action, 'cached') or self.action.cached
 
+    @property
+    def visible(self):
+        return not hasattr(self.action, 'visible') or self.action.visible
+
     def __getstate__(self):
         # Don't pickle the function reference
         keys = ['version', 'id', 'name', 'description', 'icon',
-                'fields', 'inputs', 'outputs', 'action_id']
+                'fields', 'inputs', 'outputs', 'action_id', 'visible']
         return dict([(k, getattr(self, k)) for k in keys])
 
     def __setstate__(self, state):
