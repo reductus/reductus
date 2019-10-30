@@ -32,7 +32,7 @@ webreduce.instruments['ncnr.vsans'] = webreduce.instruments['ncnr.vsans'] || {};
   }
   
   var NEXUS_REGEXP = /\.nxs\.[^\.\/]+(\.zip)?$/
-  var DIV_REGEXP = /\.DIV\.h5$/
+  var DIV_REGEXP = /DIV\.h5$/
 
   instrument.files_filter = function(x) {
     return (
@@ -46,16 +46,13 @@ webreduce.instruments['ncnr.vsans'] = webreduce.instruments['ncnr.vsans'] || {};
   instrument.load_file = load_vsans;
   instrument.default_categories = [
     [["analysis.filepurpose"]],
-    [["analysis.groupid"]],
-    [
-      [
-        "analysis.intent"
-      ],
+    [["sample.description"]],
+    [ 
       [
         "run.experimentScanID"
       ],
-      [
-        "sample.labl"
+      [   
+        "analysis.intent"
       ]
     ]
   ];
