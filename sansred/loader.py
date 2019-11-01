@@ -124,6 +124,7 @@ def readSANSNexuz(input_file, file_obj=None, metadata_lookup=metadata_lookup):
             detector_keys = ['detector']
             detectors = dict([(k, load_detector(entry['instrument'][k])) for k in detector_keys])
             metadata['entry'] = entryname
+            # hack to remove configuration from sample label (it is still stored in run.configuration)
             metadata['sample.description'] = _s(metadata["sample.labl"]).replace(_s(metadata["run.configuration"]), "")
             dataset = RawSANSData(metadata=metadata, detectors=detectors)
             datasets.append(dataset)            
