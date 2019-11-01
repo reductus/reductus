@@ -155,7 +155,39 @@ def LoadVSANS(filelist=None, check_timestamps=True):
         terminal_id = "output"
         retval = process_template(template, config, target=(nodenum, terminal_id))
         output.extend(retval.values)
+        
+    return output
 
+
+def addSimple(data):
+    """
+    Naive addition of counts and monitor from different datasets,
+    assuming all datasets were taken under identical conditions
+    (except for count time)
+
+    Just adds together count time, counts and monitor.
+
+    Use metadata from first dataset for output.
+
+    **Inputs**
+
+    data (realspace[]): measurements to be added together
+
+    **Returns**
+
+    sum (realspace): sum of inputs
+
+    2019-09-22  Brian Maranville
+    """
+
+    output = data[0].copy()
+    for d in data[1:]:
+        for detname in output.detectors:
+            if detname in d.detectors:
+                output.detectors[detname]['data'] += d.detectors[detname]['data']
+        output.metadata['run.moncnt'] += d.metadata['run.moncnt']
+        output.metadata['run.rtime'] += d.metadata['run.rtime']
+        #output.metadata['run.detcnt'] += d.metadata['run.detcnt']
     return output
 
 @cache
@@ -511,7 +543,7 @@ def sort_sample(raw_data):
 
 @nocache
 @module
-def calculate_XY(raw_data, normalize=True, mon0=1.0):
+def calculate_XY(raw_data, solid_angle_correction=True):
     """
     from embedded detector metadata, calculates the x,y,z values for each detector.
 
@@ -519,9 +551,7 @@ def calculate_XY(raw_data, normalize=True, mon0=1.0):
 
     raw_data (raw[]): raw datafiles
 
-    normalize (bool): Normalize to monitor in addition to solid angle
-
-    mon0 (float): number of monitor counts in denominator (results in counts per mon0 monitor)
+    solid_angle_correction (bool): Divide by solid angle
 
     **Returns**
 
@@ -529,6 +559,7 @@ def calculate_XY(raw_data, normalize=True, mon0=1.0):
 
     | 2018-04-28 Brian Maranville
     | 2019-09-19 Added monitor normalization
+    | 2019-09-22 Separated monitor and dOmega norm
     """
     from .vsansdata import VSansDataRealSpace, short_detectors
     from collections import OrderedDict
@@ -650,9 +681,9 @@ def calculate_XY(raw_data, normalize=True, mon0=1.0):
             det['Y'] = Y
             det['dY'] = y_pixel_size
             det['Z'] = z
-            det['norm'] = x_pixel_size * y_pixel_size / z**2
-            if normalize:
-                det['norm'] *= monitor_counts/mon0
+            det['dOmega'] = x_pixel_size * y_pixel_size / z**2
+            if solid_angle_correction:
+                det['data'] /= det['dOmega']
 
             new_detectors[detname] = det
         output.append(VSansDataRealSpace(metadata=metadata, detectors=new_detectors))
@@ -729,14 +760,15 @@ def monitor_normalize(qdata, mon0=1e8):
 
     **Returns**
 
-    output (qspace): corrected for dead time
-
+    output (qspace): corrected for monitor counts
     2019-09-19  Brian Maranville
     """
-    monitor = qdata.metadata['run.moncnt']
-    for d in qdata.detectors:
-        d.res.data *= mon0/monitor
-    return qdata
+    output = qdata.copy()
+    monitor = output.metadata['run.moncnt']
+    umon = Uncertainty(monitor, monitor)
+    for d in output.detectors:
+        output.detectors[d]['data'] *= mon0/umon
+    return output
 
 @cache
 @module
@@ -772,6 +804,7 @@ def correct_detector_sensitivity(data, sensitivity, exclude_back_detector=True):
             det['data'] /= div_det['data']
 
     return new_data
+
 
 @nocache
 @module   
