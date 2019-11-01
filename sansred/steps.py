@@ -606,7 +606,7 @@ def calculateDQ_IGOR(data, inQ, del_r=None):
     v_r1 = v_b + fv*v_d +v_g
 
     rm = rmd + 0.5*v_r1/rmd
-    v_r = v_r1 - 0.5*(v_r1/rmd)^2
+    v_r = v_r1 - 0.5*(v_r1/rmd)**2
     if (v_r < 0.0):
         v_r = 0.0
     
