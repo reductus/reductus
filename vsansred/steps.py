@@ -68,9 +68,17 @@ def module(action):
     # This is a decorator, so return the original function
     return action
 
+def hidden(action):
+    """
+    Decorator which indicates method is not to be shown in GUI
+    """
+    action.visible = False
+    return action
+
 @cache
 @module
-def LoadVSANS(filelist=None, check_timestamps=True):
+@hidden
+def _LoadVSANS(filelist=None, check_timestamps=True):
     """
     loads a data file into a VSansData obj and returns that.
 
@@ -96,9 +104,59 @@ def LoadVSANS(filelist=None, check_timestamps=True):
         name = basename(path)
         fid = BytesIO(url_get(fileinfo, mtime_check=check_timestamps))
         entries = readVSANSNexuz(name, fid)
+        if fileinfo['path'].endswith("DIV.h5"):
+            print('div file...')
+            for entry in entries:
+                entry.metadata['analysis.filepurpose'] = "Sensitivity"
+                entry.metadata['analysis.intent'] = "DIV"
+                entry.metadata['sample.description'] = entry.metadata['run.filename']
         data.extend(entries)
 
     return data
+
+@cache
+@module
+def LoadVSANS(filelist=None, check_timestamps=True):
+    """
+    loads a data file into a VSansData obj and returns that. (uses cached values)
+
+    **Inputs**
+
+    filelist (fileinfo[]): Files to open.
+    
+    check_timestamps (bool): verify that timestamps on file match request
+
+    **Returns**
+
+    output (raw[]): all the entries loaded.
+
+    2018-10-30 Brian Maranville
+    """
+
+    from dataflow.calc import process_template
+    from dataflow.core import Template
+
+    template_def = {
+        "name": "loader_template",
+        "description": "VSANS remote loader",
+        "modules": [
+        {"module": "ncnr.vsans._LoadVSANS", "version": "0.1", "config": {}}
+        ],
+        "wires": [],
+        "instrument": "ncnr.vsans",
+        "version": "0.0"
+    }
+
+    template = Template(**template_def)
+    output = []
+    for fi in filelist:
+        config = {"0": {"filelist": [fi]}}
+        nodenum = 0
+        terminal_id = "output"
+        retval = process_template(template, config, target=(nodenum, terminal_id))
+        output.extend(retval.values)
+
+    return output
 
 @cache
 @module
@@ -131,6 +189,7 @@ def LoadVSANSHe3(filelist=None, check_timestamps=True):
         data.extend(entries)
 
     return data
+
 
 @cache
 @module
@@ -168,13 +227,84 @@ def LoadVSANSHe3Parallel(filelist=None, check_timestamps=True):
     template = Template(**template_def)
     output = []
     for fi in filelist:
-        config = {"0": {"filelist": [{"path": fi["path"], "source": fi["source"], "mtime": fi["mtime"]}]}}
+        #config = {"0": {"filelist": [{"path": fi["path"], "source": fi["source"], "mtime": fi["mtime"]}]}}
+        config = {"0": {"filelist": [fi]}}
         nodenum = 0
         terminal_id = "output"
         retval = process_template(template, config, target=(nodenum, terminal_id))
         output.extend(retval.values)
 
     return output
+
+@cache
+@module
+def LoadVSANSDIV(filelist=None, check_timestamps=True):
+    """
+    loads a DIV file into a VSansData obj and returns that.
+
+    **Inputs**
+
+    filelist (fileinfo[]): Files to open.
+    
+    check_timestamps (bool): verify that timestamps on file match request
+
+    **Returns**
+
+    output (realspace[]): all the entries loaded.
+
+    2019-10-30 Brian Maranville
+    """
+    from dataflow.fetch import url_get
+    from .loader import readVSANSNexuz
+    
+
+    if filelist is None:
+        filelist = []
+
+    data = []
+    for fileinfo in filelist:
+        path, mtime, entries = fileinfo['path'], fileinfo.get('mtime', None), fileinfo.get('entries', None)
+        name = basename(path)
+        fid = BytesIO(url_get(fileinfo, mtime_check=check_timestamps))
+        entries = readVSANSNexuz(name, fid) # metadata_lookup=div_metadata_lookup)
+        for entry in entries:
+            div_entries = _loadDivData(entry)
+            data.extend(div_entries)
+
+    return data
+
+def _loadDivData(entry):
+    from collections import OrderedDict
+    from .vsansdata import VSansDataRealSpace, short_detectors
+
+    div_entries = []
+
+    for sn in short_detectors:
+        new_detectors = OrderedDict()
+        new_metadata = deepcopy(entry.metadata)
+        detname = 'detector_{short_name}'.format(short_name=sn)
+        if not detname in entry.detectors:
+            continue
+        det = deepcopy(entry.detectors[detname])
+
+        data = det['data']['value']
+        if 'linear_data_error' in det and 'value' in det['linear_data_error']:
+            data_variance = np.sqrt(det['linear_data_error']['value'])
+        else:
+            data_variance = data
+        udata = Uncertainty(data, data_variance)
+        det['data'] = udata
+        det['norm'] = 1.0
+        xDim, yDim = data.shape[:2]
+        det['X'] = np.arange(xDim)
+        det['Y'] = np.arange(yDim)
+        det['dX'] = det['dY'] = 1
+
+        new_metadata['sample.labl'] = detname
+        new_detectors[detname] = det
+        div_entries.append(VSansDataRealSpace(metadata=new_metadata, detectors=new_detectors))
+    
+    return div_entries
 
 @cache
 @module
@@ -440,7 +570,11 @@ def calculate_XY(raw_data, normalize=True, mon0=1.0):
                 realDistY =  0.5 * y_pixel_size
 
                 data = det['data']['value']
-                udata = Uncertainty(data, data)
+                if 'linear_data_error' in det and 'value' in det['linear_data_error']:
+                    data_variance = np.sqrt(det['linear_data_error']['value'])
+                else:
+                    data_variance = data
+                udata = Uncertainty(data, data_variance)
 
             else:
                 
@@ -463,7 +597,11 @@ def calculate_XY(raw_data, normalize=True, mon0=1.0):
 
                 #solid_angle_correction = z*z / 1e6
                 data = det['data']['value']
-                udata = Uncertainty(data, data)
+                if 'linear_data_error' in det and 'value' in det['linear_data_error']:
+                    data_variance = np.sqrt(det['linear_data_error']['value'])
+                else:
+                    data_variance = data
+                udata = Uncertainty(data, data_variance)
                 position_key = sn[-1]
                 if position_key == 'T':
                     # FROM IGOR: (q,p = 0 for lower-left pixel) 
@@ -521,6 +659,63 @@ def calculate_XY(raw_data, normalize=True, mon0=1.0):
 
     return output
 
+def oversample_XY(realspace_data, oversampling=3, exclude_back_detector=True):
+    """
+    Split each pixel into subpixels in realspace
+
+    **Inputs**
+
+    realspace_data (realspace): data in XY coordinates
+
+    oversampling (int): how many subpixels to create along x and y 
+      (e.g. oversampling=3 results in 9 subpixels per input pixel)
+
+    exclude_back_detector {exclude back detector} (bool): Skip oversampling for the back detector when true
+
+    **Returns**
+
+    oversampled (realspace): datasets with oversampled pixels
+
+    | 2019-10-29 Brian Maranville
+    """
+    from .vsansdata import short_detectors
+    rd = realspace_data.copy()
+
+    for sn in short_detectors:
+        detname = 'detector_{short_name}'.format(short_name=sn)
+        if detname == 'B' and exclude_back_detector:
+            continue
+        if not detname in rd.detectors:
+            continue
+        det = rd.detectors[detname]
+        
+        X = det['X']
+        Y = det['Y']
+        dX = det['dX']
+        dY = det['dY']
+        x_min = X.min() - dX/2.0
+        y_min = Y.min() - dY/2.0
+
+        data = det['data']
+        dimX, dimY = data.shape
+        dimX *= oversampling
+        dimY *= oversampling
+        dX /= oversampling
+        dY /= oversampling
+        X,Y = np.indices((dimX, dimY))
+        X = X * dX + x_min + dX/2.0
+        Y = Y * dY + y_min + dY/2.0
+
+        det['data'] = np.repeat(np.repeat(data, oversampling, 0), oversampling, 1) / oversampling**2
+        det['X'] = X
+        det['dX'] = dX
+        det['Y'] = Y
+        det['dY'] = dY
+        det['norm'] /= oversampling**2
+        det['oversampling'] = det.get('oversampling', 1.0) * oversampling
+
+    return rd
+
 @module
 def monitor_normalize(qdata, mon0=1e8):
     """"
@@ -541,7 +736,42 @@ def monitor_normalize(qdata, mon0=1e8):
     monitor = qdata.metadata['run.moncnt']
     for d in qdata.detectors:
         d.res.data *= mon0/monitor
-    return res
+    return qdata
+
+@cache
+@module
+def correct_detector_sensitivity(data, sensitivity, exclude_back_detector=True):
+    """
+    Divide by detector sensitivity
+
+     **Inputs**
+
+    data (realspace): datafile in realspace X,Y coordinates
+
+    sensitivity (realspace): DIV file
+
+    exclude_back_detector {exclude back detector} (bool): Skip correcting the back detector when true 
+
+    **Returns**
+
+    div_corrected (realspace): datafiles where output is divided by sensitivity
+
+    2019-10-30 Brian Maranville
+    """
+    from .vsansdata import VSansDataQSpace, short_detectors
+    from collections import OrderedDict
+
+    
+    new_data = data.copy()
+    for detname in data.detectors:
+        det = new_data.detectors[detname]
+        div_det = sensitivity.detectors.get(detname, None)
+        if detname.endswith("_B") and exclude_back_detector:
+            continue
+        if div_det is not None:
+            det['data'] /= div_det['data']
+
+    return new_data
 
 @nocache
 @module   
@@ -595,6 +825,86 @@ def calculate_Q(realspace_data):
 
     return output
 
+
+@nocache
+@module
+def circular_av_new(qspace_data, q_min=None, q_max=None, q_step=None):
+    """
+    Calculates I vs Q from qpace coordinate data
+     **Inputs**
+
+    qspace_data (qspace): datafiles in qspace X,Y coordinates
+
+    q_min (float): minimum Q value for binning (defaults to q_step)
+
+    q_max (float): maxiumum Q value for binning (defaults to max of q values in data)
+
+    q_step (float): step size for Q bins (defaults to minimum qx step)
+
+    **Returns**
+
+    I_Q (v1d[]): VSANS 1d data
+
+    | 2019-10-29 Brian Maranville
+    """
+    from .vsansdata import short_detectors, VSans1dData
+
+    output = []
+    for sn in short_detectors:
+        detname = 'detector_{short_name}'.format(short_name=sn)
+        if not detname in qspace_data.detectors:
+            continue
+        det = deepcopy(qspace_data.detectors[detname])
+
+        my_q_step = (det['Qx'][1, 0] - det['Qx'][0, 0]) * det.get('oversampling', 1.0) if q_step is None else q_step
+
+        my_q_min = my_q_step if q_min is None else q_min
+        
+        my_q_max = det['Q'].max() if q_max is None else q_max
+
+        q_bins = np.arange(my_q_min, my_q_max+my_q_step, my_q_step)
+        Q = (q_bins[:-1] + q_bins[1:])/2.0
+        dx = np.zeros_like(Q)
+
+        # adding simple width-based mask around the perimeter:
+        #mask = np.ones_like(det['Q'], dtype=np.bool)
+        mask = det.get('shadow_mask', np.ones_like(det['Q'], dtype=np.bool))
+
+        # dq = data.dq_para if hasattr(data, 'dqpara') else np.ones_like(data.q) * q_step
+        I, _bins_used = np.histogram(det['Q'][mask], bins=q_bins, weights=(det['data'].x/det['norm'])[mask])
+        I_norm, _ = np.histogram(det['Q'][mask], bins=q_bins, weights=np.ones_like(det['data'].x[mask]))
+        I_var, _ = np.histogram(det['Q'][mask], bins=q_bins, weights=det['data'].variance[mask])
+        #Q_ave, _ = np.histogram(data.q, bins=q_bins, weights=data.q)
+        #Q_var, _ = np.histogram(data.q, bins=q_bins, weights=data.dq_para**2)
+        #Q_mean, _ = np.histogram(data.meanQ[mask], bins=q_bins, weights=data.meanQ[mask])
+        #Q_mean_lookup = np.digitize(data.meanQ[mask], bins=q_bins)
+        #Q_mean_norm, _ = np.histogram(data.meanQ[mask], bins=q_bins, weights=np.ones_like(data.data.x[mask]))
+        #ShadowFactor, _ = np.histogram(data.meanQ[mask], bins=q_bins, weights=data.shadow_factor[mask])
+
+        nonzero_mask = I_norm > 0
+
+        I[nonzero_mask] /= I_norm[nonzero_mask]
+        I_var[nonzero_mask] /= (I_norm[nonzero_mask]**2)
+        #Q_mean[Q_mean_norm > 0] /= Q_mean_norm[Q_mean_norm > 0]
+        #ShadowFactor[Q_mean_norm > 0] /= Q_mean_norm[Q_mean_norm > 0]
+
+        # calculate Q_var...
+        # remarkably, the variance of a sum of normalized gaussians 
+        # with variances v_i, displaced from the mean center by xc_i
+        # is the sum of (xc_i**2 + v_i).   Gaussians are weird.
+
+        # exclude Q_mean_lookups that overflow the length of the calculated Q_mean:
+        #Q_var_mask = (Q_mean_lookup < len(Q_mean))
+        #Q_mean_center = Q_mean[Q_mean_lookup[Q_var_mask]]
+        #Q_var_contrib = (data.meanQ[mask][Q_var_mask] - Q_mean_center)**2 + (data.dq_para[mask][Q_var_mask])**2
+        #Q_var, _ = np.histogram(data.meanQ[mask][Q_var_mask], bins=q_bins, weights=Q_var_contrib)
+        #Q_var[Q_mean_norm > 0] /= Q_mean_norm[Q_mean_norm > 0]
+
+        canonical_output = VSans1dData(Q, I, dx, np.sqrt(I_var), xlabel="Q", vlabel="I", xunits="1/Ang", vunits="arb.", xscale="log", vscale="log", metadata={"title": sn})
+        output.append(canonical_output)
+
+    return output
+
 def circular_average(qspace_data):
     """
     Calculates I vs Q from qpace coordinate data
@@ -604,9 +914,111 @@ def circular_average(qspace_data):
 
     **Returns**
 
-    QxQy_data (qspace[]): datafiles with Q information
+    I_Q (v1d[]): VSANS 1d data
 
     2018-04-27 Brian Maranville
     """
     from sansred.sansdata import Sans1dData
     from collections import OrderedDict
+
+def calculate_IQ(realspace_data):
+    """
+    Calculates I vs Q from realspace coordinate data
+     **Inputs**
+
+    realspace_data (realspace[]): datafiles in qspace X,Y coordinates
+
+    **Returns**
+
+    I_Q (iqdata[]): datafiles with Q information
+
+    2018-04-27 Brian Maranville
+    """
+    from sansred.sansdata import Sans1dData
+    from collections import OrderedDict
+
+def geometric_shadow(realspace_data, border_width=4.0, inplace=True):
+    from collections import OrderedDict
+    from .vsansdata import short_detectors
+
+    output = []
+    for rd in realspace_data:
+        #metadata = deepcopy(rd.metadata)
+        detector_angles = OrderedDict()
+        #print(r.detectors)
+        for sn in short_detectors:
+            detname = 'detector_{short_name}'.format(short_name=sn)
+            if not detname in rd.detectors:
+                continue
+            det = deepcopy(rd.detectors[detname])
+            X = det['X']
+            dX = det['dX']
+            Y = det['Y']
+            dY = det['dY']
+            z = det['Z']
+
+            dobj = OrderedDict()
+
+            # small angle approximation
+            dobj['theta_x_min'] = X.min() / z
+            dobj['theta_x_max'] = X.max() / z
+            dobj['theta_x_step'] = dX / z
+
+            dobj['theta_y_min'] = Y.min() / z
+            dobj['theta_y_max'] = Y.max() / z
+            dobj['theta_y_step'] = dY / z
+            dobj['data'] = det['data']
+            dobj['Z'] = det['Z']
+
+            detector_angles[detname] = dobj
+        
+        for sn in short_detectors:
+            detname = 'detector_{short_name}'.format(short_name=sn)
+            if not detname in detector_angles:
+                continue
+            dobj = detector_angles[detname]
+            shadow_mask = np.ones_like(dobj['data'].x, dtype=np.bool)
+            for upstream_sn in short_detectors:
+                up_detname = 'detector_{short_name}'.format(short_name=upstream_sn)
+                if up_detname in detector_angles:
+                    ud = detector_angles[up_detname]
+                    if ud['Z'] < dobj['Z'] - 1:
+                        x_min_index = int(round((ud['theta_x_min'] - dobj['theta_x_min'])/dobj['theta_x_step'] - border_width))
+                        x_max_index = int(round((ud['theta_x_max'] - dobj['theta_x_min'])/dobj['theta_x_step'] + border_width))
+                        y_min_index = int(round((ud['theta_y_min'] - dobj['theta_y_min'])/dobj['theta_y_step'] - border_width))
+                        y_max_index = int(round((ud['theta_y_max'] - dobj['theta_y_min'])/dobj['theta_y_step'] + border_width))
+                        dimX = dobj['data'].shape[0]
+                        dimY = dobj['data'].shape[1]
+                        x_applies = (x_min_index < dimX and x_max_index >= 0)
+                        y_applies = (y_min_index < dimY and y_max_index >= 0)
+                        if x_applies and y_applies:
+                            x_min_index = max(x_min_index, 0)
+                            x_max_index = min(x_max_index, dimX)
+                            y_min_index = max(y_min_index, 0)
+                            y_max_index = min(y_max_index, dimY)
+                            shadow_mask[x_min_index:x_max_index, y_min_index:y_max_index] = False
+            dobj['shadow_mask'] = shadow_mask
+            if inplace and detname in rd.detectors:
+                rd.detectors[detname]['shadow_mask'] = shadow_mask
+
+        output.append(detector_angles)
+    return output
+
+def top_bottom_shadow(realspace_data, width=3, inplace=True):
+    from .vsansdata import short_detectors
+    for rd in realspace_data:
+        #metadata = deepcopy(rd.metadata)
+        #print(r.detectors)
+        for sn in short_detectors:
+            detname = 'detector_{short_name}'.format(short_name=sn)
+            if not detname in rd.detectors:
+                continue
+            det = rd.detectors[detname]
+            orientation = det['tube_orientation']['value'][0].decode().upper()
+            if orientation == 'VERTICAL':
+                oversampling = det.get('oversampling', 1)
+                shadow_mask = det.get('shadow_mask', np.ones_like(det['data'].x, dtype=np.bool))
+                effective_width = int(width * oversampling)
+                shadow_mask[:,0:effective_width] = False
+                shadow_mask[:,-effective_width:] = False
+                det['shadow_mask'] = shadow_mask
