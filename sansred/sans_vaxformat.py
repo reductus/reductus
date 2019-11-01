@@ -165,7 +165,7 @@ def readNCNRData(inputfile, file_obj=None):
      reals['resolution.ap12dis'],
      reals['resolution.lmda'],
      reals['resolution.dlmda'],
-     reals['resolution.save'],
+     reals['resolution.nlenses'],
      metadata['tslice.slicing'],
      metadata['tslice.multfact'],
      metadata['tslice.ltslice'],
