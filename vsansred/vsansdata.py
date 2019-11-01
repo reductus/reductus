@@ -24,7 +24,7 @@ short_detectors = ["B", "MB", "MT", "ML", "MR", "FT", "FB", "FL", "FR"]
 
 def _b(s):
     if IS_PY3:
-        return s.encode('utf-8')
+        return s.encode('utf-8') if hasattr(s, 'encode') else s
     else:
         return s
 
@@ -137,7 +137,7 @@ class VSansData(object):
                 "zmax": zmax,
             },
             "type": "2d_multi",
-            "title": self.metadata["run.filename"] + b":" + self.metadata["sample.labl"],
+            "title": _b(self.metadata["run.filename"]) + b":" + _b(self.metadata["sample.labl"]),
             #"z": [output_grid.T.tolist()],
             "datasets": datasets,
             "ztransform": "log",
@@ -236,7 +236,7 @@ class VSans1dData(object):
         return pythonize(props)
 
     def get_plottable(self):
-        label = self.metadata['title'],
+        label = self.metadata.get('title', "unknown"),
         xdata = self.x.tolist()
         ydata = self.v.tolist()
         yerr = self.dv.tolist()
