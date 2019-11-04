@@ -150,12 +150,12 @@ def LoadVSANS(filelist=None, check_timestamps=True):
     template = Template(**template_def)
     output = []
     for fi in filelist:
-        config = {"0": {"filelist": [fi]}}
+        config = {"0": {"filelist": [fi], "check_timestamps": check_timestamps}}
         nodenum = 0
         terminal_id = "output"
         retval = process_template(template, config, target=(nodenum, terminal_id))
         output.extend(retval.values)
-        
+
     return output
 
 
@@ -541,7 +541,7 @@ def sort_sample(raw_data):
 
     return blocked_beam
 
-@nocache
+@cache
 @module
 def calculate_XY(raw_data, solid_angle_correction=True):
     """
@@ -690,6 +690,8 @@ def calculate_XY(raw_data, solid_angle_correction=True):
 
     return output
 
+@cache
+@module
 def oversample_XY(realspace_data, oversampling=3, exclude_back_detector=True):
     """
     Split each pixel into subpixels in realspace
@@ -742,7 +744,7 @@ def oversample_XY(realspace_data, oversampling=3, exclude_back_detector=True):
         det['dX'] = dX
         det['Y'] = Y
         det['dY'] = dY
-        det['norm'] /= oversampling**2
+        det['dOmega'] /= oversampling**2
         det['oversampling'] = det.get('oversampling', 1.0) * oversampling
 
     return rd
@@ -904,7 +906,7 @@ def circular_av_new(qspace_data, q_min=None, q_max=None, q_step=None):
         mask = det.get('shadow_mask', np.ones_like(det['Q'], dtype=np.bool))
 
         # dq = data.dq_para if hasattr(data, 'dqpara') else np.ones_like(data.q) * q_step
-        I, _bins_used = np.histogram(det['Q'][mask], bins=q_bins, weights=(det['data'].x/det['norm'])[mask])
+        I, _bins_used = np.histogram(det['Q'][mask], bins=q_bins, weights=(det['data'].x)[mask])
         I_norm, _ = np.histogram(det['Q'][mask], bins=q_bins, weights=np.ones_like(det['data'].x[mask]))
         I_var, _ = np.histogram(det['Q'][mask], bins=q_bins, weights=det['data'].variance[mask])
         #Q_ave, _ = np.histogram(data.q, bins=q_bins, weights=data.q)
@@ -970,88 +972,136 @@ def calculate_IQ(realspace_data):
     from sansred.sansdata import Sans1dData
     from collections import OrderedDict
 
-def geometric_shadow(realspace_data, border_width=4.0, inplace=True):
+@cache
+@module
+def geometric_shadow(realspace_data, border_width=4.0, inplace=False):
+    """
+    Calculate the overlap shadow from upstream panels on VSANS detectors
+    Outputs will still be realspace data, but with shadow_mask updated to
+    include these overlap regions
+
+     **Inputs**
+
+    realspace_data (realspace): datafiles in qspace X,Y coordinates
+
+    border_width (float): extra width (in pixels on original detector) to exclude
+        as a margin.  Note that if the data has been oversampled, this number
+        still refers to original pixel widths (oversampling is divided out)
+    
+    inplace (bool): do the calculation in-place, modifying the input dataset
+
+    **Returns**
+
+    shadowed (realspace): datafiles in qspace X,Y coordinates with updated
+        shadow mask
+
+    2019-11-01 Brian Maranville
+    """
+
+    detector_angles = calculate_angles(realspace_data)
+
+    if not inplace:
+        realspace_data = realspace_data.copy()
+
+    # assume that detectors are in decreasing Z-order
+    for dnum, (detname, det) in enumerate(detector_angles.items()):
+        rdet = realspace_data.detectors[detname]
+        shadow_mask = rdet.get('shadow_mask', np.ones_like(rdet['data'].x, dtype=np.bool))
+        for udet in list(detector_angles.values())[dnum+1:]:
+            #final check: is detector in the same plane?
+            if udet['Z'] < det['Z'] - 1:
+                x_min_index = int(round((udet['theta_x_min'] - det['theta_x_min'])/det['theta_x_step'] - border_width))
+                x_max_index = int(round((udet['theta_x_max'] - det['theta_x_min'])/det['theta_x_step'] + border_width))
+                y_min_index = int(round((udet['theta_y_min'] - det['theta_y_min'])/det['theta_y_step'] - border_width))
+                y_max_index = int(round((udet['theta_y_max'] - det['theta_y_min'])/det['theta_y_step'] + border_width))
+                dimX = rdet['data'].shape[0]
+                dimY = rdet['data'].shape[1]
+                x_applies = (x_min_index < dimX and x_max_index >= 0)
+                y_applies = (y_min_index < dimY and y_max_index >= 0)
+                if x_applies and y_applies:
+                    x_min_index = max(x_min_index, 0)
+                    x_max_index = min(x_max_index, dimX)
+                    y_min_index = max(y_min_index, 0)
+                    y_max_index = min(y_max_index, dimY)
+                    shadow_mask[x_min_index:x_max_index, y_min_index:y_max_index] = False
+        rdet['shadow_mask'] = shadow_mask
+    
+    return realspace_data
+
+def calculate_angles(rd):
     from collections import OrderedDict
     from .vsansdata import short_detectors
 
-    output = []
-    for rd in realspace_data:
-        #metadata = deepcopy(rd.metadata)
-        detector_angles = OrderedDict()
-        #print(r.detectors)
-        for sn in short_detectors:
-            detname = 'detector_{short_name}'.format(short_name=sn)
-            if not detname in rd.detectors:
-                continue
-            det = deepcopy(rd.detectors[detname])
-            X = det['X']
-            dX = det['dX']
-            Y = det['Y']
-            dY = det['dY']
-            z = det['Z']
+    detector_angles = OrderedDict()
+    for sn in short_detectors:
+        detname = 'detector_{short_name}'.format(short_name=sn)
+        if not detname in rd.detectors:
+            continue
+        det = rd.detectors[detname]
+        X = det['X']
+        dX = det['dX']
+        Y = det['Y']
+        dY = det['dY']
+        z = det['Z']
 
-            dobj = OrderedDict()
+        dobj = OrderedDict()
 
-            # small angle approximation
-            dobj['theta_x_min'] = X.min() / z
-            dobj['theta_x_max'] = X.max() / z
-            dobj['theta_x_step'] = dX / z
+        # small angle approximation
+        dobj['theta_x_min'] = X.min() / z
+        dobj['theta_x_max'] = X.max() / z
+        dobj['theta_x_step'] = dX / z
 
-            dobj['theta_y_min'] = Y.min() / z
-            dobj['theta_y_max'] = Y.max() / z
-            dobj['theta_y_step'] = dY / z
-            dobj['data'] = det['data']
-            dobj['Z'] = det['Z']
+        dobj['theta_y_min'] = Y.min() / z
+        dobj['theta_y_max'] = Y.max() / z
+        dobj['theta_y_step'] = dY / z
+        dobj['Z'] = det['Z']
 
-            detector_angles[detname] = dobj
-        
-        for sn in short_detectors:
-            detname = 'detector_{short_name}'.format(short_name=sn)
-            if not detname in detector_angles:
-                continue
-            dobj = detector_angles[detname]
-            shadow_mask = np.ones_like(dobj['data'].x, dtype=np.bool)
-            for upstream_sn in short_detectors:
-                up_detname = 'detector_{short_name}'.format(short_name=upstream_sn)
-                if up_detname in detector_angles:
-                    ud = detector_angles[up_detname]
-                    if ud['Z'] < dobj['Z'] - 1:
-                        x_min_index = int(round((ud['theta_x_min'] - dobj['theta_x_min'])/dobj['theta_x_step'] - border_width))
-                        x_max_index = int(round((ud['theta_x_max'] - dobj['theta_x_min'])/dobj['theta_x_step'] + border_width))
-                        y_min_index = int(round((ud['theta_y_min'] - dobj['theta_y_min'])/dobj['theta_y_step'] - border_width))
-                        y_max_index = int(round((ud['theta_y_max'] - dobj['theta_y_min'])/dobj['theta_y_step'] + border_width))
-                        dimX = dobj['data'].shape[0]
-                        dimY = dobj['data'].shape[1]
-                        x_applies = (x_min_index < dimX and x_max_index >= 0)
-                        y_applies = (y_min_index < dimY and y_max_index >= 0)
-                        if x_applies and y_applies:
-                            x_min_index = max(x_min_index, 0)
-                            x_max_index = min(x_max_index, dimX)
-                            y_min_index = max(y_min_index, 0)
-                            y_max_index = min(y_max_index, dimY)
-                            shadow_mask[x_min_index:x_max_index, y_min_index:y_max_index] = False
-            dobj['shadow_mask'] = shadow_mask
-            if inplace and detname in rd.detectors:
-                rd.detectors[detname]['shadow_mask'] = shadow_mask
+        detector_angles[detname] = dobj
 
-        output.append(detector_angles)
-    return output
+    return detector_angles
 
+@cache
+@module
 def top_bottom_shadow(realspace_data, width=3, inplace=True):
+    """
+    Calculate the overlap shadow from upstream panels on VSANS detectors
+    Outputs will still be realspace data, but with shadow_mask updated to
+    include these overlap regions
+
+     **Inputs**
+
+    realspace_data (realspace): datafiles in qspace X,Y coordinates
+
+    width (float): width to mask on the top of the L,R detectors 
+        (middle and front).  Note that if the data has been oversampled, this number
+        still refers to original pixel widths (oversampling is divided out)
+    
+    inplace (bool): do the calculation in-place, modifying the input dataset
+
+    **Returns**
+
+    shadowed (realspace): datafiles in qspace X,Y coordinates with updated
+        shadow mask
+    
+    2019-11-01 Brian Maranville
+    """
     from .vsansdata import short_detectors
-    for rd in realspace_data:
-        #metadata = deepcopy(rd.metadata)
-        #print(r.detectors)
-        for sn in short_detectors:
-            detname = 'detector_{short_name}'.format(short_name=sn)
-            if not detname in rd.detectors:
-                continue
-            det = rd.detectors[detname]
-            orientation = det['tube_orientation']['value'][0].decode().upper()
-            if orientation == 'VERTICAL':
-                oversampling = det.get('oversampling', 1)
-                shadow_mask = det.get('shadow_mask', np.ones_like(det['data'].x, dtype=np.bool))
-                effective_width = int(width * oversampling)
-                shadow_mask[:,0:effective_width] = False
-                shadow_mask[:,-effective_width:] = False
-                det['shadow_mask'] = shadow_mask
+
+    rd = realspace_data if inplace else realspace_data.copy()
+
+    for det in rd.detectors.values():
+        orientation = det.get(
+            'tube_orientation', {}
+        ).get(
+            'value', [b"NONE"]
+        )[0].decode().upper()
+
+        if orientation == 'VERTICAL':
+            oversampling = det.get('oversampling', 1)
+            shadow_mask = det.get('shadow_mask', np.ones_like(det['data'].x, dtype=np.bool))
+            effective_width = int(width * oversampling)
+            shadow_mask[:,0:effective_width] = False
+            shadow_mask[:,-effective_width:] = False
+            det['shadow_mask'] = shadow_mask
+    
+    return rd
