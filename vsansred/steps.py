@@ -808,7 +808,7 @@ def correct_detector_sensitivity(data, sensitivity, exclude_back_detector=True):
     return new_data
 
 
-@nocache
+@cache
 @module   
 def calculate_Q(realspace_data):
     """
@@ -861,7 +861,7 @@ def calculate_Q(realspace_data):
     return output
 
 
-@nocache
+@cache
 @module
 def circular_av_new(qspace_data, q_min=None, q_max=None, q_step=None):
     """
