@@ -716,7 +716,7 @@ def oversample_XY(realspace_data, oversampling=3, exclude_back_detector=True):
 
     for sn in short_detectors:
         detname = 'detector_{short_name}'.format(short_name=sn)
-        if detname == 'B' and exclude_back_detector:
+        if detname == 'detector_B' and exclude_back_detector:
             continue
         if not detname in rd.detectors:
             continue
