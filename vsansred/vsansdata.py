@@ -120,7 +120,7 @@ class VSansData(object):
             zmin = np.min([corrected.min(), zmin])
 
             datasets.append({
-                "data": corrected.ravel('C').tolist(),
+                "data": corrected.ravel('C'),
                 "dims": {
                     "xmin": xmin,
                     "xmax": xmax,
@@ -153,13 +153,13 @@ class VSansData(object):
             "metadata": self.metadata.copy()
         }
 
-        return _toDictItem(data_2d)
+        return _toDictItem(data_2d, convert_bytes=True)
 
         #return {"entry": "entry", "type": "metadata", "values": _toDictItem(self.metadata)}
 
     def get_metadata(self):
         metadata = {}
-        metadata.update(pythonize(self.metadata))
+        metadata.update(_toDictItem(self.metadata, convert_bytes=True))
         return metadata
 
 
