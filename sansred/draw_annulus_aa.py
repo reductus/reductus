@@ -8,7 +8,7 @@ Create an antialiased annulus mask using PIL image commands.
 from PIL import Image, ImageDraw
 import numpy
 
-def annular_mask_antialiased(shape, center, inner_radius, outer_radius,
+def annular_mask_antialiased_pillow(shape, center, inner_radius, outer_radius,
                              background_value=0.0, mask_value=1.0,
                              oversampling=8):
     # type: (Tuple[int, int], Tuple[float, float], float, float, float, float, int)  -> numpy.ndarray
@@ -62,8 +62,74 @@ def annular_mask_antialiased(shape, center, inner_radius, outer_radius,
     # This produced artifacts - output.max() was > mask_value by 10% or more!
 
     # Using numpy reshape instead (rebinning) - see Scipy cookbook
+    output = numpy.asarray(im)
+    output = output.reshape(shape[0], oversampling, shape[1], oversampling).mean(1).mean(2)
+    return output
+
+def rectangular_mask_antialiased_pillow(shape, rectangle_xy, background_value=0.0, mask_value=1.0, oversampling=8):
+    # Create a 32-bit float image
+    intermediate_shape = (shape[0]*int(oversampling), shape[1]*int(oversampling))
+    im = Image.new('F', intermediate_shape, color=background_value)
+
+    # Making a handle to the drawing tool
+    draw = ImageDraw.Draw(im)
+
+    x0,y0,x1,y1 = rectangle_xy
+
+    draw.rectangle([x0*oversampling, y0*oversampling, x1*oversampling, y1*oversampling], fill=mask_value)
     output = numpy.asarray(im).T
     output = output.reshape(shape[0], oversampling, shape[1], oversampling).mean(1).mean(2)
+    return output
+
+def annular_ellipse_mask_antialiased_cairo(shape, center, inner_radius, outer_radius,
+                        background_value=0.0, mask_value=1.0, compression_factor=1.0,
+                        oversampling=1):
+
+    import numpy
+    import cairo
+    surface = cairo.ImageSurface(cairo.FORMAT_A8, shape[1], shape[0])
+    ctx = cairo.Context(surface)
+    ctx.set_antialias(cairo.ANTIALIAS_GRAY)
+    ctx.scale(1.0 / compression_factor, 1.0)
+
+    # Arc(cx, cy, radius, start_angle, stop_angle)
+    thickness = outer_radius - inner_radius
+    avg_radius = (outer_radius + inner_radius)/2.0
+    ctx.arc(center[1] * compression_factor, center[0], avg_radius, 0, 2*numpy.pi)
+    ctx.close_path()
+
+    ctx.set_source_rgba(1,1,1,1)  # Solid color
+    ctx.set_line_width(thickness)
+    ctx.stroke()
+    buf = surface.get_data()
+    data = numpy.ndarray(shape=shape, dtype=numpy.uint8, buffer=buf)
+    output = numpy.ones_like(data, dtype=numpy.float) * background_value
+    output += data.astype(float) * (mask_value - background_value) / 255.0
+    return output
+
+def rectangular_mask_antialiased_cairo(shape, rectangle_xy, background_value=0.0, mask_value=1.0, oversampling=8):
+    # Create a 32-bit float image
+    import numpy
+    import cairo
+    surface = cairo.ImageSurface(cairo.FORMAT_A8, shape[1], shape[0])
+    ctx = cairo.Context(surface)
+    ctx.set_antialias(cairo.ANTIALIAS_GRAY)
+    ctx.set_source_rgba(0,0,0,0)  # Solid color
+    ctx.paint()
+
+    x0,y0,x1,y1 = rectangle_xy
+    w = x1 - x0
+    h = y1 - y0
+
+    #ctx.set_source(cairo.SolidPattern(0.5, 0.5, 0.5))
+    ctx.set_source_rgba(1.0,1.0,1.0,1.0)  # Solid color
+    ctx.rectangle(y0, x0, h, w)
+    ctx.fill()
+
+    buf = surface.get_data()
+    data = numpy.ndarray(shape=shape, dtype=numpy.uint8, buffer=buf)
+    output = numpy.ones_like(data, dtype=numpy.float) * background_value
+    output += data.astype(float) * (mask_value - background_value) / 255.0
     return output
 
 def pie_bounding_box(center, radius, start_angle, end_angle):
@@ -203,6 +269,14 @@ def check_sector_cut_antialiased(shape, center, inner_radius, outer_radius, star
     draw.ellipse(inner_bbox, fill=background_value)
     im.show()
 
+# prefer cairo version because it doesn't require oversampling, and is GPU accelerated!
+try:
+    import cairo
+    annular_mask_antialiased = annular_ellipse_mask_antialiased_cairo
+    rectangular_mask_antialiased = rectangular_mask_antialiased_cairo
+except ImportError:
+    annular_mask_antialiased = annular_mask_antialiased_pillow
+    rectangular_mask_antialiased = rectangular_mask_antialiased_pillow
 def check():
     check_sector_cut_antialiased(
         (128,128),

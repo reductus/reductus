@@ -460,7 +460,13 @@ load_instrument = function(instrument_id, update_selector) {
       return instrument_def;
     })
     .then(function() {
-      module_names = (["Add new module:"]).concat(Object.keys(module_defs));
+      module_names = (["Add new module:"])
+        .concat(
+          Object.keys(module_defs).filter(function(mname) {
+            let module = module_defs[mname];
+            return (module.visible != false)
+          })
+        );
       d3.selectAll("#new_module option").remove()
       d3.select("#new_module").append("option").text("Add new module:");
       d3.select("#new_module").selectAll("option").data(module_names)

@@ -662,9 +662,12 @@ def parse_datatype(par):
         attr["pattern"] = attrstr
 
     elif type == "range":
-        if attrstr not in ("x", "y", "xy", "ellipse"):
-            raise ValueError("range must be one of x, y, xy or ellipse for " + name)
+        if attrstr not in ("x", "y", "xy", "ellipse", "sector_centered"):
+            raise ValueError("range must be one of x, y, xy, ellipse or sector_centered for " + name)
         attr["axis"] = attrstr
+
+    elif type == "patch_metadata":
+        attr["key"] = attrstr
 
     else: # type in ["str", "bool", "fileinfo", "index", "coordinate"]:
         if par["typeattr"] is not None:
@@ -675,7 +678,7 @@ def parse_datatype(par):
     par["datatype"] = type
     par["typeattr"] = attr
 
-FIELD_TYPES = set("str bool int float opt regex range index coordinate fileinfo scale".split())
+FIELD_TYPES = set("str bool int float opt regex range index coordinate fileinfo scale patch_metadata".split())
 
 def check_multiplicity(par, values, bundle_length):
     """
@@ -769,6 +772,9 @@ def _validate_one(par, value, as_default):
 
     elif datatype == "scale":
         value = _type_check(name, value, float)
+    
+    elif datatype == "patch_metadata":
+        value = _patch_check(name, value)
 
     else:
         raise ValueError("no %s type check for %s"%(datatype, name))
@@ -794,6 +800,30 @@ def _finfo_check(name, value):
         #raise
         raise ValueError("value %r is not {source: str, path: str, mtime: int, entries: [str, ...]} for %s"
                          % (value, name))
+    return value
+
+def _patch_check(name, value):
+    if (not isinstance(value, dict)
+            or "op" not in value
+            or "path" not in value
+            or value["op"] not in ["test", "add", "replace", "copy", "move", "remove"]):
+        raise ValueError("patch must be a dict, with valid op code and path")
+    
+    elif value["op"] in ["test", "add", "replace"]:
+        if not "value" in value:
+            raise ValueError("patch for test, add or replace must contain value field")
+        else:
+            value["value"] = _type_check(name, value["value"], str)
+    
+    elif value["op"] in ["copy", "move"]:
+        if not "from" in value:
+            raise ValueError("patch for copy or move must contain from field")
+        else:
+            value["from"] = _type_check(name, value["from"], str)
+
+    value["op"] = _type_check(name, value["op"], str)
+    value["path"] = _type_check(name, value["path"], str)
+    
     return value
 
 def _list_check(name, values, n, ptype):

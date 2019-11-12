@@ -1,11 +1,11 @@
 // requires(webreduce.server_api)
 webreduce = window.webreduce || {};
 webreduce.instruments = webreduce.instruments || {};
-webreduce.instruments['ncnr.sans'] = webreduce.instruments['ncnr.sans'] || {};
+webreduce.instruments['ncnr.vsans'] = webreduce.instruments['ncnr.vsans'] || {};
 
 // define the loader and categorizers for ncnr.sans instrument
 (function(instrument) {
-  function load_sans(load_params, db, noblock, return_type) {
+  function load_vsans(load_params, db, noblock, return_type) {
     // load params is a list of: 
     // {datasource: "ncnr", path: "ncnrdata/cgd/...", mtime: 12319123109}
     var noblock = (noblock == true); // defaults to false if not specified
@@ -14,12 +14,12 @@ webreduce.instruments['ncnr.sans'] = webreduce.instruments['ncnr.sans'] || {};
       return {
         template: {
           "name": "loader_template",
-          "description": "SANS remote loader",
+          "description": "VSANS remote loader",
           "modules": [
-            {"module": "ncnr.sans.LoadRawSANS", "version": "0.1", "config": {}}
+            {"module": "ncnr.vsans.LoadVSANS", "version": "0.1", "config": {}}
           ],
           "wires": [],
-          "instrument": "ncnr.sans",
+          "instrument": "ncnr.vsans",
           "version": "0.0"
         },
         config: {"0": {"filelist": [{"path": lp.path, "source": lp.source, "mtime": lp.mtime}]}},
@@ -31,9 +31,8 @@ webreduce.instruments['ncnr.sans'] = webreduce.instruments['ncnr.sans'] || {};
     return calc_params;
   }
   
-  var NEXUZ_REGEXP = /\.nxz\.[^\.\/]+$/
   var NEXUS_REGEXP = /\.nxs\.[^\.\/]+(\.zip)?$/
-  var DIV_REGEXP = /\.DIV$/
+  var DIV_REGEXP = /DIV\.h5$/
 
   instrument.files_filter = function(x) {
     return (
@@ -44,12 +43,18 @@ webreduce.instruments['ncnr.sans'] = webreduce.instruments['ncnr.sans'] || {};
     )
   }
 
-  instrument.load_file = load_sans;
+  instrument.load_file = load_vsans;
   instrument.default_categories = [
     [["analysis.filepurpose"]],
     [["sample.description"]],
-    [["analysis.intent"]],
-    [["run.experimentScanID"]]
+    [ 
+      [
+        "run.experimentScanID"
+      ],
+      [   
+        "analysis.intent"
+      ]
+    ]
   ];
   instrument.categories = jQuery.extend(true, [], instrument.default_categories);  
   
@@ -83,34 +88,6 @@ webreduce.instruments['ncnr.sans'] = webreduce.instruments['ncnr.sans'] || {};
   }
   
   
-  function add_counts(target, file_objs) {
-    var jstree = target.jstree(true);
-    var leaf, entry;
-    var to_decorate = jstree.get_json("#", {"flat": true})
-      .filter(function(leaf) { 
-        return (leaf.li_attr && 
-                'filename' in leaf.li_attr && 
-                leaf.li_attr.filename in file_objs &&
-                'entryname' in leaf.li_attr && 
-                'source' in leaf.li_attr &&
-                'mtime' in leaf.li_attr) 
-        })
-    
-    to_decorate.forEach(function(leaf, i) {
-      var filename = leaf.li_attr.filename;
-      var file_obj = file_objs[filename];
-      var entry = file_obj.values.filter(function(f) {return f.entry == leaf.li_attr.entryname});
-      if (entry && entry[0]) {
-        var e = entry[0];
-        //console.log(e, ('run.detcnt' in e && 'run.moncnt' in e && 'run.rtime' in e));
-        if ('run.detcnt' in e && 'run.moncnt' in e && 'run.rtime' in e) {
-          var leaf_actual = jstree._model.data[leaf.id];
-          leaf_actual.li_attr.title = 't:' + e['run.rtime'] + ' det:' + e['run.detcnt'] + ' mon:' + e['run.moncnt'];
-        }
-      }
-    });
-  }
-  
   function add_viewer_link(target, file_objs) {
     var jstree = target.jstree(true);
     var to_decorate = jstree.get_json("#", {"flat": true})
@@ -122,11 +99,27 @@ webreduce.instruments['ncnr.sans'] = webreduce.instruments['ncnr.sans'] || {};
     to_decorate.forEach(function(leaf, i) {
       var fullpath = leaf.li_attr.filename;
       var datasource = leaf.li_attr.source;
-      if (["ncnr", "ncnr_DOI"].indexOf(datasource) < 0) { return }
-      if (datasource == "ncnr_DOI") { fullpath = "ncnrdata" + fullpath; }
-      var pathsegments = fullpath.split("/");
+      var link;
+      var base_path;
+      if (datasource == "ncnr") {
+        link = "<a href=\"https://ncnr.nist.gov/ncnrdata/view/nexus-hdf-viewer.html";
+        base_path = "";
+      }
+      else if (datasource == "ncnr_DOI") {
+        link = "<a href=\"https://ncnr.nist.gov/ncnrdata/view/nexus-hdf-viewer.html";
+        base_path = "ncnrdata";
+      }
+      else if (datasource == "charlotte") {
+        link = "<a href=\"https://charlotte.ncnr.nist.gov/ncnrdata/view/nexus-hdf-viewer.html";
+        base_path = "";
+      }
+      else {
+        return
+      }
+      var pathsegments = (base_path + fullpath).split("/");
       var pathlist = pathsegments.slice(0, pathsegments.length-1).join("+");
       var filename = pathsegments.slice(-1);
+      
       var link = "<a href=\"https://ncnr.nist.gov/ncnrdata/view/nexus-hdf-viewer.html";
       link += "?pathlist=" + pathlist;
       link += "&filename=" + filename;
@@ -136,7 +129,7 @@ webreduce.instruments['ncnr.sans'] = webreduce.instruments['ncnr.sans'] || {};
     })
   }
   
-  instrument.decorators = [add_viewer_link, add_counts];
+  instrument.decorators = [add_viewer_link];
     
-})(webreduce.instruments['ncnr.sans']);
+})(webreduce.instruments['ncnr.vsans']);
 

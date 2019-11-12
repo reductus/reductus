@@ -1,0 +1,32 @@
+{
+  "wires": [
+    {
+      "source": [
+        0,
+        "output"
+      ],
+      "target": [
+        1,
+        "data"
+      ]
+    }
+  ],
+  "modules": [
+    {
+      "x": 100,
+      "title": "LoadVSANS",
+      "module": "ncnr.vsans.LoadVSANS",
+      "y": 100,
+      "config": {
+        "filelist": []
+      }
+    },
+    {
+      "module": "ncnr.vsans.patch",
+      "title": "Patch",
+      "x": 255,
+      "y": 100,
+      "config": {}
+    }
+  ]
+}

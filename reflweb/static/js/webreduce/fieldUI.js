@@ -374,7 +374,8 @@ webreduce.editor.make_fieldUI = webreduce.editor.make_fieldUI || {};
     var subfields = []
       .concat((/x/.test(axis)) ? ["xmin", "xmax"] : [])
       .concat((/y/.test(axis)) ? ["ymin", "ymax"] : [])
-      .concat((/^ellipse$/.test(axis)) ? ["cx", "cy", "rx", "ry"] : []);
+      .concat((/^ellipse$/.test(axis)) ? ["cx", "cy", "rx", "ry"] : [])
+      .concat((/^sector_centered$/.test(axis)) ? ["angle_offset", "angle_width"] : []);
 
     var subinputs = input.selectAll("div.subfield").data(subfields).enter()
       .append("div")
@@ -567,7 +568,53 @@ webreduce.editor.make_fieldUI = webreduce.editor.make_fieldUI || {};
           event.initEvent('input', true, true);
           subinputs.node().dispatchEvent(event);
         });
-      }  
+      }
+      else if (axis == 'sector_centered' && active_plot && active_plot.interactors) {
+        // add angleSlice interactor
+        var value = datum.value || datum.default_value;
+        var value = [
+          (value[0] == null) ? 0.0 : value[0],
+          (value[1] == null) ? 90.0 : value[1]
+        ]
+        
+        var opts = {
+          type: 'Sector',
+          name: 'sector',
+          color1: 'red',
+          color2: 'orange',
+          show_lines: true,
+          show_center: false,
+          mirror: true,
+          cx: 0,
+          cy: 0,
+          angle_offset: value[0] * Math.PI/180.0,
+          angle_range: value[1] * Math.PI/180.0
+        }
+
+        var interactor = new angleSliceInteractor.default(opts);
+        active_plot.interactors(interactor);
+        // bind the update after init, so that it doesn't alter the field at init.
+        subinputs.on("change", function(d,i) { 
+          if (datum.value == null) { datum.value = datum.default_value }
+          var v = parseFloat(this.value);
+          v = (isNaN(v)) ? null : v;
+          datum.value[i] = v;
+          var item = ["angle_offset", "angle_range"][i];
+          var default_value = [0.0, Math.PI/2.0][i];
+          interactor.state[item] = (v == null) ? default_value : v * Math.PI/180.0;
+          interactor.update(false);
+        });
+        interactor.dispatch.on("update", function() { 
+          var state = interactor.state;
+          datum.value = [state.angle_offset * 180.0/Math.PI, state.angle_range * 180.0/Math.PI];
+          subinputs
+            .property("value", function(d,i) { return (datum.value) ? datum.value[i] : null })
+            .attr("value", function(d,i) { return (datum.value) ? datum.value[i] : null })
+          var event = document.createEvent('Event');
+          event.initEvent('input', true, true);
+          subinputs.node().dispatchEvent(event);
+        });
+      } 
     }
     return input    
   }
@@ -607,6 +654,110 @@ webreduce.editor.make_fieldUI = webreduce.editor.make_fieldUI || {};
   }
   fieldUI.coordinate = coordinateUI;
   
+  var patchUI = function() {
+    var datum = this.datum,
+        field = this.field,
+        target = this.target,
+        datasets_in = this.datasets_in,
+        module = this.active_module;
+    
+    let key = field.typeattr.key;
+
+    datum.value = datum.value || [];
+    var input = target.append("div")
+      .classed("fields", true)
+      .datum(datum)
+      .append("label")
+        .text(field.label)
+        .append("ul")
+        .classed("metadata-patches", true)
+    
+    input.append("div")
+      .classed("patch_key", true)
+      .text("Key: " + field.typeattr.key)
+
+    input.selectAll("li.patches").data(datum.value).enter()
+      .append("li")
+      .classed("patches", true)
+    
+    input.selectAll("li.patches")
+      .text(function(d) { return JSON.stringify(d)})
+
+    var op = "replace";
+
+    if (this.add_interactors) {
+      var active_plot = this.active_plot;
+      cols = active_plot.selectAll("th.colHeader").data();
+      key_col = cols.indexOf(key);
+      active_plot.selectAll(".metadata-row")
+        .each(function(d,i) { 
+
+          d3.select(this).selectAll("pre")
+            .attr("contenteditable", function(dd, ii) {
+              return ii != key_col;
+            })
+            .attr("title", function(dd, ii) {
+              let c = cols[ii];
+              return "was: " + d[c];
+            })
+            .on("input", function(dd, ii) {
+              let c = cols[ii];
+              let new_text = this.innerText;
+              let old_text = String(d[c]);
+              let dirty = (old_text != new_text);
+              d3.select(this.parentNode).classed("dirty", dirty);
+              let path = "/" + d[key] + "/" + c;
+              var p = {path: path, value: new_text, op: op}
+              let update_existing = false;
+              if (dirty) {
+                for (var po of datum.value) {
+                  if (po.path == path) {
+                    po.value = new_text;
+                    update_existing = true;
+                    break;
+                  }
+                }
+                if (!update_existing) {
+                  datum.value.push(p);
+                }
+              }
+              else {
+                for (var vi in datum.value) {
+                  let po = datum.value[vi];
+                  if (po.path == path) {
+                    datum.value.splice(vi, 1);
+                    break;
+                  }
+                }
+              }
+              input.selectAll("li.patches").data(datum.value).enter()
+                .append("li")
+                .classed("patches", true)
+                
+              input.selectAll("li.patches").data(datum.value).exit().remove()
+              
+              input.selectAll("li.patches")
+                .text(function(d) { return JSON.stringify(d)})
+
+              var event = document.createEvent('Event');
+              event.initEvent('input', true, true);
+              input.node().dispatchEvent(event);
+            })
+            .each(function(dd, ii) {
+              let c = cols[ii];
+              let path = "/" + d[key] + "/" + c;
+              let match_patch = datum.value.find(function(v) { return v.path == path });
+              if (match_patch) {
+                d3.select(this).text(String(match_patch.value))
+                d3.select(this.parentNode).classed("dirty", true);
+              }
+            })
+        });
+    }
+    return input
+  }
+  fieldUI.patch_metadata = patchUI;
+
   var strUI = function() {
     var datum = this.datum,
         field = this.field,

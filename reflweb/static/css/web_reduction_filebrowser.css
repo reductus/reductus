@@ -146,6 +146,11 @@ path.x-slice.lines:hover {
   stroke-width: 8px !important;
 }
 
+g.interactor-sector path.centerline {
+    stroke: orange;
+    stroke-dasharray: 10,2;
+}
+
 rect.zoom {
   stroke: steelblue;
   fill-opacity: 0.5;
@@ -175,7 +180,12 @@ div.fields .subfield {
 #plotdiv {
   flex: 1;
   text-align: start;
+  overflow: auto;
   /* overflow: hidden; */
+}
+
+#plotdiv.plot {
+  overflow: hidden;
 }
 
 #plot_title {
@@ -467,7 +477,7 @@ div#top_panel {
   max-height: 2em;
   padding: 1em;
   overflow: visible;
-  z-index: 100;
+  z-index: 1000;
 }
 
 div#east_panel {
