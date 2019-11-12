@@ -4,30 +4,22 @@
 import numpy as np
 
 try:
-    from . import _reduction  ## C API wrapper
-    #from . import _rebin  ## cython wrapper
-except ImportError:
-    import warnings
-    warnings.warn("Reduction module not compiled...rebinning unavailable")
-
-try:
     from typing import Sequence, Optional, Union
 except ImportError:
     pass
 
-def rebin(x, I, xo, Io=None, dtype=np.float64):
-    # type: (Sequence, Sequence, Sequence, Optional[np.ndarray], Union[str, type]) -> np.ndarray
+def rebin(x, I, xo, dtype=np.float64):
+    # type: (Sequence, Sequence, Sequence, Union[str, type]) -> np.ndarray
     """
     Rebin a vector.
 
-    x are the existing bin edges
-    xo are the new bin edges
-    I are the existing counts (one fewer than edges)
+    *x* are the existing bin edges.
 
-    Io will be used if present, but be sure that it is a contiguous
-    array of the correct shape and size.
+    *xo* are the new bin edges.
 
-    dtype is the type to use for the intensity vectors.  This can be
+    *I* are the existing counts (one fewer than edges).
+
+    *dtype* is the type to use for the intensity vectors.  This can be
     integer (uint8, uint16, uint32) or real (float32 or f, float64 or d).
     The edge vectors are all coerced to doubles.
 
@@ -35,27 +27,44 @@ def rebin(x, I, xo, Io=None, dtype=np.float64):
     The algorithm uses truncation so total intensity will be down on
     average by half the total number of bins.
     """
-    from .rebin_python import rebin_counts
-    # Coerce axes to float arrays
-    x, xo = _input(x, dtype='d'), _input(xo, dtype='d')
-    shape_in = np.array([x.shape[0]-1])
-    shape_out = np.array([xo.shape[0]-1])
-
-    # Coerce counts to correct type and check shape
-    if dtype is None:
-        dtype = getattr(I, 'dtype', np.float64)
-    I = _input(I, dtype=dtype)
-    if shape_in != I.shape:
+    # Coerce to arrays and check shape
+    I = np.asarray(I)
+    x, xo = np.asarray(x, dtype='d'), np.asarray(xo, dtype='d')
+    if len(x.shape) != 1 or len(xo.shape) != 1 or len(x)-1 != len(I):
         raise TypeError("input array incorrect shape %s"%I.shape)
 
-    # Create output vector
-    Io = _output(Io, shape_out, dtype=dtype)
+    ix = _rebin_counts(x, I, xo, dtype=dtype)
+    return ix
 
-    rebin_counts(x, I, xo, Io)
-    return Io
 
-def rebin2d(x, y, I, xo, yo, Io=None, dtype=None):
-    # type: (Sequence, Sequence, Sequence, Sequence, Sequence, Optional[np.ndarray], Union[str, type]) -> np.ndarray
+def _rebin_counts(x, I, xo, dtype):
+    # type: (np.ndarray, np.ndarray, np.ndarray, np.ndarray) -> None
+
+    # Sort directions ascending vs. descending
+    if x[0] > x[-1]:
+        x, I = x[::-1], I[::-1]
+    reverse_xo = xo[0] > xo[-1]
+    if reverse_xo:
+        xo = xo[::-1]
+
+    cc = np.empty(len(x), dtype=np.float64)
+    cc[0] = 0
+    cc[1:] = np.cumsum(I)
+    integral = np.interp(xo, x, cc)  # result is always float64
+    ix = np.diff(integral)
+
+    # Set proper return type, rounding to nearest integer for integral types.
+    # This may add/remove counts if we hit exactly 0.5 on some bins.
+    if dtype == np.float32:
+        ix = np.asarray(ix, dtype=dtype)
+    elif dtype != np.float64:
+        ix = np.asarray(ix+0.5, dtype=dtype)
+
+    return ix[::-1] if reverse_xo else ix
+
+
+def rebin2d(x, y, I, xo, yo, dtype=np.float64):
+    # type: (Sequence, Sequence, Sequence, Sequence, Sequence, Union[str, type]) -> np.ndarray
     """
     Rebin a matrix.
 
@@ -79,64 +88,106 @@ def rebin2d(x, y, I, xo, yo, Io=None, dtype=None):
                [1., 1., 1., 1., 1.],
                [1., 1., 1., 1., 1.]])
 
-    dtype is the type to use for the intensity vectors.  This can be
+    dtype is the type to use for the output intensity.  This can be
     integer (uint8, uint16, uint32) or real (float32 or f, float64 or d).
-    The edge vectors are all coerced to doubles.
+    The edge vectors are all coerced to doubles.  Default is the dtype
+    of the input intensity.
 
     Note that total intensity is not preserved for integer rebinning.
     The algorithm uses truncation so total intensity will be down on
     average by half the total number of bins.
-
-    Io will be used if present, if it is contiguous and if it has the
-    correct shape and type for the input.  Otherwise it will raise a
-    TypeError.  This will allow you to rebin the slices of an appropriately
-    ordered matrix without making copies.
     """
-    from .rebin_python import rebin_counts_2D
-    # Coerce axes to float arrays
-    x, y, xo, yo = [_input(v, dtype='d') for v in (x, y, xo, yo)]
-    shape_in = np.array([x.shape[0]-1, y.shape[0]-1])
-    shape_out = np.array([xo.shape[0]-1, yo.shape[0]-1])
-
-    # Coerce counts to correct type and check shape
-    if dtype is None:
-        dtype = getattr(I, 'dtype', np.float64)
-    I = _input(I, dtype=dtype)
-    if (shape_in != I.shape).any():
+    # Coerce inputs to arrays
+    I = np.asarray(I)
+    x, y, xo, yo = (np.asarray(v, dtype='d') for v in (x, y, xo, yo))
+    shape_in = (x.shape[0]-1, y.shape[0]-1)
+    if shape_in != I.shape or any(len(v.shape) != 1 for v in (x, y, xo, yo)):
         raise TypeError("input array incorrect shape %s"%str(I.shape))
 
-    # Create output vector
-    Io = _output(Io, shape_out, dtype=dtype)
-
-    rebin_counts_2D(x, y, I, xo, yo, Io)
+    Io = _rebin_counts_2D(x, y, I, xo, yo, dtype=dtype)
     return Io
 
-def _input(v, dtype='d'):
-    # type: Sequence -> np.ndarray
-    """
-    Force v to be a contiguous array of the correct type, avoiding copies
-    if possible.
-    """
-    return np.ascontiguousarray(v, dtype=dtype)
 
-def _output(v, shape, dtype=np.float64):
-    """
-    Create a contiguous array of the correct shape and type to hold a
-    returned array, reusing an existing array if possible.
-    """
-    if v is None:
-        return np.empty(shape, dtype=dtype)
-    if not (isinstance(v, np.ndarray)
-            and v.dtype == np.dtype(dtype)
-            and v.shape == shape
-            and v.flags.contiguous):
-        raise TypeError("output vector must be contiguous %s of size %s"
-                        %(dtype, shape))
-    return v
+def _rebin_counts_2D(x, y, I, xo, yo, dtype):
+    # type: (np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray) -> None
+
+    # Arrange indices so they are ascending.
+    # Slices are cheap---they don't make copies.
+    if x[0] > x[-1]:
+        x, I = x[::-1], I[::-1, :]
+    if y[0] > y[-1]:
+        y, I = y[::-1], I[:, ::-1]
+    reverse_xo = xo[0] > xo[-1]
+    if reverse_xo:
+        xo = xo[::-1]
+    reverse_yo = yo[0] > yo[-1]
+    if reverse_yo:
+        yo = yo[::-1]
+
+    # Create a cumulative sum.  Use float64 for integers to minimize
+    # overflow issues, even though it costs 2x in terms of space for int32.
+    intermediate_dtype = np.float32 if dtype == np.float32 else np.float64
+    csx = np.empty((len(x), len(y)-1), dtype=intermediate_dtype)
+    csx[0, :] = 0
+    csx[1:, :] = I
+    np.cumsum(csx, out=csx, axis=0)
+
+    xindices = np.interp(xo, x, np.arange(len(x)))  # result is float64
+    xindices_whole = np.floor(xindices).astype(int)
+    xindices_frac = np.fmod(xindices, 1.0)  # result is float64
+    # The only way an index will match the highest bin edge is for lookups at
+    # or outside the range of the source.  In this case the fractional portion
+    # will always == 0.0, so clipping this to the bin edge below is safe and
+    # allows us to use the source weights unmodified.
+    xintegral = I[xindices_whole.clip(max=len(x)-2), :]  # result is I.dtype
+    xintegral = np.asarray(xintegral, dtype=intermediate_dtype)  # int=>float
+    xintegral *= xindices_frac[:, None]
+    xintegral += csx[xindices_whole, :]
+    del csx
+    # rebinned over x
+    ix = np.diff(xintegral, axis=0)
+    # Note: inplace diff, which returns -delta in xintegral[0:-1], is only a
+    # few percent faster, and is much more subject to implementation details
+    # in the overlapping region, so don't use it.  Numpy 1.13 promises to
+    # create a temporary for inplace operations on overlapping regions, so
+    # the minor performance gains are likely to disappear anyway.
+    #xintegral[:-1] -= xintegral[1:]
+    #ix = xintegral[:-1]
+    del xintegral
+
+    csy = np.empty((len(xo)-1, len(y)), dtype=intermediate_dtype)
+    csy[:, 0] = 0
+    csy[:, 1:] = ix
+    np.cumsum(csy, out=csy, axis=1)
+
+    yindices = np.interp(yo, y, np.arange(len(y)))
+    yindices_whole = np.floor(yindices).astype(int)
+    yindices_frac = np.fmod(yindices, 1.0)
+    yintegral = ix[:, yindices_whole.clip(max=len(y)-2)]
+    # ix is already the correct dtype, so no need to change it
+    yintegral *= yindices_frac[None, :]
+    yintegral += csy[:, yindices_whole]
+    del csy
+    # rebinned over x and y
+    ixy = np.diff(yintegral, axis=1)
+    #yintegral[:-1] -= yintegral[1:]
+    #ixy = yintegral[:-1]
+    del yintegral
+
+    if ixy.dtype != dtype:
+        # If return type is float, then the intermediate type will be the
+        # same float32/float64.  If the return type is integer then the
+        # intermediate type will be float64 and needs to be converted to int.
+        ixy = np.asarray(ixy+0.5, dtype=dtype)
+
+    if reverse_xo:
+        ixy = ixy[::-1, :]
+    if reverse_yo:
+        ixy = ixy[:, ::-1]
+    return ixy
 
 
 # ================ Test code ==================
-# TODO: move test code to its own file
 def _check1d(from_bins, val, to_bins, target):
     """
     Test 1D rebinning *from_bins* => *to_bins* of counts *val* => *target*.
@@ -150,7 +201,7 @@ def _check1d(from_bins, val, to_bins, target):
     the result is unexpected.  *t.description* is set to the name of the
     test variant so that nosetests will have slightly nicer error reporting.
     """
-    target = _input(target)
+    target = np.asarray(target, dtype='d')
     for (f, F) in [(from_bins, val), (from_bins[::-1], val[::-1])]:
         for (t, T) in [(to_bins, target), (to_bins[::-1], target[::-1])]:
             test_name = "rebin %s->%s: %s->%s"%(f, t, F, T)
@@ -161,44 +212,54 @@ def _check1d(from_bins, val, to_bins, target):
             test.description = test_name
             yield test
 
+
 def _test1d():
     # Split a value
-    for t in _check1d([1, 2, 3, 4], [10, 20, 30], [1, 2.5, 4], [20, 40]):
+    for t in _check1d([1, 2, 3, 4], [10, 20, 30],
+                      [1, 2.5, 4], [20, 40]):
         t()
 
     # bin is a superset of rebin
-    for t in _check1d([0, 1, 2, 3, 4], [5, 10, 20, 30], [1, 2.5, 3], [20, 10]):
+    for t in _check1d([0, 1, 2, 3, 4], [5, 10, 20, 30],
+                      [1, 2.5, 3], [20, 10]):
         t()
 
     # bin is a subset of rebin
-    for t in _check1d([1, 2, 3, 4, 5, 6], [10, 20, 30, 40, 50], [2.5, 3.5], [25]):
+    for t in _check1d([1, 2, 3, 4, 5, 6], [10, 20, 30, 40, 50],
+                      [2.5, 3.5], [25]):
         t()
 
     # one bin to many
-    for t in _check1d([1, 2, 3, 4, 5, 6], [10, 20, 30, 40, 50], [2.1, 2.2, 2.3, 2.4], [2, 2, 2]):
+    for t in _check1d([1, 2, 3, 4, 5, 6], [10, 20, 30, 40, 50],
+                      [2.1, 2.2, 2.3, 2.4], [2, 2, 2]):
         t()
 
     # many bins to one
-    for t in _check1d([1, 2, 3, 4, 5, 6], [10, 20, 30, 40, 50], [2.5, 4.5], [60]):
+    for t in _check1d([1, 2, 3, 4, 5, 6], [10, 20, 30, 40, 50],
+                      [2.5, 4.5], [60]):
         t()
+
 
 def _check2d(x, y, z, xo, yo, zo):
     # type: (Sequence, Sequence, Sequence, Sequence, Sequence, Sequence) -> None
     result = rebin2d(x, y, z, xo, yo)
     target = np.array(zo, dtype=result.dtype)
+    assert result.dtype == target.dtype
     assert np.linalg.norm(target-result) < 1e-14, \
         "rebin2d failed for %s, %s->%s, %s\n%s\n%s" % (x, y, xo, yo, z, zo)
+
 
 def _uniform_test(x, y):
     z = np.array([y], 'd') * np.array([x], 'd').T
     xedges = np.concatenate([(0, ), np.cumsum(x)])
     yedges = np.concatenate([(0, ), np.cumsum(y)])
-    nx = np.round(xedges[-1])
-    ny = np.round(yedges[-1])
+    nx = int(np.round(xedges[-1]))
+    ny = int(np.round(yedges[-1]))
     ox = np.arange(nx+1)
     oy = np.arange(ny+1)
     target = np.ones([nx, ny], 'd')
     return _check2d(xedges, yedges, z, ox, oy, target)
+
 
 def _test2d():
     x, y, I = [0, 3, 5, 7], [0, 1, 3], [[3, 6], [2, 4], [2, 4]]
@@ -219,20 +280,23 @@ def _test2d():
     # subset/superset
     _check2d([0, 1, 2, 3], [0, 1, 2, 3],
              [[1]*3]*3, [0.5, 1.5, 2.5], [0.5, 1.5, 2.5], [[1]*2]*2)
-    #for dtype in ['uint8', 'uint16', 'uint32', 'uint64', 'float32', 'float64']:
-    #    yield lambda: _check2d(
-    #        [0, 1, 2, 3, 4], [0, 1, 2, 3, 4],
-    #        np.array([[1]*4]*4, dtype=dtype),
-    #        [-2, -1, 2, 5, 6], [-2, -1, 2, 5, 6],
-    #        np.array([[0, 0, 0, 0], [0, 4, 4, 0], [0, 4, 4, 0], [0, 0, 0, 0]], dtype=dtype)
-    #        )
+    for dtype in ['uint8', 'uint16', 'uint32', 'uint64', 'float32', 'float64']:
+        _check2d(
+            [0, 1, 2, 3, 4], [0, 1, 2, 3, 4],
+            np.array([[1]*4]*4, dtype=dtype),
+            [-2, -1, 2, 5, 6], [-2, -1, 2, 5, 6],
+            np.array([[0, 0, 0, 0], [0, 4, 4, 0], [0, 4, 4, 0], [0, 0, 0, 0]],
+                      dtype=dtype)
+            )
     # non-square test
-    #yield lambda: _uniform_test([1, 2.5, 4, 0.5], [3, 1, 2.5, 1, 3.5])
-    #yield lambda: _uniform_test([3, 2], [1, 2])
+    _uniform_test([1, 2.5, 4, 0.5], [3, 1, 2.5, 1, 3.5])
+    _uniform_test([3, 2], [1, 2])
+
 
 def test():
     _test1d()
     _test2d()
+
 
 if __name__ == "__main__":
     test()

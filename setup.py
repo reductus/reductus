@@ -13,7 +13,7 @@ if sys.argv[1] == 'test':
 
 #sys.dont_write_bytecode = True
 
-from setuptools import setup, Extension, find_packages
+from setuptools import setup, find_packages
 
 import subprocess
 git_version_hash = subprocess.Popen(["git", "rev-parse", "HEAD"], stdout=subprocess.PIPE).stdout.read()
