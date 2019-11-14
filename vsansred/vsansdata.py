@@ -114,19 +114,21 @@ class VSansData(object):
             yaxis = det[self.yaxisname]
             xmax = xaxis.max()
             xmin = xaxis.min()
+            xstep = (xmax - xmin) / (max(dimX-1, 1))
             ymax = yaxis.max()
             ymin = yaxis.min()
+            ystep = (ymax - ymin) / (max(dimY-1, 1))
             zmax = np.max([corrected.max(), zmax])
             zmin = np.min([corrected.min(), zmin])
 
             datasets.append({
                 "data": corrected.ravel('C'),
                 "dims": {
-                    "xmin": xmin,
-                    "xmax": xmax,
+                    "xmin": xmin - xstep/2.0,
+                    "xmax": xmax + xstep/2.0,
                     "xdim": dimX,
-                    "ymin": ymin,
-                    "ymax": ymax,
+                    "ymin": ymin - ystep/2.0,
+                    "ymax": ymax + ystep/2.0,
                     "ydim": dimY,
                 }
             })
@@ -233,7 +235,7 @@ class VSans1dData(object):
 
     def to_dict(self):
         props = dict([(p, getattr(self, p, None)) for p in self.properties])
-        return pythonize(props)
+        return _toDictItem(props)
 
     def get_plottable(self):
         label = self.metadata.get('title', "unknown"),
@@ -259,7 +261,7 @@ class VSans1dData(object):
 
     def export(self):
         fid = BytesIO()
-        fid.write(_b("# %s\n" % json.dumps(pythonize(self.metadata)).strip("{}")))
+        fid.write(_b("# %s\n" % json.dumps(_toDictItem(self.metadata)).strip("{}")))
         columns = {"columns": [self.xlabel, self.vlabel, "uncertainty", "resolution"]}
         units = {"units": [self.xunits, self.vunits, self.vunits, self.xunits]}
         fid.write(_b("# %s\n" % json.dumps(columns).strip("{}")))
@@ -307,7 +309,7 @@ class Sans1dData(object):
 
     def to_dict(self):
         props = dict([(p, getattr(self, p, None)) for p in self.properties])
-        return pythonize(props)
+        return _toDictItem(props)
 
     def get_plottable(self):
         label = "%s: %s" % (self.metadata['run.experimentScanID'], self.metadata['sample.labl'])
@@ -333,7 +335,7 @@ class Sans1dData(object):
 
     def export(self):
         fid = BytesIO()
-        fid.write(_b("# %s\n" % json.dumps(pythonize(self.metadata)).strip("{}")))
+        fid.write(_b("# %s\n" % json.dumps(_toDictItem(self.metadata)).strip("{}")))
         columns = {"columns": [self.xlabel, self.vlabel, "uncertainty", "resolution"]}
         units = {"units": [self.xunits, self.vunits, self.vunits, self.xunits]}
         fid.write(_b("# %s\n" % json.dumps(columns).strip("{}")))

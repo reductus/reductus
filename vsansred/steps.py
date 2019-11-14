@@ -901,8 +901,6 @@ def circular_av_new(qspace_data, q_min=None, q_max=None, q_step=None):
         Q = (q_bins[:-1] + q_bins[1:])/2.0
         dx = np.zeros_like(Q)
 
-        # adding simple width-based mask around the perimeter:
-        #mask = np.ones_like(det['Q'], dtype=np.bool)
         mask = det.get('shadow_mask', np.ones_like(det['Q'], dtype=np.bool))
 
         # dq = data.dq_para if hasattr(data, 'dqpara') else np.ones_like(data.q) * q_step
