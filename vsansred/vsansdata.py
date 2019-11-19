@@ -261,7 +261,7 @@ class VSans1dData(object):
 
     def export(self):
         fid = BytesIO()
-        fid.write(_b("# %s\n" % json.dumps(_toDictItem(self.metadata)).strip("{}")))
+        fid.write(_b("# %s\n" % json.dumps(_toDictItem(self.metadata, convert_bytes=True)).strip("{}")))
         columns = {"columns": [self.xlabel, self.vlabel, "uncertainty", "resolution"]}
         units = {"units": [self.xunits, self.vunits, self.vunits, self.xunits]}
         fid.write(_b("# %s\n" % json.dumps(columns).strip("{}")))
