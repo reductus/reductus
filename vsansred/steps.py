@@ -239,7 +239,8 @@ def LoadVSANSHe3Parallel(filelist=None, check_timestamps=True):
 
     output (raw[]): all the entries loaded.
 
-    2018-04-29 Brian Maranville
+    | 2018-04-29 Brian Maranville
+    | 2019-11-20 Brian Maranville changed metadata list
     """
 
     from dataflow.calc import process_template
@@ -363,7 +364,9 @@ def He3_transmission(he3data, trans_panel="auto"):
     from .vsansdata import short_detectors, Parameters, VSans1dData,  _toDictItem
     import dateutil.parser
     from collections import OrderedDict
-    
+
+    he3data.sort(key=lambda d:  d.metadata.get("run.instrumentScanID", None))
+
     BlockedBeams = OrderedDict()
     for d in he3data:
         filename = d.metadata.get("run.filename", "unknown_file")
