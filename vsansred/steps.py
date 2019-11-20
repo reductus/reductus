@@ -403,9 +403,13 @@ def He3_transmission(he3data, trans_panel="auto"):
         f_det_dis_desired = d.metadata.get("f_det.dis_des", 0)
         num_attenuators = d.metadata.get("run.atten", 0)
         middle_timestamp = (tend - (count_time * 1000.0 / 2.0)) # in milliseconds
+        opacity = d.metadata.get("he3_back.opacity", 0.0)
+        wavelength = d.metadata.get("resolution.lmda")
         mappings.setdefault(tstartstr, {
             "Insert_time": tstart,
             "Cell_name": d.metadata.get("he3_back.name", "unknown"),
+            "Te": d.metadata.get("he3_back.te", 1.0),
+            "Mu": opacity*wavelength,
             "Transmissions": []
         })
 
