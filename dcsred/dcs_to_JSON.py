@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import re
-import simplejson
+import json
 import os
 from time import time, strftime
 
@@ -286,7 +286,7 @@ def process_raw_dcs(data_path):
     }
 
     #print time()-t0
-    return simplejson.dumps([output])
+    return json.dumps([output])
 
 
 def main():
