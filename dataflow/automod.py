@@ -422,13 +422,13 @@ def _unsplit_name(name):
 # parameter definition regular expression
 parameter_re = re.compile(r"""\A
     \s*(?P<id>\w+)                           # name
-    \s*([{]\s*(?P<label>.*?)\s*[}])?         # { label }    (optional)
-    \s*([(]                                  # (
+    \s*(\{\s*(?P<label>.*?)\s*\})?           # { label }    (optional)
+    \s*(\(                                   # (
         \s*(?P<datatype>.*?)                 #    datatype  (non-greedy)
-        \s*([[]\s*(?P<length>[0-9]*)\s*[]])? #    [length]  (optional)
+        \s*(\[\s*(?P<length>[0-9]*)\s*\])?   #    [length]  (optional)
         \s*(?P<multiple>[?*+])?              #    multiple  (optional [*+?])
         \s*(:\s*(?P<typeattr>.*?))?          #    :typeattr (optional)
-    \s*[)])?                                 # )
+    \s*\))?                                  # )
     \s*:                                     # :
     \s*(?P<description>.*?)                  # description  (non-greedy)
     \s*\Z""", re.VERBOSE)
@@ -772,7 +772,7 @@ def _validate_one(par, value, as_default):
 
     elif datatype == "scale":
         value = _type_check(name, value, float)
-    
+
     elif datatype == "patch_metadata":
         value = _patch_check(name, value)
 
@@ -808,13 +808,13 @@ def _patch_check(name, value):
             or "path" not in value
             or value["op"] not in ["test", "add", "replace", "copy", "move", "remove"]):
         raise ValueError("patch must be a dict, with valid op code and path")
-    
+
     elif value["op"] in ["test", "add", "replace"]:
         if not "value" in value:
             raise ValueError("patch for test, add or replace must contain value field")
         else:
             value["value"] = _type_check(name, value["value"], str)
-    
+
     elif value["op"] in ["copy", "move"]:
         if not "from" in value:
             raise ValueError("patch for copy or move must contain from field")
@@ -823,7 +823,7 @@ def _patch_check(name, value):
 
     value["op"] = _type_check(name, value["op"], str)
     value["path"] = _type_check(name, value["path"], str)
-    
+
     return value
 
 def _list_check(name, values, n, ptype):
