@@ -83,6 +83,8 @@ he3_metadata_lookup = OrderedDict([
     ("he3_back.starttime", "DAS_logs/backPolarization/timestamp"),
     ("he3_back.name", "DAS_logs/backPolarization/name"),
     ("he3_back.inbeam", "DAS_logs/backPolarization/inBeam"),
+    ("he3_back.opacity", "DAS_logs/backPolarization/opacityAt1Ang"),
+    ("he3_back.te", "DAS_logs/backPolarization/glassTransmission"),
     ("run.instrumentScanID", "DAS_logs/trajectory/instrumentScanID"),
     ("run.rtime", "control/count_time"),
     ("run.moncnt", "control/monitor_counts"),
