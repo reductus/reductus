@@ -662,6 +662,7 @@ class ReflData(Group):
     Reflectometry data structure, giving a predictable name space for the
     reduction steps regardless of input file format.
     """
+
     _groups = (
         ("slit1", Slit), ("slit2", Slit), ("slit3", Slit), ("slit4", Slit),
         ("detector", Detector),
@@ -1010,9 +1011,9 @@ class ReflData(Group):
 
     def save(self, filename):
         with open(filename, 'w') as fid:
-            fid.write(self.export())
+            fid.write(self.export_columns())
 
-    def export(self):
+    def export_columns(self):
         fid = BytesIO()  # numpy.savetxt requires a byte stream
         for n in ['name', 'entry', 'polarization']:
             _write_key_value(fid, n, getattr(self, n))
@@ -1100,6 +1101,8 @@ class ReflData(Group):
 
     def get_metadata(self):
         return self.todict()
+    
+    _export_types = {"column": export_columns}
 
 def get_item(obj, path):
     result = obj

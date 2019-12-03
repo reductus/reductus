@@ -479,15 +479,20 @@ class DataType(object):
     *id* : string
         Name of the data type.
 
-    *cls* : Classs
+    *cls* : Class
         Python class defining the data type.
+
+    *export_types*: list(strings)
+        A list of implemented export types for the data type (binary, text, etc..)
+
     """
     def __init__(self, id, cls):
         self.id = id
         self.cls = cls
+        self.export_types = list(getattr(cls, "_export_types", {}).keys())
 
     def get_definition(self):
-        return {"id": self.id}
+        return {"id": self.id, "export_types": self.export_types}
 
 
 class Bundle(object):
@@ -507,8 +512,8 @@ class Bundle(object):
         values = [v.get_metadata() for v in self.values]
         return {'datatype': self.datatype.id, 'values': values}
 
-    def get_export(self):
-        values = [v.export() for v in self.values]
+    def get_export(self, export_type="column", headers=None, concatenate=True):
+        values = [v._export_types[export_type](v) for v in self.values]
         return {'datatype': self.datatype.id, 'values': values}
 
     @staticmethod
