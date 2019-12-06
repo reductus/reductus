@@ -141,7 +141,7 @@ def find_calculated(template_def, config):
     return retval
 
 @expose
-def calc_terminal(template_def, config, nodenum, terminal_id, return_type='full'):
+def calc_terminal(template_def, config, nodenum, terminal_id, return_type='full', export_type="column", concatenate=True):
     """ json-rpc wrapper for calc_single
     template_def =
     {"name": "template_name",
@@ -190,9 +190,18 @@ def calc_terminal(template_def, config, nodenum, terminal_id, return_type='full'
         return retval.get_metadata()
     elif return_type == 'export':
         # inject git version hash into export data:
-        to_export = retval.get_export()
-        to_export["server_git_hash"] = server_git_hash
-        to_export["server_mtime"] = server_mtime
+        headers = {
+            "template_data": {
+                "template": template_def,
+                "config": config,
+                "node": nodenum,
+                "terminal": terminal_id,
+                "server_git_hash": server_git_hash,
+                "server_mtime": server_mtime,
+            }
+        }
+        to_export = retval.get_export(export_type=export_type, headers=headers, concatenate=concatenate)
+        
         return to_export
 
     raise KeyError(return_type + " not a valid return_type (should be one of ['full', 'plottable', 'metadata', 'export'])")

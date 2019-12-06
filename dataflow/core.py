@@ -489,10 +489,10 @@ class DataType(object):
     def __init__(self, id, cls):
         self.id = id
         self.cls = cls
-        self.export_types = list(getattr(cls, "_export_types", {}).keys())
+        self.export_types = getattr(cls, "_export_types", {})
 
     def get_definition(self):
-        return {"id": self.id, "export_types": self.export_types}
+        return {"id": self.id, "export_types": list(self.export_types.keys())}
 
 
 class Bundle(object):
@@ -513,8 +513,8 @@ class Bundle(object):
         return {'datatype': self.datatype.id, 'values': values}
 
     def get_export(self, export_type="column", headers=None, concatenate=True):
-        values = [v._export_types[export_type](v) for v in self.values]
-        return {'datatype': self.datatype.id, 'values': values}
+        to_export = self.datatype.export_types[export_type](self.values, headers=headers, concatenate=concatenate)
+        return {'datatype': self.datatype.id, 'values': to_export}
 
     @staticmethod
     def fromdict(state):

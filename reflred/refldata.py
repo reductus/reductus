@@ -94,6 +94,23 @@ IS_PY3 = sys.version_info[0] >= 3
 QZ_FROM_SAMPLE = 'sample angle'
 QZ_FROM_DETECTOR = 'detector angle'
 
+def _export_columns(datasets, headers=None, concatenate=False):
+    header_string = "#" + json.dumps(headers)[1:-1] + "\n"
+    outputs = []
+    if len(datasets) > 0:
+        exports = [d.to_column_text() for d in datasets]
+        if concatenate:
+            filename = exports[0].get('filename', 'default_name.dat')
+            export_strings = [e['value'] for e in exports]
+            export_string = header_string + "\n\n".join(export_strings)
+            outputs.append({"filename": filename, "value": export_string})
+        else:
+            for i, e in enumerate(exports):
+                export_string = header_string + e["value"]
+                filename = e.get('filename', 'default_name_%d.dat' % (i,))
+                outputs.append({"filename": filename, "value": export_string})
+    return outputs
+
 class Group(object):
     _fields = ()
     _props = ()
@@ -1011,9 +1028,9 @@ class ReflData(Group):
 
     def save(self, filename):
         with open(filename, 'w') as fid:
-            fid.write(self.export_columns())
+            fid.write(self._export_columns())
 
-    def export_columns(self):
+    def to_column_text(self):
         fid = BytesIO()  # numpy.savetxt requires a byte stream
         for n in ['name', 'entry', 'polarization']:
             _write_key_value(fid, n, getattr(self, n))
@@ -1045,23 +1062,18 @@ class ReflData(Group):
                 if IS_PY3:
                     datarow = datarow.encode('utf-8')
                 fid.write(datarow)
-            export_string = fid.getvalue()
-            if IS_PY3:
-                export_string = export_string.decode('utf-8')
-            name = getattr(self, "name", "default_name")
-            entry = getattr(self, "entry", "default_entry")
-            return {"name": name, "entry": entry, "export_string": export_string, "file_suffix": ".dat"}
+            suffix = "dat"
         else:
             _write_key_value(fid, "columns", [self.xlabel, self.vlabel, "uncertainty", "resolution"])
             _write_key_value(fid, "units", [self.xunits, self.vunits, self.vunits, self.xunits])
             data = np.vstack([self.x, self.v, self.dv, self.dx]).T
             np.savetxt(fid, data, fmt="%.10e")
-            export_string = fid.getvalue()
-            if IS_PY3:
+            suffix = "refl"
+
+        export_string = fid.getvalue() 
+        if IS_PY3:
                 export_string = export_string.decode('utf-8')
-            name = getattr(self, "name", "default_name")
-            entry = getattr(self, "entry", "default_entry")
-            return {"name": name, "entry": entry, "export_string": export_string, "file_suffix": ".refl"}
+        return {"filename": "%s_%s.%s" % (self.name, self.entry, suffix), "value": export_string}
 
     def get_plottable(self):
         columns = self.columns
@@ -1101,8 +1113,8 @@ class ReflData(Group):
 
     def get_metadata(self):
         return self.todict()
-    
-    _export_types = {"column": export_columns}
+
+    _export_types = {"column": _export_columns}
 
 def get_item(obj, path):
     result = obj

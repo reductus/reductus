@@ -161,7 +161,8 @@ webreduce.instruments = webreduce.instruments || {};
       var api_exception_dialog = $("div#api_exception").dialog({autoOpen: false, width: 600});
       var upload_dialog = $("#upload_template").dialog({autoOpen: false, width: 400});
       var reload_exported_dialog = $("#reload_exported").dialog({autoOpen: false, width: 400});
-      var export_data = $("#export_data").dialog({autoOpen: false, width: 400});
+      var initiate_export_data = $("#initiate_export").dialog({autoOpen: false, width: 400});
+      var route_export_data = $("#route_export_data").dialog({autoOpen: false, width: 400});
       var categories_editor = $("#categories_editor").dialog({autoOpen: false, width: 600});
       
       ////////////////////////////////////////////////////////////////////
