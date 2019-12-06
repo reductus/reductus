@@ -57,21 +57,15 @@ def _export_nxcansas(datasets, headers=None, concatenate=False):
     if len(datasets) > 0:
         exports = [d.to_NXcanSAS() for d in datasets]
         if concatenate:
-            #print(exports[0])
-            first_item = exports[0]["h5"]
             filename = exports[0]['filename']
             fid = BytesIO()
             container = h5py.File(fid)
-            #container.filename = filename
-            #print(dict(first_item.attrs))
-            #container.attrs.update(first_item.attrs)
             container["template_def"] = header_string
             for e in exports:
                 h5_item = e["h5"]
                 group_to_copy = list(h5_item.values())[0]
-                group_name = h5_item.filename
+                group_name = e['filename']
                 container.copy(group_to_copy, group_name)
-                #print(group_name, group_to_copy)
             container.close()
             fid.seek(0)
             outputs.append({"filename": filename, "value": fid.read()})
@@ -79,7 +73,9 @@ def _export_nxcansas(datasets, headers=None, concatenate=False):
             for e in exports:
                 h5_item = e["h5"]
                 h5_item["template_def"] = header_string
-                outputs.append({"filename": h5_item.filename, "value": h5_item.id.get_file_image()})
+                h5_item.flush()
+                value = h5_item.id.get_file_image()
+                outputs.append({"filename": e['filename'], "value": value})
                 
     return outputs
 
@@ -370,17 +366,17 @@ class SansIQData(object):
         fid.write(_b("# %s\n" % json.dumps({"columns": labels}).strip("{}")))
         np.savetxt(fid, np.vstack(column_values).T, fmt="%.10e")
         fid.seek(0)
-        name = getattr(self, "name", "default_name")
+        name = self.metadata.get("name", "default_name")
         entry = self.metadata.get("entry", "default_entry")
-        suffix = ".sansIQ.dat"
+        suffix = "sansIQ.dat"
         return {"filename": "%s_%s.%s" % (name, entry, suffix), "value": fid.read()}
 
     def to_NXcanSAS(self):
         import h5py
         fid = BytesIO()
-        name = getattr(self, "name", "default_name")
-        entry = self.metadata.get("entry", "default_entry")
-        suffix = ".sansIQ.nx.h5"
+        name = _s(self.metadata.get("name", "default_name"))
+        entry = _s(self.metadata.get("entry", "default_entry"))
+        suffix = "sansIQ.nx.h5"
         filename = "%s_%s.%s" % (name, entry, suffix)
         output = {"filename": filename}
         h5_item = h5py.File(fid)
