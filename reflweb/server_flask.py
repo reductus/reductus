@@ -45,13 +45,13 @@ def handle_error(e):
         code = e.code
     content = {'exception': repr(e), 'traceback': traceback.format_exc()}
     logging.info(content['traceback'])
-    return make_response(msgpack_converter.dumps(content), code)
+    return make_response(msgpack_converter.packb(content), code)
 
 def wrap_method(mfunc):
     def wrapper(*args, **kwargs):
         real_kwargs = request.get_json() if request.get_data() else {}
         content = mfunc(*args, **real_kwargs)
-        response = make_response(msgpack_converter.dumps(content))
+        response = make_response(msgpack_converter.packb(content))
         response.headers['Content-Type'] = 'application/msgpack'
         return response
     return wrapper

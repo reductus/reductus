@@ -15,7 +15,7 @@ webreduce.server_api = webreduce.server_api || {};
         xhr.onreadystatechange = function() {
           if (xhr.readyState == XMLHttpRequest.DONE) {
             var responseArray = new Uint8Array(xhr.response),
-            decoded = msgpack.decode(responseArray);
+            decoded = MessagePack.decode(responseArray);
             ((xhr.status == 200) ? resolve : reject)(decoded);
           }
         }
