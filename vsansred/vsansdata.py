@@ -34,6 +34,52 @@ def _s(b):
     else:
         return b
 
+def _export_columns(datasets, headers=None, concatenate=False):
+    header_string = "#" + json.dumps(headers)[1:-1] + "\n"
+    outputs = []
+    if len(datasets) > 0:
+        exports = [d.to_column_text() for d in datasets]
+        if concatenate:
+            filename = exports[0].get('filename', 'default_name.dat')
+            export_strings = [e['value'].decode() for e in exports]
+            export_string = header_string + "\n\n".join(export_strings)
+            outputs.append({"filename": filename, "value": export_string})
+        else:
+            for i, e in enumerate(exports):
+                export_string = header_string + e["value"]
+                filename = e.get('filename', 'default_name_%d.dat' % (i,))
+                outputs.append({"filename": filename, "value": export_string})
+    return outputs
+
+def _export_nxcansas(datasets, headers=None, concatenate=False):
+    import h5py
+    header_string = json.dumps(headers)
+    outputs = []
+    if len(datasets) > 0:
+        exports = [d.to_NXcanSAS() for d in datasets]
+        if concatenate:
+            filename = exports[0]['filename']
+            fid = BytesIO()
+            container = h5py.File(fid)
+            container["template_def"] = header_string
+            for e in exports:
+                h5_item = e["h5"]
+                group_to_copy = list(h5_item.values())[0]
+                group_name = e['filename']
+                container.copy(group_to_copy, group_name)
+            container.close()
+            fid.seek(0)
+            outputs.append({"filename": filename, "value": fid.read()})
+        else:
+            for e in exports:
+                h5_item = e["h5"]
+                h5_item["template_def"] = header_string
+                h5_item.flush()
+                value = h5_item.id.get_file_image()
+                outputs.append({"filename": e['filename'], "value": value})
+                
+    return outputs
+
 class RawVSANSData(object):
     suffix = ".vsans"
     def __init__(self, metadata, detectors=None):
@@ -46,10 +92,10 @@ class RawVSANSData(object):
 
     def get_plottable(self):
         #return {"entry": "entry", "type": "params", "params": _toDictItem(self.metadata)}
-        return {"entry": "entry", "type": "metadata", "values": _toDictItem(self.metadata)}
+        return {"entry": "entry", "type": "metadata", "values": _toDictItem(self.metadata, convert_bytes=True)}
 
     def get_metadata(self):
-        return _toDictItem(self.metadata)        
+        return _toDictItem(self.metadata, convert_bytes=True)
 
     def export(self):
         output = json.dumps(_toDictItem(self.metadata, convert_bytes=True))
@@ -183,7 +229,7 @@ class VSansDataQSpace(VSansData):
         self.yaxisname = 'Qy'
         VSansData.__init__(self, metadata=metadata, detectors=detectors)
 
-    def export(self):
+    def to_column_text(self):
         # export to 6-column format compatible with SASVIEW
         # Data columns are Qx - Qy - I(Qx,Qy) - err(I) - Qz - SigmaQ_parall - SigmaQ_perp - fSubS(beam stop shadow)
         column_names = ["Qx", "Qy", "I", "dI", "Qz", "SigmaQ_para", "SigmaQ_perp", "ShadowFactor", "detector_id"]
@@ -214,7 +260,86 @@ class VSansDataQSpace(VSansData):
         fid.seek(0)
         name = _s(self.metadata["run.filename"])
         entry = _s(self.metadata.get("entry", "default_entry"))
-        return {"name": name, "entry": entry, "export_string": fid.read(), "file_suffix": ".vsans2d.dat"}        
+        suffix = "vsans2d.dat"
+        filename = "%s_%s.%s" % (name, entry, suffix)
+        return {"filename": filename, "value": fid.read().decode()}
+
+    def to_NXcanSAS(self):
+        import h5py
+        fid = BytesIO()
+        name = _s(self.metadata.get("name", "default_name"))
+        entry = _s(self.metadata.get("entry", "default_entry"))
+        suffix = "sansIQ.nx.h5"
+        filename = "%s_%s.%s" % (name, entry, suffix)
+        output = {"filename": filename}
+        h5_item = h5py.File(fid)
+        
+        entryname = self.metadata.get("entry", "entry")
+        entry = h5_item.create_group(entryname)
+        entry.attrs.update({
+            "NX_class": "NXentry",
+            "canSAS_class": "SASentry",
+            "version": "1.0"
+        })
+        entry["definition"] = "NXcanSAS"
+        entry["run"] = "<see the documentation>"
+        entry["title"] = self.metadata["sample.description"]
+
+        instrument = entry.create_group("instrument")
+        total_length = 0
+        for d_id, sn in enumerate(short_detectors):
+            detname = 'detector_{short_name}'.format(short_name=sn)
+            det = self.detectors.get(detname, None)
+            if det is None:
+                continue
+            g = instrument.create_group(detname)
+            g.attrs["NX_class"] = "NXdetector"
+            g["data"] = det["data"].x
+            g["data_variance"] = det["data"].variance
+            g["Qx"] = det["Qx"]
+            g["Qy"] = det["Qy"]
+            g["Qz"] = det["Qz"]
+            total_length += det["data"].x.size
+
+        I = np.empty((total_length), dtype=np.float)
+        dI = np.empty((total_length), dtype=np.float)
+        Q = np.empty((3,total_length), dtype=np.float)
+        
+        data_cursor = 0
+        for d_id, sn in enumerate(short_detectors):
+            detname = 'detector_{short_name}'.format(short_name=sn)
+            det = self.detectors.get(detname, None)
+            if det is None:
+                continue
+            I_new = det["data"].x
+            dI_new = det["data"].variance
+            I[data_cursor:data_cursor + I_new.size] = I_new.ravel("C")
+            dI[data_cursor:data_cursor + I_new.size] = dI_new.ravel("C")
+            for qi, qn in enumerate(["Qx", "Qy", "Qz"]):
+                Q[qi, data_cursor:data_cursor + I_new.size] = det[qn].ravel("C")
+
+        # TODO: convert this to a view of detectors using h5py.VirtualSource?
+        datagroup = entry.create_group("data")
+        datagroup.attrs.update({
+            "NX_class": "NXdata",
+            "canSAS_class": "SASdata",
+            "signal": "I",
+            "I_axes": "<see the documentation>",
+            "Q_indices": [1,2,3]
+        })
+        datagroup["I"] = I
+        datagroup["I"].attrs["units"] = "1/m"
+        datagroup["I"].attrs["uncertainties"] = "Idev"
+        datagroup["Idev"] = dI
+        datagroup["Idev"].attrs["units"] = datagroup["I"].attrs["units"]
+        datagroup["Q"] = Q
+        datagroup["Q"].attrs["units"] = "1/nm"
+
+        output["h5"] = h5_item
+        
+        return output
+
+    _export_types = {"column": _export_columns, "NXcanSAS": _export_nxcansas}
 
 class VSans1dData(object):
     properties = ['x', 'v', 'dx', 'dv', 'xlabel', 'vlabel', 'xunits', 'vunits', 'xscale', 'vscale', 'metadata', 'fit_function']
