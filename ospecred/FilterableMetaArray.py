@@ -5,6 +5,23 @@ from numpy import ndarray, array, fromstring, float, float32, ones, empty, newax
 
 from .MetaArray import MetaArray
 
+def _export_columns(datasets, headers=None, concatenate=False):
+    header_string = "#" + json.dumps(headers)[1:-1] + "\n"
+    outputs = []
+    if len(datasets) > 0:
+        exports = [d.to_column_text() for d in datasets]
+        if concatenate:
+            filename = exports[0].get('filename', 'default_name.dat')
+            export_strings = [e['value'] for e in exports]
+            export_string = header_string + "\n\n".join(export_strings)
+            outputs.append({"filename": filename, "value": export_string})
+        else:
+            for i, e in enumerate(exports):
+                export_string = header_string + e["value"]
+                filename = e.get('filename', 'default_name_%d.dat' % (i,))
+                outputs.append({"filename": filename, "value": export_string})
+    return outputs
+
 class FilterableMetaArray(MetaArray):
     def __new__(cls, *args, **kw):
         obj = MetaArray.__new__(cls, *args, **kw)
@@ -76,8 +93,12 @@ class FilterableMetaArray(MetaArray):
         metadata.update(self.extrainfo)
         return metadata
 
-    def export(self):
-        return_value = {"name": self.extrainfo["friendly_name"], "entry": self.extrainfo["entry"]}
+    def to_column_text(self):
+        name = self.extrainfo["friendly_name"]
+        entry = self.extrainfo["entry"]
+        suffix = "ospec.dat"
+        filename = "%s_%s.%s" % (name, entry, suffix)
+        return_value = {"filename": filename}
         if len(self.shape) == 3:
             # return gnuplottable format:
             """ export 2d data to gnuplot format """
@@ -99,7 +120,7 @@ class FilterableMetaArray(MetaArray):
                         dump += "%g\t%g\t%g\n" % (x, y, array_out[ix, iy])
                 result.append(dump)
 
-            return_value["export_string"] =  result[0]
+            return_value["value"] =  result[0]
 
         elif len(self.shape) == 2:
             fid = BytesIO()
@@ -110,11 +131,11 @@ class FilterableMetaArray(MetaArray):
             output_data = hstack((self._info[0]['values'][:,None], self))
             savetxt(fid, output_data, header="\t".join(data_cols))
             fid.seek(0)
-            return_value["export_string"] = fid.read()
+            return_value["value"] = fid.read().decode()
 
         else:
             print("can only handle 1d or 2d data")
-            return_value["export_string"] = ""
+            return_value["value"] = ""
 
         return return_value
 
@@ -307,6 +328,8 @@ class FilterableMetaArray(MetaArray):
         else:
             print("can only handle 1d or 2d data")
             return
+
+    _export_types = {"column": _export_columns}
 
 #    def get_plottable_new(self):
 #        array_out = self['Measurements':'counts']
