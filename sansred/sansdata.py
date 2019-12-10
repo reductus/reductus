@@ -80,7 +80,7 @@ def _export_nxcansas(datasets, headers=None, concatenate=False):
     return outputs
 
 class RawSANSData(RawVSANSData):
-    suffix = ".sans"
+    suffix = "sans"
 
 class SansData(object):
     """SansData object used for storing values from a sample file (not div/mask).
@@ -369,7 +369,7 @@ class SansIQData(object):
         name = self.metadata.get("name", "default_name")
         entry = self.metadata.get("entry", "default_entry")
         suffix = "sansIQ.dat"
-        return {"filename": "%s_%s.%s" % (name, entry, suffix), "value": fid.read()}
+        return {"name": name, "entry": entry, "value": fid.read(), "file_suffix": suffix}
 
     def to_NXcanSAS(self):
         import h5py
@@ -377,8 +377,9 @@ class SansIQData(object):
         name = _s(self.metadata.get("name", "default_name"))
         entry = _s(self.metadata.get("entry", "default_entry"))
         suffix = "sansIQ.nx.h5"
-        filename = "%s_%s.%s" % (name, entry, suffix)
-        output = {"filename": filename}
+        #filename = "%s_%s.%s" % (name, entry, suffix)
+        #output = {"filename": filename}
+        output = {"name": name, "entry": entry, "file_suffix": suffix}
         h5_item = h5py.File(fid)
         
         entryname = self.metadata.get("entry", "entry")
@@ -404,7 +405,7 @@ class SansIQData(object):
         datagroup["Q"] = self.Q
         datagroup["Q"].attrs["units"] = "1/nm"
 
-        output["h5"] = h5_item
+        output["value"] = h5_item
         
         return output
 

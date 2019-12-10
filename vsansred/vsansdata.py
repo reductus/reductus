@@ -81,7 +81,7 @@ def _export_nxcansas(datasets, headers=None, concatenate=False):
     return outputs
 
 class RawVSANSData(object):
-    suffix = ".vsans"
+    suffix = "vsans"
     def __init__(self, metadata, detectors=None):
         self.metadata = metadata
         self.metadata['name'] = metadata['run.filename']
@@ -97,11 +97,11 @@ class RawVSANSData(object):
     def get_metadata(self):
         return _toDictItem(self.metadata, convert_bytes=True)
 
-    def export(self):
+    def to_column_text(self):
         output = json.dumps(_toDictItem(self.metadata, convert_bytes=True))
-        name = getattr(self.metadata, "name", "default_name")
-        entry = getattr(self.metadata, "entry", "default_entry")
-        return {"name": name, "entry": entry, "export_string": output, "file_suffix": self.suffix + ".metadata.json"}
+        name = _s(self.metadata.get("name", "default_name"))
+        entry = _s(self.metadata.get("entry", "default_entry"))
+        return {"name": name, "entry": entry, "value": output, "file_suffix": self.suffix + "metadata.json"}
 
 class RawVSANSHe3Data(RawVSANSData):
     pass
@@ -261,8 +261,8 @@ class VSansDataQSpace(VSansData):
         name = _s(self.metadata["run.filename"])
         entry = _s(self.metadata.get("entry", "default_entry"))
         suffix = "vsans2d.dat"
-        filename = "%s_%s.%s" % (name, entry, suffix)
-        return {"filename": filename, "value": fid.read().decode()}
+        #filename = "%s_%s.%s" % (name, entry, suffix)
+        return {"name": name, "entry": entry, "value": fid.read().decode(), "file_suffix": suffix}
 
     def to_NXcanSAS(self):
         import h5py
@@ -270,8 +270,9 @@ class VSansDataQSpace(VSansData):
         name = _s(self.metadata.get("name", "default_name"))
         entry = _s(self.metadata.get("entry", "default_entry"))
         suffix = "sansIQ.nx.h5"
-        filename = "%s_%s.%s" % (name, entry, suffix)
-        output = {"filename": filename}
+        #filename = "%s_%s.%s" % (name, entry, suffix)
+        #output = {"filename": filename}
+        output = {"name": name, "entry": entry, "file_suffix": suffix}
         h5_item = h5py.File(fid)
         
         entryname = self.metadata.get("entry", "entry")
@@ -335,7 +336,7 @@ class VSansDataQSpace(VSansData):
         datagroup["Q"] = Q
         datagroup["Q"].attrs["units"] = "1/nm"
 
-        output["h5"] = h5_item
+        output["value"] = h5_item
         
         return output
 
@@ -384,7 +385,7 @@ class VSans1dData(object):
     def get_metadata(self):
         return _toDictItem(self.metadata)
 
-    def export(self):
+    def to_column_text(self):
         fid = BytesIO()
         fid.write(_b("# %s\n" % json.dumps(_toDictItem(self.metadata, convert_bytes=True)).strip("{}")))
         columns = {"columns": [self.xlabel, self.vlabel, "uncertainty", "resolution"]}
@@ -395,7 +396,7 @@ class VSans1dData(object):
         fid.seek(0)
         name = getattr(self, "name", "default_name")
         entry = getattr(self.metadata, "entry", "default_entry")
-        return {"name": name, "entry": entry, "export_string": fid.read(), "file_suffix": ".vsans1d.dat"}
+        return {"name": name, "entry": entry, "value": fid.read(), "file_suffix": "vsans1d.dat"}
 
 def pythonize(obj):
     output = {}

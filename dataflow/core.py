@@ -486,10 +486,11 @@ class DataType(object):
         A list of implemented export types for the data type (binary, text, etc..)
 
     """
-    def __init__(self, id, cls):
+    def __init__(self, id, cls, export_types=None):
         self.id = id
         self.cls = cls
-        self.export_types = getattr(cls, "_export_types", {})
+        # export_types is e.g. {"columns": {"method_name": "to_column_text", "exporter": exporters.text}}
+        self.export_types = export_types if export_types is not None else {}
 
     def get_definition(self):
         return {"id": self.id, "export_types": list(self.export_types.keys())}
@@ -513,7 +514,8 @@ class Bundle(object):
         return {'datatype': self.datatype.id, 'values': values}
 
     def get_export(self, export_type="column", headers=None, concatenate=True):
-        to_export = self.datatype.export_types[export_type](self.values, headers=headers, concatenate=concatenate)
+        exporter_info = self.datatype.export_types[export_type]
+        to_export = exporter_info["exporter"](self.values, export_method=exporter_info["method_name"], headers=headers, concatenate=concatenate)
         return {'datatype': self.datatype.id, 'values': to_export}
 
     @staticmethod

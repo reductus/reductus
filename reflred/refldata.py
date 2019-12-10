@@ -1028,7 +1028,7 @@ class ReflData(Group):
 
     def save(self, filename):
         with open(filename, 'w') as fid:
-            fid.write(self._export_columns())
+            fid.write(self.to_column_text()["value"])
 
     def to_column_text(self):
         fid = BytesIO()  # numpy.savetxt requires a byte stream
