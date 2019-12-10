@@ -575,7 +575,7 @@ def calculateDQ_IGOR(data, inQ, del_r=None):
     LP = 1.0/( 1.0/L1 + 1.0/L2)
     v_lambda = labmdaWidth**2/6.0
 
-    if 'LENS' in data.metadata['run.guide'].upper():
+    if 'LENS' in _s(data.metadata['run.guide'].upper()):
         # NOTE: this might need adjustment.  Ticket #677 filed in trac to change to:
         # v_b = 0.25*(S1*L2/L1)**2 +0.25*(2/3)*(labmdaWidth)**2*(S2*L2/LP)**2	
         v_b = 0.25*(S1*L2/L1)**2 +0.25*(2/3)*(labmdaWidth/lambda0)**2*(S2*L2/LP)**2		# correction to 2nd term
@@ -590,14 +590,21 @@ def calculateDQ_IGOR(data, inQ, del_r=None):
     r0 = L2*np.tan(2.0*np.arcsin(lambda0*inQ/(4.0*np.pi) ))
     delta = 0.5*(BS_prime - r0)**2/v_d
 
-    if (r0 < BS_prime):
-        inc_gamma=np.exp(gammaln(1.5))*(1-gammainc(1.5,delta))
-    else:
-        inc_gamma=np.exp(gammaln(1.5))*(1+gammainc(1.5,delta))
+    #if (r0 < BS_prime):
+    #    inc_gamma=np.exp(gammaln(1.5))*(1-gammainc(1.5,delta))
+    #else:
+    #    inc_gamma=np.exp(gammaln(1.5))*(1+gammainc(1.5,delta))
+    inc_gamma = np.ones_like(r0)
+    r0_less = (r0 < BS_prime)
+    r0_more = (r0 >= BS_prime)
+    inc_gamma[r0_less] = np.exp(gammaln(1.5))*(1-gammainc(1.5,delta[r0_less]))
+    inc_gamma[r0_more] = np.exp(gammaln(1.5))*(1+gammainc(1.5,delta[r0_more]))
+ 
 
     fSubS = 0.5*(1.0+erf( (r0-BS_prime)/np.sqrt(2.0*v_d) ) )
-    if (fSubS <= 0.0):
-        fSubS = 1.e-10
+    #if (fSubS <= 0.0):
+    #    fSubS = 1.e-10
+    fSubS[fSubS <= 0.0] = 1.e-10
 
     fr = 1.0 + np.sqrt(v_d)*np.exp(-1.0*delta) /(r0*fSubS*np.sqrt(2.0*np.pi))
     fv = inc_gamma/(fSubS*np.sqrt(np.pi)) - r0**2*(fr-1.0)**2/v_d
@@ -607,9 +614,10 @@ def calculateDQ_IGOR(data, inQ, del_r=None):
 
     rm = rmd + 0.5*v_r1/rmd
     v_r = v_r1 - 0.5*(v_r1/rmd)**2
-    if (v_r < 0.0):
-        v_r = 0.0
-    
+    #if (v_r < 0.0):
+    #    v_r = 0.0
+    v_r[v_r < 0.0] = 0.0
+
     QBar = (4.0*np.pi/lambda0)*np.sin(0.5*np.arctan(rm/L2))
     SigmaQ = QBar*np.sqrt(v_r/rmd**2 + v_lambda)
 
@@ -781,7 +789,7 @@ def circular_av(data):
 
 @nocache
 @module
-def circular_av_new(data, q_min=None, q_max=None, q_step=None, mask_width=3):
+def circular_av_new(data, q_min=None, q_max=None, q_step=None, mask_width=3, dQ_method='none'):
     """
     Using a circular average, it converts data to 1D (Q vs. I)
 
@@ -798,6 +806,8 @@ def circular_av_new(data, q_min=None, q_max=None, q_step=None, mask_width=3):
 
     mask_width (int): number of pixels to mask around the perimeter of the detector
 
+    dQ_method (opt:none|IGOR|statistical) : method for calculating dQ
+
     **Returns**
 
     nominal_output (sans1d): converted to I vs. nominal Q
@@ -808,6 +818,7 @@ def circular_av_new(data, q_min=None, q_max=None, q_step=None, mask_width=3):
 
     | 2019-01-01 Brian Maranville
     | 2019-09-05 Adding mask_width as a temporary way to handle basic masking
+    | 2019-12-10 Brian Maranville adding dQ_method opts
     """
     from scipy import interpolate
     from dataflow.lib import rebin
@@ -827,8 +838,6 @@ def circular_av_new(data, q_min=None, q_max=None, q_step=None, mask_width=3):
 
     q_bins = np.arange(q_min, q_max+q_step, q_step)
     Q = (q_bins[:-1] + q_bins[1:])/2.0
-    dx = np.zeros_like(Q)
-    Q_mean_error = dx.copy()
 
     # adding simple width-based mask around the perimeter:
     mask = np.zeros_like(data.q, dtype=np.bool)
@@ -864,8 +873,15 @@ def circular_av_new(data, q_min=None, q_max=None, q_step=None, mask_width=3):
     Q_var, _ = np.histogram(data.meanQ[mask][Q_var_mask], bins=q_bins, weights=Q_var_contrib)
     Q_var[Q_mean_norm > 0] /= Q_mean_norm[Q_mean_norm > 0]
 
+    if dQ_method == 'IGOR':
+        Q_mean, Q_mean_error = calculateDQ_IGOR(data, Q)
+    elif dQ_method == 'statistical':
+        Q_mean_error = np.sqrt(Q_var)
+    else:
+        # 'none' is the default
+        Q_mean_error = np.zeros_like(Q)
 
-    nominal_output = Sans1dData(Q, I, dx=dx, dv=I_var, xlabel="Q", vlabel="I",
+    nominal_output = Sans1dData(Q, I, dx=Q_mean_error, dv=I_var, xlabel="Q", vlabel="I",
                         xunits="inv. A", vunits="neutrons")
     nominal_output.metadata = deepcopy(data.metadata)
     nominal_output.metadata['extra_label'] = "_circ"
@@ -875,7 +891,7 @@ def circular_av_new(data, q_min=None, q_max=None, q_step=None, mask_width=3):
     mean_output.metadata = deepcopy(data.metadata)
     mean_output.metadata['extra_label'] = "_circ"
 
-    canonical_output = SansIQData(I, np.sqrt(I_var), Q, np.sqrt(Q_var), Q_mean, ShadowFactor, metadata=deepcopy(data.metadata))
+    canonical_output = SansIQData(I, np.sqrt(I_var), Q, Q_mean_error, Q_mean, ShadowFactor, metadata=deepcopy(data.metadata))
     
     return nominal_output, mean_output, canonical_output
 
