@@ -419,15 +419,16 @@ def calculateDQ(data):
     yctr = data.metadata["det.beamy"]
 
     shape = data.data.x.shape
-    x, y = np.indices(shape)
+    x, y = np.indices(shape) + 1.0 # detector indexing starts at 1...
     X = DDetX * (x-xctr)
     Y = DDetY * (y-yctr)
 
-    apOff = data.metadata["sample.position"]
-    S1 = data.metadata["resolution.ap1"]
-    S2 = data.metadata["resolution.ap2"]
-    L1 = data.metadata["resolution.ap12dis"] - apOff
-    L2 = data.metadata["det.dis"] + apOff
+    sampleOff = data.metadata["sample.position"]
+    apOff = data.metadata["resolution.ap2Off"]
+    S1 = data.metadata["resolution.ap1"] / 2.0 # use radius
+    S2 = data.metadata["resolution.ap2"] / 2.0 # use radius
+    L1 = data.metadata["resolution.ap12dis"]
+    L2 = data.metadata["det.dis"] + sampleOff + apOff
     LP = 1.0/( 1.0/L1 + 1.0/L2)
     SDD = L2
     SSD = L1
@@ -459,10 +460,11 @@ def calculateMeanQ(data):
 
     DDetX = data.metadata["det.pixelsizex"]
     DDetY = data.metadata["det.pixelsizey"]
-    apOff = data.metadata["sample.position"]
+    sampleOff = data.metadata["sample.position"]
+    apOff = data.metadata["resolution.ap2Off"]
     wavelength = data.metadata['resolution.lmda']
-    L1 = data.metadata["resolution.ap12dis"] - apOff
-    L2 = data.metadata["det.dis"] + apOff
+    L1 = data.metadata["resolution.ap12dis"]
+    L2 = data.metadata["det.dis"] + sampleOff + apOff
     LB = 20.1 + 1.61*BS # empirical formula from NCNR_Utils.ipf, line 123 in "getResolution"
     BS_prime = BS + (BS * LB / (L2 - LB)) # adding triangular shadow from LB to L2
 
@@ -712,10 +714,10 @@ def PixelsToQ(data, beam_center=[None,None], correct_solid_angle=True):
     res.r = r
     res.metadata['det.beamx'] = x0
     res.metadata['det.beamy'] = y0
-    res.qx_min = q0/2.0 * data.metadata['det.pixelsizex']*(0.5 - x0)/ L2
-    res.qy_min = q0/2.0 * data.metadata['det.pixelsizex']*(0.5 - y0)/ L2
-    res.qx_max = q0/2.0 * data.metadata['det.pixelsizex']*(128.5 - x0)/ L2
-    res.qy_max = q0/2.0 * data.metadata['det.pixelsizex']*(128.5 - y0)/ L2
+    res.qx_min = q0/2.0 * data.metadata['det.pixelsizex']*(0.5 - x0)/ Z
+    res.qy_min = q0/2.0 * data.metadata['det.pixelsizex']*(0.5 - y0)/ Z
+    res.qx_max = q0/2.0 * data.metadata['det.pixelsizex']*(128.5 - x0)/ Z
+    res.qy_max = q0/2.0 * data.metadata['det.pixelsizex']*(128.5 - y0)/ Z
     res.xlabel = "Qx (inv. Angstroms)"
     res.ylabel = "Qy (inv. Angstroms)"
     res.theta = theta
