@@ -534,6 +534,11 @@ def calculateDQ_IGOR(data, inQ, del_r=None):
     | *The effect of gravity on the resolution of small-angle neutron diffraction peaks*
     | [ doi:10.1107/S0021889811033322 ]
 
+    | J. Appl. Cryst. (1995). 28, 105-114
+    | https://doi.org/10.1107/S0021889894010095 (Cited by 90)
+    | Instrumental Smearing Effects in Radially Symmetric Small-Angle Neutron Scattering by Numerical and Analytical Methods
+    | J. G. Barker and J. S. Pedersen
+
     **Inputs**
 
     data (sans2d): data in
@@ -555,11 +560,14 @@ def calculateDQ_IGOR(data, inQ, del_r=None):
     if del_r is None:
         del_r = DDet
 
-    apOff = data.metadata["sample.position"]
-    S1 = data.metadata["resolution.ap1"]
-    S2 = data.metadata["resolution.ap2"]
-    L1 = data.metadata["resolution.ap12dis"] - apOff
-    L2 = data.metadata["det.dis"] + apOff
+    apOff = data.metadata["resolution.ap2Off"]
+    sampleOff = data.metadata["sample.position"]
+    S1 = data.metadata["resolution.ap1"] * 0.5 # convert to radius, already cm
+    S2 = data.metadata["resolution.ap2"] * 0.5 # to radius
+    # no need to subtract apOff below - this is done in device model
+    # but for comparison with IGOR, leave it in:
+    L1 = data.metadata["resolution.ap12dis"] - apOff 
+    L2 = data.metadata["det.dis"] + sampleOff + apOff
     LP = 1.0/( 1.0/L1 + 1.0/L2)
     
     BS = data.metadata['det.bstop'] / 2.0 # diameter to radius, already in cm
@@ -841,7 +849,11 @@ def circular_av_new(data, q_min=None, q_max=None, q_step=None, mask_width=3, dQ_
 
     # adding simple width-based mask around the perimeter:
     mask = np.zeros_like(data.q, dtype=np.bool)
-    mask[mask_width:-mask_width, mask_width:-mask_width] = True
+    mask_width = abs(mask_width)
+    if (mask_width > 0):
+        mask[mask_width:-mask_width, mask_width:-mask_width] = True
+    else:
+        mask[:] = True
 
     # dq = data.dq_para if hasattr(data, 'dqpara') else np.ones_like(data.q) * q_step
     I, _bins_used = np.histogram(data.q[mask], bins=q_bins, weights=data.data.x[mask])
@@ -1884,7 +1896,8 @@ def SuperLoadSANS(filelist=None, do_det_eff=True, do_deadtime=True,
 
     output (sans2d[]): all the entries loaded.
 
-    2018-04-21 Brian Maranville
+    | 2018-04-21 Brian Maranville
+    | 2019-12-11 Changed loader to include sample aperture offset position
     """
     data = LoadSANS(filelist, flip=False, transpose=False, check_timestamps=check_timestamps)
 

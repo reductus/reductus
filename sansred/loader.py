@@ -56,7 +56,8 @@ metadata_lookup = OrderedDict([
     ("sample.temp", "DAS_logs/temp/primaryNode/average_value"),
     ("resolution.ap1", "DAS_logs/geometry/sourceAperture"),
     ("resolution.ap2", "instrument/sample_aperture/size"),
-    ("resolution.ap12dis", "instrument/source_aperture/distance"),
+    ("resolution.ap2Off", "instrument/sample_aperture/distance"),
+    ("resolution.ap12dis", "DAS_logs/geometry/sourceApertureToSampleAperture"),
     ("sample.position", "DAS_logs/geometry/samplePositionOffset"),
     ("electromagnet_lrm.field","DAS_logs/electromagnet_lrm/field"),
     ("mag.value","DAS_logs/mag/value"),
@@ -78,7 +79,8 @@ unit_specifiers = {
     "det.pixeloffsety": "cm",
     "sample.thk": "cm",
     "resolution.ap1": "cm",
-    "resolution.ap2": "cm"
+    "resolution.ap2": "cm",
+    "resolution.ap2Off": "cm",
 }
 
 def process_sourceAperture(field, units):
