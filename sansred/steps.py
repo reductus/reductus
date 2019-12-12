@@ -623,6 +623,17 @@ def calculateDQ_IGOR(data, inQ, del_r=None):
 
     return QBar, SigmaQ
 
+def _calculate_Q(X, Y, Z, q0):
+    r = np.sqrt(X**2+Y**2)
+    theta = np.arctan2(r, Z)/2 #remember to convert Z to cm from meters
+    q = q0*np.sin(theta)
+    phi = np.arctan2(Y, X)
+    qx = q*np.cos(theta)*np.cos(phi)
+    qy = q*np.cos(theta)*np.sin(phi)
+    qz = q*np.sin(theta)
+
+    return r, theta, q, phi, qx, qy, qz
+
 @nocache
 @module
 def PixelsToQ(data, beam_center=[None,None], correct_solid_angle=True):
@@ -646,39 +657,53 @@ def PixelsToQ(data, beam_center=[None,None], correct_solid_angle=True):
     2016-04-17 Brian Maranville
     """
 
-    apOff = data.metadata["sample.position"]
-    L2 = data.metadata["det.dis"] + apOff
+    sampleOffset = data.metadata["sample.position"]
+    Z = data.metadata["det.dis"] + sampleOffset
     beamx_override, beamy_override = beam_center
     x0 = beamx_override if beamx_override is not None else data.metadata['det.beamx'] #should be close to 64
     y0 = beamy_override if beamy_override is not None else data.metadata['det.beamy'] #should be close to 64
     wavelength = data.metadata['resolution.lmda']
+    q0 = (4*np.pi/wavelength)
     shape = data.data.x.shape
 
-    qx = np.empty(shape, 'float')
-    qy = np.empty(shape, 'float')
-
-    x, y = np.indices(shape) + 0.5 # left, bottom edge of first pixel is 0.5, 0.5 pix.
-    X = data.metadata['det.pixelsizex']*(x-x0) # in mm in nexus, but converted by loader
-    Y = data.metadata['det.pixelsizey']*(y-y0)
-    r = np.sqrt(X**2+Y**2)
-    theta = np.arctan2(r, L2)/2 #remember to convert L2 to cm from meters
-    q = (4*np.pi/wavelength)*np.sin(theta)
-    alpha = np.arctan2(Y, X)
-    qx = q*np.cos(alpha)
-    qy = q*np.sin(alpha)
+    x, y = np.indices(shape) + 1.0 # center of first pixel is 1, 1 (Detector indexing)
+    dX = data.metadata['det.pixelsizex']
+    dY = data.metadata['det.pixelsizey']
+    # centers of pixels:
+    X = dX*(x-x0) # in mm in nexus, but converted by loader
+    Y = dY*(y-y0)
+    r, theta, q, phi, qx, qy, qz = _calculate_Q(X, Y, Z, q0)
+    
     if correct_solid_angle:
         data.data.x = data.data.x * (np.cos(theta)**3)
+
+    # bin corners:
+    X_low = dX*(x-0.5-x0)
+    X_high = dX*(x+0.5-x0)
+    Y_low = dY*(y-0.5-y0)
+    Y_high = dY*(y+0.5-y0)
+
+    r_low, theta_low, q_low, phi_low, qx_low, qy_low, qz_low = _calculate_Q(X_low, Y_low, Z, q0)
+    r_high, theta_high, q_high, phi_high, qx_high, qy_high, qz_high = _calculate_Q(X_high, Y_high, Z, q0)
+
     res = data.copy()
     #Adding res.q
     res.q = q
     res.qx = qx
     res.qy = qy
+    res.qz = qz
+    # bin edges:
+    res.qx_low = qx_low
+    res.qy_low = qy_low
+    res.qx_high = qx_high
+    res.qy_high = qy_high
+
     res.X = X
     res.Y = Y
+    res.Z = Z
     res.r = r
     res.metadata['det.beamx'] = x0
     res.metadata['det.beamy'] = y0
-    q0 = (4*np.pi/wavelength)
     res.qx_min = q0/2.0 * data.metadata['det.pixelsizex']*(0.5 - x0)/ L2
     res.qy_min = q0/2.0 * data.metadata['det.pixelsizex']*(0.5 - y0)/ L2
     res.qx_max = q0/2.0 * data.metadata['det.pixelsizex']*(128.5 - x0)/ L2
@@ -726,8 +751,8 @@ def circular_av(data):
     shape1 = data.data.x.shape
     x0 = data.metadata['det.beamx'] # should be close to 64
     y0 = data.metadata['det.beamy'] # should be close to 64
-    apOff = data.metadata["sample.position"]
-    L2 = data.metadata["det.dis"] + apOff
+    sampleOffset = data.metadata["sample.position"]
+    L2 = data.metadata["det.dis"] + sampleOffset
     wavelength = data.metadata['resolution.lmda']
 
     center = (x0, y0)
@@ -820,8 +845,6 @@ def circular_av_new(data, q_min=None, q_max=None, q_step=None, mask_width=3, dQ_
     | 2019-09-05 Adding mask_width as a temporary way to handle basic masking
     | 2019-12-10 Brian Maranville adding dQ_method opts
     """
-    from scipy import interpolate
-    from dataflow.lib import rebin
 
     # calculate the change in q that corresponds to a change in pixel of 1
     if data.qx is None:
