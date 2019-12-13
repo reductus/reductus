@@ -644,7 +644,10 @@ def _calculate_Q(X, Y, Z, q0):
 
     return r, theta, q, phi, qx, qy, qz
 
-@nocache
+def FX(xx,sx3,xcenter,sx):
+    return sx3*np.tan((xx-xcenter)*sx/sx3)
+
+@cache
 @module
 def PixelsToQ(data, beam_center=[None,None], correct_solid_angle=True):
     """
@@ -677,21 +680,27 @@ def PixelsToQ(data, beam_center=[None,None], correct_solid_angle=True):
     shape = data.data.x.shape
 
     x, y = np.indices(shape) + 1.0 # center of first pixel is 1, 1 (Detector indexing)
-    dX = data.metadata['det.pixelsizex']
-    dY = data.metadata['det.pixelsizey']
+    xcenter, ycenter = [(dd + 1.0)/2.0 for dd in shape] # = 64.5 for 128x128 array
+    sx = data.metadata['det.pixelsizex'] # cm
+    sy = data.metadata['det.pixelsizey']
+    sx3 = 1000.0 # constant, = 10000(mm) = 1000 cm; not in the nexus file for some reason.
+    sy3 = 1000.0 # (cm) also not in the nexus file 
     # centers of pixels:
-    X = dX*(x-x0) # in mm in nexus, but converted by loader
-    Y = dY*(y-y0)
+    dxbm = sx3*np.tan((x0-xcenter)*sx/sx3)
+    dybm = sy3*np.tan((y0-ycenter)*sy/sy3)
+
+    X = sx3*np.tan((x-xcenter)*sx/sx3) - dxbm # in mm in nexus, but converted by loader
+    Y = sy3*np.tan((y-ycenter)*sy/sy3) - dybm
     r, theta, q, phi, qx, qy, qz = _calculate_Q(X, Y, Z, q0)
     
     if correct_solid_angle:
-        data.data.x = data.data.x * (np.cos(theta)**3)
+        data.data.x = data.data.x / (np.cos(theta)**3)
 
     # bin corners:
-    X_low = dX*(x-0.5-x0)
-    X_high = dX*(x+0.5-x0)
-    Y_low = dY*(y-0.5-y0)
-    Y_high = dY*(y+0.5-y0)
+    X_low = sx3*np.tan((x - 0.5 - xcenter)*sx/sx3) - dxbm # in mm in nexus, but converted by loader
+    X_high = sx3*np.tan((x + 0.5 - xcenter)*sx/sx3) - dxbm # in mm in nexus, but converted by loader
+    Y_low = sy3*np.tan((y - 0.5 - ycenter)*sy/sy3) - dybm
+    Y_high = sy3*np.tan((y + 0.5 - ycenter)*sy/sy3) - dybm
 
     r_low, theta_low, q_low, phi_low, qx_low, qy_low, qz_low = _calculate_Q(X_low, Y_low, Z, q0)
     r_high, theta_high, q_high, phi_high, qx_high, qy_high, qz_high = _calculate_Q(X_high, Y_high, Z, q0)
@@ -822,6 +831,9 @@ def circular_av(data):
 
     return nominal_output, mean_output
 
+def oversample_2d(input_array, oversampling):
+    return np.repeat(np.repeat(input_array, oversampling, 0), oversampling, 1)
+
 @nocache
 @module
 def circular_av_new(data, q_min=None, q_max=None, q_step=None, mask_width=3, dQ_method='none'):
@@ -880,16 +892,33 @@ def circular_av_new(data, q_min=None, q_max=None, q_step=None, mask_width=3, dQ_
     else:
         mask[:] = True
 
+    oversampling = 3
+
+    o_mask = oversample_2d(mask, oversampling)
+    #o_q = oversample_2d(data.q, oversampling)
+    o_qxi, o_qyi = np.indices(o_mask.shape)
+    o_qx_offsets = ((o_qxi % oversampling) + 0.5) / oversampling
+    o_qy_offsets = ((o_qyi % oversampling) + 0.5) / oversampling
+    qx_width = oversample_2d(data.qx_high - data.qx_low, oversampling)
+    qy_width = oversample_2d(data.qy_high - data.qy_low, oversampling)
+    original_lookups = (np.floor_divide(o_qxi, oversampling), np.floor_divide(o_qyi, oversampling))
+    o_qx = data.qx_low[original_lookups] + (qx_width * o_qx_offsets)
+    o_qy = data.qy_low[original_lookups] + (qy_width * o_qy_offsets)
+    o_q = np.sqrt(o_qx**2 + o_qy**2)
+    o_data = oversample_2d(data.data, oversampling) # Uncertainty object...
+    o_meanQ = oversample_2d(data.meanQ, oversampling)
+    o_shadow_factor = oversample_2d(data.shadow_factor, oversampling)
+    o_dq_para = oversample_2d(data.dq_para, oversampling)
+
     # dq = data.dq_para if hasattr(data, 'dqpara') else np.ones_like(data.q) * q_step
-    I, _bins_used = np.histogram(data.q[mask], bins=q_bins, weights=data.data.x[mask])
-    I_norm, _ = np.histogram(data.q[mask], bins=q_bins, weights=np.ones_like(data.data.x[mask]))
-    I_var, _ = np.histogram(data.q[mask], bins=q_bins, weights=data.data.variance[mask])
+    I, _bins_used = np.histogram(o_q[o_mask], bins=q_bins, weights=o_data.x[o_mask])
+    I_norm, _ = np.histogram(o_q[o_mask], bins=q_bins, weights=np.ones_like(o_data.x[o_mask]))
+    I_var, _ = np.histogram(o_q[o_mask], bins=q_bins, weights=o_data.variance[o_mask])
     #Q_ave, _ = np.histogram(data.q, bins=q_bins, weights=data.q)
     #Q_var, _ = np.histogram(data.q, bins=q_bins, weights=data.dq_para**2)
-    Q_mean, _ = np.histogram(data.meanQ[mask], bins=q_bins, weights=data.meanQ[mask])
-    Q_mean_lookup = np.digitize(data.meanQ[mask], bins=q_bins)
-    Q_mean_norm, _ = np.histogram(data.meanQ[mask], bins=q_bins, weights=np.ones_like(data.data.x[mask]))
-    ShadowFactor, _ = np.histogram(data.meanQ[mask], bins=q_bins, weights=data.shadow_factor[mask])
+    Q_mean, _ = np.histogram(o_meanQ[o_mask], bins=q_bins, weights=o_meanQ[o_mask])
+    Q_mean_norm, _ = np.histogram(o_meanQ[o_mask], bins=q_bins, weights=np.ones_like(o_data.x[o_mask]))
+    ShadowFactor, _ = np.histogram(o_meanQ[o_mask], bins=q_bins, weights=o_shadow_factor[o_mask])
 
     nonzero_mask = I_norm > 0
 
@@ -903,16 +932,17 @@ def circular_av_new(data, q_min=None, q_max=None, q_step=None, mask_width=3, dQ_
     # with variances v_i, displaced from the mean center by xc_i
     # is the sum of (xc_i**2 + v_i).   Gaussians are weird.
 
-    # exclude Q_mean_lookups that overflow the length of the calculated Q_mean:
-    Q_var_mask = (Q_mean_lookup < len(Q_mean))
-    Q_mean_center = Q_mean[Q_mean_lookup[Q_var_mask]]
-    Q_var_contrib = (data.meanQ[mask][Q_var_mask] - Q_mean_center)**2 + (data.dq_para[mask][Q_var_mask])**2
-    Q_var, _ = np.histogram(data.meanQ[mask][Q_var_mask], bins=q_bins, weights=Q_var_contrib)
-    Q_var[Q_mean_norm > 0] /= Q_mean_norm[Q_mean_norm > 0]
-
+    
     if dQ_method == 'IGOR':
         Q_mean, Q_mean_error = calculateDQ_IGOR(data, Q)
     elif dQ_method == 'statistical':
+        # exclude Q_mean_lookups that overflow the length of the calculated Q_mean:
+        Q_mean_lookup = np.digitize(o_meanQ[o_mask], bins=q_bins)
+        Q_var_mask = (Q_mean_lookup < len(Q_mean))
+        Q_mean_center = Q_mean[Q_mean_lookup[Q_var_mask]]
+        Q_var_contrib = (o_meanQ[o_mask][Q_var_mask] - Q_mean_center)**2 + (o_dq_para[o_mask][Q_var_mask])**2
+        Q_var, _ = np.histogram(o_meanQ[o_mask][Q_var_mask], bins=q_bins, weights=Q_var_contrib)
+        Q_var[Q_mean_norm > 0] /= Q_mean_norm[Q_mean_norm > 0]
         Q_mean_error = np.sqrt(Q_var)
     else:
         # 'none' is the default
@@ -1076,19 +1106,32 @@ def correct_detector_efficiency(sansdata):
 
     output (sans2d): corrected for efficiency
 
-    2016-08-04 Brian Maranville and Andrew Jackson
+    | 2016-08-04 Brian Maranville and Andrew Jackson
+    | 2019-12-13 updated to detector coordinates
     """
 
-    apOff = sansdata.metadata["sample.position"]
-    L2 = sansdata.metadata["det.dis"] + apOff
+    sampleOff = sansdata.metadata["sample.position"]
+    Z = sansdata.metadata["det.dis"] + sampleOff # cm
     lambd = sansdata.metadata["resolution.lmda"]
     shape = sansdata.data.x.shape
-    (x0, y0) = np.shape(sansdata.data.x)
-    x, y = np.indices(shape)
-    X = sansdata.metadata['det.pixelsizex']/10.0*(x-x0/2)
-    Y = sansdata.metadata['det.pixelsizey']/10.0*(y-y0/2)
+    x0 = sansdata.metadata['det.beamx'] #should be close to 64
+    y0 = sansdata.metadata['det.beamy'] #should be close to 64
+    xcenter, ycenter = [(dd + 1.0)/2.0 for dd in shape]
+
+    x, y = np.indices(shape) + 1.0 # detector coordinates
+
+    sx = sansdata.metadata['det.pixelsizex'] # cm
+    sy = sansdata.metadata['det.pixelsizey']
+    sx3 = 1000.0 # constant, = 10000(mm) = 1000 cm; not in the nexus file for some reason.
+    sy3 = 1000.0 # (cm) also not in the nexus file 
+    # centers of pixels:
+    dxbm = sx3*np.tan((x0-xcenter)*sx/sx3)
+    dybm = sy3*np.tan((y0-ycenter)*sy/sy3)
+
+    X = sx3*np.tan((x-xcenter)*sx/sx3) - dxbm # in mm in nexus, but converted by loader
+    Y = sy3*np.tan((y-ycenter)*sy/sy3) - dybm
     r = np.sqrt(X**2+Y**2)
-    theta_det = np.arctan2(r, L2*100)/2
+    theta_det = np.arctan2(r, Z)/2
 
     stAl = 0.00967*lambd*0.8 # dimensionless, constants from JGB memo
     stHe = 0.146*lambd*2.5
@@ -1481,8 +1524,8 @@ def absolute_scaling(empty, sample, Tsam, div, instrument="NG7", integration_box
     detCnt = empty.metadata['run.detcnt']
     countTime = empty.metadata['run.rtime']
     monCnt = empty.metadata['run.moncnt']
-    apOff = empty.metadata["sample.position"]
-    sdd = empty.metadata["det.dis"] + apOff # already in cm
+    sampleOff = empty.metadata["sample.position"]
+    sdd = empty.metadata["det.dis"] + sampleOff # already in cm
     pixel = empty.metadata['det.pixelsizex'] # already in cm
     lambd = wavelength = empty.metadata['resolution.lmda']
 
