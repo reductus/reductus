@@ -1556,7 +1556,7 @@ def absolute_scaling(empty, sample, Tsam, div, instrument="NG7", integration_box
     #-------------------------------------------------------------------------------------#
 
     # Correct empty beam by the sensitivity
-    data = empty.__truediv__(div.data)
+    data = empty.data/div.data
     # Then take the sum in XY box, including stat. error
     if auto_box:
         height, x, y, width_x, width_y = moments(empty.data.x)
@@ -1571,7 +1571,7 @@ def absolute_scaling(empty, sample, Tsam, div, instrument="NG7", integration_box
     else:
         xmin, xmax, ymin, ymax = map(int, integration_box)
 
-    detCnt = np.sum(data.data[xmin:xmax+1, ymin:ymax+1])
+    detCnt = np.sum(data[xmin:xmax+1, ymin:ymax+1])
     print("DETCNT: ", detCnt)
     print('attentrans: ', attenTrans)
     print('monCnt: ', monCnt)
