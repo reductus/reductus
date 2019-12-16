@@ -694,7 +694,18 @@ def PixelsToQ(data, beam_center=[None,None], correct_solid_angle=True):
     r, theta, q, phi, qx, qy, qz = _calculate_Q(X, Y, Z, q0)
     
     if correct_solid_angle:
-        data.data.x = data.data.x / (np.cos(theta)**3)
+        """
+        rad = sqrt(dtdis2 + xd^2 + yd^2)
+		domega = rad/dtdist
+		ratio = domega^3
+		xy = xx[ii]*yy[jj]
+
+		data[ii][jj] *= xy*ratio
+        """
+        xx = (np.cos((x-xcenter)*sx/sx3))**2
+        yy = (np.cos((y-ycenter)*sy/sy3))**2
+        #data.data.x = data.data.x / (np.cos(theta)**3)
+        data.data.x = data.data.x * xx * yy / (np.cos(2*theta)**3)
 
     # bin corners:
     X_low = sx3*np.tan((x - 0.5 - xcenter)*sx/sx3) - dxbm # in mm in nexus, but converted by loader
