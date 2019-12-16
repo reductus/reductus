@@ -904,7 +904,8 @@ def circular_av_new(data, q_min=None, q_max=None, q_step=None, mask_width=3, dQ_
     original_lookups = (np.floor_divide(o_qxi, oversampling), np.floor_divide(o_qyi, oversampling))
     o_qx = data.qx_low[original_lookups] + (qx_width * o_qx_offsets)
     o_qy = data.qy_low[original_lookups] + (qy_width * o_qy_offsets)
-    o_q = np.sqrt(o_qx**2 + o_qy**2)
+    o_qz = oversample_2d(data.qz, oversampling)
+    o_q = np.sqrt(o_qx**2 + o_qy**2 + o_qz**2)
     o_data = oversample_2d(data.data, oversampling) # Uncertainty object...
     o_meanQ = oversample_2d(data.meanQ, oversampling)
     o_shadow_factor = oversample_2d(data.shadow_factor, oversampling)
