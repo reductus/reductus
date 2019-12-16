@@ -80,7 +80,7 @@ def readNCNRSensitivity(inputfile):
     
     detdata.resize(128,128)
     
-    return detdata
+    return detdata.T
 
 
 def readNCNRData(inputfile, file_obj=None):
