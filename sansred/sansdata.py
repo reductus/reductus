@@ -186,7 +186,7 @@ class SansData(object):
 
     def get_metadata(self):
         metadata = {}
-        metadata.update(_toDictItem(self.metadata))
+        metadata.update(_toDictItem(self.metadata, convert_bytes=True))
         return metadata
 
 class Sans1dData(object):
@@ -208,7 +208,7 @@ class Sans1dData(object):
 
     def to_dict(self):
         props = dict([(p, getattr(self, p, None)) for p in self.properties])
-        return _toDictItem(props)
+        return _toDictItem(props, convert_bytes=True)
 
     def get_plottable(self):
         label = "%s: %s" % (self.metadata['run.experimentScanID'], self.metadata['sample.labl'])
