@@ -876,8 +876,16 @@ def circular_av_new(data, q_min=None, q_max=None, q_step=None, mask_width=3, dQ_
 
     | 2019-01-01 Brian Maranville
     | 2019-09-05 Adding mask_width as a temporary way to handle basic masking
-    | 2019-12-10 Brian Maranville adding dQ_method opts
+    | 2019-12-11 Brian Maranville adding dQ_method opts
     """
+
+    # adding simple width-based mask around the perimeter:
+    mask = np.zeros_like(data.q, dtype=np.bool)
+    mask_width = abs(mask_width)
+    if (mask_width > 0):
+        mask[mask_width:-mask_width, mask_width:-mask_width] = True
+    else:
+        mask[:] = True
 
     # calculate the change in q that corresponds to a change in pixel of 1
     if data.qx is None:
@@ -890,18 +898,10 @@ def circular_av_new(data, q_min=None, q_max=None, q_step=None, mask_width=3, dQ_
         q_min = q_step
     
     if q_max is None:
-        q_max = data.q.max()
+        q_max = data.q[mask].max()
 
     q_bins = np.arange(q_min, q_max+q_step, q_step)
     Q = (q_bins[:-1] + q_bins[1:])/2.0
-
-    # adding simple width-based mask around the perimeter:
-    mask = np.zeros_like(data.q, dtype=np.bool)
-    mask_width = abs(mask_width)
-    if (mask_width > 0):
-        mask[mask_width:-mask_width, mask_width:-mask_width] = True
-    else:
-        mask[:] = True
 
     oversampling = 3
 
@@ -926,17 +926,17 @@ def circular_av_new(data, q_min=None, q_max=None, q_step=None, mask_width=3, dQ_
     I, _bins_used = np.histogram(o_q[o_mask], bins=q_bins, weights=o_data.x[o_mask])
     I_norm, _ = np.histogram(o_q[o_mask], bins=q_bins, weights=np.ones_like(o_data.x[o_mask]))
     I_var, _ = np.histogram(o_q[o_mask], bins=q_bins, weights=o_data.variance[o_mask])
-    #Q_ave, _ = np.histogram(data.q, bins=q_bins, weights=data.q)
+    #Q_ave, _ = np.histogram(o_q[o_mask], bins=q_bins, weights=o_q[o_mask])
     #Q_var, _ = np.histogram(data.q, bins=q_bins, weights=data.dq_para**2)
-    Q_mean, _ = np.histogram(o_meanQ[o_mask], bins=q_bins, weights=o_meanQ[o_mask])
-    Q_mean_norm, _ = np.histogram(o_meanQ[o_mask], bins=q_bins, weights=np.ones_like(o_data.x[o_mask]))
+    Q_mean, _ = np.histogram(o_q[o_mask], bins=q_bins, weights=o_meanQ[o_mask])
     ShadowFactor, _ = np.histogram(o_q[o_mask], bins=q_bins, weights=o_shadow_factor[o_mask])
 
     nonzero_mask = I_norm > 0
 
     I[nonzero_mask] /= I_norm[nonzero_mask]
     I_var[nonzero_mask] /= (I_norm[nonzero_mask]**2)
-    Q_mean[Q_mean_norm > 0] /= Q_mean_norm[Q_mean_norm > 0]
+    Q_mean[nonzero_mask] /= I_norm[nonzero_mask]
+    Q_ave[nonzero_mask] /= I_norm[nonzero_mask]
     ShadowFactor[nonzero_mask] /= I_norm[nonzero_mask]
 
     # calculate Q_var...
@@ -949,12 +949,12 @@ def circular_av_new(data, q_min=None, q_max=None, q_step=None, mask_width=3, dQ_
         Q_mean, Q_mean_error = calculateDQ_IGOR(data, Q)
     elif dQ_method == 'statistical':
         # exclude Q_mean_lookups that overflow the length of the calculated Q_mean:
-        Q_mean_lookup = np.digitize(o_meanQ[o_mask], bins=q_bins)
-        Q_var_mask = (Q_mean_lookup < len(Q_mean))
-        Q_mean_center = Q_mean[Q_mean_lookup[Q_var_mask]]
-        Q_var_contrib = (o_meanQ[o_mask][Q_var_mask] - Q_mean_center)**2 + (o_dq_para[o_mask][Q_var_mask])**2
-        Q_var, _ = np.histogram(o_meanQ[o_mask][Q_var_mask], bins=q_bins, weights=Q_var_contrib)
-        Q_var[Q_mean_norm > 0] /= Q_mean_norm[Q_mean_norm > 0]
+        Q_lookup = np.digitize(o_q[o_mask], bins=q_bins)
+        Q_lookup_mask = (Q_lookup < len(Q))
+        Q_mean_center = Q_mean[Q_lookup[Q_lookup_mask]]
+        Q_var_contrib = (o_meanQ[o_mask][Q_lookup_mask] - Q_mean_center)**2 + (o_dq_para[o_mask][Q_lookup_mask])**2
+        Q_var, _ = np.histogram(o_meanQ[o_mask][Q_lookup_mask], bins=q_bins, weights=Q_var_contrib)
+        Q_var[nonzero_mask] /= I_norm[nonzero_mask]
         Q_mean_error = np.sqrt(Q_var)
     else:
         # 'none' is the default
