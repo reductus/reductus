@@ -936,7 +936,7 @@ def circular_av_new(data, q_min=None, q_max=None, q_step=None, mask_width=3, dQ_
     I[nonzero_mask] /= I_norm[nonzero_mask]
     I_var[nonzero_mask] /= (I_norm[nonzero_mask]**2)
     Q_mean[nonzero_mask] /= I_norm[nonzero_mask]
-    Q_ave[nonzero_mask] /= I_norm[nonzero_mask]
+    #Q_ave[nonzero_mask] /= I_norm[nonzero_mask]
     ShadowFactor[nonzero_mask] /= I_norm[nonzero_mask]
 
     # calculate Q_var...
