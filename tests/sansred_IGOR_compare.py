@@ -23,8 +23,11 @@ d299 = np.loadtxt("./regression_files/AUG17299.ABS", skiprows=14)
 
 q_IGOR_low = d298[:,0]
 dq_IGOR_low = d298[:,3]
+meanQ_IGOR_low = d298[:,4]
+shadow_IGOR_low = d298[:,5]
 q_reductus_low = output_low.values[0].Q
 dq_reductus_low = output_low.values[0].dQ
+shadow_reductus_low = output_low.values[0].ShadowFactor
 
 q_IGOR_high = d299[:,0]
 dq_IGOR_high = d299[:,3]
@@ -35,6 +38,11 @@ plot(output_low.values[0].Q, output_low.values[0].dQ, 'bo', label="dQ: reductus"
 plot(output_high.values[0].Q, output_high.values[0].dQ, 'bo', label="dQ: reductus")
 plot(q_IGOR_low, dq_IGOR_low, label="dQ: IGOR")
 plot(q_IGOR_high, dq_IGOR_high, label="dQ: IGOR")
+legend()
+
+figure()
+plot(q_IGOR_low[:10], shadow_IGOR_low[:10], label="Shadow factor: IGOR")
+plot(q_reductus_low[:10], shadow_reductus_low[:10], label="Shadow factor: reductus")
 legend()
 
 figure()
