@@ -930,14 +930,14 @@ def circular_av_new(data, q_min=None, q_max=None, q_step=None, mask_width=3, dQ_
     #Q_var, _ = np.histogram(data.q, bins=q_bins, weights=data.dq_para**2)
     Q_mean, _ = np.histogram(o_meanQ[o_mask], bins=q_bins, weights=o_meanQ[o_mask])
     Q_mean_norm, _ = np.histogram(o_meanQ[o_mask], bins=q_bins, weights=np.ones_like(o_data.x[o_mask]))
-    ShadowFactor, _ = np.histogram(o_meanQ[o_mask], bins=q_bins, weights=o_shadow_factor[o_mask])
+    ShadowFactor, _ = np.histogram(o_q[o_mask], bins=q_bins, weights=o_shadow_factor[o_mask])
 
     nonzero_mask = I_norm > 0
 
     I[nonzero_mask] /= I_norm[nonzero_mask]
     I_var[nonzero_mask] /= (I_norm[nonzero_mask]**2)
     Q_mean[Q_mean_norm > 0] /= Q_mean_norm[Q_mean_norm > 0]
-    ShadowFactor[Q_mean_norm > 0] /= Q_mean_norm[Q_mean_norm > 0]
+    ShadowFactor[nonzero_mask] /= I_norm[nonzero_mask]
 
     # calculate Q_var...
     # remarkably, the variance of a sum of normalized gaussians 
@@ -1581,13 +1581,13 @@ def absolute_scaling(empty, sample, Tsam, div, instrument="NG7", integration_box
     # Thus either fix this or pass un-normalized data.
     # Compute kappa = incident intensity * solid angle of the pixel
     kappa = detCnt / attenTrans * 1.0e8 / monCnt * (pixel/sdd)**2
-    print("Kappa: ", kappa)
+    print("Kappa: ", kappa.x, "+/-", np.sqrt(kappa.variance))
 
     #utc_datetime = date.datetime.utcnow()
     #print(utc_datetime.strftime("%Y-%m-%d %H:%M:%S"))
 
     Tsam_factor = Uncertainty(Tsam.params['factor'], Tsam.params['factor_variance'])
-    print('Tsam_factor: ', Tsam_factor)
+    print('Tsam_factor: ', Tsam_factor.x)
 
     #-----Using Kappa to Scale data-----#
     Dsam = sample.metadata['sample.thk']
