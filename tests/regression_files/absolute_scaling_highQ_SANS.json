@@ -6,9 +6,9 @@
       "config": {
         "filelist": [
           {
-            "path": "ncnrdata/ng7sans/201708/22666/data/sans47228.nxs.ng7",
+            "path": "ncnrdata/ng7sans/201708/22666/data/sans47229.nxs.ng7",
             "source": "ncnr",
-            "mtime": 1502403977,
+            "mtime": 1502407643,
             "entries": [
               "entry"
             ]
@@ -28,9 +28,9 @@
       "config": {
         "filelist": [
           {
-            "path": "ncnrdata/ng7sans/201708/22666/data/sans47199.nxs.ng7",
+            "path": "ncnrdata/ng7sans/201708/22666/data/sans47201.nxs.ng7",
             "source": "ncnr",
-            "mtime": 1502371896,
+            "mtime": 1502373383,
             "entries": [
               "entry"
             ]
@@ -106,9 +106,9 @@
       "config": {
         "filelist": [
           {
-            "path": "ncnrdata/ng7sans/201708/22666/data/sans47165.nxs.ng7",
+            "path": "ncnrdata/ng7sans/201708/22666/data/sans47164.nxs.ng7",
             "source": "ncnr",
-            "mtime": 1502305754,
+            "mtime": 1502304443,
             "entries": [
               "entry"
             ]
@@ -153,10 +153,10 @@
       "config": {
         "auto_box": false,
         "integration_box": [
-          55,
-          74,
-          53,
-          75
+          106,
+          121,
+          56,
+          73
         ]
       }
     },
@@ -211,9 +211,9 @@
       "config": {
         "filelist": [
           {
-            "path": "ncnrdata/ng7sans/201708/22666/data/sans47198.nxs.ng7",
+            "path": "ncnrdata/ng7sans/201708/22666/data/sans47200.nxs.ng7",
             "source": "ncnr",
-            "mtime": 1502370605,
+            "mtime": 1502372143,
             "entries": [
               "entry"
             ]
