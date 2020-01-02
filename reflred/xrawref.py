@@ -126,12 +126,20 @@ class BrukerRefl(refldata.ReflData):
         self.instrument = 'BrukerXray'
         # 1-sigma angular resolution (degrees) reported by Bruker.  Our own
         # measurements give a similar value (~ 0.033 degrees FWHM)
-        self.angular_resolution = FWHM2sigma(0.03)
+        nominal_resolution = 0.03
+        self.angular_resolution = FWHM2sigma(nominal_resolution)
         self.slit1.distance = -275.5
         self.slit2.distance = -192.7
         self.slit3.distance = +175.0
-        self.slit1.x = 0.03 # TODO: check
-        self.slit2.x = 0.03 # TODO: check
+        # Set the slit openings so that divergence calculation will yield
+        # the nominal resolution for the given slit positions.
+        # In practice the xray resolution is defined by optical elements
+        # such as Goebel mirrors, and so the slit geometry should not be
+        # used to compute resolution.  Slit openings could be used to estimate
+        # beam footprint on the sample if we knew the true value...
+        nominal_slits = (np.radians(nominal_resolution)
+                         * abs(self.slit1.distance - self.slit2.distance))
+        self.slit1.x = self.slit2.x = nominal_slits
         self.slit1.y = self.slit2.y = 20.0 # Note: back slits unused in reduction
         #self.slit4.distance = data_as(entry,'instrument/predetector_slit2/distance','mm')
         #self.detector.distance = data_as(entry,'instrument/detector/distance','mm')
