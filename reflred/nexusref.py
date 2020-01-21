@@ -15,6 +15,7 @@ from dataflow.lib import hzf_readonly_stripped as hzf
 from dataflow.lib import unit
 from dataflow.lib import iso8601
 from dataflow.lib import h5_open
+from dataflow.lib.strings import _s, _b
 
 from . import refldata
 from .util import fetch_url
@@ -85,7 +86,7 @@ def load_metadata(filename, file_obj=None):
     file = h5_open.h5_open_zip(filename, file_obj)
     measurements = []
     for name, entry in file.items():
-        if entry.attrs.get('NX_class', None) == 'NXentry':
+        if _s(entry.attrs.get('NX_class', None)) == 'NXentry':
             data = NCNRNeXusRefl(entry, name, filename)
             measurements.append(data)
     if file_obj is None:
@@ -103,7 +104,7 @@ def load_entries(filename, file_obj=None, entries=None):
     for name, entry in file.items():
         if entries is not None and name not in entries:
             continue
-        if entry.attrs.get('NX_class', None) == 'NXentry':
+        if _s(entry.attrs.get('NX_class', None)) == 'NXentry':
             data = NCNRNeXusRefl(entry, name, filename)
             data.load(entry)
             measurements.append(data)
@@ -137,7 +138,7 @@ class NCNRNeXusRefl(refldata.ReflData):
         #print(entry['instrument'].values())
         das = entry['DAS_logs']
         self.probe = 'neutron'
-        self.name = das['trajectoryData/fileName'][0] if 'trajectoryData/fileName' in das else 'unknown'
+        self.name = _s(das['trajectoryData/fileName'][0] if 'trajectoryData/fileName' in das else 'unknown')
         if 'trajectoryData/fileNum' in das:
             self.filenumber = das['trajectoryData/fileNum'][0]
         else:
@@ -146,9 +147,9 @@ class NCNRNeXusRefl(refldata.ReflData):
             self.filenumber = -randint(10**9, (10**10) - 1)
 
         #self.date = iso8601.parse_date(entry['start_time'][0].decode('utf-8'))
-        self.date = iso8601.parse_date(entry['start_time'][0])
-        self.description = entry['experiment_description'][0]
-        self.instrument = entry['instrument/name'][0]
+        self.date = iso8601.parse_date(_s(entry['start_time'][0]))
+        self.description = _s(entry['experiment_description'][0])
+        self.instrument = _s(entry['instrument/name'][0])
         self.slit1.distance = data_as(entry, 'instrument/presample_slit1/distance', 'mm')
         self.slit2.distance = data_as(entry, 'instrument/presample_slit2/distance', 'mm')
         #self.slit3.distance = data_as(entry, 'instrument/predetector_slit1/distance','mm')
@@ -161,15 +162,15 @@ class NCNRNeXusRefl(refldata.ReflData):
         self.monitor.deadtime = data_as(monitor_device, 'dead_time','us')
         self.monitor.deadtime_error = data_as(monitor_device, 'dead_time_error', 'us')
 
-        self.sample.name = entry['sample/name'][0] if 'name' in entry['sample'] else ""
-        self.sample.description = entry['sample/description'][0] if 'description' in entry['sample'] else ""
-        raw_intent = das['trajectoryData/_scanType'][0] if 'trajectoryData/_scanType' in das else ""
+        self.sample.name = _s(entry['sample/name'][0] if 'name' in entry['sample'] else "")
+        self.sample.description = _s(entry['sample/description'][0] if 'description' in entry['sample'] else "")
+        raw_intent = _s(das['trajectoryData/_scanType'][0] if 'trajectoryData/_scanType' in das else "")
         if raw_intent in self.trajectory_intents:
             self.intent = self.trajectory_intents[raw_intent]
-        self.monitor.base = das['counter/countAgainst'][0]
+        self.monitor.base = _s(das['counter/countAgainst'][0])
         self.monitor.time_step = 0.001  # assume 1 ms accuracy on reported clock
-        self.polarization = _get_pol(das, 'frontPolarization') \
-                            + _get_pol(das, 'backPolarization')
+        self.polarization = _s(_get_pol(das, 'frontPolarization')) \
+                            + _s(_get_pol(das, 'backPolarization'))
 
         if np.isnan(self.slit1.distance):
             self.warn("Slit 1 distance is missing; using 2 m")
@@ -186,17 +187,17 @@ class NCNRNeXusRefl(refldata.ReflData):
 
         # TODO: stop trying to guess DOI
         if 'DOI' in entry:
-            URI = entry['DOI']
+            URI = _s(entry['DOI'])
         else:
             # See: dataflow.modules.doi_resolve for helpers.
             #NCNR_DOI = "10.18434/T4201B"
             NCNR_DOI = "https://ncnr.nist.gov/pub/ncnrdata"
             LOCATION = {'pbr':'ngd', 'magik':'cgd', 'ng7r':'ng7'}
-            nice_instrument = str(das['experiment/instrument'].value[0]).lower()
+            nice_instrument = _s(das['experiment/instrument'].value[0]).lower()
             instrument = LOCATION.get(nice_instrument, nice_instrument)
             year, month = self.date.year, self.date.month
             cycle = "%4d%02d"%(year, month)
-            experiment = str(entry['experiment_identifier'].value[0])
+            experiment = _s(entry['experiment_identifier'].value[0])
             filename = os.path.basename(self.path)
             URI = "/".join((NCNR_DOI, instrument, cycle, experiment, "data", filename))
         self.uri = URI
@@ -260,7 +261,7 @@ class NCNRNeXusRefl(refldata.ReflData):
             # elements separated by new lines...
             if len(scanned_variables) == 1:
                 scanned_variables = str(scanned_variables[0]).split('\n')
-            scanned_variables = [s for s in scanned_variables if not s.startswith("areaDetector")]
+            scanned_variables = [_s(s) for s in scanned_variables if not _s(s).startswith("areaDetector")]
             for node_id in scanned_variables:
                 path = node_id.replace('.', '/')
                 try:
