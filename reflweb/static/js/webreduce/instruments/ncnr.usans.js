@@ -45,7 +45,8 @@ webreduce.instruments['ncnr.usans'] = webreduce.instruments['ncnr.usans'] || {};
   instrument.load_file = load_usans;
   instrument.default_categories = [
     [["analysis.intent"]],
-    [["run.filename"]]
+    [["run.filePrefix"]],
+    [["run.instFileNum"]]
   ];
   instrument.categories = jQuery.extend(true, [], instrument.default_categories);  
   

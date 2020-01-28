@@ -47,7 +47,7 @@ def module(action):
 
 @cache
 @module
-def LoadRawUSANS(filelist=None, check_timestamps=True):
+def LoadRawUSANS(filelist=None, check_timestamps=True, det_deadtime=7e-6, trans_deadtime=1.26e-5):
     """
     loads a data file into a RawSansData obj and returns that.
 
@@ -57,11 +57,15 @@ def LoadRawUSANS(filelist=None, check_timestamps=True):
     
     check_timestamps (bool): verify that timestamps on file match request
 
+    det_deadtime {main deadtime (s)} (float): main detector deadtime, in seconds
+
+    trans_deadtime {trans deadtime (s)} (float): transmission detector deadtime, in seconds 
+
     **Returns**
 
     output (data[]): all the entries loaded.
 
-    2018-04-23 Brian Maranville
+    2020-01-28 Brian Maranville
     """
     from dataflow.fetch import url_get
     from .loader import readUSANSNexus

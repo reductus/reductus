@@ -26,7 +26,7 @@ metadata_lookup = OrderedDict([
     ("eventfile", "DAS_logs/areaDetector/eventFileName"),
 ])
 
-def readUSANSNexus(input_file, file_obj=None, metadata_lookup=metadata_lookup):
+def readUSANSNexus(input_file, file_obj=None, metadata_lookup=metadata_lookup, det_deadtime=0.0, trans_deadtime=0.0):
     """
     Load all entries from the NeXus file into sans data sets.
     """
@@ -44,11 +44,14 @@ def readUSANSNexus(input_file, file_obj=None, metadata_lookup=metadata_lookup):
             ("entry", _s(entryname)),
         ])
 
-        detCts = entry['DAS_logs/linearDetector/counts'][()].sum(axis=1)
-        transCts = entry['DAS_logs/transDetector/counts'][()].sum(axis=1)
+        counts = entry['DAS_logs/linearDetector/counts'][()]
+        countTime = entry['DAS_logs/counter/liveTime'][()]
+        trans_counts = entry['DAS_logs/transDetector/counts'][()]
+        detCts = (counts / (1.0 - (counts*det_deadtime/countTime[:,None]))).sum(axis=1)
+        transCts = (trans_counts / (1.0 - (trans_counts*trans_deadtime/countTime[:,None]))).sum(axis=1)
         monCts = entry['DAS_logs/counter/liveMonitor'][()]
-        angle = entry['DAS_logs/analyzerRotation/softPosition'][()]
+        Q = entry['DAS_logs/analyzerRotation/softPosition'][()]
 
-        dataset = USansData(metadata=metadata, detCts=detCts, transCts=transCts, monCts=monCts, angle=angle) 
+        dataset = USansData(metadata=metadata, countTime=countTime, detCts=detCts, transCts=transCts, monCts=monCts, Q=Q) 
         datasets.append(dataset)   
     return datasets

@@ -11,12 +11,13 @@ IS_PY3 = sys.version_info[0] >= 3
 from dataflow.lib.strings import _s, _b
 
 class RawData(object):
-    def __init__(self, metadata=None, detCts=None, transCts=None, monCts=None, angle=None):
+    def __init__(self, metadata=None, countTime=None, detCts=None, transCts=None, monCts=None, Q=None):
         self.metadata = metadata
+        self.countTime = countTime
         self.detCts = detCts
         self.transCts = transCts
         self.monCts = monCts
-        self.angle = angle
+        self.Q = Q
 
     def todict(self):
         return _toDictItem(self.metadata)
@@ -31,19 +32,21 @@ class USansData(RawData):
     def get_plottable(self):
         name = self.metadata.get("run.filename", "")
         entry = ""
-        xcol = "angle"
+        xcol = "Q"
         ycol = "I_det"
         columns = OrderedDict([
-            ('angle', {'label': 'angle', 'units': 'degrees'}),
+            ('Q', {'label': 'Q', 'units': '1/Ang'}),
             ('I_det', {'label': 'Counts', 'units': '', 'errorbars': 'dI'}),
             ('I_trans', {'label': 'Transmission Counts', 'units': '', 'errorbars': 'dIt'}),
             ('I_mon', {'label': 'Monitor Counts', 'units': '', 'errorbars': 'dIm'}),
+            ('countTime', {'label': 'Count Time', 'units': 's'}),
         ])
         datas = {
-            "angle": {"values": self.angle.tolist()},
+            "Q": {"values": self.Q.tolist()},
             "I_det": {"values": self.detCts.tolist(), "errorbars": np.sqrt(self.detCts).tolist()},
             "I_trans": {"values": self.transCts.tolist(), "errorbars": np.sqrt(self.transCts).tolist()},
             "I_mon": {"values": self.monCts.tolist(), "errorbars": np.sqrt(self.monCts).tolist()},
+            "countTime": {"values": self.countTime.tolist()},
         }
         series = [{"label": "%s:%s" % (name, entry)}]
         plottable = {
