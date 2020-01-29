@@ -8,15 +8,16 @@ import sys
 
 IS_PY3 = sys.version_info[0] >= 3
 
+from dataflow.lib.uncertainty import Uncertainty
 from dataflow.lib.strings import _s, _b
 
 class RawData(object):
     def __init__(self, metadata=None, countTime=None, detCts=None, transCts=None, monCts=None, Q=None):
         self.metadata = metadata
         self.countTime = countTime
-        self.detCts = detCts
-        self.transCts = transCts
-        self.monCts = monCts
+        self.detCts = Uncertainty(detCts, detCts + (detCts == 0))
+        self.transCts = Uncertainty(transCts, transCts + (transCts == 0))
+        self.monCts = Uncertainty(monCts, monCts + (monCts == 0))
         self.Q = Q
 
     def todict(self):
@@ -43,9 +44,9 @@ class USansData(RawData):
         ])
         datas = {
             "Q": {"values": self.Q.tolist()},
-            "I_det": {"values": self.detCts.tolist(), "errorbars": np.sqrt(self.detCts).tolist()},
-            "I_trans": {"values": self.transCts.tolist(), "errorbars": np.sqrt(self.transCts).tolist()},
-            "I_mon": {"values": self.monCts.tolist(), "errorbars": np.sqrt(self.monCts).tolist()},
+            "I_det": {"values": self.detCts.x.tolist(), "errorbars": np.sqrt(self.detCts.variance).tolist()},
+            "I_trans": {"values": self.transCts.x.tolist(), "errorbars": np.sqrt(self.transCts.variance).tolist()},
+            "I_mon": {"values": self.monCts.x.tolist(), "errorbars": np.sqrt(self.monCts.variance).tolist()},
             "countTime": {"values": self.countTime.tolist()},
         }
         series = [{"label": "%s:%s" % (name, entry)}]
