@@ -225,7 +225,6 @@ def list_instruments():
     return list(_instrument_registry.keys())
 
 def create_instruments():
-    print("create_instruments")
     fetch.DATA_SOURCES = config.data_sources
 
     if getattr(config, 'use_redis', False):
@@ -240,10 +239,9 @@ def create_instruments():
         cache._use_compression = True
 
     # load refl instrument if nothing specified in config
-    instruments = getattr(config, 'instruments', ['refl'])
-    for instrument_id in instruments:
-        print(f"loading {instrument_id}...")
-        instrument_module = importlib.import_module(f'{instrument_id}red.dataflow')
+    instruments = getattr(config, 'instruments', ['reflred'])
+    for package_name in instruments:
+        instrument_module = importlib.import_module(f'{package_name}.dataflow')
         instrument_module.define_instrument()
 
 if __name__ == '__main__':
