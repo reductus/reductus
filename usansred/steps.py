@@ -227,3 +227,101 @@ def getPeakParams(data):
 
     return Parameters(params=peak_params)
     
+def correctData(data, empty, bkg_level=0.0, emp_level=0.0, thick=1.0):
+    """"
+    Do the final data reduction.  Requires a data and empty, normalized.
+    
+    **Inputs**
+
+    data (data): data in
+
+    empty (data): empty in
+
+    bkg_level (float): background level
+
+    emp_level (float): empty background level
+
+    thick (float): thickness of sample, in cm
+
+    **Returns**
+
+    corrected (data): corrected output
+
+    2020-01-29 Brian Maranville
+    """
+    # find q-range of empty:
+    empty_qmax = empty.Q.max()
+    empty_qmin = empty.Q.min()
+    empty_mask = np.logical_and(data.Q >= empty_qmin, data.Q <= empty_qmax)
+    
+
+
+"""
+Function DoCorrectData()
+
+	SVAR USANSFolder = root:Packages:NIST:USANS:Globals:gUSANSFolder
+	
+	//constants
+//	NVAR  thetaH = root:Globals:MainPanel:gTheta_H			//Darwin FWHM
+//	NVAR  thetaV = root:Globals:MainPanel:gTheta_V			//Vertical divergence
+	NVAR dOmega =  $(USANSFolder+":Globals:MainPanel:gDomega")			//Solid angle of detector
+	NVAR defaultMCR = $(USANSFolder+":Globals:MainPanel:gDefaultMCR")
+		
+	//waves
+	Wave iqSAM = $(USANSFolder+":SAM:DetCts")
+	Wave errSAM = $(USANSFolder+":SAM:ErrDetCts")
+	Wave qvalSAM = $(USANSFolder+":SAM:Qvals")
+	Wave iqEMP = $(USANSFolder+":EMP:DetCts")
+	Wave errEMP = $(USANSFolder+":EMP:ErrDetCts")
+	Wave qvalEMP = $(USANSFolder+":EMP:Qvals")
+	//BKG,EMP levels,trans,thick
+	NVAR bkgLevel = $(USANSFolder+":Globals:MainPanel:gBkgCts")
+	NVAR empLevel =  $(USANSFolder+":Globals:MainPanel:gEmpCts")
+	NVAR Trock =  $(USANSFolder+":Globals:MainPanel:gTransRock")
+	NVAR Twide =  $(USANSFolder+":Globals:MainPanel:gTransWide")
+	NVAR thick =  $(USANSFolder+":Globals:MainPanel:gThick")
+	//New waves in COR folder, same length as SAM data
+	Duplicate/O iqSAM,$(USANSFolder+":COR:DetCts")
+	Duplicate/O errSAM,$(USANSFolder+":COR:ErrDetCts")
+	Duplicate/O qvalSAM,$(USANSFolder+":COR:Qvals")
+	Wave iqCOR = $(USANSFolder+":COR:DetCts")
+	Wave qvalCOR = $(USANSFolder+":COR:Qvals")
+	Wave errCOR = $(USANSFolder+":COR:ErrDetCts")
+	
+	//correction done here
+	//q-values of EMP must be interpolated to match SAM data
+	//use the extrapolated value of EMP beyind its measured range
+	Variable num=numpnts(iqSAM),ii,scale,tempI,temperr,maxq,wq
+	maxq = qvalEMP[(numpnts(qvalEMP)-1)]		//maximum measure q-value for the empty
+	
+	for(ii=0;ii<num;ii+=1)
+		wq = qvalSAM[ii]	//q-point of the sample
+		if(wq<maxq)
+			tempI = interp(wq,qvalEMP,iqEMP)
+			temperr = interp(wq,qvalEMP,errEMP)
+		else
+			tempI = empLevel
+			//temperr = sqrt(empLevel)
+			temperr = 0		//JGB 5/31/01
+		endif
+		iqCOR[ii] = iqSAM[ii] - Trock*tempI - (1-Trock)*bkglevel
+		errCOR[ii] = sqrt(errSAM[ii]^2 + Trock^2*temperr^2)		//Trock^2; JGB 5/31/01
+	endfor
+	
+	String str=note(iqEMP)
+	Variable pkHtEMP=NumberByKey("PEAKVAL", str,":",";") 
+	//absolute scaling factor
+	scale = 1/(Twide*thick*dOmega*pkHtEMP)
+	iqCOR *= scale
+	errCOR *= scale
+	
+	//copy to Graph directory to plot
+	Duplicate/O $(USANSFolder+":COR:Qvals"),$(USANSFolder+":Graph:Qvals_COR")
+	Duplicate/O $(USANSFolder+":COR:DetCts"),$(USANSFolder+":Graph:DetCts_COR")
+	Duplicate/O $(USANSFolder+":COR:ErrDetCts"),$(USANSFolder+":Graph:ErrDetCts_COR")
+	
+	//now plot the data (or just bring the graph to the front)
+	DoCORGraph()
+	return(0)
+End
+"""
