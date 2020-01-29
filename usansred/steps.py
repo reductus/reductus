@@ -62,7 +62,7 @@ def findPeak(qvals, counts, min_height=10, sample_width=10):
     central_counts = counts[central_slice]
     central_qvals = qvals[central_slice]
     peak_center = np.sum(central_qvals*central_counts)/np.sum(central_counts) 
-    return peak_val, peak_center
+    return {"peak_center": peak_center, "peak_value": peak_val}
 
 @cache
 @module
@@ -176,6 +176,53 @@ def findTWideCts(data, q_threshold=1e-4):
     
     return Parameters(params=output)
 
+@cache
+@module
+def setPeakCenter(data, peak_params, peak_center=None):
+    """"
+    Given a USansData object and a new peak center, adjusts Q values to match the new center
+    If a peak_center is specified directly, it will always be used
+    Otherwise the value from the input peak_params (coming from the fit) will be used
     
+    **Inputs**
 
+    data (data): data in
+
+    peak_params (params?): send output from findPeak to here, and the 'peak_center' will be used unless overridden
+
+    peak_center (float?): override the value from the peak_params['peak_center']
+
+    **Returns**
+
+    adjusted_data (data): corrected for new peak center
+
+    2020-01-28 Brian Maranville
+    """
+    peak_center = peak_center if peak_center is not None else peak_params.params['peak_center']
+
+    data.Q -= peak_center
+
+    return data
+
+@cache
+@module
+def getPeakParams(data):
+    """"
+    Given a USansData object peak parameters (center and height) will be calculated
+    
+    **Inputs**
+
+    data (data): data in
+
+    **Returns**
+
+    peak_params (params): peak data
+
+    2020-01-28 Brian Maranville
+    """
+    from sansred.sansdata import Parameters
+
+    peak_params = findPeak(data.Q, data.detCts.x)
+
+    return Parameters(params=peak_params)
     
