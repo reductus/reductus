@@ -1,10 +1,8 @@
 language: python
+python:
+  - "3.6"
+  - "3.7"
 sudo: false
-matrix:
-  include:
-  - os: linux
-    env:
-    - PY=3.7
 branches:
   only:
   - master
