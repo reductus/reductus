@@ -99,4 +99,38 @@ def LoadRawUSANS(filelist=None, check_timestamps=True, det_deadtime=7e-6, trans_
         
         data.extend(entries)
 
-    return data
+    return data, peak_data
+
+@cache
+@module
+def convert_to_countrate(unnormalized, do_mon_norm=True, mon0=1e6):
+    """"
+    Given a USansData object, normalize the data to time and the provided monitor
+
+    **Inputs**
+
+    unnormalized (data): data in
+
+    do_mon_norm {normalize to mon0} (bool) : normalized detCnt to specified mon0 (otherwise just time)
+
+    mon0 (float): provided monitor
+
+    **Returns**
+
+    output (data): corrected for dead time
+
+    2020-01-28 Brian Maranville
+    """
+
+    time = unnormalized.countTime
+    monitor = unnormalized.monCts
+
+    if do_mon_norm:
+        unnormalized.detCts *= mon0/monitor
+    else:
+        unnormalized.detCts /= time
+    
+    unnormalized.monCts /= time
+    unnormalized.transCts /= time
+        
+    return unnormalized
