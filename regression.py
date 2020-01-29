@@ -60,7 +60,7 @@ def load_instrument(instrument_id):
     Load the dataflow instrument definition given the instrument name.
     """
     if instrument_id not in LOADED_INSTRUMENTS:
-        instrument_module_name = 'dataflow.modules.'+instrument_id
+        instrument_module_name = instrument_id+'red.dataflow'
         instrument_module = importlib.import_module(instrument_module_name)
         instrument_module.define_instrument()
         LOADED_INSTRUMENTS.add(instrument_id)
@@ -176,7 +176,7 @@ def play_file(filename):
 
     if export['values']:
         basename = export['values'][0].get('name', 'replay')
-        ext = export['values'][0].get('file_suffix', '.refl') 
+        ext = export['values'][0].get('file_suffix', '.refl')
         filename = basename + ext
     else:
         filename = 'replay.dat'

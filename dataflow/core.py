@@ -6,7 +6,11 @@ from __future__ import print_function
 import inspect
 import json
 from collections import OrderedDict
-from importlib import resources
+
+try:
+    from importlib import resources
+except ImportError: # CRUFT: pre-3.7 support
+    import importlib_resources as resources
 
 from numpy import NaN, inf
 
