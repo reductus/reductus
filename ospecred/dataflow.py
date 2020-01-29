@@ -1,6 +1,5 @@
 from dataflow import core as df
 from dataflow.automod import make_modules, make_template
-from dataflow import templates
 
 from . import magik_filters_func as steps
 from . import templates
