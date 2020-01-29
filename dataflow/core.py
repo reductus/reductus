@@ -434,7 +434,8 @@ class Instrument(object):
         if used - defined:
             raise TypeError("undefined types: %s" % ", ".join(used - defined))
         if defined - used:
-            raise TypeError("unused types: %s" % ", ".join(defined - used))
+            #raise TypeError("unused types: %s" % ", ".join(defined - used))
+            print("Warning: unused types: %s" % ", ".join(defined - used))
 
     def _check_names(self):
         names = set(m.name for m in self.modules)
