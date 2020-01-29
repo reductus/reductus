@@ -45,6 +45,24 @@ def module(action):
 # Loader stuff
 #################
 
+def findPeak(qvals, counts, min_height=10, sample_width=10):
+    # using first moment to get center and height
+    # IGOR command: FindPeak/P/Q/M=10/R=[(temp-10),(temp+10)]
+    # where 
+    # /M=minLevel Defines minimum level of a peak 
+    # /R=[startP,endP] Specifies point range and direction for search
+    peak_index = np.argmax(counts)
+    peak_q = qvals[peak_index]
+    peak_val = counts[peak_index]
+    if peak_val < min_height:
+        return None,None
+    
+    central_slice = slice(peak_index-sample_width, peak_index+sample_width+1)
+    central_counts = counts[central_slice]
+    central_qvals = qvals[central_slice]
+    peak_center = np.sum(central_qvals*central_counts)/np.sum(central_counts) 
+    return peak_val, peak_center
+
 @cache
 @module
 def LoadRawUSANS(filelist=None, check_timestamps=True, det_deadtime=7e-6, trans_deadtime=1.26e-5):
