@@ -190,7 +190,7 @@ def setPeakCenter(data, peak_params, peak_center=None):
 
     peak_params (params?): send output from findPeak to here, and the 'peak_center' will be used unless overridden
 
-    peak_center (float?): override the value from the peak_params['peak_center']
+    peak_center (float*): override the value from the peak_params['peak_center']
 
     **Returns**
 
@@ -218,11 +218,12 @@ def getPeakParams(data):
 
     peak_params (params): peak data
 
-    2020-01-28 Brian Maranville
+    2020-01-29 Brian Maranville
     """
     from sansred.sansdata import Parameters
 
-    peak_params = findPeak(data.Q, data.detCts.x)
+    peak_params = {"fileNumber": data.metadata["run.instFileNum"], "intent": data.metadata["analysis.intent"]}
+    peak_params.update(findPeak(data.Q, data.detCts.x))
 
     return Parameters(params=peak_params)
     
