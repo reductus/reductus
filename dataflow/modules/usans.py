@@ -4,6 +4,7 @@ from dataflow import templates
 
 from usansred import steps
 from usansred.usansdata import RawData, USansData
+from sansred.sansdata import Parameters
 
 INSTRUMENT = "ncnr.usans"
 
@@ -14,14 +15,14 @@ def define_instrument():
     # Define data types
     usansraw = df.DataType(INSTRUMENT+".raw", RawData)
     usansdata = df.DataType(INSTRUMENT+".data", USansData)
-    #params = df.DataType(INSTRUMENT+".params", Parameters)
+    params = df.DataType(INSTRUMENT+".params", Parameters)
 
     # Define instrument
     usans = df.Instrument(
         id=INSTRUMENT,
         name='NCNR Ultra-Small Angle Neutron Scattering Instrument (USANS)',
         menu=[('steps', modules)],
-        datatypes=[usansdata], #, usansraw], # params],
+        datatypes=[usansdata, params], # usansraw],
         template_defs=templates.get_templates(INSTRUMENT),
         )
 

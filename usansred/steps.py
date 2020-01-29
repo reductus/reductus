@@ -1,6 +1,7 @@
 from posixpath import basename, join
 from copy import copy, deepcopy
 from io import BytesIO
+import numpy as np
 
 ALL_ACTIONS = []
 
@@ -99,7 +100,7 @@ def LoadRawUSANS(filelist=None, check_timestamps=True, det_deadtime=7e-6, trans_
         
         data.extend(entries)
 
-    return data, peak_data
+    return data
 
 @cache
 @module
@@ -134,3 +135,47 @@ def convert_to_countrate(unnormalized, do_mon_norm=True, mon0=1e6):
     unnormalized.transCts /= time
         
     return unnormalized
+
+@module
+def findTWideCts(data, q_threshold=1e-4):
+    """"
+    Given a USansData object, find the TWide parameters.
+    If no data is available above the Q threshold, uses the last 4 points and returns
+    a warning in the parameters.
+
+    **Inputs**
+
+    data (data): data in
+
+    q_threshold (float): use Q values larger than this to do the calculation
+
+    **Returns**
+
+    twide (params): corrected for dead time
+
+    2020-01-28 Brian Maranville
+    """
+    from sansred.sansdata import Parameters
+
+    mask = (data.Q > q_threshold)
+    missing_data_warn = False
+
+    if mask.sum() == 0:
+        mask = np.zeros_like(data.Q, dtype='bool')
+        mask[-4:] = True
+        missing_data_warn = True
+
+    mean_cts = data.transCts[mask].mean()
+    mean_mon = data.monCts[mask].mean()
+
+    cts = mean_cts/mean_mon
+
+    output = {"fileNumber": data.metadata["run.instFileNum"], "TWIDE": cts.x, "TWIDE_ERR": np.sqrt(cts.variance)}
+    if missing_data_warn:
+        output["WARNING"] = "You don't have data past 1e-4 A-1 (~2 degrees) - so Twide may not be reliable"
+    
+    return Parameters(params=output)
+
+    
+
+    
