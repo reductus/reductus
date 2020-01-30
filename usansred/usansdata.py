@@ -122,6 +122,22 @@ class USansCorData(object):
 
     def get_metadata(self):
         return _toDictItem(self.metadata)
+    
+    def export(self):
+        from io import BytesIO
+        # export to 6-column format compatible with SASVIEW
+        # Data columns are Qx - Qy - I(Qx,Qy) - err(I) - Qz - SigmaQ_parall - SigmaQ_perp - fSubS(beam stop shadow)
+        labels = ["Qx (1/A)", "I(Q) (Counts/sec/(1e6 Monitor))", "std. dev. I(Q) (1/cm)", "dQ (1/A)", "filler", "filler"]
+
+        fid = BytesIO()
+        fid.write(_b("# %s\n" % json.dumps(_toDictItem(self.metadata, convert_bytes=True)).strip("{}")))
+        fid.write(_b("# %s\n" % json.dumps({"columns": labels}).strip("{}")))
+        filler = np.zeros_like(self.Q)
+        np.savetxt(fid, np.vstack([self.Q, self.iqCOR.x, np.sqrt(self.iqCOR.variance), filler, filler, filler]).T, fmt="%15.6g")
+        fid.seek(0)
+        name = _s(self.metadata["Sample file"])
+        entry = ""
+        return {"name": name, "entry": entry, "export_string": fid.read(), "file_suffix": ".usans.cor"}
 
 
 class Parameters(dict):
