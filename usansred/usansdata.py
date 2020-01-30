@@ -19,6 +19,7 @@ class RawData(object):
         self.transCts = Uncertainty(transCts, transCts + (transCts == 0))
         self.monCts = Uncertainty(monCts, monCts + (monCts == 0))
         self.Q = Q
+        self.Q_offset = 0.0
 
     def todict(self):
         return _toDictItem(self.metadata)
@@ -30,6 +31,12 @@ class RawData(object):
         return _toDictItem(self.metadata)
 
 class USansData(RawData):
+    xcol = "Q"
+    xlabel = "Q"
+    xunits = "1/Ang"
+    ycol = "I_det"
+    ylabel = "Counts"
+    yunits = "arb. units"
     def get_plottable(self):
         name = self.metadata.get("run.filename", "")
         entry = ""
@@ -69,6 +76,52 @@ class USansData(RawData):
         }
         #print(plottable)
         return plottable
+
+class USansCorData(object):
+    def __init__(self, metadata=None, iqCOR=None, Q=None):
+        self.metadata = metadata
+        self.iqCOR = iqCOR
+        self.Q = Q
+
+    def todict(self):
+        return _toDictItem(self.metadata)
+
+    def get_plottable(self):
+        name = self.metadata.get("Sample file", "")
+        entry = ""
+        xcol = "Q"
+        ycol = "iqCOR"
+        columns = OrderedDict([
+            ('Q', {'label': 'Q', 'units': '1/Ang'}),
+            ('iqCOR', {'label': 'Corrected Counts', 'units': '/1E6 Monitor', 'errorbars': 'dI'}),
+        ])
+        datas = {
+            "Q": {"values": self.Q.tolist()},
+            "iqCOR": {"values": self.iqCOR.x.tolist(), "errorbars": np.sqrt(self.iqCOR.variance).tolist()},
+        }
+        series = [{"label": "%s:%s" % (name, entry)}]
+        plottable = {
+            "type": "nd",
+            "title": "%s:%s" % (name, entry),
+            "entry": "entry",
+            "columns": columns,
+            "options": {
+                "series": series,
+                "axes": {
+                    "xaxis": {"label": "%s(%s)" % (columns[xcol]["label"], columns[xcol]["units"])},
+                    "yaxis": {"label": "%s(%s)" % (columns[ycol]["label"], columns[ycol]["units"])}
+                },
+                "xcol": xcol,
+                "ycol": ycol,
+                "errorbar_width": 0
+            },
+            "datas": datas
+        }
+        #print(plottable)
+        return plottable
+
+    def get_metadata(self):
+        return _toDictItem(self.metadata)
 
 
 class Parameters(dict):

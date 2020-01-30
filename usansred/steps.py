@@ -84,7 +84,7 @@ def LoadRawUSANS(filelist=None, check_timestamps=True, det_deadtime=7e-6, trans_
 
     output (data[]): all the entries loaded.
 
-    2020-01-28 Brian Maranville
+    2020-01-29 Brian Maranville
     """
     from dataflow.fetch import url_get
     from .loader import readUSANSNexus
@@ -96,7 +96,7 @@ def LoadRawUSANS(filelist=None, check_timestamps=True, det_deadtime=7e-6, trans_
         path, mtime, entries = fileinfo['path'], fileinfo.get('mtime', None), fileinfo.get('entries', None)
         name = basename(path)
         fid = BytesIO(url_get(fileinfo, mtime_check=check_timestamps))
-        entries = readUSANSNexus(name, fid)
+        entries = readUSANSNexus(name, fid, det_deadtime=det_deadtime, trans_deadtime=trans_deadtime)
         
         data.extend(entries)
 
@@ -136,6 +136,22 @@ def convert_to_countrate(unnormalized, do_mon_norm=True, mon0=1e6):
         
     return unnormalized
 
+def _findTWideCts(data, q_threshold=1e-4):
+    mask = (data.Q > q_threshold)
+    missing_data_warn = False
+
+    if mask.sum() == 0:
+        mask = np.zeros_like(data.Q, dtype='bool')
+        mask[-4:] = True
+        missing_data_warn = True
+
+    mean_cts = data.transCts[mask].mean()
+    mean_mon = data.monCts[mask].mean()
+
+    twide = mean_cts/mean_mon
+
+    return twide, missing_data_warn
+
 @module
 def findTWideCts(data, q_threshold=1e-4):
     """"
@@ -157,20 +173,9 @@ def findTWideCts(data, q_threshold=1e-4):
     """
     from sansred.sansdata import Parameters
 
-    mask = (data.Q > q_threshold)
-    missing_data_warn = False
+    twide = _findTWideCts(data, q_threshold)
 
-    if mask.sum() == 0:
-        mask = np.zeros_like(data.Q, dtype='bool')
-        mask[-4:] = True
-        missing_data_warn = True
-
-    mean_cts = data.transCts[mask].mean()
-    mean_mon = data.monCts[mask].mean()
-
-    cts = mean_cts/mean_mon
-
-    output = {"fileNumber": data.metadata["run.instFileNum"], "TWIDE": cts.x, "TWIDE_ERR": np.sqrt(cts.variance)}
+    output = {"fileNumber": data.metadata["run.instFileNum"], "TWIDE": twide.x, "TWIDE_ERR": np.sqrt(twide.variance)}
     if missing_data_warn:
         output["WARNING"] = "You don't have data past 1e-4 A-1 (~2 degrees) - so Twide may not be reliable"
     
@@ -201,6 +206,7 @@ def setPeakCenter(data, peak_params, peak_center=None):
     peak_center = peak_center if peak_center is not None else peak_params.params['peak_center']
 
     data.Q -= peak_center
+    data.Q_offset = peak_center
 
     return data
 
@@ -226,14 +232,16 @@ def getPeakParams(data):
     peak_params.update(findPeak(data.Q, data.detCts.x))
 
     return Parameters(params=peak_params)
-    
-def correctData(data, empty, bkg_level=0.0, emp_level=0.0, thick=1.0):
+
+@cache
+@module
+def correctData(sample, empty, bkg_level=0.0, emp_level=0.0, thick=1.0, dOmega=7.1e-7):
     """"
     Do the final data reduction.  Requires a data and empty, normalized.
     
     **Inputs**
 
-    data (data): data in
+    sample (data): data in
 
     empty (data): empty in
 
@@ -243,85 +251,57 @@ def correctData(data, empty, bkg_level=0.0, emp_level=0.0, thick=1.0):
 
     thick (float): thickness of sample, in cm
 
+    dOmega (float): solid angle of detector (steradians)
+
     **Returns**
 
     corrected (data): corrected output
 
+    corrected_info (params): correction info
+
     2020-01-29 Brian Maranville
     """
+    from dataflow.lib.uncertainty import Uncertainty
+    from .usansdata import USansCorData
+    from sansred.sansdata import Parameters
     # find q-range of empty:
     empty_qmax = empty.Q.max()
     empty_qmin = empty.Q.min()
-    empty_mask = np.logical_and(data.Q >= empty_qmin, data.Q <= empty_qmax)
+    empty_mask = np.logical_and(sample.Q >= empty_qmin, sample.Q <= empty_qmax)
+    interpolated_empty = np.interp(sample.Q, empty.Q, empty.detCts.x, left=emp_level, right=emp_level)
+    interpolated_empty_err = np.interp(sample.Q, empty.Q, empty.detCts.variance, left=0, right=0)
+    tempI = Uncertainty(interpolated_empty, interpolated_empty_err)
+
+    Twide_sam, _ = _findTWideCts(sample)
+    Twide_emp, _ = _findTWideCts(empty)
+
+    pkHtEMP = empty.detCts.x.max()
+    pkHtSAM = sample.detCts.x.max()
+
+    Trock = pkHtSAM / pkHtEMP
+    Twide = Twide_sam / Twide_emp
+
+    ratio = Trock / Twide
+
+    iqCOR = sample.detCts - Trock*tempI - (1-Trock)*bkg_level
+
+    scale = 1/(Twide*thick*dOmega*pkHtEMP)
+
+    iqCOR *= scale
+
+    info = {
+        "Sample file": sample.metadata["run.filename"],
+        "Empty file": empty.metadata["run.filename"],
+        "Trock/Twide": ratio.x,
+        "Thickness": thick,
+        "Twide": Twide.x,
+        "Trock": Trock,
+        "Sample Peak Angle": getattr(sample, 'Q_offset', 0.0),
+        "Empty Peak Angle": getattr(empty, 'Q_offset', 0.0),
+        "Empty level": emp_level,
+        "Bkg level": bkg_level
+    }
+
+    corrected = USansCorData(metadata=info,iqCOR=iqCOR, Q=sample.Q)
     
-
-
-"""
-Function DoCorrectData()
-
-	SVAR USANSFolder = root:Packages:NIST:USANS:Globals:gUSANSFolder
-	
-	//constants
-//	NVAR  thetaH = root:Globals:MainPanel:gTheta_H			//Darwin FWHM
-//	NVAR  thetaV = root:Globals:MainPanel:gTheta_V			//Vertical divergence
-	NVAR dOmega =  $(USANSFolder+":Globals:MainPanel:gDomega")			//Solid angle of detector
-	NVAR defaultMCR = $(USANSFolder+":Globals:MainPanel:gDefaultMCR")
-		
-	//waves
-	Wave iqSAM = $(USANSFolder+":SAM:DetCts")
-	Wave errSAM = $(USANSFolder+":SAM:ErrDetCts")
-	Wave qvalSAM = $(USANSFolder+":SAM:Qvals")
-	Wave iqEMP = $(USANSFolder+":EMP:DetCts")
-	Wave errEMP = $(USANSFolder+":EMP:ErrDetCts")
-	Wave qvalEMP = $(USANSFolder+":EMP:Qvals")
-	//BKG,EMP levels,trans,thick
-	NVAR bkgLevel = $(USANSFolder+":Globals:MainPanel:gBkgCts")
-	NVAR empLevel =  $(USANSFolder+":Globals:MainPanel:gEmpCts")
-	NVAR Trock =  $(USANSFolder+":Globals:MainPanel:gTransRock")
-	NVAR Twide =  $(USANSFolder+":Globals:MainPanel:gTransWide")
-	NVAR thick =  $(USANSFolder+":Globals:MainPanel:gThick")
-	//New waves in COR folder, same length as SAM data
-	Duplicate/O iqSAM,$(USANSFolder+":COR:DetCts")
-	Duplicate/O errSAM,$(USANSFolder+":COR:ErrDetCts")
-	Duplicate/O qvalSAM,$(USANSFolder+":COR:Qvals")
-	Wave iqCOR = $(USANSFolder+":COR:DetCts")
-	Wave qvalCOR = $(USANSFolder+":COR:Qvals")
-	Wave errCOR = $(USANSFolder+":COR:ErrDetCts")
-	
-	//correction done here
-	//q-values of EMP must be interpolated to match SAM data
-	//use the extrapolated value of EMP beyind its measured range
-	Variable num=numpnts(iqSAM),ii,scale,tempI,temperr,maxq,wq
-	maxq = qvalEMP[(numpnts(qvalEMP)-1)]		//maximum measure q-value for the empty
-	
-	for(ii=0;ii<num;ii+=1)
-		wq = qvalSAM[ii]	//q-point of the sample
-		if(wq<maxq)
-			tempI = interp(wq,qvalEMP,iqEMP)
-			temperr = interp(wq,qvalEMP,errEMP)
-		else
-			tempI = empLevel
-			//temperr = sqrt(empLevel)
-			temperr = 0		//JGB 5/31/01
-		endif
-		iqCOR[ii] = iqSAM[ii] - Trock*tempI - (1-Trock)*bkglevel
-		errCOR[ii] = sqrt(errSAM[ii]^2 + Trock^2*temperr^2)		//Trock^2; JGB 5/31/01
-	endfor
-	
-	String str=note(iqEMP)
-	Variable pkHtEMP=NumberByKey("PEAKVAL", str,":",";") 
-	//absolute scaling factor
-	scale = 1/(Twide*thick*dOmega*pkHtEMP)
-	iqCOR *= scale
-	errCOR *= scale
-	
-	//copy to Graph directory to plot
-	Duplicate/O $(USANSFolder+":COR:Qvals"),$(USANSFolder+":Graph:Qvals_COR")
-	Duplicate/O $(USANSFolder+":COR:DetCts"),$(USANSFolder+":Graph:DetCts_COR")
-	Duplicate/O $(USANSFolder+":COR:ErrDetCts"),$(USANSFolder+":Graph:ErrDetCts_COR")
-	
-	//now plot the data (or just bring the graph to the front)
-	DoCORGraph()
-	return(0)
-End
-"""
+    return corrected, Parameters(info)
