@@ -13,12 +13,23 @@ webreduce.editor = webreduce.editor || {};
     return uuid;
   }
 
-  webreduce.editor._cache = new PouchDB("calculations", {size: 100});
+  webreduce.editor.make_cache = function() {
+    try {
+      webreduce.editor._cache = new PouchDB("calculations", {size: 100});
+    } catch (e) {
+      if (e.name === "SecurityError") {
+        alert("Could not store website data — adjust your privacy level and try again.");
+      }
+      throw e;
+    }
+  }
+  webreduce.editor.make_cache();
+
   webreduce.editor.clear_cache = function() {
     webreduce.blockUI("clearing cache...", 1000);
     new PouchDB('calculations').destroy().then(function () {
-      // database destroyed      
-      webreduce.editor._cache = new PouchDB("calculations");
+      // cache destroyed, now create a new one
+      webreduce.editor.make_cache();
       webreduce.unblockUI(1000);
     }).catch(function (err) {
       // error occurred
