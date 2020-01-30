@@ -2,14 +2,11 @@
 """
 Load a NeXus file into a reflectometry data structure.
 """
-from __future__ import division, print_function
 
 import os
 import tempfile
-from zipfile import ZipFile, _EndRecData
 
 import numpy as np
-import h5py as h5
 
 from dataflow.lib import hzf_readonly_stripped as hzf
 from dataflow.lib import unit
@@ -18,6 +15,14 @@ from dataflow.lib import h5_open
 from dataflow.lib.strings import _s, _b
 
 from . import refldata
+
+TRAJECTORY_INTENTS = {
+    'SPEC': 'specular',
+    'SLIT': 'intensity',
+    'BGP': 'background+',
+    'BGM': 'background-',
+    'ROCK': 'rock sample',
+}
 
 def data_as(group, fieldname, units, rep=1):
     """
@@ -42,6 +47,7 @@ def data_as(group, fieldname, units, rep=1):
     else:
         return value
 
+
 def nxfind(group, nxclass):
     """
     Iterate over the entries of type *nxclass* in the hdf5 *group*.
@@ -49,22 +55,6 @@ def nxfind(group, nxclass):
     for entry in group.values():
         if nxclass == entry.attrs.get('NX_class', None):
             yield entry
-
-
-def load_metadata(filename, file_obj=None):
-    """
-    Load the summary info for all entries in a NeXus file.
-    """
-    #file = h5.File(filename)
-    file = h5_open.h5_open_zip(filename, file_obj)
-    measurements = []
-    for name, entry in file.items():
-        if _s(entry.attrs.get('NX_class', None)) == 'NXentry':
-            data = NCNRNeXusRefl(entry, name, filename)
-            measurements.append(data)
-    if file_obj is None:
-        file.close()
-    return measurements
 
 
 def load_metadata(filename, file_obj=None):
@@ -92,13 +82,131 @@ def load_nexus_entries(filename, file_obj=None, entries=None,
         if entries is not None and name not in entries:
             continue
         if _s(entry.attrs.get('NX_class', None)) == 'NXentry':
-            data = entry_loader(entry, name, filename)
+            data = NCNRNeXusRefl(entry, name, filename)
             if not meta_only:
                 data.load(entry)
             measurements.append(data)
     if file_obj is None:
         file.close()
     return measurements
+
+
+def nexus_common(self, entry, entryname, filename):
+    #print(entry['instrument'].values())
+    das = entry['DAS_logs']
+    self.entry = entryname
+    self.path = os.path.abspath(filename)
+    self.name = _s(das['trajectoryData/fileName'][0]) if 'trajectoryData/fileName' in das else 'unknown'
+    if 'trajectoryData/fileNum' in das:
+        self.filenumber = das['trajectoryData/fileNum'][0]
+    else:
+        # fall back to randomly generated filenum
+        from random import randint
+        self.filenumber = -randint(10**9, (10**10) - 1)
+
+    #self.date = iso8601.parse_date(entry['start_time'][0].decode('utf-8'))
+    self.date = iso8601.parse_date(_s(entry['start_time'][0]))
+    self.description = _s(entry['experiment_description'][0])
+    self.instrument = _s(entry['instrument/name'][0])
+
+    # Determine the number of points in the scan.
+    # TODO: Reliable way to determine scan length.
+    # Prefer to not load the entire counter at this point, especially since
+    # we don't know where it is.
+    n = das['counter/liveROI'].shape[0]
+    if n == 1:
+        n = das['counter/liveMonitor'].shape[0]
+    if n == 1:
+        n = das['counter/liveTime'].shape[0]
+    self.points = n
+
+    monitor_device = entry.get('control/monitor', {})
+    self.monitor.deadtime = data_as(monitor_device, 'dead_time','us')
+    self.monitor.deadtime_error = data_as(monitor_device, 'dead_time_error', 'us')
+    self.monitor.base = _s(das['counter/countAgainst'][0])
+    self.monitor.time_step = 0.001  # assume 1 ms accuracy on reported clock
+    self.monitor.counts = np.asarray(data_as(das, 'counter/liveMonitor', '', rep=n), 'd')
+    self.monitor.counts_variance = self.monitor.counts.copy()
+    self.monitor.count_time = data_as(das, 'counter/liveTime', 's', rep=n)
+
+    self.sample.name = _s(entry['sample/name'][0]) if 'name' in entry['sample'] else ""
+    self.sample.description = _s(entry['sample/description'][0]) if 'description' in entry['sample'] else ""
+
+    # TODO: stop trying to guess DOI
+    if 'DOI' in entry:
+        URI = _s(entry['DOI'])
+    else:
+        # See: dataflow.modules.doi_resolve for helpers.
+        #NCNR_DOI = "10.18434/T4201B"
+        NCNR_DOI = "https://ncnr.nist.gov/pub/ncnrdata"
+        LOCATION = {'pbr':'ngd', 'magik':'cgd', 'ng7r':'ng7', 'candor':'cdr'}
+        nice_instrument = _s(das['experiment/instrument'].value[0]).lower()
+        instrument = LOCATION.get(nice_instrument, nice_instrument)
+        year, month = self.date.year, self.date.month
+        cycle = "%4d%02d"%(year, month)
+        experiment = _s(entry['experiment_identifier'].value[0])
+        filename = os.path.basename(self.path)
+        URI = "/".join((NCNR_DOI, instrument, cycle, experiment, "data", filename))
+    self.uri = URI
+
+    self.scan_value = []
+    self.scan_units = []
+    self.scan_label = []
+    SCANNED_VARIABLES = 'trajectory/scannedVariables'
+    if SCANNED_VARIABLES in das:
+        scanned_variables = das[SCANNED_VARIABLES].value
+        # Just in case the scanned variables is a string with
+        # elements separated by new lines...
+        if len(scanned_variables) == 1:
+            scanned_variables = _s(scanned_variables[0]).split('\n')
+        scanned_variables = [_s(s) for s in scanned_variables if not _s(s).startswith("areaDetector")]
+        for node_id in scanned_variables:
+            path = node_id.replace('.', '/')
+            try:
+                field = das[path]
+            except KeyError:
+                print(">>> could not read scanned %s for %s"
+                        % (node_id, os.path.basename(self.path)))
+                continue
+            try:
+                scan_value = data_as(das, path, '', rep=n)
+                scan_units = field.attrs.get('units', '')
+                scan_label = field.attrs.get('label', node_id)
+            except Exception:
+                print(">>> unexpected error reading %s for %s"
+                        % (node_id, os.path.basename(self.path)))
+                continue
+            # check if numeric:
+            if scan_value.dtype.kind in ["f", "u", "i"]:
+                self.scan_value.append(scan_value)
+                self.scan_units.append(scan_units)
+                self.scan_label.append(scan_label)
+
+    # TODO: field
+    if 'temp' in das:
+        if 'temp/primaryControlLoop' in das:
+            temp_primaryControlLoop = das['temp/primaryControlLoop'].value
+            self.sample.temp_setpoint = data_as(das, 'temp/setpoint_%d' % (temp_primaryControlLoop), 'K')[0]
+        temp_values = data_as(das, 'temp/primaryNode/value', 'K')
+        temp_shape = temp_values.shape[0] if temp_values.shape[0] else 1.0;
+        # only include one significant figure for temperatures.
+        self.sample.temp_avg = round(np.sum(temp_values)/temp_shape, 1)
+
+
+def get_pol(das, pol):
+    if pol in das:
+        direction = _s(das[pol+'/direction'][0])
+        if direction == 'UP':
+            result = '+'
+        elif direction == 'DOWN':
+            result = '-'
+        elif direction == '' or direction == 'BEAM_OUT' or direction == 'UNPOLARIZED':
+            result = ''
+        else:
+            raise ValueError("Don't understand DAS_logs/%s/direction=%r"%(pol,direction))
+    else:
+        result = ''
+    return result
 
 
 class NCNRNeXusRefl(refldata.ReflData):
@@ -108,100 +216,51 @@ class NCNRNeXusRefl(refldata.ReflData):
     See :class:`refldata.ReflData` for details.
     """
     format = "NeXus"
-    trajectory_intents = {
-        'SPEC': 'specular',
-        'SLIT': 'intensity',
-        'BGP': 'background+',
-        'BGM': 'background-',
-        'ROCK': 'rock sample'
-    }
+    probe = "neutron"
 
     def __init__(self, entry, entryname, filename):
         super(NCNRNeXusRefl, self).__init__()
-        self.entry = entryname
-        self.path = os.path.abspath(filename)
-        self._set_metadata(entry)
+        nexus_common(self, entry, entryname, filename)
 
-    def _set_metadata(self, entry):
+    def load(self, entry):
         #print(entry['instrument'].values())
         das = entry['DAS_logs']
-        self.probe = 'neutron'
-        self.name = _s(das['trajectoryData/fileName'][0] if 'trajectoryData/fileName' in das else 'unknown')
-        if 'trajectoryData/fileNum' in das:
-            self.filenumber = das['trajectoryData/fileNum'][0]
-        else:
-            # fall back to randomly generated filenum
-            from random import randint
-            self.filenumber = -randint(10**9, (10**10) - 1)
+        n = self.points
+        raw_intent = _s(das['trajectoryData/_scanType'][0] if 'trajectoryData/_scanType' in das else "")
+        if raw_intent in TRAJECTORY_INTENTS:
+            self.intent = TRAJECTORY_INTENTS[raw_intent]
+        self.polarization = _s(
+            get_pol(das, 'frontPolarization')
+            + get_pol(das, 'backPolarization')
+        )
 
-        #self.date = iso8601.parse_date(entry['start_time'][0].decode('utf-8'))
-        self.date = iso8601.parse_date(_s(entry['start_time'][0]))
-        self.description = _s(entry['experiment_description'][0])
-        self.instrument = _s(entry['instrument/name'][0])
+
         self.slit1.distance = data_as(entry, 'instrument/presample_slit1/distance', 'mm')
         self.slit2.distance = data_as(entry, 'instrument/presample_slit2/distance', 'mm')
-        #self.slit3.distance = data_as(entry, 'instrument/predetector_slit1/distance','mm')
-        #self.slit4.distance = data_as(entry, 'instrument/predetector_slit2/distance','mm')
-        #self.detector.distance = data_as(entry, 'instrument/detector/distance','mm')
-        #self.detector.rotation = data_as(entry, 'instrument/detector/rotation','degree')
-        self.detector.deadtime = data_as(entry, 'instrument/single_detector/dead_time', 'us')
-        self.detector.deadtime_error = data_as(entry, 'instrument/single_detector/dead_time_error', 'us')
-        monitor_device = entry.get('instrument/monitor', {})
-        self.monitor.deadtime = data_as(monitor_device, 'dead_time','us')
-        self.monitor.deadtime_error = data_as(monitor_device, 'dead_time_error', 'us')
-
-        self.sample.name = _s(entry['sample/name'][0] if 'name' in entry['sample'] else "")
-        self.sample.description = _s(entry['sample/description'][0] if 'description' in entry['sample'] else "")
-        raw_intent = _s(das['trajectoryData/_scanType'][0] if 'trajectoryData/_scanType' in das else "")
-        if raw_intent in self.trajectory_intents:
-            self.intent = self.trajectory_intents[raw_intent]
-        self.monitor.base = _s(das['counter/countAgainst'][0])
-        self.monitor.time_step = 0.001  # assume 1 ms accuracy on reported clock
-        self.polarization = _s(_get_pol(das, 'frontPolarization')) \
-                            + _s(_get_pol(das, 'backPolarization'))
-
+        self.slit3.distance = data_as(entry, 'instrument/predetector_slit1/distance','mm')
+        self.slit4.distance = data_as(entry, 'instrument/predetector_slit2/distance','mm')
         if np.isnan(self.slit1.distance):
             self.warn("Slit 1 distance is missing; using 2 m")
             self.slit1.distance = -2000
         if np.isnan(self.slit2.distance):
             self.warn("Slit 2 distance is missing; using 1 m")
             self.slit2.distance = -1000
-        if np.isnan(self.detector.wavelength):
-            self.warn("Wavelength is missing; using 4.75 A")
-            self.detector.wavelength = 4.75
-        if np.isnan(self.detector.wavelength_resolution):
-            self.warn("Wavelength resolution is missing; using 1.5% dL/L FWHM")
-            self.detector.wavelength_resolution = 0.015/2.35*self.detector.wavelength
 
-        # TODO: stop trying to guess DOI
-        if 'DOI' in entry:
-            URI = _s(entry['DOI'])
-        else:
-            # See: dataflow.modules.doi_resolve for helpers.
-            #NCNR_DOI = "10.18434/T4201B"
-            NCNR_DOI = "https://ncnr.nist.gov/pub/ncnrdata"
-            LOCATION = {'pbr':'ngd', 'magik':'cgd', 'ng7r':'ng7'}
-            nice_instrument = _s(das['experiment/instrument'].value[0]).lower()
-            instrument = LOCATION.get(nice_instrument, nice_instrument)
-            year, month = self.date.year, self.date.month
-            cycle = "%4d%02d"%(year, month)
-            experiment = _s(entry['experiment_identifier'].value[0])
-            filename = os.path.basename(self.path)
-            URI = "/".join((NCNR_DOI, instrument, cycle, experiment, "data", filename))
-        self.uri = URI
-
-    def load(self, entry):
-        das = entry['DAS_logs']
-        self.detector.counts = np.asarray(data_as(das, 'counter/liveROI', ''), 'd')
-        self.detector.counts_variance = self.detector.counts.copy()
-        self.detector.dims = self.detector.counts.shape
-        n = self.detector.dims[0]
-        self.points = n
-        self.monitor.counts = np.asarray(data_as(das, 'counter/liveMonitor', '', rep=n), 'd')
-        self.monitor.counts_variance = self.monitor.counts.copy()
-        self.monitor.count_time = data_as(das, 'counter/liveTime', 's', rep=n)
         self.detector.wavelength = data_as(entry, 'instrument/monochromator/wavelength','Ang', rep=n)
         self.detector.wavelength_resolution = data_as(entry, 'instrument/monochromator/wavelength_error','Ang', rep=n)
+        self.detector.deadtime = data_as(entry, 'instrument/single_detector/dead_time', 'us')
+        self.detector.deadtime_error = data_as(entry, 'instrument/single_detector/dead_time_error', 'us')
+        if np.isnan(self.detector.wavelength).all():
+            self.warn("Wavelength is missing; using 4.75 A")
+            self.detector.wavelength = 4.75
+        if np.isnan(self.detector.wavelength_resolution).all():
+            self.warn("Wavelength resolution is missing; using 1.5% dL/L FWHM")
+            self.detector.wavelength_resolution = 0.015/2.35*self.detector.wavelength
+        self.detector.distance = data_as(entry, 'instrument/detector/distance','mm')
+        self.detector.rotation = data_as(entry, 'instrument/detector/rotation','degree')
+
+        self.detector.counts = np.asarray(data_as(das, 'counter/liveROI', ''), 'd')
+        self.detector.counts_variance = self.detector.counts.copy()
         for k, s in enumerate([self.slit1, self.slit2, self.slit3, self.slit4]):
             x = 'slitAperture%d/softPosition'%(k+1)
             y = 'vertSlitAperture%d/softPosition'%(k+1)
@@ -239,47 +298,6 @@ class NCNRNeXusRefl(refldata.ReflData):
         self.Qz_target = data_as(das, 'trajectoryData/_q', '', rep=n)
         if 'trajectoryData/_theta_offset' in das:
             self.background_offset = 'theta'
-        self.scan_value = []
-        self.scan_units = []
-        self.scan_label = []
-        SCANNED_VARIABLES = 'trajectory/scannedVariables'
-        if SCANNED_VARIABLES in das:
-            scanned_variables = das[SCANNED_VARIABLES].value
-            # Just in case the scanned variables is a string with
-            # elements separated by new lines...
-            if len(scanned_variables) == 1:
-                scanned_variables = str(scanned_variables[0]).split('\n')
-            scanned_variables = [_s(s) for s in scanned_variables if not _s(s).startswith("areaDetector")]
-            for node_id in scanned_variables:
-                path = node_id.replace('.', '/')
-                try:
-                    field = das[path]
-                except KeyError:
-                    print(">>> could not read scanned %s for %s"
-                          % (node_id, os.path.basename(self.path)))
-                    continue
-                try:
-                    scan_value = data_as(das, path, '', rep=n)
-                    scan_units = field.attrs.get('units', '')
-                    scan_label = field.attrs.get('label', node_id)
-                except Exception:
-                    print(">>> unexpected error reading %s for %s"
-                          % (node_id, os.path.basename(self.path)))
-                    continue
-                # check if numeric:
-                if scan_value.dtype.kind in ["f", "u", "i"]:
-                    self.scan_value.append(scan_value)
-                    self.scan_units.append(scan_units)
-                    self.scan_label.append(scan_label)
-        # TODO: field
-        if 'temp' in das:
-            if 'temp/primaryControlLoop' in das:
-                temp_primaryControlLoop = das['temp/primaryControlLoop'].value
-                self.sample.temp_setpoint = data_as(das, 'temp/setpoint_%d' % (temp_primaryControlLoop), 'K')[0]
-            temp_values = data_as(das, 'temp/primaryNode/value', 'K')
-            temp_shape = temp_values.shape[0] if temp_values.shape[0] else 1.0;
-            # only include one significant figure for temperatures.
-            self.sample.temp_avg = round(np.sum(temp_values)/temp_shape, 1)
 
     def _load_slits(self, instrument):
         """
@@ -319,31 +337,16 @@ class NCNRNeXusRefl(refldata.ReflData):
                     self.slit4.distance = d
                     index += 1
 
-def _get_pol(das, pol):
-    if pol in das:
-        direction = das[pol+'/direction'][0]
-        if direction == 'UP':
-            result = '+'
-        elif direction == 'DOWN':
-            result = '-'
-        elif direction == '' or direction == 'BEAM_OUT' or direction == 'UNPOLARIZED':
-            result = ''
-        else:
-            raise ValueError("Don't understand DAS_logs/%s/direction=%r"%(pol,direction))
-    else:
-        result = ''
-    return result
-
-
 
 def demo():
     import sys
+    from .load import load_from_uri
     if len(sys.argv) == 1:
-        print("usage: python -m reflred.steps.nexusref file...")
+        print("usage: python -m reflred.nexusref file...")
         sys.exit(1)
     for filename in sys.argv[1:]:
         try:
-            entries = load_from_uri(filename)
+            entries = load_from_uri(filename, loader=load_entries)
         except Exception as exc:
             print("**** "+str(exc)+" **** while reading "+filename)
             continue
