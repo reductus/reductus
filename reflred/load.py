@@ -12,10 +12,6 @@ import pytz
 from dataflow.lib.iso8601 import seconds_since_epoch
 from dataflow.fetch import url_get
 
-from . import nexusref
-from . import xrawref
-from . import candor
-
 DATA_SOURCES = {}
 
 def _fetch_url_uncached(url):
@@ -92,12 +88,15 @@ def url_load(fileinfo, check_timestamps=True):
     filename = basename(path)
     content = url_get(fileinfo, mtime_check=check_timestamps)
     if filename.endswith('.raw') or filename.endswith('.ras'):
+        from . import xrawref
         return load_from_string(filename, content, entries=entries,
                                 loader=xrawref.load_entries)
     elif filename.endswith('.nxs.cdr'):
+        from . import candor
         return load_from_string(filename, content, entries=entries,
                                 loader=candor.load_entries)
     else:
+        from . import nexusref
         return load_from_string(filename, content, entries=entries,
                                 loader=nexusref.load_entries)
 

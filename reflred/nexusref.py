@@ -111,13 +111,18 @@ def nexus_common(self, entry, entryname, filename):
 
     # Determine the number of points in the scan.
     # TODO: Reliable way to determine scan length.
-    # Prefer to not load the entire counter at this point, especially since
-    # we don't know where it is.
-    n = das['counter/liveROI'].shape[0]
-    if n == 1:
-        n = das['counter/liveMonitor'].shape[0]
-    if n == 1:
-        n = das['counter/liveTime'].shape[0]
+    if 'trajectory/liveScanLength' in entry:
+        # New files should have num points in trajectory/liveScanLength ...
+        n = entry['trajectory/liveScanLength'].value
+    else:
+        # Guess length by looking at the counter fields
+        # Prefer to not load the entire counter at this point, especially since
+        # we don't know where it is.
+        n = das['counter/liveROI'].shape[0]
+        if n == 1:
+            n = das['counter/liveMonitor'].shape[0]
+        if n == 1:
+            n = das['counter/liveTime'].shape[0]
     self.points = n
 
     monitor_device = entry.get('control/monitor', {})
@@ -338,7 +343,7 @@ class NCNRNeXusRefl(refldata.ReflData):
                     index += 1
 
 
-def demo():
+def demo(loader=load_entries):
     import sys
     from .load import load_from_uri
     if len(sys.argv) == 1:
@@ -346,7 +351,7 @@ def demo():
         sys.exit(1)
     for filename in sys.argv[1:]:
         try:
-            entries = load_from_uri(filename, loader=load_entries)
+            entries = load_from_uri(filename, loader=loader)
         except Exception as exc:
             print("**** "+str(exc)+" **** while reading "+filename)
             continue
