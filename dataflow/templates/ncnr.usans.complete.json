@@ -1,0 +1,165 @@
+{
+  "modules": [
+    {
+      "module": "ncnr.usans.LoadRawUSANS",
+      "title": "LoadRawSample",
+      "x": 70,
+      "y": 35
+    },
+    {
+      "module": "ncnr.usans.setPeakCenter",
+      "title": "Set Peak Center",
+      "x": 595,
+      "y": 35
+    },
+    {
+      "module": "ncnr.usans.getPeakParams",
+      "title": "Get Peak",
+      "x": 455,
+      "y": 65
+    },
+    {
+      "module": "ncnr.usans.LoadRawUSANS",
+      "title": "LoadRawEmpty",
+      "x": 70,
+      "y": 110
+    },
+    {
+      "module": "ncnr.usans.correctData",
+      "title": "Correctdata",
+      "x": 785,
+      "y": 60,
+      "config": {
+        "emp_level": 0.76,
+        "bkg_level": 0.62,
+        "thick": 0.1
+      }
+    },
+    {
+      "module": "ncnr.usans.convert_to_countrate",
+      "title": "Convert To Countrate",
+      "x": 245,
+      "y": 35
+    },
+    {
+      "module": "ncnr.usans.setPeakCenter",
+      "title": "Set Peak Center",
+      "x": 595,
+      "y": 110
+    },
+    {
+      "module": "ncnr.usans.getPeakParams",
+      "title": "Get Peak",
+      "x": 455,
+      "y": 140
+    },
+    {
+      "module": "ncnr.usans.convert_to_countrate",
+      "title": "Convert To Countrate",
+      "x": 244,
+      "y": 110
+    }
+  ],
+  "wires": [
+    {
+      "source": [
+        2,
+        "peak_params"
+      ],
+      "target": [
+        1,
+        "peak_params"
+      ]
+    },
+    {
+      "source": [
+        0,
+        "output"
+      ],
+      "target": [
+        5,
+        "unnormalized"
+      ]
+    },
+    {
+      "source": [
+        5,
+        "output"
+      ],
+      "target": [
+        2,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        5,
+        "output"
+      ],
+      "target": [
+        1,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        7,
+        "peak_params"
+      ],
+      "target": [
+        6,
+        "peak_params"
+      ]
+    },
+    {
+      "source": [
+        8,
+        "output"
+      ],
+      "target": [
+        7,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        8,
+        "output"
+      ],
+      "target": [
+        6,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        3,
+        "output"
+      ],
+      "target": [
+        8,
+        "unnormalized"
+      ]
+    },
+    {
+      "source": [
+        6,
+        "adjusted_data"
+      ],
+      "target": [
+        4,
+        "empty"
+      ]
+    },
+    {
+      "source": [
+        1,
+        "adjusted_data"
+      ],
+      "target": [
+        4,
+        "sample"
+      ]
+    }
+  ]
+}
