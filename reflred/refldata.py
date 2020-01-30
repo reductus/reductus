@@ -737,6 +737,8 @@ class ReflData(Group):
     date = datetime.datetime(1970, 1, 1)
     #: Duration of the measurement.
     duration = 0
+    #: Nominal attenuation as recorded in the data file, or 1.0 if not recorded
+    attenuation = 1.0
     #: '' unpolarized
     #: '+' spin up
     #: '-' spin down
