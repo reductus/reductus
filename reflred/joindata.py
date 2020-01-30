@@ -533,20 +533,18 @@ def sort_columns(columns, keys):
 
 def demo():
     import sys
-    import pylab
+    import matplotlib.pyplot as plt
     import numpy; numpy.set_printoptions(linewidth=10000)
     from . import steps
-    from . import nexusref
+    from .load import load_from_uri
     from .util import group_by_key
-    from .refldata import Intent
     if len(sys.argv) == 1:
-        print("usage: python -m reflred.steps.joindata file...")
+        print("usage: python -m reflred.joindata file...")
         sys.exit(1)
-    pylab.hold(True)
     data = []
     for filename in sys.argv[1:]:
         try:
-            entries = nexusref.load_from_uri(filename)
+            entries = load_from_uri(filename)
         except Exception as exc:
             print(str(exc) + " while loading " + filename)
             continue
@@ -563,8 +561,8 @@ def demo():
         result = join_datasets(group, Qtol=0.5, dQtol=0.002)
         result.plot()
         output.append(result)
-    pylab.legend()
-    pylab.show()
+    plt.legend()
+    plt.show()
 
 if __name__ == "__main__":
     demo()
