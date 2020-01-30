@@ -14,7 +14,8 @@ from dataflow.lib import iso8601
 from dataflow.lib import h5_open
 from dataflow.lib.strings import _s, _b
 
-from . import refldata
+from .refldata import ReflData
+from .resolution import FWHM2sigma
 
 TRAJECTORY_INTENTS = {
     'SPEC': 'specular',
@@ -23,6 +24,8 @@ TRAJECTORY_INTENTS = {
     'BGM': 'background-',
     'ROCK': 'rock sample',
 }
+
+DEFAULT_WAVELENGTH_DISPERSION = 0.015
 
 def data_as(group, fieldname, units, rep=1):
     """
@@ -33,7 +36,7 @@ def data_as(group, fieldname, units, rep=1):
     field = group[fieldname]
     units_in = _s(field.attrs.get('units', ''))
     converter = unit.Converter(units_in)
-    value = converter(field.value, units)
+    value = converter(field[()], units)
     if rep != 1:
         if value.shape[0] == 1:
             return np.repeat(value, rep, axis=0)
@@ -73,7 +76,6 @@ def load_nexus_entries(filename, file_obj=None, entries=None,
     """
     Load the summary info for all entries in a NeXus file.
     """
-    #file = h5.File(filename)
     file = h5_open.h5_open_zip(filename, file_obj)
     measurements = []
     for name, entry in file.items():
@@ -228,11 +230,11 @@ def get_pol(das, pol):
     return result
 
 
-class NCNRNeXusRefl(refldata.ReflData):
+class NCNRNeXusRefl(ReflData):
     """
     NeXus reflectometry entry.
 
-    See :class:`refldata.ReflData` for details.
+    See :class:`ReflData` for details.
     """
     format = "NeXus"
     probe = "neutron"
@@ -265,16 +267,21 @@ class NCNRNeXusRefl(refldata.ReflData):
             self.warn("Slit 2 distance is missing; using 1 m")
             self.slit2.distance = -1000
 
-        self.detector.wavelength = data_as(entry, 'instrument/monochromator/wavelength','Ang', rep=n)
-        self.detector.wavelength_resolution = data_as(entry, 'instrument/monochromator/wavelength_error','Ang', rep=n)
+        self.monochromator.wavelength = data_as(entry, 'instrument/monochromator/wavelength','Ang', rep=n)
+        self.monochromator.wavelength_resolution = data_as(entry, 'instrument/monochromator/wavelength_error','Ang', rep=n)
+        if np.isnan(self.monochromator.wavelength).all():
+            self.warn("Wavelength is missing; using 4.75 A")
+            self.monochromator.wavelength = 4.75
+        if np.isnan(self.monochromator.wavelength_resolution).all():
+            self.warn("Wavelength resolution is missing; using %.1f%% dL/L FWHM"
+                      % (100*DEFAULT_WAVELENGTH_DISPERSION,))
+            self.monochromator.wavelength_resolution = \
+                FWHM2sigma(DEFAULT_WAVELENGTH_DISPERSION*self.monochromator.wavelength)
+
+        self.detector.wavelength = self.monochromator.wavelength
+        self.detector.wavelength_resolution = self.monochromator.wavelength_resolution
         self.detector.deadtime = data_as(entry, 'instrument/single_detector/dead_time', 'us')
         self.detector.deadtime_error = data_as(entry, 'instrument/single_detector/dead_time_error', 'us')
-        if np.isnan(self.detector.wavelength).all():
-            self.warn("Wavelength is missing; using 4.75 A")
-            self.detector.wavelength = 4.75
-        if np.isnan(self.detector.wavelength_resolution).all():
-            self.warn("Wavelength resolution is missing; using 1.5% dL/L FWHM")
-            self.detector.wavelength_resolution = 0.015/2.35*self.detector.wavelength
         self.detector.distance = data_as(entry, 'instrument/detector/distance','mm')
         self.detector.rotation = data_as(entry, 'instrument/detector/rotation','degree')
 

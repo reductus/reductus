@@ -42,13 +42,26 @@ def TL2Q(T=None, L=None):
     return 4 * pi * sin(T) / L
 
 
-_FWHM_scale = sqrt(log(256))
+_FWHM_scale = 2*sqrt(2*log(2))
 def FWHM2sigma(s):
     return s/_FWHM_scale
 
 
 def sigma2FWHM(s):
     return s*_FWHM_scale
+
+
+def calc_Qx(Ti, Td, Li, Ld):
+    # type: (np.ndarray, np.ndarray, np.ndarray) -> (np.ndarray, np.ndarray)
+    ki, kf = 2*pi/Li, 2*pi/Ld
+    Qx = ki*cos(radians(Td - Ti)) - kf*cos(radians(-Ti))
+    return Qx
+
+
+def calc_Qz(Ti, Td, Li, Ld):
+    ki, kf = 2*pi/Li, 2*pi/Ld
+    Qz = ki*sin(radians(Td - Ti)) - kf*sin(radians(-Ti))
+    return Qz
 
 
 def TiTdL2Qxz(Ti, Td, L):
