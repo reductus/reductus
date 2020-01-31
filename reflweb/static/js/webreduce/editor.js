@@ -13,6 +13,30 @@ webreduce.editor = webreduce.editor || {};
     return uuid;
   }
 
+  class inMemoryCache {
+    constructor() {
+      this.storage = new Map();
+      this.adapter = 'memory';
+    }
+    destroy() {
+      this.storage = null;
+    }
+    get(key) {
+      let storage = this.storage;
+      return new Promise(function(resolve, reject) {
+        if (storage.has(key)) {
+          resolve(storage.get(key));
+        }
+        else {
+          reject("key not found: " + String(key));
+        }
+      });
+    }
+    put(key, value) {
+      return this.storage.set(key, value);
+    }
+  };
+
   webreduce.editor.make_cache = function() {
     try {
       webreduce.editor._cache = new PouchDB("calculations", {size: 100});
@@ -21,7 +45,7 @@ webreduce.editor = webreduce.editor || {};
         var warning = "Could not store website data - falling back to in-memory storage (may cause memory issues.)";
         warning += "Please adjust your privacy level to allow website data storage (unblock cookies?) and reload page.";
         alert(warning);
-        webreduce.editor._cache = new PouchDB("calculations", {size: 100, adapter: 'memory'})
+        webreduce.editor._cache = new inMemoryCache();
       }
       throw e;
     }
