@@ -22,14 +22,15 @@ TRAJECTORY_INTENTS = {
     'ROCK': 'rock sample',
 }
 
-DEFAULT_WAVELENGTH_DISPERSION = 0.015
+WAVELENGTH = 4.
+WAVELENGTH_DISPERSION = 0.015
 
-def data_as(group, fieldname, units, rep=1):
+def data_as(group, fieldname, units, rep=1, NA=None):
     """
     Return value of field in the desired units.
     """
     if fieldname not in group:
-        return np.NaN
+        return NA
     field = group[fieldname]
     units_in = _s(field.attrs.get('units', ''))
     converter = unit.Converter(units_in)
@@ -143,13 +144,20 @@ def nexus_common(self, entry, entryname, filename):
     self.points = n
 
     monitor_device = entry.get('control/monitor', {})
-    self.monitor.deadtime = data_as(monitor_device, 'dead_time','us')
+    self.monitor.deadtime = data_as(monitor_device, 'dead_time', 'us')
     self.monitor.deadtime_error = data_as(monitor_device, 'dead_time_error', 'us')
     self.monitor.base = str_data(das, 'counter/countAgainst')
     self.monitor.time_step = 0.001  # assume 1 ms accuracy on reported clock
     self.monitor.counts = np.asarray(data_as(das, 'counter/liveMonitor', '', rep=n), 'd')
     self.monitor.counts_variance = self.monitor.counts.copy()
     self.monitor.count_time = data_as(das, 'counter/liveTime', 's', rep=n)
+
+    # NG7 monitor saturation is stored in control/countrate_correction
+    saturation_device = entry.get('control/countrate_correction', None)
+    if saturation_device is not None:
+        rate = data_as(saturation_device, 'measured_rate', '')
+        correction = data_as(saturation_device, 'correction', '')
+        self.monitor.saturation = np.vstack((rate, 1./correction))
 
     self.sample.name = str_data(entry, 'sample/name')
     self.sample.description = str_data(entry, 'sample/description')
@@ -251,36 +259,51 @@ class NCNRNeXusRefl(ReflData):
         #print(entry['instrument'].values())
         das = entry['DAS_logs']
         n = self.points
-        raw_intent = _s(das['trajectoryData/_scanType'][0] if 'trajectoryData/_scanType' in das else "")
+        raw_intent = str_data(das, 'trajectoryData/_scanType')
         if raw_intent in TRAJECTORY_INTENTS:
             self.intent = TRAJECTORY_INTENTS[raw_intent]
-        self.polarization = _s(
+
+        # Polarizers
+        self.polarization = (
             get_pol(das, 'frontPolarization')
             + get_pol(das, 'backPolarization')
         )
 
+        # Monochromator
+        self.monochromator.wavelength = data_as(entry, 'instrument/monochromator/wavelength', 'Ang', rep=n)
+        self.monochromator.wavelength_resolution = data_as(entry, 'instrument/monochromator/wavelength_error', 'Ang', rep=n)
+        if self.monochromator.wavelength is None:
+            self.warn(f"Wavelength is missing; using {WAVELENGTH} A")
+            self.monochromator.wavelength = WAVELENGTH
+        if self.monochromator.wavelength_resolution is None:
+            self.warn("Wavelength resolution is missing; using %.1f%% dL/L FWHM"
+                      % (100*WAVELENGTH_DISPERSION,))
+            self.monochromator.wavelength_resolution = \
+                FWHM2sigma(WAVELENGTH_DISPERSION*self.monochromator.wavelength)
+
+        # Slits
         self.slit1.distance = data_as(entry, 'instrument/presample_slit1/distance', 'mm')
         self.slit2.distance = data_as(entry, 'instrument/presample_slit2/distance', 'mm')
         self.slit3.distance = data_as(entry, 'instrument/predetector_slit1/distance', 'mm')
         self.slit4.distance = data_as(entry, 'instrument/predetector_slit2/distance', 'mm')
-        if np.isnan(self.slit1.distance):
+        if self.slit1.distance is None:
             self.warn("Slit 1 distance is missing; using 2 m")
             self.slit1.distance = -2000
-        if np.isnan(self.slit2.distance):
+        if self.slit2.distance is None:
             self.warn("Slit 2 distance is missing; using 1 m")
             self.slit2.distance = -1000
 
-        self.monochromator.wavelength = data_as(entry, 'instrument/monochromator/wavelength', 'Ang', rep=n)
-        self.monochromator.wavelength_resolution = data_as(entry, 'instrument/monochromator/wavelength_error', 'Ang', rep=n)
-        if np.isnan(self.monochromator.wavelength).all():
-            self.warn("Wavelength is missing; using 4.75 A")
-            self.monochromator.wavelength = 4.75
-        if np.isnan(self.monochromator.wavelength_resolution).all():
-            self.warn("Wavelength resolution is missing; using %.1f%% dL/L FWHM"
-                      % (100*DEFAULT_WAVELENGTH_DISPERSION,))
-            self.monochromator.wavelength_resolution = \
-                FWHM2sigma(DEFAULT_WAVELENGTH_DISPERSION*self.monochromator.wavelength)
+        for k, slit in enumerate([self.slit1, self.slit2, self.slit3, self.slit4]):
+            x = 'slitAperture%d/softPosition'%(k+1)
+            x_target = 'slitAperture%d/desiredSoftPosition'%(k+1)
+            slit.x = data_as(das, x, 'mm', rep=n)
+            slit.x_target = data_as(das, x_target, 'mm', rep=n)
+            y = 'vertSlitAperture%d/softPosition'%(k+1)
+            y_target = 'vertSlitAperture%d/desiredSoftPosition'%(k+1)
+            slit.y = data_as(das, y, 'mm', rep=n)
+            slit.y_target = data_as(das, y_target, 'mm', rep=n)
 
+        # Detector
         self.detector.wavelength = self.monochromator.wavelength
         self.detector.wavelength_resolution = self.monochromator.wavelength_resolution
         self.detector.deadtime = data_as(entry, 'instrument/single_detector/dead_time', 'us')
@@ -288,19 +311,12 @@ class NCNRNeXusRefl(ReflData):
         self.detector.distance = data_as(entry, 'instrument/detector/distance', 'mm')
         self.detector.rotation = data_as(entry, 'instrument/detector/rotation', 'degree')
 
+        # Counts
         self.detector.counts = np.asarray(data_as(das, 'counter/liveROI', ''), 'd')
         self.detector.counts_variance = self.detector.counts.copy()
-        for k, s in enumerate([self.slit1, self.slit2, self.slit3, self.slit4]):
-            x = 'slitAperture%d/softPosition'%(k+1)
-            y = 'vertSlitAperture%d/softPosition'%(k+1)
-            x_target = 'slitAperture%d/desiredSoftPosition'%(k+1)
-            y_target = 'vertSlitAperture%d/desiredSoftPosition'%(k+1)
-            if x in das:
-                s.x = data_as(das, x, 'mm', rep=n)
-            if y in das:
-                s.y = data_as(das, y, 'mm', rep=n)
-            s.x_target = data_as(das, x_target, 'mm', rep=n)
-            s.y_target = data_as(das, y_target, 'mm', rep=n)
+        self.detector.dims = self.detector.counts.shape[1:]
+
+        # Angles
         if 'sampleAngle' in das:
             # selects MAGIK or PBR, which have sample and detector angle
             self.sample.angle_x = data_as(das, 'sampleAngle/softPosition', 'degree', rep=n)
@@ -370,13 +386,17 @@ class NCNRNeXusRefl(ReflData):
 
 def demo(loader=load_entries):
     import sys
-    from .load import load_from_uri
+    from .load import url_load
+    from .reflweb import default_config
+    from dataflow.cache import set_test_cache
     if len(sys.argv) == 1:
         print("usage: python -m reflred.nexusref file...")
         sys.exit(1)
     for filename in sys.argv[1:]:
+        if ':' not in filename:
+            filename = 'file://' + os.getcwd() + "/" + filename
         try:
-            entries = load_from_uri(filename, loader=loader)
+            entries = url_load(filename, loader=loader)
         except Exception as exc:
             print("**** "+str(exc)+" **** while reading "+filename)
             raise
