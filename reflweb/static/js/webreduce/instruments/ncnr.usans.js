@@ -44,7 +44,6 @@ webreduce.instruments['ncnr.usans'] = webreduce.instruments['ncnr.usans'] || {};
 
   instrument.load_file = load_usans;
   instrument.default_categories = [
-    [["analysis.intent"]],
     [["run.filePrefix"]],
     [["run.instFileNum"]]
   ];
