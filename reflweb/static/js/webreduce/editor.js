@@ -46,8 +46,9 @@ webreduce.editor = webreduce.editor || {};
         warning += "Please adjust your privacy level to allow website data storage (unblock cookies?) and reload page.";
         alert(warning);
         webreduce.editor._cache = new inMemoryCache();
+      } else {
+        throw e;
       }
-      throw e;
     }
   }
   webreduce.editor.make_cache();
@@ -1197,7 +1198,12 @@ webreduce.editor = webreduce.editor || {};
     // embed the active template in a subroutine, exposing the
     // currently active output.  Store the structure in the 
     // browser.
-    if (!window.localStorage) {alert("localStorage not supported in your browser"); return }
+    try {
+        if (!window.localStorage) { throw false; }
+    } catch (e) {
+        alert("localStorage not supported in your browser");
+        return;
+    }
     if (webreduce.editor._active_terminal == null) {
             alert("please select one input or output terminal to stash"); 
             return 
@@ -1207,7 +1213,7 @@ webreduce.editor = webreduce.editor || {};
     var stashname = prompt("stash data as:", suggested_name);
     if (stashname == null) {return} // cancelled
     
-    var existing_stashes = JSON.parse(localStorage['webreduce.editor.stashes'] || "{}");
+    var existing_stashes = _fetch_stashes();
     //var existing_stashnames = Object.keys(existing_stashes);
     
     if (existing_stashes.hasOwnProperty(stashname)) {
@@ -1234,12 +1240,12 @@ webreduce.editor = webreduce.editor || {};
       "instrument_id": instrument_id
     }
     existing_stashes[stashname] = subroutine;
-    localStorage['webreduce.editor.stashes'] = JSON.stringify(existing_stashes);
+    _save_stashes(existing_stashes);
     webreduce.editor.load_stashes(existing_stashes);
   }
   
   webreduce.editor.load_stashes = function(stashes) {
-    var existing_stashes = stashes || JSON.parse(localStorage['webreduce.editor.stashes'] || "{}");
+    var existing_stashes = stashes || _fetch_stashes();
     var stashnames = Object.keys(existing_stashes);
     d3.select("div#stashedlist").selectAll("ul").remove();
     var stashedlist = d3.select("div#stashedlist")
@@ -1287,12 +1293,24 @@ webreduce.editor = webreduce.editor || {};
       
     //console.log(JSON.stringify(subroutine, null, 2));    
   }
-  
+
+  function _fetch_stashes() {
+    try {
+      return JSON.parse(localStorage['webreduce.editor.stashes'] || "{}");
+    } catch (e) {
+      return {}
+    }
+  }
+  function _save_stashes(stashes) {
+    try {
+      localStorage['webreduce.editor.stashes'] = JSON.stringify(stashes);
+    } catch (e) {}
+  }
   function remove_stash(stashname) {
-    var existing_stashes = JSON.parse(localStorage['webreduce.editor.stashes'] || "{}");
+    var existing_stashes = fetch_stashes();
     if (stashname in existing_stashes) {
       delete existing_stashes[stashname];
-      localStorage['webreduce.editor.stashes'] = JSON.stringify(existing_stashes);
+      _save_stashes(existing_stashes);
       webreduce.editor.load_stashes();
     }
   }
@@ -1300,7 +1318,7 @@ webreduce.editor = webreduce.editor || {};
   function reload_stash(stashname) {
     var overwrite = confirm("discard active template to load stashed?");
     if (!overwrite) {return}
-    var existing_stashes = JSON.parse(localStorage['webreduce.editor.stashes'] || "{}");
+    var existing_stashes = _fetch_stashes();
     if (stashname in existing_stashes) {
       var stashed = existing_stashes[stashname];
       var template = stashed.module_def.template;
@@ -1317,7 +1335,7 @@ webreduce.editor = webreduce.editor || {};
     // doesn't handle subroutines...
     d3.selectAll("g.module .selected").classed("selected", false);
     var existing_stashes = JSON.parse(localStorage['webreduce.editor.stashes'] || "{}");
-    var stashnames = stashnames.filter(function(s) {return (s in existing_stashes)});
+    var stashnames = _fetch_stashes();
     var recalc_mtimes = $("#auto_reload_mtimes").prop("checked");
     var params_to_calc = stashnames.map(function(stashname) {
       var stashed = existing_stashes[stashname];
@@ -1852,13 +1870,13 @@ webreduce.editor = webreduce.editor || {};
             $("#main_menu").menu("refresh");
           })
           var default_template = template_names[0];
-          if (localStorage) {
+          try {
             var lookup_id = "webreduce.instruments." + instrument_id + ".last_used_template";
             var test_template_name = localStorage.getItem(lookup_id);
             if (test_template_name != null && test_template_name in instrument_def.templates) {
               default_template = test_template_name;
             }
-          }
+          } catch (e) {}
           if (load_default) {
             current_instrument = instrument_id;
             var template_copy = jQuery.extend(true, {}, instrument_def.templates[default_template]);
