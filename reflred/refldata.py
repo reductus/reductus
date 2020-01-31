@@ -361,9 +361,12 @@ class Detector(Group):
         Detector solid angle [x,y], calculated from distance and size.
     center (2 x millimetre)
         Location of the center pixel [x,y] relative to the detector arm.
-    widths_x (nx x millimetre)
-    widths_y (ny x millimetre)
-        Pixel widths in x and y.  We assume no space between the pixels.
+    width_x (nx x millimetre)
+    width_y (ny x millimetre)
+        Pixel width in x and y.
+    offset_x (nx x millimetre)
+    offset_y (ny x millimetre)
+        Pixel offset in x and y.
     angle_x (n x degree)
     angle_y (n x degree)
         Angle of the detector arm relative to the main beam in x and y.
@@ -421,8 +424,10 @@ class Detector(Group):
     distance = None # mm
     size = (1., 1.)  # mm
     center = (0., 0.) # mm
-    widths_x = 1. # mm
-    widths_y = 1. # mm
+    width_x = 1. # mm
+    width_y = 1. # mm
+    offset_x = 0. # mm
+    offset_y = 0. # mm
     angle_x = 0.  # degree
     angle_y = 0.  # degree
     angle_x_target = 0.  # degree
@@ -863,38 +868,61 @@ class ReflData(Group):
     def dv(self, dv):
         self._dv = dv
 
+    @property
+    def Ti(self):
+        return self.sample.angle_x
+
+    @property
+    def Td(self):
+        return self.detector.angle_x
+
+    @property
+    def Tf(self):
+        return self.Td - self.Ti
+
+    @property
+    def Ti_target(self):
+        return self.sample.angle_x_target
+
+    @property
+    def Td_target(self):
+        return self.detector.angle_x_target
+
+    @property
+    def Tf_target(self):
+        return self.Td_target - self.Ti_target
+
+    @property
+    def Li(self):
+        return self.monochromator.wavelength
+
+    @property
+    def Ld(self):
+        return self.detector.wavelength
 
     @property
     def Qz(self):
         if self.Qz_basis == 'target':
             #return self.Qz_target
-            Ti, Td = self.sample.angle_x_target, self.detector.angle_x_target
-            Li, Ld = self.monochromator.wavelength, self.detector.wavelength
-            return calc_Qz(Ti, Td, Li, Ld)
-        Ti, Td = self.sample.angle_x, self.detector.angle_x
-        Li, Ld = self.monochromator.wavelength, self.detector.wavelength
+            return calc_Qz(self.Ti_target, self.Td_target, self.Li, self.Ld)
         if self.Qz_basis == 'actual':
-            return calc_Qz(Ti, Td, Li, Ld)
+            return calc_Qz(self.Ti, self.Td, self.Li, self.Ld)
         if self.Qz_basis == 'detector':
-            return calc_Qz(Td/2, Td, Li, Ld)
+            return calc_Qz(self.Td/2, self.Td, self.Li, self.Ld)
         if self.Qz_basis == 'sample':
-            return calc_Qz(Ti, 2*Ti, Li, Ld)
+            return calc_Qz(self.Ti, 2*self.Ti, self.Li, self.Ld)
         raise KeyError("Qz basis must be one of [actual, detector, sample, target]")
 
     @property
     def Qx(self):
         if self.Qz_basis == 'target':
-            Ti, Td = self.sample.angle_x_target, self.detector.angle_x_target
-            Li, Ld = self.monochromator.wavelength, self.detector.wavelength
-            return calc_Qx(Ti, Td, Li, Ld)
-        Ti, Td = self.sample.angle_x, self.detector.angle_x
-        Li, Ld = self.monochromator.wavelength, self.detector.wavelength
+            return calc_Qx(self.Ti_target, self.Td_target, self.Li, self.Ld)
         if self.Qz_basis == 'actual':
-            return calc_Qx(Ti, Td, Li, Ld)
+            return calc_Qx(self.Ti, self.Td, self.Li, self.Ld)
         if self.Qz_basis == 'detector':
-            return np.zeros_like(Td)
+            return np.zeros_like(self.Td)
         if self.Qz_basis == 'sample':
-            return np.zeros_like(Ti)
+            return np.zeros_like(self.Ti)
         raise KeyError("Qz basis must be one of [actual, detector, sample, target]")
 
     @property
