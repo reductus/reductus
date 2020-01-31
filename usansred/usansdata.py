@@ -87,7 +87,10 @@ class USansCorData(object):
         return _toDictItem(self.metadata)
 
     def get_plottable(self):
-        name = self.metadata.get("Sample file", "")
+        if isinstance(self.metadata, list):
+            name = ",".join([m.get("Sample file", "") for m in self.metadata])
+        else:
+            name = self.metadata.get("Sample file", "")
         entry = ""
         xcol = "Q"
         ycol = "iqCOR"
@@ -130,12 +133,19 @@ class USansCorData(object):
         labels = ["Qx (1/A)", "I(Q) (Counts/sec/(1e6 Monitor))", "std. dev. I(Q) (1/cm)", "dQ (1/A)", "filler", "filler"]
 
         fid = BytesIO()
-        fid.write(_b("# %s\n" % json.dumps(_toDictItem(self.metadata, convert_bytes=True)).strip("{}")))
+        cleaned_metadata = _toDictItem(self.metadata, convert_bytes=True)
+        if not isinstance(cleaned_metadata, list):
+            cleaned_metadata = [cleaned_metadata]
+        for c in cleaned_metadata:
+            fid.write(b'### Parameters:\n')
+            for k,v in c.items():
+                fid.write(_b("# %s\n" % json.dumps({k: v}).strip("{}")))
+        #fid.write(_b("# %s\n" % json.dumps(_toDictItem(self.metadata, convert_bytes=True)).strip("{}")))
         fid.write(_b("# %s\n" % json.dumps({"columns": labels}).strip("{}")))
-        filler = np.zeros_like(self.Q)
+        filler = np.ones_like(self.Q, dtype='float') * -1.0 * cleaned_metadata[0]["dQv"]
         np.savetxt(fid, np.vstack([self.Q, self.iqCOR.x, np.sqrt(self.iqCOR.variance), filler, filler, filler]).T, fmt="%15.6g")
         fid.seek(0)
-        name = _s(self.metadata["Sample file"])
+        name = _s(cleaned_metadata[0]["Sample file"])
         entry = ""
         return {"name": name, "entry": entry, "export_string": fid.read(), "file_suffix": ".usans.cor"}
 

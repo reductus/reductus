@@ -25,17 +25,6 @@
       "y": 110
     },
     {
-      "module": "ncnr.usans.correctData",
-      "title": "Correctdata",
-      "x": 785,
-      "y": 60,
-      "config": {
-        "emp_level": 0.76,
-        "bkg_level": 0.62,
-        "thick": 0.1
-      }
-    },
-    {
       "module": "ncnr.usans.convert_to_countrate",
       "title": "Convert To Countrate",
       "x": 245,
@@ -58,6 +47,12 @@
       "title": "Convert To Countrate",
       "x": 244,
       "y": 110
+    },
+    {
+      "module": "ncnr.usans.correctJoinData",
+      "title": "Correct + Join",
+      "x": 780,
+      "y": 60
     }
   ],
   "wires": [
@@ -77,13 +72,13 @@
         "output"
       ],
       "target": [
-        5,
+        4,
         "unnormalized"
       ]
     },
     {
       "source": [
-        5,
+        4,
         "output"
       ],
       "target": [
@@ -93,7 +88,7 @@
     },
     {
       "source": [
-        5,
+        4,
         "output"
       ],
       "target": [
@@ -103,31 +98,31 @@
     },
     {
       "source": [
-        7,
+        6,
         "peak_params"
       ],
       "target": [
-        6,
+        5,
         "peak_params"
       ]
     },
     {
       "source": [
-        8,
+        7,
         "output"
       ],
       "target": [
-        7,
+        6,
         "data"
       ]
     },
     {
       "source": [
-        8,
+        7,
         "output"
       ],
       "target": [
-        6,
+        5,
         "data"
       ]
     },
@@ -137,18 +132,8 @@
         "output"
       ],
       "target": [
-        8,
+        7,
         "unnormalized"
-      ]
-    },
-    {
-      "source": [
-        6,
-        "adjusted_data"
-      ],
-      "target": [
-        4,
-        "empty"
       ]
     },
     {
@@ -157,8 +142,18 @@
         "adjusted_data"
       ],
       "target": [
-        4,
+        8,
         "sample"
+      ]
+    },
+    {
+      "source": [
+        5,
+        "adjusted_data"
+      ],
+      "target": [
+        8,
+        "empty"
       ]
     }
   ]

@@ -299,9 +299,94 @@ def correctData(sample, empty, bkg_level=0.0, emp_level=0.0, thick=1.0, dOmega=7
         "Sample Peak Angle": getattr(sample, 'Q_offset', 0.0),
         "Empty Peak Angle": getattr(empty, 'Q_offset', 0.0),
         "Empty level": emp_level,
-        "Bkg level": bkg_level
+        "Bkg level": bkg_level,
+        "dQv": sample.metadata["dQv"],
     }
 
     corrected = USansCorData(metadata=info,iqCOR=iqCOR, Q=sample.Q)
     
     return corrected, Parameters(info)
+
+@cache
+@module
+def correctJoinData(sample, empty, q_tol=0.01, bkg_level=0.0, emp_level=0.0, thick=1.0, dOmega=7.1e-7):
+    """"
+    Do the final data reduction.  Requires sample and empty datasets, normalized.
+    Multiple inputs in either will be joined into one dataset before processing.
+    
+    **Inputs**
+
+    sample (data[]): data in
+
+    empty (data): empty in
+
+    q_tol (float): values closer together than this tolerance in Q will be joined into a single point
+
+    bkg_level (float): background level
+
+    emp_level (float): empty background level
+
+    thick (float): thickness of sample, in cm
+
+    dOmega (float): solid angle of detector (steradians)
+
+    **Returns**
+
+    corrected (data): corrected output
+
+    corrected_info (params[]): correction info
+
+    2020-01-29 Brian Maranville
+    """
+
+    from dataflow.lib.uncertainty import Uncertainty
+    from .usansdata import USansCorData
+    from sansred.sansdata import Parameters
+
+
+    data_groups = make_groups([s.Q for s in sample])
+
+    reduced_pairs = [correctData(s, empty, bkg_level=bkg_level, emp_level=emp_level, thick=thick, dOmega=dOmega) for s in sample]
+
+    reduced_values = [r[0] for r in reduced_pairs]
+    reduced_infos = [r[1].params for r in reduced_pairs]
+
+    Qvals = []
+    iqCOR_x = []
+    iqCOR_variance = []
+    for g in data_groups:
+        qmean = np.array([x for x,i,j in g]).mean()
+        iq = [reduced_values[i].iqCOR[j] for x,i,j in g]
+        iqmean = sum(iq) / len(iq)
+        Qvals.append(qmean)
+        iqCOR_x.append(iqmean.x)
+        iqCOR_variance.append(iqmean.variance)
+    
+    iqCOR = Uncertainty(iqCOR_x, iqCOR_variance)
+    Qvals = np.array(Qvals)
+
+    corrected = USansCorData(metadata=reduced_infos,iqCOR=iqCOR, Q=Qvals)
+    
+    return corrected, [Parameters(info) for info in reduced_infos]
+
+    
+
+def make_groups(xvals_list, xtol=0):
+    # xvals_list is list of xvals arrays
+    groups = []
+    for i, xvals in enumerate(xvals_list):
+        for j, x in enumerate(xvals):
+            matched = False
+            for g in groups:
+                d = [(x-gp[0]) <= (xtol * x) for gp in g]
+                if all([(x-gp[0]) <= (xtol * x) for gp in g]):
+                    g.append((x,i,j))
+                    matched = True
+                    break
+            if not matched:
+                groups.append([(x,i,j)])
+    return groups
+
+
+            
+

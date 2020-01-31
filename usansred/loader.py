@@ -42,6 +42,7 @@ def readUSANSNexus(input_file, file_obj=None, metadata_lookup=metadata_lookup, d
             ("start_time", _s(entry["start_time"][0])),
             ("end_time",_s(entry["end_time"][0])),
             ("entry", _s(entryname)),
+            ("dQv", 0.117), # constant of the instrument.  Should it be in the nexus def?
         ])
 
         counts = entry['DAS_logs/linearDetector/counts'][()]
