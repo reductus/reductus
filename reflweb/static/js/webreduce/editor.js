@@ -18,7 +18,10 @@ webreduce.editor = webreduce.editor || {};
       webreduce.editor._cache = new PouchDB("calculations", {size: 100});
     } catch (e) {
       if (e.name === "SecurityError") {
-        alert("Could not store website data — adjust your privacy level and try again.");
+        var warning = "Could not store website data - falling back to in-memory storage (may cause memory issues.)";
+        warning += "Please adjust your privacy level to allow website data storage (unblock cookies?) and reload page.";
+        alert(warning);
+        webreduce.editor._cache = new PouchDB("calculations", {size: 100, adapter: 'memory'})
       }
       throw e;
     }
@@ -27,7 +30,7 @@ webreduce.editor = webreduce.editor || {};
 
   webreduce.editor.clear_cache = function() {
     webreduce.blockUI("clearing cache...", 1000);
-    new PouchDB('calculations').destroy().then(function () {
+    webreduce.editor._cache.destroy().then(function () {
       // cache destroyed, now create a new one
       webreduce.editor.make_cache();
       webreduce.unblockUI(1000);
