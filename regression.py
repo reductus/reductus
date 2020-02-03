@@ -216,7 +216,7 @@ def main():
         else:
             replay_file(sys.argv[1])
         sys.exit(0)
-    except Exception as exc:
+    except Exception:
         traceback.print_exc()
         sys.exit(1)
 

@@ -327,8 +327,8 @@ class Monochromator(Group):
         approximately square for multi-sheet monochromators and highly
         skewed on TOF machines.
     """
-    wavelength = 1. # angstrom
-    wavelength_resolution = 0. # angstrom
+    wavelength = None # angstrom
+    wavelength_resolution = None # angstrom
 
 
 @set_fields
@@ -907,23 +907,28 @@ class ReflData(Group):
 
     @property
     def Qz(self):
+        # Note: specular reflectivity assumes elastic scattering
+        Li = Ld = self.Ld
         if self.Qz_basis == 'target':
-            #return self.Qz_target
-            return calc_Qz(self.Ti_target, self.Td_target, self.Li, self.Ld)
+            if self.Qz_target is not None:
+                return self.Qz_target
+            return calc_Qz(self.Ti_target, self.Td_target, Li, Ld)
         if self.Qz_basis == 'actual':
-            return calc_Qz(self.Ti, self.Td, self.Li, self.Ld)
+            return calc_Qz(self.Ti, self.Td, Li, Ld)
         if self.Qz_basis == 'detector':
-            return calc_Qz(self.Td/2, self.Td, self.Li, self.Ld)
+            return calc_Qz(self.Td/2, self.Td, Li, Ld)
         if self.Qz_basis == 'sample':
-            return calc_Qz(self.Ti, 2*self.Ti, self.Li, self.Ld)
+            return calc_Qz(self.Ti, 2*self.Ti, Li, Ld)
         raise KeyError("Qz basis must be one of [actual, detector, sample, target]")
 
     @property
     def Qx(self):
+        # Note: specular reflectivity assumes elastic scattering
+        Li = Ld = self.Ld
         if self.Qz_basis == 'target':
-            return calc_Qx(self.Ti_target, self.Td_target, self.Li, self.Ld)
+            return calc_Qx(self.Ti_target, self.Td_target, Li, Ld)
         if self.Qz_basis == 'actual':
-            return calc_Qx(self.Ti, self.Td, self.Li, self.Ld)
+            return calc_Qx(self.Ti, self.Td, Li, Ld)
         if self.Qz_basis == 'detector':
             return np.zeros_like(self.Td)
         if self.Qz_basis == 'sample':

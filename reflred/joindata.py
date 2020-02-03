@@ -93,7 +93,7 @@ def join_datasets(group, Qtol, dQtol, by_Q=False):
     #    Td: detector theta
     #    Ti: incident (sample) theta
     #    dT: angular divergence
-    #    L : wavelength
+    #    Ld: detector wavelength
     #    dL: wavelength dispersion
     isslit = Intent.isslit(group[0].intent)
     isrock = Intent.isrock(group[0].intent)
@@ -101,12 +101,12 @@ def join_datasets(group, Qtol, dQtol, by_Q=False):
         # Sort detector rocking curves so that small deviations in sample
         # angle don't throw off the order in detector angle.
         keys = ('Qx', 'Qz', 'dQ')
-        #keys = ('Td', 'Ti', 'L', 'dT', 'dL')
+        #keys = ('Td', 'Ti', 'Ld', 'dT', 'dL')
     elif isslit:
-        keys = ('dT', 'L', 'dL')
+        keys = ('dT', 'Ld', 'dL')
     else:
         keys = ('Qz', 'dQ', 'Qx')
-        #keys = ('Ti', 'Td', 'L', 'dT', 'dL')
+        #keys = ('Ti', 'Td', 'Ld', 'dT', 'dL')
     columns = sort_columns(columns, keys)
 
     data = build_dataset(group, columns)
@@ -147,6 +147,12 @@ def build_dataset(group, columns):
     data.detector.rotation = None
     data.detector.counts = None
     data.detector.counts_variance = None
+    # Note: The ReflData object assumes elastic scattering, using the detector
+    # wavelength to compute qx and qz.  For now the join operation is ignoring
+    # the monochromator wavelength, so make sure it doesn't appear in the
+    # joined dataset.
+    data.monochromator.wavelength = None
+    data.monochromator.wavelength_resolution = None
     data.monitor.counts_variance = None
     for k in range(1, 5):
         slit = getattr(data, 'slit%d'%k)
@@ -203,7 +209,7 @@ def build_dataset(group, columns):
     data.slit2.x = columns['s2']
     data.slit3.x = columns['s3']
     data.slit4.x = columns['s4']
-    data.detector.wavelength = columns['L']
+    data.detector.wavelength = columns['Ld']
     data.detector.wavelength_resolution = columns['dL']
     data.monitor.count_time = columns['time']
     data.monitor.counts = columns['monitor']
@@ -237,10 +243,10 @@ def get_fields(group):
         s2=[data.slit2.x for data in group],
         s3=[data.slit3.x for data in group],
         s4=[data.slit4.x for data in group],
-        dT=[data.angular_resolution for data in group],
         Ti=[data.sample.angle_x for data in group],
         Td=[data.detector.angle_x for data in group],
-        L=[data.detector.wavelength for data in group],
+        dT=[data.angular_resolution for data in group],
+        Ld=[data.detector.wavelength for data in group],
         dL=[data.detector.wavelength_resolution for data in group],
         monitor=[data.monitor.counts for data in group],
         time=[data.monitor.count_time for data in group],
@@ -331,10 +337,10 @@ def set_QdQ(columns):
     Generate Q and dQ fields from angles and geometry
     """
     Ti, Td, dT = columns['Ti'], columns['Td'], columns['dT']
-    L, dL = columns['L'], columns['dL']
-    Qx, Qz = TiTdL2Qxz(Ti, Td, L)
+    Ld, dL = columns['Ld'], columns['dL']
+    Qx, Qz = TiTdL2Qxz(Ti, Td, Ld)
     # TODO: is dQx == dQz ?
-    dQ = dTdL2dQ(Td-Ti, dT, L, dL)
+    dQ = dTdL2dQ(Td-Ti, dT, Ld, dL)
     columns['Qx'], columns['Qz'], columns['dQ'] = Qx, Qz, dQ
     return columns
 
@@ -348,7 +354,7 @@ def get_target_values(group):
         Ti=[data.sample.angle_x_target for data in group],
         Td=[data.detector.angle_x_target for data in group],
         dT=[_target_dT(data) for data in group],
-        L=[data.detector.wavelength for data in group],
+        Ld=[data.detector.wavelength for data in group],
         dL=[data.detector.wavelength_resolution for data in group],
     )
     return columns
@@ -370,9 +376,9 @@ def group_by_target_angles(columns):
     Given columns of target values, group together exactly matching points.
     """
     Ti, Td, dT = columns['Ti'], columns['Td'], columns['dT']
-    L, dL = columns['L'], columns['dL']
+    Ld, dL = columns['Ld'], columns['dL']
     points = {}
-    for index, point in enumerate(zip(Ti, Td, dT, L, dL)):
+    for index, point in enumerate(zip(Ti, Td, dT, Ld, dL)):
         points.setdefault(point, []).append(index)
     return list(points.values())
 
@@ -383,15 +389,15 @@ def group_by_actual_angles(columns, Qtol, dQtol):
     Given instrument geometry columns group points by angles and wavelength.
     """
     Ti, Td, dT = columns['Ti'], columns['Td'], columns['dT']
-    L, dL = columns['L'], columns['dL']
+    Ld, dL = columns['Ld'], columns['dL']
     #print "joining", Qtol, dQtol, Ti, Td, dT
     groups = [list(range(len(Ti)))]
     groups = _group_by_dim(groups, Td, Qtol*dT)
     #print("Td groups", groups)
     groups = _group_by_dim(groups, Ti, Qtol*dT)
     #print("Ti groups", groups)
-    groups = _group_by_dim(groups, L, Qtol*dL)
-    #print("L groups", groups)
+    groups = _group_by_dim(groups, Ld, Qtol*dL)
+    #print("Ld groups", groups)
     groups = _group_by_dim(groups, dT, dQtol*dT)
     #print("dT groups", groups)
     groups = _group_by_dim(groups, dL, dQtol*dL)
