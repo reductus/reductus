@@ -52,7 +52,12 @@ def str_data(group, field, default=''):
     Retrieve value of field as a string, with default if field is missing.
     """
     if field in group:
-        return _s(group[field][0])
+        data = group[field][0]
+        if len(data.shape) > 0:
+            value = [_s(v) for v in data]
+        else:
+            value = _s(data)
+        return value
     else:
         return default
 
@@ -94,9 +99,9 @@ def load_nexus_entries(filename, file_obj=None, entries=None,
     """
     Load the summary info for all entries in a NeXus file.
     """
-    file = h5_open.h5_open_zip(filename, file_obj)
+    handle = h5_open.h5_open_zip(filename, file_obj)
     measurements = []
-    for name, entry in file.items():
+    for name, entry in handle.items():
         if entries is not None and name not in entries:
             continue
         if _s(entry.attrs.get('NX_class', None)) == 'NXentry':
@@ -105,7 +110,7 @@ def load_nexus_entries(filename, file_obj=None, entries=None,
                 data.load(entry)
             measurements.append(data)
     if file_obj is None:
-        file.close()
+        handle.close()
     return measurements
 
 
@@ -131,7 +136,7 @@ def nexus_common(self, entry, entryname, filename):
     # TODO: Reliable way to determine scan length.
     if 'trajectory/liveScanLength' in entry:
         # New files should have num points in trajectory/liveScanLength ...
-        n = entry['trajectory/liveScanLength'].value
+        n = entry['trajectory/liveScanLength'][()]
     else:
         # Guess length by looking at the counter fields
         # Prefer to not load the entire counter at this point, especially since
@@ -216,7 +221,7 @@ def nexus_common(self, entry, entryname, filename):
     # TODO: magnetic field
     if 'temp' in das:
         if 'temp/primaryControlLoop' in das:
-            temp_controller = das['temp/primaryControlLoop'].value
+            temp_controller = das['temp/primaryControlLoop'][()]
             setpoint_field = 'temp/setpoint_%d' % (temp_controller,)
             self.sample.temp_setpoint = data_as(das, setpoint_field, 'K')[0]
         temp_values = data_as(das, 'temp/primaryNode/value', 'K')
@@ -330,14 +335,16 @@ class NCNRNeXusRefl(ReflData):
             tilt = 0.
             #tilt = data_as(das, 'sampleTilt/softPosition', 'degree', rep=n)
             theta = data_as(das, 'q/thetaIncident', 'degree', rep=n)
-            self.sample.angle_x = theta + tilt
-            self.detector.angle_x = 2*theta
+            if theta is not None:
+                self.sample.angle_x = theta + tilt
+                self.detector.angle_x = 2*theta
             # NaN if not defined
             tilt_target = 0.
             #tilt_target = data_as(das, 'sampleTilt/desiredSoftPosition', 'degree', rep=n)
             theta_target = data_as(das, 'q/desiredThetaInident', 'degree', rep=n)
-            self.sample.angle_x_target = theta_target + tilt_target
-            self.detector.angle_x_target = 2*theta_target
+            if theta_target is not None:
+                self.sample.angle_x_target = theta_target + tilt_target
+                self.detector.angle_x_target = 2*theta_target
         else:
             raise ValueError("Unknown sample angle in file")
         self.Qz_target = data_as(das, 'trajectoryData/_q', '', rep=n)

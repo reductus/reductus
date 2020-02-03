@@ -158,6 +158,16 @@ class NG7PSD(ReflData):
     def Td(self):
         return self.Td_target
 
+    @property
+    def Li(self):
+        return self.monochromator.wavelength[:, None]
+
+    @property
+    def Ld(self):
+        return self.detector.wavelength[:, None]
+
 if __name__ == "__main__":
+    # Example:
+    #   python -m reflred.ng7psd ncnr://ncnrdata/ng7/202001/27596/data/5ppm_NRW_0M33037.nxz.ng7
     from .nexusref import demo
     demo(loader=load_entries)

@@ -402,6 +402,9 @@ class Detector(Group):
 
         Note: There may be separate per pixel and per detector
         saturation levels.
+    mask (nx x ny)
+        Ignore data when (mask&0xFFFF != 0)
+        https://manual.nexusformat.org/classes/base_classes/NXdetector.html
 
     Measurement
     ===========
@@ -415,10 +418,11 @@ class Detector(Group):
         skewed on TOF machines.
     time_of_flight (k+1 millisecond)
         Time boundaries for time-of-flight measurement
-    counts (nx x ny x k counts OR n x nx x ny counts)
+    counts (nx x ny x k counts OR n x nx x ny counts OR n x nx x ny x k counts)
         nx x ny detector pixels
         n number of measurements
-        k time/wavelength channels
+        k time-of-flight/wavelength channels
+    counts_variance (like counts)
     """
     dims = (1, 1) # i,j
     distance = None # mm
@@ -439,6 +443,7 @@ class Detector(Group):
     time_of_flight = None  # ms
     counts = None
     counts_variance = None
+    mask = None
     deadtime = None
     deadtime_error = None
     columns = {
@@ -1057,9 +1062,18 @@ class ReflData(Group):
             self.warnings.extend("  "+s for s in other.warnings)
 
     def plot(self, label=None):
-        from matplotlib import pyplot as plt
         if label is None:
             label = self.name+self.polarization
+        if self.v.ndim == 2:
+            self._plot_2d(label)
+        elif self.v.ndim == 1:
+            self._plot_1d(label)
+        else:
+            raise TypeError("Cannot plot data of shape "+str(self.v.shape))
+
+    def _plot_1d(self, label):
+        from matplotlib import pyplot as plt
+
         xerr = self.dx if self.angular_resolution is not None else None
         x, dx, xunits, xlabel = self.x, xerr, self.xunits, self.xlabel
         #x, dx, xunits, xlabel = self.detector.angle_x, self.angular_resolution, 'detector angle', 'deg'
@@ -1068,6 +1082,15 @@ class ReflData(Group):
         plt.ylabel("%s (%s)"%(self.vlabel, self.vunits) if self.vunits else self.vlabel)
         if not Intent.isslit(self.intent):
             plt.yscale('log')
+
+    def _plot_2d(self, label):
+        from matplotlib import pyplot as plt
+
+        x, xunits, xlabel = self.x, self.xunits, self.xlabel
+        data = np.log(self.v + (self.v == 0))
+        plt.pcolormesh(data, label=label)
+        plt.xlabel("pixel")
+        plt.ylabel("%s (%s)"%(self.xlabel, self.xunits))
 
     def save(self, filename):
         with open(filename, 'w') as fid:

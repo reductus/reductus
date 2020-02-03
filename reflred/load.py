@@ -1,4 +1,3 @@
-import datetime
 from os.path import basename
 from io import BytesIO
 
@@ -9,11 +8,9 @@ def load_from_string(filename, data, entries=None, loader=None):
     """
     Load a nexus file from a string, e.g., as returned from url.read().
     """
-    fd = BytesIO(data)
-    entries = loader(filename, fd, entries=entries)
-    fd.close()
+    with BytesIO(data) as fd:
+        entries = loader(filename, fd, entries=entries)
     return entries
-
 
 def url_load(fileinfo, check_timestamps=True, loader=None):
     path, entries = fileinfo['path'], fileinfo.get('entries', None)
