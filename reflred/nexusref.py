@@ -386,19 +386,16 @@ class NCNRNeXusRefl(ReflData):
 
 def demo(loader=load_entries):
     import sys
-    from .load import url_load
-    from .reflweb import default_config
-    from dataflow.cache import set_test_cache
+    from .load import setup_fetch, fetch_uri
     if len(sys.argv) == 1:
         print("usage: python -m reflred.nexusref file...")
         sys.exit(1)
-    for filename in sys.argv[1:]:
-        if ':' not in filename:
-            filename = 'file://' + os.getcwd() + "/" + filename
+    setup_fetch()
+    for uri in sys.argv[1:]:
         try:
-            entries = url_load(filename, loader=loader)
+            entries = fetch_uri(uri, loader=loader)
         except Exception as exc:
-            print("**** "+str(exc)+" **** while reading "+filename)
+            print("**** "+str(exc)+" **** while reading "+uri)
             raise
             continue
 

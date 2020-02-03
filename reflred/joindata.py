@@ -534,19 +534,20 @@ def sort_columns(columns, keys):
 def demo():
     import sys
     import matplotlib.pyplot as plt
-    import numpy; numpy.set_printoptions(linewidth=10000)
     from . import steps
-    from .load import load_from_uri
+    from .load import setup_fetch, fetch_uri
     from .util import group_by_key
     if len(sys.argv) == 1:
         print("usage: python -m reflred.joindata file...")
         sys.exit(1)
+    np.set_printoptions(linewidth=10000)
+    setup_fetch()
     data = []
-    for filename in sys.argv[1:]:
+    for uri in sys.argv[1:]:
         try:
-            entries = load_from_uri(filename)
+            entries = fetch_uri(uri)
         except Exception as exc:
-            print(str(exc) + " while loading " + filename)
+            print(str(exc) + " while loading " + uri)
             continue
         for entry in entries:
             entry = steps.mark_intent(steps.normalize(steps.divergence(entry)))

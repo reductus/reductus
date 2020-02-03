@@ -285,19 +285,20 @@ class RigakuRefl(refldata.ReflData):
 
 
 def demo():
+    import sys
+    from .load import setup_fetch, fetch_uri
     from .scale import apply_norm
     from .steps import divergence
-    from .load import load_from_uri
-    import sys
     if len(sys.argv) == 1:
         print("usage: python -m reflred.xrawref file...")
         sys.exit(1)
+    setup_fetch()
     plotted_datasets = 0
-    for filename in sys.argv[1:]:
+    for uri in sys.argv[1:]:
         try:
-            entries = load_from_uri(filename, loader=load_entries)
+            entries = fetch_uri(uri, loader=load_entries)
         except Exception as exc:
-            print("Error while loading", filename, ':', str(exc))
+            print("Error while loading", uri, ':', str(exc))
             #traceback.print_exc(); raise
             continue
 
