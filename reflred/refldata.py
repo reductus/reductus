@@ -883,7 +883,8 @@ class ReflData(Group):
 
     @property
     def Tf(self):
-        return self.Td - self.Ti
+        Ti, Td = self.Ti, self.Td
+        return Td - Ti if Ti is not None and Td is not None else None
 
     @property
     def Ti_target(self):
@@ -895,7 +896,8 @@ class ReflData(Group):
 
     @property
     def Tf_target(self):
-        return self.Td_target - self.Ti_target
+        Ti, Td = self.Ti_target, self.Td_target
+        return Td - Ti if Ti is not None and Td is not None else None
 
     @property
     def Li(self):
@@ -1102,6 +1104,14 @@ class ReflData(Group):
             fid.write(self.export())
 
     def export(self):
+        if self.v.ndim == 2:
+            return self._export_2d()
+        elif self.v.ndim == 1:
+            return self._export_1d()
+        else:
+            raise TypeError("Cannot plot data of shape "+str(self.v.shape))
+
+    def _export_1d(self):
         fid = BytesIO()  # numpy.savetxt requires a byte stream
         for n in ['name', 'entry', 'polarization']:
             _write_key_value(fid, n, getattr(self, n))
@@ -1133,25 +1143,47 @@ class ReflData(Group):
                 if IS_PY3:
                     datarow = datarow.encode('utf-8')
                 fid.write(datarow)
-            export_string = fid.getvalue()
-            if IS_PY3:
-                export_string = export_string.decode('utf-8')
-            name = getattr(self, "name", "default_name")
-            entry = getattr(self, "entry", "default_entry")
-            return {"name": name, "entry": entry, "export_string": export_string, "file_suffix": ".dat"}
         else:
             _write_key_value(fid, "columns", [self.xlabel, self.vlabel, "uncertainty", "resolution"])
             _write_key_value(fid, "units", [self.xunits, self.vunits, self.vunits, self.xunits])
             data = np.vstack([self.x, self.v, self.dv, self.dx]).T
             np.savetxt(fid, data, fmt="%.10e")
-            export_string = fid.getvalue()
-            if IS_PY3:
-                export_string = export_string.decode('utf-8')
-            name = getattr(self, "name", "default_name")
-            entry = getattr(self, "entry", "default_entry")
-            return {"name": name, "entry": entry, "export_string": export_string, "file_suffix": ".refl"}
+            file_suffix = ".refl"
+
+        export_string = fid.getvalue()
+        fid.close()
+        if IS_PY3:
+            export_string = export_string.decode('utf-8')
+        name = getattr(self, "name", "default_name")
+        entry = getattr(self, "entry", "default_entry")
+        return {
+            "name": name,
+            "entry": entry,
+            "export_string": export_string,
+            "file_suffix": file_suffix,
+            }
+
+    def _export_2d(self):
+        export_string = ""
+        name = getattr(self, "name", "default_name")
+        entry = getattr(self, "entry", "default_entry")
+        return {
+            "name": name,
+            "entry": entry,
+            "export_string": export_string,
+            "file_suffix": ".dat",
+            }
 
     def get_plottable(self):
+        #print("Fetching plottable of dimension", self.v.ndim)
+        if self.v.ndim == 2:
+            return self._plottable_2d()
+        elif self.v.ndim == 1:
+            return self._plottable_1d()
+        else:
+            raise TypeError("Cannot plot data of shape "+str(self.v.shape))
+
+    def _plottable_1d(self):
         columns = self.columns
         data_arrays = [self.scan_value[self.scan_label.index(p)] if v.get('is_scan', False) else get_item(self, p) for p,v in columns.items()]
         data_arrays = [np.resize(d, self.points).tolist() for d in data_arrays]
@@ -1183,6 +1215,65 @@ class ReflData(Group):
                 "errorbar_width": 0
             },
             "datas": datas
+        }
+        #print(plottable)
+        return plottable
+
+    def _plottable_2d(self):
+        name = getattr(self, "name", "default_name")
+        entry = getattr(self, "entry", "default_entry")
+        data = self.v
+        ny, nx = data.shape
+        #print("data shape", nx, ny)
+        x, xlabel = np.arange(1, nx+1), "pixel"
+        if Intent.isslit(self.intent):
+            y, ylabel = self.slit1.x, "S1"
+        elif Intent.isspec(self.intent):
+            y, ylabel = self.Qz_target, "Qz"
+        else:
+            y, ylabel = np.arange(1, ny+1), "point"
+        def limits(v, n):
+            low, high = v.min(), v.max()
+            delta = (high - low) / max(n-1, 1)
+            # TODO: move range cleanup to plotter
+            if delta == 0.:
+                delta = v[0]/10.
+            return low - delta/2, high+delta/2
+        xmin, xmax = limits(x, nx)
+        ymin, ymax = limits(y, ny)
+        # TODO: self.detector.mask
+        zmin, zmax = data.min(), data.max()
+        # TODO: move range cleanup to plotter
+        if zmin <= 0.:
+            if (data > 0).any():
+                zmin = data[data > 0].min()
+            else:
+                data[:] = zmin = 1e-10
+            if zmin >= zmax:
+                zmax = 10*zmin
+        plottable = {
+            "type": "2d",
+            "entry": entry,
+            "title": "%s:%s" % (name, entry),
+            "options": {
+                "fixedAspect": {
+                    'fixAspect': False,
+                    'aspectRatio': 1.0,
+                },
+            },
+            'xlabel': xlabel,
+            'ylabel': ylabel,
+            'zlabel': 'Intensity (I)',
+            'dims': {
+                "xmin": xmin,
+                "xmax": xmax,
+                "xdim": nx,
+                "ymin": ymin,
+                "ymax": ymax,
+                "ydim": ny,
+            },
+            "z": [data.T.ravel('C').tolist()],
+            "ztransform": "log",
         }
         #print(plottable)
         return plottable

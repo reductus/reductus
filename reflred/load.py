@@ -32,10 +32,16 @@ def url_load(fileinfo, check_timestamps=True, loader=None):
         return load_from_string(filename, content, entries=entries,
                                 loader=nexusref.load_entries)
 
-def url_load_list(files=None, check_timestamps=True):
+def url_load_list(files=None, check_timestamps=True, loader=None):
     if files is None:
         return []
-    result = [entry for fileinfo in files for entry in url_load(fileinfo, check_timestamps=check_timestamps)]
+    result = [
+        entry
+        for fileinfo in files
+        for entry in url_load(
+            fileinfo, check_timestamps=check_timestamps, loader=loader,
+            )
+        ]
     return result
 
 def setup_fetch():

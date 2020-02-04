@@ -347,7 +347,9 @@ class NCNRNeXusRefl(ReflData):
                 self.detector.angle_x_target = 2*theta_target
         else:
             raise ValueError("Unknown sample angle in file")
-        self.Qz_target = data_as(das, 'trajectoryData/_q', '', rep=n)
+        self.Qz_target = data_as(das, 'q/z', '', rep=n)
+        if self.Qz_target is None:
+            self.Qz_target = data_as(das, 'trajectoryData/_q', '', rep=n)
         # TODO: use background_offset if it is defined
         #if 'trajectoryData/_theta_offset' in das:
         #    self.background_offset = 'theta'

@@ -1303,7 +1303,7 @@ def save(data, name='auto', ext='auto', path='auto'):
 
 @cache
 @module
-def load_psd(filelist=None):
+def load_ng7_psd(filelist=None):
     r"""
     Load a list of NG7 psd files from the NCNR data server.
 
@@ -1319,7 +1319,7 @@ def load_psd(filelist=None):
     from .ng7psd import load_entries
 
     datasets = []
-    for data in url_load_list(filelist):
+    for data in url_load_list(filelist, loader=load_entries):
         datasets.append(data)
 
     return datasets

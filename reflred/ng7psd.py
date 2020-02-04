@@ -21,6 +21,9 @@ def load_entries(filename, file_obj=None, entries=None):
 
 WAVELENGTH = 4.768
 WAVELENGTH_DISPERSION = 0.025
+S1_DISTANCE = -1722.25
+S2_DISTANCE = -222.25
+S3_DISTANCE = 229.0
 DETECTOR_DISTANCE = 2006.
 PIXEL_WIDTH = 100./256
 PIXEL_OFFSET = np.linspace(0, 100, 257)[:-1] - 50 + 1/256
@@ -63,10 +66,7 @@ class NG7PSD(ReflData):
                 FWHM2sigma(WAVELENGTH_DISPERSION*self.monochromator.wavelength)
 
         # Slits
-        self.slit1.distance = data_as(entry, 'instrument/presample_slit1/distance', 'mm')
-        self.slit2.distance = data_as(entry, 'instrument/presample_slit2/distance', 'mm')
-        self.slit3.distance = data_as(entry, 'instrument/predetector_slit1/distance', 'mm')
-        self.slit4.distance = data_as(entry, 'instrument/predetector_slit2/distance', 'mm')
+        # Read slit opening from the data file
         for k, slit in enumerate((self.slit1, self.slit2, self.slit3)):
             x = 'slitAperture%d/softPosition'%(k+1)
             x_target = 'slitAperture%d/desiredSoftPosition'%(k+1)
@@ -76,6 +76,35 @@ class NG7PSD(ReflData):
             #y_target = 'vertSlitAperture%d/desiredSoftPosition'%(k+1)
             #slit.y = data_as(das, y, 'mm', rep=n)
             #slit.y_target = data_as(das, y_target, 'mm', rep=n)
+        # There is no slit 4: use detector pixel width instead.
+        self.slit4.x = data_as(entry, 'instrument/PSD/x_pixel_size', 'mm')
+        if self.slit4.x is None:
+            self.slit4.x = 0.390625  # 10 cm / 256 pixels
+        self.slit4.x_target = self.slit4.x
+        # Get slit distances as set by nexus config.js
+        self.slit1.distance = data_as(entry, 'instrument/presample_slit1/distance', 'mm')
+        self.slit2.distance = data_as(entry, 'instrument/presample_slit2/distance', 'mm')
+        self.slit3.distance = data_as(entry, 'instrument/predetector_slit1/distance', 'mm')
+        self.slit4.distance = data_as(entry, 'instrument/predetector_slit2/distance', 'mm')
+        # Fill in missing distance data, if they aren't in the config file
+        for slit, default in (
+                (self.slit1, S1_DISTANCE),
+                (self.slit2, S2_DISTANCE),
+                (self.slit3, S3_DISTANCE),
+                (self.slit4, DETECTOR_DISTANCE),
+                ):
+            if slit.distance is None:
+                slit.distance = default
+        # TODO: Correct for distance increase with q (5mm over 2m at q=0.2)
+        # ... and the corresponding 1/4 % decrease in divergence per pixel
+        # As the sample drops the slits pull away from the sample according
+        # to the following:
+        #    d = x * sqrt(tan(theta)^2 + 1)  # distance to detector center
+        #      = nominal_distance * sqrt(tan(radians(detector_angle))**2 + 1)
+        #    delta = d - nominal_distance
+        # so S1, S2, S3 and detector distance all need to increase by this much.
+        # Note: This calculation is used when computing the property Td_target,
+        # the pixel angle for each point on the detector.
 
         # Detector
         self.detector.wavelength = self.monochromator.wavelength
@@ -88,13 +117,6 @@ class NG7PSD(ReflData):
             self.detector.distance = DETECTOR_DISTANCE
             self.warn("PSD distance is missing; using %.1f mm"
                       % (self.detector.distance,))
-        # TODO: ignore detector distance increase with q (5mm over 2m at q=0.2)
-        # ... and the corresponding 1/4 % decrease in divergence per pixel
-        # If you really want to correct for it then use the following:
-        #    d = x * sqrt(tan(theta)^2 + 1)
-        #      = nominal_distance * sqrt(tan(radians(detector_angle))**2 + 1)
-        # or per pixel in the Td_target code below:
-        #    d = sqrt(x**2 + pixel_y**2)
 
         # TODO: ng7r/nexus/config.js needs to record info about the PSD
 
@@ -103,6 +125,7 @@ class NG7PSD(ReflData):
         if roi_device != "linearDetector":
             raise TypeError("expected roiAgainst to be linearDetector")
         self.detector.counts = np.asarray(data_as(das, roi_device + '/counts', ''), 'd')
+        #print("detector shape", self.detector.counts.shape)
         self.detector.counts_variance = self.detector.counts.copy()
         self.detector.dims = self.detector.counts.shape[1:]
         npixels = self.detector.dims[0]
@@ -119,6 +142,7 @@ class NG7PSD(ReflData):
         # Angles
         if 'q' not in das:
             raise ValueError("Unknown sample angle in file")
+        self.Qz_target = data_as(das, 'q/z', '', rep=n)
         # Ignore sampleTilt for now since it is arbitrary.  NG7 is not
         # using zeros for the sampleTilt motor in a predictable way.
         #tilt = data_as(das, 'sampleTilt/softPosition', 'degree', rep=n)
@@ -133,21 +157,35 @@ class NG7PSD(ReflData):
         self.sample.angle_x_target = self.sample.angle_x
         self.detector.angle_x_target = self.detector.angle_x
 
+        # TODO: what does angular resolution mean before integration?
+        from .angles import divergence
+        # Use slit2 and pixel width for the collimation geometry. The values
+        # for pixel width and distances are stored as slit 4.
+        slits = (self.slit4.x, self.slit2.x)
+        distance = (self.slit4.distance, self.slit2.distance)
+        theta = self.sample.angle_x
+        self.angular_resolution = divergence(
+            slits=slits, distance=distance, T=theta,
+            sample_width=np.inf,
+            sample_broadening=0.,
+            use_sample=False,
+        )
+
     @property
     def Ti_target(self):
         return self.sample.angle_x[:, None] # [n, 1]
 
     @property
     def Td_target(self):
-        # Assuming the detector is vertical at distance x from the
-        # sample center at q=0.
+        # Assuming the detector tilts with angle as the sampleElevator drops,
+        # increasing the length of the arm slightly at the sample center.
         x = self.detector.distance  # [1]
         theta = np.radians(self.detector.angle_x) # [n]
-        y = np.tan(theta)*x  # [n] * [1] = [n]
+        distance = x * np.sqrt(np.tan(theta)**2 + 1)  # [n] * [1] = [n]
         center = self.detector.center[0]  # [1]
         offset = self.detector.offset_x # [p]
-        pixel_y = y[:, None] + offset[None, :] + center # [n, p]
-        pixel_theta = np.arctan2(pixel_y, x) # [n, p]
+        pixel_y = offset + center # [p]
+        pixel_theta = np.arctan2(pixel_y[None, :], distance[:, None]) # [n, p]
         return np.degrees(pixel_theta)
 
     @property
