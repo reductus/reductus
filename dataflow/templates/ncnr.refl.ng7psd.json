@@ -1,0 +1,326 @@
+{
+  "modules": [
+    {
+      "module": "ncnr.refl.ng7_psd",
+      "title": "PSD spec",
+      "x": 20,
+      "y": 10,
+      "config": {
+        "filelist": []
+      }
+    },
+    {
+      "module": "ncnr.refl.psd_center",
+      "title": "Psd Center",
+      "x": 90,
+      "y": 55,
+      "config": {
+        "center": 132
+      }
+    },
+    {
+      "module": "ncnr.refl.psd_integrate",
+      "title": "Psd Integrate",
+      "x": 170,
+      "y": 10
+    },
+    {
+      "module": "ncnr.refl.subtract_background",
+      "title": "Subtract Background",
+      "x": 315,
+      "y": 10
+    },
+    {
+      "module": "ncnr.refl.join",
+      "title": "Join",
+      "x": 560,
+      "y": 10
+    },
+    {
+      "module": "ncnr.refl.ng7_psd",
+      "title": "PSD slit",
+      "x": 15,
+      "y": 110
+    },
+    {
+      "module": "ncnr.refl.psd_center",
+      "title": "Psd Center",
+      "x": 90,
+      "y": 155
+    },
+    {
+      "module": "ncnr.refl.psd_integrate",
+      "title": "Psd Integrate",
+      "x": 170,
+      "y": 110
+    },
+    {
+      "module": "ncnr.refl.rescale",
+      "title": "Rescale",
+      "x": 560,
+      "y": 140
+    },
+    {
+      "module": "ncnr.refl.join",
+      "title": "Join",
+      "x": 560,
+      "y": 110
+    },
+    {
+      "module": "ncnr.refl.divide_intensity",
+      "title": "Divide Intensity",
+      "x": 715,
+      "y": 10
+    },
+    {
+      "module": "ncnr.refl.fit_footprint",
+      "title": "Fit Footprint",
+      "x": 745,
+      "y": 40
+    },
+    {
+      "module": "ncnr.refl.correct_footprint",
+      "title": "Correct Footprint",
+      "x": 910,
+      "y": 10
+    },
+    {
+      "module": "ncnr.refl.monitor_dead_time",
+      "title": "Monitor Dead Time",
+      "x": 345,
+      "y": 40
+    },
+    {
+      "module": "ncnr.refl.normalize",
+      "title": "Normalize",
+      "x": 375,
+      "y": 70
+    },
+    {
+      "module": "ncnr.refl.monitor_dead_time",
+      "title": "Monitor Dead Time",
+      "x": 345,
+      "y": 140
+    },
+    {
+      "module": "ncnr.refl.normalize",
+      "title": "Normalize",
+      "x": 375,
+      "y": 170
+    },
+    {
+      "module": "ncnr.refl.mask_points",
+      "title": "Mask Points",
+      "x": 560,
+      "y": 70
+    },
+    {
+      "module": "ncnr.refl.mask_points",
+      "title": "Mask Points",
+      "x": 560,
+      "y": 170
+    }
+  ],
+  "wires": [
+    {
+      "source": [
+        0,
+        "output"
+      ],
+      "target": [
+        1,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        1,
+        "output"
+      ],
+      "target": [
+        2,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        2,
+        "specular"
+      ],
+      "target": [
+        3,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        2,
+        "background"
+      ],
+      "target": [
+        3,
+        "backp"
+      ]
+    },
+    {
+      "source": [
+        5,
+        "output"
+      ],
+      "target": [
+        6,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        6,
+        "output"
+      ],
+      "target": [
+        7,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        8,
+        "output"
+      ],
+      "target": [
+        9,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        4,
+        "output"
+      ],
+      "target": [
+        10,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        9,
+        "output"
+      ],
+      "target": [
+        10,
+        "base"
+      ]
+    },
+    {
+      "source": [
+        10,
+        "output"
+      ],
+      "target": [
+        11,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        10,
+        "output"
+      ],
+      "target": [
+        12,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        11,
+        "fitted_footprint"
+      ],
+      "target": [
+        12,
+        "fitted_footprint"
+      ]
+    },
+    {
+      "source": [
+        3,
+        "output"
+      ],
+      "target": [
+        13,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        13,
+        "output"
+      ],
+      "target": [
+        14,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        15,
+        "output"
+      ],
+      "target": [
+        16,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        16,
+        "output"
+      ],
+      "target": [
+        18,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        18,
+        "output"
+      ],
+      "target": [
+        8,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        14,
+        "output"
+      ],
+      "target": [
+        17,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        17,
+        "output"
+      ],
+      "target": [
+        4,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        7,
+        "specular"
+      ],
+      "target": [
+        15,
+        "data"
+      ]
+    }
+  ]
+}

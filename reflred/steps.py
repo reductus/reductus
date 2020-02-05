@@ -664,6 +664,114 @@ def normalize(data, base='auto'):
 
 
 @module
+def psd_center(data, center=128):
+    """
+    Set center pixel for the detector.
+
+    **Inputs**
+
+    data (psddata) : data to scale
+
+    center (float) : beam center pixel (should be the same for all datasets)
+
+    **Returns**
+
+    output (psddata) : scaled data
+
+    2020-02-04 Paul Kienzle
+    """
+    data = copy(data)
+    data.detector = copy(data.detector)
+    data.detector.center = (center, 0)
+    data.log("center(%.15g)" % (center,))
+    return data
+
+@module
+def psd_integrate(
+        data, spec_scale=1.5, spec_pixel=5.,
+        left_scale=1., left_pixel=0., right_scale=1., right_pixel=0.,
+        min_pixel=5., max_pixel=251., degree=1., mc_samples=0,
+        signal_jump=100.
+        ):
+    r"""
+    Integrate specular and background from psd.
+
+    Specular and background regions are computed from beam divergence and
+    pixel width using the following:
+
+        spec = spec scale * divergence + spec pixels
+        left = left scale * specular + left pixels
+        right = right scale * specular + right pixels
+
+    The beam divergence used in the equations above is estimated from
+    the slit openings. The specular signal is the sum over pixels
+    in [-spec, +spec]. The background signal is determined by fitting
+    a polynomial of degree n to the pixels in [-spec - left, -spec)
+    and (spec, spec + right), then integrating that polynomial over
+    the specular pixels.
+
+    Specular uncertainty comes from simply integrating over the pixels.
+    Background uncertainty comes from the uncertainty in the polynomial
+    fitting parameters.  It can be estimated using Monte Carlo sampling,
+    or by simple Gaussian propagation of uncertainty if mc samples is 0.
+
+    The residual after subtracting the background estimate is also
+    returned. Use this to verify that the integration ranges are
+    chosen appropriately.  A jump value is added to the signal in the
+    residuals to make it easier to identify the spec boundaries.  Values
+    outside the background range are set to zero.
+
+    **Inputs**
+
+    data (refldata) : data to integrate
+
+    spec_scale {Spec scale}(float:<0,inf>) : Divergence multiple, or zero for fixed width.
+
+    spec_pixel {Spec offset}(float:pixel) : Fixed divergence broadening in pixels (or narrowing if negative)
+
+    left_scale {Back- scale}(float:<0,inf>) : Left background as a function of the specular width.
+
+    left_pixel {Back- offset}(float:pixel) : Left background shift in pixels.
+
+    right_scale {Back+ scale}(float:<0,inf>) : Right background as a function of the specular width.
+
+    right_pixel {Back+ offset}(float:pixel) : Right background shift in pixels.
+
+    min_pixel {Left edge}(float:pixel<1,256>) : Left background cutoff pixel.
+
+    max_pixel {Right edge}(float:pixel<1,256>) : Right background cutoff pixel.
+
+    degree {Polynomial degree}(int:<0,9>) : Background polynomial degree.
+
+    mc_samples {MC samples}(int:<0,inf>) : Number of MC samples for uncertainty analysis, or zero for simple gaussian.
+
+    signal_jump {Signal jump}(float) : Offset added to signal in residual
+
+    **Returns**
+
+    specular (refldata) : integrated specular
+
+    background (refldata) : integrated background
+
+    residual (psddata) : background subtracted psd data
+
+    | 2020-02-03 Paul Kienzle
+    """
+    from .ng7psd import apply_integration
+
+    spec, back, resid = apply_integration(
+        data, spec_scale, spec_pixel,
+        left_scale, left_pixel, right_scale, right_pixel,
+        min_pixel, max_pixel, degree, mc_samples, signal_jump,
+    )
+    spec.log("integrate(%.15g, %.15g)" % (spec_scale, spec_pixel))
+    back.log("integrate(%.15g, %.15g, %.15g, %.15g)"
+             % (left_scale, left_pixel, right_scale, right_pixel))
+    resid.log("integrate()")
+
+    return spec, back, resid
+
+@module
 def rescale(data, scale=1.0, dscale=0.0):
     """
     Rescale the count rate by some scale and uncertainty.
@@ -1303,7 +1411,7 @@ def save(data, name='auto', ext='auto', path='auto'):
 
 @cache
 @module
-def load_ng7_psd(filelist=None):
+def ng7_psd(filelist=None):
     r"""
     Load a list of NG7 psd files from the NCNR data server.
 
@@ -1313,7 +1421,7 @@ def load_ng7_psd(filelist=None):
 
     **Returns**
 
-    output (refldata[]): All entries of all files in the list.
+    output (psddata[]): All entries of all files in the list.
     """
     from .load import url_load_list
     from .ng7psd import load_entries

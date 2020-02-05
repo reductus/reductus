@@ -602,6 +602,7 @@ class Intent(object):
     """
     slit = 'intensity'
     spec = 'specular'
+    back = 'background'
     backp = 'background+'
     backm = 'background-'
     rockQ = 'rock qx'
@@ -613,7 +614,7 @@ class Intent(object):
     other = 'other'
     scan = 'scan'
 
-    intents = (slit, spec, backp, backm, rockQ, rock3, rock4,
+    intents = (slit, spec, back, backp, backm, rockQ, rock3, rock4,
                deff, time, other, scan, none)
 
     @staticmethod
@@ -1061,6 +1062,9 @@ class ReflData(Group):
         self.messages.append(msg)
 
     def log_dependency(self, label, other):
+        # TODO: eliminate logging ... don't need it if we have the template
+        if self.messages is other.messages or self.warnings is other.warnings:
+            raise RuntimeError("message logs collide")
         if other.messages:
             self.messages.append(label + ":")
             self.messages.extend("  "+s for s in other.messages)
@@ -1068,19 +1072,18 @@ class ReflData(Group):
             self.warnings.append(label + ":")
             self.warnings.extend("  "+s for s in other.warnings)
 
+    def save(self, filename):
+        with open(filename, 'w') as fid:
+            fid.write(self.export())
+
+    def get_metadata(self):
+        return self.todict()
+
     def plot(self, label=None):
         if label is None:
             label = self.name+self.polarization
-        if self.v.ndim == 2:
-            self._plot_2d(label)
-        elif self.v.ndim == 1:
-            self._plot_1d(label)
-        else:
-            raise TypeError("Cannot plot data of shape "+str(self.v.shape))
 
-    def _plot_1d(self, label):
         from matplotlib import pyplot as plt
-
         xerr = self.dx if self.angular_resolution is not None else None
         x, dx, xunits, xlabel = self.x, xerr, self.xunits, self.xlabel
         #x, dx, xunits, xlabel = self.detector.angle_x, self.angular_resolution, 'detector angle', 'deg'
@@ -1090,28 +1093,8 @@ class ReflData(Group):
         if not Intent.isslit(self.intent):
             plt.yscale('log')
 
-    def _plot_2d(self, label):
-        from matplotlib import pyplot as plt
-
-        x, xunits, xlabel = self.x, self.xunits, self.xlabel
-        data = np.log(self.v + (self.v == 0))
-        plt.pcolormesh(data, label=label)
-        plt.xlabel("pixel")
-        plt.ylabel("%s (%s)"%(self.xlabel, self.xunits))
-
-    def save(self, filename):
-        with open(filename, 'w') as fid:
-            fid.write(self.export())
-
     def export(self):
-        if self.v.ndim == 2:
-            return self._export_2d()
-        elif self.v.ndim == 1:
-            return self._export_1d()
-        else:
-            raise TypeError("Cannot plot data of shape "+str(self.v.shape))
-
-    def _export_1d(self):
+        # Note: subclass this for non-traditional reflectometry measurements
         fid = BytesIO()  # numpy.savetxt requires a byte stream
         for n in ['name', 'entry', 'polarization']:
             _write_key_value(fid, n, getattr(self, n))
@@ -1163,27 +1146,8 @@ class ReflData(Group):
             "file_suffix": file_suffix,
             }
 
-    def _export_2d(self):
-        export_string = ""
-        name = getattr(self, "name", "default_name")
-        entry = getattr(self, "entry", "default_entry")
-        return {
-            "name": name,
-            "entry": entry,
-            "export_string": export_string,
-            "file_suffix": ".dat",
-            }
-
     def get_plottable(self):
-        #print("Fetching plottable of dimension", self.v.ndim)
-        if self.v.ndim == 2:
-            return self._plottable_2d()
-        elif self.v.ndim == 1:
-            return self._plottable_1d()
-        else:
-            raise TypeError("Cannot plot data of shape "+str(self.v.shape))
-
-    def _plottable_1d(self):
+        # Note: subclass this for non-traditional reflectometry measurements
         columns = self.columns
         data_arrays = [self.scan_value[self.scan_label.index(p)] if v.get('is_scan', False) else get_item(self, p) for p,v in columns.items()]
         data_arrays = [np.resize(d, self.points).tolist() for d in data_arrays]
@@ -1219,7 +1183,20 @@ class ReflData(Group):
         #print(plottable)
         return plottable
 
-    def _plottable_2d(self):
+
+class PSDData(ReflData):
+    """PSD data for reflectometer"""
+    def plot(self, label=None):
+        if label is None:
+            label = self.name+self.polarization
+
+        from matplotlib import pyplot as plt
+        data = np.log(self.v + (self.v == 0))
+        plt.pcolormesh(data, label=label)
+        plt.xlabel("pixel")
+        plt.ylabel("%s (%s)"%(self.xlabel, self.xunits))
+
+    def get_plottable(self):
         name = getattr(self, "name", "default_name")
         entry = getattr(self, "entry", "default_entry")
         data = self.v
@@ -1278,8 +1255,18 @@ class ReflData(Group):
         #print(plottable)
         return plottable
 
-    def get_metadata(self):
-        return self.todict()
+    def export(self):
+        export_string = ""
+        name = getattr(self, "name", "default_name")
+        entry = getattr(self, "entry", "default_entry")
+        return {
+            "name": name,
+            "entry": entry,
+            "export_string": export_string,
+            "file_suffix": ".dat",
+            }
+
+
 
 def get_item(obj, path):
     result = obj
