@@ -210,16 +210,41 @@ class NG7PSD(PSDData):
         return self.detector.wavelength[:, None]
 
 def apply_integration(
-        data, spec_scale=1, spec_pixel=0,
-        left_scale=1, left_pixel=0, right_scale=1, right_pixel=0,
-        min_pixel=1, max_pixel=256, degree=0, mc_samples=0,
-        signal_jump=100,
+        data, spec=(1, 0), left=(1, 0), right=(1, 0), pixel_range=(1, 256),
+        degree=0, mc_samples=0, seed=None, signal_jump=100,
     ):
-    divergence, Is, Ib, residual = integrate(
-        data, spec_scale, spec_pixel,
-        left_scale, left_pixel, right_scale, right_pixel,
-        min_pixel, max_pixel, degree, mc_samples, signal_jump,
-    )
+    """
+    Apply integration to *data* returning specular, background and residual.
+
+    *data* is a dataset containing psd data in *data.v*.
+
+    *spec*, *left* and *right* are (scale, offset) for the boundaries of the
+    specular, left background and right background respectively.  The scale
+    applies to the divergence estimated from slit 1 and the offset is the
+    number of pixels to add or subtract from that width.
+
+    *pixel_range* refers to the outer edges of the valid detector pixels.
+
+    *degree* is the polynomial degree fitted to the background.
+
+    *mc_samples* are the number of Monte Carlo samples to use when estimating
+    background value and uncertainty under the signal.  Use 0 for an estimate
+    directly from the uncertainty in the fitting parameters
+    (**mc_samples==0 is broken** as of this writing).  Set *seed* to a fixed
+    value for reproducible results.
+
+    *signal_jump* adds a shift to the signal region in the returned plot to
+    aid visualization.
+    """
+    from dataflow.lib.seed import push_seed
+
+    # Make sure Monte Carlo simulations are reproducible by using the
+    # same seed every time.
+    with push_seed(seed):
+        divergence, Is, Ib, residual = integrate(
+            data, spec, left, right, pixel_range,
+            degree, mc_samples, signal_jump,
+        )
 
     spec_data, back_data = _build_1d(data, Is), _build_1d(data, Ib)
     spec_data.angular_resolution = divergence
@@ -254,28 +279,27 @@ def _build_1d(head, intensity):
     data.intent = head.intent
     return data
 
-def integrate(
-        data, spec_scale, spec_pixel,
-        left_scale, left_pixel, right_scale, right_pixel,
-        min_pixel, max_pixel, degree, mc_samples, signal_jump,
-    ):
+def integrate(data, spec, left, right, pixel_range,
+              degree, mc_samples, signal_jump):
     from dataflow.lib import err1d
     from dataflow.lib.wsolve import wpolyfit
 
     nframes, npixels = data.v.shape
 
     # Determine the boundaries of each frame
-    slit_width = data.slit1.x
-    pixel_width = data.slit4.x
-    spec_width = spec_scale*slit_width/pixel_width + spec_pixel
-    back_left = np.maximum((left_scale+1)*spec_width + left_pixel, spec_width)
-    back_right = np.maximum((right_scale+1)*spec_width + right_pixel, spec_width)
+    slit_width, pixel_width = data.slit1.x, data.slit4.x
+    divergence = slit_width / pixel_width
+    spec_width = spec[0]*divergence + spec[1]
+    back_left = spec_width + np.maximum(left[0]*divergence + left[1], 0)
+    back_right = spec_width + np.maximum(right[0]*divergence + right[1], 0)
+    #print("integrate", spec, slit_width, pixel_width, spec_width, back_left, back_right)
 
     # Pixels are numbered from 1 to npixels, including the center pixel.
     # Normalize the pixels so the polynomial fitter uses smaller x.
     # Could also normalize by resolution width, but that makes it harder
     # to identify where the integration region is bad.
     center = data.detector.center[0]
+    min_pixel, max_pixel = pixel_range
     p1 = np.maximum(min_pixel-center, -back_left)
     p2 = np.maximum(min_pixel-center, -spec_width)
     p3 = np.minimum(max_pixel-center, +spec_width)

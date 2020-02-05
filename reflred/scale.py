@@ -65,6 +65,10 @@ def apply_norm(data, base='auto'):
         units = ''
     else:
         raise ValueError("Expected %r in %s" % (base, NORMALIZE_OPTIONS))
+    # Broadcast for nD detector arrays
+    if C.ndim > 1:
+        dims = (-1,) + (1,) * (C.ndim-1)
+        M, varM = np.reshape(M, dims), np.reshape(varM, dims)
     #print "norm",C,varC,M,varM
     value, variance = err1d.div(C, varC+(varC == 0), M, varM)
     data.v = value

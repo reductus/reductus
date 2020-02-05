@@ -688,10 +688,10 @@ def psd_center(data, center=128):
 
 @module
 def psd_integrate(
-        data, spec_scale=1.5, spec_pixel=5.,
-        left_scale=1., left_pixel=0., right_scale=1., right_pixel=0.,
-        min_pixel=5., max_pixel=251., degree=1., mc_samples=0,
-        signal_jump=100.
+        data, spec_scale=1, spec_pixel=5.,
+        left_scale=1., left_pixel=5., right_scale=1., right_pixel=5.,
+        min_pixel=5., max_pixel=251., degree=1., mc_samples=1000,
+        signal_jump=0,
         ):
     r"""
     Integrate specular and background from psd.
@@ -700,8 +700,8 @@ def psd_integrate(
     pixel width using the following:
 
         spec = spec scale * divergence + spec pixels
-        left = left scale * specular + left pixels
-        right = right scale * specular + right pixels
+        left = left scale * divergence + left pixels
+        right = right scale * divergence + right pixels
 
     The beam divergence used in the equations above is estimated from
     the slit openings. The specular signal is the sum over pixels
@@ -714,26 +714,36 @@ def psd_integrate(
     Background uncertainty comes from the uncertainty in the polynomial
     fitting parameters.  It can be estimated using Monte Carlo sampling,
     or by simple Gaussian propagation of uncertainty if mc samples is 0.
+    MC estimates are stochastic, so rerunning with a different random
+    number sequence will give a different result.  To make the reduction
+    reproducible, the number of samples is used as the seed value for the
+    random number generator.  To assess the variation in the background
+    estimate, try slightly longer sequence lengths.  We have found 100
+    samples gives a background estimate that is approximately stable
+    (variation in estimate is well within uncertainty). A default value
+    of 1000 was chosen because it is reasonably fast and reasonably stable.
+    Test on your own data by comparing mc_samples to mc_samples+1
 
     The residual after subtracting the background estimate is also
     returned. Use this to verify that the integration ranges are
     chosen appropriately.  A jump value is added to the signal in the
     residuals to make it easier to identify the spec boundaries.  Values
-    outside the background range are set to zero.
+    outside the background range are set to NaN. (Note: NaN does not work
+    as a jump value.)
 
     **Inputs**
 
     data (refldata) : data to integrate
 
-    spec_scale {Spec scale}(float:<0,inf>) : Divergence multiple, or zero for fixed width.
+    spec_scale {Spec scale}(float:<0,inf>) : Specular width as a divergence multiple, or zero for fixed width.
 
-    spec_pixel {Spec offset}(float:pixel) : Fixed divergence broadening in pixels (or narrowing if negative)
+    spec_pixel {Spec offset}(float:pixel) : Fixed broadening in pixels (or narrowing if negative)
 
-    left_scale {Back- scale}(float:<0,inf>) : Left background as a function of the specular width.
+    left_scale {Back- scale}(float:<0,inf>) : Left background width as a divergence multiple, or zero for fixed width.
 
     left_pixel {Back- offset}(float:pixel) : Left background shift in pixels.
 
-    right_scale {Back+ scale}(float:<0,inf>) : Right background as a function of the specular width.
+    right_scale {Back+ scale}(float:<0,inf>) : Right background width as a divergence multiple, or zero for fixed width.
 
     right_pixel {Back+ offset}(float:pixel) : Right background shift in pixels.
 
@@ -759,10 +769,13 @@ def psd_integrate(
     """
     from .ng7psd import apply_integration
 
+    mc_seed = mc_samples if mc_samples > 0 else None
     spec, back, resid = apply_integration(
-        data, spec_scale, spec_pixel,
-        left_scale, left_pixel, right_scale, right_pixel,
-        min_pixel, max_pixel, degree, mc_samples, signal_jump,
+        data, spec=(spec_scale, spec_pixel),
+        left=(left_scale, left_pixel), right=(right_scale, right_pixel),
+        pixel_range=(min_pixel, max_pixel),
+        degree=degree, mc_samples=mc_samples, signal_jump=signal_jump,
+        seed=mc_seed,
     )
     spec.log("integrate(%.15g, %.15g)" % (spec_scale, spec_pixel))
     back.log("integrate(%.15g, %.15g, %.15g, %.15g)"
@@ -1411,23 +1424,64 @@ def save(data, name='auto', ext='auto', path='auto'):
 
 @cache
 @module
-def ng7_psd(filelist=None):
+def ng7_psd(
+        filelist=None,
+        detector_correction=False,
+        monitor_correction=False,
+        center=None,
+        intent='auto',
+        base='none'):
     r"""
-    Load a list of NG7 psd files from the NCNR data server.
+    Load a list of NG7 PSD files from the NCNR data server.
 
     **Inputs**
 
     filelist (fileinfo[]): List of files to open.
 
+    detector_correction {Apply detector deadtime correction} (bool)
+    : If True, use deadtime constants in file to correct detector counts.
+
+    monitor_correction {Apply monitor saturation correction} (bool)
+    : If True, use the measured saturation curve in file to correct
+    : the monitor counts.
+
+    center {Beam center} (int)
+    : Detector pixel containing the beam center.  This is needed for
+    : plotting Qx-Qz, etc., and for setting the specular integration region.
+
+    intent (opt:auto|specular|intensity|scan)
+    : Measurement intent (specular, slit, or some other scan), auto or infer.
+    : If intent is 'scan', then use the first scanned variable.
+
+    base {Normalize by} (opt:auto|monitor|time|power|none)
+    : How to convert from counts to count rates.
+    : Leave this as none if your template does normalization after integration.
+
     **Returns**
 
-    output (psddata[]): All entries of all files in the list.
+    output (refldata[]): All entries of all files in the list.
+
+    | 2020-02-05 Paul Kienzle
     """
     from .load import url_load_list
     from .ng7psd import load_entries
 
     datasets = []
     for data in url_load_list(filelist, loader=load_entries):
+        data.Qz_basis = 'target'
+        if intent not in [None, 'auto']:
+            data.intent = intent
+        if center is not None:
+            data = psd_center(data, center)
+        # Note: divergence is estimated from specular integration width, so
+        # unlike super_load, there is no reason to set it here.
+        #data = divergence(data, sample_width)
+        if detector_correction:
+            data = detector_dead_time(data, None)
+        if monitor_correction:
+            data = monitor_saturation(data)
+        data = normalize(data, base=base)
+        #print "data loaded and normalized"
         datasets.append(data)
 
     return datasets

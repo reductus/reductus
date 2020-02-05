@@ -1155,7 +1155,7 @@ class ReflData(Group):
         # add errorbars:
         for k in columns.keys():
             if 'errorbars' in columns[k]:
-                print('errorbars found for column %s' % (k,))
+                #print('errorbars found for column %s' % (k,))
                 errorbars = get_item(self, columns[k]['errorbars'])
                 datas[k]["errorbars"] = errorbars.tolist()
         name = getattr(self, "name", "default_name")
