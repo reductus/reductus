@@ -490,11 +490,21 @@ class DataType(object):
         self.id = id
         self.cls = cls
         # export_types is e.g. {"columns": {"method_name": "to_column_text", "exporter": exporters.text}}
-        self.export_types = export_types if export_types is not None else {}
+        self.export_types = self._find_exporters()
 
     def get_definition(self):
         return {"id": self.id, "export_types": list(self.export_types.keys())}
 
+    def _find_exporters(self):
+        exporters = {}
+        for n in dir(self.cls):
+            p = getattr(self.cls, n)
+            if type(p) == types.FunctionType:
+                export_name = getattr(p, 'export_name', 'default')
+                exporter = getattr(p, 'exporter', None)
+                if exporter is not None:
+                    exporters[export_name] = {"exporter": exporter, "method_name": p.__name__}
+        return exporters
 
 class Bundle(object):
     def __init__(self, datatype, values):

@@ -15,6 +15,7 @@ from collections import OrderedDict
 import numpy as np
 
 from dataflow.lib.uncertainty import Uncertainty
+from dataflow.lib.exporters import exports_HDF5, exports_text
 from vsansred.vsansdata import RawVSANSData, _toDictItem
 
 IS_PY3 = sys.version_info[0] >= 3
@@ -354,6 +355,7 @@ class SansIQData(object):
         #print(plottable)
         return plottable
 
+    @exports_text(name="column")
     def to_column_text(self):
         # export to 6-column format compatible with SASVIEW
         # The 6 columns are | Q (1/A) | I(Q) (1/cm) | std. dev. I(Q) (1/cm) | sigmaQ | meanQ | ShadowFactor|
@@ -371,6 +373,7 @@ class SansIQData(object):
         suffix = "sansIQ.dat"
         return {"name": name, "entry": entry, "value": fid.read(), "file_suffix": suffix}
 
+    @exports_HDF5(name="NXcanSAS")
     def to_NXcanSAS(self):
         import h5py
         fid = BytesIO()
@@ -408,8 +411,6 @@ class SansIQData(object):
         output["value"] = h5_item
         
         return output
-
-    _export_types = {"column": _export_columns, "NXcanSAS": _export_nxcansas}
 
 class Parameters(object):
     def __init__(self, params=None):

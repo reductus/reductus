@@ -93,11 +93,8 @@ def define_instrument():
     modules = make_modules(steps.ALL_ACTIONS, prefix=INSTRUMENT+'.')
     modules.append(make_cached_subloader_module(steps.super_load, prefix=INSTRUMENT+'.'))
     modules.append(make_cached_subloader_module(steps.ncnr_load, prefix=INSTRUMENT+'.'))
-    export_types = {
-        "columns": {"method_name": "to_column_text", "exporter": exporters.text}
-    }
     # Define data types
-    refldata = df.DataType(INSTRUMENT+".refldata", ReflData, export_types=export_types)
+    refldata = df.DataType(INSTRUMENT+".refldata", ReflData)
     poldata = df.DataType(INSTRUMENT+".poldata", PolarizationData)
     deadtime = df.DataType(INSTRUMENT+".deadtime", DeadTimeData)
     footprint = df.DataType(INSTRUMENT+".footprint.params", FootprintData)
