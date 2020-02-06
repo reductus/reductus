@@ -198,6 +198,7 @@ def calc_terminal(template_def, config, nodenum, terminal_id, return_type='full'
                 "terminal": terminal_id,
                 "server_git_hash": server_git_hash,
                 "server_mtime": server_mtime,
+                "export_type": export_type,
             }
         }
         to_export = retval.get_export(export_type=export_type, headers=headers, concatenate=concatenate)
