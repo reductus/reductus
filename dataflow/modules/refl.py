@@ -2,7 +2,6 @@ from dataflow import core as df
 from dataflow import templates
 from dataflow.automod import make_modules, make_template, auto_module
 from dataflow.calc import process_template
-from dataflow.lib import exporters
 
 from reflred import steps
 from reflred.refldata import ReflData
