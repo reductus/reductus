@@ -15,6 +15,7 @@ from io import BytesIO
 import numpy as np
 
 from dataflow.lib.uncertainty import Uncertainty
+from dataflow.lib.exporters import exports_HDF5, exports_text
 
 IS_PY3 = sys.version_info[0] >= 3
 
@@ -34,52 +35,6 @@ def _s(b):
     else:
         return b
 
-def _export_columns(datasets, headers=None, concatenate=False):
-    header_string = "#" + json.dumps(headers)[1:-1] + "\n"
-    outputs = []
-    if len(datasets) > 0:
-        exports = [d.to_column_text() for d in datasets]
-        if concatenate:
-            filename = exports[0].get('filename', 'default_name.dat')
-            export_strings = [e['value'].decode() for e in exports]
-            export_string = header_string + "\n\n".join(export_strings)
-            outputs.append({"filename": filename, "value": export_string})
-        else:
-            for i, e in enumerate(exports):
-                export_string = header_string + e["value"]
-                filename = e.get('filename', 'default_name_%d.dat' % (i,))
-                outputs.append({"filename": filename, "value": export_string})
-    return outputs
-
-def _export_nxcansas(datasets, headers=None, concatenate=False):
-    import h5py
-    header_string = json.dumps(headers)
-    outputs = []
-    if len(datasets) > 0:
-        exports = [d.to_NXcanSAS() for d in datasets]
-        if concatenate:
-            filename = exports[0]['filename']
-            fid = BytesIO()
-            container = h5py.File(fid)
-            container["template_def"] = header_string
-            for e in exports:
-                h5_item = e["h5"]
-                group_to_copy = list(h5_item.values())[0]
-                group_name = e['filename']
-                container.copy(group_to_copy, group_name)
-            container.close()
-            fid.seek(0)
-            outputs.append({"filename": filename, "value": fid.read()})
-        else:
-            for e in exports:
-                h5_item = e["h5"]
-                h5_item["template_def"] = header_string
-                h5_item.flush()
-                value = h5_item.id.get_file_image()
-                outputs.append({"filename": e['filename'], "value": value})
-                
-    return outputs
-
 class RawVSANSData(object):
     suffix = "vsans"
     def __init__(self, metadata, detectors=None):
@@ -97,6 +52,7 @@ class RawVSANSData(object):
     def get_metadata(self):
         return _toDictItem(self.metadata, convert_bytes=True)
 
+    @exports_text(name="metadata")
     def to_column_text(self):
         output = json.dumps(_toDictItem(self.metadata, convert_bytes=True))
         name = _s(self.metadata.get("name", "default_name"))
@@ -229,6 +185,7 @@ class VSansDataQSpace(VSansData):
         self.yaxisname = 'Qy'
         VSansData.__init__(self, metadata=metadata, detectors=detectors)
 
+    @exports_text(name="column")
     def to_column_text(self):
         # export to 6-column format compatible with SASVIEW
         # Data columns are Qx - Qy - I(Qx,Qy) - err(I) - Qz - SigmaQ_parall - SigmaQ_perp - fSubS(beam stop shadow)
@@ -264,6 +221,7 @@ class VSansDataQSpace(VSansData):
         #filename = "%s_%s.%s" % (name, entry, suffix)
         return {"name": name, "entry": entry, "value": fid.read().decode(), "file_suffix": suffix}
 
+    @exports_HDF5(name="NXcanSAS")
     def to_NXcanSAS(self):
         import h5py
         fid = BytesIO()
@@ -340,8 +298,6 @@ class VSansDataQSpace(VSansData):
         
         return output
 
-    _export_types = {"column": _export_columns, "NXcanSAS": _export_nxcansas}
-
 class VSans1dData(object):
     properties = ['x', 'v', 'dx', 'dv', 'xlabel', 'vlabel', 'xunits', 'vunits', 'xscale', 'vscale', 'metadata', 'fit_function']
 
@@ -385,6 +341,7 @@ class VSans1dData(object):
     def get_metadata(self):
         return _toDictItem(self.metadata)
 
+    @exports_text(name="column")
     def to_column_text(self):
         fid = BytesIO()
         fid.write(_b("# %s\n" % json.dumps(_toDictItem(self.metadata, convert_bytes=True)).strip("{}")))
@@ -396,25 +353,7 @@ class VSans1dData(object):
         fid.seek(0)
         name = getattr(self, "name", "default_name")
         entry = getattr(self.metadata, "entry", "default_entry")
-        return {"name": name, "entry": entry, "value": fid.read(), "file_suffix": "vsans1d.dat"}
-
-def pythonize(obj):
-    output = {}
-    for a in obj:
-        attr = obj.get(a, None)
-        if isinstance(attr, np.integer):
-            attr = int(attr)
-        elif isinstance(attr, np.floating):
-            attr = float(attr)
-        elif isinstance(attr, np.ndarray):
-            attr = attr.tolist()
-        elif isinstance(attr, datetime.datetime):
-            attr = [attr.year, attr.month, attr.day,
-                    attr.hour, attr.minute, attr.second]
-        elif isinstance(attr, dict):
-            attr = pythonize(attr)
-        output[a] = attr
-    return output
+        return {"name": name, "entry": entry, "value": fid.read().decode('utf-8'), "file_suffix": "vsans1d.dat"}
 
 class Sans1dData(object):
     properties = ['x', 'v', 'dx', 'dv', 'xlabel', 'vlabel', 'xunits', 'vunits', 'xscale', 'vscale', 'metadata', 'fit_function']
@@ -459,6 +398,7 @@ class Sans1dData(object):
     def get_metadata(self):
         return self.to_dict()
 
+    @exports_text(name="column")
     def export(self):
         fid = BytesIO()
         fid.write(_b("# %s\n" % json.dumps(_toDictItem(self.metadata)).strip("{}")))
@@ -470,7 +410,7 @@ class Sans1dData(object):
         fid.seek(0)
         name = getattr(self, "name", "default_name")
         entry = getattr(self.metadata, "entry", "default_entry")
-        return {"name": name, "entry": entry, "export_string": fid.read(), "file_suffix": ".sans1d.dat"}
+        return {"name": name, "entry": entry, "export_string": fid.read().decode(), "file_suffix": ".sans1d.dat"}
 
 class Parameters(object):
     def __init__(self, params=None):
@@ -491,6 +431,7 @@ class Metadata(OrderedDict):
     def get_metadata(self):
         return _toDictItem(self)        
 
+    @exports_text(name="json")
     def export(self):
         output = json.dumps(_toDictItem(self, convert_bytes=True))
         name = getattr(self, "name", "default_name")

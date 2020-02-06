@@ -16,23 +16,7 @@ def _b(s):
         return s
 
 from dataflow.lib import octave
-
-def _export_columns(datasets, headers=None, concatenate=False):
-    header_string = "#" + json.dumps(headers)[1:-1] + "\n"
-    outputs = []
-    if len(datasets) > 0:
-        exports = [d.to_column_text() for d in datasets]
-        if concatenate:
-            filename = exports[0].get('filename', 'default_name.dat')
-            export_strings = [e['value'] for e in exports]
-            export_string = header_string + "\n\n".join(export_strings)
-            outputs.append({"filename": filename, "value": export_string})
-        else:
-            for i, e in enumerate(exports):
-                export_string = header_string + e["value"]
-                filename = e.get('filename', 'default_name_%d.dat' % (i,))
-                outputs.append({"filename": filename, "value": export_string})
-    return outputs
+from dataflow.lib.exporters import exports_HDF5, exports_text
 
 class RawData(object):
     def __init__(self, name, data):
@@ -187,6 +171,7 @@ class DCS1dData(object):
     def get_metadata(self):
         return self.to_dict()
 
+    @exports_text(name="column")
     def to_column_text(self):
         fid = io.BytesIO()
         #fid.write(_b("# %s\n" % json.dumps(_toDictItem(self.metadata)).strip("{}")))
@@ -202,10 +187,8 @@ class DCS1dData(object):
         entry = self.metadata.get("entry", "default_entry")
         suffix = "dcs.dat"
         filename = "%s_%s.%s" % (name, entry, suffix)
-        return {"filename": filename, "value": fid.read().decode()}
+        return {"name": name, "entry": entry, "file_suffix": suffix, "value": fid.read().decode()}
     
-    _export_types = {"column": _export_columns}
-
 class Parameters(dict):
     def get_metadata(self):
         return _toDictItem(self)

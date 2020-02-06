@@ -2,25 +2,9 @@ from io import BytesIO
 #from cStringIO import StringIO as BytesIO
 
 from numpy import ndarray, array, fromstring, float, float32, ones, empty, newaxis, savetxt, sqrt, mod, isnan, ma, hstack, log10
+from dataflow.lib.exporters import exports_HDF5, exports_text
 
 from .MetaArray import MetaArray
-
-def _export_columns(datasets, headers=None, concatenate=False):
-    header_string = "#" + json.dumps(headers)[1:-1] + "\n"
-    outputs = []
-    if len(datasets) > 0:
-        exports = [d.to_column_text() for d in datasets]
-        if concatenate:
-            filename = exports[0].get('filename', 'default_name.dat')
-            export_strings = [e['value'] for e in exports]
-            export_string = header_string + "\n\n".join(export_strings)
-            outputs.append({"filename": filename, "value": export_string})
-        else:
-            for i, e in enumerate(exports):
-                export_string = header_string + e["value"]
-                filename = e.get('filename', 'default_name_%d.dat' % (i,))
-                outputs.append({"filename": filename, "value": export_string})
-    return outputs
 
 class FilterableMetaArray(MetaArray):
     def __new__(cls, *args, **kw):
@@ -93,12 +77,13 @@ class FilterableMetaArray(MetaArray):
         metadata.update(self.extrainfo)
         return metadata
 
+    @exports_text(name="column")
     def to_column_text(self):
         name = self.extrainfo["friendly_name"]
         entry = self.extrainfo["entry"]
         suffix = "ospec.dat"
         filename = "%s_%s.%s" % (name, entry, suffix)
-        return_value = {"filename": filename}
+        return_value = {"name": name, "entry": entry, "file_suffix": suffix}
         if len(self.shape) == 3:
             # return gnuplottable format:
             """ export 2d data to gnuplot format """
@@ -328,8 +313,6 @@ class FilterableMetaArray(MetaArray):
         else:
             print("can only handle 1d or 2d data")
             return
-
-    _export_types = {"column": _export_columns}
 
 #    def get_plottable_new(self):
 #        array_out = self['Measurements':'counts']

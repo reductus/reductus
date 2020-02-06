@@ -34,52 +34,6 @@ def _s(b):
     else:
         return b
 
-def _export_columns(datasets, headers=None, concatenate=False):
-    header_string = "#" + json.dumps(headers)[1:-1] + "\n"
-    outputs = []
-    if len(datasets) > 0:
-        exports = [d.to_column_text() for d in datasets]
-        if concatenate:
-            filename = exports[0].get('filename', 'default_name.dat')
-            export_strings = [e['value'].decode() for e in exports]
-            export_string = header_string + "\n\n".join(export_strings)
-            outputs.append({"filename": filename, "value": export_string})
-        else:
-            for i, e in enumerate(exports):
-                export_string = header_string + e["value"]
-                filename = e.get('filename', 'default_name_%d.dat' % (i,))
-                outputs.append({"filename": filename, "value": export_string})
-    return outputs
-
-def _export_nxcansas(datasets, headers=None, concatenate=False):
-    import h5py
-    header_string = json.dumps(headers)
-    outputs = []
-    if len(datasets) > 0:
-        exports = [d.to_NXcanSAS() for d in datasets]
-        if concatenate:
-            filename = exports[0]['filename']
-            fid = BytesIO()
-            container = h5py.File(fid)
-            container["template_def"] = header_string
-            for e in exports:
-                h5_item = e["h5"]
-                group_to_copy = list(h5_item.values())[0]
-                group_name = e['filename']
-                container.copy(group_to_copy, group_name)
-            container.close()
-            fid.seek(0)
-            outputs.append({"filename": filename, "value": fid.read()})
-        else:
-            for e in exports:
-                h5_item = e["h5"]
-                h5_item["template_def"] = header_string
-                h5_item.flush()
-                value = h5_item.id.get_file_image()
-                outputs.append({"filename": e['filename'], "value": value})
-                
-    return outputs
-
 class RawSANSData(RawVSANSData):
     suffix = "sans"
 
@@ -283,6 +237,7 @@ class Sans1dData(object):
     def get_metadata(self):
         return self.to_dict()
 
+    @exports_text(name="column")
     def to_column_text(self):
         fid = BytesIO()
         fid.write(_b("# %s\n" % json.dumps(_toDictItem(self.metadata, convert_bytes=True)).strip("{}")))
@@ -295,9 +250,7 @@ class Sans1dData(object):
         name = getattr(self, "name", "default_name")
         entry = self.metadata.get("entry", "default_entry")
         suffix = ".sans1d.dat"
-        return {"filename": "%s_%s.%s" % (name, entry, suffix), "value": fid.read()}
-
-    _export_types = {"column": _export_columns}
+        return {"name": name, "entry": entry, "file_suffix": suffix, "value": fid.read().decode('utf-8')}
 
 class SansIQData(object):
     def __init__(self, I=None, dI=None, Q=None, dQ=None, meanQ=None, ShadowFactor=None, label='', metadata=None):
@@ -368,10 +321,10 @@ class SansIQData(object):
         fid.write(_b("# %s\n" % json.dumps({"columns": labels}).strip("{}")))
         np.savetxt(fid, np.vstack(column_values).T, fmt="%.10e")
         fid.seek(0)
-        name = self.metadata.get("name", "default_name")
-        entry = self.metadata.get("entry", "default_entry")
+        name = _s(self.metadata.get("name", "default_name"))
+        entry = _s(self.metadata.get("entry", "default_entry"))
         suffix = "sansIQ.dat"
-        return {"name": name, "entry": entry, "value": fid.read(), "file_suffix": suffix}
+        return {"name": name, "entry": entry, "value": fid.read().decode('utf-8'), "file_suffix": suffix}
 
     @exports_HDF5(name="NXcanSAS")
     def to_NXcanSAS(self):

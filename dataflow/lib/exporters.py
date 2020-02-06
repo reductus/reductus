@@ -41,7 +41,7 @@ def hdf(datasets, export_method="to_hdf", headers=None, concatenate=False):
             filename = "%s_%s.%s" % (name, entry, file_suffix)
             fid = io.BytesIO()
             container = h5py.File(fid)
-            container["template_def"] = header_string
+            container.attrs["template_def"] = header_string
             for e in exports:
                 h5_item = e["value"]
                 group_to_copy = list(h5_item.values())[0]
@@ -58,7 +58,7 @@ def hdf(datasets, export_method="to_hdf", headers=None, concatenate=False):
                 filename = "%s_%s.%s" % (name, entry, file_suffix)
 
                 h5_item = e["value"]
-                h5_item["template_def"] = header_string
+                h5_item.attrs["template_def"] = header_string
                 h5_item.flush()
                 value = h5_item.id.get_file_image()
                 outputs.append({"filename": filename, "value": value})
@@ -72,7 +72,7 @@ def exports_text(name="column"):
         return f
     return inner_function
 
-def exports_HDF5(f, name="NeXus"):
+def exports_HDF5(name="NeXus"):
     def inner_function(f):
         f.exporter = hdf
         f.export_name = name
