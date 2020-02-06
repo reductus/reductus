@@ -1712,7 +1712,7 @@ webreduce.editor = webreduce.editor || {};
       var export_dialog = $("div#initiate_export").dialog("open");
       var d3_handle = d3.select(export_dialog[0]);
       var export_type_choices = d3_handle.select("span#export_types").selectAll("label")
-        .data(export_types)
+        .data(export_types, function(d) {return d})
       export_type_choices
         .enter().append("label")
           .text(function(d) { return d })
