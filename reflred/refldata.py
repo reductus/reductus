@@ -327,6 +327,9 @@ class Monochromator(Group):
         approximately square for multi-sheet monochromators and highly
         skewed on TOF machines.
     """
+    columns = {
+        "wavelength": {"units": "Angstroms", "variance": "wavelength_resolution"},
+    }
     wavelength = None # angstrom
     wavelength_resolution = None # angstrom
 
@@ -449,7 +452,7 @@ class Detector(Group):
     columns = {
         "counts": {"units": "counts", "variance": "counts_variance"},
         "angle_x": {"units": "degrees"},
-        "wavelength": {"units": "Angstroms", "variance": "wavelength_resolution"}
+        "wavelength": {"units": "Angstroms", "variance": "wavelength_resolution"},
     }
 
     @property
@@ -912,12 +915,12 @@ class ReflData(Group):
     def Qz(self):
         # Note: specular reflectivity assumes elastic scattering
         Li = Ld = self.Ld
-        if self.Qz_basis == 'target':
-            if self.Qz_target is not None:
-                return self.Qz_target
-            return calc_Qz(self.Ti_target, self.Td_target, Li, Ld)
         if self.Qz_basis == 'actual':
             return calc_Qz(self.Ti, self.Td, Li, Ld)
+        if self.Qz_basis == 'target':
+            # Require Qz_target exist datafile to use "target" basis.
+            return self.Qz_target
+            #return calc_Qz(self.Ti_target, self.Td_target, Li, Ld)
         if self.Qz_basis == 'detector':
             return calc_Qz(self.Td/2, self.Td, Li, Ld)
         if self.Qz_basis == 'sample':
@@ -928,10 +931,11 @@ class ReflData(Group):
     def Qx(self):
         # Note: specular reflectivity assumes elastic scattering
         Li = Ld = self.Ld
-        if self.Qz_basis == 'target':
-            return calc_Qx(self.Ti_target, self.Td_target, Li, Ld)
         if self.Qz_basis == 'actual':
             return calc_Qx(self.Ti, self.Td, Li, Ld)
+        if self.Qz_basis == 'target':
+            return np.zeros_like(self.Td)
+            #return calc_Qx(self.Ti_target, self.Td_target, Li, Ld)
         if self.Qz_basis == 'detector':
             return np.zeros_like(self.Td)
         if self.Qz_basis == 'sample':
@@ -958,7 +962,8 @@ class ReflData(Group):
             ('Qx', {'label': 'Qx', 'units': "1/Ang"}),
             ('angular_resolution', {'label': 'Angular Resolution (1-sigma)', 'units': 'degrees'})
         ])
-        for subclsnm in ['sample', 'detector', 'monitor', 'slit1', 'slit2', 'slit3', 'slit4']:
+        # TODO: duplicate code in columns, apply_mask and refldata._group
+        for subclsnm in ['sample', 'detector', 'monitor', 'slit1', 'slit2', 'slit3', 'slit4', 'monochromator']:
             subcls = getattr(self, subclsnm, None)
             if subcls is None:
                 continue
@@ -1001,7 +1006,7 @@ class ReflData(Group):
 
         self.scan_value = [v[make_mask(v, mask_indices)] if check_array(v) else v for v in self.scan_value]
 
-        for subclsnm in ['sample', 'detector', 'monitor', 'slit1', 'slit2', 'slit3', 'slit4']:
+        for subclsnm in ['sample', 'detector', 'monitor', 'slit1', 'slit2', 'slit3', 'slit4', 'monochromator']:
             subcls = getattr(self, subclsnm, None)
             if subcls is None:
                 continue
@@ -1010,6 +1015,11 @@ class ReflData(Group):
                 v = getattr(subcls, col, None)
                 if check_array(v):
                     setattr(subcls, col, v[make_mask(v, mask_indices)])
+                # handle col_target
+                target_name = col + "_target"
+                v = getattr(subcls, target_name, None)
+                if check_array(v):
+                    setattr(subcls, target_name, v[make_mask(v, mask_indices)])
                 # handle variance
                 dv_name = sub_cols[col].get('variance', None)
                 if dv_name is not None:

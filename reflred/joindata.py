@@ -93,6 +93,7 @@ def join_datasets(group, Qtol, dQtol, by_Q=False):
     #    Td: detector theta
     #    Ti: incident (sample) theta
     #    dT: angular divergence
+    #    Li: monochromator wavelength
     #    Ld: detector wavelength
     #    dL: wavelength dispersion
     isslit = Intent.isslit(group[0].intent)
@@ -147,12 +148,6 @@ def build_dataset(group, columns):
     data.detector.rotation = None
     data.detector.counts = None
     data.detector.counts_variance = None
-    # Note: The ReflData object assumes elastic scattering, using the detector
-    # wavelength to compute qx and qz.  For now the join operation is ignoring
-    # the monochromator wavelength, so make sure it doesn't appear in the
-    # joined dataset.
-    data.monochromator.wavelength = None
-    data.monochromator.wavelength_resolution = None
     data.monitor.counts_variance = None
     for k in range(1, 5):
         slit = getattr(data, 'slit%d'%k)
@@ -209,6 +204,7 @@ def build_dataset(group, columns):
     data.slit2.x = columns['s2']
     data.slit3.x = columns['s3']
     data.slit4.x = columns['s4']
+    data.monochromator.wavelength = columns['Li']
     data.detector.wavelength = columns['Ld']
     data.detector.wavelength_resolution = columns['dL']
     data.monitor.count_time = columns['time']
@@ -246,6 +242,7 @@ def get_fields(group):
         Ti=[data.sample.angle_x for data in group],
         Td=[data.detector.angle_x for data in group],
         dT=[data.angular_resolution for data in group],
+        Li=[data.monochromator.wavelength for data in group],
         Ld=[data.detector.wavelength for data in group],
         dL=[data.detector.wavelength_resolution for data in group],
         monitor=[data.monitor.counts for data in group],
