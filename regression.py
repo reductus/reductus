@@ -115,6 +115,7 @@ def replay_file(filename):
     """
 
     # Load the template and the target output
+    # note that this only works for text-based exports: others will be implemented later
     with open(filename, 'r') as fid:
         first_line = fid.readline()
         template_data = json.loads(TEMPLATE.sub('{', first_line))
@@ -134,8 +135,13 @@ def replay_file(filename):
     target = template_data['node'], template_data['terminal']
     template_config = {}
     retval = process_template(template, template_config, target=target)
-    export = retval.get_export()
-    new_content = '\n\n'.join(v['export_string'] for v in export['values'])
+    # this is a hack: remove the default "column" once there are regression files
+    # that contain this metadata:
+    export_type = template_data.get("export_type", "column")
+    export = retval.get_export(headers=template_data, concatenate=True, export_type=export_type)
+    new_content = export['values'][0]['value']
+    # remove the first line:
+    new_content = re.compile(r"^(#|//).*\n").sub("", new_content)
     has_diff = show_diff(old_content, new_content)
     if has_diff:
         # Save the new output into athe temp directory so we can easily update
