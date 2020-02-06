@@ -1148,7 +1148,7 @@ class ReflData(Group):
 
     def get_plottable(self):
         # Note: subclass this for non-traditional reflectometry measurements
-        columns = self.columns
+        columns = self.columns # {name: {label: str, units: str, errorbars: str}}
         data_arrays = [self.scan_value[self.scan_label.index(p)] if v.get('is_scan', False) else get_item(self, p) for p,v in columns.items()]
         data_arrays = [np.resize(d, self.points).tolist() for d in data_arrays]
         datas = dict([(c, {"values": d}) for c,d in zip(columns.keys(), data_arrays)])
@@ -1196,12 +1196,8 @@ class PSDData(ReflData):
         plt.xlabel("pixel")
         plt.ylabel("%s (%s)"%(self.xlabel, self.xunits))
 
-    def get_plottable(self):
-        name = getattr(self, "name", "default_name")
-        entry = getattr(self, "entry", "default_entry")
-        data = self.v
-        ny, nx = data.shape
-        #print("data shape", nx, ny)
+    def get_axes(self):
+        ny, nx = self.v.shape
         x, xlabel = np.arange(1, nx+1), "pixel"
         if Intent.isslit(self.intent):
             y, ylabel = self.slit1.x, "S1"
@@ -1209,6 +1205,11 @@ class PSDData(ReflData):
             y, ylabel = self.Qz_target, "Qz"
         else:
             y, ylabel = np.arange(1, ny+1), "point"
+        return (x, xlabel), (y, ylabel)
+
+    def get_plottable(self):
+        name = getattr(self, "name", "default_name")
+        entry = getattr(self, "entry", "default_entry")
         def limits(v, n):
             low, high = v.min(), v.max()
             delta = (high - low) / max(n-1, 1)
@@ -1216,6 +1217,10 @@ class PSDData(ReflData):
             if delta == 0.:
                 delta = v[0]/10.
             return low - delta/2, high+delta/2
+        data = self.v
+        ny, nx = data.shape
+        (x, xlabel), (y, ylabel) = self.get_axes()
+        #print("data shape", nx, ny)
         xmin, xmax = limits(x, nx)
         ymin, ymax = limits(y, ny)
         # TODO: self.detector.mask
@@ -1228,12 +1233,23 @@ class PSDData(ReflData):
                 data[:] = zmin = 1e-10
             if zmin >= zmax:
                 zmax = 10*zmin
+        dims = {
+            "xmin": xmin, "xmax": xmax, "xdim": nx,
+            "ymin": ymin, "ymax": ymax, "ydim": ny,
+            "zmin": zmin, "zmax": zmax,
+        }
+        z = data.T.ravel('C').tolist()
         plottable = {
-            "type": "2d",
-            "entry": entry,
-            "title": "%s:%s" % (name, entry),
-            "options": {
-                "fixedAspect": {
+            #'type': '2d_multi',
+            #'dims': {'zmin': zmin, 'zmax': zmax},
+            #'datasets': [{'dims': dims, 'data': z}],
+            'type': '2d',
+            'dims': dims,
+            'z': [z],
+            'entry': entry,
+            'title': "%s:%s" % (name, entry),
+            'options': {
+                'fixedAspect': {
                     'fixAspect': False,
                     'aspectRatio': 1.0,
                 },
@@ -1241,16 +1257,7 @@ class PSDData(ReflData):
             'xlabel': xlabel,
             'ylabel': ylabel,
             'zlabel': 'Intensity (I)',
-            'dims': {
-                "xmin": xmin,
-                "xmax": xmax,
-                "xdim": nx,
-                "ymin": ymin,
-                "ymax": ymax,
-                "ydim": ny,
-            },
-            "z": [data.T.ravel('C').tolist()],
-            "ztransform": "log",
+            'ztransform': 'log',
         }
         #print(plottable)
         return plottable

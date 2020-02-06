@@ -211,10 +211,11 @@ class NG7PSD(PSDData):
 
 def apply_integration(
         data, spec=(1, 0), left=(1, 0), right=(1, 0), pixel_range=(1, 256),
-        degree=0, mc_samples=0, seed=None, signal_jump=100,
+        degree=0, mc_samples=0, seed=None, slices=[],
     ):
     """
-    Apply integration to *data* returning specular, background and residual.
+    Apply integration to *data* returning specular, backgroundm, residual
+    after background subtraction and slices.
 
     *data* is a dataset containing psd data in *data.v*.
 
@@ -233,17 +234,17 @@ def apply_integration(
     (**mc_samples==0 is broken** as of this writing).  Set *seed* to a fixed
     value for reproducible results.
 
-    *signal_jump* adds a shift to the signal region in the returned plot to
-    aid visualization.
+    *slices* is a list of coordinates at which to display cross sections of
+    the background fit.
     """
     from dataflow.lib.seed import push_seed
 
     # Make sure Monte Carlo simulations are reproducible by using the
     # same seed every time.
     with push_seed(seed):
-        divergence, Is, Ib, residual = integrate(
+        divergence, Is, Ib, residual, slice_plot = integrate(
             data, spec, left, right, pixel_range,
-            degree, mc_samples, signal_jump,
+            degree, mc_samples, slices,
         )
 
     spec_data, back_data = _build_1d(data, Is), _build_1d(data, Ib)
@@ -253,7 +254,7 @@ def apply_integration(
     resid_data = copy(data)
     resid_data.v = residual
 
-    return spec_data, back_data, resid_data
+    return spec_data, back_data, resid_data, slice_plot
 
 def _build_1d(head, intensity):
     # Initialize new from existing data
@@ -280,7 +281,7 @@ def _build_1d(head, intensity):
     return data
 
 def integrate(data, spec, left, right, pixel_range,
-              degree, mc_samples, signal_jump):
+              degree, mc_samples, slices):
     from dataflow.lib import err1d
     from dataflow.lib.wsolve import wpolyfit
 
@@ -310,6 +311,48 @@ def integrate(data, spec, left, right, pixel_range,
     # or 95%.
     sigma = (p3 - p2)/4
     divergence = np.degrees(np.arctan(sigma / data.detector.distance))
+
+    # Find slices we want to plot by looking up the selected slice values
+    # in the list of y values for the frames.
+    (_, _), (yaxis, _) = data.get_axes() # get the data axes
+    index = np.searchsorted(yaxis, slices)
+    # TODO: search y-axis as bin edges rather than centers
+    index = index[(index > 0)&(index < nframes)] - 1 # can't do last slice
+    index = set(index) # duplicates and order don't matter for sets
+
+    # Prepare plottable for slices
+    series = [] # [{"label": str}, ...]
+    lines = [] # [{c: {"values": [], "errorbars": []} for c in (pixel, intensity, error)}
+    columns = {
+        "pixel": {"label": "Pixel", "units": ""}, # no errorbars
+        "intensity": {"label": "Intensity", "units": "counts", "errorbars": "error"}
+    }
+    plottable = {
+        "type": "1d",
+        "title": data.name + ":" + data.entry,
+        "entry": data.entry,
+        "columns": columns,
+        "options": {
+            "series": series,
+            "axes": {
+                "xaxis": {"label": "Pixel"},
+                "yaxis": {"label": "Intensity (counts)"},
+            },
+            "xcol": "pixel",
+            "ycol": "intensity",
+            "errorbar_width": 0,
+        },
+        "data": lines,
+    }
+    def addline(label, x, y, dy=None):
+        #print("line", label, x, y, dy)
+        if dy is not None:
+            line = [[xk, yk, {"yupper":yk+dyk, "ylower": yk-dyk}]
+                    for xk, yk, dyk in zip(x, y, dy)]
+        else:
+            line = [[xk, yk] for xk, yk in zip(x, y)]
+        series.append(label)
+        lines.append(line)
 
     # Cycle through detector frames gathering signal and background for each.
     results = []
@@ -356,15 +399,23 @@ def integrate(data, spec, left, right, pixel_range,
         #FWHM = top_half[-1] - top_half[0]
         #sigma = FWHM/(2*sqrt(2*log(2)))
 
+        # add slices if the index is in the set of selected indices
+        if k in index:
+            valstr = str(yaxis[k])
+            addline('data:'+valstr, pixel, y, dy)
+            addline('spec:'+valstr, spec_x, fit(spec_x))
+            addline('back:'+valstr, back_x, fit(back_x))
+
         # Show background residuals
         residual = y - fit(pixel)
         residual[~full_idx] = np.nan #0.
-        residual[spec_idx] += signal_jump
+        #residual[spec_idx] += signal_jump
+
         results.append((Is, dIs, Ib, dIb, residual))
 
     Is, dIs, Ib, dIb, residual = (np.asarray(v) for v in zip(*results))
 
-    return divergence, (Is, dIs), (Ib, dIb), residual
+    return divergence, (Is, dIs), (Ib, dIb), residual, plottable
 
 def poisson_sum(v, dv):
     """

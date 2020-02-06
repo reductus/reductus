@@ -6,7 +6,32 @@
       "x": 20,
       "y": 0,
       "config": {
-        "filelist": [],
+        "filelist": [
+          {
+            "path": "/ng7/202001/27596/data/5ppm_NRW_0M33037.nxz.ng7",
+            "source": "ncnr_DOI",
+            "mtime": 1578847102,
+            "entries": [
+              "unpolarized"
+            ]
+          },
+          {
+            "path": "/ng7/202001/27596/data/5ppm_NRW_0M33038.nxz.ng7",
+            "source": "ncnr_DOI",
+            "mtime": 1578869833,
+            "entries": [
+              "unpolarized"
+            ]
+          },
+          {
+            "path": "/ng7/202001/27596/data/5ppm_NRW_0M33039.nxz.ng7",
+            "source": "ncnr_DOI",
+            "mtime": 1578921868,
+            "entries": [
+              "unpolarized"
+            ]
+          }
+        ],
         "base": "none",
         "center": 132,
         "detector_correction": false,
@@ -52,14 +77,14 @@
     {
       "module": "ncnr.refl.rescale",
       "title": "Rescale",
-      "x": 595,
-      "y": 105
+      "x": 585,
+      "y": 135
     },
     {
       "module": "ncnr.refl.join",
       "title": "Join",
-      "x": 595,
-      "y": 30
+      "x": 725,
+      "y": 135
     },
     {
       "module": "ncnr.refl.divide_intensity",
@@ -71,7 +96,7 @@
       "module": "ncnr.refl.fit_footprint",
       "title": "Fit Footprint",
       "x": 775,
-      "y": 30
+      "y": 50
     },
     {
       "module": "ncnr.refl.correct_footprint",
@@ -88,8 +113,8 @@
     {
       "module": "ncnr.refl.normalize",
       "title": "Normalize",
-      "x": 315,
-      "y": 105
+      "x": 305,
+      "y": 135
     },
     {
       "module": "ncnr.refl.mask_points",
@@ -100,8 +125,8 @@
     {
       "module": "ncnr.refl.mask_points",
       "title": "Mask Points",
-      "x": 450,
-      "y": 105
+      "x": 440,
+      "y": 135
     }
   ],
   "wires": [

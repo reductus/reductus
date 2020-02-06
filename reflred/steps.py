@@ -691,7 +691,7 @@ def psd_integrate(
         data, spec_scale=1, spec_pixel=5.,
         left_scale=1., left_pixel=5., right_scale=1., right_pixel=5.,
         min_pixel=5., max_pixel=251., degree=1., mc_samples=1000,
-        signal_jump=0,
+        slices=None,
         ):
     r"""
     Integrate specular and background from psd.
@@ -726,10 +726,8 @@ def psd_integrate(
 
     The residual after subtracting the background estimate is also
     returned. Use this to verify that the integration ranges are
-    chosen appropriately.  A jump value is added to the signal in the
-    residuals to make it easier to identify the spec boundaries.  Values
-    outside the background range are set to NaN. (Note: NaN does not work
-    as a jump value.)
+    chosen appropriately.  There is an additional output to show slices
+    for selected frames---this will show the quality of background estimate.
 
     **Inputs**
 
@@ -755,7 +753,7 @@ def psd_integrate(
 
     mc_samples {MC samples}(int:<0,inf>) : Number of MC samples for uncertainty analysis, or zero for simple gaussian.
 
-    signal_jump {Signal jump}(float) : Offset added to signal in residual
+    slices {Slice value}(float) : Display data cross-sections at the given values.
 
     **Returns**
 
@@ -765,24 +763,28 @@ def psd_integrate(
 
     residual (psddata) : background subtracted psd data
 
+    sliceplot (plot) : slices plot
+
     | 2020-02-03 Paul Kienzle
     """
     from .ng7psd import apply_integration
+    from dataflow.data import Plottable
 
     mc_seed = mc_samples if mc_samples > 0 else None
-    spec, back, resid = apply_integration(
+    #print("slices", slices)
+    spec, back, resid, sliceplot = apply_integration(
         data, spec=(spec_scale, spec_pixel),
         left=(left_scale, left_pixel), right=(right_scale, right_pixel),
         pixel_range=(min_pixel, max_pixel),
-        degree=degree, mc_samples=mc_samples, signal_jump=signal_jump,
-        seed=mc_seed,
+        degree=degree, mc_samples=mc_samples, seed=mc_seed,
+        slices=[slices] if slices is not None else [],
     )
     spec.log("integrate(%.15g, %.15g)" % (spec_scale, spec_pixel))
     back.log("integrate(%.15g, %.15g, %.15g, %.15g)"
              % (left_scale, left_pixel, right_scale, right_pixel))
     resid.log("integrate()")
 
-    return spec, back, resid
+    return spec, back, resid, Plottable(sliceplot)
 
 @module
 def rescale(data, scale=1.0, dscale=0.0):

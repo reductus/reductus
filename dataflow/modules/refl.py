@@ -2,6 +2,7 @@ from dataflow import core as df
 from dataflow import templates
 from dataflow.automod import make_modules, make_template, auto_module
 from dataflow.calc import process_template
+from dataflow.data import Plottable
 
 from reflred import steps
 from reflred.refldata import ReflData, PSDData
@@ -123,6 +124,7 @@ def define_instrument():
     footprint = df.DataType(INSTRUMENT+".footprint.params", FootprintData)
     flux = df.DataType(INSTRUMENT+".flux.params", FluxData)
     backgroundfield = df.DataType(INSTRUMENT + ".backgroundfield.params", BackgroundFieldData)
+    plottable = df.DataType(INSTRUMENT+".plot", Plottable)
 
     #import json
     #import os
@@ -138,7 +140,7 @@ def define_instrument():
         id=INSTRUMENT,
         name='NCNR reflectometer',
         menu=[('steps', modules)],
-        datatypes=[refldata, poldata, psddata, deadtime, footprint, flux, backgroundfield],
+        datatypes=[refldata, poldata, psddata, deadtime, footprint, flux, backgroundfield, plottable],
         template_defs=templates.get_templates(INSTRUMENT),
         )
 
