@@ -49,7 +49,7 @@ webreduce.instruments['ncnr.vsans'] = webreduce.instruments['ncnr.vsans'] || {};
     [["sample.description"]],
     [ 
       [
-        "run.experimentScanID"
+        "run.instFileNum"
       ],
       [   
         "analysis.intent"
