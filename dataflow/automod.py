@@ -708,7 +708,7 @@ def validate(par, value, as_default=False):
     n = par["length"]
     if n == 1:
         return _validate_one(par, value, as_default)
-    elif not isinstance(value, list):
+    elif not isinstance(value, (list, tuple)):
         raise ValueError("invalid value for %s, expected list"%name)
     elif n and len(value) != n:
         raise ValueError("invalid value for %s, wrong length"%name)

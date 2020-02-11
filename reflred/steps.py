@@ -691,7 +691,7 @@ def psd_integrate(
         data, spec_scale=1, spec_pixel=5.,
         left_scale=1., left_pixel=5., right_scale=1., right_pixel=5.,
         min_pixel=5., max_pixel=251., degree=1., mc_samples=1000,
-        slices=None,
+        slices=None, #(0.01, 0.05, 0.10, 0.15),
         ):
     r"""
     Integrate specular and background from psd.
@@ -753,7 +753,7 @@ def psd_integrate(
 
     mc_samples {MC samples}(int:<0,inf>) : Number of MC samples for uncertainty analysis, or zero for simple gaussian.
 
-    slices {Slice value}(float) : Display data cross-sections at the given values.
+    slices {Slice value}(float]) : Display data cross-sections at the given values.
 
     **Returns**
 
