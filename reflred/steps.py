@@ -753,7 +753,7 @@ def psd_integrate(
 
     mc_samples {MC samples}(int:<0,inf>) : Number of MC samples for uncertainty analysis, or zero for simple gaussian.
 
-    slices {Slice value}(float]) : Display data cross-sections at the given values.
+    slices {Slice value}(float) : Display data cross-sections at the given values.
 
     **Returns**
 
