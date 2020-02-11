@@ -1432,6 +1432,7 @@ def ng7_psd(
         monitor_correction=False,
         center=None,
         intent='auto',
+        sample_width=None,
         base='none'):
     r"""
     Load a list of NG7 PSD files from the NCNR data server.
@@ -1455,6 +1456,11 @@ def ng7_psd(
     : Measurement intent (specular, slit, or some other scan), auto or infer.
     : If intent is 'scan', then use the first scanned variable.
 
+    sample_width {Sample width (mm)} (float?)
+    : Width of the sample along the beam direction in mm, used for
+    calculating the effective resolution when the sample is smaller
+    than the beam.  Leave blank to use value from data file.
+
     base {Normalize by} (opt:auto|monitor|time|power|none)
     : How to convert from counts to count rates.
     : Leave this as none if your template does normalization after integration.
@@ -1464,9 +1470,18 @@ def ng7_psd(
     output (refldata[]): All entries of all files in the list.
 
     | 2020-02-05 Paul Kienzle
+    | 2020-02-11 Paul Kienzle include divergence estimate in startup
     """
     from .load import url_load_list
     from .ng7psd import load_entries
+
+    # Note: divergence is required for join, so always calculate it.  If you
+    # really want it optional then use:
+    #
+    #  auto_divergence {Calculate dQ} (bool)
+    #    : Automatically calculate the angular divergence of the beam.
+    #
+    auto_divergence = True
 
     datasets = []
     for data in url_load_list(filelist, loader=load_entries):
@@ -1475,9 +1490,8 @@ def ng7_psd(
             data.intent = intent
         if center is not None:
             data = psd_center(data, center)
-        # Note: divergence is estimated from specular integration width, so
-        # unlike super_load, there is no reason to set it here.
-        #data = divergence(data, sample_width)
+        if auto_divergence:
+            data = divergence(data, sample_width)
         if detector_correction:
             data = detector_dead_time(data, None)
         if monitor_correction:

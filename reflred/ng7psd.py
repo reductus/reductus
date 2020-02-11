@@ -240,14 +240,12 @@ def apply_integration(
     # Make sure Monte Carlo simulations are reproducible by using the
     # same seed every time.
     with push_seed(seed):
-        divergence, Is, Ib, residual, slice_plot = integrate(
+        Is, Ib, residual, slice_plot = integrate(
             data, spec, left, right, pixel_range,
             degree, mc_samples, slices,
         )
 
     spec_data, back_data = _build_1d(data, Is), _build_1d(data, Ib)
-    spec_data.angular_resolution = divergence
-    back_data.angular_resolution = divergence
 
     resid_data = copy(data)
     resid_data.v = residual
@@ -305,10 +303,11 @@ def integrate(data, spec, left, right, pixel_range,
     p4 = np.minimum(max_pixel-center, +back_right)
     pixel = np.arange(1, npixels+1) - center
 
-    # Estimate divergence. Assume signal width is chosen to span +/- 2 sigma,
-    # or 95%.
-    sigma = (p3 - p2)/4
-    divergence = np.degrees(np.arctan(sigma / data.detector.distance))
+    # TODO: maybe estimate divergence from specular peak width?
+    # The following does not work:
+    #    # Assume signal width is chosen to span +/- 2 sigma, or 95%.
+    #    sigma = (p3 - p2)/4 * pixel_width
+    #    divergence = np.degrees(np.arctan(sigma / data.detector.distance))
 
     # Find slices we want to plot by looking up the selected slice values
     # in the list of y values for the frames.
@@ -413,7 +412,7 @@ def integrate(data, spec, left, right, pixel_range,
 
     Is, dIs, Ib, dIb, residual = (np.asarray(v) for v in zip(*results))
 
-    return divergence, (Is, dIs), (Ib, dIb), residual, plottable
+    return (Is, dIs), (Ib, dIb), residual, plottable
 
 def poisson_sum(v, dv):
     """
