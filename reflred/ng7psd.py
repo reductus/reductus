@@ -123,11 +123,8 @@ class NG7PSD(PSDData):
 
         # TODO: ng7r/nexus/config.js needs to record info about the PSD
 
-        ## Counts ---  verify that we are pulling data from the PSD
-        #roi_device = str_data(das, 'counter/roiAgainst')
-        #if roi_device != "linearDetector":
-        #    self.warn("expected roiAgainst to be linearDetector for %r"
-        #              % (self.name))
+        # Load data from linear detector.  Note that counts/liveROI may not
+        # match if counts/roiAgainst is against a different detector.
         self.detector.counts = np.asarray(data_as(das, 'linearDetector/counts', ''), 'd')
         #print("detector shape", self.detector.counts.shape)
         self.detector.counts_variance = self.detector.counts.copy()
