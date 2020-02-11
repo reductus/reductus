@@ -59,12 +59,12 @@ class NG7PSD(PSDData):
         self.monochromator.wavelength = data_as(entry, 'instrument/monochromator/wavelength', 'Ang', rep=n, NA=None)
         self.monochromator.wavelength_resolution = data_as(entry, 'instrument/monochromator/wavelength_error', 'Ang', rep=n, NA=None)
         if self.monochromator.wavelength is None:
-            self.warn("Wavelength is missing; using %.3f A"
-                      % (WAVELENGTH,))
+            self.warn("Wavelength is missing for %r; using %.3f A"
+                      % (self.name, WAVELENGTH))
             self.monochromator.wavelength = WAVELENGTH
         if self.monochromator.wavelength_resolution is None:
-            self.warn("Wavelength resolution is missing; using %.1f%% dL/L FWHM"
-                      % (100*WAVELENGTH_DISPERSION,))
+            self.warn("Wavelength resolution is missing for %r; using %.1f%% dL/L FWHM"
+                      % (self.name, 100*WAVELENGTH_DISPERSION))
             self.monochromator.wavelength_resolution = \
                 FWHM2sigma(WAVELENGTH_DISPERSION*self.monochromator.wavelength)
 
@@ -118,16 +118,17 @@ class NG7PSD(PSDData):
         self.detector.rotation = data_as(entry, 'instrument/PSD/rotation', 'degree')
         if self.detector.distance is None:
             self.detector.distance = DETECTOR_DISTANCE
-            self.warn("PSD distance is missing; using %.1f mm"
-                      % (self.detector.distance,))
+            self.warn("PSD distance is missing for %r; using %.1f mm"
+                      % (self.name, self.detector.distance))
 
         # TODO: ng7r/nexus/config.js needs to record info about the PSD
 
-        # Counts ---  verify that we are pulling data from the PSD
-        roi_device = str_data(das, 'counter/roiAgainst')
-        if roi_device != "linearDetector":
-            raise TypeError("expected roiAgainst to be linearDetector")
-        self.detector.counts = np.asarray(data_as(das, roi_device + '/counts', ''), 'd')
+        ## Counts ---  verify that we are pulling data from the PSD
+        #roi_device = str_data(das, 'counter/roiAgainst')
+        #if roi_device != "linearDetector":
+        #    self.warn("expected roiAgainst to be linearDetector for %r"
+        #              % (self.name))
+        self.detector.counts = np.asarray(data_as(das, 'linearDetector/counts', ''), 'd')
         #print("detector shape", self.detector.counts.shape)
         self.detector.counts_variance = self.detector.counts.copy()
         self.detector.dims = self.detector.counts.shape[1:]
@@ -146,7 +147,7 @@ class NG7PSD(PSDData):
 
         # Angles
         if 'q' not in das:
-            raise ValueError("Unknown sample angle in file")
+            raise ValueError("Unknown sample angle in file %r" % self.name)
         self.Qz_target = data_as(das, 'q/z', '', rep=n)
         # Ignore sampleTilt for now since it is arbitrary.  NG7 is not
         # using zeros for the sampleTilt motor in a predictable way.
