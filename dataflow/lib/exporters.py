@@ -112,7 +112,7 @@ def exports_HDF5(name="NeXus"):
     return inner_function
 
 def exports_PNG(name="PNG"):
-     def inner_function(f):
+    def inner_function(f):
         f.exporter = png
         f.export_name = name
         return f
