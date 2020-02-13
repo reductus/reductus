@@ -1,3 +1,8 @@
+"""
+Support for different export types.
+
+See :class:`dataflow.core.DataType` for details.
+"""
 from functools import wraps
 
 def text(datasets, export_method="to_column_text", headers=None, concatenate=False):

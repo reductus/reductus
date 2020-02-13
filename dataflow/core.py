@@ -482,14 +482,58 @@ class DataType(object):
     *cls* : Class
         Python class defining the data type.
 
-    *export_types*: list(strings)
-        A list of implemented export types for the data type (binary, text, etc..)
+    **Data Visualization**
 
+    Data objects are displayed to the user, with the display format
+    returned by *data.get_plottable()*.  The details of the plottable
+    object are still fluid, and defined by the webreduce server.  See
+    reflweb/static/js/webreduce/editor.js for the implementation.
+
+    **Metadata**
+
+    Information about the data object is sent to the web browser client via
+    the *data.get_metadata()* method.
+
+    **TODO**: add details about the structure and use of metadata.  It looks
+    to be a simple JSON mapping of the data object which is available on
+    the debug console of the browser.  Check if the webreduce client uses
+    any specific fields from the object.
+
+    **Data Export**
+
+    Data objects define available exporters as::
+
+        from dataflow.lib import exporters
+        self.export_types = {
+            "NAME" : {
+                "method_name": "METHOD",
+                "exporter": exporters.COMPOSITOR,
+            }
+        }
+
+    where NAME is export type shown to the user, METHOD is the name of the
+    data method which builds the exported object, and COMPOSITOR is
+    a function that knows how to bundle entries into independent or
+    concatenated export files, each with the template metadata attached.
+
+    The export types are discovered by introspection, using a decorator
+    on the entry constructor such as *@exporters.exports_HDF5("NAME")*.
+
+    The constructor method needs to return an object of the form::
+
+        {
+            "name": "NAME",
+            "entry": "ENTRY",
+            "file_suffix": ".EXT",
+            "value": formatted_data,
+        }
+
+    The resulting data will be saved in *NAME.EXT* for concatenated
+    results, or *NAME_ENTRY.EXT* for individual files. (subject to change)
     """
-    def __init__(self, id, cls, export_types=None):
+    def __init__(self, id, cls):
         self.id = id
         self.cls = cls
-        # export_types is e.g. {"columns": {"method_name": "to_column_text", "exporter": exporters.text}}
         self.export_types = self._find_exporters()
 
     def get_definition(self):
