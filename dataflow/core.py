@@ -541,13 +541,16 @@ class DataType(object):
 
     def _find_exporters(self):
         exporters = {}
-        for n in dir(self.cls):
-            p = getattr(self.cls, n)
-            if type(p) == types.FunctionType:
-                export_name = getattr(p, 'export_name', 'default')
-                exporter = getattr(p, 'exporter', None)
+        for method_name in dir(self.cls):
+            method = getattr(self.cls, method_name)
+            if callable(method):
+                exporter = getattr(method, 'exporter', None)
                 if exporter is not None:
-                    exporters[export_name] = {"exporter": exporter, "method_name": p.__name__}
+                    export_name = getattr(method, 'export_name', 'default')
+                    exporters[export_name] = {
+                        "exporter": exporter,
+                        "method_name": method_name,
+                    }
         return exporters
 
 class Bundle(object):
@@ -567,9 +570,14 @@ class Bundle(object):
         values = [v.get_metadata() for v in self.values]
         return {'datatype': self.datatype.id, 'values': values}
 
-    def get_export(self, export_type="column", headers=None, concatenate=True):
+    def get_export(self, export_type="column", template_data=None, concatenate=True):
         exporter_info = self.datatype.export_types[export_type]
-        to_export = exporter_info["exporter"](self.values, export_method=exporter_info["method_name"], headers=headers, concatenate=concatenate)
+        exporter = exporter_info["exporter"]
+        to_export = exporter(
+            self.values,
+            export_method=exporter_info["method_name"],
+            template_data=template_data,
+            concatenate=concatenate)
         return {'datatype': self.datatype.id, 'values': to_export}
 
     @staticmethod

@@ -36,7 +36,7 @@ def _s(b):
         return b
 
 class RawVSANSData(object):
-    suffix = "vsans"
+    suffix = ".vsans"
     def __init__(self, metadata, detectors=None):
         self.metadata = metadata
         self.metadata['name'] = metadata['run.filename']
@@ -55,9 +55,12 @@ class RawVSANSData(object):
     @exports_text(name="metadata")
     def to_column_text(self):
         output = json.dumps(_toDictItem(self.metadata, convert_bytes=True))
-        name = _s(self.metadata.get("name", "default_name"))
-        entry = _s(self.metadata.get("entry", "default_entry"))
-        return {"name": name, "entry": entry, "value": output, "file_suffix": self.suffix + "metadata.json"}
+        return {
+            "name": _s(self.metadata.get("name", "default_name")),
+            "entry": _s(self.metadata.get("entry", "default_entry")),
+            "file_suffix": self.suffix + "metadata.json",
+            "value": output,
+        }
 
 class RawVSANSHe3Data(RawVSANSData):
     pass
@@ -192,59 +195,60 @@ class VSansDataQSpace(VSansData):
         column_names = ["Qx", "Qy", "I", "dI", "Qz", "SigmaQ_para", "SigmaQ_perp", "ShadowFactor", "detector_id"]
         labels = ["Qx (1/A)", "Qy (1/A)", "I(Q) (1/cm)", "std. dev. I(Q) (1/cm)", "Qz (1/A)", "sigmaQ_para", "sigmaQ_perp", "ShadowFactor", "detector_id"]
 
-        fid = BytesIO()
-        fid.write(_b("# %s\n" % json.dumps(_toDictItem(self.metadata, convert_bytes=True)).strip("{}")))
-        fid.write(_b('# detector_id: {"0":"B","1":"MB","2":"MT","3":"ML","4":"MR","5":"FT","6":"FB","7":"FL","8":FR"}\n'))
-        fid.write(_b("# %s\n" % json.dumps({"columns": labels}).strip("{}")))
-        for d_id, sn in enumerate(short_detectors):
-            detname = 'detector_{short_name}'.format(short_name=sn)
-            det = self.detectors.get(detname, None)
-            if det is None:
-                continue
-            column_length = det['Qx'].size
-            column_values = [
-                det['Qx'].ravel('C'),
-                det['Qy'].ravel('C'),
-                (det['data']).x.ravel('C'),
-                np.sqrt((det['data']).variance).ravel('C'),
-                det['Qz'].ravel('C'),
-                np.zeros(column_length, dtype='float'), # not yet calculated
-                np.zeros(column_length, dtype='float'), # not yet calculated
-                np.zeros(column_length, dtype='float'), # not yet calculated
-                np.ones(column_length, dtype='float') * d_id
-            ]
-            np.savetxt(fid, np.vstack(column_values).T, fmt="%.10e")
-        fid.seek(0)
-        name = _s(self.metadata["run.filename"])
-        entry = _s(self.metadata.get("entry", "default_entry"))
-        suffix = "vsans2d.dat"
-        #filename = "%s_%s.%s" % (name, entry, suffix)
-        return {"name": name, "entry": entry, "value": fid.read().decode(), "file_suffix": suffix}
+        with BytesIO() as fid:
+            fid.write(_b("# %s\n" % json.dumps(_toDictItem(self.metadata, convert_bytes=True)).strip("{}")))
+            fid.write(_b('# detector_id: {"0":"B","1":"MB","2":"MT","3":"ML","4":"MR","5":"FT","6":"FB","7":"FL","8":FR"}\n'))
+            fid.write(_b("# %s\n" % json.dumps({"columns": labels}).strip("{}")))
+            for d_id, sn in enumerate(short_detectors):
+                detname = 'detector_{short_name}'.format(short_name=sn)
+                det = self.detectors.get(detname, None)
+                if det is None:
+                    continue
+                column_length = det['Qx'].size
+                column_values = [
+                    det['Qx'].ravel('C'),
+                    det['Qy'].ravel('C'),
+                    (det['data']).x.ravel('C'),
+                    np.sqrt((det['data']).variance).ravel('C'),
+                    det['Qz'].ravel('C'),
+                    np.zeros(column_length, dtype='float'), # not yet calculated
+                    np.zeros(column_length, dtype='float'), # not yet calculated
+                    np.zeros(column_length, dtype='float'), # not yet calculated
+                    np.ones(column_length, dtype='float') * d_id
+                ]
+                np.savetxt(fid, np.vstack(column_values).T, fmt="%.10e")
+            fid.seek(0)
+            value = fid.read()
+
+        return {
+            "name": _s(self.metadata["run.filename"]),
+            "entry": _s(self.metadata.get("entry", "default_entry")),
+            "file_suffix": ".vsans2d.dat",
+            "value": value.decode(),
+        }
 
     @exports_HDF5(name="NXcanSAS")
     def to_NXcanSAS(self):
         import h5py
+
+        # TODO: Avoid returning open handles to caller.
+        # Check whether closing h5_item frees fid, or whether it is kept
+        # around indefinitely leading to a memory leak.
         fid = BytesIO()
-        name = _s(self.metadata.get("name", "default_name"))
-        entry = _s(self.metadata.get("entry", "default_entry"))
-        suffix = "sansIQ.nx.h5"
-        #filename = "%s_%s.%s" % (name, entry, suffix)
-        #output = {"filename": filename}
-        output = {"name": name, "entry": entry, "file_suffix": suffix}
         h5_item = h5py.File(fid)
-        
-        entryname = self.metadata.get("entry", "entry")
-        entry = h5_item.create_group(entryname)
-        entry.attrs.update({
+
+        entry_name = self.metadata.get("entry", "entry")
+        nxentry = h5_item.create_group(entry_name)
+        nxentry.attrs.update({
             "NX_class": "NXentry",
             "canSAS_class": "SASentry",
             "version": "1.0"
         })
-        entry["definition"] = "NXcanSAS"
-        entry["run"] = "<see the documentation>"
-        entry["title"] = self.metadata["sample.description"]
+        nxentry["definition"] = "NXcanSAS"
+        nxentry["run"] = "<see the documentation>"
+        nxentry["title"] = self.metadata["sample.description"]
 
-        instrument = entry.create_group("instrument")
+        instrument = nxentry.create_group("instrument")
         total_length = 0
         for d_id, sn in enumerate(short_detectors):
             detname = 'detector_{short_name}'.format(short_name=sn)
@@ -263,7 +267,7 @@ class VSansDataQSpace(VSansData):
         I = np.empty((total_length), dtype=np.float)
         dI = np.empty((total_length), dtype=np.float)
         Q = np.empty((3,total_length), dtype=np.float)
-        
+
         data_cursor = 0
         for d_id, sn in enumerate(short_detectors):
             detname = 'detector_{short_name}'.format(short_name=sn)
@@ -278,7 +282,7 @@ class VSansDataQSpace(VSansData):
                 Q[qi, data_cursor:data_cursor + I_new.size] = det[qn].ravel("C")
 
         # TODO: convert this to a view of detectors using h5py.VirtualSource?
-        datagroup = entry.create_group("data")
+        datagroup = nxentry.create_group("data")
         datagroup.attrs.update({
             "NX_class": "NXdata",
             "canSAS_class": "SASdata",
@@ -294,9 +298,12 @@ class VSansDataQSpace(VSansData):
         datagroup["Q"] = Q
         datagroup["Q"].attrs["units"] = "1/nm"
 
-        output["value"] = h5_item
-        
-        return output
+        return {
+            "name": _s(self.metadata.get("name", "default_name")),
+            "entry": _s(self.metadata.get("entry", "default_entry")),
+            "file_suffix": ".sansIQ.nx.h5",
+            "value": h5_item,
+        }
 
 class VSans1dData(object):
     properties = ['x', 'v', 'dx', 'dv', 'xlabel', 'vlabel', 'xunits', 'vunits', 'xscale', 'vscale', 'metadata', 'fit_function']
@@ -343,17 +350,22 @@ class VSans1dData(object):
 
     @exports_text(name="column")
     def to_column_text(self):
-        fid = BytesIO()
-        fid.write(_b("# %s\n" % json.dumps(_toDictItem(self.metadata, convert_bytes=True)).strip("{}")))
-        columns = {"columns": [self.xlabel, self.vlabel, "uncertainty", "resolution"]}
-        units = {"units": [self.xunits, self.vunits, self.vunits, self.xunits]}
-        fid.write(_b("# %s\n" % json.dumps(columns).strip("{}")))
-        fid.write(_b("# %s\n" % json.dumps(units).strip("{}")))
-        np.savetxt(fid, np.vstack([self.x, self.v, self.dv, self.dx]).T, fmt="%.10e")
-        fid.seek(0)
-        name = getattr(self, "name", "default_name")
-        entry = getattr(self.metadata, "entry", "default_entry")
-        return {"name": name, "entry": entry, "value": fid.read().decode('utf-8'), "file_suffix": "vsans1d.dat"}
+        with BytesIO() as fid:
+            fid.write(_b("# %s\n" % json.dumps(_toDictItem(self.metadata, convert_bytes=True)).strip("{}")))
+            columns = {"columns": [self.xlabel, self.vlabel, "uncertainty", "resolution"]}
+            units = {"units": [self.xunits, self.vunits, self.vunits, self.xunits]}
+            fid.write(_b("# %s\n" % json.dumps(columns).strip("{}")))
+            fid.write(_b("# %s\n" % json.dumps(units).strip("{}")))
+            np.savetxt(fid, np.vstack([self.x, self.v, self.dv, self.dx]).T, fmt="%.10e")
+            fid.seek(0)
+            value = fid.read()
+
+        return {
+            "name": getattr(self, "name", "default_name"),
+            "entry": getattr(self.metadata, "entry", "default_entry"),
+            "file_suffix": ".vsans1d.dat",
+            "value": value.decode('utf-8'),
+        }
 
 class Sans1dData(object):
     properties = ['x', 'v', 'dx', 'dv', 'xlabel', 'vlabel', 'xunits', 'vunits', 'xscale', 'vscale', 'metadata', 'fit_function']
@@ -400,17 +412,22 @@ class Sans1dData(object):
 
     @exports_text(name="column")
     def export(self):
-        fid = BytesIO()
-        fid.write(_b("# %s\n" % json.dumps(_toDictItem(self.metadata)).strip("{}")))
-        columns = {"columns": [self.xlabel, self.vlabel, "uncertainty", "resolution"]}
-        units = {"units": [self.xunits, self.vunits, self.vunits, self.xunits]}
-        fid.write(_b("# %s\n" % json.dumps(columns).strip("{}")))
-        fid.write(_b("# %s\n" % json.dumps(units).strip("{}")))
-        np.savetxt(fid, np.vstack([self.x, self.v, self.dv, self.dx]).T, fmt="%.10e")
-        fid.seek(0)
-        name = getattr(self, "name", "default_name")
-        entry = getattr(self.metadata, "entry", "default_entry")
-        return {"name": name, "entry": entry, "export_string": fid.read().decode(), "file_suffix": ".sans1d.dat"}
+        with BytesIO() as fid:
+            fid.write(_b("# %s\n" % json.dumps(_toDictItem(self.metadata)).strip("{}")))
+            columns = {"columns": [self.xlabel, self.vlabel, "uncertainty", "resolution"]}
+            units = {"units": [self.xunits, self.vunits, self.vunits, self.xunits]}
+            fid.write(_b("# %s\n" % json.dumps(columns).strip("{}")))
+            fid.write(_b("# %s\n" % json.dumps(units).strip("{}")))
+            np.savetxt(fid, np.vstack([self.x, self.v, self.dv, self.dx]).T, fmt="%.10e")
+            fid.seek(0)
+            value = fid.read()
+
+        return {
+            "name": getattr(self, "name", "default_name"),
+            "entry": getattr(self.metadata, "entry", "default_entry"),
+            "file_suffix": ".sans1d.dat",
+            "value": value.decode(),
+        }
 
 class Parameters(object):
     def __init__(self, params=None):
@@ -429,11 +446,14 @@ class Metadata(OrderedDict):
         return {"entry": "entry", "type": "metadata", "values": _toDictItem(self)}
 
     def get_metadata(self):
-        return _toDictItem(self)        
+        return _toDictItem(self)
 
     @exports_text(name="json")
     def export(self):
-        output = json.dumps(_toDictItem(self, convert_bytes=True))
-        name = getattr(self, "name", "default_name")
-        entry = getattr(self, "entry", "default_entry")
-        return {"name": name, "entry": entry, "export_string": output, "file_suffix": ".vsans.metadata.json"}
+        value = json.dumps(_toDictItem(self, convert_bytes=True))
+        return {
+            "name": getattr(self, "name", "default_name"),
+            "entry": getattr(self, "entry", "default_entry"),
+            "file_suffix": ".vsans.metadata.json",
+            "value": output,
+        }

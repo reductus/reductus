@@ -190,7 +190,7 @@ def calc_terminal(template_def, config, nodenum, terminal_id, return_type='full'
         return retval.get_metadata()
     elif return_type == 'export':
         # inject git version hash into export data:
-        headers = {
+        template_data = {
             "template_data": {
                 "template": template_def,
                 "config": config,
@@ -201,8 +201,10 @@ def calc_terminal(template_def, config, nodenum, terminal_id, return_type='full'
                 "export_type": export_type,
             }
         }
-        to_export = retval.get_export(export_type=export_type, headers=headers, concatenate=concatenate)
-        
+        to_export = retval.get_export(
+            export_type=export_type, template_data=template_data,
+            concatenate=concatenate)
+
         return to_export
 
     raise KeyError(return_type + " not a valid return_type (should be one of ['full', 'plottable', 'metadata', 'export'])")

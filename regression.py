@@ -138,7 +138,7 @@ def replay_file(filename):
     # this is a hack: remove the default "column" once there are regression files
     # that contain this metadata:
     export_type = template_data.get("export_type", "column")
-    export = retval.get_export(headers=template_data, concatenate=True, export_type=export_type)
+    export = retval.get_export(template_data=template_data, concatenate=True, export_type=export_type)
     new_content = export['values'][0]['value']
     # remove the first line:
     new_content = re.compile(r"^(#|//).*\n").sub("", new_content)

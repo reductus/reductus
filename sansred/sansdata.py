@@ -35,7 +35,7 @@ def _s(b):
         return b
 
 class RawSANSData(RawVSANSData):
-    suffix = "sans"
+    suffix = ".sans"
 
 class SansData(object):
     """SansData object used for storing values from a sample file (not div/mask).
@@ -239,18 +239,22 @@ class Sans1dData(object):
 
     @exports_text(name="column")
     def to_column_text(self):
-        fid = BytesIO()
-        fid.write(_b("# %s\n" % json.dumps(_toDictItem(self.metadata, convert_bytes=True)).strip("{}")))
-        columns = {"columns": [self.xlabel, self.vlabel, "uncertainty", "resolution"]}
-        units = {"units": [self.xunits, self.vunits, self.vunits, self.xunits]}
-        fid.write(_b("# %s\n" % json.dumps(columns).strip("{}")))
-        fid.write(_b("# %s\n" % json.dumps(units).strip("{}")))
-        np.savetxt(fid, np.vstack([self.x, self.v, self.dv, self.dx]).T, fmt="%.10e")
-        fid.seek(0)
-        name = getattr(self, "name", "default_name")
-        entry = self.metadata.get("entry", "default_entry")
-        suffix = ".sans1d.dat"
-        return {"name": name, "entry": entry, "file_suffix": suffix, "value": fid.read().decode('utf-8')}
+        with BytesIO() as fid:
+            fid.write(_b("# %s\n" % json.dumps(_toDictItem(self.metadata, convert_bytes=True)).strip("{}")))
+            columns = {"columns": [self.xlabel, self.vlabel, "uncertainty", "resolution"]}
+            units = {"units": [self.xunits, self.vunits, self.vunits, self.xunits]}
+            fid.write(_b("# %s\n" % json.dumps(columns).strip("{}")))
+            fid.write(_b("# %s\n" % json.dumps(units).strip("{}")))
+            np.savetxt(fid, np.vstack([self.x, self.v, self.dv, self.dx]).T, fmt="%.10e")
+            fid.seek(0)
+            value = fid.read()
+
+        return {
+            "name": getattr(self, "name", "default_name"),
+            "entry": self.metadata.get("entry", "default_entry"),
+            "file_suffix": ".sans1d.dat",
+            "value": value.decode('utf-8'),
+        }
 
 class SansIQData(object):
     def __init__(self, I=None, dI=None, Q=None, dQ=None, meanQ=None, ShadowFactor=None, label='', metadata=None):
@@ -282,14 +286,14 @@ class SansIQData(object):
         ])
         
         name = self.metadata.get("name", "default_name")
-        entry = self.metadata.get("entry", "default_entry")
-        series = [{"label": "%s:%s" % (name, entry)}]
+        entry_name = self.metadata.get("entry", "default_entry")
+        series = [{"label": "%s:%s" % (name, entry_name)}]
         xcol = "Q"
         ycol = "I"
         plottable = {
             "type": "nd",
-            "title": "%s:%s" % (name, entry),
-            "entry": entry,
+            "title": "%s:%s" % (name, entry_name),
+            "entry": entry_name,
             "columns": columns,
             "options": {
                 "series": series,
@@ -316,39 +320,38 @@ class SansIQData(object):
         column_values = [getattr(self, cn) for cn in column_names]
         labels = ["Q (1/A)", "I(Q) (1/cm)", "std. dev. I(Q) (1/cm)", "sigmaQ", "meanQ", "ShadowFactor"]
 
-        fid = BytesIO()
-        fid.write(_b("# %s\n" % json.dumps(_toDictItem(self.metadata, convert_bytes=True)).strip("{}")))
-        fid.write(_b("# %s\n" % json.dumps({"columns": labels}).strip("{}")))
-        np.savetxt(fid, np.vstack(column_values).T, fmt="%.10e")
-        fid.seek(0)
-        name = _s(self.metadata.get("name", "default_name"))
-        entry = _s(self.metadata.get("entry", "default_entry"))
-        suffix = "sansIQ.dat"
-        return {"name": name, "entry": entry, "value": fid.read().decode('utf-8'), "file_suffix": suffix}
+        with BytesIO() as fid:
+            fid.write(_b("# %s\n" % json.dumps(_toDictItem(self.metadata, convert_bytes=True)).strip("{}")))
+            fid.write(_b("# %s\n" % json.dumps({"columns": labels}).strip("{}")))
+            np.savetxt(fid, np.vstack(column_values).T, fmt="%.10e")
+            fid.seek(0)
+            value = fid.read()
+
+        return {
+            "name": _s(self.metadata.get("name", "default_name")),
+            "entry": _s(self.metadata.get("entry", "default_entry")),
+            "file_suffix": ".sansIQ.dat",
+            "value": value.decode('utf-8'),
+        }
 
     @exports_HDF5(name="NXcanSAS")
     def to_NXcanSAS(self):
         import h5py
+
         fid = BytesIO()
-        name = _s(self.metadata.get("name", "default_name"))
-        entry = _s(self.metadata.get("entry", "default_entry"))
-        suffix = "sansIQ.nx.h5"
-        #filename = "%s_%s.%s" % (name, entry, suffix)
-        #output = {"filename": filename}
-        output = {"name": name, "entry": entry, "file_suffix": suffix}
         h5_item = h5py.File(fid)
-        
-        entryname = self.metadata.get("entry", "entry")
-        entry = h5_item.create_group(entryname)
-        entry.attrs.update({
+
+        entry_name = self.metadata.get("entry", "entry")
+        nxentry = h5_item.create_group(entry_name)
+        nxentry.attrs.update({
             "NX_class": "NXentry",
             "canSAS_class": "SASentry",
             "version": "1.0"
         })
-        entry["definition"] = "NXcanSAS"
-        entry["run"] = "<see the documentation>"
-        entry["title"] = self.metadata["sample.description"]
-        datagroup = entry.create_group("data")
+        nxentry["definition"] = "NXcanSAS"
+        nxentry["run"] = "<see the documentation>"
+        nxentry["title"] = self.metadata["sample.description"]
+        datagroup = nxentry.create_group("data")
         datagroup.attrs.update({
             "NX_class": "NXdata",
             "canSAS_class": "SASdata",
@@ -361,9 +364,12 @@ class SansIQData(object):
         datagroup["Q"] = self.Q
         datagroup["Q"].attrs["units"] = "1/nm"
 
-        output["value"] = h5_item
-        
-        return output
+        return {
+            "name": _s(self.metadata.get("name", "default_name")),
+            "entry": _s(self.metadata.get("entry", "default_entry")),
+            "file_suffix": ".sansIQ.nx.h5",
+            "value": h5_item,
+        }
 
 class Parameters(object):
     def __init__(self, params=None):

@@ -81,8 +81,8 @@ class FilterableMetaArray(MetaArray):
     def to_column_text(self):
         name = self.extrainfo["friendly_name"]
         entry = self.extrainfo["entry"]
-        suffix = "ospec.dat"
-        filename = "%s_%s.%s" % (name, entry, suffix)
+        suffix = ".ospec.dat"
+        filename = "%s_%s%s" % (name, entry, suffix)
         return_value = {"name": name, "entry": entry, "file_suffix": suffix}
         if len(self.shape) == 3:
             # return gnuplottable format:
