@@ -29,11 +29,12 @@ The simplest way to create git_revision is to run rev from setup.py::
 
     ...
 
-    # Include the git revision in the package data.
-    package_data = {package: ['git_revision']}
+    # Include git revision in the package data.  This can be done by adding
+    # it to setup() or having "include dataflow/git_revision" in MANIFEST.in.
+    #package_data = {package: ['git_revision']}
     setup(
         ...
-        package_data=package_data,
+        #package_data=package_data,
         include_package_data=True,
         ...
     )
