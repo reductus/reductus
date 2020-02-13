@@ -17,38 +17,16 @@ import dataflow
 from dataflow.core import Template, lookup_instrument, _instrument_registry
 from dataflow.cache import use_redis, use_diskcache, get_cache
 from dataflow.calc import process_template
+from dataflow.rev import revision_info
 import dataflow.core as df
 
 import dataflow.modules
-
 from dataflow import fetch
-
 try:
     from reflweb import config
 except ImportError:
     from reflweb import default_config as config
 
-IS_PY3 = sys.version_info[0] >= 3
-
-# for local and development installs of the server, the .git folder
-# will exist in parent (reduction) folder...
-if os.path.exists(os.path.join(os.path.dirname(__file__), "..", ".git")):
-    import subprocess
-    cwd = os.path.dirname(__file__)
-    server_git_hash = subprocess.Popen(["git", "rev-parse", "HEAD"], cwd=cwd, stdout=subprocess.PIPE).stdout.read().strip()
-    if IS_PY3: server_git_hash = server_git_hash.decode('ascii')
-    server_mtime = int(subprocess.Popen(["git", "log", "-1", "--pretty=format:%ct"], cwd=cwd, stdout=subprocess.PIPE).stdout.read().strip())
-    print("running git rev-parse HEAD", server_git_hash, server_mtime)
-else:
-    # otherwise for prebuilt systems use the packaged file that was created in setup.py
-    import pkg_resources
-    if pkg_resources.resource_exists("reflweb", "git_version_hash"):
-        server_git_hash = pkg_resources.resource_string("reflweb", "git_version_hash").strip()
-        if IS_PY3: server_git_hash = server_git_hash.decode('ascii')
-        server_mtime = int(pkg_resources.resource_string("reflweb", "git_version_mtime").strip())
-    else:
-        server_git_hash = "unknown"
-        server_mtime = 0
 
 api_methods = []
 
@@ -190,15 +168,17 @@ def calc_terminal(template_def, config, nodenum, terminal_id, return_type='full'
         return retval.get_metadata()
     elif return_type == 'export':
         # inject git version hash into export data:
+        rev_id, rev_time = revision_info()
         headers = {
             "template_data": {
                 "template": template_def,
                 "config": config,
                 "node": nodenum,
                 "terminal": terminal_id,
-                "server_git_hash": server_git_hash,
-                "server_mtime": server_mtime,
+                "server_git_hash": rev_id,
+                "server_mtime": rev_time,
                 "export_type": export_type,
+                #"datasources": fetch.DATA_SOURCES, # Is this needed?
             }
         }
         to_export = retval.get_export(export_type=export_type, headers=headers, concatenate=concatenate)
