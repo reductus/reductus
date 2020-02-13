@@ -65,6 +65,38 @@ def hdf(datasets, export_method="to_hdf", headers=None, concatenate=False):
                 
     return outputs
 
+def png(datasets, export_method="to_png", headers=None, concatenate=False):
+    # NOTE: concatenate not supported for PNG - keyword ignored.
+    from PIL import PngImagePlugin
+    import json
+    import io
+
+    header_string = json.dumps(headers, separators=(',', ':'))
+    
+    exports = [getattr(d, export_method)() for d in datasets]
+    outputs = []
+    for e in exports:
+        name = e.get("name", "default_name")
+        entry = e.get("entry", "entry")
+        file_suffix = e.get("file_suffix", "dat")
+        filename = "%s_%s.%s" % (name, entry, file_suffix)
+
+        image = PngImagePlugin.PngImageFile(e["value"])
+        new_metadata = PngImagePlugin.PngInfo()
+        existing_metadata = image.text
+        for key, value in existing_metadata.items():
+            if isinstance(value, PngImagePlugin.iTXt):
+                new_metadata.add_itxt(key, value)
+            elif isinstance(value, str):
+                new_metadata.add_text(key, value)
+        new_metadata.add_itxt("reductus_template.json", header_string)
+        value = io.BytesIO()
+        image.save(value, pnginfo=new_metadata)
+        outputs.append({"filename": filename, "value": value})
+    
+    return outputs
+    
+
 def exports_text(name="column"):
     def inner_function(f):
         f.exporter = text
@@ -75,6 +107,13 @@ def exports_text(name="column"):
 def exports_HDF5(name="NeXus"):
     def inner_function(f):
         f.exporter = hdf
+        f.export_name = name
+        return f
+    return inner_function
+
+def exports_PNG(name="PNG"):
+     def inner_function(f):
+        f.exporter = png
         f.export_name = name
         return f
     return inner_function
