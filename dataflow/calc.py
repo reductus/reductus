@@ -330,7 +330,7 @@ def fingerprint_node(module, node_config, inputs_fp):
     """
     Create a unique sha1 hash for a module based on its attributes and inputs.
     """
-    config = module.get('config', {})
+    config = module.get('config', {}).copy()
     config.update(node_config)
     config_str = str(_format_ordered(config))
     current_module_version = lookup_module(module['module']).version
