@@ -10,18 +10,9 @@ if len(sys.argv) == 1:
 if sys.argv[1] == 'test':
     from subprocess import call
     sys.exit(call([sys.executable, '-m', 'pytest'] + sys.argv[2:]))
-#    #sys.exit(call(['test.sh'] + sys.argv[2:]))
 
 # Create the resource file dataflow/git_revision
 os.system(f'"{sys.executable}" dataflow/rev.py')
-
-# Do we need to explicitly collect resource files?  Or does setup()
-# automatically include everything when include_package_data=True?
-# package data include dataflow/git_revision, the template files, and
-# all the static content for reflweb.
-#package_data = {'dataflow': ['git_revision', ...]}
-
-#sys.dont_write_bytecode = True
 
 packages = find_packages(exclude=['reflbin'])
 
