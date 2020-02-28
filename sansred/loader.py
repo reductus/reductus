@@ -41,6 +41,7 @@ metadata_lookup = OrderedDict([
     ("polarization.back", "DAS_logs/backPolarization/direction"),
     ("polarization.backname", "DAS_logs/backPolarization/name"),
     ("run.filePrefix", "DAS_logs/trajectoryData/filePrefix"),
+    ("run.instFileNum", "DAS_logs/trajectoryData/instFileNum"),
     ("run.experimentScanID", "DAS_logs/trajectory/experimentScanID"),
     ("run.instrumentScanID", "DAS_logs/trajectory/instrumentScanID"),
     ("run.experimentPointID", "DAS_logs/trajectory/experimentPointID"),

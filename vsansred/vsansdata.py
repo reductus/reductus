@@ -312,7 +312,7 @@ class Sans1dData(object):
         return _toDictItem(props)
 
     def get_plottable(self):
-        label = "%s: %s" % (self.metadata['run.experimentScanID'], self.metadata['sample.labl'])
+        label = "%s: %s" % (self.metadata['run.instFileNum'], self.metadata['sample.labl'])
         xdata = self.x.tolist()
         ydata = self.v.tolist()
         yerr = self.dv.tolist()

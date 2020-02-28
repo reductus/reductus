@@ -206,10 +206,10 @@ webreduce.instruments = webreduce.instruments || {};
                   var instrument_id = webreduce.editor._instrument_id;
                   var template_copy = jQuery.extend(true, {}, webreduce.editor._instrument_def.templates[template_id]);
                   webreduce.editor.load_template(template_copy, null, null, instrument_id);
-                  if (localStorage && localStorage.setItem) {
+                  try {
                     var lookup_id = "webreduce.instruments." + instrument_id + ".last_used_template";
                     localStorage.setItem(lookup_id, template_id);
-                  }
+                  } catch (e) {}
                 })
             )  
           ))
