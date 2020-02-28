@@ -86,6 +86,7 @@ from io import BytesIO
 import numpy as np
 from numpy import inf, arctan2, sqrt, sin, cos, pi, radians
 
+from dataflow.lib.exporters import exports_text
 from . import resolution
 
 IS_PY3 = sys.version_info[0] >= 3
@@ -662,6 +663,7 @@ class ReflData(Group):
     Reflectometry data structure, giving a predictable name space for the
     reduction steps regardless of input file format.
     """
+
     _groups = (
         ("slit1", Slit), ("slit2", Slit), ("slit3", Slit), ("slit4", Slit),
         ("detector", Detector),
@@ -1010,68 +1012,68 @@ class ReflData(Group):
 
     def save(self, filename):
         with open(filename, 'w') as fid:
-            fid.write(self.export())
+            fid.write(self.to_column_text()["value"])
 
-    def export(self):
-        fid = BytesIO()  # numpy.savetxt requires a byte stream
-        for n in ['name', 'entry', 'polarization']:
-            _write_key_value(fid, n, getattr(self, n))
-        wavelength = getattr(self.detector, "wavelength", None)
-        wavelength_resolution = getattr(self.detector, "wavelength_resolution", None)
-        if wavelength is not None:
-            _write_key_value(fid, "wavelength", float(wavelength[0]))
-        if wavelength_resolution is not None:
-            _write_key_value(fid, "wavelength_resolution", float(wavelength_resolution[0]))
-        if Intent.isscan(self.intent):
-            _write_key_value(fid, "columns", list(self.columns.keys()))
-            _write_key_value(fid, "units", [c.get("units", "") for c in self.columns.values()])
-            # add column headers
-            header_string = "\t".join(list(self.columns.keys())) + "\n"
-            if IS_PY3:
-                header_string = header_string.encode('utf-8')
-            fid.write(header_string)
-            def get_item(obj, path):
-                result = obj
-                keylist = path.split("/")
-                while len(keylist) > 0:
-                    result = getattr(result, keylist.pop(0), {})
-                return result
-            data_arrays = [self.scan_value[self.scan_label.index(p)] if v.get('is_scan', False) else get_item(self, p) for p,v in self.columns.items()]
-            data_arrays = [np.resize(d, self.points) for d in data_arrays]
-            format_string = "\t".join(["%s" if d.dtype.kind in ["S", "U"] else "%.10e" for d in data_arrays]) + "\n"
-            for i in range(self.points):
-                datarow = format_string % tuple([d[i] for d in data_arrays])
-                if IS_PY3:
-                    datarow = datarow.encode('utf-8')
-                fid.write(datarow)
-            export_string = fid.getvalue()
-            if IS_PY3:
-                export_string = export_string.decode('utf-8')
-            name = getattr(self, "name", "default_name")
-            entry = getattr(self, "entry", "default_entry")
-            return {"name": name, "entry": entry, "export_string": export_string, "file_suffix": ".dat"}
-        else:
-            _write_key_value(fid, "columns", [self.xlabel, self.vlabel, "uncertainty", "resolution"])
-            _write_key_value(fid, "units", [self.xunits, self.vunits, self.vunits, self.xunits])
-            data = np.vstack([self.x, self.v, self.dv, self.dx]).T
-            np.savetxt(fid, data, fmt="%.10e")
-            export_string = fid.getvalue()
-            if IS_PY3:
-                export_string = export_string.decode('utf-8')
-            name = getattr(self, "name", "default_name")
-            entry = getattr(self, "entry", "default_entry")
-            return {"name": name, "entry": entry, "export_string": export_string, "file_suffix": ".refl"}
+    @exports_text("column")
+    def to_column_text(self):
+        with BytesIO() as fid:  # numpy.savetxt requires a byte stream
+            for n in ['name', 'entry', 'polarization']:
+                _write_key_value(fid, n, getattr(self, n))
+            wavelength = getattr(self.detector, "wavelength", None)
+            wavelength_resolution = getattr(self.detector, "wavelength_resolution", None)
+            if wavelength is not None:
+                _write_key_value(fid, "wavelength", float(wavelength[0]))
+            if wavelength_resolution is not None:
+                _write_key_value(fid, "wavelength_resolution", float(wavelength_resolution[0]))
+            if Intent.isscan(self.intent):
+                _write_key_value(fid, "columns", list(self.columns.keys()))
+                _write_key_value(fid, "units", [c.get("units", "") for c in self.columns.values()])
+                # add column headers
+                header_string = "\t".join(list(self.columns.keys())) + "\n"
+                fid.write(header_string.encode('utf-8'))
+                data_arrays = [
+                    self.scan_value[self.scan_label.index(p)] if v.get('is_scan', False)
+                    else get_item_from_path(self, p)
+                    for p, v in self.columns.items()
+                ]
+                data_arrays = [np.resize(d, self.points) for d in data_arrays]
+                format_string = "\t".join([
+                    "%s" if d.dtype.kind in ["S", "U"]
+                    else "%.10e"
+                    for d in data_arrays
+                    ]) + "\n"
+                for i in range(self.points):
+                    datarow = format_string % tuple([d[i] for d in data_arrays])
+                    fid.write(datarow.encode('utf-8'))
+                suffix = ".dat"
+            else:
+                _write_key_value(fid, "columns", [self.xlabel, self.vlabel, "uncertainty", "resolution"])
+                _write_key_value(fid, "units", [self.xunits, self.vunits, self.vunits, self.xunits])
+                data = np.vstack([self.x, self.v, self.dv, self.dx]).T
+                np.savetxt(fid, data, fmt="%.10e")
+                suffix = ".refl"
+            value = fid.getvalue()
+
+        return {
+            "name": self.name,
+            "entry": self.entry,
+            "file_suffix": suffix,
+            "value": value.decode('utf-8'),
+        }
 
     def get_plottable(self):
         columns = self.columns
-        data_arrays = [self.scan_value[self.scan_label.index(p)] if v.get('is_scan', False) else get_item(self, p) for p,v in columns.items()]
+        data_arrays = [
+            self.scan_value[self.scan_label.index(p)] if v.get('is_scan', False)
+            else get_item_from_path(self, p)
+            for p, v in columns.items()]
         data_arrays = [np.resize(d, self.points).tolist() for d in data_arrays]
         datas = dict([(c, {"values": d}) for c,d in zip(columns.keys(), data_arrays)])
         # add errorbars:
         for k in columns.keys():
             if 'errorbars' in columns[k]:
                 print('errorbars found for column %s' % (k,))
-                errorbars = get_item(self, columns[k]['errorbars'])
+                errorbars = get_item_from_path(self, columns[k]['errorbars'])
                 datas[k]["errorbars"] = errorbars.tolist()
         name = getattr(self, "name", "default_name")
         entry = getattr(self, "entry", "default_entry")
@@ -1101,7 +1103,8 @@ class ReflData(Group):
     def get_metadata(self):
         return self.todict()
 
-def get_item(obj, path):
+
+def get_item_from_path(obj, path):
     result = obj
     keylist = path.split("/")
     while len(keylist) > 0:

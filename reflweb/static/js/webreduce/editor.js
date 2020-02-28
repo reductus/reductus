@@ -1329,7 +1329,9 @@ webreduce.editor = webreduce.editor || {};
         config = params.config || {},
         node = params.node,
         terminal = params.terminal,
-        return_type = params.return_type || 'metadata';
+        return_type = params.return_type || 'metadata',
+        export_type = params.export_type || 'column',
+        concatenate = params.concatenate || false;
     
     var versioned = webreduce.editor.get_versioned_template(template), 
         sig = Sha1.hash(JSON.stringify({
@@ -1338,7 +1340,9 @@ webreduce.editor = webreduce.editor || {};
           config: config,
           node: node,
           terminal: terminal,
-          return_type: return_type }));
+          return_type: return_type, 
+          export_type: export_type,
+          concatenate: concatenate}));
           
     return sig
   }
@@ -1350,7 +1354,9 @@ webreduce.editor = webreduce.editor || {};
         config = params.config || {},
         node = params.node,
         terminal = params.terminal,
-        return_type = params.return_type || 'metadata';
+        return_type = params.return_type || 'metadata',
+        export_type = params.export_type || 'column',
+        concatenate = params.concatenate || false;
         
     if (caching) {
       var sig = webreduce.editor.get_signature(params);
@@ -1363,7 +1369,10 @@ webreduce.editor = webreduce.editor || {};
               config: config,
               nodenum: node,
               terminal_id: terminal,
-              return_type: return_type})
+              return_type: return_type,
+              export_type: export_type,
+              concatenate: concatenate
+            })
             .then(function(result) {
               var doc = {
                 _id: sig, 
@@ -1384,7 +1393,9 @@ webreduce.editor = webreduce.editor || {};
         config: config,
         nodenum: node,
         terminal_id: terminal,
-        return_type: return_type});
+        return_type: return_type,
+        export_type: export_type,
+        concatenate: concatenate});
       })
       .catch(function(e) {
         console.log("error", e)
@@ -1459,33 +1470,29 @@ webreduce.editor = webreduce.editor || {};
   
   var export_handlers = {
     
-    singlefile: function(result, header, filename) {
-        var export_strings = result.values.map(function(v) { return v.export_string });
-        var header_string = '# ' + JSON.stringify(header).slice(1,-1) + '\n';
-        var file_suffix = (result.values[0] || {}).file_suffix || ".refl";
-        if (!(/\./.test(filename))) {
-          filename += file_suffix; // replace with instrument-specific ending?
-        }
-        webreduce.download(header_string + export_strings.join('\n\n'), filename);
-      },
-      
-    zipfile: function(result, header, filename) {
-        var multiple_entries = flag_multiple_entry(result.values);
-        var header_string = '# ' + JSON.stringify(header).slice(1,-1) + '\n';
-        var file_suffix = (result.values[0] || {}).file_suffix || ".refl";    
+    download: function(result, filename) {
+      if (result.values.length == 1) {
+        webreduce.download(result.values[0].value, filename);
+      }
+      else {
         var filect = 0;
+        let subnames = new Set();
+        let subcounter = 0;
         var write_next = function(writer, exports) {
           if (filect < exports.length) {
-            var v = exports[filect++];
-            var to_export = header_string + v.export_string;
-            var subname = (v.name in multiple_entries) ? v.name + "_" + v.entry : v.name;
-            subname += file_suffix;
-            var reader = new zip.TextReader(to_export);
+            var to_export = exports[filect++];
+            let test_subname = to_export.filename || "default_filename";
+            var subname = test_subname;
+            while (subnames.has(subname)) {
+              subname = test_subname + "_" + (subcounter++).toFixed();
+            }
+            subnames.add(subname);
+            var reader = new zip.TextReader(to_export.value);
             writer.add(subname, reader, function() { write_next(writer, exports); });
           }
           else { 
             writer.close(function(blob) {
-              webreduce.download(blob, filename);
+              webreduce.download(blob, filename + ".zip");
             });
           }
         }
@@ -1494,19 +1501,14 @@ webreduce.editor = webreduce.editor || {};
           }, function(error) {
             console.log(error);
           });
-      },
+      }
+    },
       
-    webapi: function(result, header, filename, data) {
+    webapi: function(result, filename, data) {
         window.addEventListener("message", connection_callback, false);
         var connection_id = Math.random().toString(36).replace(/[^a-z]+/g, '').substr(0, 5);
         var webapp = window.open(data.url + "?connection_id=" + connection_id, "_blank");
-        var export_strings = result.values.map(function(v) { return v.export_string });
-        var header_string = '# ' + JSON.stringify(header).slice(1,-1) + '\n';
-        var file_suffix = (result.values[0] || {}).file_suffix || ".refl";
-        if (!(/\./.test(filename))) {
-          filename += file_suffix; // replace with instrument-specific ending?
-        }
-        var exported = header_string + export_strings.join('\n\n');
+        var exported = result.values.map(function(v) { return v.value }).join("\n\n");
         function connection_callback(event) {
           // hoisting is required... 
           var message = event.data;
@@ -1666,50 +1668,100 @@ webreduce.editor = webreduce.editor || {};
     });
   }
   
+  webreduce.editor.export_targets = [
+    { 
+      "id": "download",
+      "label": "download",
+      "type": "download"
+    }
+  ];
+
   webreduce.editor.export_data = function() {
     var w = webreduce.editor;
     if (w._active_terminal == null) { alert("no input or output selected to export"); }
+    let active_modulename = w._active_template.modules[w._active_node].module;
+    let active_module_def = webreduce.editor._instrument_def.modules.find(function(m) { return m.id == active_modulename })
+    let active_input_output = active_module_def.inputs
+      .concat(active_module_def.outputs)
+      .find(function(o) { return o.id == w._active_terminal});
+    let export_datatype = active_input_output.datatype;
+
+    var export_types = webreduce.editor._instrument_def.datatypes.find(function(d) { return d.id == export_datatype}).export_types;
     var params = {
-        template: w._active_template,
-        config: {},
-        node: w._active_node,
-        terminal: w._active_terminal,
-        return_type: "export",
-      },
-      recalc_mtimes = $("#auto_reload_mtimes").prop("checked");
+      template: w._active_template,
+      config: {},
+      node: w._active_node,
+      terminal: w._active_terminal,
+      return_type: "export",
+      //export_type: export_type,
+      concatenate: true
+    }
+    if (export_types.length == 0) {
+      alert('no exports defined for this datatype: ' + export_datatype);
+      return
+    }
+    /*
+    else if (export_types.length == 1) {
+      // if there's only one, no need to ask...
+      params.export_type = export_types[0];
+      initiate_export(params);
+    }
+    */
+    else {
+      // when there are more than one export types defined, ask which one to use:
+      var export_dialog = $("div#initiate_export").dialog("open");
+      var d3_handle = d3.select(export_dialog[0]);
+      var export_type_choices = d3_handle.select("span#export_types").selectAll("label")
+        .data(export_types, function(d) {return d})
+      export_type_choices
+        .enter().append("label")
+          .text(function(d) { return d })
+          .append("input")
+            .attr("type", "radio")
+            .property("checked", function(d,i) { return i==0 })
+            .attr("name", "export_type_switcher")
+            .attr("class", "custom-export")
+            .attr("id", function(d) { return d })
+      export_type_choices.exit().remove();
+
+      d3_handle.select("button#export_cancel").on("click", function() { export_dialog.dialog("close"); });
+      d3_handle.select("button#export_confirm").on("click", function() {
+        export_dialog.dialog("close");
+        var selected_export_type = d3_handle.select('input[name="export_type_switcher"]:checked');
+        let export_type = selected_export_type.attr("id");
+        let concatenate = d3_handle.select('input#concatenate_exports').property("checked");
+        params.export_type = export_type;
+        params.concatenate = concatenate;
+        initiate_export(params);
+      });
+    }
+
+  }
+
+  function initiate_export(params) {
+    var w = webreduce.editor;
+    var recalc_mtimes = $("#auto_reload_mtimes").prop("checked");
     webreduce.editor.calculate(params, recalc_mtimes).then(function(result) {
       // add the template and target node, terminal to the header of the file:
-      var header = {
-        template_data: {
-          template: params.template,
-          node: params.node,
-          terminal: params.terminal,
-          datasources: webreduce._datasources,
-          server_git_hash: result.server_git_hash,
-          server_mtime: new Date((result.server_mtime || 0.0) * 1000).toISOString(),
-          instrument_id: w._instrument_id
-        }
-      };
-      var suggested_name = (result.values[0] || {}).name || "myfile.refl";
-      
-      
-      
-      var dialog = $("div#export_data").dialog("open");
+      var suggested_name = (result.values[0] || {}).filename || "myfile.refl";
+      var additional_export_targets = webreduce.instruments[w._instrument_id].export_targets || [];
+      var dialog = $("div#route_export_data").dialog("open");
       var d3_handle = d3.select(dialog[0]);
-      var export_targets = webreduce.instruments[w._instrument_id].export_targets || [];
       //d3_handle.selectAll("span#export_targets label").remove();
-      var extra_choices = d3_handle.select("span#export_targets").selectAll("label")
+      var export_targets = webreduce.editor.export_targets.concat(additional_export_targets);
+      var route_choices = d3_handle.select("span#export_targets").selectAll("label")
         .data(export_targets, function(d,i) { return w._instrument_id + d.id; })
-      extra_choices
+      route_choices
         .enter().append("label")
           .text(function(d) { return d.label })
           .append("input")
             .attr("type", "radio")
+            .property("checked", function(d,i) { return i==0 })
             .attr("data-handler", function(d) { return d.type })
             .attr("name", "export_switcher")
             .attr("class", "custom-export")
             .attr("id", function(d) { return d.id })
-      extra_choices.exit().remove();
+      route_choices.exit().remove();
         
       d3_handle.select("input#export_filename").property("value", suggested_name);
       d3_handle.select("button#export_cancel").on("click", function() { dialog.dialog("close"); });
@@ -1719,25 +1771,9 @@ webreduce.editor = webreduce.editor || {};
         var selected_exporter = d3_handle.select('input[name="export_switcher"]:checked')
         var handler = selected_exporter.attr("data-handler");
         var data = (selected_exporter.datum) ? selected_exporter.datum() : {};
-        export_handlers[handler](result, header, filename, data);
-        console.log("export handler:", handler);
+        export_handlers[handler](result, filename, data);
       });
-    });      
-  }
-  
-  function flag_multiple_entry(exports) {
-    // the list of exports will each have a name and entry value;
-    // if there is more than one entry item per name, mark it as a multiple
-    var existing_names = {};
-    var multiple_entries = {};
-    exports.forEach(function(v) {
-      if (existing_names.hasOwnProperty(v.name)) {
-        multiple_entries[v.name] = true;
-      } else {
-        existing_names[v.name] = true;
-      }
     });
-    return multiple_entries;
   }
   
   webreduce.editor.accept_parameters = function(target, active_module) {
