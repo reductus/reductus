@@ -1,7 +1,8 @@
 #!/usr/bin/env python
-import sys, os
-from os.path import join as joinpath, dirname
-import re
+import sys
+import os
+
+from setuptools import setup, find_packages
 
 if len(sys.argv) == 1:
     sys.argv.append('install')
@@ -9,17 +10,9 @@ if len(sys.argv) == 1:
 if sys.argv[1] == 'test':
     from subprocess import call
     sys.exit(call([sys.executable, '-m', 'pytest'] + sys.argv[2:]))
-#    #sys.exit(call(['test.sh'] + sys.argv[2:]))
 
-#sys.dont_write_bytecode = True
-
-from setuptools import setup, find_packages
-
-import subprocess
-git_version_hash = subprocess.Popen(["git", "rev-parse", "HEAD"], stdout=subprocess.PIPE).stdout.read()
-open("reflweb/git_version_hash", "wb").write(git_version_hash)
-server_mtime = subprocess.Popen(["git", "log", "-1", "--pretty=format:%ct"], stdout=subprocess.PIPE).stdout.read()
-open("reflweb/git_version_mtime", "wb").write(server_mtime)
+# Create the resource file dataflow/git_revision
+os.system(f'"{sys.executable}" dataflow/rev.py')
 
 packages = find_packages(exclude=['reflbin'])
 
@@ -51,11 +44,13 @@ dist = setup(
         'console_scripts': ['reductus=reflweb.run:main'],
     },
     install_requires=[
-        'scipy', 'numpy', 'h5py', 'uncertainties', 'docutils', 'wheel', 'pytz', 'msgpack-python', 'flask'],
+        'scipy', 'numpy', 'h5py', 'uncertainties', 'docutils',
+        'wheel', 'pytz', 'msgpack-python', 'flask',
+        ],
     extras_require={
         'masked_curve_fit': ['numdifftools'],
         },
-    tests_require = ['pytest'],
+    tests_require=['pytest'],
     )
 
 # End of file

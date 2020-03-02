@@ -66,6 +66,9 @@ for method in api.api_methods:
     app.add_url_rule(path, path, wrapped, methods=["POST"])
     app.add_url_rule(shortpath, shortpath, wrapped, methods=["POST"])
 
+from dataflow.rev import print_revision
+print_revision()
+
 if __name__ == '__main__':
     logging.basicConfig(level=logging.WARNING)
     port = 8002

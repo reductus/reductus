@@ -4,9 +4,6 @@ from os import listdir
 from os.path import isfile, join as joinpath, dirname, abspath, exists
 
 import regression
-from reflweb import default_config as config
-from dataflow.cache import set_test_cache
-from dataflow import fetch
 
 try:
     import pytest
@@ -24,24 +21,21 @@ except ImportError:
 
 # Prefer not to scan regression directory on module load, but pytest doesn't
 # seem to have an interface for building tests on demand.
-REGRESSION_PATH = abspath(joinpath(dirname(__file__), 'regression_files'))
-
 def get_regression_files():
+    REGRESSION_PATH = abspath(joinpath(dirname(__file__), 'regression_files'))
     if exists(REGRESSION_PATH):
-        data_files = (f for f in listdir(REGRESSION_PATH)
-                      if isfile(joinpath(REGRESSION_PATH, f)))
+        data_files = (
+            path
+            for f in listdir(REGRESSION_PATH)
+            # CRUFT: assignment expressions require python 3.8
+            #if isfile(path := joinpath(REGRESSION_PATH, f))
+            for path in [joinpath(REGRESSION_PATH, f)]
+            if isfile(path))
     else:
         data_files = ()
     return data_files
 
-@parametrize("filename", get_regression_files())
-def test_regression(filename):
-    set_test_cache()
-    fetch.DATA_SOURCES = config.data_sources
+@parametrize("path", get_regression_files())
+def test_regression(path):
     #description = "Regression test on %s"%path
-    path = joinpath(REGRESSION_PATH, filename)
     regression.replay_file(path)
-
-if __name__ == "__main__":
-    import sys
-    test_regression(sys.argv[1])
