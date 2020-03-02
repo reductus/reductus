@@ -2,6 +2,7 @@ from io import BytesIO
 #from cStringIO import StringIO as BytesIO
 
 from numpy import ndarray, array, fromstring, float, float32, ones, empty, newaxis, savetxt, sqrt, mod, isnan, ma, hstack, log10
+from dataflow.lib.exporters import exports_HDF5, exports_text
 
 from .MetaArray import MetaArray
 
@@ -76,8 +77,13 @@ class FilterableMetaArray(MetaArray):
         metadata.update(self.extrainfo)
         return metadata
 
-    def export(self):
-        return_value = {"name": self.extrainfo["friendly_name"], "entry": self.extrainfo["entry"]}
+    @exports_text(name="column")
+    def to_column_text(self):
+        name = self.extrainfo["friendly_name"]
+        entry = self.extrainfo["entry"]
+        suffix = ".ospec.dat"
+        filename = "%s_%s%s" % (name, entry, suffix)
+        return_value = {"name": name, "entry": entry, "file_suffix": suffix}
         if len(self.shape) == 3:
             # return gnuplottable format:
             """ export 2d data to gnuplot format """
@@ -99,7 +105,7 @@ class FilterableMetaArray(MetaArray):
                         dump += "%g\t%g\t%g\n" % (x, y, array_out[ix, iy])
                 result.append(dump)
 
-            return_value["export_string"] =  result[0]
+            return_value["value"] =  result[0]
 
         elif len(self.shape) == 2:
             fid = BytesIO()
@@ -110,11 +116,11 @@ class FilterableMetaArray(MetaArray):
             output_data = hstack((self._info[0]['values'][:,None], self))
             savetxt(fid, output_data, header="\t".join(data_cols))
             fid.seek(0)
-            return_value["export_string"] = fid.read()
+            return_value["value"] = fid.read().decode()
 
         else:
             print("can only handle 1d or 2d data")
-            return_value["export_string"] = ""
+            return_value["value"] = ""
 
         return return_value
 
