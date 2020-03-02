@@ -12,4 +12,5 @@ __pycache__
 /reflred/src/_rebin.cc
 /reflred.egg-info/
 /reflweb/config.py
-/reflweb/git_version_*
+/reflweb/git_version*
+/dataflow/git_version*

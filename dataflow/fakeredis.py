@@ -138,6 +138,9 @@ class FileBasedCache(object):
             lookups = filenums[low:(high+1 if high != -1 else None)]
             return [open(os.path.join(keydir, str(n)), "rb").read() for n in lookups]
 
+    def __repr__(self):
+        return "<%s.%s %s>" % (
+            self.__class__.__module__, self.__class__.__name__, self.cachedir)
 
 
 def demo():
