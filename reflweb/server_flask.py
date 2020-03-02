@@ -45,13 +45,13 @@ def handle_error(e):
         code = e.code
     content = {'exception': repr(e), 'traceback': traceback.format_exc()}
     logging.info(content['traceback'])
-    return make_response(msgpack_converter.dumps(content), code)
+    return make_response(msgpack_converter.packb(content, use_bin_type=True), code)
 
 def wrap_method(mfunc):
     def wrapper(*args, **kwargs):
         real_kwargs = request.get_json() if request.get_data() else {}
         content = mfunc(*args, **real_kwargs)
-        response = make_response(msgpack_converter.dumps(content))
+        response = make_response(msgpack_converter.packb(content, use_bin_type=True))
         response.headers['Content-Type'] = 'application/msgpack'
         return response
     return wrapper
@@ -65,6 +65,9 @@ for method in api.api_methods:
     shortpath = posixpath.join("/", method)
     app.add_url_rule(path, path, wrapped, methods=["POST"])
     app.add_url_rule(shortpath, shortpath, wrapped, methods=["POST"])
+
+from dataflow.rev import print_revision
+print_revision()
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.WARNING)

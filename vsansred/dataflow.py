@@ -1,9 +1,9 @@
 from dataflow import core as df
 from dataflow.automod import make_modules
-from dataflow import templates
 
-from vsansred import steps
-from vsansred.vsansdata import RawVSANSData, VSansDataRealSpace, VSansDataQSpace, Parameters, VSans1dData #, Metadata
+from . import steps
+from . import templates
+from .vsansdata import RawVSANSData, VSansDataRealSpace, VSansDataQSpace, Parameters, VSans1dData #, Metadata
 
 INSTRUMENT = "ncnr.vsans"
 
@@ -25,7 +25,7 @@ def define_instrument():
         name='NCNR Very Small Angle Neutron Scattering (VSANS) instrument',
         menu=[('steps', modules)],
         datatypes=[vsans_raw, vsans_realspace, vsans_qspace, params, vsans_1d],
-        template_defs=templates.get_templates(INSTRUMENT),
+        template_defs=df.load_templates(templates),
         )
 
     # Register instrument
