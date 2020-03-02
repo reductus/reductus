@@ -25,7 +25,6 @@ import json
 import re
 import importlib
 import difflib
-import traceback
 
 from dataflow import fetch
 from dataflow.cache import set_test_cache
@@ -138,7 +137,7 @@ def run_template(template_data, concatenate=True):
     retval = process_template(template, template_config, target=target)
 
     export = retval.get_export(
-        headers=template_data,
+        template_data=template_data,
         concatenate=concatenate,
         export_type=export_type)
     return export
