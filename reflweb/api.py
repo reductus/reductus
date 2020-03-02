@@ -1,10 +1,7 @@
 from __future__ import print_function
 
-import sys
 import os
-import importlib
 from pprint import pprint
-import traceback
 import json
 try:
     from urllib.parse import urlencode
@@ -14,7 +11,8 @@ except ImportError:
     import urllib2
 
 import dataflow
-from dataflow.core import Template, lookup_instrument, _instrument_registry
+from dataflow.core import Template, load_instrument, lookup_instrument
+from dataflow.core import list_instruments as _list_instruments
 from dataflow.cache import use_redis, use_diskcache, get_cache
 from dataflow.calc import process_template
 from dataflow.rev import revision_info
@@ -213,7 +211,7 @@ def list_datasources():
 
 @expose
 def list_instruments():
-    return list(_instrument_registry.keys())
+    return _list_instruments()
 
 def create_instruments():
     fetch.DATA_SOURCES = config.data_sources
@@ -229,11 +227,11 @@ def create_instruments():
         cache = get_cache()
         cache._use_compression = True
 
-    # load refl instrument if nothing specified in config
-    instruments = getattr(config, 'instruments', ['reflred'])
-    for package_name in instruments:
-        instrument_module = importlib.import_module(f'{package_name}.dataflow')
-        instrument_module.define_instrument()
+    # Load refl instrument if nothing specified in config.
+    # Note: instrument names do not match instrument ids.
+    instruments = getattr(config, 'instruments', ['refl'])
+    for name in instruments:
+        load_instrument(name)
 
 if __name__ == '__main__':
     create_instruments()

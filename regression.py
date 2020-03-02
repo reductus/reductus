@@ -28,7 +28,7 @@ import difflib
 
 from dataflow import fetch
 from dataflow.cache import set_test_cache
-from dataflow.core import Template, lookup_instrument, lookup_module
+from dataflow.core import Template, load_instrument, lookup_module
 from dataflow.calc import process_template
 from dataflow.rev import revision_info
 
@@ -61,19 +61,6 @@ def prepare_dataflow(template_def):
     first_module = template_def['modules'][0]['module']
     instrument_id = first_module.split('.')[1]
     load_instrument(instrument_id)
-
-def load_instrument(instrument_id):
-    # type: (str) -> None
-    """
-    Load the dataflow instrument definition given the instrument name.
-    """
-    instrument_module_name = instrument_id+'red.dataflow'
-    instrument_module = importlib.import_module(instrument_module_name)
-    try:
-        return lookup_instrument(instrument_module.INSTRUMENT)
-    except KeyError:
-        instrument_module.define_instrument()
-    return lookup_instrument(instrument_module.INSTRUMENT)
 
 def run_template(template_data, concatenate=True):
     """
