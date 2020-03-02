@@ -23,14 +23,13 @@ import sys
 import os
 import json
 import re
-import importlib
 import difflib
-import traceback
 
-from dataflow.cache import set_test_cache
-from dataflow.core import Template, lookup_module
-from dataflow.calc import process_template
 from dataflow import fetch
+from dataflow.cache import set_test_cache
+from dataflow.core import Template, load_instrument, lookup_module
+from dataflow.calc import process_template
+from dataflow.rev import revision_info
 
 try:
     from reflweb import config
@@ -52,32 +51,97 @@ else:
 # - open brace of template
 TEMPLATE = re.compile(r"^(#|//) *([\"']?template(_data)?[\"']?)? *[:=]? *\{")
 
+def prepare_dataflow(template_def):
+    # Set up caching if not already done.
+    fetch.DATA_SOURCES = config.data_sources
+    set_test_cache()
 
-LOADED_INSTRUMENTS = set()
-def load_instrument(instrument_id):
-    # type: (str) -> None
+    # Find the instrument name from the first module and register it.
+    first_module = template_def['modules'][0]['module']
+    instrument_id = first_module.split('.')[1]
+    load_instrument(instrument_id)
+
+def run_template(template_data, concatenate=True):
     """
-    Load the dataflow instrument definition given the instrument name.
+    Run a template defined by *template_data*.
+
+    Returns *export* = {'datatype': str, 'values': [content, ...]}.
+
+    Each *content* block is {'filename': str, 'value': *value*}, where
+    value depends on the export type requested in *template_data*.
+
+    Output from "column" export will contain a string with the file content,
+    with the first line containing the template data structure.
+
+    Output from "hdf" export will contain a sequence of bytes defining the
+    HDF file, with template data stored in the attribute NXroot@template_def.
+
+    If *concatenate* then all datasets will be combined into a single value.
+
+    Example::
+
+        from dataflow.rev import revision_info
+        revision, timestamp = revision_info()
+        template_data = {
+            "template": json.loads(template_str),
+            "config": {}, # optional?
+            "node": node_id,
+            "terminal": terminal_id,
+            "export_type": "column",
+            "server_git_hash": revision,
+            "server_mtime": timestamp,
+            "datasources": [
+                # ignored...
+                {'url': '...', 'start_path': '...', 'name': '...'},
+                ],
+        }
+        export = run_template(template_data, concatenate=False)
+        for entry in export['values']:
+            with open(entry['filename'], 'w') as fd:
+                fd.write(entry['value'])
     """
-    if instrument_id not in LOADED_INSTRUMENTS:
-        instrument_module_name = 'dataflow.modules.'+instrument_id
-        instrument_module = importlib.import_module(instrument_module_name)
-        instrument_module.define_instrument()
-        LOADED_INSTRUMENTS.add(instrument_id)
+    #print("template_data", template_data['datasources'])
+    template_def = template_data['template']
+    template_config = template_data.get('config', {})
+    target = template_data['node'], template_data['terminal']
+    # CRUFT: use template_data["export_type"] when regression files are updated
+    export_type = template_data.get('export_type', 'column')
+    template = Template(**template_def)
+    #template.show()  # for debugging, show the template structure
 
+    # run the template
+    # TODO: use datasources given in template? It may be a security risk...
+    #datasources = template_data.get('datasources', [])
+    #if datasources:
+    #    original = fetch.DATA_SOURCES
+    #    fetch.DATA_SOURCES = datasources
+    #    try:
+    #        retval = process_template(template, template_config, target=target)
+    #    finally:
+    #        fetch.DATA_SOURCES = original
+    #else:
+    retval = process_template(template, template_config, target=target)
 
-def show_diff(old, new, show_diff=True):
+    export = retval.get_export(
+        template_data=template_data,
+        concatenate=concatenate,
+        export_type=export_type)
+    return export
+
+def compare(old, new, show_diff=True, skip=0):
     # type: (str, str) -> bool
     """
     Compare *old* and *new* text, returning True if they differ.
 
+    *old* and *new* are multi-line strings.
+
     *show_diff* is True if the differences should be printed to stdout.
 
-    The text should be a multi-line string.
+    *skip* is the number of lines to skip before starting the comparison.
     """
     has_diff = False
-    delta = difflib.unified_diff(old.splitlines(True),
-                                 new.splitlines(True),
+    delta = difflib.unified_diff(old.splitlines(True)[skip:],
+                                 new.splitlines(True)[skip:],
                                  fromfile="old", tofile="new")
     for line in delta:
         if show_diff:
@@ -85,7 +149,6 @@ def show_diff(old, new, show_diff=True):
         has_diff = True
 
     return has_diff
-
 
 def replay_file(filename):
     # type: (str) -> None
@@ -98,54 +161,32 @@ def replay_file(filename):
     Raises *RuntimeError* if the files differ.
     """
 
-    # Here's how the export file is constructed by the reductus client.
-    # This snippet is from reflweb/static/editor.js in the function
-    # webreduce.editor.export_data
-    """
-    var header = {
-        template_data: {
-            template: params.template,
-            node: params.node,
-            terminal: params.terminal,
-            server_git_hash: result.server_git_hash,
-            server_mtime: new Date((result.server_mtime || 0.0) * 1000).toISOString()
-        }
-    };
-    webreduce.download('# ' + JSON.stringify(header).slice(1,-1) + '\n' + result.values.join('\n\n'), filename);
-    """
-
     # Load the template and the target output
+    # note that this only works for text-based exports: others will be implemented later
     with open(filename, 'r') as fid:
-        first_line = fid.readline()
-        template_data = json.loads(TEMPLATE.sub('{', first_line))
         old_content = fid.read()
 
-    # Show the template
-    #print(json.dumps(template_data['template'], indent=2))
+    # Grab the template data from the first line
+    first_line, _ = old_content.split('\n', maxsplit=1)
+    template_data = json.loads(TEMPLATE.sub('{', first_line))
+    #import pprint; pprint.pprint(template_data)
 
-    # Make sure instrument is available
-    template_module = template_data['template']['modules'][0]['module']
-    instrument_id = template_module.split('.')[1]
-    load_instrument(instrument_id)
+    # Run the template and return the desired content.
+    prepare_dataflow(template_data['template'])
+    export = run_template(template_data, concatenate=True)
+    new_content = export['values'][0]['value']
 
-    # run the template
-    template = Template(**template_data['template'])
-    # extract module 'refl' from ncnr.refl.module into module id
-    target = template_data['node'], template_data['terminal']
-    template_config = {}
-    retval = process_template(template, template_config, target=target)
-    export = retval.get_export()
-    new_content = '\n\n'.join(v['export_string'] for v in export['values'])
-    has_diff = show_diff(old_content, new_content)
+    # Compare old to new, ignoring the first line.
+    has_diff = compare(old_content, new_content, skip=1)
+
+    # Save the new output into the temp directory if different
+    if has_diff:  # use True to always save
+        path = os.path.join('/tmp', os.path.basename(filename))
+        save_content([{'filename': path, 'value': new_content}])
+
+    # Raise an error if different.
     if has_diff:
-        # Save the new output into athe temp directory so we can easily update
-        # the regression tests
-        new_path = os.path.join('/tmp', os.path.basename(filename))
-        with open(new_path, 'wb') as fid:
-            fid.write(encode(first_line))
-            fid.write(encode(new_content))
-        raise RuntimeError("File replay for %r differs; new file stored in %r"
-                           % (filename, new_path))
+        raise RuntimeError("File replay for %r differs" % filename)
 
 
 def find_leaves(template):
@@ -154,74 +195,51 @@ def find_leaves(template):
     return ids - sources
 
 def play_file(filename):
+    export_type = 'column'
+    concatenate = True
+
     with open(filename) as fid:
-        template_json = json.loads(fid.read())
+        template_def = json.loads(fid.read())
 
-    # Make sure instrument is available
-    template_module = template_json['modules'][0]['module']
-    instrument_id = template_module.split('.')[1]
-    load_instrument(instrument_id)
-
-    node = max(find_leaves(template_json))
-    node_module = lookup_module(template_json['modules'][node]['module'])
+    prepare_dataflow(template_def)
+    node = max(find_leaves(template_def))
+    node_module = lookup_module(template_def['modules'][node]['module'])
     terminal = node_module.outputs[0]['id']
 
-    #print(json.dumps(template_json, indent=2))
-
-    template = Template(**template_json)
-    template_config = {}
-    target = node, terminal
-    retval = process_template(template, template_config, target=target)
-    export = retval.get_export()
-    # Uncomment to show the resulting plottable object.
-    #print(retval.get_plottable())
-
-    if export['values']:
-        basename = export['values'][0].get('name', 'replay')
-        ext = export['values'][0].get('file_suffix', '.refl')
-        filename = basename + ext
-    else:
-        filename = 'replay.dat'
-
+    revision, timestamp = revision_info()
     template_data = {
-        'template': template_json,
+        'template': template_def,
+        'config': {},
         'node': node,
         'terminal': terminal,
-        'server_git_hash': None,
-        'server_mtime': None,
-        #server_git_hash: result.server_git_hash,
-        #server_mtime: new Date((result.server_mtime || 0.0) * 1000).toISOString()
+        'server_git_hash': revision,
+        'server_mtime': timestamp,
+        'export_type': export_type,
     }
-    first_line = '# ' + json.dumps({'template_data': template_data})[1:-1]
-    new_content = '\n\n'.join(v['export_string'] for v in export['values'])
-    with open(filename, 'wb') as file:
-        print("writing", filename)
-        file.write(encode(first_line))
-        file.write(b'\n')
-        file.write(encode(new_content))
+    export = run_template(template_data, concatenate=concatenate)
 
+    save_content(export['values'])
+
+def save_content(entries):
+    for entry in entries:
+        filename = entry['filename']
+        print("writing", filename)
+        with open(filename, 'w') as fd:
+            fd.write(entry['value'])
 
 def main():
     # type: (str) -> None
     """
     Run a regression test using the first command line as the target file.
     """
-    set_test_cache()
-    fetch.DATA_SOURCES = config.data_sources
-
     if len(sys.argv) < 2:
-        print("usage: python regression.py datafile")
+        print("usage: python regression.py (datafile|template.json)")
         sys.exit()
-    try:
-        if sys.argv[1].endswith('.json'):
-            play_file(sys.argv[1])
-        else:
-            replay_file(sys.argv[1])
+    if sys.argv[1].endswith('.json'):
+        play_file(sys.argv[1])
+    else:
+        replay_file(sys.argv[1])
         sys.exit(0)
-    except Exception:
-        traceback.print_exc()
-        sys.exit(1)
-
 
 if __name__ == "__main__":
     main()

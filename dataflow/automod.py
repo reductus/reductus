@@ -306,11 +306,11 @@ def auto_module(action):
 timestamp = re.compile(r"^([|] )?(?P<date>[0-9]{4}-[0-9]{2}-[0-9]{2})\s+(?P<author>.*?)\s*(:\s*(?P<change>.*?)\s*)?$")
 def _parse_function(action):
     # grab arguments and defaults from the function definition
-    argspec = inspect.getargspec(action)
+    argspec = inspect.getfullargspec(action)
     args = argspec.args if not inspect.ismethod(action) else argspec.args[1:]
     defaults = (dict(zip(args[-len(argspec.defaults):], argspec.defaults))
                 if argspec.defaults else {})
-    if argspec.varargs is not None or argspec.keywords is not None:
+    if argspec.varargs is not None or argspec.varkw is not None:
         raise ValueError("function contains *args or **kwargs")
 
     # Grab the docstring from the function

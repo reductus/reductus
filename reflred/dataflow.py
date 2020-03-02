@@ -1,39 +1,17 @@
 from dataflow import core as df
-from dataflow import templates
 from dataflow.automod import make_modules, make_template, auto_module
 from dataflow.calc import process_template
 from dataflow.data import Plottable
 
-from reflred import steps
-from reflred.refldata import ReflData, PSDData
-from reflred.polarization import PolarizationData
-from reflred.deadtime import DeadTimeData
-from reflred.footprint import FootprintData
-from reflred.backgroundfield import BackgroundFieldData
+from . import steps
+from . import templates
+from .refldata import ReflData, PSDData
+from .polarization import PolarizationData
+from .deadtime import DeadTimeData
+from .footprint import FootprintData
+from .backgroundfield import BackgroundFieldData
 
 INSTRUMENT = "ncnr.refl"
-
-class DataflowReflData(ReflData):
-    """
-    This doesn't work because on first load, the class is still ReflData from nexusref
-    (only becomes DataFlowReflData on cache/reload)
-    """
-    def get_plottable_JSON(self):
-        plottable = {
-            'axes': {
-                'xaxis': {'label': self.xlabel + ' (' + self.xunits + ')'},
-                'yaxis': {'label': self.vlabel + ' (' + self.vunits + ')'}
-            },
-            'data': [[x, y, {'yupper': y+dy, 'ylower':y-dy, 'xupper':x, 'xlower':x}]
-                     for x, y, dy in zip(self.x, self.v, self.dv)],
-            'title': self.name + ":" + self.entry
-        }
-        return plottable
-
-    def get_plottable(self):
-        return self.todict()
-    def get_metadata(self):
-        return self.todict()
 
 class FluxData(object):
     def __init__(self, fluxes, total_flux):
@@ -115,7 +93,6 @@ def define_instrument():
     modules = make_modules(steps.ALL_ACTIONS, prefix=INSTRUMENT+'.')
     modules.append(make_cached_subloader_module(steps.super_load, prefix=INSTRUMENT+'.'))
     modules.append(make_cached_subloader_module(steps.ncnr_load, prefix=INSTRUMENT+'.'))
-
     # Define data types
     refldata = df.DataType(INSTRUMENT+".refldata", ReflData)
     poldata = df.DataType(INSTRUMENT+".poldata", PolarizationData)
@@ -141,7 +118,7 @@ def define_instrument():
         name='NCNR reflectometer',
         menu=[('steps', modules)],
         datatypes=[refldata, poldata, psddata, deadtime, footprint, flux, backgroundfield, plottable],
-        template_defs=templates.get_templates(INSTRUMENT),
+        template_defs=df.load_templates(templates),
         )
 
     # Register instrument

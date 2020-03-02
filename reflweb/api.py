@@ -1,10 +1,7 @@
 from __future__ import print_function
 
-import sys
 import os
-import importlib
 from pprint import pprint
-import traceback
 import json
 try:
     from urllib.parse import urlencode
@@ -14,41 +11,18 @@ except ImportError:
     import urllib2
 
 import dataflow
-from dataflow.core import Template, lookup_instrument, _instrument_registry
+from dataflow.core import Template, load_instrument, lookup_instrument
+from dataflow.core import list_instruments as _list_instruments
 from dataflow.cache import use_redis, use_diskcache, get_cache
 from dataflow.calc import process_template
-import dataflow.core as df
-
-import dataflow.modules
+from dataflow.rev import revision_info
 
 from dataflow import fetch
-
 try:
     from reflweb import config
 except ImportError:
     from reflweb import default_config as config
 
-IS_PY3 = sys.version_info[0] >= 3
-
-# for local and development installs of the server, the .git folder
-# will exist in parent (reduction) folder...
-if os.path.exists(os.path.join(os.path.dirname(__file__), "..", ".git")):
-    import subprocess
-    cwd = os.path.dirname(__file__)
-    server_git_hash = subprocess.Popen(["git", "rev-parse", "HEAD"], cwd=cwd, stdout=subprocess.PIPE).stdout.read().strip()
-    if IS_PY3: server_git_hash = server_git_hash.decode('ascii')
-    server_mtime = int(subprocess.Popen(["git", "log", "-1", "--pretty=format:%ct"], cwd=cwd, stdout=subprocess.PIPE).stdout.read().strip())
-    print("running git rev-parse HEAD", server_git_hash, server_mtime)
-else:
-    # otherwise for prebuilt systems use the packaged file that was created in setup.py
-    import pkg_resources
-    if pkg_resources.resource_exists("reflweb", "git_version_hash"):
-        server_git_hash = pkg_resources.resource_string("reflweb", "git_version_hash").strip()
-        if IS_PY3: server_git_hash = server_git_hash.decode('ascii')
-        server_mtime = int(pkg_resources.resource_string("reflweb", "git_version_mtime").strip())
-    else:
-        server_git_hash = "unknown"
-        server_mtime = 0
 
 api_methods = []
 
@@ -141,7 +115,7 @@ def find_calculated(template_def, config):
     return retval
 
 @expose
-def calc_terminal(template_def, config, nodenum, terminal_id, return_type='full'):
+def calc_terminal(template_def, config, nodenum, terminal_id, return_type='full', export_type="column", concatenate=True):
     """ json-rpc wrapper for calc_single
     template_def =
     {"name": "template_name",
@@ -190,9 +164,23 @@ def calc_terminal(template_def, config, nodenum, terminal_id, return_type='full'
         return retval.get_metadata()
     elif return_type == 'export':
         # inject git version hash into export data:
-        to_export = retval.get_export()
-        to_export["server_git_hash"] = server_git_hash
-        to_export["server_mtime"] = server_mtime
+        rev_id, rev_time = revision_info()
+        template_data = {
+            "template_data": {
+                "template": template_def,
+                "config": config,
+                "node": nodenum,
+                "terminal": terminal_id,
+                "server_git_hash": rev_id,
+                "server_mtime": rev_time,
+                "export_type": export_type,
+                #"datasources": fetch.DATA_SOURCES, # Is this needed?
+            }
+        }
+        to_export = retval.get_export(
+            export_type=export_type, template_data=template_data,
+            concatenate=concatenate)
+
         return to_export
 
     raise KeyError(return_type + " not a valid return_type (should be one of ['full', 'plottable', 'metadata', 'export'])")
@@ -223,10 +211,9 @@ def list_datasources():
 
 @expose
 def list_instruments():
-    return list(_instrument_registry.keys())
+    return _list_instruments()
 
 def create_instruments():
-
     fetch.DATA_SOURCES = config.data_sources
 
     if getattr(config, 'use_redis', False):
@@ -235,16 +222,16 @@ def create_instruments():
     elif getattr(config, 'use_diskcache', False):
         diskcache_params = getattr(config, "diskcache_params", {})
         use_diskcache(**diskcache_params)
-    
+
     if getattr(config, 'use_compression', False):
         cache = get_cache()
         cache._use_compression = True
 
-    # load refl instrument if nothing specified in config
+    # Load refl instrument if nothing specified in config.
+    # Note: instrument names do not match instrument ids.
     instruments = getattr(config, 'instruments', ['refl'])
-    for instrument_id in instruments:
-        instrument_module = importlib.import_module('dataflow.modules.{instr}'.format(instr=instrument_id))
-        instrument_module.define_instrument()
+    for name in instruments:
+        load_instrument(name)
 
 if __name__ == '__main__':
     create_instruments()
