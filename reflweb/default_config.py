@@ -52,4 +52,4 @@ file_helper_url = {
     "ncnr": "https://ncnr.nist.gov/ncnrdata/listftpfiles.php",
     "ncnr_DOI": "https://ncnr.nist.gov/ncnrdata/listncnrdatafiles.php"
 }
-instruments = ["reflred", "ospecred", "sansred"]
+instruments = ["refl", "ospec", "sans"]

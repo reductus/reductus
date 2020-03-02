@@ -3,6 +3,8 @@ Core class definitions
 """
 from __future__ import print_function
 
+import sys
+import importlib
 import inspect
 import json
 from collections import OrderedDict
@@ -21,6 +23,52 @@ TEMPLATE_VERSION = '1.0'
 _instrument_registry = OrderedDict()
 _module_registry = {}
 _datatype_registry = {}
+
+_loaded_instruments = set() # previously loaded instruments
+def load_instrument(name):
+    """
+    Load the dataflow instrument definition given by the instrument *name*.
+
+    This is a convenience function that relies on a standard layout for
+    the instrument definition.  It assumes there is a reduction package
+    called *name+"red"* on the python path which contains the module
+    *dataflow.py*.  The module should contain the symbol *INSTRUMENT*
+    giving the instrument id (for example, "ncnr.refl") and the
+    function *define_instrument()* to register the instrument if *INSTRUMENT*
+    is not already registered.
+
+    The *{name}red.dataflow.define_instrument()* method should define
+    the :class:`Module` reduction steps, the :class:`DataType` items
+    to pass information between them and an :class:`Instrument` object
+    to pull them together.  It should call :func:`register_instrument`
+    on the resulting instrument object.
+
+    Unfortunately, the instrument definition module cannot be directly
+    determined from a stored template. Each step in the template does
+    define *"module": id* where *id* is a dotted name such as
+    *"ncnr.refl.subtract_background"*. By convention the second element
+    corresponds to the input *name* for this function.
+
+    Note: You can call *load_instrument(name)* repeatedly with the same
+    name, but you can't call it if you have called *define_instrument()*
+    directly.  Attempting to do so will raise a ValueError stating that
+    the instrument is already defined.
+
+    TODO: Include instrument definition module name in the saved template.
+    """
+    module_name = name + 'red.dataflow'
+    if module_name not in _loaded_instruments:
+        module = importlib.import_module(module_name)
+        _loaded_instruments.add(module_name)
+        # Note: need to check for INSTRUMENT even though we've already
+        # checked for module_name because the module may have been loaded
+        # the traditional way using something like:
+        #     import myinstred; myinstred.define_instrument()
+        if module.INSTRUMENT not in _instrument_registry:
+            module.define_instrument()
+        else:
+            raise ValueError(f"Instrument {module.INSTRUMENT} already defined.")
+
 def register_instrument(instrument):
     """
     Add a new instrument to the server.
@@ -37,6 +85,13 @@ def lookup_instrument(id):
     Find a predfined instrument given its id.
     """
     return _instrument_registry[id]
+
+
+def list_instruments():
+    """
+    Return a list of available instruments.
+    """
+    return list(_instrument_registry.keys())
 
 
 def register_module(module):
