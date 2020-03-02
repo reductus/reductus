@@ -1,9 +1,9 @@
 from dataflow import core as df
 from dataflow.automod import make_modules
-from dataflow import templates
 
-from dcsred import steps
-from dcsred.dcsdata import RawData, EQData, DCS1dData, EfTwoThetaData, Parameters
+from . import steps
+from . import templates
+from .dcsdata import RawData, EQData, DCS1dData, EfTwoThetaData
 
 INSTRUMENT = "ncnr.dcs"
 
@@ -24,7 +24,7 @@ def define_instrument():
         name='NCNR Disk Chopper Spectrometer',
         menu=[('steps', modules)],
         datatypes=[dcsraw, eqdata, eq1ddata, ef2thetadata], # params],
-        template_defs=templates.get_templates(INSTRUMENT),
+        template_defs=df.load_templates(templates),
         )
 
     # Register instrument

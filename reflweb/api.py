@@ -19,7 +19,6 @@ from dataflow.cache import use_redis, use_diskcache, get_cache
 from dataflow.calc import process_template
 import dataflow.core as df
 
-import dataflow.modules
 
 from dataflow import fetch
 
@@ -238,7 +237,6 @@ def list_instruments():
     return list(_instrument_registry.keys())
 
 def create_instruments():
-
     fetch.DATA_SOURCES = config.data_sources
 
     if getattr(config, 'use_redis', False):
@@ -247,15 +245,15 @@ def create_instruments():
     elif getattr(config, 'use_diskcache', False):
         diskcache_params = getattr(config, "diskcache_params", {})
         use_diskcache(**diskcache_params)
-    
+
     if getattr(config, 'use_compression', False):
         cache = get_cache()
         cache._use_compression = True
 
     # load refl instrument if nothing specified in config
-    instruments = getattr(config, 'instruments', ['refl'])
-    for instrument_id in instruments:
-        instrument_module = importlib.import_module('dataflow.modules.{instr}'.format(instr=instrument_id))
+    instruments = getattr(config, 'instruments', ['reflred'])
+    for package_name in instruments:
+        instrument_module = importlib.import_module(f'{package_name}.dataflow')
         instrument_module.define_instrument()
 
 if __name__ == '__main__':

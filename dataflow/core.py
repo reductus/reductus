@@ -5,8 +5,12 @@ from __future__ import print_function
 
 import inspect
 import json
-import types
 from collections import OrderedDict
+
+try:
+    from importlib import resources
+except ImportError: # CRUFT: pre-3.7 support
+    import importlib_resources as resources
 
 from numpy import NaN, inf
 
@@ -61,6 +65,32 @@ def register_datatype(datatype):
 
 def lookup_datatype(id):
     return _datatype_registry[id]
+
+
+def load_templates(package):
+    """
+    Returns a dictionary {name: template} for the given instrument.
+
+    Templates are defined as JSON objects, with stored in a file named
+    "<instrument>.<name>.json".  All templates for an instrument should
+    be stored in a templates subdirectory, made into a package by inclusion
+    of an empty __init__.py file.  They can then be loaded using::
+
+        from dataflow import core as df
+        from . import templates
+        ...
+        instrument = df.Instrument(
+            ...
+            templates=df.load_templates(templates),
+        )
+    """
+    templates = {}
+    for filename in resources.contents(package):
+        if filename.endswith('.json'):
+            name = filename.split('.')[-2]
+            template = json.loads(resources.read_text(package, filename))
+            templates[name] = template
+    return templates
 
 
 class Module(object):

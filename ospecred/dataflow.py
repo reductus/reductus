@@ -1,9 +1,9 @@
 from dataflow import core as df
 from dataflow.automod import make_modules, make_template
-from dataflow import templates
 
-from ospecred import magik_filters_func as steps
-from ospecred.FilterableMetaArray import FilterableMetaArray
+from . import magik_filters_func as steps
+from . import templates
+from .FilterableMetaArray import FilterableMetaArray
 
 INSTRUMENT = "ncnr.ospec"
 
@@ -19,7 +19,7 @@ def define_instrument():
 
     # Define data types
     ospec2d = df.DataType(INSTRUMENT+".ospec2d", FilterableMetaArray)
-    ospec1d = df.DataType(INSTRUMENT+".ospec1d", FilterableMetaArray)
+    #ospec1d = df.DataType(INSTRUMENT+".ospec1d", FilterableMetaArray)
     ospecnd = df.DataType(INSTRUMENT+".ospecnd", FilterableMetaArray)
     params = df.DataType(INSTRUMENT+".params", Parameters)
     #offset_data = df.DataType(INSTRUMENT+".offset_data", dict)
@@ -30,7 +30,7 @@ def define_instrument():
         name='NCNR offspecular',
         menu=[('steps', modules)],
         datatypes=[ospec2d, ospecnd, params],
-        template_defs = templates.get_templates(INSTRUMENT),
+        template_defs=df.load_templates(templates),
         )
 
     # Register instrument

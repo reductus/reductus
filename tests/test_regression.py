@@ -29,7 +29,7 @@ REGRESSION_PATH = abspath(joinpath(dirname(__file__), 'regression_files'))
 def get_regression_files():
     if exists(REGRESSION_PATH):
         data_files = (f for f in listdir(REGRESSION_PATH)
-                    if isfile(joinpath(REGRESSION_PATH, f)))
+                      if isfile(joinpath(REGRESSION_PATH, f)))
     else:
         data_files = ()
     return data_files
@@ -43,4 +43,5 @@ def test_regression(filename):
     regression.replay_file(path)
 
 if __name__ == "__main__":
-    test_regression()
+    import sys
+    test_regression(sys.argv[1])

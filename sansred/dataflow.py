@@ -1,9 +1,9 @@
 from dataflow import core as df
 from dataflow.automod import make_modules
-from dataflow import templates
 
-from sansred import steps
-from sansred.sansdata import RawSANSData, SansData, Sans1dData, SansIQData, Parameters
+from . import steps
+from . import templates
+from .sansdata import RawSANSData, SansData, Sans1dData, SansIQData, Parameters
 
 INSTRUMENT = "ncnr.sans"
 
@@ -25,7 +25,7 @@ def define_instrument():
         name='NCNR SANS',
         menu=[('steps', modules)],
         datatypes=[sansraw, sans2d, sans1d, sansIQ, params],
-        template_defs=templates.get_templates(INSTRUMENT),
+        template_defs=df.load_templates(templates),
         )
 
     # Register instrument
