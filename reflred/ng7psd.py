@@ -32,7 +32,7 @@ PIXEL_OFFSET = np.linspace(0, 100, 257)[:-1] - 50 + 1/256
 
 class NG7PSD(PSDData):
     """
-    NeXus reflectometry entry.
+    NG7PSD entry.
 
     See :class:`refldata.ReflData` for details.
     """
@@ -182,6 +182,7 @@ class NG7PSD(PSDData):
     def Td_target(self):
         # Assuming the detector tilts with angle as the sampleElevator drops,
         # increasing the length of the arm slightly at the sample center.
+        # Note: using a fixed distance would give 2% error on angle at q=0.5
         x = self.detector.distance  # [1]
         theta = np.radians(self.detector.angle_x) # [n]
         distance = x * np.sqrt(np.tan(theta)**2 + 1)  # [n] * [1] = [n]
