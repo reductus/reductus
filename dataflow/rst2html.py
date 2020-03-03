@@ -15,6 +15,8 @@ from docutils.core import publish_parts
 from docutils.writers.html4css1 import HTMLTranslator
 from docutils.nodes import SkipNode
 
+# As of 2020-03-01 latest mathjax is 2.7.7 and 3.0.1
+MATHJAX_CONFIG = "mathjax https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js"
 
 def rst2html(rst, part="whole", math_output="html"):
     r"""
@@ -42,7 +44,7 @@ def rst2html(rst, part="whole", math_output="html"):
     # Ick! mathjax doesn't work properly with math-output, and the
     # others don't work properly with math_output!
     if math_output == "mathjax":
-        settings = {"math_output": math_output}
+        settings = {"math_output": MATHJAX_CONFIG}
     else:
         settings = {"math-output": math_output}
 
