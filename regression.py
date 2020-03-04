@@ -65,7 +65,10 @@ def run_template(template_data, concatenate=True):
     """
     Run a template defined by *template_data*.
 
-    Returns *export* = {'datatype': str, 'values': [content, ...]}.
+    Returns *output* and *export* where *output* is the data structure
+    produced by the output terminal and *export* is a list of
+    *[{"filename": filename, "value": bytes}, ...]* giving the files
+    exported for that bundle.
 
     Each *content* block is {'filename': str, 'value': *value*}, where
     value depends on the export type requested in *template_data*.
@@ -95,7 +98,7 @@ def run_template(template_data, concatenate=True):
                 {'url': '...', 'start_path': '...', 'name': '...'},
                 ],
         }
-        export = run_template(template_data, concatenate=False)
+        bundle, export = run_template(template_data, concatenate=False)
         for entry in export['values']:
             with open(entry['filename'], 'w') as fd:
                 fd.write(entry['value'])
@@ -120,13 +123,13 @@ def run_template(template_data, concatenate=True):
     #    finally:
     #        fetch.DATA_SOURCES = original
     #else:
-    retval = process_template(template, template_config, target=target)
+    output = process_template(template, template_config, target=target)
 
-    export = retval.get_export(
+    export = output.get_export(
         template_data=template_data,
         concatenate=concatenate,
         export_type=export_type)
-    return export
+    return output, export
 
 def compare(old, new, show_diff=True, skip=0):
     # type: (str, str) -> bool
@@ -173,7 +176,7 @@ def replay_file(filename):
 
     # Run the template and return the desired content.
     prepare_dataflow(template_data['template'])
-    export = run_template(template_data, concatenate=True)
+    _, export = run_template(template_data, concatenate=True)
     new_content = export['values'][0]['value']
 
     # Compare old to new, ignoring the first line.
@@ -203,6 +206,7 @@ def play_file(filename):
 
     prepare_dataflow(template_def)
     node = max(find_leaves(template_def))
+    #node = 0
     node_module = lookup_module(template_def['modules'][node]['module'])
     terminal = node_module.outputs[0]['id']
 
@@ -216,9 +220,21 @@ def play_file(filename):
         'server_mtime': timestamp,
         'export_type': export_type,
     }
-    export = run_template(template_data, concatenate=concatenate)
+    output, export = run_template(template_data, concatenate=concatenate)
 
     save_content(export['values'])
+    plot_content(output)
+
+def plot_content(output):
+    plotted = False
+    import matplotlib.pyplot as plt
+    for data in output.values:
+        if hasattr(data, 'plot'):
+            plt.figure()
+            data.plot()
+            plotted = True
+    if plotted:
+        plt.show()
 
 def save_content(entries):
     for entry in entries:
@@ -234,12 +250,12 @@ def main():
     """
     if len(sys.argv) < 2:
         print("usage: python regression.py (datafile|template.json)")
-        sys.exit()
+        sys.exit(1)
     if sys.argv[1].endswith('.json'):
         play_file(sys.argv[1])
     else:
         replay_file(sys.argv[1])
-        sys.exit(0)
+    sys.exit(0)
 
 if __name__ == "__main__":
     main()
