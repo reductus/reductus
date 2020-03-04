@@ -3,6 +3,8 @@ from __future__ import print_function
 import os
 from pprint import pprint
 import json
+import traceback
+
 try:
     from urllib.parse import urlencode
     import urllib.request as urllib2
@@ -154,7 +156,7 @@ def calc_terminal(template_def, config, nodenum, terminal_id, return_type='full'
     except Exception:
         print("==== template ===="); pprint(template_def)
         print("==== config ===="); pprint(config)
-        #traceback.print_exc()
+        traceback.print_exc()
         raise
     if return_type == 'full':
         return retval.todict()
