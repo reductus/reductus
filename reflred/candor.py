@@ -1,5 +1,9 @@
 #!/usr/bin/env python
+import json
+
 import numpy as np
+
+from dataflow.lib.exporters import exports_text
 
 from .refldata import ReflData, Intent
 from .nexusref import load_nexus_entries, nexus_common, get_pol
@@ -21,6 +25,22 @@ def load_entries(filename, file_obj=None, entries=None):
 
 #: Number of detector channels per detector tube on CANDOR
 NUM_CHANNELS = 54
+S1_DISTANCE = -4335.86
+S2_DISTANCE = -356.0
+S3_DISTANCE = 356.0
+DETECTOR_DISTANCE = 3496.0
+
+_EFFICIENCY = None
+def detector_efficiency():
+    from pathlib import Path
+    global _EFFICIENCY
+    if _EFFICIENCY is None:
+        path = Path(__file__).parent / 'DetectorWavelengths.csv'
+        eff = np.loadtxt(path, delimiter=',')[:, 3]
+        eff = eff / np.mean(eff)
+        _EFFICIENCY = np.hstack((eff, eff))
+        _EFFICIENCY = _EFFICIENCY.reshape(1, 2, NUM_CHANNELS)
+    return _EFFICIENCY
 
 class Candor(ReflData):
     """
@@ -67,6 +87,15 @@ class Candor(ReflData):
         self.slit2.distance = data_as(entry, 'instrument/presample_slit2/distance', 'mm')
         self.slit3.distance = data_as(entry, 'instrument/predetector_slit1/distance', 'mm')
         self.slit4.distance = data_as(entry, 'instrument/detector_mask/distance', 'mm')
+        # Fill in missing distance data, if they aren't in the config file
+        for slit, default in (
+                (self.slit1, S1_DISTANCE),
+                (self.slit2, S2_DISTANCE),
+                (self.slit3, S3_DISTANCE),
+                (self.slit4, DETECTOR_DISTANCE),
+                ):
+            if slit.distance is None:
+                slit.distance = default
 
         for k, slit in enumerate((self.slit1, self.slit2, self.slit3)):
             x = 'slitAperture%d/softPosition'%(k+1)
@@ -103,8 +132,12 @@ class Candor(ReflData):
             efficiency = np.ones(wavelength.shape) * efficiency
         divergence = divergence.reshape(NUM_CHANNELS, -1).T[None, :, :]
         efficiency = efficiency.reshape(NUM_CHANNELS, -1).T[None, :, :]
+        # CRUFT: nexus should store efficiency
+        if (efficiency == 1.0).all():
+            efficiency = detector_efficiency()
         self.detector.efficiency = efficiency
-        # TODO: not using angular divergence?
+        # TODO: sample broadening?
+        self.angular_resolution = divergence
 
         # If not monochromatic beam then assume elastic scattering
         if self.monochromator.wavelength is None:
@@ -126,24 +159,34 @@ class Candor(ReflData):
         #bank_angle = np.arange(30)*0.1
         ## Add an extra dimension to sample angle
 
+
     @property
     def Ti(self):
         return self.sample.angle_x[:, None, None]
 
+    @property
     def Ti_target(self):
-        self.sample.angle_x_target = self.sample.angle_x[:, None, None]
+        return self.sample.angle_x_target[:, None, None]
 
+    @property
     def Td(self):
         angle, offset = self.detector.angle_x, self.detector._bank_angle
         return angle[:, None, None] + offset[None, :, None]
 
+    @property
+    def dT(self):
+        self.detector._divergence
+
+    @property
     def Td_target(self):
         angle, offset = self.detector.angle_x_target, self.detector._bank_angle
         return angle[:, None, None] + offset[None, :, None]
 
+    @property
     def Li(self):
-        return self.monochromator.wavelength[None, :, None]
+        return self.monochromator.wavelength[:, None, None]
 
+    @property
     def Ld(self):
         return self.detector.wavelength[None, :, :]
 
@@ -153,48 +196,84 @@ class Candor(ReflData):
 
         from matplotlib import pyplot as plt
         xerr = self.dx if self.angular_resolution is not None else None
-        #x, dx, xunits, xlabel = self.x, xerr, self.xunits, self.xlabel
-        x, xunits, xlabel = self.detector.wavelength, 'Ang', 'detector wavelength'
-        y, yunits, ylabel = self.sample.angle_x, 'degree', 'sample angle'
-        v = self.v
-        plt.subplot(211)
-        plt.pcolormesh(edges(x[0, 0, :]), edges(y[:, 0, 0]), v[:, 0, :])
-        plt.xlabel("%s (%s)"%(xlabel, xunits))
-        plt.ylabel("%s (%s)"%(ylabel, yunits))
-        plt.colorbar()
-        plt.text(0, 0, ["bank 0"], ha='right', va='bottom', zorder=5)
-        plt.subplot(212)
-        plt.pcolormesh(edges(x[0, 1, :]), edges(y[:, 0, 0]), v[:, 1, :])
-        plt.xlabel("%s (%s)"%(xlabel, xunits))
-        plt.ylabel("%s (%s)"%(ylabel, yunits))
-        plt.colorbar()
-        plt.text(0, 0, ["bank 1"], ha='left', va='top', zorder=5)
+        #x, dx, xlabel = self.x, xerr, f"{self.xlabel} ({self.xunits})"
+        v = np.log10(self.v + (self.v == 0))
+        channel = np.arange(1, NUM_CHANNELS+1)
+
+        if True: # Qz - channel
+            x, xlabel = self.Qz, 'Qz (1/Ang)'
+            y, ylabel = np.vstack((channel, channel))[None, :, :], "channel"
+
+            plt.subplot(211)
+            plt.pcolormesh(x[:, 0, :].T, y[:, 0, :].T, v[:, 0, :].T)
+            plt.xlabel(xlabel)
+            plt.ylabel(f"{ylabel} - bank 0")
+            plt.colorbar()
+            plt.subplot(212)
+            plt.pcolormesh(x[:, 1, :].T, y[:, 1, :].T, v[:, 1, :].T)
+            plt.xlabel(xlabel)
+            plt.ylabel(f"{ylabel} - bank 1")
+            plt.colorbar()
+            plt.suptitle(f'detector counts for {self.name}')
+
+        if False: # lambda-theta
+            x, xlabel = self.detector.wavelength, 'detector wavelength (Ang)'
+            y, ylabel = self.sample.angle_x, 'sample angle (degree)'
+            plt.subplot(211)
+            plt.pcolormesh(edges(x[0]), edges(y), v[:, 0, :])
+            plt.xlabel(xlabel)
+            plt.ylabel(f"{ylabel} - bank 0")
+            plt.colorbar()
+            plt.subplot(212)
+            plt.pcolormesh(edges(x[1]), edges(y), v[:, 1, :])
+            plt.xlabel(xlabel)
+            plt.ylabel(f"{ylabel} - bank 1")
+            plt.colorbar()
+            plt.suptitle(f'detector counts for {self.name}')
+
+        if False: # detector efficiency
+            plt.figure()
+            eff = self.detector.efficiency[0]
+            plt.plot(channel, eff[0], label='bank 0')
+            plt.plot(channel, eff[1], label='bank 1')
+            plt.xlabel('channel number')
+            plt.ylabel('wavelength efficiency')
+            plt.suptitle(f'detectorTable.detectorEfficiencies for {self.name}')
+            plt.legend()
+
+        if False: # detector wavelength
+            plt.figure()
+            y, ylabel = self.detector.wavelength, 'detector wavelength (Ang)'
+            dy = self.detector.wavelength_resolution
+            plt.errorbar(channel, y[0], yerr=dy[0], label='bank 0')
+            plt.errorbar(channel, y[1], yerr=dy[1], label='bank 1')
+            plt.xlabel('channel number')
+            plt.ylabel(ylabel)
+            plt.suptitle(f'detectorTable.wavelength for {self.name}')
+            plt.legend()
 
     def get_axes(self):
-        ny, nx = self.v.shape
-        x, xlabel = np.arange(1, nx+1), "pixel"
-        if Intent.isslit(self.intent):
-            y, ylabel = self.slit1.x, "S1"
-        elif Intent.isspec(self.intent):
-            y, ylabel = self.Qz_target, "Qz"
-        else:
-            y, ylabel = np.arange(1, ny+1), "point"
+        x, xlabel = self.detector.wavelength, "Wavelength (Ang)"
+        y, ylabel = self.sample.angle_x, "Detector Angle (degrees)"
         return (x, xlabel), (y, ylabel)
 
     def get_plottable(self):
         name = getattr(self, "name", "default_name")
         entry = getattr(self, "entry", "default_entry")
-        def limits(v, n):
-            low, high = v.min(), v.max()
+        def limits(vec, n):
+            low, high = vec.min(), vec.max()
             delta = (high - low) / max(n-1, 1)
             # TODO: move range cleanup to plotter
             if delta == 0.:
-                delta = v[0]/10.
+                delta = vec[0]/10.
             return low - delta/2, high+delta/2
-        data = self.v
-        ny, nx = data.shape
+        data = np.moveaxis(self.v, 1, 0)
+        _, ny, nx = data.shape  # nbanks, nangles, nwavelengths
         (x, xlabel), (y, ylabel) = self.get_axes()
-        #print("data shape", nx, ny)
+        #print("data shape", nx, ny, data.shape)
+        # Paste frames back-to-back
+        data = np.hstack((data[0], data[1]))[None, :, :]
+        x, nx = np.hstack((x, x + (x.max()-x.min()))), 2*nx
         xmin, xmax = limits(x, nx)
         ymin, ymax = limits(y, ny)
         # TODO: self.detector.mask
@@ -212,14 +291,15 @@ class Candor(ReflData):
             "ymin": ymin, "ymax": ymax, "ydim": ny,
             "zmin": zmin, "zmax": zmax,
         }
-        z = data.T.ravel('C').tolist()
+        z = [frame.ravel('F').tolist() for frame in data]
+        #print("data", data.shape, dims, len(z))
         plottable = {
             #'type': '2d_multi',
             #'dims': {'zmin': zmin, 'zmax': zmax},
             #'datasets': [{'dims': dims, 'data': z}],
             'type': '2d',
             'dims': dims,
-            'z': [z],
+            'z': z,
             'entry': entry,
             'title': "%s:%s" % (name, entry),
             'options': {
@@ -237,16 +317,16 @@ class Candor(ReflData):
         return plottable
 
     # TODO: Define export format for partly reduced PSD data.
-    #@exports_text("column")
+    @exports_text("json")
     def to_column_text(self):
-        export_string = ""
+        export_string = json.dumps(self._toDict())
         name = getattr(self, "name", "default_name")
         entry = getattr(self, "entry", "default_entry")
         return {
             "name": name,
             "entry": entry,
-            "export_string": export_string,
-            "file_suffix": ".dat",
+            "file_suffix": ".json",
+            "value": export_string,
             }
 
 def edges(c):

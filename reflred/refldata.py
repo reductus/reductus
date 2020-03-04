@@ -920,9 +920,9 @@ class ReflData(Group):
         if self.Qz_basis == 'actual':
             return calc_Qz(self.Ti, self.Td, Li, Ld)
         if self.Qz_basis == 'target':
-            # Require Qz_target exist datafile to use "target" basis.
-            return self.Qz_target
-            #return calc_Qz(self.Ti_target, self.Td_target, Li, Ld)
+            if self.Qz_target is not None:
+                return self.Qz_target
+            return calc_Qz(self.Ti_target, self.Td, Li, Ld)
         if self.Qz_basis == 'detector':
             return calc_Qz(self.Td/2, self.Td, Li, Ld)
         if self.Qz_basis == 'sample':
@@ -947,9 +947,12 @@ class ReflData(Group):
     @property
     def dQ(self):
         if self.angular_resolution is None:
-            raise ValueError("Need to estimate divergence before requesting dQ")
-        T, dT = self.sample.angle_x, self.angular_resolution+self.sample.broadening
-        L, dL = self.detector.wavelength, self.detector.wavelength_resolution
+            return None
+            #raise ValueError("Need to estimate divergence before requesting dQ")
+        # TODO: move sample broadening to to the dQ calculation
+        T, dT = self.Ti, self.angular_resolution
+        L, dL = self.Ld, self.detector.wavelength_resolution
+        #print(T.shape, dT.shape, L.shape, dL.shape)
         return dTdL2dQ(T, dT, L, dL)
 
     @property
@@ -1277,7 +1280,7 @@ class PSDData(ReflData):
         return plottable
 
     # TODO: Define export format for partly reduced PSD data.
-    #@exports_text("column")
+    @exports_text("json")
     def to_column_text(self):
         export_string = ""
         name = getattr(self, "name", "default_name")
@@ -1285,8 +1288,8 @@ class PSDData(ReflData):
         return {
             "name": name,
             "entry": entry,
-            "export_string": export_string,
             "file_suffix": ".dat",
+            "value": export_string,
             }
 
 def get_item_from_path(obj, path):

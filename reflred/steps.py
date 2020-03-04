@@ -87,19 +87,19 @@ def ncnr_load(filelist=None, check_timestamps=True):
     output (refldata[]): All entries of all files in the list.
 
     2016-06-29 Brian Maranville
-    | 2017-08-21 Brian Maranville change to refldata, force cache invalidate
-    | 2018-06-18 Brian Maranville change to nexusref to ignore areaDetector
+    | 2017-08-21 Brian Maranville Change to refldata, force cache invalidate
+    | 2018-06-18 Brian Maranville Change to nexusref to ignore areaDetector
     | 2018-12-10 Brian Maranville get_plottable routines moved to python data container from js
+    | 2020-03-03 Paul Kienzle Just load.  Don't even compute divergence
     """
+    # NB: used mainly to set metadata for processing, so keep it minimal
+    # TODO: make a metadata loader that does not send all data to browser
     # NB: Fileinfo is a structure with
     #     { path: "location/on/server", mtime: timestamp }
     from .load import url_load_list
-    auto_divergence = True
 
     datasets = []
     for data in url_load_list(filelist, check_timestamps=check_timestamps):
-        if auto_divergence:
-            data = divergence(data)
         datasets.append(data)
     return datasets
 
@@ -811,6 +811,42 @@ def rescale(data, scale=1.0, dscale=0.0):
     apply_rescale(data, scale, dscale)
     return data
 
+@module
+def spectral_correction(data, spectrum=()):
+    r"""
+    Correct for the relative intensity in the different detector channels
+    across the detector banks.  This correction depends on a number of
+    factors including the distribution of wavelenths from the source,
+    any wavelength selection filters in the path, the relative angles
+    of the analyzer leaves, and the efficiency of the detector in each
+    channel.
+
+    **Inputs**
+
+    data (refldata) : data to scale
+
+    spectrum (float[]) : override spectrum from data file
+
+    **Returns**
+
+    output (refldata) : scaled data
+
+    2020-03-03 Paul Kienzle
+    """
+    # TODO: let the user paste their own values overriding what is stored
+    # in the nexus file?
+    data = copy(data)
+    #print(data.v.shape, data.detector.efficiency.shape)
+    if spectrum:
+        # TODO: rewrite to handle detector shapes other than candor.
+        spectrum = np.asarray(spectrum)[None, None, :]
+    else:
+        spectrum = data.detector.efficiency
+    data.v /= spectrum
+    data.dv /= np.sqrt(spectrum)
+    return data
+
+
 #@nocache
 @module
 def join(data, Q_tolerance=0.5, dQ_tolerance=0.002, order='file',
@@ -1423,6 +1459,78 @@ def save(data, name='auto', ext='auto', path='auto'):
         name = data.name
     filename = os.path.join(path, name+ext)
     data.save(filename)
+
+
+@cache
+@module
+def candor(
+        filelist=None,
+        detector_correction=False,
+        monitor_correction=False,
+        intent='auto',
+        sample_width=None,
+        base='none'):
+    r"""
+    Load a list of Candor files from the NCNR data server.
+
+    **Inputs**
+
+    filelist (fileinfo[]): List of files to open.
+
+    detector_correction {Apply detector deadtime correction} (bool)
+    : If True, use deadtime constants in file to correct detector counts.
+
+    monitor_correction {Apply monitor saturation correction} (bool)
+    : If True, use the measured saturation curve in file to correct
+    the monitor counts.
+
+    intent (opt:auto|specular|intensity|scan)
+    : Measurement intent (specular, slit, or some other scan), auto or infer.
+    : If intent is 'scan', then use the first scanned variable.
+
+    sample_width {Sample width (mm)} (float?)
+    : Width of the sample along the beam direction in mm, used for
+    calculating the effective resolution when the sample is smaller
+    than the beam.  Leave blank to use value from data file.
+
+    base {Normalize by} (opt:auto|monitor|time|power|none)
+    : How to convert from counts to count rates.
+    : Leave this as none if your template does normalization after integration.
+
+    **Returns**
+
+    output (refldata[]): All entries of all files in the list.
+
+    | 2020-02-05 Paul Kienzle
+    | 2020-02-11 Paul Kienzle include divergence estimate in startup
+    """
+    from .load import url_load_list
+    from .candor import load_entries
+
+    # Note: divergence is required for join, so always calculate it.  If you
+    # really want it optional then use:
+    #
+    #  auto_divergence {Calculate dQ} (bool)
+    #    : Automatically calculate the angular divergence of the beam.
+    #
+    auto_divergence = True
+
+    datasets = []
+    for data in url_load_list(filelist, loader=load_entries):
+        data.Qz_basis = 'target'
+        if intent not in [None, 'auto']:
+            data.intent = intent
+        if auto_divergence:
+            data = divergence(data, sample_width)
+        if detector_correction:
+            data = detector_dead_time(data, None)
+        if monitor_correction:
+            data = monitor_saturation(data)
+        data = normalize(data, base=base)
+        #print "data loaded and normalized"
+        datasets.append(data)
+
+    return datasets
 
 @cache
 @module

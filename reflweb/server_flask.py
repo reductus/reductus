@@ -9,7 +9,6 @@ python server_flask.py 8002
 (then visit http://localhost:8002/static/index.html in your browser)
 
 """
-
 import os, sys, posixpath
 import traceback
 import logging
