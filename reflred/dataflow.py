@@ -1,5 +1,5 @@
 from dataflow import core as df
-from dataflow.automod import make_modules, make_template, auto_module
+from dataflow.automod import make_modules, make_template, auto_module, get_modules
 from dataflow.calc import process_template
 from dataflow.data import Plottable
 
@@ -91,7 +91,8 @@ def make_cached_subloader_module(load_action, prefix=""):
 
 def define_instrument():
     # Define modules
-    modules = make_modules(steps.ALL_ACTIONS, prefix=INSTRUMENT+'.')
+    actions = get_modules(steps)
+    modules = make_modules(actions, prefix=INSTRUMENT+'.')
     modules.append(make_cached_subloader_module(steps.super_load, prefix=INSTRUMENT+'.'))
     modules.append(make_cached_subloader_module(steps.ncnr_load, prefix=INSTRUMENT+'.'))
     # Define data types

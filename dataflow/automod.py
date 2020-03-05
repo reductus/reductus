@@ -19,6 +19,92 @@ from .rst2html import rst2html
 
 IS_PY3 = sys.version_info[0] >= 3
 
+# Decorators to tag action methods for an instrument
+
+def cache(action):
+    """
+    Decorator which adds the *cached* attribute to the function.
+
+    Use *@cache* to force caching to always occur (for example, when
+    the function references remote resources, vastly reduces memory, or is
+    expensive to compute.  Use *@nocache* when debugging a function
+    so that it will be recomputed each time regardless of whether or not it
+    is seen again.
+    """
+    action.cached = True
+    return action
+
+def nocache(action):
+    """
+    Decorator which adds the *cached* attribute to the function.
+
+    Use *@cache* to force caching to always occur (for example, when
+    the function references remote resources, vastly reduces memory, or is
+    expensive to compute.  Use *@nocache* when debugging a function
+    so that it will be recomputed each time regardless of whether or not it
+    is seen again.
+    """
+    action.cached = False
+    return action
+
+def module(tag=""):
+    """
+    Decorator adds *group=tag* as an attribute to the function.
+
+    This marks a method as a reduction step to be included in the list
+    of reduction steps. If *tag* is set then the action will be placed in a
+    submenu with that label.  If used as a bare function then defaults
+    to a tag of "" for the top-level menu.
+
+    For example, to register *action*::
+
+        @module
+        def action(data, par='default'):
+            ...
+
+    To register action in the *viz* submenu use::
+
+        @module("viz")
+        def viz_action(data):
+            ...
+
+    Actions can be retrieved from a module using :func:`get_modules`.
+    """
+    # Called as @module
+    if callable(tag):
+        tag.group = ""
+        return tag
+
+    # Called as @module("tag")
+    def wrapper(fn):
+        fn.group = tag
+        return fn
+    return wrapper
+
+def get_modules(module, grouped=False, sorted=True):
+    """
+    Retrieve @module actions from a python module.
+
+    If *grouped*, return modules grouped by action tag.
+
+    If *sorted*, sort the actions by name attribute, otherwise they appear
+    in the original order in the module.
+    """
+    actions = [
+        fn for name in dir(module)
+        for fn in [getattr(module, name)]
+        if hasattr(fn, 'group')
+    ]
+    if sorted:
+        actions.sort(key=lambda fn: fn.__name__)
+    if grouped:
+        from collections import defaultdict
+        groups = defaultdict(list)
+        for fn in actions:
+            groups[fn.action].append(fn)
+        return groups
+    return actions
+
 def make_template(name, description, diagram, instrument, version):
     """
     Convert a diagram into a template.
