@@ -613,8 +613,8 @@ class DataType(object):
             "value": formatted_data,
         }
 
-    The resulting data will be saved in *NAME.EXT* for concatenated
-    results, or *NAME_ENTRY.EXT* for individual files. (subject to change)
+    The resulting data will be saved in *NAME_ENTRY.EXT*.  For concatenated
+    results the filename for the first item will be used.
     """
     def __init__(self, id, cls):
         self.id = id
@@ -628,14 +628,15 @@ class DataType(object):
         exporters = {}
         for method_name in dir(self.cls):
             method = getattr(self.cls, method_name)
-            if callable(method):
-                exporter = getattr(method, 'exporter', None)
-                if exporter is not None:
-                    export_name = getattr(method, 'export_name', 'default')
-                    exporters[export_name] = {
-                        "exporter": exporter,
-                        "method_name": method_name,
-                    }
+            if not callable(method):
+                continue
+            exporter = getattr(method, 'exporter', None)
+            if exporter is not None:
+                export_name = getattr(method, 'export_name', 'default')
+                exporters[export_name] = {
+                    "exporter": exporter,
+                    "method_name": method_name,
+                }
         return exporters
 
 class Bundle(object):
@@ -656,6 +657,8 @@ class Bundle(object):
         return {'datatype': self.datatype.id, 'values': values}
 
     def get_export(self, export_type="column", template_data=None, concatenate=True):
+        if export_type not in self.datatype.export_types:
+            raise ValueError(f"{self.datatype.id} does not provide {export_type} export.")
         exporter_info = self.datatype.export_types[export_type]
         exporter = exporter_info["exporter"]
         to_export = exporter(
