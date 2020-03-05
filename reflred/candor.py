@@ -3,7 +3,7 @@ import json
 
 import numpy as np
 
-from dataflow.lib.exporters import exports_text
+from dataflow.lib.exporters import exports_json
 
 from .refldata import ReflData, Intent
 from .nexusref import load_nexus_entries, nexus_common, get_pol
@@ -317,17 +317,20 @@ class Candor(ReflData):
         return plottable
 
     # TODO: Define export format for partly reduced PSD data.
-    @exports_text("json")
-    def to_column_text(self):
-        export_string = json.dumps(self._toDict())
+    @exports_json("json")
+    def to_json_text(self):
         name = getattr(self, "name", "default_name")
         entry = getattr(self, "entry", "default_entry")
         return {
             "name": name,
             "entry": entry,
             "file_suffix": ".json",
-            "value": export_string,
+            "value": self._toDict(),
             }
+
+    # Kill column writer
+    def to_column_text(self):
+        pass
 
 def edges(c):
     midpoints = (c[:-1]+c[1:])/2

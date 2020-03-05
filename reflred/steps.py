@@ -823,13 +823,13 @@ def spectral_correction(data, spectrum=()):
 
     **Inputs**
 
-    data (refldata) : data to scale
+    data (candordata) : data to scale
 
     spectrum (float[]) : override spectrum from data file
 
     **Returns**
 
-    output (refldata) : scaled data
+    output (candordata) : scaled data
 
     2020-03-03 Paul Kienzle
     """
@@ -1499,10 +1499,9 @@ def candor(
 
     **Returns**
 
-    output (refldata[]): All entries of all files in the list.
+    output (candordata[]): All entries of all files in the list.
 
     | 2020-02-05 Paul Kienzle
-    | 2020-02-11 Paul Kienzle include divergence estimate in startup
     """
     from .load import url_load_list
     from .candor import load_entries

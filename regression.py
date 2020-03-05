@@ -65,19 +65,20 @@ def run_template(template_data, concatenate=True):
     """
     Run a template defined by *template_data*.
 
-    Returns *output* and *export* where *output* is the data structure
-    produced by the output terminal and *export* is a list of
-    *[{"filename": filename, "value": bytes}, ...]* giving the files
-    exported for that bundle.
+    Returns *bundle* and *exports*.
 
-    Each *content* block is {'filename': str, 'value': *value*}, where
+    *bundle* is a :class:`dataflow.core.Bundle` object with a *values*
+    attribute containing the list of items in the bundle, and a *datatype*
+    attribute giving the data type for each value.
+
+    *exports* is a list of *[{'filename': str, 'value': valu*}, ...]* where
     value depends on the export type requested in *template_data*.
-
     Output from "column" export will contain a string with the file content,
     with the first line containing the template data structure.
-
-    Output from "hdf" export will contain a sequence of bytes defining the
+    Output from "hdf" export will contain a byte sequence defining the
     HDF file, with template data stored in the attribute NXroot@template_def.
+    Output from "json" export will contain a JSON string with hierarchical
+    structure *{template_data: json, outputs: [json, json, ...]}*.
 
     If *concatenate* then all datasets will be combined into a single value.
 
@@ -108,7 +109,6 @@ def run_template(template_data, concatenate=True):
     template_config = template_data.get('config', {})
     target = template_data['node'], template_data['terminal']
     # CRUFT: use template_data["export_type"] when regression files are updated
-    export_type = template_data.get('export_type', 'column')
     template = Template(**template_def)
     #template.show()  # for debugging, show the template structure
 
@@ -123,13 +123,19 @@ def run_template(template_data, concatenate=True):
     #    finally:
     #        fetch.DATA_SOURCES = original
     #else:
-    output = process_template(template, template_config, target=target)
+    bundle = process_template(template, template_config, target=target)
 
-    export = output.get_export(
-        template_data=template_data,
-        concatenate=concatenate,
-        export_type=export_type)
-    return output, export
+    # TODO: default to column, json, hdf, ...
+    export_type = template_data.get("export_type", "column")
+    if export_type in bundle.datatype.export_types:
+        export = bundle.get_export(
+            template_data=template_data,
+            concatenate=concatenate,
+            export_type=export_type,
+            )
+    else:
+        export = None
+    return bundle, export
 
 def compare(old, new, show_diff=True, skip=0):
     # type: (str, str) -> bool
@@ -222,7 +228,8 @@ def play_file(filename):
     }
     output, export = run_template(template_data, concatenate=concatenate)
 
-    save_content(export['values'])
+    if export:
+        save_content(export['values'])
     plot_content(output)
 
 def plot_content(output):

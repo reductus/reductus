@@ -6,6 +6,7 @@ from dataflow.data import Plottable
 from . import steps
 from . import templates
 from .refldata import ReflData, PSDData
+from .candor import Candor
 from .polarization import PolarizationData
 from .deadtime import DeadTimeData
 from .footprint import FootprintData
@@ -97,6 +98,7 @@ def define_instrument():
     refldata = df.DataType(INSTRUMENT+".refldata", ReflData)
     poldata = df.DataType(INSTRUMENT+".poldata", PolarizationData)
     psddata = df.DataType(INSTRUMENT+".psddata", PSDData)
+    candordata = df.DataType(INSTRUMENT+".candordata", Candor)
     deadtime = df.DataType(INSTRUMENT+".deadtime", DeadTimeData)
     footprint = df.DataType(INSTRUMENT+".footprint.params", FootprintData)
     flux = df.DataType(INSTRUMENT+".flux.params", FluxData)
@@ -117,7 +119,10 @@ def define_instrument():
         id=INSTRUMENT,
         name='NCNR reflectometer',
         menu=[('steps', modules)],
-        datatypes=[refldata, poldata, psddata, deadtime, footprint, flux, backgroundfield, plottable],
+        datatypes=[
+            refldata, poldata, psddata, candordata, deadtime, footprint,
+            flux, backgroundfield, plottable,
+            ],
         template_defs=df.load_templates(templates),
         )
 

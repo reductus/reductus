@@ -86,7 +86,7 @@ from io import BytesIO
 import numpy as np
 from numpy import inf, arctan2, sqrt, sin, cos, pi, radians
 
-from dataflow.lib.exporters import exports_text
+from dataflow.lib.exporters import exports_text, exports_json, NumpyEncoder
 from .resolution import calc_Qx, calc_Qz, dTdL2dQ
 
 IS_PY3 = sys.version_info[0] >= 3
@@ -1280,17 +1280,20 @@ class PSDData(ReflData):
         return plottable
 
     # TODO: Define export format for partly reduced PSD data.
-    @exports_text("json")
-    def to_column_text(self):
-        export_string = ""
+    @exports_json("json")
+    def to_json_text(self):
         name = getattr(self, "name", "default_name")
         entry = getattr(self, "entry", "default_entry")
         return {
             "name": name,
             "entry": entry,
             "file_suffix": ".dat",
-            "value": export_string,
+            "value": self._toDict(),
             }
+
+    # Kill column writer for now
+    def to_column_text(self):
+        pass
 
 def get_item_from_path(obj, path):
     result = obj
@@ -1300,7 +1303,7 @@ def get_item_from_path(obj, path):
     return result
 
 def _write_key_value(fid, key, value):
-    value_str = json.dumps(value)
+    value_str = json.dumps(value, cls=NumpyEncoder)
     if IS_PY3:
         fid.write('# "{0}": {1}\n'.format(key, value_str).encode('utf-8'))
     else:
@@ -1332,7 +1335,7 @@ def _toDictItem(obj):
         obj = obj.tolist()
     elif isinstance(obj, datetime.datetime):
         obj = [obj.year, obj.month, obj.day, obj.hour, obj.minute, obj.second]
-    elif isinstance(obj, list):
+    elif isinstance(obj, (list, tuple)):
         obj = [_toDictItem(a) for a in obj]
     return obj
 
