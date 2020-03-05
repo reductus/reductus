@@ -25,11 +25,14 @@ def load_entries(filename, file_obj=None, entries=None):
 
 #: Number of detector channels per detector tube on CANDOR
 NUM_CHANNELS = 54
+
+# CRUFT: these will be in the nexus/config.js eventually
 S1_DISTANCE = -4335.86
 S2_DISTANCE = -356.0
 S3_DISTANCE = 356.0
 DETECTOR_DISTANCE = 3496.0
 
+# CRUFT: these will be in the
 _EFFICIENCY = None
 def detector_efficiency():
     from pathlib import Path
@@ -82,12 +85,12 @@ class Candor(ReflData):
         #    self.monochromator.wavelength_resolution = \
         #        FWHM2sigma(WAVELENGTH_DISPERSION*self.monochromator.wavelength)
 
-        # Slits
+        # Slit distances
         self.slit1.distance = data_as(entry, 'instrument/presample_slit1/distance', 'mm')
         self.slit2.distance = data_as(entry, 'instrument/presample_slit2/distance', 'mm')
         self.slit3.distance = data_as(entry, 'instrument/predetector_slit1/distance', 'mm')
-        self.slit4.distance = data_as(entry, 'instrument/detector_mask/distance', 'mm')
-        # Fill in missing distance data, if they aren't in the config file
+        self.slit4.distance = data_as(entry, 'instrument/predetector_slit2/distance', 'mm')
+        # CRUFT: old candor files don't populate instrument slits
         for slit, default in (
                 (self.slit1, S1_DISTANCE),
                 (self.slit2, S2_DISTANCE),
@@ -97,7 +100,11 @@ class Candor(ReflData):
             if slit.distance is None:
                 slit.distance = default
 
-        for k, slit in enumerate((self.slit1, self.slit2, self.slit3)):
+        # Slit openings
+        # Note: Candor does not have slit4, but we translate the detector
+        # mask value into a slit4 opening positioned right at the detector.
+        # TODO: get values from instrument group instead of DAS_logs.
+        for k, slit in enumerate((self.slit1, self.slit2, self.slit3, self.slit4)):
             x = 'slitAperture%d/softPosition'%(k+1)
             x_target = 'slitAperture%d/desiredSoftPosition'%(k+1)
             slit.x = data_as(das, x, 'mm', rep=n)
@@ -106,11 +113,10 @@ class Candor(ReflData):
             #y_target = 'vertSlitAperture%d/desiredSoftPosition'%(k+1)
             #slit.y = data_as(das, y, 'mm', rep=n)
             #slit.y_target = data_as(das, y_target, 'mm', rep=n)
-        # Slit 4 on CANDOR is a fixed mask rather than continuous motors.
-        self.slit4.x = data_as(entry, 'instrument/detector_mask/width', 'mm', rep=n)
-        self.slit4.x_target = self.slit4.x
-        #self.slit4.y = data_as(entry, 'instrument/detector_mask/height', 'mm', rep=n)
-        #self.slit4.y_target = self.slit4.y
+        # CRUFT: old files don't have the detector mask mapped
+        if self.slit4.x is None:
+            mask = float(str_data(das, 'detectorMaskMap/key', '10'))
+            self.slit4.x_target = self.slit4.x = np.full(n, mask)
 
         # Detector
         wavelength = data_as(das, 'detectorTable/wavelengths', '')
@@ -132,7 +138,7 @@ class Candor(ReflData):
             efficiency = np.ones(wavelength.shape) * efficiency
         divergence = divergence.reshape(NUM_CHANNELS, -1).T[None, :, :]
         efficiency = efficiency.reshape(NUM_CHANNELS, -1).T[None, :, :]
-        # CRUFT: nexus should store efficiency
+        # CRUFT: old files have efficiency set to 1
         if (efficiency == 1.0).all():
             efficiency = detector_efficiency()
         self.detector.efficiency = efficiency
@@ -253,8 +259,14 @@ class Candor(ReflData):
             plt.legend()
 
     def get_axes(self):
+        ny, _, nx = self.v.shape
         x, xlabel = self.detector.wavelength, "Wavelength (Ang)"
-        y, ylabel = self.sample.angle_x, "Detector Angle (degrees)"
+        if Intent.isslit(self.intent):
+            y, ylabel = self.slit1.x, "S1"
+        elif Intent.isspec(self.intent):
+            y, ylabel = self.sample.angle_x, "Detector Angle (degrees)"
+        else:
+            y, ylabel = np.arange(1, ny+1), "point"
         return (x, xlabel), (y, ylabel)
 
     def get_plottable(self):

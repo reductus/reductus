@@ -1112,6 +1112,7 @@ class ReflData(Group):
         with open(filename, 'w') as fid:
             fid.write(self.to_column_text()["value"])
 
+    # TODO: split refldata in to ReflBase and PointRefl so PSD doesn't inherit column format
     @exports_text("column")
     def to_column_text(self):
         # Note: subclass this for non-traditional reflectometry measurements

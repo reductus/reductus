@@ -656,6 +656,9 @@ def normalize(data, base='auto'):
 
     2015-12-17 Paul Kienzle
     """
+    # TODO: consistent use of data.detector.counts vs. data.v
+    # see in particular the detector/monitor dead time, spectral efficiency,
+    # dark current, etc.
     from .scale import apply_norm
     data = copy(data)
     data.log('normalize(base=%r)' % base)
@@ -812,7 +815,7 @@ def rescale(data, scale=1.0, dscale=0.0):
     return data
 
 @module
-def spectral_correction(data, spectrum=()):
+def spectral_efficiency(data, spectrum=()):
     r"""
     Correct for the relative intensity in the different detector channels
     across the detector banks.  This correction depends on a number of
@@ -833,19 +836,57 @@ def spectral_correction(data, spectrum=()):
 
     2020-03-03 Paul Kienzle
     """
-    # TODO: let the user paste their own values overriding what is stored
-    # in the nexus file?
-    data = copy(data)
+    from .candor import NUM_CHANNELS
+    # TODO: too many components operating directly on detector counts?
+    # TODO: let the user paste their own spectral efficiency, overriding datafile
+    # TODO: generalize to detector shapes beyond candor
     #print(data.v.shape, data.detector.efficiency.shape)
+    if len(spectrum)%NUM_CHANNELS != 0:
+        raise ValueError(f"Vector length {len(spectrum)} must be a multiple of {NUM_CHANNELS}")
     if spectrum:
-        # TODO: rewrite to handle detector shapes other than candor.
-        spectrum = np.asarray(spectrum)[None, None, :]
+        spectrum = np.reshape(spectrum, (NUM_CHANNELS, -1)).T[None, :, :]
     else:
         spectrum = data.detector.efficiency
-    data.v /= spectrum
-    data.dv /= np.sqrt(spectrum)
+    data = copy(data)
+    data.detector = copy(data.detector)
+    data.detector.counts = data.detector.counts / spectrum
+    data.detector.counts_variance = data.detector.counts_variance / spectrum
     return data
 
+@module
+def dark_current(data, dc_rate=0.):
+    r"""
+    Correct for the dark current, which is the average number of
+    spurious counts per minute of measurement on each detector channel.
+
+    Note: could instead use this module to estimate the dark current and
+    output a background signal which can then be plotted or fed into a
+    background subtraction tool.  Or maybe just produce a dark current
+    plottable as an extra output.
+
+    **Inputs**
+
+    data (candordata) : data to scale
+
+    dc_rate {Dark counts per minute} (float)
+    : Number of dark counts to subtract from each detector channel per
+    minute of counting time.
+
+    **Returns**
+
+    output (candordata): Dark current subtracted data.
+
+    2020-03-04 Paul Kienzle
+    """
+    # TODO: no uncertainty propagation
+    # TODO: generalize to detector shapes beyond candor
+    # TODO: datatype hierarchy: accepts any kind of refldata
+    if dc_rate > 0.:
+        dc = data.monitor.count_time*(dc_rate/60.)
+        data = copy(data)
+        data.detector = copy(data.detector)
+        data.detector.counts = data.detector.counts - dc[:, None, None]
+    return data
 
 #@nocache
 @module
@@ -1467,6 +1508,8 @@ def candor(
         filelist=None,
         detector_correction=False,
         monitor_correction=False,
+        spectral_correction=False,
+        dc_rate=0.,
         intent='auto',
         sample_width=None,
         base='none'):
@@ -1478,15 +1521,24 @@ def candor(
     filelist (fileinfo[]): List of files to open.
 
     detector_correction {Apply detector deadtime correction} (bool)
-    : If True, use deadtime constants in file to correct detector counts.
+    : If True, use deadtime constants in file to correct detector counts
+    (see Detector Dead Time).
 
-    monitor_correction {Apply monitor saturation correction} (bool)
-    : If True, use the measured saturation curve in file to correct
-    the monitor counts.
+    monitor_correction {Apply monitor deadtime correction} (bool)
+    : If True, use deadtime constants in file to correct monitor counts
+    (see Monitor Dead Time).
+
+    spectral_correction {Apply detector efficiency correction} (bool)
+    : If True, scale counts by the detector efficiency calibration given
+    in the file (see Spectral Efficiency).
+
+    dc_rate {Dark counts per minute} (float)
+    : Number of dark counts to subtract from each detector channel per
+    minute of counting time (see Dark Current).
 
     intent (opt:auto|specular|intensity|scan)
     : Measurement intent (specular, slit, or some other scan), auto or infer.
-    : If intent is 'scan', then use the first scanned variable.
+    If intent is 'scan', then use the first scanned variable (see Mark Intent).
 
     sample_width {Sample width (mm)} (float?)
     : Width of the sample along the beam direction in mm, used for
@@ -1494,8 +1546,8 @@ def candor(
     than the beam.  Leave blank to use value from data file.
 
     base {Normalize by} (opt:auto|monitor|time|power|none)
-    : How to convert from counts to count rates.
-    : Leave this as none if your template does normalization after integration.
+    : How to convert from counts to count rates. Leave this as none if your
+    template does normalization after integration (see Normalize).
 
     **Returns**
 
@@ -1524,7 +1576,11 @@ def candor(
         if detector_correction:
             data = detector_dead_time(data, None)
         if monitor_correction:
-            data = monitor_saturation(data)
+            data = monitor_dead_time(data, None)
+        if spectral_correction:
+            data = spectral_efficiency(data)
+        if dc_rate > 0.:
+            data = dark_current(data, dc_rate)
         data = normalize(data, base=base)
         #print "data loaded and normalized"
         datasets.append(data)
@@ -1690,6 +1746,8 @@ def super_load(filelist=None,
     #    : Automatically calculate the angular divergence of the beam.
     #
     auto_divergence = True
+
+    # TODO: sample_width is ignored if datafile defines angular_divergence
 
     datasets = []
     for data in url_load_list(filelist):

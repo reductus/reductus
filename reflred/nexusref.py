@@ -164,8 +164,12 @@ def nexus_common(self, entry, entryname, filename):
         correction = data_as(saturation_device, 'correction', '')
         self.monitor.saturation = np.vstack((rate, 1./correction))
 
-    self.sample.name = str_data(entry, 'sample/name')
+    # CRUFT: old candor files don't define NXsample
+    self.sample.name = str_data(entry, 'sample/name', default=None)
     self.sample.description = str_data(entry, 'sample/description')
+    if self.sample.name is None:
+        self.sample.name = str_data(entry, 'DAS_logs/sample/name')
+        self.sample.description = str_data(entry, 'DAS_logs/sample/description')
 
     # TODO: stop trying to guess DOI
     if 'DOI' in entry:
