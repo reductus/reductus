@@ -1,4 +1,4 @@
-"""
+r"""
 Convert a restructured text document to html.
 
 Inline math markup can uses the *math* directive, or it can use latex
