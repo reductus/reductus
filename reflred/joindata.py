@@ -172,7 +172,6 @@ def build_dataset(group, columns):
                          else '')
     #data.normbase
     data.warnings = []  # initialize per-file history
-    data.messages = []  # initialize per-file history
     #data.vlabel
     #data.vunits
     #data.vscale
