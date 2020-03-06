@@ -1057,12 +1057,6 @@ class ReflData(Group):
             props = _fromDict(state[attr])
             setattr(self, attr, cls(**props))
 
-    def __or__(self, pipeline):
-        return pipeline(self)
-
-    def __ior__(self, pipeline):
-        return pipeline.apply_and_log(self)
-
     def warn(self, msg):
         """Record a warning that should be displayed to the user"""
         warnings.warn(msg)
