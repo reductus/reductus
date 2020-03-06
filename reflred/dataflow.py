@@ -4,6 +4,7 @@ from dataflow.calc import process_template
 from dataflow.data import Plottable
 
 from . import steps
+from . import candor_steps
 from . import templates
 from .refldata import ReflData, PSDData
 from .candor import Candor
@@ -91,7 +92,7 @@ def make_cached_subloader_module(load_action, prefix=""):
 
 def define_instrument():
     # Define modules
-    actions = get_modules(steps)
+    actions = get_modules(steps) + get_modules(candor_steps)
     modules = make_modules(actions, prefix=INSTRUMENT+'.')
     modules.append(make_cached_subloader_module(steps.super_load, prefix=INSTRUMENT+'.'))
     modules.append(make_cached_subloader_module(steps.ncnr_load, prefix=INSTRUMENT+'.'))
