@@ -1,0 +1,94 @@
+{
+  "modules": [
+    {
+      "module": "ncnr.refl.candor",
+      "title": "cdr slit",
+      "x": 35,
+      "y": 145
+    },
+    {
+      "module": "ncnr.refl.stitch_intensity",
+      "title": "Scale&Join",
+      "x": 190,
+      "y": 145
+    },
+    {
+      "module": "ncnr.refl.candor",
+      "title": "cdr spec",
+      "x": 35,
+      "y": 5
+    },
+    {
+      "module": "ncnr.refl.candor",
+      "title": "cdr back+",
+      "x": 35,
+      "y": 55
+    },
+    {
+      "module": "ncnr.refl.candor",
+      "title": "cdr back-",
+      "x": 35,
+      "y": 100
+    },
+    {
+      "module": "ncnr.refl.join",
+      "title": "Join",
+      "x": 190,
+      "y": 5
+    },
+    {
+      "module": "ncnr.refl.join",
+      "title": "Join",
+      "x": 190,
+      "y": 55
+    },
+    {
+      "module": "ncnr.refl.join",
+      "title": "Join",
+      "x": 190,
+      "y": 100
+    }
+  ],
+  "wires": [
+    {
+      "source": [
+        0,
+        "output"
+      ],
+      "target": [
+        1,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        2,
+        "output"
+      ],
+      "target": [
+        5,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        3,
+        "output"
+      ],
+      "target": [
+        6,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        4,
+        "output"
+      ],
+      "target": [
+        7,
+        "data"
+      ]
+    }
+  ]
+}

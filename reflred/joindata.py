@@ -4,7 +4,7 @@ Join reflectivity datasets with matching intent/cross section.
 """
 from __future__ import print_function
 
-from copy import copy
+from copy import deepcopy
 
 import numpy as np
 
@@ -127,17 +127,14 @@ def build_dataset(group, columns):
     """
     head = group[0]
 
-    # Copy details of first file as metadata for the returned dataset, and
-    # populate it with the result vectors.  Note that this is copy by reference;
-    # if an array in head gets updated later, then this modification will
-    # also appear in the returned data.  Not sure if this is problem...
-    data = ReflData()
-    for p in data._fields:
-        setattr(data, p, getattr(head, p))
-    for group_name, _ in data._groups:
-        head_group, data_group = getattr(head, group_name), getattr(data, group_name)
-        for p in data_group._fields:
-            setattr(data_group, p, getattr(head_group, p))
+    # Copy details of first file as metadata for the returned dataset.
+    # Note: using deepcopy since this is going to update subgroup
+    # data such as data.slit1.x.
+    data = deepcopy(group[0])
+    ## Could instead do a semi-deep copy using info from the group:
+    #data = copy(group[0])
+    #for group_name, _ in data._groups:
+    #    setattr(data, group_name, copy(getattr(data, group_name)))
 
     # Clear the fields that are no longer defined
     data.sample.angle_x_target = None

@@ -67,6 +67,7 @@ def candor(
     # Note: candor automatically computes divergence.
     datasets = []
     for data in url_load_list(filelist, loader=load_entries):
+        # TODO: drop data rows where fastShutter.openState is 0
         data.Qz_basis = 'target'
         if intent not in [None, 'auto']:
             data.intent = intent
@@ -103,7 +104,7 @@ def spectral_efficiency(data, spectrum=()):
 
     output (candordata) : scaled data
 
-    2020-03-03 Paul Kienzle
+    | 2020-03-03 Paul Kienzle
     """
     from .candor import NUM_CHANNELS
     # TODO: too many components operating directly on detector counts?
@@ -122,7 +123,7 @@ def spectral_efficiency(data, spectrum=()):
     data.detector.counts_variance = data.detector.counts_variance / spectrum
     return data
 
-@module
+@module("candor")
 def dark_current(data, dc_rate=0.):
     r"""
     Correct for the dark current, which is the average number of
@@ -145,7 +146,7 @@ def dark_current(data, dc_rate=0.):
 
     output (candordata): Dark current subtracted data.
 
-    2020-03-04 Paul Kienzle
+    | 2020-03-04 Paul Kienzle
     """
     # TODO: no uncertainty propagation
     # TODO: generalize to detector shapes beyond candor
@@ -155,4 +156,49 @@ def dark_current(data, dc_rate=0.):
         data = copy(data)
         data.detector = copy(data.detector)
         data.detector.counts = data.detector.counts - dc[:, None, None]
+    return data
+
+@module("candor")
+def stitch_intensity(data):
+    r"""
+    Join the intensity measurements into a single entry.
+
+    **Inputs**
+
+    data (candordata[]) : data to join
+
+    **Returns**
+
+    output (candordata[]) : joined data
+
+    | 2020-03-04 Paul Kienzle
+    """
+    from .refldata import Intent
+    from .steps import join
+
+    # sort the segments and make sure there is one and only one overlap
+    data = [copy(v) for v in data]
+    data.sort(key=lambda d: (d.slit1.x[0], d.slit2.x[0]))
+    for a, b in zip(data[:-1], data[1:]):
+        # Verify overlap
+        if (not np.isclose(a.slit1.x[-1], b.slit1.x[0])
+            or not np.isclose(a.slit2.x[-1], b.slit2.x[0])
+            or not np.isclose(a.slit3.x[-1], b.slit3.x[0])):
+            raise ValueError("need one point of overlap between segments")
+        # Scale the *next* segment to the current segment rather than scaling
+        # the current segment.  This does two things: (1) the first segment
+        # doesn't need to be scaled since it has the narrowest slits, hence
+        # the smallest attenuators are needed, and (2) the attenuation
+        # computed at the next cycle automatically includes the cumulative
+        # attenuation up to the current cycle.
+        # TODO: propagate uncertainties
+        atten = a.v[-1] / b.v[0]
+        b.v *= atten[None, ...]
+
+    # Force intent to treat this as a slit scan.
+    data[0].intent = Intent.slit
+
+    # Use existing join algorithm.
+    # TODO: expose join parameters to the user?
+    data = join(data)
     return data
