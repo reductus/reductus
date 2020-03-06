@@ -2,6 +2,7 @@ from dataflow import core as df
 from dataflow.automod import make_modules, make_template, auto_module, get_modules
 from dataflow.calc import process_template
 from dataflow.data import Plottable
+from dataflow.lib.exporters import exports_json
 
 from . import steps
 from . import candor_steps
@@ -25,12 +26,19 @@ class FluxData(object):
             "fluxes": self.fluxes,
             "total_flux": self.total_flux
         }
+
     def get_plottable(self):
         return self.get_metadata()
-    def export(self):
-        import json
-        export_string = json.dumps(self.get_metadata(), indent=2)
-        return {"name": "fluxes", "entry": "", "export_string": export_string, "file_suffix": ".dat"}
+
+    @exports_json
+    def to_json_text(self):
+        return {
+            "name": "fluxes",
+            "entry": "",
+            "file_suffix": ".json",
+            "value": self.get_metadata(),
+            "compact": False,  # pretty-print result
+        }
 
 def make_cached_subloader_module(load_action, prefix=""):
     """
