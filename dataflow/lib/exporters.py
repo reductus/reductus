@@ -16,8 +16,11 @@ class NumpyEncoder(json.JSONEncoder):
         # Let the base class default method raise the TypeError
         return json.JSONEncoder.default(self, obj)
 
-def json_dumps(obj):
-    return json.dumps(obj, separators=(",", ":"), cls=NumpyEncoder)
+def json_dumps(obj, compact=True):
+    if compact:
+        return json.dumps(obj, separators=(",", ":"), cls=NumpyEncoder)
+    else:
+        return json.dumps(obj, indent=2, cls=NumpyEncoder)
 
 def _build_filename(export, ext="", index=None):
     index_tag = f"_{index}" if index is not None else ""
@@ -35,7 +38,8 @@ def json_writer(datasets, export_method=None, template_data=None, concatenate=Fa
             "template_data": template_data,
             "outputs": [export["value"] for export in exports],
         }
-        export_string = json_dumps(data)
+        compact = exports[0].get("compact", False)
+        export_string = json_dumps(data, compact=compact)
         #export_string = export_string.encode('utf-8')
         filename = _build_filename(exports[0], ext=".dat", index=None)
         outputs.append({"filename": filename, "value": export_string})
@@ -46,9 +50,10 @@ def json_writer(datasets, export_method=None, template_data=None, concatenate=Fa
                 "outputs": [export["value"]],
                 #"index": i,   # TODO: do we want the output index?
             }
-            export_string = json_dumps(data)
+            compact = export.get("compact", False)
+            export_string = json_dumps(data, compact=compact)
             #export_string = export_string.encode('utf-8')
-            filename = _build_filename(exports[0], ext=".dat", index=i)
+            filename = _build_filename(export, ext=".dat", index=i)
             outputs.append({"filename": filename, "value": export_string})
     return outputs
 
@@ -67,7 +72,7 @@ def text(datasets, export_method=None, template_data=None, concatenate=False):
         for i, export in enumerate(exports):
             export_string = header_string + export["value"]
             #export_string = export_string.encode('utf-8')
-            filename = _build_filename(exports[0], ext=".dat", index=i)
+            filename = _build_filename(export, ext=".dat", index=i)
             outputs.append({"filename": filename, "value": export_string})
     return outputs
 
@@ -106,7 +111,7 @@ def hdf(datasets, export_method=None, template_data=None, concatenate=False):
         outputs.append({"filename": filename, "value": fid.read()})
     else:
         for i, export in exports:
-            filename = _build_filename(exports[0], ext=".hdf5", index=i)
+            filename = _build_filename(export, ext=".hdf5", index=i)
             h5_item = export["value"]
             _set_nexus_attrs(h5_item, filename)
             h5_item.attrs["template_def"] = header_string
@@ -137,13 +142,33 @@ def png(datasets, export_method=None, template_data=None, concatenate=False):
         new_metadata.add_itxt("reductus_template.json", header_string)
         value = io.BytesIO()
         image.save(value, pnginfo=new_metadata)
-        filename = _build_filename(exports[0], ext=".hdf5", index=i)
+        filename = _build_filename(export, ext=".hdf5", index=i)
         outputs.append({"filename": filename, "value": value})
 
     return outputs
 
 
 def exports_json(name="json"):
+    """
+    Decorator for json output file.
+
+    The wrapped function should return a structure containing::
+
+        {
+            "name": "base file name",
+            "entry": "file entry",
+            "file_suffix": ".json",
+            "value": {...},  # JSON data (supports numpy arrays as values)
+            "compact": True,  # Default is false
+        }
+
+    The resulting file will contain::
+
+        {
+            "template_data": {...},  # template information
+            "outputs": [{...}],  #  list of all outputs in bundle
+        }
+    """
     def inner_function(f):
         f.exporter = json_writer
         f.export_name = name

@@ -1,8 +1,9 @@
 from collections import OrderedDict
 import datetime
-import json
 
 import numpy as np
+
+from .lib.exporters import exports_json
 
 def todict(obj, convert_bytes=False):
     if isinstance(obj, np.integer):
@@ -16,7 +17,8 @@ def todict(obj, convert_bytes=False):
     elif isinstance(obj, (list, tuple)):
         obj = [todict(a, convert_bytes=convert_bytes) for a in obj]
     elif isinstance(obj, (dict, OrderedDict)):
-        obj = OrderedDict([(k, todict(v, convert_bytes=convert_bytes)) for k, v in obj.items()])
+        obj = OrderedDict([(k, todict(v, convert_bytes=convert_bytes))
+                           for k, v in obj.items()])
     elif isinstance(obj, bytes) and convert_bytes:
         obj = obj.decode()
     return obj
@@ -68,8 +70,7 @@ class Parameters(OrderedDict):
         return todict(self)
 
     def get_plottable(self):
-        #return {"entry": "entry", "type": "params", "params": _toDictItem(self.metadata)}
-        return {"entry": "entry", "type": "params", "params": todict(self.__dict__)}
+        return {"entry": "entry", "type": "params", "params": todict(self)}
 
     # For compatibility with existing Parameters objects in sansred, etc.
     @property
@@ -82,13 +83,14 @@ class Parameters(OrderedDict):
             return self[name]
         raise AttributeError(f"Name '{name}' is not {self.__class__.__name__}")
 
-    def export(self):
-        output = json.dumps(todict(self, convert_bytes=True))
-        name = getattr(self, "name", "default_name")
-        entry = getattr(self, "entry", "default_entry")
-        suffix = getattr(self, "suffix", self.__class__.__name__)
-        return dict(name=name, entry=entry, export_string=output,
-                    file_suffix=suffix+".metadata.json")
+    @exports_json("json")
+    def to_json_text(self):
+        return {
+            "name": getattr(self, "name", self.__class__.__name__),
+            #"entry": getattr(self, "entry", "default_entry"),
+            "file_suffix": ".json",
+            "value": todict(self, convert_bytes=True),
+        }
 
 class Plottable:
     """
@@ -108,9 +110,13 @@ class Plottable:
     def get_plottable(self):
         return todict(self.layout)
 
-    def export(self):
-        output = json.dumps(todict(self.layout))
+    @exports_json("json")
+    def to_json_text(self):
         title = self.layout.get("title", "name:entry")
         name, entry = title.split(':', 1) if ':' in title else (title,"entry")
-        return dict(name=name, entry=entry, export_string=output,
-                    file_suffix=".plottable.json")
+        return {
+            "name": name,
+            "entry": entry,
+            "file_suffix": ".plot.json",
+            "value": todict(self.layout),
+        }
