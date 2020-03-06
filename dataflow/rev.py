@@ -112,7 +112,7 @@ def git_rev(repo):
     the git repository changes.  It only reads files, so it should not do
     any damage to the repository in the process.
     """
-    # Based on stackoverflow am9417 and Ciro Santilli 
+    # Based on stackoverflow am9417 and Ciro Santilli
     # https://stackoverflow.com/questions/14989858/get-the-current-git-hash-in-a-python-script/59950703#59950703
     # https://stackoverflow.com/questions/22968856/what-is-the-file-format-of-a-git-commit-object-data-structure/37438460#37438460
 
