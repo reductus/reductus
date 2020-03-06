@@ -1062,10 +1062,6 @@ class ReflData(Group):
         warnings.warn(msg)
         self.warnings.append(msg)
 
-    def save(self, filename):
-        with open(filename, 'w') as fid:
-            fid.write(self.export())
-
     def get_metadata(self):
         return self.todict()
 
