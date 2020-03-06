@@ -765,8 +765,6 @@ class ReflData(Group):
     normbase = None
     #: List of warnings generated when the file was loaded
     warnings = None
-    #: List of corrections that have been applied to the data
-    messages = None
     #: Value label for y-axis on 1-D or colorbar on 2-D plots.
     #: Label will change when the value is normalized.
     vlabel = 'Intensity'
@@ -1035,14 +1033,13 @@ class ReflData(Group):
         for attr, cls in ReflData._groups:
             setattr(self, attr, cls())
         self.warnings = []
-        self.messages = []
         Group.__init__(self, **kw)
 
     def __str__(self):
         base = [_str(self, indent=2)]
         others = ["".join(("  ", s, "\n", str(getattr(self, s))))
                   for s, _ in ReflData._groups]
-        return "\n".join(base+others+self.messages)
+        return "\n".join(base+others)
 
     def todict(self):
         state = _toDict(self)
@@ -1070,22 +1067,6 @@ class ReflData(Group):
         """Record a warning that should be displayed to the user"""
         warnings.warn(msg)
         self.warnings.append(msg)
-
-    def log(self, msg):
-        """Record corrections that have been applied to the data"""
-        #print "log:",msg
-        self.messages.append(msg)
-
-    def log_dependency(self, label, other):
-        # TODO: eliminate logging ... don't need it if we have the template
-        if self.messages is other.messages or self.warnings is other.warnings:
-            raise RuntimeError("message logs collide")
-        if other.messages:
-            self.messages.append(label + ":")
-            self.messages.extend("  "+s for s in other.messages)
-        if other.warnings:
-            self.warnings.append(label + ":")
-            self.warnings.extend("  "+s for s in other.warnings)
 
     def save(self, filename):
         with open(filename, 'w') as fid:

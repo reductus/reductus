@@ -80,12 +80,6 @@ def fit_dead_time(data, source='detector', mode='auto'):
     from .deadtime import fit_dead_time
 
     data = fit_dead_time(data, source=source, mode=mode)
-
-    data.log("fit_dead_time(attenuated, unattenuated, source=%r, mode=%r)"
-             % (source, mode))
-    #for k, d in enumerate(data):
-    #    data.log("data %d:"%k)
-    #    data.log(d.messages)
     return data
 
 
@@ -123,13 +117,9 @@ def monitor_dead_time(data, dead_time, nonparalyzing=0.0, paralyzing=0.0):
     data = copy(data)
     data.monitor = copy(data.monitor)
     if nonparalyzing != 0.0 or paralyzing != 0.0:
-        data.log('monitor_dead_time(nonparalyzing=%.15g, paralyzing=%.15g)'
-                 % (nonparalyzing, paralyzing))
         apply_monitor_dead_time(data, tau_NP=nonparalyzing,
                                 tau_P=paralyzing)
     elif dead_time is not None:
-        data.log('monitor_dead_time(dead_time)')
-        data.log_dependency('dead_time', dead_time)
         apply_monitor_dead_time(data, tau_NP=dead_time.tau_NP,
                                 tau_P=dead_time.tau_P)
     elif data.monitor.deadtime is not None and np.isfinite(data.monitor.deadtime).all():
@@ -137,7 +127,6 @@ def monitor_dead_time(data, dead_time, nonparalyzing=0.0, paralyzing=0.0):
             tau_NP, tau_P = data.monitor.deadtime
         except Exception:
             tau_NP, tau_P = data.monitor.deadtime, 0.0
-        data.log('monitor_dead_time()')
         apply_monitor_dead_time(data, tau_NP=tau_NP, tau_P=tau_P)
     else:
         pass  # no deadtime correction parameters available.
@@ -175,15 +164,10 @@ def detector_dead_time(data, dead_time, nonparalyzing=0.0, paralyzing=0.0):
 
     #data = copy(data)
     #data.detector = copy(data.detector)
-    data.log('trying to do detector_dead_time()' + str(data.detector.deadtime))
     if nonparalyzing != 0.0 or paralyzing != 0.0:
-        data.log('detector_dead_time(nonparalyzing=%.15g, paralyzing=%.15g)'
-                 % (nonparalyzing, paralyzing))
         apply_detector_dead_time(data, tau_NP=nonparalyzing,
                                  tau_P=paralyzing)
     elif dead_time is not None:
-        data.log('detector_dead_time(dead_time)')
-        data.log_dependency('dead_time', dead_time)
         apply_detector_dead_time(data, tau_NP=dead_time.tau_NP,
                                  tau_P=dead_time.tau_P)
     elif data.detector.deadtime is not None and not np.all(np.isnan(data.detector.deadtime)):
@@ -191,8 +175,6 @@ def detector_dead_time(data, dead_time, nonparalyzing=0.0, paralyzing=0.0):
             tau_NP, tau_P = data.detector.deadtime
         except Exception:
             tau_NP, tau_P = data.detector.deadtime, 0.0
-        data.log('detector_dead_time(nonparalyzing=%.15g, paralyzing=%.15g)'
-                 % (tau_NP, tau_P))
         apply_detector_dead_time(data, tau_NP=tau_NP, tau_P=tau_P)
     else:
         raise ValueError("no valid deadtime provided in file or parameter")
@@ -219,7 +201,6 @@ def monitor_saturation(data):
     data = copy(data)
     if getattr(data.monitor, 'saturation', None) is not None:
         data.monitor = copy(data.monitor)
-        data.log('monitor_saturation()')
         apply_monitor_saturation(data)
     else:
         data.warn("no monitor saturation for %r"%data.name)
@@ -246,7 +227,6 @@ def detector_saturation(data):
     if getattr(data.detector, 'saturation', None) is not None:
         #print("detector "+str(data.detector.__dict__))
         data.detector = copy(data.detector)
-        data.log('detector_saturation()')
         apply_detector_saturation(data)
     else:
         data.warn("no detector saturation for %r"%data.name)
@@ -278,7 +258,6 @@ def theta_offset(data, offset=0.0):
     data.detector = copy(data.detector)
     data.sample.angle_x = copy(data.sample.angle_x)
     data.detector.angle_x = copy(data.detector.angle_x)
-    data.log('theta_offset(%.15g)' % offset)
     apply_theta_offset(data, offset)
     return data
 
@@ -305,7 +284,6 @@ def back_reflection(data):
     data.detector = copy(data.detector)
     data.sample.angle_x = copy(data.sample.angle_x)
     data.detector.angle_x = copy(data.detector.angle_x)
-    data.log("back_reflection()")
     apply_back_reflection(data)
     return data
 
@@ -332,7 +310,6 @@ def absolute_angle(data):
     data.detector = copy(data.detector)
     data.sample.angle_x = copy(data.sample.angle_x)
     data.detector.angle_x = copy(data.detector.angle_x)
-    data.log("absolute_angle()")
     apply_absolute_angle(data)
     return data
 
@@ -364,7 +341,6 @@ def divergence(data, sample_width=None, sample_broadening=0):
     from .angles import apply_divergence
     #data = copy(data)
     if data.angular_resolution is None:
-        data.log('divergence()')
         apply_divergence(data, sample_width, sample_broadening)
     return data
 
@@ -390,7 +366,6 @@ def mask_specular(data):
     """
     from .background import apply_specular_mask
     data = copy(data)
-    data.log('mask_specular()')
     apply_specular_mask(data)
     return data
 
@@ -429,7 +404,6 @@ def mask_points(data, mask_indices=None):
     | 2019-07-02 Brian Maranville: change self.points after mask
     """
     data = copy(data)
-    data.log('mask_points(%r)' % (mask_indices,))
     output = mask_action(data=data, mask_indices=mask_indices)
     return output
 
@@ -466,7 +440,6 @@ def mark_intent(data, intent='auto'):
     """
     from .intent import apply_intent
     #data = copy(data)
-    data.log('mark_intent(%r)' % intent)
     apply_intent(data, intent)
     return data
 
@@ -615,7 +588,6 @@ def normalize(data, base='auto'):
     # dark current, etc.
     from .scale import apply_norm
     data = copy(data)
-    data.log('normalize(base=%r)' % base)
     apply_norm(data, base)
     return data
 
@@ -640,7 +612,6 @@ def psd_center(data, center=128):
     data = copy(data)
     data.detector = copy(data.detector)
     data.detector.center = (center, 0)
-    data.log("center(%.15g)" % (center,))
     return data
 
 @module
@@ -736,10 +707,6 @@ def psd_integrate(
         degree=degree, mc_samples=mc_samples, seed=mc_seed,
         slices=[slices] if slices is not None else [],
     )
-    spec.log("integrate(%.15g, %.15g)" % (spec_scale, spec_pixel))
-    back.log("integrate(%.15g, %.15g, %.15g, %.15g)"
-             % (left_scale, left_pixel, right_scale, right_pixel))
-    resid.log("integrate()")
 
     return spec, back, resid, Plottable(sliceplot)
 
@@ -764,7 +731,6 @@ def rescale(data, scale=1.0, dscale=0.0):
     """
     from .scale import apply_rescale
     data = copy(data)
-    data.log("scale(%.15g,%.15g)" % (scale, dscale))
     apply_rescale(data, scale, dscale)
     return data
 
@@ -922,11 +888,6 @@ def join(data, Q_tolerance=0.5, dQ_tolerance=0.002, order='file',
     for group in datasets:
         group = sort_files(group, order)
         result = join_datasets(group, Q_tolerance, dQ_tolerance)
-
-        result.log("join(*data)")
-        for i, d in enumerate(group):
-            result.log_dependency('data[%d]' % i, d)
-        #print "join", result.name, result.v, result.dv
         output.append(result)
     return output
 
@@ -967,10 +928,7 @@ def align_background(data, offset='auto'):
         offset = 'auto'
     from .background import set_background_alignment
     #data = copy(data)
-    # TODO: do we want to log the alignment chosen when alignment is auto?
-    # Or do we log the fact that auto alignment was chosen?
     set_background_alignment(data, offset)
-    data.log('align_background(%r)'%data.Qz_basis)
     return data
 
 
@@ -1014,15 +972,10 @@ def subtract_background(data, backp, backm, align="none"):
     from .background import apply_background_subtraction
 
     data = copy(data)
-    data.log("background(%s,%s)"
-             % ("backp" if backp is not None else "None",
-                "backm" if backm is not None else "None"))
     if backp is not None:
-        data.log_dependency("back+", backp)
         if align != "none":
             align_background(backp, offset=align)
     if backm is not None:
-        data.log_dependency("back-", backm)
         if align != "none":
             align_background(backm, offset=align)
     #print "%s - (%s+%s)/2"%(data.name, (backp.name if backp else "none"), (backm.name if backm else "none"))
@@ -1179,8 +1132,6 @@ def divide_intensity(data, base):
     if base is not None:
         from .scale import apply_intensity_norm
         data = copy(data)
-        data.log("divide(base)")
-        data.log_dependency("base", base)
         apply_intensity_norm(data, base)
     return data
 
@@ -1217,9 +1168,6 @@ def smooth_slits(datasets, degree=1, span=2, dx=0.01):
     datasets = [copy(d) for d in datasets]
     for d in datasets:
         d.slit1, d.slit2 = copy(d.slit1), copy(d.slit2)
-        # TODO: not reproducible from log
-        # no info in log about which datasets were smoothed together
-        d.log("smooth_slits(degree=%d, span=%d, dx=%g)" % (degree, span, dx))
 
     apply_smoothing(datasets, dx=dx, degree=degree, span=span)
     return datasets
@@ -1256,8 +1204,6 @@ def abinitio_footprint(data, Io=1., width=None, offset=0.):
     from .footprint import apply_abinitio_footprint
 
     data = copy(data)
-    data.log("abinitio_footprint(Io=%s,width=%s,offset=%s)"
-             % (str(Io), str(width), str(offset)))
     apply_abinitio_footprint(data, Io, width, offset)
     return data
 
@@ -1339,8 +1285,6 @@ def correct_footprint(data, fitted_footprint, correction_range=[None, None],
     # in all cases, overwrite the error in fitted_footprint with specified
     # values:
     fitted_footprint.dp = dp
-    data.log("footprint(p=%s,dp=%s)"
-             % (str(fitted_footprint.p), str(fitted_footprint.dp)))
     apply_fitted_footprint(data, fitted_footprint, correction_range)
     return data
 
@@ -1388,11 +1332,6 @@ def estimate_polarization(data, FRbalance=50.0, Emin=0.0, Imin=0.0, clip=False):
 
     poldata = PolarizationData(data, FRbal=0.01*FRbalance,
                                Emin=0.01*Emin, Imin=Imin, clip=clip)
-
-    poldata.log("PolarizationData(beam, Imin=%.15g, Emin=%.15g%%, FRbal=%.15g%%, clip=%d)"
-                % (Imin, Emin, FRbalance, 0+clip))
-    #for xs in ('++','+-','-+','--'):
-    #    poldata.log_dependency("beam"+xs, data[xs])
     return poldata
 
 
@@ -1419,8 +1358,6 @@ def correct_polarization(data, polarization, spinflip=True):
     """
     from .polarization import apply_polarization_correction
     data = copy(data)
-    #data.log("correct_polarization(polarization, splinflip=True)")
-    #data.log_dependency("polarization", polarization)
     apply_polarization_correction(data, polarization, spinflip)
     return data
 
@@ -1446,7 +1383,6 @@ def save(data, name='auto', ext='auto', path='auto'):
     if path == 'auto':
         path = '.'
     if ext == 'auto':
-        # TODO: look in the log to guess an extension
         ext = '.dat'
     elif not ext.startswith('.'):
         ext = '.' + ext
