@@ -81,6 +81,45 @@ def module(tag=""):
         return fn
     return wrapper
 
+# From unutbu and Glenn Maynard
+# https://stackoverflow.com/questions/13503079/how-to-create-a-copy-of-a-python-function/13503277#13503277
+# http://stackoverflow.com/a/6528148/190597
+def copy_func(f):
+    """Make a copy of a function, including its attributes"""
+    import types
+    import functools
+    g = types.FunctionType(f.__code__, f.__globals__, name=f.__name__,
+                           argdefs=f.__defaults__,
+                           closure=f.__closure__)
+    g = functools.update_wrapper(g, f)
+    g.__kwdefaults__ = f.__kwdefaults__
+    return g
+
+def copy_module(f, new_name, old_type, new_type, tag=None):
+    """
+    Copy a dataflow module replacing name with *new_name* and *old_type*
+    with *new_type*.
+
+    For example::
+
+        from dataflow.automod import copy_module
+        # Note: do not load symbols from steps directly into the file scope
+        # or they will be defined twice as reduction modules.
+        from reflred import steps
+
+        candor_join = copy_module(
+            steps.join, "candor_join", "refldata", "candordata", tag="candor")
+    """
+    g = copy_func(f)
+    g.__name__ = new_name
+    g.__doc__ = re.sub(
+        rf"\({old_type}([^a-zA-Z_)]*)\)",
+        rf"({new_type}\1)",
+        f.__doc__)
+    if tag is not None:
+        g.group = tag
+    return g
+
 def get_modules(module, grouped=False, sorted=True):
     """
     Retrieve @module actions from a python module.
