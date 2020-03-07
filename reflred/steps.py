@@ -809,6 +809,7 @@ def join(data, Q_tolerance=0.5, dQ_tolerance=0.002, order='file',
     from .util import group_by_key
     # No copy necessary; join is never in-place.
 
+    # TODO: parse **deprecated** in automod and hide deprecated inputs on ui
     if tolerance is not None:
         Q_tolerance = dQ_tolerance = tolerance
     datasets = [v for k, v in sorted(group_by_key(group_by, data).items())]

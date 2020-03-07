@@ -36,13 +36,13 @@ def data_as(group, fieldname, units, rep=1, NA=None):
     converter = unit.Converter(units_in)
     value = converter(field[()], units)
     if rep != 1:
-        if value.shape[0] == 1:
+        if len(value) == 1:
             return np.repeat(value, rep, axis=0)
-        elif value.shape[0] != rep:
+        elif len(value) == rep:
+            return value
+        else:
             raise ValueError("field %r does not match counts in %r"
                              %(field.name, field.file.filename))
-        else:
-            return value
     else:
         return value
 
@@ -205,8 +205,13 @@ def nexus_common(self, entry, entryname, filename):
             try:
                 field = das[path]
             except KeyError:
-                print(">>> could not read scanned %s for %s"
-                      % (node_id, os.path.basename(self.path)))
+                # Note: Suppressing this message because it makes the
+                # regression tests noisy.  Older versions of the SelectFields
+                # filter on the datawriter were not stripping the fields from
+                # control/scanned variables lists, but newer ones are.
+                # TODO: reenable test for missing scan fields
+                #print(">>> could not read scanned %s for %s"
+                #      % (node_id, os.path.basename(self.path)))
                 continue
             try:
                 scan_value = data_as(das, path, '', rep=n)

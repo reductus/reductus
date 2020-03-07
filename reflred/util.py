@@ -163,7 +163,10 @@ def test_nearest():
 
 def poisson_average(y, dy, norm='monitor'):
     r"""
-    Return the Poisson average of a rate vector y +/- dy.
+    Return the Poisson average of a rate vector *y +/- dy*.
+
+    If y, dy is multidimensional then average the first dimension, returning
+    an item of one fewer dimentsions.
 
     Use *norm='monitor'* When counting against monitor (the default) or
     *norm='time'* when counting against time.
@@ -278,22 +281,27 @@ def poisson_average(y, dy, norm='monitor'):
     counts = y*monitors
 
     # Compute average rate
-    combined_monitors, combined_counts = np.sum(monitors), np.sum(counts)
+    combined_monitors = np.sum(monitors, axis=0)
+    combined_counts = np.sum(counts, axis=0)
     bar_y = combined_counts/combined_monitors
-    if norm == "monitor":
+    if norm != "monitor":
+        bar_dy = bar_y * np.sqrt(1./combined_monitors)
+    elif np.isscalar(bar_y):
         if bar_y == 0:
-            # then the simplification: sqrt(1/N + 1/M) is invalid,
-            # use |dy| = 1/M*sqrt((dN)^2 + 1/M)
-            # but dN in this case is 1.
             bar_dy = 1./combined_monitors * np.sqrt(1. + 1./combined_monitors)
         else:
-            # the simplification will work in this case, sort of
             bar_dy = bar_y * np.sqrt(1./combined_counts + 1./combined_monitors)
     else:
-        bar_dy = bar_y * np.sqrt(1./combined_monitors)
+        # When bar_y is zero then 1/N is undefined and so sqrt(1/N + 1/M) fails.
+        # Instead use |dy| = 1/M*sqrt((dN)^2 + 1/M) with dN = 1.
+        bar_dy = 1./combined_monitors * np.sqrt(1. + 1./combined_monitors)
+        # When bar_y is not zero then use |dy| = N/M * sqrt(1/N + 1/M)
+        idx = (bar_y != 0)
+        bar_dy[idx] = bar_y[idx] * np.sqrt(1./combined_counts[idx] + 1./combined_monitors[idx])
 
     #print("est. monitors:", monitors)
     #print("est. counts:", counts)
+    #print("poisson avg", counts.shape, bar_y.shape, bar_dy.shape)
     return bar_y, bar_dy
 
 

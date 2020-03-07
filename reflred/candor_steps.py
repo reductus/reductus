@@ -69,7 +69,7 @@ def candor(
     for data in url_load_list(filelist, loader=load_entries):
         # TODO: drop data rows where fastShutter.openState is 0
         data.Qz_basis = 'target'
-        if intent not in [None, 'auto']:
+        if intent not in (None, 'none', 'auto'):
             data.intent = intent
         if dc_rate > 0.:
             data = dark_current(data, dc_rate)
@@ -173,17 +173,19 @@ def stitch_intensity(data):
 
     | 2020-03-04 Paul Kienzle
     """
+    from math import isclose
     from .refldata import Intent
     from .steps import join
 
     # sort the segments and make sure there is one and only one overlap
     data = [copy(v) for v in data]
     data.sort(key=lambda d: (d.slit1.x[0], d.slit2.x[0]))
+    #print([(d.slit1.x[0],d.slit1.x[-1]) for d in data])
     for a, b in zip(data[:-1], data[1:]):
         # Verify overlap
-        if (not np.isclose(a.slit1.x[-1], b.slit1.x[0])
-            or not np.isclose(a.slit2.x[-1], b.slit2.x[0])
-            or not np.isclose(a.slit3.x[-1], b.slit3.x[0])):
+        if (not isclose(a.slit1.x[-1], b.slit1.x[0], abs_tol=0.001)
+            or not isclose(a.slit2.x[-1], b.slit2.x[0], abs_tol=0.001)
+            or not isclose(a.slit3.x[-1], b.slit3.x[0], abs_tol=0.001)):
             raise ValueError("need one point of overlap between segments")
         # Scale the *next* segment to the current segment rather than scaling
         # the current segment.  This does two things: (1) the first segment
@@ -192,6 +194,7 @@ def stitch_intensity(data):
         # computed at the next cycle automatically includes the cumulative
         # attenuation up to the current cycle.
         # TODO: propagate uncertainties
+        # TODO: maybe update counts (unnormalized) rather than v (normalized)
         atten = a.v[-1] / b.v[0]
         b.v *= atten[None, ...]
 

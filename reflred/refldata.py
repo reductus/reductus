@@ -376,6 +376,9 @@ class Detector(Group):
         Angle of the detector arm relative to the main beam in x and y.
         This may be constant or an array of length n for the number of
         measurements in the scan.
+    angle_x_offset (nx x degree)
+    angle_y_offset (ny x degree)
+        Pixel angle in x and y.
     rotation (degree)
         Angle of rotation of the detector relative to the beam.  This
         will affect how vertical integration in the region of interest
@@ -439,6 +442,8 @@ class Detector(Group):
     angle_x = 0.  # degree
     angle_y = 0.  # degree
     angle_x_target = 0.  # degree
+    angle_x_offset = 0. # degree
+    angle_y_offset = 0. # degree
     rotation = 0. # degree
     efficiency = 1. # proportion
     saturation = inf # counts/sec
@@ -915,12 +920,13 @@ class ReflData(Group):
     def Qz(self):
         # Note: specular reflectivity assumes elastic scattering
         Li = Ld = self.Ld
+        #print("Qz_basis", self.Qz_basis, self.Ti.shape, self.Td.shape, self.Ti_target.shape, self.Td_target.shape, Li.shape)
         if self.Qz_basis == 'actual':
             return calc_Qz(self.Ti, self.Td, Li, Ld)
         if self.Qz_basis == 'target':
             if self.Qz_target is not None:
                 return self.Qz_target
-            return calc_Qz(self.Ti_target, self.Td, Li, Ld)
+            return calc_Qz(self.Ti_target, self.Td_target, Li, Ld)
         if self.Qz_basis == 'detector':
             return calc_Qz(self.Td/2, self.Td, Li, Ld)
         if self.Qz_basis == 'sample':

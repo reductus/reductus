@@ -193,20 +193,37 @@ def build_dataset(group, columns):
     # Fill in the fields we have averaged
     data.v = columns['v']
     data.dv = columns['dv']
-    data.angular_resolution = columns['dT']
+    data.monitor.count_time = columns['time']
+    data.monitor.counts = columns['monitor']
     data.sample.angle_x = columns['Ti']
     data.detector.angle_x = columns['Td']
+    data.sample.angle_x_target = columns['Ti_target']
+    data.detector.angle_x_target = columns['Td_target']
     data.slit1.x = columns['s1']
     data.slit2.x = columns['s2']
     data.slit3.x = columns['s3']
     data.slit4.x = columns['s4']
-    data.monochromator.wavelength = columns['Li']
-    data.detector.wavelength = columns['Ld']
-    data.detector.wavelength_resolution = columns['dL']
-    data.monitor.count_time = columns['time']
-    data.monitor.counts = columns['monitor']
-    data.Qz_target = columns['Qz_target']
-    #data.Qz_target = None
+    # TODO: cleaner handling of candor data
+    # Angular resolution may be stored separately from dT in the joined set
+    # if it is multidimensional or dT is set to something else for grouping.
+    res = 'angular_resolution' if 'angular_resolution' in columns else 'dT'
+    data.angular_resolution = columns[res]
+    # Some fields may not have been in the original data
+    if data.Qz_target is not None:
+        data.Qz_target = columns['Qz_target']
+    if data.monochromator.wavelength is not None:
+        data.monochromator.wavelength = columns['Li']
+    if data.detector.wavelength is not None:
+        # On candor data.detector.wavelength has shape [1, 2, 54] since it is
+        # constant for all measurement points. Since Ld and dL need to be
+        # scalars for grouping it is inconvenient to maintain the
+        # full wavelength for each frame, so we instead assume that any time
+        # the wavelength is multidimensional then it is constant. Further,
+        # we assume that the constant is included in the group[0] metadata
+        # we use as the basis of our return value.
+        if data.detector.wavelength.ndim == 1:
+            data.detector.wavelength = columns['Ld']
+            data.detector.wavelength_resolution = columns['dL']
 
     # Add in any sample environment fields
     data.sample.environment = {}
@@ -243,11 +260,37 @@ def get_fields(group):
         dL=[data.detector.wavelength_resolution for data in group],
         monitor=[data.monitor.counts for data in group],
         time=[data.monitor.count_time for data in group],
+        Ti_target=[data.sample.angle_x_target for data in group],
+        Td_target=[data.detector.angle_x_target for data in group],
         Qz_target=[data.Qz_target for data in group],
         # using v,dv since poisson average wants rates
         v=[data.v for data in group],
         dv=[data.dv for data in group],
     )
+    # TODO: cleaner way of handling multi-channel detectors
+    if columns['v'][0].ndim > 1:
+        # For candor analysis (and anything else with an nD detector), pick
+        # a particular detector channel to use as the basis for merging
+        # detector frames. This has only been tested on Candor so far, and
+        # may need to change if we want to handle overlapping frames in a
+        # traditional detector with a psd.
+
+        # Save the angular divergence since it may be multidimensional, and
+        # we will want to paste it in to the joined dataset. We will replace
+        # dT with a scalar for the purposes of grouping frames.
+        columns['angular_resolution'] = columns['dT']
+
+        # Make dT a scalar. Use S1 rather than dT since candor does not yet
+        # compute divergence properly.  Otherwise use the first channel of dT.
+        columns['dT'] = columns['s1']
+        #columns['dT'] = [v.flat[0] for v in columns['dT']]
+
+        # Pick the first channel of L, dL.  Not picking a column since they are
+        # constant across all frames, and since the column stacker automatically
+        # extends a scalar to a vector with one entry per frame.
+        columns['Ld'] = [v.flat[0] for v in columns['Ld']]
+        columns['dL'] = [v.flat[0] for v in columns['dL']]
+
     return columns
 
 
@@ -286,8 +329,9 @@ def stack_columns(group, columns):
                             for part, data in zip(values, group)])
                    for field, values in columns.items())
 
-    # Turn the data into arrays, masking out the points we are ignoring
-    columns = dict((k, np.hstack(v)) for k, v in columns.items())
+    # Turn the data into arrays.
+    #for k, v in columns.items(): print(f"{k}:", [vk.shape for vk in v])
+    columns = dict((k, np.concatenate(v, axis=0)) for k, v in columns.items())
     return columns
 
 
@@ -297,10 +341,10 @@ def _scalar_to_vector(value, data, field):
     Make v a vector of length n if v is a scalar, or leave it alone.
     """
     n = len(data.v)
-    if np.isscalar(value):
-        return np.ones(n)*value
-    elif len(value) == 1:
-        return np.ones(n)*value[0]
+    if value is None:  # Convert missing data to NaN
+        value = np.NaN
+    if np.isscalar(value) or len(value) == 1:
+        return np.repeat(value, n, axis=0)
     elif len(value) == n:
         return value
     else:
@@ -331,6 +375,7 @@ def set_QdQ(columns):
     """
     Ti, Td, dT = columns['Ti'], columns['Td'], columns['dT']
     Ld, dL = columns['Ld'], columns['dL']
+    #print("set_QdQ", [v.shape for v in (Ti, Td, dT, Ld, dL)])
     Qx, Qz = TiTdL2Qxz(Ti, Td, Ld)
     # TODO: is dQx == dQz ?
     dQ = dTdL2dQ(Td-Ti, dT, Ld, dL)
@@ -507,7 +552,7 @@ def merge_points(index_sets, columns, normbase):
             w = weight[group]
             for key, value in columns.items():
                 if key not in ['v', 'dv', 'time', 'monitor']:
-                    results[key].append(np.average(value[group], weights=w))
+                    results[key].append(np.average(value[group], weights=w, axis=0))
 
     # Turn lists into arrays
     results = dict((k, np.array(v)) for k, v in results.items())

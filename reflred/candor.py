@@ -31,6 +31,8 @@ S1_DISTANCE = -4335.86
 S2_DISTANCE = -356.0
 S3_DISTANCE = 356.0
 DETECTOR_DISTANCE = 3496.0
+MONO_WAVELENGTH = 4.75
+MONO_WAVELENGTH_DISPERSION = 0.01
 
 # CRUFT: these will be in the
 _EFFICIENCY = None
@@ -74,16 +76,34 @@ class Candor(ReflData):
         )
 
         # Monochromator
-        self.monochromator.wavelength = data_as(entry, 'instrument/monochromator/wavelength', 'Ang', rep=n)
-        self.monochromator.wavelength_resolution = data_as(entry, 'instrument/monochromator/wavelength_error', 'Ang', rep=n)
-        #if self.monochromator.wavelength is None:
-        #    self.warn(f"Wavelength is missing; using {WAVELENGTH} A")
-        #    self.monochromator.wavelength = WAVELENGTH
-        #if self.monochromator.wavelength_resolution is None:
-        #    self.warn("Wavelength resolution is missing; using %.1f%% dL/L FWHM"
-        #              % (100*WAVELENGTH_DISPERSION,))
-        #    self.monochromator.wavelength_resolution = \
-        #        FWHM2sigma(WAVELENGTH_DISPERSION*self.monochromator.wavelength)
+        ismono = (str_data(das, 'monoTrans/key', 'OUT') == 'IN')
+        if ismono:
+            self.warn("monochromatic beams not yet supported for Candor reduction")
+            self.monochromator.wavelength = data_as(entry, 'instrument/monochromator/wavelength', 'Ang', rep=n)
+            # TODO: make sure wavelength_error is 1-sigma, not FWHM %
+            self.monochromator.wavelength_resolution = data_as(entry, 'instrument/monochromator/wavelength_error', '', rep=n)
+            # CRUFT: nexus config doesn't link in monochromator
+            if self.monochromator.wavelength is None:
+                self.monochromator.wavelength = data_as(das, 'mono/wavelength', 'Ang', rep=n)
+            if self.monochromator.wavelength is None:
+                self.warn(f"Wavelength is missing; using {MONO_WAVELENGTH} A")
+                self.monochromator.wavelength = MONO_WAVELENGTH
+            # TODO: generate wavelength_error directly with the nexus writer
+            if self.monochromator.wavelength_resolution is None:
+                dispersion = data_as(das, 'mono/wavelengthSpread', '', rep=n)
+                if dispersion is not None:
+                    self.monochromator.wavelength_resolution = \
+                        FWHM2sigma(dispersion*self.monochromator.wavelength)
+            if self.monochromator.wavelength_resolution is None:
+                self.warn("Wavelength resolution is missing; using %.1f%% dL/L FWHM"
+                        % (100*MONO_WAVELENGTH_DISPERSION,))
+                self.monochromator.wavelength_resolution = \
+                    FWHM2sigma(MONO_WAVELENGTH_DISPERSION*self.monochromator.wavelength)
+            self.monochromator.wavelength = self.monochromator.wavelength[:, None, None]
+            self.monochromator.wavelength_resolution = self.monochromator.wavelength_resolution[:, None, None]
+        else:
+            self.monochromator.wavelength = None
+            self.monochromator.wavelength_resolution = None
 
         # Slit distances
         self.slit1.distance = data_as(entry, 'instrument/presample_slit1/distance', 'mm')
@@ -115,14 +135,20 @@ class Candor(ReflData):
             #slit.y_target = data_as(das, y_target, 'mm', rep=n)
         # CRUFT: old files don't have the detector mask mapped
         if self.slit4.x is None:
-            mask = float(str_data(das, 'detectorMaskMap/key', '10'))
+            mask_str = str_data(das, 'detectorMaskMap/key', '10')
+            if not mask_str:
+                mask_str = '10'
+            try:
+                mask = float(mask_str)
+            except ValueError:
+                raise ValueError(f"mask value {mask_str} cannot be converted to float")
             self.slit4.x_target = self.slit4.x = np.full(n, mask)
 
         # Detector
         wavelength = data_as(das, 'detectorTable/wavelengths', '')
         wavelength_spread = data_as(das, 'detectorTable/wavelengthSpreads', '')
-        wavelength = wavelength.reshape(NUM_CHANNELS, -1).T
-        wavelength_spread = wavelength_spread.reshape(NUM_CHANNELS, -1).T
+        wavelength = wavelength.reshape(NUM_CHANNELS, -1).T[None, :, :]
+        wavelength_spread = wavelength_spread.reshape(NUM_CHANNELS, -1).T[None, :, :]
         self.detector.wavelength = wavelength
         self.detector.wavelength_resolution = FWHM2sigma(wavelength * wavelength_spread)
 
@@ -145,11 +171,6 @@ class Candor(ReflData):
         # TODO: sample broadening?
         self.angular_resolution = divergence
 
-        # If not monochromatic beam then assume elastic scattering
-        if self.monochromator.wavelength is None:
-            self.monochromator.wavelength = self.detector.wavelength
-            self.monochromator.wavelength_resolution = self.detector.wavelength_resolution
-
         # Counts
         self.detector.counts = np.asarray(data_as(das, 'areaDetector/counts', ''), 'd')
         self.detector.counts_variance = self.detector.counts.copy()
@@ -161,7 +182,7 @@ class Candor(ReflData):
         self.detector.angle_x = data_as(das, 'detectorTableMotor/softPosition', 'degree', rep=n)
         self.detector.angle_x_target = data_as(das, 'detectorTableMotor/desiredSoftPosition', 'degree', rep=n)
 
-        self.detector._bank_angle = data_as(das, 'detectorTable/rowAngularOffsets', '')[0]
+        self.detector.angle_x_offset = data_as(das, 'detectorTable/rowAngularOffsets', '')[0]
         #bank_angle = np.arange(30)*0.1
         ## Add an extra dimension to sample angle
 
@@ -176,39 +197,42 @@ class Candor(ReflData):
 
     @property
     def Td(self):
-        angle, offset = self.detector.angle_x, self.detector._bank_angle
+        angle, offset = self.detector.angle_x, self.detector.angle_x_offset
         return angle[:, None, None] + offset[None, :, None]
 
     @property
-    def dT(self):
-        self.detector._divergence
-
-    @property
     def Td_target(self):
-        angle, offset = self.detector.angle_x_target, self.detector._bank_angle
+        angle, offset = self.detector.angle_x_target, self.detector.angle_x_offset
         return angle[:, None, None] + offset[None, :, None]
 
     @property
     def Li(self):
-        return self.monochromator.wavelength[:, None, None]
+        # Assume incident = reflected wavelength if no monochromator
+        return (self.Ld if self.monochromator.wavelength is None
+                else self.monochromator.wavelength)
 
     @property
     def Ld(self):
-        return self.detector.wavelength[None, :, :]
+        return self.detector.wavelength  # Candor always has detector wavelength
+        #return (self.Li if self.detector.wavelength is None
+        #        else self.detector.wavelength)
 
     def plot(self, label=None):
         if label is None:
             label = self.name+self.polarization
 
         from matplotlib import pyplot as plt
-        xerr = self.dx if self.angular_resolution is not None else None
-        #x, dx, xlabel = self.x, xerr, f"{self.xlabel} ({self.xunits})"
         v = np.log10(self.v + (self.v == 0))
         channel = np.arange(1, NUM_CHANNELS+1)
 
-        if True: # Qz - channel
-            x, xlabel = self.Qz, 'Qz (1/Ang)'
+        if True: # Qz/S1 - channel
+            if Intent.isslit(self.intent):
+                x, xlabel = self.slit1.x, "Slit 1 opening (mm)"
+                x = np.vstack((x, x)).T[:,:,None]
+            else:
+                x, xlabel = self.Qz, "Qz (1/Ang)"
             y, ylabel = np.vstack((channel, channel))[None, :, :], "channel"
+            #print("Qz-channel", x.shape, y.shape, v.shape)
 
             plt.subplot(211)
             plt.pcolormesh(x[:, 0, :].T, y[:, 0, :].T, v[:, 0, :].T)
