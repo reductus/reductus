@@ -4,6 +4,34 @@ import numpy as np
 
 from dataflow.lib import err1d
 
+def extend(a, b):
+    """
+    Extend *a* to match the number of dimensions of *b*.
+
+    This adds dimensions to the end of *a* rather than the beginning. It is
+    equivalent to *a[..., None, None]* with the right number of None elements
+    to make the number of dimensions match (or np.newaxis if you prefer).
+
+    For example::
+
+        >>> from numpy.random import rand
+        >>> a, b = rand(3, 4), rand(3, 4, 2)
+        >>> a + b
+        ValueError: operands could not be broadcast together with shapes (3,4) (3,4,2)
+        >>> c = extend(a, b) + b
+        >>> c.shape
+        (3, 4, 2)
+
+    Numpy broadcasting rules automatically extend arrays to the beginning,
+    so the corresponding *lextend* function is not needed::
+
+        >>> c = rand(3, 4) + rand(2, 3, 4)
+        >>> c.shape
+        (2, 3, 4)
+    """
+    extra_dims = (np.newaxis,)*(b.ndim-a.ndim)
+    return a[(..., *extra_dims)]
+
 def indent(text, prefix="  "):
     """
     Add a prefix to every line in a string.
@@ -169,17 +197,19 @@ def poisson_average(y, dy, norm='monitor'):
     an item of one fewer dimentsions.
 
     Use *norm='monitor'* When counting against monitor (the default) or
-    *norm='time'* when counting against time.
+    *norm='time'* when counting against time.  Use *norm='none'* if *y, dy*
+    is unnormalized, and the poisson sum should be returned.
 
     The count rate is expressed as the number of counts in an interval $N$
     divided by the interval $M$.  The rate for the combined interval should
-    match the rate you would get if you counted the entire interval at once,
+    match the rate you would get if you counted for the entire interval,
     which is $\sum N_i / \sum M_i$.  We do this by inferring the counts
     and intervals from the rate and uncertainty, adding them together, and
     dividing to get the average rate over the entire interval.
 
-    With counts and monitors both from Poisson distribution, the uncertainties
-    are $\sqrt N$ and $\sqrt M$ respectively.  With error propagation, we get
+    With counts $N$ and monitors $M$ both from Poisson distributions, the
+    uncertainties are $\sqrt N$ and $\sqrt M$ respectively, and gaussian
+    error propagation gives
 
     .. math::
        :nowrap:
@@ -270,13 +300,28 @@ def poisson_average(y, dy, norm='monitor'):
     is better for error propagation.  Monitor weighted averaging
     works well for everything except data with many zero counts.
     """
+    # Check whether we are combining rates or counts.  If it is counts,
+    # then simply sum them, and sum the uncertainty in quadrature. This
+    # gives the expected result for poisson statistics, with counts over
+    # the combined interval having variance equal to the sum of the counts.
+    # It even gives correct results for very low count rates with many of
+    # the individual counts giving zero, so long as variance on zero counts
+    # is set to zero rather than one.
+    if norm == "none":
+        bar_y = np.sum(y, axis=0)
+        bar_dy = np.sqrt(np.sum(dy**2, axis=0))
+        return bar_y, bar_dy
+
     dy = dy + (dy == 0)  # Protect against zero counts in division
 
     # Recover monitor and counts
     if norm == "monitor":
         monitors = y*(y+1)/dy**2
-    else:
+    elif norm == "time":
         monitors = y/dy**2
+    else:
+        raise ValueError("expected norm to be time, monitor or none.")
+
     monitors[y == 0] = 1./dy[y == 0]  # Special handling for 0 counts
     counts = y*monitors
 

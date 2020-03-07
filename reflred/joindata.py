@@ -10,7 +10,7 @@ import numpy as np
 
 from dataflow.lib import unit
 from .refldata import Intent, ReflData, Environment
-from .util import poisson_average
+from .util import poisson_average, extend
 from .resolution import divergence, dTdL2dQ, TiTdL2Qxz
 
 try:
@@ -110,12 +110,12 @@ def join_datasets(group, Qtol, dQtol, by_Q=False):
         #keys = ('Ti', 'Td', 'Ld', 'dT', 'dL')
     columns = sort_columns(columns, keys)
 
-    data = build_dataset(group, columns)
+    data = build_dataset(group, columns, normbase)
     #print "joined",data.intent
     return data
 
 
-def build_dataset(group, columns):
+def build_dataset(group, columns, norm):
     # type: (List[ReflData], StackedColumns) -> ReflData
     """
     Build a new dataset from a set of columns.
@@ -137,15 +137,10 @@ def build_dataset(group, columns):
     #    setattr(data, group_name, copy(getattr(data, group_name)))
 
     # Clear the fields that are no longer defined
-    data.sample.angle_x_target = None
     data.sample.angle_y = None
     data.sample.rotation = None
-    data.detector.angle_x_target = None
     data.detector.angle_y = None
     data.detector.rotation = None
-    data.detector.counts = None
-    data.detector.counts_variance = None
-    data.monitor.counts_variance = None
     for k in range(1, 5):
         slit = getattr(data, 'slit%d'%k)
         slit.x = slit.y = slit.x_target = slit.y_target = None
@@ -190,11 +185,36 @@ def build_dataset(group, columns):
     #data.Qx # read-only
     #data.dQ # read-only
 
+    # Fill in rates and monitors.
+    # Note: we are not tracking monitor variance, so assume it is equal
+    # to monitor counts (dm^2 = m).  This does not account for monitor
+    # scaling due to dead time correction, etc.  In practice it doesn't
+    # matter since we've already normalized the counts to a count rate
+    # and we don't need detector counts or variance.
+    v, dv, m, t = columns['v'], columns['dv'], columns['monitor'], columns['time']
+    dmsq = m
+    data.v = v
+    data.dv = dv
+    data.monitor.count_time = t
+    data.monitor.counts = m
+    data.monitor.counts_variance = dmsq
+
+    # Assign a value to detector counts. We need this if we norm after join.
+    if norm == "none":
+        # v = counts, dv = dcounts
+        data.detector.counts = v
+        data.detector.counts_variance = dv**2
+    elif norm == "time":
+        # v = counts/time, dv = dcounts/time
+        data.detector.counts = v * extend(t, v)
+        data.detector.counts_variance = (dv * extend(t, dv))**2
+    elif norm == "monitor":
+        # v = counts/monitor, (dv/v)^2 = (dcounts/counts)^2+(dmonitor/monitor)^2
+        # => dc^2 = (m dv)^2 - (v dm)^2
+        data.detector.counts = v * extend(m, v)
+        data.detector.counts_variance = (extend(m, dv)*dv)**2 - v**2*extend(dmsq,v)
+
     # Fill in the fields we have averaged
-    data.v = columns['v']
-    data.dv = columns['dv']
-    data.monitor.count_time = columns['time']
-    data.monitor.counts = columns['monitor']
     data.sample.angle_x = columns['Ti']
     data.detector.angle_x = columns['Td']
     data.sample.angle_x_target = columns['Ti_target']
@@ -556,7 +576,8 @@ def merge_points(index_sets, columns, normbase):
             for key, value in columns.items():
                 results[key].append(value[index])
         else:
-            v, dv = poisson_average(columns['v'][group], columns['dv'][group])
+            v, dv = poisson_average(
+                columns['v'][group], columns['dv'][group], norm=normbase)
             results['v'].append(v)
             results['dv'].append(dv)
             results['time'].append(np.sum(columns['time'][group]))

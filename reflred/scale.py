@@ -1,6 +1,7 @@
 import numpy as np
 
 from dataflow.lib import err1d
+from .util import extend
 
 
 def apply_rescale(data, scale, dscale):
@@ -14,7 +15,8 @@ def apply_intensity_norm(data, base):
                            base.angular_resolution, base.v, base.dv**2)
     I, varI = err1d.div(data.v, data.dv**2, S, varS)
     data.v, data.dv = I, np.sqrt(varI)
-    
+
+
 def calculate_number(data, base, time_uncertainty=1e-6):
     """ returns the measured base flux * count time for each point """
     assert base.normbase == 'time', "can't calculate time-integrated flux from monitor-normalized base"
@@ -22,6 +24,7 @@ def calculate_number(data, base, time_uncertainty=1e-6):
                            base.angular_resolution, base.v, base.dv**2)
     F, varF = err1d.mul(data.monitor.count_time, time_uncertainty**2, S, varS)
     return F, varF
+
 
 def estimate_attenuation(datasets):
     raise NotImplementedError()
@@ -67,8 +70,7 @@ def apply_norm(data, base='auto'):
         raise ValueError("Expected %r in %s" % (base, NORMALIZE_OPTIONS))
     # Broadcast for nD detector arrays
     if C.ndim > 1:
-        dims = (-1,) + (1,) * (C.ndim-1)
-        M, varM = np.reshape(M, dims), np.reshape(varM, dims)
+        M, varM = extend(M, C), extend(varM, C)
     #print "norm",C,varC,M,varM
     value, variance = err1d.div(C, varC+(varC == 0), M, varM)
     data.v = value
