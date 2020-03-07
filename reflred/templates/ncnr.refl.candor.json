@@ -3,6 +3,12 @@
     {
       "module": "ncnr.refl.candor",
       "title": "cdr slit",
+      "config": {
+        "base": "auto",
+        "monitor_correction": true,
+        "spectral_correction": true,
+        "intent": "intensity"
+      },
       "x": 35,
       "y": 145
     },
@@ -15,35 +21,53 @@
     {
       "module": "ncnr.refl.candor",
       "title": "cdr spec",
+      "config": {
+        "base": "auto",
+        "monitor_correction": true,
+        "spectral_correction": true,
+        "intent": "specular"
+      },
       "x": 35,
       "y": 5
     },
     {
       "module": "ncnr.refl.candor",
       "title": "cdr back+",
+      "config": {
+        "base": "auto",
+        "monitor_correction": true,
+        "spectral_correction": true,
+        "intent": "background+"
+      },
       "x": 35,
       "y": 55
     },
     {
       "module": "ncnr.refl.candor",
       "title": "cdr back-",
+      "config": {
+        "base": "auto",
+        "monitor_correction": true,
+        "spectral_correction": true,
+        "intent": "background-"
+      },
       "x": 35,
       "y": 100
     },
     {
-      "module": "ncnr.refl.join",
+      "module": "ncnr.refl.candor_join",
       "title": "Join",
       "x": 190,
       "y": 5
     },
     {
-      "module": "ncnr.refl.join",
+      "module": "ncnr.refl.candor_join",
       "title": "Join",
       "x": 190,
       "y": 55
     },
     {
-      "module": "ncnr.refl.join",
+      "module": "ncnr.refl.candor_join",
       "title": "Join",
       "x": 190,
       "y": 100

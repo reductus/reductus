@@ -3,7 +3,10 @@ from copy import copy
 
 import numpy as np
 
-from dataflow.automod import cache, nocache, module
+from dataflow.automod import cache, nocache, module, copy_module
+# Note: do not load symbols from .steps directly into the file scope
+# or they will be defined twice as reduction modules.
+from . import steps
 
 @cache
 @module("candor")
@@ -39,9 +42,9 @@ def candor(
     : If True, scale counts by the detector efficiency calibration given
     in the file (see Spectral Efficiency).
 
-    intent (opt:auto|specular|intensity|scan)
-    : Measurement intent (specular, slit, or some other scan), auto or infer.
-    If intent is 'scan', then use the first scanned variable (see Mark Intent).
+    intent (opt:auto|specular|background+\|background-\|intensity|rock sample|rock detector|rock qx|scan)
+    : Measurement intent (specular, background+, background-, slit, rock),
+    auto or infer.  If intent is 'scan', then use the first scanned variable.
 
     sample_width {Sample width (mm)} (float?)
     : Width of the sample along the beam direction in mm, used for
@@ -60,9 +63,6 @@ def candor(
     """
     from .load import url_load_list
     from .candor import load_entries
-    # Note: do not put these symbols at the module level or they will be
-    # discovered by the get_modules() function.
-    from .steps import detector_dead_time, monitor_dead_time, normalize
 
     # Note: candor automatically computes divergence.
     datasets = []
@@ -74,12 +74,12 @@ def candor(
         if dc_rate > 0.:
             data = dark_current(data, dc_rate)
         if detector_correction:
-            data = detector_dead_time(data, None)
+            data = steps.detector_dead_time(data, None)
         if monitor_correction:
-            data = monitor_dead_time(data, None)
+            data = steps.monitor_dead_time(data, None)
         if spectral_correction:
             data = spectral_efficiency(data)
-        data = normalize(data, base=base)
+        data = steps.normalize(data, base=base)
         datasets.append(data)
 
     return datasets
@@ -205,3 +205,6 @@ def stitch_intensity(data):
     # TODO: expose join parameters to the user?
     data = join(data)
     return data
+
+candor_join = copy_module(
+    steps.join, "candor_join", "refldata", "candordata", tag="candor")

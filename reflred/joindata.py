@@ -548,7 +548,7 @@ def merge_points(index_sets, columns, normbase):
             results['dv'].append(dv)
             results['time'].append(np.sum(columns['time'][group]))
             results['monitor'].append(np.sum(columns['monitor'][group]))
-            # TODO: dQ should increase when points are mixed
+            # TODO: dQ should increase when points are mixed (see MERGE below)
             w = weight[group]
             for key, value in columns.items():
                 if key not in ['v', 'dv', 'time', 'monitor']:
@@ -558,6 +558,26 @@ def merge_points(index_sets, columns, normbase):
     results = dict((k, np.array(v)) for k, v in results.items())
     return results
 
+# MERGE variance
+#
+# There is a simple expression for the moments of a mixture of distributions:
+#     T = (sum wk . T) / (sum wk)
+#     dT^2 = (sum wk . (dTk^2 + Tk^2)) / (sum wk) - T^2
+# See: https://en.wikipedia.org/wiki/Mixture_density#Moments
+#
+# This formula should be applied to angular distribution since that is
+# the quantity being mixed when combining measurements at slightly
+# different angles.
+#
+# When rebinning Candor values as a function of Q then apply this directly
+# to (Q, dQ) since the resolution function is curved in theta-lambda space.
+# Note that the fitting function will need a weighted wavelength distribution
+# for rare earths and for strongly absorbing samples where the scattering is
+# wavelength dependent. It may suffice to compute the joint dQ and dL then
+# assign dT so that it is consistent: this will underestimate the true dT,
+# but it should be good enough for fitting. Alternatively, measure fewer
+# angles for longer and do not merge points so that you can ignore
+# wavelength variation within each theory value.
 
 def sort_columns(columns, keys):
     # type: (StackedColumns, Sequence[str]) -> StackedColumns
