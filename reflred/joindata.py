@@ -530,8 +530,21 @@ def merge_points(index_sets, columns, normbase):
     Note: we do not yet increase divergence when points with slightly
     different incident angles are mixed.
     """
-    # Weight each point in the average by monitor.
-    weight = columns[normbase]
+    # Weight each point by monitor/time/counts
+    if normbase == "none":
+        # if weighting by counts then use the counts across the entire
+        # detector as the weight.  This is a just a proxy for time/monitor
+        # weighting but using the measured data, assuming the same conditions
+        # give the same count rate.
+        counts = columns['v']
+        ndim = counts[0].ndim
+        if ndim == 1:
+            weight = counts
+        else:
+            axis = tuple(range(1, ndim))
+            weight = [np.sum(v, axis=axis) for v in counts]
+    else:
+        weight = columns[normbase]
 
     # build a structure to hold the results
     results = dict((k, []) for k in columns.keys())
