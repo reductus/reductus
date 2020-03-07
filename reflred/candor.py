@@ -44,7 +44,7 @@ def detector_efficiency():
         eff = np.loadtxt(path, delimiter=',')[:, 3]
         eff = eff / np.mean(eff)
         _EFFICIENCY = np.hstack((eff, eff))
-        _EFFICIENCY = _EFFICIENCY.reshape(1, 2, NUM_CHANNELS)
+        _EFFICIENCY = _EFFICIENCY.reshape(2, NUM_CHANNELS)
     return _EFFICIENCY
 
 class Candor(ReflData):
@@ -74,6 +74,17 @@ class Candor(ReflData):
             get_pol(das, 'frontPolarization')
             + get_pol(das, 'backPolarization')
         )
+
+        # Counts
+        # Load counts early so we can tell whether channels are axis 1 or 2
+        counts = np.asarray(data_as(das, 'areaDetector/counts', ''), 'd')
+        channels_at_end = (counts.shape[2] == NUM_CHANNELS)
+        if not channels_at_end:
+            counts = np.swapaxes(counts, 1, 2)
+        self.detector.counts = counts
+        self.detector.counts_variance = counts.copy()
+        self.detector.dims = counts.shape[1:]
+
 
         # Monochromator
         ismono = (str_data(das, 'monoTrans/key', 'OUT') == 'IN')
@@ -147,10 +158,14 @@ class Candor(ReflData):
         # Detector
         wavelength = data_as(das, 'detectorTable/wavelengths', '')
         wavelength_spread = data_as(das, 'detectorTable/wavelengthSpreads', '')
-        wavelength = wavelength.reshape(NUM_CHANNELS, -1).T[None, :, :]
-        wavelength_spread = wavelength_spread.reshape(NUM_CHANNELS, -1).T[None, :, :]
-        self.detector.wavelength = wavelength
-        self.detector.wavelength_resolution = FWHM2sigma(wavelength * wavelength_spread)
+        if channels_at_end:
+            wavelength = wavelength.reshape(NUM_CHANNELS, -1).T
+            wavelength_spread = wavelength_spread.reshape(NUM_CHANNELS, -1).T
+        else:
+            wavelength = wavelength.reshape(-1, NUM_CHANNELS)
+            wavelength_spread = wavelength_spread.reshape(-1, NUM_CHANNELS)
+        self.detector.wavelength = wavelength[None, :, :]
+        self.detector.wavelength_resolution = FWHM2sigma(wavelength * wavelength_spread)[None, :, :]
 
         divergence = data_as(das, 'detectorTable/angularSpreads', '')
         efficiency = data_as(das, 'detectorTable/detectorEfficiencies', '')
@@ -162,19 +177,18 @@ class Candor(ReflData):
             if np.isnan(efficiency):
                 efficiency = 1.0  # default efficiency if missing
             efficiency = np.ones(wavelength.shape) * efficiency
-        divergence = divergence.reshape(NUM_CHANNELS, -1).T[None, :, :]
-        efficiency = efficiency.reshape(NUM_CHANNELS, -1).T[None, :, :]
+        if channels_at_end:
+            divergence = divergence.reshape(NUM_CHANNELS, -1).T
+            efficiency = efficiency.reshape(NUM_CHANNELS, -1).T
+        else:
+            divergence = divergence.reshape(-1, NUM_CHANNELS)
+            efficiency = efficiency.reshape(-1, NUM_CHANNELS)
         # CRUFT: old files have efficiency set to 1
         if (efficiency == 1.0).all():
             efficiency = detector_efficiency()
-        self.detector.efficiency = efficiency
+        self.detector.efficiency = efficiency[None, :, :]
         # TODO: sample broadening?
-        self.angular_resolution = divergence
-
-        # Counts
-        self.detector.counts = np.asarray(data_as(das, 'areaDetector/counts', ''), 'd')
-        self.detector.counts_variance = self.detector.counts.copy()
-        self.detector.dims = self.detector.counts.shape[1:]
+        self.angular_resolution = divergence[None, :, :]
 
         # Angles
         self.sample.angle_x = data_as(das, 'sampleAngleMotor/softPosition', 'degree', rep=n)
