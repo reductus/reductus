@@ -1,3 +1,4 @@
+
 {
   "modules": [
     {
@@ -10,13 +11,13 @@
         "intent": "intensity"
       },
       "x": 35,
-      "y": 145
+      "y": 110
     },
     {
       "module": "ncnr.refl.stitch_intensity",
       "title": "Scale&Join",
       "x": 190,
-      "y": 145
+      "y": 110
     },
     {
       "module": "ncnr.refl.candor",
@@ -40,7 +41,7 @@
         "intent": "background+"
       },
       "x": 35,
-      "y": 55
+      "y": 35
     },
     {
       "module": "ncnr.refl.candor",
@@ -52,7 +53,7 @@
         "intent": "background-"
       },
       "x": 35,
-      "y": 100
+      "y": 65
     },
     {
       "module": "ncnr.refl.candor_join",
@@ -64,13 +65,25 @@
       "module": "ncnr.refl.candor_join",
       "title": "Join",
       "x": 190,
-      "y": 55
+      "y": 35
     },
     {
       "module": "ncnr.refl.candor_join",
       "title": "Join",
       "x": 190,
-      "y": 100
+      "y": 65
+    },
+    {
+      "module": "ncnr.refl.candor_background",
+      "title": "Background",
+      "x": 345,
+      "y": 5
+    },
+    {
+      "module": "ncnr.refl.candor_divide",
+      "title": "Candor Divide",
+      "x": 505,
+      "y": 5
     }
   ],
   "wires": [
@@ -112,6 +125,56 @@
       "target": [
         7,
         "data"
+      ]
+    },
+    {
+      "source": [
+        5,
+        "output"
+      ],
+      "target": [
+        8,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        6,
+        "output"
+      ],
+      "target": [
+        8,
+        "backp"
+      ]
+    },
+    {
+      "source": [
+        7,
+        "output"
+      ],
+      "target": [
+        8,
+        "backm"
+      ]
+    },
+    {
+      "source": [
+        8,
+        "output"
+      ],
+      "target": [
+        9,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        1,
+        "output"
+      ],
+      "target": [
+        9,
+        "base"
       ]
     }
   ]

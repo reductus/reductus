@@ -207,4 +207,21 @@ def stitch_intensity(data):
     return data
 
 candor_join = copy_module(
-    steps.join, "candor_join", "refldata", "candordata", tag="candor")
+    steps.join, "candor_join",
+    "refldata", "candordata", tag="candor")
+
+candor_rescale = copy_module(
+    steps.rescale, "candor_rescale",
+    "refldata", "candordata", tag="candor")
+
+candor_normalize = copy_module(
+    steps.normalize, "candor_normalize",
+    "refldata", "candordata", tag="candor")
+
+candor_background = copy_module(
+    steps.subtract_background, "candor_background",
+    "refldata", "candordata", tag="candor")
+
+candor_divide = copy_module(
+    steps.divide_intensity, "candor_divide",
+    "refldata", "candordata", tag="candor")

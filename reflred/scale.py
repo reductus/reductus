@@ -11,17 +11,23 @@ def apply_rescale(data, scale, dscale):
 
 def apply_intensity_norm(data, base):
     assert data.normbase == base.normbase, "can't mix time and monitor normalized data"
-    S, varS = err1d.interp(data.angular_resolution,
-                           base.angular_resolution, base.v, base.dv**2)
+
+    if data.angular_resolution.ndim == 1:
+        data_x, base_x = data.angular_resolution, base.angular_resolution
+    else:
+        data_x, base_x = data.slit1.x, base.slit1.x
+    S, varS = err1d.interp(data_x, base_x, base.v, base.dv**2)
     I, varI = err1d.div(data.v, data.dv**2, S, varS)
     data.v, data.dv = I, np.sqrt(varI)
-
 
 def calculate_number(data, base, time_uncertainty=1e-6):
     """ returns the measured base flux * count time for each point """
     assert base.normbase == 'time', "can't calculate time-integrated flux from monitor-normalized base"
-    S, varS = err1d.interp(data.angular_resolution,
-                           base.angular_resolution, base.v, base.dv**2)
+    if data.angular_resolution.ndim == 1:
+        data_x, base_x = data.angular_resolution, base.angular_resolution
+    else:
+        data_x, base_x = data.slit1.x, base.slit1.x
+    S, varS = err1d.interp(data_x, base_x, base.v, base.dv**2)
     F, varF = err1d.mul(data.monitor.count_time, time_uncertainty**2, S, varS)
     return F, varF
 

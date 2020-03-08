@@ -29,6 +29,8 @@ def extend(a, b):
         >>> c.shape
         (2, 3, 4)
     """
+    if np.isscalar(a):
+        return a
     extra_dims = (np.newaxis,)*(b.ndim-a.ndim)
     return a[(..., *extra_dims)]
 

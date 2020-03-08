@@ -69,8 +69,8 @@ def subtract_background(spec, backp, backm):
     #if backp: print "back+",backp_v,backp.v,backp.dv
     #if backm: print "back-",backm_v,backm.v,backm.dv
 
-    backp_v = interp(spec.Qz, backp.Qz, backp_v) if backp else None
-    backm_v = interp(spec.Qz, backm.Qz, backm_v) if backm else None
+    backp_v = interp(_ordinate(spec), _ordinate(backp), backp_v) if backp else None
+    backm_v = interp(_ordinate(spec), _ordinate(backm), backm_v) if backm else None
 
     if backp and backm:
         spec_v -= (backp_v + backm_v)/2
@@ -82,6 +82,24 @@ def subtract_background(spec, backp, backm):
         pass  # no background to subtract
 
     return spec_v.x, spec_v.variance
+
+def _ordinate(data):
+    """
+    Determine interpolation ordinate for the dataset.  This is Qz for 1-D data
+    but theta for n-D data (since Q varies across the detector).
+    """
+    if data.Qz.ndim == 1:
+        return data.Qz
+    # This is similar to code in Refldata.Qz ...
+    if data.Qz_basis == 'actual':
+        return data.sample.angle_x
+    if data.Qz_basis == 'target':
+        return data.sample.angle_x_target
+    if data.Qz_basis == 'detector':
+        return data.sample.detector_x/2
+    if data.Qz_basis == 'sample':
+        return data.sample.angle_x
+    raise KeyError("Qz basis must be one of [actual, detector, sample, target]")
 
 
 def guess_background_offset(back):
