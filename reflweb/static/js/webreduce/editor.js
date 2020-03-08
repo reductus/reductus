@@ -1307,7 +1307,7 @@ webreduce.editor = webreduce.editor || {};
     } catch (e) {}
   }
   function remove_stash(stashname) {
-    var existing_stashes = fetch_stashes();
+    var existing_stashes = _fetch_stashes();
     if (stashname in existing_stashes) {
       delete existing_stashes[stashname];
       _save_stashes(existing_stashes);
