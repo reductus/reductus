@@ -24,6 +24,7 @@ import os
 import json
 import re
 import difflib
+import warnings
 
 from dataflow import fetch
 from dataflow.cache import set_test_cache
@@ -208,24 +209,35 @@ def play_file(filename):
     concatenate = True
 
     with open(filename) as fid:
-        template_def = json.loads(fid.read())
+        json_data = json.loads(fid.read())
 
-    prepare_dataflow(template_def)
-    node = max(find_leaves(template_def))
-    #node = 0
-    node_module = lookup_module(template_def['modules'][node]['module'])
-    terminal = node_module.outputs[0]['id']
+    if 'template_data' in json_data:
+        template_data = json_data['template_data']
+        if 'template_data' in template_data:
+            # an extra nesting level for reasons unknown...
+            warnings.warn(f"template_data is nested in template_data in {filename}")
+            template_data = template_data['template_data']
+        template = template_data['template']
+        prepare_dataflow(template)
+    else:
+        template = json_data
+        prepare_dataflow(template)
 
-    revision, timestamp = revision_info()
-    template_data = {
-        'template': template_def,
-        'config': {},
-        'node': node,
-        'terminal': terminal,
-        'server_git_hash': revision,
-        'server_mtime': timestamp,
-        'export_type': export_type,
-    }
+        #node = 0
+        node = max(find_leaves(template))
+        node_module = lookup_module(template['modules'][node]['module'])
+        terminal = node_module.outputs[0]['id']
+        revision, timestamp = revision_info()
+        template_data = {
+            'template': template,
+            'config': {},
+            'node': node,
+            'terminal': terminal,
+            'server_git_hash': revision,
+            'server_mtime': timestamp,
+            'export_type': export_type,
+        }
+
     output, export = run_template(template_data, concatenate=concatenate)
 
     if export:
@@ -259,6 +271,7 @@ def main():
         print("usage: python regression.py (datafile|template.json)")
         sys.exit(1)
     if sys.argv[1].endswith('.json'):
+        # Don't know if this is a template or an export...
         play_file(sys.argv[1])
     else:
         replay_file(sys.argv[1])
