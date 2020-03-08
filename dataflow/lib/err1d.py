@@ -102,6 +102,8 @@ def interp(X, Xp, Fp, varFp, left=None, right=None):
     xp is assumed to be monotonically increasing.  The interpolated
     value is undefined at duplicate points.
 
+    Fp, varFp can be n-dimensional.
+
     left is (value,variance) to use for points before the range of xp, or
     None for the initial value.
 
@@ -113,6 +115,9 @@ def interp(X, Xp, Fp, varFp, left=None, right=None):
         # Support repeated values in Xp, which will lead to 0/0 errors if the
         # interpolated point is one of the repeated values.
         p = (Xp[idx+1]-X)/(Xp[idx+1]-Xp[idx])
+        if Fp.ndim > 1: # n-D support requires manual broadcast
+            extra_dims = (np.newaxis,)*(Fp.ndim-1)
+            p = p[(..., *extra_dims)]
         F = p*Fp[idx] + (1-p)*Fp[idx+1]
         # simple propagation of error formula for calculation of F, confirmed
         # by monte carlo simulation.
