@@ -1334,8 +1334,8 @@ webreduce.editor = webreduce.editor || {};
     // eventually send these as-is to server, but for now since the server
     // doesn't handle subroutines...
     d3.selectAll("g.module .selected").classed("selected", false);
-    var existing_stashes = JSON.parse(localStorage['webreduce.editor.stashes'] || "{}");
-    var stashnames = _fetch_stashes();
+    var existing_stashes = _fetch_stashes();
+    var stashnames = stashnames.filter(function(s) {return (s in existing_stashes)});
     var recalc_mtimes = $("#auto_reload_mtimes").prop("checked");
     var params_to_calc = stashnames.map(function(stashname) {
       var stashed = existing_stashes[stashname];
