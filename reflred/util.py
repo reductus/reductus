@@ -302,6 +302,9 @@ def poisson_average(y, dy, norm='monitor'):
     is better for error propagation.  Monitor weighted averaging
     works well for everything except data with many zero counts.
     """
+    if norm not in ("monitor", "time", "none"):
+        raise ValueError("expected norm to be time, monitor or none")
+
     # Check whether we are combining rates or counts.  If it is counts,
     # then simply sum them, and sum the uncertainty in quadrature. This
     # gives the expected result for poisson statistics, with counts over
@@ -317,13 +320,7 @@ def poisson_average(y, dy, norm='monitor'):
     dy = dy + (dy == 0)  # Protect against zero counts in division
 
     # Recover monitor and counts
-    if norm == "monitor":
-        monitors = y*(y+1)/dy**2
-    elif norm == "time":
-        monitors = y/dy**2
-    else:
-        raise ValueError("expected norm to be time, monitor or none.")
-
+    monitors = y*(y+1)/dy**2 if norm == "monitor" else y/dy**2 # if "time"
     monitors[y == 0] = 1./dy[y == 0]  # Special handling for 0 counts
     counts = y*monitors
 
@@ -331,20 +328,25 @@ def poisson_average(y, dy, norm='monitor'):
     combined_monitors = np.sum(monitors, axis=0)
     combined_counts = np.sum(counts, axis=0)
     bar_y = combined_counts/combined_monitors
-    if norm != "monitor":
+    if norm == "time":
         bar_dy = bar_y * np.sqrt(1./combined_monitors)
     elif np.isscalar(bar_y):
         if bar_y == 0:
+            # When bar_y is zero then 1/N is undefined and so sqrt(1/N + 1/M) fails.
+            # Instead use |dy| = 1/M*sqrt((dN)^2 + 1/M) with dN = 1.
             bar_dy = 1./combined_monitors * np.sqrt(1. + 1./combined_monitors)
         else:
+            # When bar_y is not zero then use |dy| = N/M * sqrt(1/N + 1/M)
             bar_dy = bar_y * np.sqrt(1./combined_counts + 1./combined_monitors)
     else:
-        # When bar_y is zero then 1/N is undefined and so sqrt(1/N + 1/M) fails.
-        # Instead use |dy| = 1/M*sqrt((dN)^2 + 1/M) with dN = 1.
+        # Following the scalar case above, first build bar_dy assuming
+        # that y is zero since it works for all y, then fill in the values
+        # for y not zero. Can't do this the other way since the expression
+        # for y not zero will raise errors when y is zero.
         bar_dy = 1./combined_monitors * np.sqrt(1. + 1./combined_monitors)
-        # When bar_y is not zero then use |dy| = N/M * sqrt(1/N + 1/M)
         idx = (bar_y != 0)
-        bar_dy[idx] = bar_y[idx] * np.sqrt(1./combined_counts[idx] + 1./combined_monitors[idx])
+        bar_dy[idx] = bar_y[idx] * np.sqrt(1./combined_counts[idx]
+                                           + 1./combined_monitors[idx])
 
     #print("est. monitors:", monitors)
     #print("est. counts:", counts)

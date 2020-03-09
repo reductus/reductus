@@ -602,16 +602,6 @@ def merge_points(index_sets, columns, normbase):
 # This formula should be applied to angular distribution since that is
 # the quantity being mixed when combining measurements at slightly
 # different angles.
-#
-# When rebinning Candor values as a function of Q then apply this directly
-# to (Q, dQ) since the resolution function is curved in theta-lambda space.
-# Note that the fitting function will need a weighted wavelength distribution
-# for rare earths and for strongly absorbing samples where the scattering is
-# wavelength dependent. It may suffice to compute the joint dQ and dL then
-# assign dT so that it is consistent: this will underestimate the true dT,
-# but it should be good enough for fitting. Alternatively, measure fewer
-# angles for longer and do not merge points so that you can ignore
-# wavelength variation within each theory value.
 
 def sort_columns(columns, keys):
     # type: (StackedColumns, Sequence[str]) -> StackedColumns

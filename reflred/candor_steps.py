@@ -206,6 +206,41 @@ def stitch_intensity(data):
     data = join(data)
     return data
 
+
+@module("candor")
+def candor_rebin(data, qmin=None, qmax=None, qstep=0.003):
+    r"""
+    Join the intensity measurements into a single entry.
+
+    **Inputs**
+
+    data (candordata) : data to join
+
+    qmin (float) : Start of q range, or empty to infer from data
+
+    qmax (float) : End of q range, or empty to infer from data
+
+    qstep (float) : q step size
+
+    **Returns**
+
+    output (refldata) : joined data
+
+    | 2020-03-04 Paul Kienzle
+    """
+    from .candor import rebin
+
+    if qmin is None:
+        qmin = data.Qz.min()
+
+    if qmax is None:
+        qmax = data.Qz.max()
+
+    q = np.arange(qmin, qmax, qstep)
+
+    data = rebin(data, q)
+    return data
+
 candor_join = copy_module(
     steps.join, "candor_join",
     "refldata", "candordata", tag="candor")

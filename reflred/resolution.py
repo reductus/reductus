@@ -159,7 +159,8 @@ def bins(low, high, dLoL):
 
 def binwidths(L):
     r"""
-    Determine the wavelength dispersion from bin centers *L*.
+    Determine the wavelength dispersion from bin centers *L* for time-of-flight
+    measurements.
 
     The wavelength dispersion $\Delta\lambda$ is just the difference
     between consecutive bin edges, so:
@@ -183,7 +184,8 @@ def binwidths(L):
 def binedges(L):
     # type: (np.ndarray) -> np.ndarray
     r"""
-    Construct bin edges *E* from bin centers *L*.
+    Construct bin edges *E* from bin centers *L* for time-of-flight
+    measurements.
 
     Assuming fixed $\omega = \Delta\lambda/\lambda$ in the bins, the
     edges will be spaced logarithmically at:

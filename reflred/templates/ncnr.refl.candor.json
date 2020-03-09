@@ -81,8 +81,14 @@
     },
     {
       "module": "ncnr.refl.candor_divide",
-      "title": "Candor Divide",
+      "title": "Divide",
       "x": 505,
+      "y": 5
+    },
+    {
+      "module": "ncnr.refl.candor_rebin",
+      "title": "Rebin",
+      "x": 675,
       "y": 5
     }
   ],
@@ -175,6 +181,16 @@
       "target": [
         9,
         "base"
+      ]
+    },
+    {
+      "source": [
+        9,
+        "output"
+      ],
+      "target": [
+        10,
+        "data"
       ]
     }
   ]

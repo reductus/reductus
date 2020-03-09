@@ -229,7 +229,13 @@ class Candor(ReflData):
             label = self.name+self.polarization
 
         from matplotlib import pyplot as plt
-        v = np.log10(self.v + (self.v == 0))
+        #v = np.log10(self.v + (self.v == 0))
+        # set noise floor to ignore 5% of the data above zero
+        v = self.v.copy()
+        vmin = np.sort(v[v>0])[int((v>0).size * 0.01)]
+        v[v<vmin] = vmin
+        v = np.log10(v)
+
         channel = np.arange(1, NUM_CHANNELS+1)
 
         if True: # Qz/S1 - channel
@@ -375,11 +381,128 @@ class Candor(ReflData):
     def to_column_text(self):
         pass
 
-def edges(c):
+class QData(ReflData):
+    def __init__(self, data, q, dq, v, dv):
+        super().__init__()
+        self.sample = data.sample
+        self.probe = data.probe
+        self.path = data.path
+        self.uri = data.uri
+        self.name = data.name
+        self.entry = data.entry
+        self.description = data.description
+        self.polarization = data.polarization
+        self.normbase = data.normbase
+        self._q = q
+        self._dq = dq
+        self.v = v
+        self.dv = dv
+        self.intent = Intent.spec
+        self.points = len(q)
+
+    @property
+    def Qz(self):
+        return self._q
+
+    @property
+    def Qx(self):
+        return np.zeros_like(self._q)
+
+    @property
+    def dQ(self):
+        return self._dq
+
+def rebin(data, q):
+    if data.normbase not in ("monitor", "time", "none"):
+        raise ValueError("expected norm to be time, monitor or none")
+    q_edges = edges(q, extended=True)
+    datasets = []
+    for bank in range(data.v.shape[1]):
+        q, dq, v, dv = _rebin_bank(data, bank, q_edges)
+        #output = ReflData()
+        #output.v, output.dv = v, dv
+        #output.x, output.dx = q, dq
+        datasets.append(QData(data, q, dq, v, dv))
+
+    # Only look at bank 0 for now
+    return datasets[0]
+
+def _rebin_bank(data, bank, q_edges):
+    """
+    Merge q points across channels and angles, returning q, dq, v, dv.
+
+    Intensities (v, dv) are combined using poisson averaging.
+
+    Q values (Q, dQ) for the combined measurements are weighted by intensity.
+    This means that identical measurement conditions may give different
+    (Q, dQ) depending on the randomness in the measured value.
+
+    There is a simple expression for the moments of a mixture of distributions:
+        T = (sum wk . T) / (sum wk)
+        dT^2 = (sum wk . (dTk^2 + Tk^2)) / (sum wk) - T^2
+    See: https://en.wikipedia.org/wiki/Mixture_density#Moments
+
+    When rebinning Candor values as a function of Q then apply this directly
+    to (Q, dQ) since the resolution function is curved in theta-lambda space.
+    Note that the fitting function will need a weighted wavelength distribution
+    for rare earths and for strongly absorbing samples where the scattering is
+    wavelength dependent. It may suffice to compute the joint dQ and dL then
+    assign dT so that it is consistent: this will underestimate the true dT,
+    but it should be good enough for fitting. Alternatively, measure fewer
+    angles for longer and do not merge points so that you can ignore
+    wavelength variation within each theory value.
+    """
+    norm = data.normbase
+    y, dy, q, dq = (val[:, bank, :].flatten()
+                    for val in (data.v, data.dv, data.Qz, data.dQ))
+    nbins = len(q_edges) - 1
+    bin_index = np.searchsorted(q_edges, q)
+
+    # The following is cribbed from util.poisson_average, replacing
+    # np.sum with np.bincount.
+    # TODO: update poisson average so it handles grouping
+    if norm == "none":
+        bar_y = np.bincount(bin_index, weights=y, minlength=nbins)
+        bar_dy = np.bincount(bin_index, weights=dy**2, minlength=nbins)
+    else:
+        dy = dy + (dy == 0) # protect against zero uncertainty
+        monitors = y*(y+1)/dy**2 if norm == "monitor" else y/dy**2 # if "time"
+        monitors[y == 0] = 1./dy[y == 0] # protect against zero counts
+        counts = y*monitors
+        combined_monitors = np.bincount(bin_index, weights=monitors, minlength=nbins)
+        combined_counts = np.bincount(bin_index, weights=counts, minlength=nbins)
+        bar_y = combined_counts/combined_monitors
+        if norm == "time":
+            bar_dy = bar_y * np.sqrt(1./combined_monitors)
+        else:
+            bar_dy = 1./combined_monitors * np.sqrt(1. + 1./combined_monitors)
+            idx = (bar_y != 0)
+            bar_dy[idx] = bar_y[idx] * np.sqrt(1./combined_counts[idx]
+                                            + 1./combined_monitors[idx])
+
+    # Find Q center and resolution
+    w = np.bincount(bin_index, weights=y, minlength=nbins)
+    bar_q = np.bincount(bin_index, weights=q*y, minlength=nbins)/w
+    qsq = np.bincount(bin_index, weights=q**2*y, minlength=nbins)
+    dqsq = np.bincount(bin_index, weights=dq**2*y, minlength=nbins)
+    bar_dq = np.sqrt((dqsq + qsq)/w - bar_q**2)
+
+    # Need to drop catch-all bins before and after q edges.
+    return bar_q[1:-1], bar_dq[1:-1], bar_y[1:-1], bar_dy[1:-1]
+
+def edges(c, extended=False):
+    r"""
+    Linear bin edges given centers.
+
+    If *extended* then create before/after bins so coverage is $(-\infty, \infty)$.
+    """
     midpoints = (c[:-1]+c[1:])/2
     left = 2*c[0] - midpoints[0]
     right = 2*c[-1] - midpoints[-1]
-    return np.hstack((left, midpoints, right))
+    if extended:
+        return np.hstack((-np.inf, left, midpoints, right, np.inf))
+    else:
+        return np.hstack((left, midpoints, right))
 
 if __name__ == "__main__":
     from .nexusref import demo

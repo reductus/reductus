@@ -447,8 +447,8 @@ class Detector(Group):
     rotation = 0. # degree
     efficiency = 1. # proportion
     saturation = inf # counts/sec
-    wavelength = 1. # angstrom
-    wavelength_resolution = 0. # angstrom
+    wavelength = None # angstrom
+    wavelength_resolution = None # angstrom
     time_of_flight = None  # ms
     counts = None
     counts_variance = None
@@ -1079,7 +1079,7 @@ class ReflData(Group):
         xerr = self.dx if self.angular_resolution is not None else None
         x, dx, xunits, xlabel = self.x, xerr, self.xunits, self.xlabel
         #x, dx, xunits, xlabel = self.detector.angle_x, self.angular_resolution, 'detector angle', 'deg'
-        plt.errorbar(x, self.v, yerr=self.dv, xerr=xerr, label=label, fmt='.')
+        plt.errorbar(x, self.v, yerr=self.dv, xerr=xerr, label=label, fmt='.-')
         plt.xlabel("%s (%s)"%(xlabel, xunits) if xunits else xlabel)
         plt.ylabel("%s (%s)"%(self.vlabel, self.vunits) if self.vunits else self.vlabel)
         if not Intent.isslit(self.intent):
