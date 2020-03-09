@@ -1,4 +1,3 @@
-
 {
   "modules": [
     {
@@ -74,21 +73,51 @@
       "y": 65
     },
     {
-      "module": "ncnr.refl.candor_background",
-      "title": "Background",
+      "module": "ncnr.refl.candor_rebin",
+      "title": "Rebin",
+      "x": 530,
+      "y": 65
+    },
+    {
+      "module": "ncnr.refl.candor_rebin",
+      "title": "Rebin",
+      "x": 530,
+      "y": 35,
+      "config": {
+        "qstep": 0.002
+      }
+    },
+    {
+      "module": "ncnr.refl.candor_rebin",
+      "title": "Rebin",
+      "x": 530,
+      "y": 5,
+      "config": {
+        "qstep": 0.002
+      }
+    },
+    {
+      "module": "ncnr.refl.candor_divide",
+      "title": "Divide",
       "x": 345,
       "y": 5
     },
     {
       "module": "ncnr.refl.candor_divide",
       "title": "Divide",
-      "x": 505,
-      "y": 5
+      "x": 365,
+      "y": 35
     },
     {
-      "module": "ncnr.refl.candor_rebin",
-      "title": "Rebin",
-      "x": 675,
+      "module": "ncnr.refl.candor_divide",
+      "title": "Divide",
+      "x": 385,
+      "y": 65
+    },
+    {
+      "module": "ncnr.refl.subtract_background",
+      "title": "Subtract Background",
+      "x": 700,
       "y": 5
     }
   ],
@@ -139,7 +168,7 @@
         "output"
       ],
       "target": [
-        8,
+        11,
         "data"
       ]
     },
@@ -149,8 +178,8 @@
         "output"
       ],
       "target": [
-        8,
-        "backp"
+        12,
+        "data"
       ]
     },
     {
@@ -159,17 +188,7 @@
         "output"
       ],
       "target": [
-        8,
-        "backm"
-      ]
-    },
-    {
-      "source": [
-        8,
-        "output"
-      ],
-      "target": [
-        9,
+        13,
         "data"
       ]
     },
@@ -179,8 +198,68 @@
         "output"
       ],
       "target": [
-        9,
+        11,
         "base"
+      ]
+    },
+    {
+      "source": [
+        1,
+        "output"
+      ],
+      "target": [
+        12,
+        "base"
+      ]
+    },
+    {
+      "source": [
+        1,
+        "output"
+      ],
+      "target": [
+        13,
+        "base"
+      ]
+    },
+    {
+      "source": [
+        11,
+        "output"
+      ],
+      "target": [
+        10,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        12,
+        "output"
+      ],
+      "target": [
+        9,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        13,
+        "output"
+      ],
+      "target": [
+        8,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        10,
+        "output"
+      ],
+      "target": [
+        14,
+        "data"
       ]
     },
     {
@@ -189,8 +268,18 @@
         "output"
       ],
       "target": [
-        10,
-        "data"
+        14,
+        "backp"
+      ]
+    },
+    {
+      "source": [
+        8,
+        "output"
+      ],
+      "target": [
+        14,
+        "backm"
       ]
     }
   ]
