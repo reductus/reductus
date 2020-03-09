@@ -8,7 +8,7 @@ application you can then do::
     from . import rev
 
     rev.print_revision()  # print the repo version
-    commit, timestamp = rev.revision_info()  # return commit and timestamp
+    commit = rev.revision_info()  # return commit
 
 If you use a more complicated source tree then you will need to replace
 repo_path() with a function that returns the path to the repo root before
@@ -25,7 +25,9 @@ from setup.py::
     import os
 
     # Create the resource file git_revision.
-    os.system(f'"{sys.executable}" PACKAGE_NAME/rev.py')
+    if os.system(f'"{sys.executable}" PACKAGE_NAME/rev.py') != 0:
+        print("setup.py failed to build PACKAGE_NAME/git_revision", file=sys.stderr)
+        sys.exit()
 
     ...
 
@@ -48,19 +50,15 @@ Note: the current version doesn't handled packed repositories unless
 the git command is available on your executable path.
 """
 from pathlib import Path
+from warnings import warn
 
 def repo_path():
-    """Return path to the git repo for the project."""
-    base = Path(__file__).absolute()
-    for path in base.parents:
-        if (path / ".git").exists():
-            return path
-    raise ValueError(f".git not found in parent(s) of {base}")
+    return Path(__file__).parent.parent.absolute()
 
 def print_revision():
-    """Print the git revision and timestamp"""
-    revision, timestamp = revision_info()
-    print("git revision", revision, timestamp)
+    """Print the git revision"""
+    revision = revision_info()
+    print("git revision", revision)
 
 def store_revision():
     """
@@ -68,14 +66,14 @@ def store_revision():
 
     See :mod:`rev` for details.
     """
-    commit, timestamp = git_rev(repo_path())
+    commit = git_rev(repo_path())
     path = Path(__file__).absolute().parent / RESOURCE_NAME
     with path.open('w') as fd:
-        fd.write(f"{commit} {timestamp}\n")
+        fd.write(commit + "\n")
 
 
 RESOURCE_NAME = 'git_revision'
-_REVISION_INFO = () # cached value of git revision
+_REVISION_INFO = None # cached value of git revision
 def revision_info():
     """
     Get the git hash and mtime of the repository, or the installed files.
@@ -83,20 +81,20 @@ def revision_info():
     # TODO: test with "pip install -e ." for developer mode
     global _REVISION_INFO
 
-    if not _REVISION_INFO:
+    if _REVISION_INFO is None:
         _REVISION_INFO = git_rev(repo_path())
 
-    if not _REVISION_INFO:
+    if _REVISION_INFO is None:
         try:
             from importlib import resources
         except ImportError: # CRUFT: pre-3.7 requires importlib_resources
             import importlib_resources as resources
-        revdata = resources.read_text(__name__, RESOURCE_NAME)
-        commit, timestamp = revdata.strip().split()
-        _REVISION_INFO = commit, int(timestamp)
-
-    if not _REVISION_INFO:
-        _REVISION_INFO = "unknown", 0
+        try:
+            revdata = resources.read_text(__name__, RESOURCE_NAME)
+            commit = revdata.strip().split()[0]
+            _REVISION_INFO = commit
+        except Exception:
+            _REVISION_INFO = "unknown"
 
     return _REVISION_INFO
 
@@ -112,9 +110,10 @@ def git_rev(repo):
     the git repository changes.  It only reads files, so it should not do
     any damage to the repository in the process.
     """
-    # Based on stackoverflow am9417 and Ciro Santilli
+    # Based on stackoverflow am9417
     # https://stackoverflow.com/questions/14989858/get-the-current-git-hash-in-a-python-script/59950703#59950703
-    # https://stackoverflow.com/questions/22968856/what-is-the-file-format-of-a-git-commit-object-data-structure/37438460#37438460
+    if repo is None:
+        return None
 
     git_root = Path(repo) / ".git"
     git_head = git_root / "HEAD"
@@ -127,76 +126,20 @@ def git_rev(repo):
 
     # Find head file .git/HEAD (e.g. ref: ref/heads/master => .git/ref/heads/master)
     if not head_ref.startswith('ref: '):
-        raise RuntimeError(f"expected 'ref: path/to/head' in {git_head}")
+        warn(f"expected 'ref: path/to/head' in {git_head}")
+        return None
     head_ref = head_ref[5:].strip()
-    head_ref = git_root.joinpath(*head_ref.split('/'))
 
     # Read commit id from head file
-    with head_ref.open('r') as fd:
-        commit = fd.read().strip()
-
-    # Get timestamp from commit file .git/objects/ff/fffffffffffff
-    # This is a zlib compressed file with contents:
-    #
-    #     commit {size}\0tree {tree_id}
-    #     parent {parent_id}
-    #     ...
-    #     parent {parent_id}
-    #     author {author info} {timestamp} {timezone}
-    #     committer {committer info} {timestamp} {timezone}
-    #
-    #     {commit message lines}
-    #
-    # The git repo may be packed, and the objects may not be available
-    # in the directory.  In that case they will need to be retrieved from
-    # a pack file.  The format for these files is described here:
-    #    https://git-scm.com/docs/pack-format
-    #    https://codewords.recurse.com/issues/three/unpacking-git-packfiles
-    #    https://git-scm.com/book/en/v2/Git-Internals-Packfiles
-    import zlib
-    commit_ref = git_root.joinpath("objects", commit[:2], commit[2:])
-    if commit_ref.exists():
-        with commit_ref.open('rb') as fd:
-            data = zlib.decompress(fd.read())
-        committer = next(v for v in data.split(b'\n') if v.startswith(b'committer'))
-        timestamp = int(committer.strip().rsplit(maxsplit=2)[-2])
-    else:
-        # TODO: retrieve from the pack file rather than using git log command
-        import subprocess
-        timestamp = subprocess.Popen(
-            ["git", "log", "-1", "--pretty=format:%ct"],
-            cwd=repo, stdout=subprocess.PIPE
-        ).stdout.read().strip().decode('ascii')
-
-    return commit, timestamp
-
-# CRUFT: unused --- use the git command rather than parsing the git files
-def git_rev_cmd(repo):
-    """
-    Get the git revision for the repo in the path *repo*.
-
-    Returns the commit id of the current head as well as the committer
-    timestamp as integer seconds since Jan 1 1970.
-
-    Note: this function requires the git command on the system path.
-    """
-    import subprocess
-
-    # for local and development installs of the server, the .git folder
-    # will exist in parent (reduction) folder...
-    git_root = Path(repo) / ".git"
-    if not git_root.exists():
+    head_path = git_root.joinpath(*head_ref.split('/'))
+    if not head_path.exists():
+        warn(f"path {head_path} referenced from {git_head} does not exist")
         return None
 
-    revision = subprocess.Popen(
-        ["git", "rev-parse", "HEAD"],
-        cwd=repo, stdout=subprocess.PIPE
-        ).stdout.read().strip().decode('ascii')
-    timestamp = subprocess.Popen(
-        ["git", "log", "-1", "--pretty=format:%ct"],
-        cwd=repo, stdout=subprocess.PIPE
-        ).stdout.read().strip().decode('ascii')
-    return revision, int(timestamp)
+    with head_path.open('r') as fd:
+        commit = fd.read().strip()
+
+    return commit
 
 def main():
     """
