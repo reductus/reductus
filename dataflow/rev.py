@@ -2,8 +2,12 @@
 Commit id and timestamp from the git repo.
 
 Drop the file rev.py into a top level directory PACKAGE_NAME of your
-application, right below the root of the repository.  From within your
-application you can then do::
+application, right below the root of the repository.  Set the PACKAGE_NAME
+variable in this file to the package name.  For example::
+
+    PACKAGE_NAME = "dataflow"
+
+From within your application you can then do::
 
     from . import rev
 
@@ -70,6 +74,7 @@ def store_revision():
         fd.write(commit + "\n")
 
 
+PACKAGE_NAME = 'dataflow'
 RESOURCE_NAME = 'git_revision'
 _REVISION_INFO = None # cached value of git revision
 def revision_info():
@@ -88,7 +93,7 @@ def revision_info():
         except ImportError: # CRUFT: pre-3.7 requires importlib_resources
             import importlib_resources as resources
         try:
-            revdata = resources.read_text(__name__, RESOURCE_NAME)
+            revdata = resources.read_text(PACKAGE_NAME, RESOURCE_NAME)
             commit = revdata.strip().split()[0]
             _REVISION_INFO = commit
         except Exception:
