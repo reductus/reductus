@@ -1,5 +1,5 @@
 """
-Commit id and timestamp from the git repo.
+Get commit id from the git repo.
 
 Drop the file rev.py into a top level directory PACKAGE_NAME of your
 application, right below the root of the repository.  Set the PACKAGE_NAME
@@ -12,7 +12,7 @@ From within your application you can then do::
     from . import rev
 
     rev.print_revision()  # print the repo version
-    commit = rev.revision_info()  # return commit
+    commit = rev.revision_info()  # return commit id
 
 If you use a more complicated source tree then you will need to replace
 repo_path() with a function that returns the path to the repo root before
@@ -31,7 +31,7 @@ from setup.py::
     # Create the resource file git_revision.
     if os.system(f'"{sys.executable}" PACKAGE_NAME/rev.py') != 0:
         print("setup.py failed to build PACKAGE_NAME/git_revision", file=sys.stderr)
-        sys.exit()
+        sys.exit(1)
 
     ...
 
@@ -70,12 +70,12 @@ def store_revision():
     """
     commit = git_rev(repo_path())
     path = Path(__file__).absolute().parent / RESOURCE_NAME
-    with path.open('w') as fd:
+    with path.open("w") as fd:
         fd.write(commit + "\n")
 
 
-PACKAGE_NAME = 'dataflow'
-RESOURCE_NAME = 'git_revision'
+PACKAGE_NAME = "dataflow"
+RESOURCE_NAME = "git_revision"
 _REVISION_INFO = None # cached value of git revision
 def revision_info():
     """
@@ -94,7 +94,7 @@ def revision_info():
             import importlib_resources as resources
         try:
             revdata = resources.read_text(PACKAGE_NAME, RESOURCE_NAME)
-            commit = revdata.strip().split()[0]
+            commit = revdata.strip()
             _REVISION_INFO = commit
         except Exception:
             _REVISION_INFO = "unknown"
@@ -105,8 +105,7 @@ def git_rev(repo):
     """
     Get the git revision for the repo in the path *repo*.
 
-    Returns the commit id of the current head as well as the committer
-    timestamp as integer seconds since Jan 1 1970.
+    Returns the commit id of the current head.
 
     Note: this function parses the files in the git repository directory
     without using the git application.  It may break if the structure of
@@ -124,22 +123,22 @@ def git_rev(repo):
         return None
 
     # Read .git/HEAD file
-    with git_head.open('r') as fd:
+    with git_head.open("r") as fd:
         head_ref = fd.read()
 
     # Find head file .git/HEAD (e.g. ref: ref/heads/master => .git/ref/heads/master)
-    if not head_ref.startswith('ref: '):
+    if not head_ref.startswith("ref: "):
         warn(f"expected 'ref: path/to/head' in {git_head}")
         return None
     head_ref = head_ref[5:].strip()
 
     # Read commit id from head file
-    head_path = git_root.joinpath(*head_ref.split('/'))
+    head_path = git_root.joinpath(*head_ref.split("/"))
     if not head_path.exists():
         warn(f"path {head_path} referenced from {git_head} does not exist")
         return None
 
-    with head_path.open('r') as fd:
+    with head_path.open("r") as fd:
         commit = fd.read().strip()
 
     return commit
