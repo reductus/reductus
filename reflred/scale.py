@@ -17,7 +17,9 @@ def apply_intensity_norm(data, base):
     else:
         data_x, base_x = data.slit1.x, base.slit1.x
     S, varS = err1d.interp(data_x, base_x, base.v, base.dv**2)
-    I, varI = err1d.div(data.v, data.dv**2, S, varS)
+    # Candor may have only one detector bank active, and so the other may
+    # have zeros in it.  Ignore those channels.
+    I, varI = err1d.div(data.v, data.dv**2, S + (S==0), varS)
     data.v, data.dv = I, np.sqrt(varI)
 
 def calculate_number(data, base, time_uncertainty=1e-6):
