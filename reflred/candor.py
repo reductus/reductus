@@ -43,8 +43,7 @@ def detector_efficiency():
         path = Path(__file__).parent / 'DetectorWavelengths.csv'
         eff = np.loadtxt(path, delimiter=',')[:, 3]
         eff = eff / np.mean(eff)
-        _EFFICIENCY = np.hstack((eff, eff))
-        _EFFICIENCY = _EFFICIENCY.reshape(2, NUM_CHANNELS)
+        _EFFICIENCY = np.vstack((eff, eff)).T
     return _EFFICIENCY
 
 class Candor(ReflData):
@@ -79,7 +78,7 @@ class Candor(ReflData):
         # Load counts early so we can tell whether channels are axis 1 or 2
         counts = np.asarray(data_as(das, 'areaDetector/counts', ''), 'd')
         channels_at_end = (counts.shape[2] == NUM_CHANNELS)
-        if not channels_at_end:
+        if channels_at_end:
             counts = np.swapaxes(counts, 1, 2)
         self.detector.counts = counts
         self.detector.counts_variance = counts.copy()
@@ -168,10 +167,10 @@ class Candor(ReflData):
         # TODO: check the orientation on detectorTable nodes.
         # For now they appear to be in "channels_at_end" order even if the
         # detector counts are in "banks_at_end" order.
-        wavelength = wavelength.reshape(NUM_CHANNELS, -1).T
-        wavelength_spread = wavelength_spread.reshape(NUM_CHANNELS, -1).T
-        divergence = divergence.reshape(NUM_CHANNELS, -1).T
-        efficiency = efficiency.reshape(NUM_CHANNELS, -1).T
+        wavelength = wavelength.reshape(NUM_CHANNELS, -1)
+        wavelength_spread = wavelength_spread.reshape(NUM_CHANNELS, -1)
+        divergence = divergence.reshape(NUM_CHANNELS, -1)
+        efficiency = efficiency.reshape(NUM_CHANNELS, -1)
 
         wavelength_resolution = FWHM2sigma(wavelength * wavelength_spread)
         if (efficiency == 1.0).all():
@@ -193,6 +192,9 @@ class Candor(ReflData):
         #bank_angle = np.arange(30)*0.1
         ## Add an extra dimension to sample angle
 
+        #print("shapes", self.detector.counts.shape, self.detector.wavelength.shape, self.detector.efficiency.shape)
+        #print("shapes", self.sample.angle_x.shape, self.detector.angle_x.shape, self.detector.angle_x_offset.shape)
+
 
     @property
     def Ti(self):
@@ -205,12 +207,12 @@ class Candor(ReflData):
     @property
     def Td(self):
         angle, offset = self.detector.angle_x, self.detector.angle_x_offset
-        return angle[:, None, None] + offset[None, :, None]
+        return angle[:, None, None] + offset[None, None, :]
 
     @property
     def Td_target(self):
         angle, offset = self.detector.angle_x_target, self.detector.angle_x_offset
-        return angle[:, None, None] + offset[None, :, None]
+        return angle[:, None, None] + offset[None, None, :]
 
     @property
     def Li(self):
@@ -232,7 +234,7 @@ class Candor(ReflData):
         #v = np.log10(self.v + (self.v == 0))
         # set noise floor to ignore 5% of the data above zero
         v = self.v.copy()
-        vmin = np.sort(v[v>0])[int((v>0).size * 0.01)]
+        vmin = np.sort(v[v > 0])[int((v > 0).size * 0.01)]
         v[v<vmin] = vmin
         v = np.log10(v)
 
@@ -241,19 +243,20 @@ class Candor(ReflData):
         if True: # Qz/S1 - channel
             if Intent.isslit(self.intent):
                 x, xlabel = self.slit1.x, "Slit 1 opening (mm)"
-                x = np.vstack((x, x)).T[:,:,None]
+                x = np.vstack((x, x)).T[:, :, None]
             else:
                 x, xlabel = self.Qz, "Qz (1/Ang)"
-            y, ylabel = np.vstack((channel, channel))[None, :, :], "channel"
+            y, ylabel = np.vstack((channel, channel)).T[None, :, :], "channel"
             #print("Qz-channel", x.shape, y.shape, v.shape)
 
+            #plt.figure()
             plt.subplot(211)
-            plt.pcolormesh(x[:, 0, :].T, y[:, 0, :].T, v[:, 0, :].T)
+            plt.pcolormesh(x[:, :, 0].T, y[:, :, 0].T, v[:, :, 0].T)
             plt.xlabel(xlabel)
             plt.ylabel(f"{ylabel} - bank 0")
             plt.colorbar()
             plt.subplot(212)
-            plt.pcolormesh(x[:, 1, :].T, y[:, 1, :].T, v[:, 1, :].T)
+            plt.pcolormesh(x[:, :, 1].T, y[:, :, 1].T, v[:, :, 1].T)
             plt.xlabel(xlabel)
             plt.ylabel(f"{ylabel} - bank 1")
             plt.colorbar()
@@ -262,34 +265,41 @@ class Candor(ReflData):
         if False: # lambda-theta
             x, xlabel = self.detector.wavelength, 'detector wavelength (Ang)'
             y, ylabel = self.sample.angle_x, 'sample angle (degree)'
+            #print("lambda-theta", x.shape, y.shape, v.shape)
+
+            plt.figure()
             plt.subplot(211)
-            plt.pcolormesh(edges(x[0]), edges(y), v[:, 0, :])
+            plt.pcolormesh(edges(x[0, :, 0]), edges(y), v[:, :, 0])
             plt.xlabel(xlabel)
             plt.ylabel(f"{ylabel} - bank 0")
             plt.colorbar()
             plt.subplot(212)
-            plt.pcolormesh(edges(x[1]), edges(y), v[:, 1, :])
+            plt.pcolormesh(edges(x[0, :, 1]), edges(y), v[:, :, 1])
             plt.xlabel(xlabel)
             plt.ylabel(f"{ylabel} - bank 1")
             plt.colorbar()
             plt.suptitle(f'detector counts for {self.name}')
 
         if False: # detector efficiency
-            plt.figure()
             eff = self.detector.efficiency[0]
-            plt.plot(channel, eff[0], label='bank 0')
-            plt.plot(channel, eff[1], label='bank 1')
+            #print("detector efficiency", eff.shape)
+
+            plt.figure()
+            plt.plot(channel, eff[:, 0], label='bank 0')
+            plt.plot(channel, eff[:, 1], label='bank 1')
             plt.xlabel('channel number')
             plt.ylabel('wavelength efficiency')
             plt.suptitle(f'detectorTable.detectorEfficiencies for {self.name}')
             plt.legend()
 
         if False: # detector wavelength
-            plt.figure()
             y, ylabel = self.detector.wavelength, 'detector wavelength (Ang)'
             dy = self.detector.wavelength_resolution
-            plt.errorbar(channel, y[0, 0], yerr=dy[0, 0], label='bank 0')
-            plt.errorbar(channel, y[0, 1], yerr=dy[0, 1], label='bank 1')
+            #print("detector wavelength", y.shape)
+
+            plt.figure()
+            plt.errorbar(channel, y[0, :, 0], yerr=dy[0, :, 0], label='bank 0')
+            plt.errorbar(channel, y[0, :, 1], yerr=dy[0, :, 1], label='bank 1')
             plt.xlabel('channel number')
             plt.ylabel(ylabel)
             plt.suptitle(f'detectorTable.wavelength for {self.name}')
@@ -316,12 +326,9 @@ class Candor(ReflData):
             if delta == 0.:
                 delta = vec[0]/10.
             return low - delta/2, high+delta/2
-        data = np.moveaxis(self.v, 1, 0)
-        _, ny, nx = data.shape  # nbanks, nangles, nwavelengths
+        data = self.v
+        ny, nx, _ = data.shape  # nangles, nwavelengths, nbanks
         (x, xlabel), (y, ylabel) = self.get_axes()
-        #print("data shape", nx, ny, data.shape)
-        # Paste frames back-to-back
-        data = np.hstack((data[0], data[1]))[None, :, :]
         x, nx = np.hstack((x, x + (x.max()-x.min()))), 2*nx
         xmin, xmax = limits(x, nx)
         ymin, ymax = limits(y, ny)
@@ -340,7 +347,10 @@ class Candor(ReflData):
             "ymin": ymin, "ymax": ymax, "ydim": ny,
             "zmin": zmin, "zmax": zmax,
         }
-        z = [frame.ravel('F').tolist() for frame in data]
+        # One z per detector bank
+        #z = [data[..., k].ravel('F').tolist() for k in range(data.shape[-1])]
+        # One z with banks back-to-back
+        z = [data.ravel('F').tolist()]
         #print("data", data.shape, dims, len(z))
         plottable = {
             #'type': '2d_multi',
