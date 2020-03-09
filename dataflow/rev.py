@@ -46,8 +46,6 @@ Add the following to .gitignore, substituting your package name::
 
     /PACKAGE_NAME/git_revision
 
-Note: the current version doesn't handled packed repositories unless
-the git command is available on your executable path.
 """
 from pathlib import Path
 from warnings import warn
