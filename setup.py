@@ -14,7 +14,7 @@ if sys.argv[1] == 'test':
 # Create the resource file dataflow/git_revision
 if os.system(f'"{sys.executable}" dataflow/rev.py') != 0:
     print("setup.py failed to build dataflow/git_revision", file=sys.stderr)
-    sys.exit()
+    sys.exit(1)
 
 packages = find_packages(exclude=['reflbin'])
 
