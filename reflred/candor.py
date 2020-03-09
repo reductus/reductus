@@ -409,6 +409,8 @@ class QData(ReflData):
         self.dv = dv
         self.intent = Intent.spec
         self.points = len(q)
+        # TODO: set something for dL and dT
+        self.angular_resolution = 1.
 
     @property
     def Qz(self):
@@ -427,12 +429,12 @@ def rebin(data, q):
         raise ValueError("expected norm to be time, monitor or none")
     q_edges = edges(q, extended=True)
     datasets = []
-    for bank in range(data.v.shape[1]):
-        q, dq, v, dv = _rebin_bank(data, bank, q_edges)
+    for bank in range(data.v.shape[2]):
+        qz, dq, v, dv = _rebin_bank(data, bank, q_edges)
         #output = ReflData()
         #output.v, output.dv = v, dv
         #output.x, output.dx = q, dq
-        datasets.append(QData(data, q, dq, v, dv))
+        datasets.append(QData(data, qz, dq, v, dv))
 
     # Only look at bank 0 for now
     return datasets[0]
@@ -463,11 +465,14 @@ def _rebin_bank(data, bank, q_edges):
     wavelength variation within each theory value.
     """
     norm = data.normbase
-    y, dy, q, dq = (val[:, bank, :].flatten()
+    y, dy, q, dq = (val[:, :, bank].flatten()
                     for val in (data.v, data.dv, data.Qz, data.dQ))
     nbins = len(q_edges) - 1
     bin_index = np.searchsorted(q_edges, q)
 
+    # Some bins may not have any points contributing, such as those before
+    # and after, or those in the middle if the q-step is too fine.
+    empty_q = (np.bincount(bin_index, minlength=nbins) == 0)
     # The following is cribbed from util.poisson_average, replacing
     # np.sum with np.bincount.
     # TODO: update poisson average so it handles grouping
@@ -475,12 +480,16 @@ def _rebin_bank(data, bank, q_edges):
         bar_y = np.bincount(bin_index, weights=y, minlength=nbins)
         bar_dy = np.bincount(bin_index, weights=dy**2, minlength=nbins)
     else:
+        # Counts must be positive for poisson averaging...
+        y = y.copy()
+        y[y < 0] = 0.
         dy = dy + (dy == 0) # protect against zero uncertainty
         monitors = y*(y+1)/dy**2 if norm == "monitor" else y/dy**2 # if "time"
         monitors[y == 0] = 1./dy[y == 0] # protect against zero counts
         counts = y*monitors
         combined_monitors = np.bincount(bin_index, weights=monitors, minlength=nbins)
         combined_counts = np.bincount(bin_index, weights=counts, minlength=nbins)
+        combined_monitors += empty_q  # protect against division by zero
         bar_y = combined_counts/combined_monitors
         if norm == "time":
             bar_dy = bar_y * np.sqrt(1./combined_monitors)
@@ -490,15 +499,28 @@ def _rebin_bank(data, bank, q_edges):
             bar_dy[idx] = bar_y[idx] * np.sqrt(1./combined_counts[idx]
                                             + 1./combined_monitors[idx])
 
-    # Find Q center and resolution
-    w = np.bincount(bin_index, weights=y, minlength=nbins)
-    bar_q = np.bincount(bin_index, weights=q*y, minlength=nbins)/w
-    qsq = np.bincount(bin_index, weights=q**2*y, minlength=nbins)
-    dqsq = np.bincount(bin_index, weights=dq**2*y, minlength=nbins)
-    bar_dq = np.sqrt((dqsq + qsq)/w - bar_q**2)
+    # Find Q center and resolution, weighting by intensity
+    # TODO: use intensity weighting when finding q centers?
+    #weights = y
+    w = np.ones_like(y)  # Weights must be positivie; use equal weights for now
+    bar_w = np.bincount(bin_index, weights=w, minlength=nbins)
+    bar_w += (bar_w == 0)  # protect against divide by zero
+    bar_q = np.bincount(bin_index, weights=q*w, minlength=nbins)/bar_w
+    # TODO: proper dQ calculation
+    # Combined dq according to mixture distribution.
+    #qsq = np.bincount(bin_index, weights=q**2*w, minlength=nbins)
+    #dqsq = np.bincount(bin_index, weights=dq**2*w, minlength=nbins)
+    #bar_dq = np.sqrt((dqsq + qsq)/bar_w - bar_q**2)
+    # Combined dq according average of variance.
+    #bar_dq = np.sqrt(np.bincount(bin_index, weights=dq*w, minlength=nbins)/bar_w)
+    # Set dq to 1% for now...
+    bar_dq = bar_q*0.01
 
     # Need to drop catch-all bins before and after q edges.
-    return bar_q[1:-1], bar_dq[1:-1], bar_y[1:-1], bar_dy[1:-1]
+    # Also need to drop q bins which don't contain any values.
+    keep = ~empty_q
+    keep[0] = keep[-1] = False
+    return bar_q[keep], bar_dq[keep], bar_y[keep], bar_dy[keep]
 
 def edges(c, extended=False):
     r"""
