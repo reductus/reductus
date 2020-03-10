@@ -18,7 +18,7 @@ def candor(
         spectral_correction=False,
         intent='auto',
         sample_width=None,
-        base='none'):
+        base='auto'):
     r"""
     Load a list of Candor files from the NCNR data server.
 

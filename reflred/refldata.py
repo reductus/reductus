@@ -1136,7 +1136,6 @@ class ReflData(Group):
     # TODO: split refldata in to ReflBase and PointRefl so PSD doesn't inherit column format
     @exports_text("column")
     def to_column_text(self):
-        print("=======> column export")
         # Note: subclass this for non-traditional reflectometry measurements
         with BytesIO() as fid:  # numpy.savetxt requires a byte stream
             for n in ['name', 'entry', 'polarization']:
