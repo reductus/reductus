@@ -180,7 +180,7 @@ webreduce.instruments['ncnr.refl'] = webreduce.instruments['ncnr.refl'] || {};
         var pathlist = pathsegments.slice(0, pathsegments.length-1).join("+");
         var filename = pathsegments.slice(-1);
         var viewer = viewer_link[datasource];
-        var hdf_or_zip = (filename[0].includes(".nxs.") ? viewer.replace("-zip-", "-hdf-") : viewer);
+        var hdf_or_zip = (NEXUS_REGEXP.test(fullpath) ? viewer.replace("-zip-", "-hdf-") : viewer);
         var link = "<a href=\"" + hdf_or_zip;
         link += "?pathlist=" + pathlist;
         link += "&filename=" + filename;
