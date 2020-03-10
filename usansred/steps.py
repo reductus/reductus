@@ -173,7 +173,7 @@ def findTWideCts(data, q_threshold=1e-4):
     """
     from sansred.sansdata import Parameters
 
-    twide = _findTWideCts(data, q_threshold)
+    twide, missing_data_warn = _findTWideCts(data, q_threshold)
 
     output = {"fileNumber": data.metadata["run.instFileNum"], "TWIDE": twide.x, "TWIDE_ERR": np.sqrt(twide.variance)}
     if missing_data_warn:
