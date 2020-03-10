@@ -14,20 +14,20 @@ def extend(a, b):
 
     For example::
 
-        >>> from numpy.random import rand
-        >>> a, b = rand(3, 4), rand(3, 4, 2)
-        >>> a + b
-        ValueError: operands could not be broadcast together with shapes (3,4) (3,4,2)
-        >>> c = extend(a, b) + b
-        >>> c.shape
-        (3, 4, 2)
+        from numpy.random import rand
+        a, b = rand(3, 4), rand(3, 4, 2)
+        a + b
+        ==> ValueError: operands could not be broadcast together with shapes (3,4) (3,4,2)
+        c = extend(a, b) + b
+        c.shape
+        ==> (3, 4, 2)
 
     Numpy broadcasting rules automatically extend arrays to the beginning,
     so the corresponding *lextend* function is not needed::
 
-        >>> c = rand(3, 4) + rand(2, 3, 4)
-        >>> c.shape
-        (2, 3, 4)
+        c = rand(3, 4) + rand(2, 3, 4)
+        c.shape
+        ==> (2, 3, 4)
     """
     if np.isscalar(a):
         return a
