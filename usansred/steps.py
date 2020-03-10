@@ -332,7 +332,7 @@ def correctJoinData(sample, empty, q_tol=0.01, bkg_level=0.0, emp_level=0.0, thi
 
     **Returns**
 
-    corrected (data): corrected output
+    corrected (cor): corrected output
 
     corrected_info (params[]): correction info
 
