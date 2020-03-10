@@ -273,7 +273,6 @@ def _build_1d(head, intensity):
     data.detector.offset_x = 0.
     data.detector.mask = None
     data.warnings = []  # initialize per-file history
-    data.messages = []  # initialize per-file history
     data.intent = head.intent
     return data
 
