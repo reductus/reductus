@@ -12,7 +12,9 @@ if sys.argv[1] == 'test':
     sys.exit(call([sys.executable, '-m', 'pytest'] + sys.argv[2:]))
 
 # Create the resource file dataflow/git_revision
-os.system(f'"{sys.executable}" dataflow/rev.py')
+if os.system(f'"{sys.executable}" dataflow/rev.py') != 0:
+    print("setup.py failed to build dataflow/git_revision", file=sys.stderr)
+    sys.exit(1)
 
 packages = find_packages(exclude=['reflbin'])
 
