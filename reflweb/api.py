@@ -164,7 +164,7 @@ def calc_terminal(template_def, config, nodenum, terminal_id, return_type='full'
         return retval.get_metadata()
     elif return_type == 'export':
         # inject git version hash into export data:
-        rev_id, rev_time = revision_info()
+        rev_id = revision_info()
         template_data = {
             "template_data": {
                 "template": template_def,
@@ -172,7 +172,6 @@ def calc_terminal(template_def, config, nodenum, terminal_id, return_type='full'
                 "node": nodenum,
                 "terminal": terminal_id,
                 "server_git_hash": rev_id,
-                "server_mtime": rev_time,
                 "export_type": export_type,
                 #"datasources": fetch.DATA_SOURCES, # Is this needed?
             }
