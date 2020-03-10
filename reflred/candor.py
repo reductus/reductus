@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import json
+from warnings import warn
 
 import numpy as np
 
@@ -56,7 +56,7 @@ class Candor(ReflData):
     probe = "neutron"
 
     def __init__(self, entry, entryname, filename):
-        super(Candor, self).__init__()
+        super().__init__()
         nexus_common(self, entry, entryname, filename)
         self.geometry = 'vertical'
 
@@ -76,14 +76,17 @@ class Candor(ReflData):
 
         # Counts
         # Load counts early so we can tell whether channels are axis 1 or 2
-        counts = np.asarray(data_as(das, 'areaDetector/counts', ''), 'd')
+        counts = data_as(das, 'areaDetector/counts', '')
+        if counts is None or counts.size == 0:
+            raise ValueError(f"Candor file '{self.path}' has no area detector data.")
+
         channels_at_end = (counts.shape[2] == NUM_CHANNELS)
         if channels_at_end:
             counts = np.swapaxes(counts, 1, 2)
+        counts = np.asarray(counts, 'd') # convert data to float
         self.detector.counts = counts
         self.detector.counts_variance = counts.copy()
         self.detector.dims = counts.shape[1:]
-
 
         # Monochromator
         ismono = (str_data(das, 'monoTrans/key', 'OUT') == 'IN')
@@ -187,10 +190,7 @@ class Candor(ReflData):
         self.sample.angle_x_target = data_as(das, 'sampleAngleMotor/desiredSoftPosition', 'degree', rep=n)
         self.detector.angle_x = data_as(das, 'detectorTableMotor/softPosition', 'degree', rep=n)
         self.detector.angle_x_target = data_as(das, 'detectorTableMotor/desiredSoftPosition', 'degree', rep=n)
-
         self.detector.angle_x_offset = data_as(das, 'detectorTable/rowAngularOffsets', '')[0]
-        #bank_angle = np.arange(30)*0.1
-        ## Add an extra dimension to sample angle
 
         #print("shapes", self.detector.counts.shape, self.detector.wavelength.shape, self.detector.efficiency.shape)
         #print("shapes", self.sample.angle_x.shape, self.detector.angle_x.shape, self.detector.angle_x_offset.shape)

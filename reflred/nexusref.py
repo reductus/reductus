@@ -25,7 +25,7 @@ TRAJECTORY_INTENTS = {
 WAVELENGTH = 4.
 WAVELENGTH_DISPERSION = 0.015
 
-def data_as(group, fieldname, units, rep=1, NA=None):
+def data_as(group, fieldname, units, rep=None, NA=None):
     """
     Return value of field in the desired units.
     """
@@ -35,8 +35,8 @@ def data_as(group, fieldname, units, rep=1, NA=None):
     units_in = _s(field.attrs.get('units', ''))
     converter = unit.Converter(units_in)
     value = converter(field[()], units)
-    if rep != 1:
-        if len(value) == 1:
+    if rep is not None:
+        if np.isscalar(value) or len(value) == 1:
             return np.repeat(value, rep, axis=0)
         elif len(value) == rep:
             return value
@@ -53,7 +53,7 @@ def str_data(group, field, default=''):
     """
     if field in group:
         data = group[field][0]
-        if len(data.shape) > 0:
+        if data.ndim > 0:
             value = [_s(v) for v in data]
         else:
             value = _s(data)

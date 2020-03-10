@@ -378,7 +378,7 @@ class Detector(Group):
         measurements in the scan.
     angle_x_offset (nx x degree)
     angle_y_offset (ny x degree)
-        Pixel angle in x and y.
+        Pixel angle relative to detector angle in x and y.
     rotation (degree)
         Angle of rotation of the detector relative to the beam.  This
         will affect how vertical integration in the region of interest
@@ -1047,15 +1047,15 @@ class ReflData(Group):
                   for s, _ in ReflData._groups]
         return "\n".join(base+others)
 
-    def todict(self):
-        state = _toDict(self)
-        groups = dict((s, _toDict(getattr(self, s)))
-                      for s, _ in ReflData._groups)
+    def todict(self, maxsize=np.inf):
+        state = _toDict(self, maxsize=maxsize)
+        groups = {s: _toDict(getattr(self, s), maxsize=maxsize)
+                  for s, _ in ReflData._groups}
         state.update(groups)
         return state
 
     def fromdict(self, state):
-        props = dict((k, v) for k, v in state.items() if k in self._fields)
+        props = {k: v for k, v in state.items() if k in self._fields}
         props = _fromDict(props)
         for k, v in props.items():
             setattr(self, k, v)
@@ -1069,7 +1069,51 @@ class ReflData(Group):
         self.warnings.append(msg)
 
     def get_metadata(self):
-        return self.todict()
+        """
+        Return metadata used by webreduce.
+
+        The following are used in webreduce/instruments/ncnr.refl.js::
+
+            {
+                x: [..., xmin, ..., xmax, ...]}
+                sample: {name: str, description: str}
+                intent: str
+                polarization: str
+                filenumber: int
+                filename: str
+                entryname: str
+                mtime: int
+                source: str name of data server uri
+            }
+
+        *x* min and max are used for drawing the range indicators.
+
+        *sample.description* is displayed when hovering over link.
+
+        *source* and *filename* are needed for creating the hdf reader link.
+
+        *sample.name > intent > filenumber > polarization* forms the default
+        tree ordering.
+
+        Users can define their own tree organization from the other fields
+        in the dataset, so we should probably include trajectoryData entries.
+        Sample environment conditions could also be useful for some
+        experiments.  In practice, though, the defaults are going to be
+        good enough, and users won't be changing them.  Not sure what
+        happens when a vector field is used as a sort criterion.
+        """
+        # TODO: Load and return minimal metadata for the file browser.
+        # TODO: Delay loading bulk of the data until file is selected.
+
+        # Limit metadata to scalars and small arrays
+        data = self.todict(maxsize=1000)
+        # If data['x'] is not a vector or if it was too big, then override
+        if self.x.ndim > 1 or len(data['x']) == 0 or self.x.ndim > 1:
+            if Intent.isslit(self.intent):
+                data['x'] = self.slit1.x.tolist()
+            else:
+                data['x'] = self.sample.angle_x.tolist()
+        return data
 
     def plot(self, label=None):
         if label is None:
@@ -1092,6 +1136,7 @@ class ReflData(Group):
     # TODO: split refldata in to ReflBase and PointRefl so PSD doesn't inherit column format
     @exports_text("column")
     def to_column_text(self):
+        print("=======> column export")
         # Note: subclass this for non-traditional reflectometry measurements
         with BytesIO() as fid:  # numpy.savetxt requires a byte stream
             for n in ['name', 'entry', 'polarization']:
@@ -1139,6 +1184,7 @@ class ReflData(Group):
         }
 
     def get_plottable(self):
+        print("=======> plottable")
         # Note: subclass this for non-traditional reflectometry measurements
         columns = self.columns # {name: {label: str, units: str, errorbars: str}}
         data_arrays = [
@@ -1296,25 +1342,24 @@ def _str(object, indent=4):
     prefix = " "*indent
     return prefix+("\n"+prefix).join(props)
 
-def _toDict(obj):
-    props = {}
+def _toDict(obj, maxsize=np.inf):
     properties = list(getattr(obj, '_fields', ()))
     properties += list(getattr(obj, '_props', ()))
-    for a in properties:
-        props[a] = _toDictItem(getattr(obj, a))
+    props = {a: _toDictItem(getattr(obj, a), maxsize=maxsize)
+             for a in properties}
     return props
 
-def _toDictItem(obj):
+def _toDictItem(obj, maxsize=None):
     if isinstance(obj, np.integer):
         obj = int(obj)
     elif isinstance(obj, np.floating):
         obj = float(obj)
     elif isinstance(obj, np.ndarray):
-        obj = obj.tolist()
+        obj = obj.tolist() if obj.size < maxsize else [] #[float(obj.min()), float(obj.max())]
     elif isinstance(obj, datetime.datetime):
         obj = [obj.year, obj.month, obj.day, obj.hour, obj.minute, obj.second]
     elif isinstance(obj, (list, tuple)):
-        obj = [_toDictItem(a) for a in obj]
+        obj = [_toDictItem(a, maxsize) for a in obj]
     return obj
 
 def _fromDict(props):
