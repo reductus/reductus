@@ -10,6 +10,7 @@ IS_PY3 = sys.version_info[0] >= 3
 
 from dataflow.lib.uncertainty import Uncertainty
 from dataflow.lib.strings import _s, _b
+from dataflow.lib.exporters import exports_text
 
 class RawData(object):
     def __init__(self, metadata=None, countTime=None, detCts=None, transCts=None, monCts=None, Q=None):
@@ -126,29 +127,36 @@ class USansCorData(object):
     def get_metadata(self):
         return _toDictItem(self.metadata)
     
-    def export(self):
+    @exports_text(name="column")
+    def to_column_text(self):
         from io import BytesIO
         # export to 6-column format compatible with SASVIEW
         # Data columns are Qx - Qy - I(Qx,Qy) - err(I) - Qz - SigmaQ_parall - SigmaQ_perp - fSubS(beam stop shadow)
         labels = ["Qx (1/A)", "I(Q) (Counts/sec/(1e6 Monitor))", "std. dev. I(Q) (1/cm)", "dQ (1/A)", "filler", "filler"]
 
-        fid = BytesIO()
-        cleaned_metadata = _toDictItem(self.metadata, convert_bytes=True)
-        if not isinstance(cleaned_metadata, list):
-            cleaned_metadata = [cleaned_metadata]
-        for c in cleaned_metadata:
-            fid.write(b'### Parameters:\n')
-            for k,v in c.items():
-                fid.write(_b("# %s\n" % json.dumps({k: v}).strip("{}")))
-        #fid.write(_b("# %s\n" % json.dumps(_toDictItem(self.metadata, convert_bytes=True)).strip("{}")))
-        fid.write(_b("# %s\n" % json.dumps({"columns": labels}).strip("{}")))
-        filler = np.ones_like(self.Q, dtype='float') * -1.0 * cleaned_metadata[0]["dQv"]
-        np.savetxt(fid, np.vstack([self.Q, self.iqCOR.x, np.sqrt(self.iqCOR.variance), filler, filler, filler]).T, fmt="%15.6g")
-        fid.seek(0)
-        name = _s(cleaned_metadata[0]["Sample file"])
-        entry = ""
-        return {"name": name, "entry": entry, "export_string": fid.read(), "file_suffix": ".usans.cor"}
+        with BytesIO() as fid:
+            cleaned_metadata = _toDictItem(self.metadata, convert_bytes=True)
+            if not isinstance(cleaned_metadata, list):
+                cleaned_metadata = [cleaned_metadata]
+            for c in cleaned_metadata:
+                fid.write(b'### Parameters:\n')
+                for k,v in c.items():
+                    fid.write(_b("# %s\n" % json.dumps({k: v}).strip("{}")))
+            #fid.write(_b("# %s\n" % json.dumps(_toDictItem(self.metadata, convert_bytes=True)).strip("{}")))
+            fid.write(_b("# %s\n" % json.dumps({"columns": labels}).strip("{}")))
+            filler = np.ones_like(self.Q, dtype='float') * -1.0 * cleaned_metadata[0]["dQv"]
+            np.savetxt(fid, np.vstack([self.Q, self.iqCOR.x, np.sqrt(self.iqCOR.variance), filler, filler, filler]).T, fmt="%15.6g")
+            fid.seek(0)
+            name = _s(cleaned_metadata[0]["Sample file"])
+            entry = ""
+            value = fid.read()
 
+        return {
+            "name": name,
+            "entry": "",
+            "file_suffix": ".usans.cor",
+            "value": value.decode(),
+        }
 
 class Parameters(dict):
     def get_metadata(self):
