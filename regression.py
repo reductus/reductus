@@ -86,7 +86,7 @@ def run_template(template_data, concatenate=True):
     Example::
 
         from dataflow.rev import revision_info
-        revision, timestamp = revision_info()
+        revision = revision_info()
         template_data = {
             "template": json.loads(template_str),
             "config": {}, # optional?
@@ -94,7 +94,6 @@ def run_template(template_data, concatenate=True):
             "terminal": terminal_id,
             "export_type": "column",
             "server_git_hash": revision,
-            "server_mtime": timestamp,
             "datasources": [
                 # ignored...
                 {'url': '...', 'start_path': '...', 'name': '...'},
@@ -231,14 +230,13 @@ def play_file(filename):
         node = max(find_leaves(template))
         node_module = lookup_module(template['modules'][node]['module'])
         terminal = node_module.outputs[0]['id']
-        revision, timestamp = revision_info()
+        revision = revision_info()
         template_data = {
             'template': template,
             'config': {},
             'node': node,
             'terminal': terminal,
             'server_git_hash': revision,
-            'server_mtime': timestamp,
             'export_type': export_type,
         }
 
