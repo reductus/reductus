@@ -240,10 +240,11 @@ class Candor(ReflData):
 
         channel = np.arange(1, NUM_CHANNELS+1)
 
-        if True: # Qz/S1 - channel
+        if True: # Qz - channel OR S1 - channel
             if Intent.isslit(self.intent):
                 x, xlabel = self.slit1.x, "Slit 1 opening (mm)"
-                x = np.vstack((x, x)).T[:, :, None]
+                x = x[:, None, None]
+                x = np.concatenate((x, x), axis=2)
             else:
                 x, xlabel = self.Qz, "Qz (1/Ang)"
             y, ylabel = np.vstack((channel, channel)).T[None, :, :], "channel"

@@ -159,13 +159,16 @@ def dark_current(data, dc_rate=0.):
     return data
 
 @module("candor")
-def stitch_intensity(data):
+def stitch_intensity(data, tol=0.001):
     r"""
     Join the intensity measurements into a single entry.
 
     **Inputs**
 
     data (candordata[]) : data to join
+
+    tol {Tolerance (mm)} (float)
+    : Tolerance for "overlapping" slit opening on slits 1, 2, and 3
 
     **Returns**
 
@@ -183,9 +186,9 @@ def stitch_intensity(data):
     #print([(d.slit1.x[0],d.slit1.x[-1]) for d in data])
     for a, b in zip(data[:-1], data[1:]):
         # Verify overlap
-        if (not isclose(a.slit1.x[-1], b.slit1.x[0], abs_tol=0.001)
-            or not isclose(a.slit2.x[-1], b.slit2.x[0], abs_tol=0.001)
-            or not isclose(a.slit3.x[-1], b.slit3.x[0], abs_tol=0.001)):
+        if (not isclose(a.slit1.x[-1], b.slit1.x[0], abs_tol=tol)
+            or not isclose(a.slit2.x[-1], b.slit2.x[0], abs_tol=tol)
+            or not isclose(a.slit3.x[-1], b.slit3.x[0], abs_tol=tol)):
             raise ValueError("need one point of overlap between segments")
         # Scale the *next* segment to the current segment rather than scaling
         # the current segment.  This does two things: (1) the first segment
@@ -197,6 +200,45 @@ def stitch_intensity(data):
         # TODO: maybe update counts (unnormalized) rather than v (normalized)
         atten = a.v[-1] / b.v[0]
         b.v *= atten[None, ...]
+
+        # Better scale estimation:
+        # * user provides an overlap fitting radius
+        # * order segments
+        # * for each pair of segments
+        # ** find midpoint between end of first segment and beginning of next segment
+        # ** this midpoint may lie between the two segments (no overlap),
+        #    exactly at the endpoints (single overlap) or somewhere
+        #    before the end of the first and the beginning of the next
+        # ** find all points within that overlap region
+        #       low=[(s1_low, rate_low), ...], high=[(s1_high, rate_high), ...]
+        #    where s1 is the slit 1 opening and rate is the normalized count rate.
+        # ** define f(c) as chisq from fit a quadratic to the points
+        #       [(s1_low, rate_low), ... , (s1_high, c*rate_high), ...]
+        # ** minimize f(a, c, k) = a s1^2 + c - k y
+        # This can be solved using a linear system:
+        #      [a c k] = I
+        # where
+        #      a = [s1_low^2 s1_high^2]/sigma
+        #      c = [1 ... 1  1 ... 1]/sigma
+        #      k = [0 ... 0  y_high]/sigma
+        #      I  = [y_low    0 ... 0]/sigma
+        # With 1 point overlap and identical s1 can estimate k
+        # With 2 point overlap can estimate a line bx + c
+        # With 3 point overlap can estimate the quadratic as above
+        # A quick simulation with 4 points overlap, a=5000, k=10
+        # s1_low=[1,2,3,4], s1_high=[3,4,5,6] gave k to 0.5%
+        # Note that the quadratic is centered at zero.  Without this condition
+        # the quadratic can have a minimum over the range which is non-physical.
+        # In practice the data is probably linear-quadratic-linear over the
+        # range of the entire slit scan, but each overlap should be small
+        # enough that it is either linear or quadratic.  With the right value
+        # for "c" the curve can be made as flat as necessary over the range.
+        # The attenuation "k" is not same across the detector bank since the
+        # absorption coefficient is wavelength dependent and attenuation
+        # is exponential with thickness of the attenuator.
+        # However... we are going to have fixed attenuators on motor controls,
+        # so its better to calibrate them once with high statistics and store
+        # the attenuation values in the NeXus file.
 
     # Force intent to treat this as a slit scan.
     data[0].intent = Intent.slit
