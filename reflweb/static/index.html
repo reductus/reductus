@@ -14,7 +14,7 @@
 
   <script type="text/javascript" src="https://cdn.jsdelivr.net/gh/vakata/jstree@3.3/dist/jstree.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/split.js/1.5.11/split.min.js"></script>
-  <script type="text/javascript" src="js/pouchdb.min.js"></script>
+  <script type="text/javascript" src="js/pouchdb-7.1.1.min.js"></script>
   <script type="text/javascript" src="js/sha1.js"></script>
   <script type="text/javascript" src="js/msgpack.min.js"></script>
   
@@ -124,12 +124,22 @@
     <button class="close">close</button>
   </div>
 </div>
-<div id="export_data" title="Export data">
+<div id="initiate_export" title="Export data">
+  <div class="export-types">
+    <span id="export_types"></span>
+  </div>
+  <div>
+    <label><em>combine outputs</em><input type="checkbox" id="concatenate_exports" checked></label>
+  </div>
+  <div style="float:right;">
+    <button id="export_confirm">confirm</button>
+    <button id="export_cancel">cancel</button>
+  </div>
+</div>
+<div id="route_export_data" title="Route exported data">
   <div><label>filename:<input type="text" id="export_filename" /></label></div>
   <div class="export-types">
-    <label>zipped<input type="radio" name="export_switcher" data-handler="zipfile" id="export_zipped" /></label>
-    <label>single file<input type="radio" name="export_switcher" data-handler="singlefile" id="export_single_file" checked /></label>
-    <span id="export_targets"></span>
+    destination: <span id="export_targets"></span>
   </div>
   <div style="float:right;">
     <button id="export_confirm">confirm</button>

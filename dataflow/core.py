@@ -3,10 +3,16 @@ Core class definitions
 """
 from __future__ import print_function
 
+import sys
+import importlib
 import inspect
 import json
-import types
 from collections import OrderedDict
+
+try:
+    from importlib import resources
+except ImportError: # CRUFT: pre-3.7 support
+    import importlib_resources as resources
 
 from numpy import NaN, inf
 
@@ -17,6 +23,52 @@ TEMPLATE_VERSION = '1.0'
 _instrument_registry = OrderedDict()
 _module_registry = {}
 _datatype_registry = {}
+
+_loaded_instruments = set() # previously loaded instruments
+def load_instrument(name):
+    """
+    Load the dataflow instrument definition given by the instrument *name*.
+
+    This is a convenience function that relies on a standard layout for
+    the instrument definition.  It assumes there is a reduction package
+    called *name+"red"* on the python path which contains the module
+    *dataflow.py*.  The module should contain the symbol *INSTRUMENT*
+    giving the instrument id (for example, "ncnr.refl") and the
+    function *define_instrument()* to register the instrument if *INSTRUMENT*
+    is not already registered.
+
+    The *{name}red.dataflow.define_instrument()* method should define
+    the :class:`Module` reduction steps, the :class:`DataType` items
+    to pass information between them and an :class:`Instrument` object
+    to pull them together.  It should call :func:`register_instrument`
+    on the resulting instrument object.
+
+    Unfortunately, the instrument definition module cannot be directly
+    determined from a stored template. Each step in the template does
+    define *"module": id* where *id* is a dotted name such as
+    *"ncnr.refl.subtract_background"*. By convention the second element
+    corresponds to the input *name* for this function.
+
+    Note: You can call *load_instrument(name)* repeatedly with the same
+    name, but you can't call it if you have called *define_instrument()*
+    directly.  Attempting to do so will raise a ValueError stating that
+    the instrument is already defined.
+
+    TODO: Include instrument definition module name in the saved template.
+    """
+    module_name = name + 'red.dataflow'
+    if module_name not in _loaded_instruments:
+        module = importlib.import_module(module_name)
+        _loaded_instruments.add(module_name)
+        # Note: need to check for INSTRUMENT even though we've already
+        # checked for module_name because the module may have been loaded
+        # the traditional way using something like:
+        #     import myinstred; myinstred.define_instrument()
+        if module.INSTRUMENT not in _instrument_registry:
+            module.define_instrument()
+        else:
+            raise ValueError(f"Instrument {module.INSTRUMENT} already defined.")
+
 def register_instrument(instrument):
     """
     Add a new instrument to the server.
@@ -33,6 +85,13 @@ def lookup_instrument(id):
     Find a predfined instrument given its id.
     """
     return _instrument_registry[id]
+
+
+def list_instruments():
+    """
+    Return a list of available instruments.
+    """
+    return list(_instrument_registry.keys())
 
 
 def register_module(module):
@@ -61,6 +120,32 @@ def register_datatype(datatype):
 
 def lookup_datatype(id):
     return _datatype_registry[id]
+
+
+def load_templates(package):
+    """
+    Returns a dictionary {name: template} for the given instrument.
+
+    Templates are defined as JSON objects, with stored in a file named
+    "<instrument>.<name>.json".  All templates for an instrument should
+    be stored in a templates subdirectory, made into a package by inclusion
+    of an empty __init__.py file.  They can then be loaded using::
+
+        from dataflow import core as df
+        from . import templates
+        ...
+        instrument = df.Instrument(
+            ...
+            templates=df.load_templates(templates),
+        )
+    """
+    templates = {}
+    for filename in resources.contents(package):
+        if filename.endswith('.json'):
+            name = filename.split('.')[-2]
+            template = json.loads(resources.read_text(package, filename))
+            templates[name] = template
+    return templates
 
 
 class Module(object):
@@ -480,16 +565,80 @@ class DataType(object):
     *id* : string
         Name of the data type.
 
-    *cls* : Classs
+    *cls* : Class
         Python class defining the data type.
+
+    **Data Visualization**
+
+    Data objects are displayed to the user, with the display format
+    returned by *data.get_plottable()*.  The details of the plottable
+    object are still fluid, and defined by the webreduce server.  See
+    reflweb/static/js/webreduce/editor.js for the implementation.
+
+    **Metadata**
+
+    Information about the data object is sent to the web browser client via
+    the *data.get_metadata()* method.
+
+    **TODO**: add details about the structure and use of metadata.  It looks
+    to be a simple JSON mapping of the data object which is available on
+    the debug console of the browser.  Check if the webreduce client uses
+    any specific fields from the object.
+
+    **Data Export**
+
+    Data objects define available exporters as::
+
+        from dataflow.lib import exporters
+        self.export_types = {
+            "NAME" : {
+                "method_name": "METHOD",
+                "exporter": exporters.COMPOSITOR,
+            }
+        }
+
+    where NAME is export type shown to the user, METHOD is the name of the
+    data method which builds the exported object, and COMPOSITOR is
+    a function that knows how to bundle entries into independent or
+    concatenated export files, each with the template metadata attached.
+
+    The export types are discovered by introspection, using a decorator
+    on the entry constructor such as *@exporters.exports_HDF5("NAME")*.
+
+    The constructor method needs to return an object of the form::
+
+        {
+            "name": "NAME",
+            "entry": "ENTRY",
+            "file_suffix": ".EXT",
+            "value": formatted_data,
+        }
+
+    The resulting data will be saved in *NAME_ENTRY.EXT*.  For concatenated
+    results the filename for the first item will be used.
     """
     def __init__(self, id, cls):
         self.id = id
         self.cls = cls
+        self.export_types = self._find_exporters()
 
     def get_definition(self):
-        return {"id": self.id}
+        return {"id": self.id, "export_types": list(self.export_types.keys())}
 
+    def _find_exporters(self):
+        exporters = {}
+        for method_name in dir(self.cls):
+            method = getattr(self.cls, method_name)
+            if not callable(method):
+                continue
+            exporter = getattr(method, 'exporter', None)
+            if exporter is not None:
+                export_name = getattr(method, 'export_name', 'default')
+                exporters[export_name] = {
+                    "exporter": exporter,
+                    "method_name": method_name,
+                }
+        return exporters
 
 class Bundle(object):
     def __init__(self, datatype, values):
@@ -508,9 +657,17 @@ class Bundle(object):
         values = [v.get_metadata() for v in self.values]
         return {'datatype': self.datatype.id, 'values': values}
 
-    def get_export(self):
-        values = [v.export() for v in self.values]
-        return {'datatype': self.datatype.id, 'values': values}
+    def get_export(self, export_type="column", template_data=None, concatenate=True):
+        if export_type not in self.datatype.export_types:
+            raise ValueError(f"{self.datatype.id} does not provide {export_type} export.")
+        exporter_info = self.datatype.export_types[export_type]
+        exporter = exporter_info["exporter"]
+        to_export = exporter(
+            self.values,
+            export_method=exporter_info["method_name"],
+            template_data=template_data,
+            concatenate=concatenate)
+        return {'datatype': self.datatype.id, 'values': to_export}
 
     @staticmethod
     def fromdict(state):

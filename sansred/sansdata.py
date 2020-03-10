@@ -15,6 +15,7 @@ from collections import OrderedDict
 import numpy as np
 
 from dataflow.lib.uncertainty import Uncertainty
+from dataflow.lib.exporters import exports_HDF5, exports_text
 from vsansred.vsansdata import RawVSANSData, _toDictItem
 
 IS_PY3 = sys.version_info[0] >= 3
@@ -236,18 +237,24 @@ class Sans1dData(object):
     def get_metadata(self):
         return self.to_dict()
 
-    def export(self):
-        fid = BytesIO()
-        fid.write(_b("# %s\n" % json.dumps(_toDictItem(self.metadata, convert_bytes=True)).strip("{}")))
-        columns = {"columns": [self.xlabel, self.vlabel, "uncertainty", "resolution"]}
-        units = {"units": [self.xunits, self.vunits, self.vunits, self.xunits]}
-        fid.write(_b("# %s\n" % json.dumps(columns).strip("{}")))
-        fid.write(_b("# %s\n" % json.dumps(units).strip("{}")))
-        np.savetxt(fid, np.vstack([self.x, self.v, self.dv, self.dx]).T, fmt="%.10e")
-        fid.seek(0)
-        name = getattr(self, "name", "default_name")
-        entry = self.metadata.get("entry", "default_entry")
-        return {"name": name, "entry": entry, "export_string": fid.read(), "file_suffix": ".sans1d.dat"}
+    @exports_text(name="column")
+    def to_column_text(self):
+        with BytesIO() as fid:
+            fid.write(_b("# %s\n" % json.dumps(_toDictItem(self.metadata, convert_bytes=True)).strip("{}")))
+            columns = {"columns": [self.xlabel, self.vlabel, "uncertainty", "resolution"]}
+            units = {"units": [self.xunits, self.vunits, self.vunits, self.xunits]}
+            fid.write(_b("# %s\n" % json.dumps(columns).strip("{}")))
+            fid.write(_b("# %s\n" % json.dumps(units).strip("{}")))
+            np.savetxt(fid, np.vstack([self.x, self.v, self.dv, self.dx]).T, fmt="%.10e")
+            fid.seek(0)
+            value = fid.read()
+
+        return {
+            "name": getattr(self, "name", "default_name"),
+            "entry": self.metadata.get("entry", "default_entry"),
+            "file_suffix": ".sans1d.dat",
+            "value": value.decode('utf-8'),
+        }
 
 class SansIQData(object):
     def __init__(self, I=None, dI=None, Q=None, dQ=None, meanQ=None, ShadowFactor=None, label='', metadata=None):
@@ -279,14 +286,14 @@ class SansIQData(object):
         ])
         
         name = self.metadata.get("name", "default_name")
-        entry = self.metadata.get("entry", "default_entry")
-        series = [{"label": "%s:%s" % (name, entry)}]
+        entry_name = self.metadata.get("entry", "default_entry")
+        series = [{"label": "%s:%s" % (name, entry_name)}]
         xcol = "Q"
         ycol = "I"
         plottable = {
             "type": "nd",
-            "title": "%s:%s" % (name, entry),
-            "entry": entry,
+            "title": "%s:%s" % (name, entry_name),
+            "entry": entry_name,
             "columns": columns,
             "options": {
                 "series": series,
@@ -305,22 +312,64 @@ class SansIQData(object):
         #print(plottable)
         return plottable
 
-    def export(self):
+    @exports_text(name="column")
+    def to_column_text(self):
         # export to 6-column format compatible with SASVIEW
         # The 6 columns are | Q (1/A) | I(Q) (1/cm) | std. dev. I(Q) (1/cm) | sigmaQ | meanQ | ShadowFactor|
         column_names = ["Q", "I", "dI", "dQ", "meanQ", "ShadowFactor"]
         column_values = [getattr(self, cn) for cn in column_names]
         labels = ["Q (1/A)", "I(Q) (1/cm)", "std. dev. I(Q) (1/cm)", "sigmaQ", "meanQ", "ShadowFactor"]
 
-        fid = BytesIO()
-        fid.write(_b("# %s\n" % json.dumps(_toDictItem(self.metadata, convert_bytes=True)).strip("{}")))
-        fid.write(_b("# %s\n" % json.dumps({"columns": labels}).strip("{}")))
-        np.savetxt(fid, np.vstack(column_values).T, fmt="%.10e")
-        fid.seek(0)
-        name = getattr(self, "name", "default_name")
-        entry = getattr(self.metadata, "entry", "default_entry")
-        return {"name": name, "entry": entry, "export_string": fid.read(), "file_suffix": ".sansIQ.dat"}
+        with BytesIO() as fid:
+            fid.write(_b("# %s\n" % json.dumps(_toDictItem(self.metadata, convert_bytes=True)).strip("{}")))
+            fid.write(_b("# %s\n" % json.dumps({"columns": labels}).strip("{}")))
+            np.savetxt(fid, np.vstack(column_values).T, fmt="%.10e")
+            fid.seek(0)
+            value = fid.read()
 
+        return {
+            "name": _s(self.metadata.get("name", "default_name")),
+            "entry": _s(self.metadata.get("entry", "default_entry")),
+            "file_suffix": ".sansIQ.dat",
+            "value": value.decode('utf-8'),
+        }
+
+    @exports_HDF5(name="NXcanSAS")
+    def to_NXcanSAS(self):
+        import h5py
+
+        fid = BytesIO()
+        h5_item = h5py.File(fid)
+
+        entry_name = self.metadata.get("entry", "entry")
+        nxentry = h5_item.create_group(entry_name)
+        nxentry.attrs.update({
+            "NX_class": "NXentry",
+            "canSAS_class": "SASentry",
+            "version": "1.0"
+        })
+        nxentry["definition"] = "NXcanSAS"
+        nxentry["run"] = "<see the documentation>"
+        nxentry["title"] = self.metadata["sample.description"]
+        datagroup = nxentry.create_group("data")
+        datagroup.attrs.update({
+            "NX_class": "NXdata",
+            "canSAS_class": "SASdata",
+            "signal": "I",
+            "I_axes": "<see the documentation>",
+            "Q_indices": 1
+        })
+        datagroup["I"] = self.I
+        datagroup["I"].attrs["units"] = "1/m"
+        datagroup["Q"] = self.Q
+        datagroup["Q"].attrs["units"] = "1/nm"
+
+        return {
+            "name": _s(self.metadata.get("name", "default_name")),
+            "entry": _s(self.metadata.get("entry", "default_entry")),
+            "file_suffix": ".sansIQ.nx.h5",
+            "value": h5_item,
+        }
 
 class Parameters(object):
     def __init__(self, params=None):

@@ -1,0 +1,286 @@
+{
+  "modules": [
+    {
+      "module": "ncnr.refl.candor",
+      "title": "cdr slit",
+      "config": {
+        "base": "auto",
+        "monitor_correction": true,
+        "spectral_correction": true,
+        "intent": "intensity"
+      },
+      "x": 35,
+      "y": 110
+    },
+    {
+      "module": "ncnr.refl.stitch_intensity",
+      "title": "Scale&Join",
+      "x": 190,
+      "y": 110
+    },
+    {
+      "module": "ncnr.refl.candor",
+      "title": "cdr spec",
+      "config": {
+        "base": "auto",
+        "monitor_correction": true,
+        "spectral_correction": true,
+        "intent": "specular"
+      },
+      "x": 35,
+      "y": 5
+    },
+    {
+      "module": "ncnr.refl.candor",
+      "title": "cdr back+",
+      "config": {
+        "base": "auto",
+        "monitor_correction": true,
+        "spectral_correction": true,
+        "intent": "background+"
+      },
+      "x": 35,
+      "y": 35
+    },
+    {
+      "module": "ncnr.refl.candor",
+      "title": "cdr back-",
+      "config": {
+        "base": "auto",
+        "monitor_correction": true,
+        "spectral_correction": true,
+        "intent": "background-"
+      },
+      "x": 35,
+      "y": 65
+    },
+    {
+      "module": "ncnr.refl.candor_join",
+      "title": "Join",
+      "x": 190,
+      "y": 5
+    },
+    {
+      "module": "ncnr.refl.candor_join",
+      "title": "Join",
+      "x": 190,
+      "y": 35
+    },
+    {
+      "module": "ncnr.refl.candor_join",
+      "title": "Join",
+      "x": 190,
+      "y": 65
+    },
+    {
+      "module": "ncnr.refl.candor_rebin",
+      "title": "Rebin",
+      "x": 530,
+      "y": 65
+    },
+    {
+      "module": "ncnr.refl.candor_rebin",
+      "title": "Rebin",
+      "x": 530,
+      "y": 35,
+      "config": {
+        "qstep": 0.002
+      }
+    },
+    {
+      "module": "ncnr.refl.candor_rebin",
+      "title": "Rebin",
+      "x": 530,
+      "y": 5,
+      "config": {
+        "qstep": 0.002
+      }
+    },
+    {
+      "module": "ncnr.refl.candor_divide",
+      "title": "Divide",
+      "x": 345,
+      "y": 5
+    },
+    {
+      "module": "ncnr.refl.candor_divide",
+      "title": "Divide",
+      "x": 365,
+      "y": 35
+    },
+    {
+      "module": "ncnr.refl.candor_divide",
+      "title": "Divide",
+      "x": 385,
+      "y": 65
+    },
+    {
+      "module": "ncnr.refl.subtract_background",
+      "title": "Subtract Background",
+      "x": 700,
+      "y": 5
+    }
+  ],
+  "wires": [
+    {
+      "source": [
+        0,
+        "output"
+      ],
+      "target": [
+        1,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        2,
+        "output"
+      ],
+      "target": [
+        5,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        3,
+        "output"
+      ],
+      "target": [
+        6,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        4,
+        "output"
+      ],
+      "target": [
+        7,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        5,
+        "output"
+      ],
+      "target": [
+        11,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        6,
+        "output"
+      ],
+      "target": [
+        12,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        7,
+        "output"
+      ],
+      "target": [
+        13,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        1,
+        "output"
+      ],
+      "target": [
+        11,
+        "base"
+      ]
+    },
+    {
+      "source": [
+        1,
+        "output"
+      ],
+      "target": [
+        12,
+        "base"
+      ]
+    },
+    {
+      "source": [
+        1,
+        "output"
+      ],
+      "target": [
+        13,
+        "base"
+      ]
+    },
+    {
+      "source": [
+        11,
+        "output"
+      ],
+      "target": [
+        10,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        12,
+        "output"
+      ],
+      "target": [
+        9,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        13,
+        "output"
+      ],
+      "target": [
+        8,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        10,
+        "output"
+      ],
+      "target": [
+        14,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        9,
+        "output"
+      ],
+      "target": [
+        14,
+        "backp"
+      ]
+    },
+    {
+      "source": [
+        8,
+        "output"
+      ],
+      "target": [
+        14,
+        "backm"
+      ]
+    }
+  ]
+}

@@ -1,4 +1,4 @@
-"""
+r"""
 Convert a restructured text document to html.
 
 Inline math markup can uses the *math* directive, or it can use latex
@@ -15,6 +15,8 @@ from docutils.core import publish_parts
 from docutils.writers.html4css1 import HTMLTranslator
 from docutils.nodes import SkipNode
 
+# As of 2020-03-01 latest mathjax is 2.7.7 and 3.0.1
+MATHJAX_CONFIG = "mathjax https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js"
 
 def rst2html(rst, part="whole", math_output="html"):
     r"""
@@ -42,7 +44,7 @@ def rst2html(rst, part="whole", math_output="html"):
     # Ick! mathjax doesn't work properly with math-output, and the
     # others don't work properly with math_output!
     if math_output == "mathjax":
-        settings = {"math_output": math_output}
+        settings = {"math_output": MATHJAX_CONFIG}
     else:
         settings = {"math-output": math_output}
 
@@ -108,10 +110,10 @@ def test_dollar():
     assert replace_dollar(u"so is $last$") == u"so is :math:`last`"
     assert replace_dollar(u"and $mid$ too") == u"and :math:`mid` too"
     assert replace_dollar(u"$first$, $mid$, $last$") == u":math:`first`, :math:`mid`, :math:`last`"
-    assert replace_dollar(u"dollar\$ escape") == u"dollar$ escape"
-    assert replace_dollar(u"dollar \$escape\$ too") == u"dollar $escape$ too"
+    assert replace_dollar(u"dollar\\$ escape") == u"dollar$ escape"
+    assert replace_dollar(u"dollar \\$escape\\$ too") == u"dollar $escape$ too"
     assert replace_dollar(u"spaces $in the$ math") == u"spaces :math:`in the` math"
-    assert replace_dollar(u"emb\ $ed$\ ed") == u"emb\ :math:`ed`\ ed"
+    assert replace_dollar(u"emb\\ $ed$\\ ed") == u"emb\\ :math:`ed`\\ ed"
     assert replace_dollar(u"$first$a") == u"$first$a"
     assert replace_dollar(u"a$last$") == u"a$last$"
     assert replace_dollar(u"$37") == u"$37"
