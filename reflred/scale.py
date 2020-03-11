@@ -39,37 +39,51 @@ def estimate_attenuation(datasets):
     index = np.sort([d.angular_resolution[0] for d in datasets])
 
 
-NORMALIZE_OPTIONS = 'auto|monitor|time|power|none'
+NORMALIZE_OPTIONS = 'auto|monitor|time|roi|power|none'
 def apply_norm(data, base='auto'):
     if base == 'auto':
-        if (data.monitor.counts > 0).all():
+        # We are ignoring counter.countAgainst since monitor is almost
+        # always the best choice for normalization.  Even when counting
+        # against time monitor normalization protects against flucuations
+        # in beam intensity.  Only reason not to use it is when the monitor
+        # is bad or missing.
+        if data.monitor.counts is not None and (data.monitor.counts > 0).any():
             base = 'monitor'
-        elif (data.monitor.count_time > 0).all():
+        elif data.monitor.count_time is not None and (data.monitor.count_time > 0).any():
             base = 'time'
-        elif data.monitor.source_power is not None:
-            base = 'power'
         else:
             base = 'none'
 
     C = data.detector.counts
     varC = data.detector.counts_variance
     if base == 'monitor':
-        assert (data.monitor.counts > 0).all(), "monitor counts are zero; can't normalize by monitor"
+        #assert (data.monitor.counts > 0).all(), "monitor counts are zero; can't normalize by monitor"
         M = data.monitor.counts
+        M[M == 0] = 1  # protect against zero counts in monitor
         varM = data.monitor.counts_variance
-        varM += (varM == 0)  # variance on zero counts is +/- 1
+        varM[varM == 0] = 1  # variance on zero counts is +/- 1
         units = 'monitor'
     elif base == 'time':
-        assert (data.monitor.count_time > 0).all(), "count time is zero; can't normalize by time"
+        #assert (data.monitor.count_time > 0).all(), "count time is zero; can't normalize by time"
         M = data.monitor.count_time
-        # Uniform distribution has variance of interval/12
+        M[M == 0] = data.monitor.time_step/2.  # protect against zero count time
+        # Uniform distribution has variance of interval width/12
         varM = data.monitor.time_step/12.
         units = 'second'
+    elif base == 'roi':
+        M = data.monitor.roi_counts
+        M[M == 0] = 1  # protect against zero counts in monitor
+        varM = data.monitor.roi_variance
+        varM[varM == 0] = 1  # variance on zero counts is +/- 1
+        units = 'roi count'
     elif base == 'power':
-        assert data.monitor.source_power is not None, "source power is unknown; can't normalize by power"
-        M = data.monitor.source_power
-        varM = 0
-        units = data.monitor.source_power_units
+        if data.monitor.source_power is None:
+            raise ValueError("source power is unknown; can't normalize by power")
+        # Power is in megawatts, not megawatt-hours, so scale by time.
+        time = data.monitor.count_time/3600.
+        M = data.monitor.source_power * time
+        varM = data.monitor.source_power_variance * time
+        units = data.monitor.source_power_units + "-hour"
     elif base == 'none':
         M = 1
         varM = 0

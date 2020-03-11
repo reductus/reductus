@@ -511,27 +511,20 @@ class Monitor(Group):
         user may generate a counts vector, for example by estimating
         the count rate by other means, in order to combine data
         measured by time with data measured by monitor when the
-        monitor values are otherwise unreliable.  Variance is assumed
-        to be the number of counts, after any necessary rebinning.
+        monitor values are otherwise unreliable.
+    counts_variance (n x k counts)
+        Variance is set to the number of counts but scaled during
+        monitor saturation and deadtime corrections.
+    roi_counts (n x k counts)
+        Count against a region of interest (ROI) on the detector.
+        **TODO**: ROI is **not** scaled during detector deadtime corrections,
+        and there is no correction for detector efficiency.
+    roi_variance (n x k counts)
+        Variance is to be the number of counts.
     count_time (n seconds)
         Duration of the measurement.  For scanning instruments, there is
         a separate duration for each measurement.  For TOF, this is a
         single value equal to the duration of the entire measurement.
-    source_power (n source_power_units)
-        The source power for each measurement.  For situations when the
-        monitor cannot be trusted (which can happen from time to time on
-        some instruments), we can use the number of protons incident on
-        the target (proton charge) or the energy of the source (reactor
-        power integrated over the duration of each measurement) as a proxy
-        for the monitor.  So long as the we normalize both the slit
-        measurement and the reflectivity measurement by the power, this
-        should give us a reasonable estimate of the reflectivity.  If
-        the information is available, this will be a better proxy for
-        monitor than measurement duration.
-    base ('time' | 'monitor' | 'power')
-        The measurement rate basis which should be used to normalize
-        the data.  This is initialized by the file loader, but may
-        be overridden during reduction.
     time_step (seconds)
         The count_time timer has a reporting unit, e.g. second, or
         millisecond, or in the case of NCNR ICP files, hundredths of
@@ -539,6 +532,21 @@ class Monitor(Group):
         is assumed to be uniform over the time_step, centered on
         the reported time, with a gaussian approximation of uncertainty
         being sqrt(time_step/12).
+    source_power (n source_power_units)
+        The average source power for each measurement. For situations when
+        the monitor cannot be trusted (which can happen from time to time on
+        some instruments), we can use the number of protons incident on
+        the target (proton charge) or the energy of the source (reactor
+        power integrated over the duration of each measurement) as a proxy
+        for the monitor.
+    source_power_units ('coulombs/s' | 'megawatts')
+        Units for source power.
+    source_power_variance (n source_power_units)
+        Variance in the measured source power
+    base ('time' | 'monitor' | 'roi' | 'power')
+        The measurement rate basis which should be used to normalize
+        the data.  This is initialized by the file loader, but may
+        be overridden during reduction.
     start_time (n seconds)
         For scanning instruments the start of each measurement relative
         to start of the scan.  Note that this is not simply sum of the
@@ -558,10 +566,6 @@ class Monitor(Group):
         ratio used to normalize data on some instruments.
     time_of_flight (k+1 millisecond)
         Time boundaries for the time-of-flight measurement
-    source_power_units ('coulombs' | 'megawatthours')
-        Units for source power.
-    source_power_variance (n source_power_units)
-        Variance in the measured source power
 
     The corrected monitor counts field will start as None, but may be
     set by a dead time correction, which scales the monitor according
@@ -573,6 +577,8 @@ class Monitor(Group):
     sampled_fraction = None
     counts = None
     counts_variance = None
+    roi_counts = None
+    roi_variance = None
     start_time = None
     count_time = None
     time_step = 1 # Default to nearest second
@@ -584,6 +590,7 @@ class Monitor(Group):
     saturation = None
     columns = {
         "counts": {"units": "counts", "variance": "counts_variance"},
+        "roi_counts": {"units": "counts", "variance": "roi_variance"},
         "count_time": {"units": "seconds"}
     }
     deadtime = None
@@ -1183,7 +1190,6 @@ class ReflData(Group):
         }
 
     def get_plottable(self):
-        print("=======> plottable")
         # Note: subclass this for non-traditional reflectometry measurements
         columns = self.columns # {name: {label: str, units: str, errorbars: str}}
         data_arrays = [
@@ -1191,13 +1197,16 @@ class ReflData(Group):
             else get_item_from_path(self, p)
             for p, v in columns.items()]
         data_arrays = [np.resize(d, self.points).tolist() for d in data_arrays]
-        datas = dict([(c, {"values": d}) for c,d in zip(columns.keys(), data_arrays)])
+        datas = {c: {"values": d} for c, d in zip(columns.keys(), data_arrays)}
         # add errorbars:
         for k in columns.keys():
             if 'errorbars' in columns[k]:
                 #print('errorbars found for column %s' % (k,))
                 errorbars = get_item_from_path(self, columns[k]['errorbars'])
-                datas[k]["errorbars"] = errorbars.tolist()
+                if errorbars is not None:
+                    datas[k]["errorbars"] = errorbars.tolist()
+                else:
+                    print(f"===> missing errorbars {columns[k]['errorbars']} for {k}")
         name = getattr(self, "name", "default_name")
         entry = getattr(self, "entry", "default_entry")
         series = [{"label": "%s:%s" % (name, entry)}]
@@ -1319,11 +1328,15 @@ class PSDData(ReflData):
         pass
 
 def get_item_from_path(obj, path):
-    result = obj
-    keylist = path.split("/")
-    while len(keylist) > 0:
-        result = getattr(result, keylist.pop(0), {})
-    return result
+    """
+    Fetch *obj.a.b.c* from path *"a/b/c"*.
+
+    Returns None if path does not exist.
+    """
+    *head, tail = path.split("/")
+    for key in head:
+        obj = getattr(obj, key, {})
+    return getattr(obj, tail, None)
 
 def _write_key_value(fid, key, value):
     value_str = json.dumps(value, cls=NumpyEncoder)

@@ -125,7 +125,7 @@ class NG7PSD(PSDData):
 
         # Load data from linear detector.  Note that counts/liveROI may not
         # match if counts/roiAgainst is against a different detector.
-        self.detector.counts = np.asarray(data_as(das, 'linearDetector/counts', ''), 'd')
+        self.detector.counts = data_as(das, 'linearDetector/counts', '', dtype='d')
         #print("detector shape", self.detector.counts.shape)
         self.detector.counts_variance = self.detector.counts.copy()
         self.detector.dims = self.detector.counts.shape[1:]

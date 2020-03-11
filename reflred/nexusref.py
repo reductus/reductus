@@ -25,7 +25,7 @@ TRAJECTORY_INTENTS = {
 WAVELENGTH = 4.
 WAVELENGTH_DISPERSION = 0.015
 
-def data_as(group, fieldname, units, rep=None, NA=None):
+def data_as(group, fieldname, units, rep=None, NA=None, dtype=None):
     """
     Return value of field in the desired units.
     """
@@ -35,6 +35,8 @@ def data_as(group, fieldname, units, rep=None, NA=None):
     units_in = _s(field.attrs.get('units', ''))
     converter = unit.Converter(units_in)
     value = converter(field[()], units)
+    if dtype is not None:
+        value = np.asarray(value, dtype=dtype)
     if rep is not None:
         if np.isscalar(value) or len(value) == 1:
             return np.repeat(value, rep, axis=0)
@@ -151,11 +153,29 @@ def nexus_common(self, entry, entryname, filename):
     monitor_device = entry.get('control/monitor', {})
     self.monitor.deadtime = data_as(monitor_device, 'dead_time', 'us')
     self.monitor.deadtime_error = data_as(monitor_device, 'dead_time_error', 'us')
-    self.monitor.base = str_data(das, 'counter/countAgainst')
+    base = str_data(das, 'counter/countAgainst').lower()
+    # NICE stores TIME, MONITOR, ROI, TIME_MONITOR, TIME_ROI, etc.
+    if "monitor" in base:
+        base = "monitor"
+    elif "time" in base:
+        base = "time"
+    elif "roi" in base:
+        base = "roi"
+    else:
+        base = "none"
+
     self.monitor.time_step = 0.001  # assume 1 ms accuracy on reported clock
-    self.monitor.counts = np.asarray(data_as(das, 'counter/liveMonitor', '', rep=n), 'd')
+    self.monitor.counts = data_as(das, 'counter/liveMonitor', '', rep=n, dtype='d')
     self.monitor.counts_variance = self.monitor.counts.copy()
     self.monitor.count_time = data_as(das, 'counter/liveTime', 's', rep=n)
+    self.monitor.roi_counts = data_as(das, 'counter/liveROI', '', rep=n, dtype='d')
+    self.monitor.roi_variance = self.monitor.roi_counts.copy()
+    self.monitor.roi_variance = self.monitor.roi_counts.copy()
+    self.monitor.source_power = data_as(das,
+        'reactorPower/reactorPowerThermal/average_value', 'MW', rep=n, dtype='d')
+    self.monitor.source_power_variance = data_as(das, 
+        'reactorPower/reactorPowerThermal/average_value_error', 'MW', rep=n, dtype='d')
+    self.monitor.source_power_units = "MW"
 
     # NG7 monitor saturation is stored in control/countrate_correction
     saturation_device = entry.get('control/countrate_correction', None)
@@ -326,7 +346,7 @@ class NCNRNeXusRefl(ReflData):
         self.detector.rotation = data_as(entry, 'instrument/detector/rotation', 'degree')
 
         # Counts
-        self.detector.counts = np.asarray(data_as(das, 'counter/liveROI', ''), 'd')
+        self.detector.counts = data_as(das, 'counter/liveROI', '', dtype='d')
         self.detector.counts_variance = self.detector.counts.copy()
         self.detector.dims = self.detector.counts.shape[1:]
 

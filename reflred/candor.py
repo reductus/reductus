@@ -76,14 +76,13 @@ class Candor(ReflData):
 
         # Counts
         # Load counts early so we can tell whether channels are axis 1 or 2
-        counts = data_as(das, 'areaDetector/counts', '')
+        counts = data_as(das, 'areaDetector/counts', '', dtype='d')
         if counts is None or counts.size == 0:
             raise ValueError(f"Candor file '{self.path}' has no area detector data.")
 
         channels_at_end = (counts.shape[2] == NUM_CHANNELS)
         if channels_at_end:
             counts = np.swapaxes(counts, 1, 2)
-        counts = np.asarray(counts, 'd') # convert data to float
         self.detector.counts = counts
         self.detector.counts_variance = counts.copy()
         self.detector.dims = counts.shape[1:]

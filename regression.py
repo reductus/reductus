@@ -125,9 +125,11 @@ def run_template(template_data, concatenate=True):
     #else:
     bundle = process_template(template, template_config, target=target)
 
-#    plottable = bundle.get_plottable()
-#    with open("plottable.json", "w") as fid:
-#        fid.write(json.dumps(plottable, indent=2))
+    # Smoke test on get_plottable(); not checking that it is correct yet.
+    bundle.get_plottable()
+    # Uncomment the following to save plottable during debugging.
+    #with open("plottable.json", "w") as fid:
+    #    fid.write(json.dumps(bundle.get_plottable(), indent=2))
 
     # TODO: default to column, json, hdf, ...
     export_type = template_data.get("export_type", "column")

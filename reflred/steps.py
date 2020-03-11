@@ -560,23 +560,31 @@ def normalize(data, base='auto'):
     """
     Estimate the detector count rate.
 
-    *base* can be monitor, time, power, or none for no normalization.
+    *base* can be monitor, time, roi, power, or none for no normalization.
     For example, if base='monitor' then the count rate will be counts
     per monitor count.  Note that operations that combine datasets require
     the same normalization on the points.
 
     If *base* is auto then the default will be chosen, which is 'monitor'
-    if the monitor exists, otherwise it is 'time'.
+    if the monitor exists, otherwise it is 'time'.  If neither exists
+    (not sure that can happen) then the data will be unnormalized.
 
-    When viewing data, you sometimes want to scale it to a nice number
-    such that the number of counts displayed for the first point is
-    approximately the number of counts on the detector.
+    The detector region of interest (*roi*) and reactor *power* have not been
+    tested and should not be used. The detector efficient, the dead time
+    corrections and attenuator scaling have not been applied to the roi
+    measurement.  Since the measurement is only useful if a portion of the
+    detector is exposed to the incident beam, this corrections will be
+    especially important.  In the case where the monitor is unreliable and
+    reactor power has been fluctuating, you may be able to estimate the
+    incident intensity based on the integrated reactor power. This uses
+    a simple average of the reactor power measurements multiplied by the
+    measurement time.
 
     **Inputs**
 
     data (refldata) : data to normalize
 
-    base {Normalize by} (opt:auto|monitor|time|power|none)
+    base {Normalize by} (opt:auto|monitor|time|roi|power|none)
     : how to convert from counts to count rates
 
     **Returns**
@@ -584,10 +592,16 @@ def normalize(data, base='auto'):
     output (refldata) : data with count rate rather than counts
 
     2015-12-17 Paul Kienzle
+    2020-03-10 Paul Kienzle auto almost always equals monitor
     """
+    # Note: reflpak supported visualization like "counts per 10000 monitor"
+    # so that the displayed data looked roughly like the measured data, except
+    # all scaled to a common monitor.  This is not available in reductus.
+
     # TODO: consistent use of data.detector.counts vs. data.v
     # see in particular the detector/monitor dead time, spectral efficiency,
     # dark current, etc.
+
     from .scale import apply_norm
     data = copy(data)
     apply_norm(data, base)
@@ -1358,7 +1372,7 @@ def ng7_psd(
     calculating the effective resolution when the sample is smaller
     than the beam.  Leave blank to use value from data file.
 
-    base {Normalize by} (opt:auto|monitor|time|power|none)
+    base {Normalize by} (opt:auto|monitor|time|roi|power|none)
     : How to convert from counts to count rates.
     : Leave this as none if your template does normalization after integration.
 
@@ -1447,7 +1461,7 @@ def super_load(filelist=None,
     calculating the effective resolution when the sample is smaller
     than the beam.  Leave blank to use value from data file.
 
-    base {Normalize by} (opt:auto|monitor|time|power|none)
+    base {Normalize by} (opt:auto|monitor|time|roi|power|none)
     : how to convert from counts to count rates
 
     **Returns**
@@ -1526,7 +1540,7 @@ def super_load_sorted(filelist=None,
     beam direction in mm, used for calculating the effective resolution when
     the sample is smaller than the beam.  Leave blank to use value from data file.
 
-    base {Normalize by} (opt:auto|monitor|time|power|none)
+    base {Normalize by} (opt:auto|monitor|time|roi|power|none)
     : how to convert from counts to count rates
 
     **Returns**

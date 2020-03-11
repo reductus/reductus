@@ -51,7 +51,7 @@ def candor(
     calculating the effective resolution when the sample is smaller
     than the beam.  Leave blank to use value from data file.
 
-    base {Normalize by} (opt:auto|monitor|time|power|none)
+    base {Normalize by} (opt:auto|monitor|time|roi|power|none)
     : How to convert from counts to count rates. Leave this as none if your
     template does normalization after integration (see Normalize).
 
