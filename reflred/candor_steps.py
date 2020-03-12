@@ -13,6 +13,7 @@ from . import steps
 def candor(
         filelist=None,
         dc_rate=0.,
+        dc_slope=0.,
         detector_correction=False,
         monitor_correction=False,
         spectral_correction=False,
@@ -29,6 +30,9 @@ def candor(
     dc_rate {Dark counts per minute} (float)
     : Number of dark counts to subtract from each detector channel per
     minute of counting time (see Dark Current).
+
+    dc_slope {DC vs. slit 1} (float)
+    : Dark counts per mm of slit 1 opening per minute.
 
     detector_correction {Apply detector deadtime correction} (bool)
     : If True, use deadtime constants in file to correct detector counts
@@ -60,6 +64,7 @@ def candor(
     output (candordata[]): All entries of all files in the list.
 
     | 2020-02-05 Paul Kienzle
+    | 2020-03-12 Paul Kienzle Add slit 1 dependence for DC rate
     """
     from .load import url_load_list
     from .candor import load_entries
@@ -71,8 +76,8 @@ def candor(
         data.Qz_basis = 'target'
         if intent not in (None, 'none', 'auto'):
             data.intent = intent
-        if dc_rate > 0.:
-            data = dark_current(data, dc_rate)
+        if dc_rate > 0. or dc_slope > 0.:
+            data = dark_current(data, dc_rate, dc_slope)
         if detector_correction:
             data = steps.detector_dead_time(data, None)
         if monitor_correction:
@@ -124,7 +129,7 @@ def spectral_efficiency(data, spectrum=()):
     return data
 
 @module("candor")
-def dark_current(data, dc_rate=0.):
+def dark_current(data, dc_rate=0., s1_slope=0.):
     r"""
     Correct for the dark current, which is the average number of
     spurious counts per minute of measurement on each detector channel.
@@ -142,17 +147,22 @@ def dark_current(data, dc_rate=0.):
     : Number of dark counts to subtract from each detector channel per
     minute of counting time.
 
+    s1_slope {DC vs. slit 1 in counts/(minute . mm)} (float)
+    : Dark current may increase with slit 1 opening as "dc_rate + s1_slope*S1"
+
     **Returns**
 
     output (candordata): Dark current subtracted data.
 
     | 2020-03-04 Paul Kienzle
+    | 2020-03-12 Paul Kienzle Add slit 1 dependence for DC rate
     """
     # TODO: no uncertainty propagation
     # TODO: generalize to detector shapes beyond candor
     # TODO: datatype hierarchy: accepts any kind of refldata
-    if dc_rate > 0.:
-        dc = data.monitor.count_time*(dc_rate/60.)
+    if dc_rate != 0. or s1_slope > 0.:
+        rate = dc_rate + s1_slope*data.slit1.x
+        dc = data.monitor.count_time*(rate/60.)
         data = copy(data)
         data.detector = copy(data.detector)
         data.detector.counts = data.detector.counts - dc[:, None, None]
