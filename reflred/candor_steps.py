@@ -76,7 +76,7 @@ def candor(
         data.Qz_basis = 'target'
         if intent not in (None, 'none', 'auto'):
             data.intent = intent
-        if dc_rate > 0. or dc_slope > 0.:
+        if dc_rate != 0. or dc_slope != 0.:
             data = dark_current(data, dc_rate, dc_slope)
         if detector_correction:
             data = steps.detector_dead_time(data, None)
@@ -160,7 +160,7 @@ def dark_current(data, dc_rate=0., s1_slope=0.):
     # TODO: no uncertainty propagation
     # TODO: generalize to detector shapes beyond candor
     # TODO: datatype hierarchy: accepts any kind of refldata
-    if dc_rate != 0. or s1_slope > 0.:
+    if dc_rate != 0. or s1_slope != 0.:
         rate = dc_rate + s1_slope*data.slit1.x
         dc = data.monitor.count_time*(rate/60.)
         data = copy(data)
