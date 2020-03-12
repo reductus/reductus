@@ -306,14 +306,18 @@ class Candor(ReflData):
             plt.legend()
 
     def get_axes(self):
-        ny, _, nx = self.v.shape
         x, xlabel = self.detector.wavelength, "Wavelength (Ang)"
-        if Intent.isslit(self.intent):
-            y, ylabel = self.slit1.x, "S1"
-        elif Intent.isspec(self.intent):
+        #print("intent", self.intent)
+        #if Intent.isslit(self.intent):
+        #    y, ylabel = self.slit1.x, "S1 (mm)"
+        #elif Intent.isspec(self.intent):
+        #    y, ylabel = self.sample.angle_x, "Detector Angle (degrees)"
+        if self.sample.angle_x.max() - self.sample.angle_x.min() > 0.01:
             y, ylabel = self.sample.angle_x, "Detector Angle (degrees)"
+        elif self.slit1.x.max() - self.slit1.x.min() > 0.01:
+            y, ylabel = self.slit1.x, "S1 (mm)"
         else:
-            y, ylabel = np.arange(1, ny+1), "point"
+            y, ylabel = np.arange(1, len(self.v)+1), "point"
         return (x, xlabel), (y, ylabel)
 
     def get_plottable(self):
