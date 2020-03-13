@@ -1591,8 +1591,8 @@ def spin_asymmetry(data):
 
     2016-04-04 Brian Maranville
     """
-    mm = [d for d in data if d.polarization == '--'][0]
-    pp = [d for d in data if d.polarization == '++'][0]
+    mm = [d for d in data if d.polarization in ('-', '--')][0]
+    pp = [d for d in data if d.polarization in ('+', '++')][0]
     output = copy(mm)
     output.vscale = "linear"
     output.vlabel = "Spin asymmetry (pp-mm)/(pp+mm) "
