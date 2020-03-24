@@ -415,6 +415,9 @@ class QData(ReflData):
         self.points = len(q)
         # TODO: set something for dL and dT
         self.angular_resolution = 1.
+        self.scan_value = []
+        self.scan_units = []
+        self.scan_label = []
 
     @property
     def Qz(self):
