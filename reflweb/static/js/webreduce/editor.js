@@ -311,6 +311,20 @@ webreduce.editor = webreduce.editor || {};
     });
   }
 
+  webreduce.editor.get_full = function() {
+    console.log(this._active_node, this._active_template, this._active_terminal);
+    let params_to_calc = {
+      template: this._active_template,
+      config: {},
+      node: this._active_node,
+      terminal: this._active_terminal,
+      return_type: "full"
+    }
+    this.calculate(params_to_calc, true).then(function(result) {
+      console.log(result);
+    })
+  }
+  
   function module_clicked() {
     var editor = d3.select("#" + webreduce.editor._target_id);
     if (editor.selectAll("g.module g.selected rect.terminal").size() > 1) {
