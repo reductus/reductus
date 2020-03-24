@@ -499,13 +499,14 @@ def extract_xs(data, xs="++"):
 
     data (refldata[]): data files in of all cross sections
 
-    xs {Cross-section} (opt:++\|--\|+-\|-+\|unpolarized): cross-section to extract
+    xs {Cross-section} (opt:++\|--\|+-\|-+\|+\|-\|unpolarized): cross-section to extract
 
     **Returns**
 
     output (refldata[]): data matching just that cross-section
 
-    2016-05-05 Brian Maranville
+    | 2016-05-05 Brian Maranville
+    | 2020-03-24 Brian Maranville: added half-pol cross-sections
     """
     data = copy(data)
     if xs == 'unpolarized':
