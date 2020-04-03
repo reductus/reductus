@@ -146,6 +146,9 @@ class Candor(ReflData):
             #slit.y = data_as(das, y, 'mm', rep=n)
             #slit.y_target = data_as(das, y_target, 'mm', rep=n)
         # CRUFT: old files don't have the detector mask mapped
+        # TODO: don't throw away datasets where the key is not defined:
+        #       instead figure out an effective aperture size from motors or
+        #       allow it to be overridden
         if self.slit4.x is None:
             mask_str = str_data(das, 'detectorMaskMap/key', '10')
             if not mask_str:
@@ -357,20 +360,12 @@ class Candor(ReflData):
         z = [data.ravel('F').tolist()]
         #print("data", data.shape, dims, len(z))
         plottable = {
-            #'type': '2d_multi',
-            #'dims': {'zmin': zmin, 'zmax': zmax},
-            #'datasets': [{'dims': dims, 'data': z}],
-            'type': '2d',
-            'dims': dims,
-            'z': z,
+            'type': '2d_multi',
+            'dims': {'zmin': zmin, 'zmax': zmax},
+            'datasets': [{'dims': dims, 'data': z[0]}],
             'entry': entry,
             'title': "%s:%s" % (name, entry),
-            'options': {
-                'fixedAspect': {
-                    'fixAspect': False,
-                    'aspectRatio': 1.0,
-                },
-            },
+            'options': {},
             'xlabel': xlabel,
             'ylabel': ylabel,
             'zlabel': 'Intensity (I)',
