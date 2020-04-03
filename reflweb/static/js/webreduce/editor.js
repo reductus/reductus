@@ -678,7 +678,7 @@ webreduce.editor = webreduce.editor || {};
     var aspect_ratio = null,
         values = plotdata.values,
         mychart = webreduce.editor._active_plot;
-        
+    let options = {margin: {left: 100}};
     // set up plot control buttons and options:
     if (d3.select("#plot_controls").attr("plot_type") != "2d_multi") {
       // then make the controls:
@@ -756,7 +756,7 @@ webreduce.editor = webreduce.editor || {};
     if (!(mychart && mychart.type && mychart.type == "heatmap_2d_multi")) {
       d3.selectAll("#plotdiv").selectAll("svg, div").remove();
       d3.select("#plotdiv").classed("plot", true);
-      mychart = new heatChartMulti.default({margin: {left: 100}} );
+      mychart = new heatChartMultiMasked.default(options);
       var data = values[0];
       d3.selectAll("#plotdiv").data([values[0].datasets]).call(mychart);
       webreduce.callbacks.resize_center = function() {mychart.autofit()};
@@ -774,7 +774,8 @@ webreduce.editor = webreduce.editor || {};
       if ((((data.options || {}).fixedAspect || {}).fixAspect || null) == true) {
         aspect_ratio = ((data.options || {}).fixedAspect || {}).aspectRatio || null;
       }
-    
+      
+      mychart.options(data.options);
       //mychart = new heatChart();
       mychart
         //.ztransform($("#zscale").val())
@@ -801,8 +802,8 @@ webreduce.editor = webreduce.editor || {};
       .on("click", update_plotselect)
       .on("input", update_plotselect)
     
-    update_plotselect();
     mychart.interactors(null);
+    update_plotselect();
     mychart.autofit();
     return mychart
   }
