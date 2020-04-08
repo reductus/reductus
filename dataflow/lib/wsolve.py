@@ -68,7 +68,7 @@ except ImportError:
 
 
 import numpy as np
-
+import numpy.random
 
 class LinearModel(object):
     r"""
@@ -156,6 +156,10 @@ class LinearModel(object):
         """p-value probability of rejection"""
         from scipy.stats import chi2  # lazy import in case scipy not present
         return chi2.sf(self.rnorm ** 2, self.DoF)
+
+    def rand(self, size=None):
+        """Draw random samples from the solution population"""
+        return np.random.multivariate_normal(self.x.flatten(), self.cov, size=size)
 
     def _interval(self, X, alpha, pred):
         """
@@ -364,6 +368,20 @@ class PolynomialModel(object):
         """
         A = _poly_matrix(x, self.degree, self.origin)
         return self._conf.pi(A, p)
+
+    def rand(self, size=None):
+        """Draw random samples from the solution population"""
+        # Draw parameter sets from multivariate normal
+        values = self._conf.rand(size=size)
+
+        # If fit goes through not origin then add a column of zeros
+        if self.origin:
+            # Create a column of zeros with the correct shape for the
+            # leading dimensions (corresponding to size), and concatenate
+            # it along the final dimension.
+            zeros = np.zeros(values.shape[:-1] + (1,))
+            values = np.concatenate((values, zeros), -1)
+        return values
 
     def __str__(self):
         # TODO: better polynomial pretty printing using formatnum

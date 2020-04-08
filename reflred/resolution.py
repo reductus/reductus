@@ -42,13 +42,26 @@ def TL2Q(T=None, L=None):
     return 4 * pi * sin(T) / L
 
 
-_FWHM_scale = sqrt(log(256))
+_FWHM_scale = 2*sqrt(2*log(2))
 def FWHM2sigma(s):
     return s/_FWHM_scale
 
 
 def sigma2FWHM(s):
     return s*_FWHM_scale
+
+
+def calc_Qx(Ti, Td, Li, Ld):
+    # type: (np.ndarray, np.ndarray, np.ndarray) -> (np.ndarray, np.ndarray)
+    ki, kf = 2*pi/Li, 2*pi/Ld
+    Qx = ki*cos(radians(Td - Ti)) - kf*cos(radians(-Ti))
+    return Qx
+
+
+def calc_Qz(Ti, Td, Li, Ld):
+    ki, kf = 2*pi/Li, 2*pi/Ld
+    Qz = ki*sin(radians(Td - Ti)) - kf*sin(radians(-Ti))
+    return Qz
 
 
 def TiTdL2Qxz(Ti, Td, L):
@@ -146,7 +159,8 @@ def bins(low, high, dLoL):
 
 def binwidths(L):
     r"""
-    Determine the wavelength dispersion from bin centers *L*.
+    Determine the wavelength dispersion from bin centers *L* for time-of-flight
+    measurements.
 
     The wavelength dispersion $\Delta\lambda$ is just the difference
     between consecutive bin edges, so:
@@ -170,7 +184,8 @@ def binwidths(L):
 def binedges(L):
     # type: (np.ndarray) -> np.ndarray
     r"""
-    Construct bin edges *E* from bin centers *L*.
+    Construct bin edges *E* from bin centers *L* for time-of-flight
+    measurements.
 
     Assuming fixed $\omega = \Delta\lambda/\lambda$ in the bins, the
     edges will be spaced logarithmically at:

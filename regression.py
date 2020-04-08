@@ -23,8 +23,8 @@ import sys
 import os
 import json
 import re
-import importlib
 import difflib
+import warnings
 
 from dataflow import fetch
 from dataflow.cache import set_test_cache
@@ -66,16 +66,20 @@ def run_template(template_data, concatenate=True):
     """
     Run a template defined by *template_data*.
 
-    Returns *export* = {'datatype': str, 'values': [content, ...]}.
+    Returns *bundle* and *exports*.
 
-    Each *content* block is {'filename': str, 'value': *value*}, where
+    *bundle* is a :class:`dataflow.core.Bundle` object with a *values*
+    attribute containing the list of items in the bundle, and a *datatype*
+    attribute giving the data type for each value.
+
+    *exports* is a list of *[{'filename': str, 'value': valu*}, ...]* where
     value depends on the export type requested in *template_data*.
-
     Output from "column" export will contain a string with the file content,
     with the first line containing the template data structure.
-
-    Output from "hdf" export will contain a sequence of bytes defining the
+    Output from "hdf" export will contain a byte sequence defining the
     HDF file, with template data stored in the attribute NXroot@template_def.
+    Output from "json" export will contain a JSON string with hierarchical
+    structure *{template_data: json, outputs: [json, json, ...]}*.
 
     If *concatenate* then all datasets will be combined into a single value.
 
@@ -95,7 +99,7 @@ def run_template(template_data, concatenate=True):
                 {'url': '...', 'start_path': '...', 'name': '...'},
                 ],
         }
-        export = run_template(template_data, concatenate=False)
+        bundle, export = run_template(template_data, concatenate=False)
         for entry in export['values']:
             with open(entry['filename'], 'w') as fd:
                 fd.write(entry['value'])
@@ -105,7 +109,6 @@ def run_template(template_data, concatenate=True):
     template_config = template_data.get('config', {})
     target = template_data['node'], template_data['terminal']
     # CRUFT: use template_data["export_type"] when regression files are updated
-    export_type = template_data.get('export_type', 'column')
     template = Template(**template_def)
     #template.show()  # for debugging, show the template structure
 
@@ -120,13 +123,25 @@ def run_template(template_data, concatenate=True):
     #    finally:
     #        fetch.DATA_SOURCES = original
     #else:
-    retval = process_template(template, template_config, target=target)
+    bundle = process_template(template, template_config, target=target)
 
-    export = retval.get_export(
-        template_data=template_data,
-        concatenate=concatenate,
-        export_type=export_type)
-    return export
+    # Smoke test on get_plottable(); not checking that it is correct yet.
+    bundle.get_plottable()
+    # Uncomment the following to save plottable during debugging.
+    #with open("plottable.json", "w") as fid:
+    #    fid.write(json.dumps(bundle.get_plottable(), indent=2))
+
+    # TODO: default to column, json, hdf, ...
+    export_type = template_data.get("export_type", "column")
+    if export_type in bundle.datatype.export_types:
+        export = bundle.get_export(
+            template_data=template_data,
+            concatenate=concatenate,
+            export_type=export_type,
+            )
+    else:
+        export = None
+    return bundle, export
 
 def compare(old, new, show_diff=True, skip=0):
     # type: (str, str) -> bool
@@ -173,7 +188,7 @@ def replay_file(filename):
 
     # Run the template and return the desired content.
     prepare_dataflow(template_data['template'])
-    export = run_template(template_data, concatenate=True)
+    _, export = run_template(template_data, concatenate=True)
     new_content = export['values'][0]['value']
 
     # Compare old to new, ignoring the first line.
@@ -199,25 +214,50 @@ def play_file(filename):
     concatenate = True
 
     with open(filename) as fid:
-        template_def = json.loads(fid.read())
+        json_data = json.loads(fid.read())
 
-    prepare_dataflow(template_def)
-    node = max(find_leaves(template_def))
-    node_module = lookup_module(template_def['modules'][node]['module'])
-    terminal = node_module.outputs[0]['id']
+    if 'template_data' in json_data:
+        template_data = json_data['template_data']
+        if 'template_data' in template_data:
+            # an extra nesting level for reasons unknown...
+            warnings.warn(f"template_data is nested in template_data in {filename}")
+            template_data = template_data['template_data']
+        template = template_data['template']
+        prepare_dataflow(template)
+    else:
+        template = json_data
+        prepare_dataflow(template)
 
-    revision = revision_info()
-    template_data = {
-        'template': template_def,
-        'config': {},
-        'node': node,
-        'terminal': terminal,
-        'server_git_hash': revision,
-        'export_type': export_type,
-    }
-    export = run_template(template_data, concatenate=concatenate)
+        #node = 0
+        node = max(find_leaves(template))
+        node_module = lookup_module(template['modules'][node]['module'])
+        terminal = node_module.outputs[0]['id']
+        revision = revision_info()
+        template_data = {
+            'template': template,
+            'config': {},
+            'node': node,
+            'terminal': terminal,
+            'server_git_hash': revision,
+            'export_type': export_type,
+        }
 
-    save_content(export['values'])
+    output, export = run_template(template_data, concatenate=concatenate)
+
+    if export:
+        save_content(export['values'])
+    plot_content(output)
+
+def plot_content(output):
+    plotted = False
+    import matplotlib.pyplot as plt
+    for data in output.values:
+        if hasattr(data, 'plot'):
+            plt.figure()
+            data.plot()
+            plotted = True
+    if plotted:
+        plt.show()
 
 def save_content(entries):
     for entry in entries:
@@ -233,12 +273,13 @@ def main():
     """
     if len(sys.argv) < 2:
         print("usage: python regression.py (datafile|template.json)")
-        sys.exit()
+        sys.exit(1)
     if sys.argv[1].endswith('.json'):
+        # Don't know if this is a template or an export...
         play_file(sys.argv[1])
     else:
         replay_file(sys.argv[1])
-        sys.exit(0)
+    sys.exit(0)
 
 if __name__ == "__main__":
     main()

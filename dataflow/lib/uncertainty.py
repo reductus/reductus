@@ -380,7 +380,7 @@ class Uncertainty(object):
     # This process will not work if __array__ is defined.
     #def __array__(self): return NotImplemented
 
-    def mean(self, axis=None, dtype=None, out=None, keepdims=False, biased=True):
+    def mean(self, axis=None, dtype=None, out=(None,None), keepdims=False, biased=True):
         r"""
         Compute the uncertainty-weighted average of the dataset.
 
@@ -390,9 +390,9 @@ class Uncertainty(object):
 
         See numpy.mean for details on the remaining parameters.
         """
-        if out is not None:
-            out = out.x, out.variance
-        M, varM = err1d.mean(x.x, x.variance, *args, **kw)
+        #if out != (None,None):
+        #    out = out.x, out.variance
+        M, varM = err1d.mean(self.x, self.variance, biased=biased, axis=axis, out=out, dtype=dtype, keepdims=keepdims)
         return _U(M, varM)
 
     def sum(self, axis=None, dtype=None, out=None, keepdims=False):

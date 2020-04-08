@@ -9,7 +9,6 @@ python server_flask.py 8002
 (then visit http://localhost:8002/static/index.html in your browser)
 
 """
-
 import os, sys, posixpath
 import traceback
 import logging
@@ -51,7 +50,8 @@ def wrap_method(mfunc):
     def wrapper(*args, **kwargs):
         real_kwargs = request.get_json() if request.get_data() else {}
         content = mfunc(*args, **real_kwargs)
-        response = make_response(msgpack_converter.packb(content, use_bin_type=True))
+        packed = msgpack_converter.packb(content, use_bin_type=True)
+        response = make_response(packed)
         response.headers['Content-Type'] = 'application/msgpack'
         return response
     return wrapper

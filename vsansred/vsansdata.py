@@ -108,12 +108,15 @@ class VSansData(object):
         datasets = []
         zmin = +np.inf
         zmax = -np.inf
+        series = []
+        series_color = "red"
         for sn in short_detectors:
             detname = 'detector_{short_name}'.format(short_name=sn)
             det = self.detectors.get(detname, None)
             if det is None:
                 continue
-            corrected = det['data'].x 
+            series.append({"label": sn, "color": series_color})
+            corrected = det['data'].x
             dimX, dimY = corrected.shape
             xaxis = det[self.xaxisname]
             yaxis = det[self.yaxisname]
@@ -126,7 +129,7 @@ class VSansData(object):
             zmax = np.max([corrected.max(), zmax])
             zmin = np.min([corrected.min(), zmin])
 
-            datasets.append({
+            new_dataset = {
                 "data": corrected.ravel('C'),
                 "dims": {
                     "xmin": xmin - xstep/2.0,
@@ -136,7 +139,10 @@ class VSansData(object):
                     "ymax": ymax + ystep/2.0,
                     "ydim": dimY,
                 }
-            })
+            }
+            if 'shadow_mask' in det:
+                new_dataset['mask'] = det['shadow_mask'].astype(np.float).ravel('C')
+            datasets.append(new_dataset)
         
         data_2d = {
             "dims": {
@@ -155,7 +161,15 @@ class VSansData(object):
                 "fixedAspect": {
                     "fixAspect": True,
                     "aspectRatio": 1.0
-                }
+                },
+                "legend": {"show": True},
+                "mask": {
+                    "show": True,
+                    "method": "overlay",
+                    "overlay_color": "lightGreen",
+                    "overlay_opacity": 0.8
+                },
+                "series": series
             },
             "metadata": self.metadata.copy()
         }

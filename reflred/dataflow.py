@@ -1,10 +1,14 @@
 from dataflow import core as df
-from dataflow.automod import make_modules, make_template, auto_module
+from dataflow.automod import make_modules, make_template, auto_module, get_modules
 from dataflow.calc import process_template
+from dataflow.data import Plottable
+from dataflow.lib.exporters import exports_json
 
 from . import steps
+from . import candor_steps
 from . import templates
-from .refldata import ReflData
+from .refldata import ReflData, PSDData
+from .candor import Candor
 from .polarization import PolarizationData
 from .deadtime import DeadTimeData
 from .footprint import FootprintData
@@ -22,12 +26,19 @@ class FluxData(object):
             "fluxes": self.fluxes,
             "total_flux": self.total_flux
         }
+
     def get_plottable(self):
         return self.get_metadata()
-    def export(self):
-        import json
-        export_string = json.dumps(self.get_metadata(), indent=2)
-        return {"name": "fluxes", "entry": "", "export_string": export_string, "file_suffix": ".dat"}
+
+    @exports_json
+    def to_json_text(self):
+        return {
+            "name": "fluxes",
+            "entry": "",
+            "file_suffix": ".json",
+            "value": self.get_metadata(),
+            "compact": False,  # pretty-print result
+        }
 
 def make_cached_subloader_module(load_action, prefix=""):
     """
@@ -89,16 +100,20 @@ def make_cached_subloader_module(load_action, prefix=""):
 
 def define_instrument():
     # Define modules
-    modules = make_modules(steps.ALL_ACTIONS, prefix=INSTRUMENT+'.')
+    actions = get_modules(steps) + get_modules(candor_steps)
+    modules = make_modules(actions, prefix=INSTRUMENT+'.')
     modules.append(make_cached_subloader_module(steps.super_load, prefix=INSTRUMENT+'.'))
     modules.append(make_cached_subloader_module(steps.ncnr_load, prefix=INSTRUMENT+'.'))
     # Define data types
     refldata = df.DataType(INSTRUMENT+".refldata", ReflData)
     poldata = df.DataType(INSTRUMENT+".poldata", PolarizationData)
+    psddata = df.DataType(INSTRUMENT+".psddata", PSDData)
+    candordata = df.DataType(INSTRUMENT+".candordata", Candor)
     deadtime = df.DataType(INSTRUMENT+".deadtime", DeadTimeData)
     footprint = df.DataType(INSTRUMENT+".footprint.params", FootprintData)
     flux = df.DataType(INSTRUMENT+".flux.params", FluxData)
     backgroundfield = df.DataType(INSTRUMENT + ".backgroundfield.params", BackgroundFieldData)
+    plottable = df.DataType(INSTRUMENT+".plot", Plottable)
 
     #import json
     #import os
@@ -114,7 +129,10 @@ def define_instrument():
         id=INSTRUMENT,
         name='NCNR reflectometer',
         menu=[('steps', modules)],
-        datatypes=[refldata, poldata, deadtime, footprint, flux, backgroundfield],
+        datatypes=[
+            refldata, poldata, psddata, candordata, deadtime, footprint,
+            flux, backgroundfield, plottable,
+            ],
         template_defs=df.load_templates(templates),
         )
 

@@ -4,6 +4,36 @@ import numpy as np
 
 from dataflow.lib import err1d
 
+def extend(a, b):
+    """
+    Extend *a* to match the number of dimensions of *b*.
+
+    This adds dimensions to the end of *a* rather than the beginning. It is
+    equivalent to *a[..., None, None]* with the right number of None elements
+    to make the number of dimensions match (or np.newaxis if you prefer).
+
+    For example::
+
+        from numpy.random import rand
+        a, b = rand(3, 4), rand(3, 4, 2)
+        a + b
+        ==> ValueError: operands could not be broadcast together with shapes (3,4) (3,4,2)
+        c = extend(a, b) + b
+        c.shape
+        ==> (3, 4, 2)
+
+    Numpy broadcasting rules automatically extend arrays to the beginning,
+    so the corresponding *lextend* function is not needed::
+
+        c = rand(3, 4) + rand(2, 3, 4)
+        c.shape
+        ==> (2, 3, 4)
+    """
+    if np.isscalar(a):
+        return a
+    extra_dims = (np.newaxis,)*(b.ndim-a.ndim)
+    return a[(..., *extra_dims)]
+
 def indent(text, prefix="  "):
     """
     Add a prefix to every line in a string.
@@ -163,20 +193,25 @@ def test_nearest():
 
 def poisson_average(y, dy, norm='monitor'):
     r"""
-    Return the Poisson average of a rate vector y +/- dy.
+    Return the Poisson average of a rate vector *y +/- dy*.
+
+    If y, dy is multidimensional then average the first dimension, returning
+    an item of one fewer dimentsions.
 
     Use *norm='monitor'* When counting against monitor (the default) or
-    *norm='time'* when counting against time.
+    *norm='time'* when counting against time.  Use *norm='none'* if *y, dy*
+    is unnormalized, and the poisson sum should be returned.
 
     The count rate is expressed as the number of counts in an interval $N$
     divided by the interval $M$.  The rate for the combined interval should
-    match the rate you would get if you counted the entire interval at once,
+    match the rate you would get if you counted for the entire interval,
     which is $\sum N_i / \sum M_i$.  We do this by inferring the counts
     and intervals from the rate and uncertainty, adding them together, and
     dividing to get the average rate over the entire interval.
 
-    With counts and monitors both from Poisson distribution, the uncertainties
-    are $\sqrt N$ and $\sqrt M$ respectively.  With error propagation, we get
+    With counts $N$ and monitors $M$ both from Poisson distributions, the
+    uncertainties are $\sqrt N$ and $\sqrt M$ respectively, and gaussian
+    error propagation gives
 
     .. math::
        :nowrap:
@@ -267,33 +302,55 @@ def poisson_average(y, dy, norm='monitor'):
     is better for error propagation.  Monitor weighted averaging
     works well for everything except data with many zero counts.
     """
+    if norm not in ("monitor", "time", "none"):
+        raise ValueError("expected norm to be time, monitor or none")
+
+    # Check whether we are combining rates or counts.  If it is counts,
+    # then simply sum them, and sum the uncertainty in quadrature. This
+    # gives the expected result for poisson statistics, with counts over
+    # the combined interval having variance equal to the sum of the counts.
+    # It even gives correct results for very low count rates with many of
+    # the individual counts giving zero, so long as variance on zero counts
+    # is set to zero rather than one.
+    if norm == "none":
+        bar_y = np.sum(y, axis=0)
+        bar_dy = np.sqrt(np.sum(dy**2, axis=0))
+        return bar_y, bar_dy
+
     dy = dy + (dy == 0)  # Protect against zero counts in division
 
     # Recover monitor and counts
-    if norm == "monitor":
-        monitors = y*(y+1)/dy**2
-    else:
-        monitors = y/dy**2
+    monitors = y*(y+1)/dy**2 if norm == "monitor" else y/dy**2 # if "time"
     monitors[y == 0] = 1./dy[y == 0]  # Special handling for 0 counts
     counts = y*monitors
 
     # Compute average rate
-    combined_monitors, combined_counts = np.sum(monitors), np.sum(counts)
+    combined_monitors = np.sum(monitors, axis=0)
+    combined_counts = np.sum(counts, axis=0)
     bar_y = combined_counts/combined_monitors
-    if norm == "monitor":
+    if norm == "time":
+        bar_dy = bar_y * np.sqrt(1./combined_monitors)
+    elif np.isscalar(bar_y):
         if bar_y == 0:
-            # then the simplification: sqrt(1/N + 1/M) is invalid,
-            # use |dy| = 1/M*sqrt((dN)^2 + 1/M)
-            # but dN in this case is 1.
+            # When bar_y is zero then 1/N is undefined and so sqrt(1/N + 1/M) fails.
+            # Instead use |dy| = 1/M*sqrt((dN)^2 + 1/M) with dN = 1.
             bar_dy = 1./combined_monitors * np.sqrt(1. + 1./combined_monitors)
         else:
-            # the simplification will work in this case, sort of
+            # When bar_y is not zero then use |dy| = N/M * sqrt(1/N + 1/M)
             bar_dy = bar_y * np.sqrt(1./combined_counts + 1./combined_monitors)
     else:
-        bar_dy = bar_y * np.sqrt(1./combined_monitors)
+        # Following the scalar case above, first build bar_dy assuming
+        # that y is zero since it works for all y, then fill in the values
+        # for y not zero. Can't do this the other way since the expression
+        # for y not zero will raise errors when y is zero.
+        bar_dy = 1./combined_monitors * np.sqrt(1. + 1./combined_monitors)
+        idx = (bar_y != 0)
+        bar_dy[idx] = bar_y[idx] * np.sqrt(1./combined_counts[idx]
+                                           + 1./combined_monitors[idx])
 
     #print("est. monitors:", monitors)
     #print("est. counts:", counts)
+    #print("poisson avg", counts.shape, bar_y.shape, bar_dy.shape)
     return bar_y, bar_dy
 
 
@@ -410,43 +467,6 @@ def demo_error_prop(title, rate, monitors, attenuators=None,
         y2_g = np.mean(y2)
         show("Separate", y2_ave, "no monitor uncertainty")
         show("Gaussian", y2_g, "no monitor uncertainty")
-
-
-def _fetch_url_uncached(url):
-    # type: (str) -> str
-    import urllib2
-    try:
-        fd = urllib2.urlopen(url)
-        ret = fd.read()
-    finally:
-        fd.close()
-    return ret
-
-
-def fetch_url(url, url_cache="/tmp"):
-    """
-    Fetch a file from a url.
-
-    The content of the file will be cached in */tmp/_path_to_file.ext* for
-    the url *http://path/to/file.ext*.  If *url_cache* is None, then no caching
-    is performed.  Set *url_cache* to the private cache directory if you don't
-    want the files cleaned by the tmp reaper.
-    """
-    from urlparse import urlparse
-    import os
-
-    if url_cache is None:
-        return _fetch_url_uncached(url)
-
-    cached_path = os.path.join(url_cache, urlparse(url).path.replace('/', '_'))
-    if os.path.exists(cached_path):
-        with open(cached_path) as fd:
-            ret = fd.read()
-    else:
-        ret = _fetch_url_uncached(url)
-        with open(cached_path, 'wb') as fd:
-            fd.write(ret)
-    return ret
 
 
 if __name__ == "__main__":

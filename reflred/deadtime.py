@@ -9,7 +9,6 @@ from .deadtime_fit import deadtime_from_counts, estimate_incident
 class DeadTimeData(object):
     def __init__(self, datasets, tau_NP, tau_P,
                  attenuators, rates, index):
-        self.messages = []
         self.warnings = []
 
         self.datasets = datasets
@@ -32,9 +31,6 @@ class DeadTimeData(object):
     
     def get_plottable(self):
         return {"params": self.get_metadata(), "type": "params"}
-
-    def log(self, msg):
-        self.messages.append(msg)
 
 
 def fit_dead_time(datasets, source='detector', mode='auto'):
