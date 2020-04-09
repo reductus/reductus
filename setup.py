@@ -43,7 +43,7 @@ dist = setup(
     packages=packages,
     include_package_data=True,
     entry_points = {
-        'console_scripts': ['reductus=reflweb.run:main'],
+        'console_scripts': ['reductus=web_gui.run:main'],
     },
     install_requires=[
         'scipy', 'numpy', 'h5py', 'uncertainties', 'docutils',

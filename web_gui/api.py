@@ -21,9 +21,9 @@ from dataflow.rev import revision_info
 
 from dataflow import fetch
 try:
-    from reflweb import config
+    from web_gui import config
 except ImportError:
-    from reflweb import default_config as config
+    from web_gui import default_config as config
 
 
 api_methods = []

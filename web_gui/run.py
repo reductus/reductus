@@ -8,7 +8,7 @@ def main():
     parser.add_argument('--external', action='store_true', help='listen on all interfaces, including external (local connections only if not set)')
     parser.add_argument('-p', '--port', default=8002, type=int, help='port on which to start the server')
     args = parser.parse_args()
-    from reflweb.server_flask import app
+    from web_gui.server_flask import app
     if not args.headless:
         import webbrowser
         webbrowser.open("http://localhost:%d" % (args.port))

@@ -19,12 +19,12 @@ from werkzeug.exceptions import HTTPException
 import msgpack as msgpack_converter
 
 try:
-    from reflweb import config
+    from web_gui import config
 except ImportError:
-    from reflweb import default_config as config
+    from web_gui import default_config as config
 
 RPC_ENDPOINT = '/RPC2'
-STATIC_PATH = pkg_resources.resource_filename('reflweb', 'static/')
+STATIC_PATH = pkg_resources.resource_filename('web_gui', 'static/')
 
 app = Flask(__name__, static_folder=STATIC_PATH, static_url_path='/static')
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
@@ -56,7 +56,7 @@ def wrap_method(mfunc):
         return response
     return wrapper
 
-from reflweb import api
+from web_gui import api
 api.create_instruments()
 for method in api.api_methods:
     mfunc = getattr(api, method)

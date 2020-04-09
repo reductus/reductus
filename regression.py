@@ -11,7 +11,7 @@ changed.  The output is stored in a file in /tmp [sorry windows users], so
 that the regression test can be quickly updated if the change is a valid
 change (e.g., if there is a bug fix in the monitor normalization for example).
 
-The location of the data sources is read from reflweb.config.
+The location of the data sources is read from web_gui.config.
 
 Note: if the filename ends with .json, then assume it is a template file
 and run the reduction, saving the output to *replay.dat*.  This may make it
@@ -33,9 +33,9 @@ from dataflow.calc import process_template
 from dataflow.rev import revision_info
 
 try:
-    from reflweb import config
+    from web_gui import config
 except ImportError:
-    from reflweb import default_config as config
+    from web_gui import default_config as config
 
 IS_PY3 = sys.version_info[0] >= 3
 if IS_PY3:
