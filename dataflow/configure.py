@@ -50,13 +50,13 @@ def apply_config(user_config=None, user_overrides=None):
 
     cache_config = config.get('cache', False)
     if cache_config:
-        cache_type = cache_config.get("type", None)
+        cache_engine = cache_config.get("engine", None)
         cache_params = cache_config.get("params", {})
         cache_compression = cache_config.get("compression", False)
         cache_manager = get_cache()
-        if cache_type == "diskcache":
+        if cache_engine == "diskcache":
             cache_manager.use_diskcache(**cache_params)
-        elif cache_type == "redis":
+        elif cache_engine == "redis":
             cache_manager.use_redis(**cache_params)
         else:
             cache_manager.use_memory()
