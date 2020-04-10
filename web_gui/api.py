@@ -15,16 +15,11 @@ except ImportError:
 import dataflow
 from dataflow.core import Template, load_instrument, lookup_instrument
 from dataflow.core import list_instruments as _list_instruments
-from dataflow.cache import use_redis, use_diskcache, get_cache
+from dataflow.cache import get_cache
 from dataflow.calc import process_template
 from dataflow.rev import revision_info
-
+from dataflow import configure
 from dataflow import fetch
-try:
-    from web_gui import config
-except ImportError:
-    from web_gui import default_config as config
-
 
 api_methods = []
 
@@ -73,7 +68,7 @@ def get_file_metadata(source="ncnr", pathlist=None):
     if source == "local":
         metadata = local_file_metadata(pathlist)
     else:
-        url = config.file_helper_url[source] #'http://ncnr.nist.gov/ipeek/listftpfiles.php'
+        url = fetch.FILE_HELPERS[source] #'http://ncnr.nist.gov/ipeek/listftpfiles.php'
         values = {'pathlist[]' : pathlist}
         data = urlencode(values, True)
         req = urllib2.Request(url, data.encode('ascii'))
@@ -208,31 +203,16 @@ def calc_template(template_def, config):
 
 @expose
 def list_datasources():
-    return config.data_sources
+    return fetch.DATA_SOURCES
 
 @expose
 def list_instruments():
     return _list_instruments()
 
-def create_instruments():
-    fetch.DATA_SOURCES = config.data_sources
-
-    if getattr(config, 'use_redis', False):
-        redis_params = getattr(config, "redis_params", {})
-        use_redis(**redis_params)
-    elif getattr(config, 'use_diskcache', False):
-        diskcache_params = getattr(config, "diskcache_params", {})
-        use_diskcache(**diskcache_params)
-
-    if getattr(config, 'use_compression', False):
-        cache = get_cache()
-        cache._use_compression = True
-
-    # Load refl instrument if nothing specified in config.
-    # Note: instrument names do not match instrument ids.
-    instruments = getattr(config, 'instruments', ['refl'])
-    for name in instruments:
-        load_instrument(name)
+def initialize(config=None):
+    if config is None:
+        config = configure.load_config('config')
+    configure.apply_config(user_config=config)
 
 if __name__ == '__main__':
-    create_instruments()
+    initialize()

@@ -7,8 +7,20 @@ def main():
     parser.add_argument('-x', '--headless', action='store_true', help='do not automatically load client in browser')
     parser.add_argument('--external', action='store_true', help='listen on all interfaces, including external (local connections only if not set)')
     parser.add_argument('-p', '--port', default=8002, type=int, help='port on which to start the server')
+    parser.add_argument('-c', '--config-file', type=str, help='path to JSON configuration to load')
+    parser.add_argument('-i','--instruments', nargs='+', help='instruments to load (overrides config)')
     args = parser.parse_args()
-    from web_gui.server_flask import app
+    if args.config_file is not None:
+        import json
+        config = json.loads(open(args.config_file, 'rt').read())
+    else:
+        from dataflow.configure import load_config
+        config = load_config(name="config", fallback=True)
+    if args.instruments is not None:
+        config["instruments"] = args.instruments
+
+    from web_gui.server_flask import create_app
+    app = create_app(config)
     if not args.headless:
         import webbrowser
         webbrowser.open("http://localhost:%d" % (args.port))

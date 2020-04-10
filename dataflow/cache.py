@@ -74,40 +74,15 @@ class CacheManager(object):
     def __init__(self):
         self._cache = None
         self._file_cache = None
-        self._redis_kwargs = None
-        self._diskcache_kwargs = None
+        self._engine = None
         self._use_compression = False
         self._pickle_protocol = PICKLE_PROTOCOL
 
-    def _connect(self):
-        if self._redis_kwargs is not None:
-            try:
-                self._cache = redis_connect(**self._redis_kwargs)
-                self._file_cache = self._cache
-                return
-            except Exception as exc:
-                warning = "Redis connection failed with:\n\t" + str(exc)
-                warning += "\nFalling back to in-memory cache."
-                warnings.warn(warning)
-        elif self._diskcache_kwargs is not None:
-            try:
-                from diskcache import FanoutCache as Cache
-                # patch the class so it has "exists" method
-                Cache.exists = Cache.__contains__
-                cachedir = self._diskcache_kwargs.pop("cachedir", "cache")
-                print('cacheargs:', self._diskcache_kwargs)
-                self._cache = Cache(cachedir, **self._diskcache_kwargs)
-                file_cachedir = self._diskcache_kwargs.pop("file_cachedir", "files_cache")
-                self._file_cache = Cache(file_cachedir, **self._diskcache_kwargs)
-                return
-            except Exception as exc:
-                warning = "diskcache connection failed with:\n\t" + str(exc)
-                warning += "\nFalling back to in-memory cache."
-                warnings.warn(warning)
+    @property
+    def engine(self):
+        return self._engine
 
-        self.set_test_cache()
-
-    def set_test_cache(self):
+    def use_memory(self):
         """
         Set up cache for testing.
         """
@@ -115,14 +90,28 @@ class CacheManager(object):
             cachedir = os.path.join(tempfile.gettempdir(), "reductus_test")
             self._cache = memory_cache()
             self._file_cache = file_cache(cachedir=cachedir)
+            self._cache_engine = "memory"
 
     def use_diskcache(self, **kwargs):
         """
         use the PyPi package 'diskcache' as the main store
         """
-        if self._cache is not None:
-            raise RuntimeError("call use_diskcache() before cache is first used")
-        self._diskcache_kwargs = kwargs
+        try:
+            from diskcache import FanoutCache as Cache
+            # patch the class so it has "exists" method
+            Cache.exists = Cache.__contains__
+            cachedir = kwargs.pop("cachedir", "cache")
+            self._cache = Cache(cachedir, **kwargs)
+            file_cachedir = kwargs.pop("file_cachedir", "files_cache")
+            self._file_cache = Cache(file_cachedir, **kwargs)
+            self._cache_engine = "diskcache"
+            return
+        except Exception as exc:
+            warning = "diskcache connection failed with:\n\t" + str(exc)
+            warning += "\nFalling back to in-memory cache."
+            warnings.warn(warning)
+            self.use_memory()
+        
 
     def use_redis(self, **kwargs):
         """
@@ -133,25 +122,31 @@ class CacheManager(object):
         details.  If use_redis() is not called, then get_cache() will use
         an in-memory cache instead.
         """
-        if self._cache is not None:
-            raise RuntimeError("call use_redis() before cache is first used")
-        self._redis_kwargs = kwargs
+        try:
+            self._cache = redis_connect(**kwargs)
+            self._file_cache = self._cache
+            self._cache_engine = "redis"
+            return
+        except Exception as exc:
+            warning = "Redis connection failed with:\n\t" + str(exc)
+            warning += "\nFalling back to in-memory cache."
+            warnings.warn(warning)
+            self.use_memory()
 
     def get_cache(self):
         """
         Connect to the key-value cache.
         """
         if self._cache is None:
-            self._connect()
+            self.use_memory()
         return self._cache
 
     def get_cache_manager(self):
         """
-        Connect to the key-value cache, and return
-        this manager class
+        return this manager class
         """
         if self._cache is None:
-            self._connect()
+            self.use_memory()
         return self
 
     def get_file_cache(self):
@@ -159,7 +154,7 @@ class CacheManager(object):
         Connect to the file cache.
         """
         if self._cache is None:
-            self._connect()
+            self.use_memory()
         return self._file_cache
 
     def store_file(self, key, contents):
@@ -200,7 +195,6 @@ class CacheManager(object):
         return self._cache.exists(key)
 
 
-
 # Singleton cache manager if you only need one cache
 CACHE_MANAGER = CacheManager()
 
@@ -209,4 +203,4 @@ use_redis = CACHE_MANAGER.use_redis
 use_diskcache = CACHE_MANAGER.use_diskcache
 get_cache = CACHE_MANAGER.get_cache_manager
 get_file_cache = CACHE_MANAGER.get_file_cache
-set_test_cache = CACHE_MANAGER.set_test_cache
+set_test_cache = CACHE_MANAGER.use_memory
