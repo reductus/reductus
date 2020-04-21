@@ -241,7 +241,7 @@ def build_dataset(group, columns, norm):
         # the wavelength is multidimensional then it is constant. Further,
         # we assume that the constant is included in the group[0] metadata
         # we use as the basis of our return value.
-        if data.detector.wavelength.ndim == 1:
+        if getattr(data.detector.wavelength, 'ndim', 0) < 2:
             data.detector.wavelength = columns['Ld']
             data.detector.wavelength_resolution = columns['dL']
 
