@@ -301,6 +301,8 @@ def correctData(sample, empty, bkg_level=0.0, emp_level=0.0, thick=1.0, dOmega=7
         "Empty level": emp_level,
         "Bkg level": bkg_level,
         "dQv": sample.metadata["dQv"],
+        "Start time": sample.metadata["start_time"],
+        "Entry": sample.metadata["entry"],
     }
 
     corrected = USansCorData(metadata=info,iqCOR=iqCOR, Q=sample.Q)

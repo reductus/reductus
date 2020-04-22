@@ -104,17 +104,26 @@ def hdf(datasets, export_method=None, template_data=None, concatenate=False):
             h5_item = export["value"]
             group_to_copy = list(h5_item.values())[0]
             group_name = "%s_%s" % (export["name"], export["entry"])
+            for k,v in group_to_copy.items():
+                if v.attrs.get("NX_class", "") == "NXprocess":
+                    v["template_def"] = header_string
             container.copy(group_to_copy, group_name)
             h5_item.close()
         container.close()
         fid.seek(0)
         outputs.append({"filename": filename, "value": fid.read()})
     else:
-        for i, export in exports:
+        for i, export in enumerate(exports):
             filename = _build_filename(export, ext=".hdf5", index=i)
             h5_item = export["value"]
             _set_nexus_attrs(h5_item, filename)
             h5_item.attrs["template_def"] = header_string
+            for entry in h5_item.values():
+                if not entry.attrs.get("NX_class", "") == "NXentry":
+                    continue
+                for k,v in entry.items():
+                    if v.attrs.get("NX_class", "") == "NXprocess":
+                        v["template_def"] = header_string
             h5_item.flush()
             value = h5_item.id.get_file_image()
             h5_item.close()
