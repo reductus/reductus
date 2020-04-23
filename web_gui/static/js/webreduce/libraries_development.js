@@ -18,4 +18,5 @@ import {default as _jstree} from "https://dev.jspm.io/npm:jstree@3.3";
 import {default as jquery} from "https://dev.jspm.io/npm:jquery@latest";
 export {jquery};
 export {default as Split} from "https://dev.jspm.io/split.js@1.5.11";
+export {default as sha1} from "https://dev.jspm.io/sha1@1.1.1";
 

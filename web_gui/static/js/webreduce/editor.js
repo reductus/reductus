@@ -5,12 +5,13 @@ export var editor = {};
 import {app} from './main.js';
 import {server_api} from './server_api/api_msgpack.js';
 import {dependencies} from './deps.js';
-import {Sha1} from './sha1.es.js';
+//import {Sha1} from './sha1.es.js';
 import {instruments} from './instruments/index.js';
 // now a global...
 import {d3} from './libraries.js';
 import {extend, heatChart, xyChart, dataflowEditor, colormap_names, get_colormap} from './libraries.js';
 import {PouchDB} from './libraries.js';
+import {sha1} from './libraries.js';
 import {filebrowser} from './filebrowser.js';
 import {make_fieldUI} from './fieldUI.js';
 
@@ -1413,7 +1414,7 @@ editor.get_signature = function(params) {
       concatenate = params.concatenate || false;
   
   var versioned = this.get_versioned_template(template), 
-      sig = Sha1.hash(JSON.stringify({
+      sig = sha1(JSON.stringify({
         method: "calculate",
         template: versioned,
         config: config,

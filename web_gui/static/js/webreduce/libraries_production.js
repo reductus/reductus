@@ -5,8 +5,12 @@ import * as messagepack from 'messagepack';
 export {messagepack};
 import PouchDB from 'pouchdb-browser';
 export {PouchDB};
-export {xyChart, heatChart, colormap_names, get_colormap, dataflowEditor} from './node_modules/d3-science/src/index.js';
 export {
+    xyChart,
+    heatChart,
+    colormap_names,
+    get_colormap,
+    dataflowEditor,
     extend,
     rectangleSelect,
     xSliceInteractor,
@@ -14,13 +18,16 @@ export {
     rectangleInteractor,
     ellipseInteractor,
     monotonicFunctionInteractor 
-}  from './node_modules/d3-science/src/index.js';
+} from 'd3-science';
+//}  from './node_modules/d3-science/src/index.js';
 export {default as Split} from 'split.js';
+export {default as sha1} from 'sha1'
 //import {default as _jstree} from 'jstree';
 //window.jstree = _jstree
 //import './node_modules/jstree/dist/themes/default/style.css';
 //import {default as jquery} from 'jquery';
 //window.jQuery = jquery;
-//import {default as _jquery_ui} from 'jquery-ui-dist';
+//import {default as jquery_ui} from 'jquery-ui-dist';
+//export {jquery_ui};
 //window.jqui = _jquery_ui;
 //export {jquery, jquery as jQuery};
