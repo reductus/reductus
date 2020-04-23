@@ -19,6 +19,131 @@ from .rst2html import rst2html
 
 IS_PY3 = sys.version_info[0] >= 3
 
+# Decorators to tag action methods for an instrument
+
+def cache(action):
+    """
+    Decorator which adds the *cached* attribute to the function.
+
+    Use *@cache* to force caching to always occur (for example, when
+    the function references remote resources, vastly reduces memory, or is
+    expensive to compute.  Use *@nocache* when debugging a function
+    so that it will be recomputed each time regardless of whether or not it
+    is seen again.
+    """
+    action.cached = True
+    return action
+
+def nocache(action):
+    """
+    Decorator which adds the *cached* attribute to the function.
+
+    Use *@cache* to force caching to always occur (for example, when
+    the function references remote resources, vastly reduces memory, or is
+    expensive to compute.  Use *@nocache* when debugging a function
+    so that it will be recomputed each time regardless of whether or not it
+    is seen again.
+    """
+    action.cached = False
+    return action
+
+def module(tag=""):
+    """
+    Decorator adds *group=tag* as an attribute to the function.
+
+    This marks a method as a reduction step to be included in the list
+    of reduction steps. If *tag* is set then the action will be placed in a
+    submenu with that label.  If used as a bare function then defaults
+    to a tag of "" for the top-level menu.
+
+    For example, to register *action*::
+
+        @module
+        def action(data, par='default'):
+            ...
+
+    To register action in the *viz* submenu use::
+
+        @module("viz")
+        def viz_action(data):
+            ...
+
+    Actions can be retrieved from a module using :func:`get_modules`.
+    """
+    # Called as @module
+    if callable(tag):
+        tag.group = ""
+        return tag
+
+    # Called as @module("tag")
+    def wrapper(fn):
+        fn.group = tag
+        return fn
+    return wrapper
+
+# From unutbu and Glenn Maynard
+# https://stackoverflow.com/questions/13503079/how-to-create-a-copy-of-a-python-function/13503277#13503277
+# http://stackoverflow.com/a/6528148/190597
+def copy_func(f):
+    """Make a copy of a function, including its attributes"""
+    import types
+    import functools
+    g = types.FunctionType(f.__code__, f.__globals__, name=f.__name__,
+                           argdefs=f.__defaults__,
+                           closure=f.__closure__)
+    g = functools.update_wrapper(g, f)
+    g.__kwdefaults__ = f.__kwdefaults__
+    return g
+
+def copy_module(f, new_name, old_type, new_type, tag=None):
+    """
+    Copy a dataflow module replacing name with *new_name* and *old_type*
+    with *new_type*.
+
+    For example::
+
+        from dataflow.automod import copy_module
+        # Note: do not load symbols from steps directly into the file scope
+        # or they will be defined twice as reduction modules.
+        from reflred import steps
+
+        candor_join = copy_module(
+            steps.join, "candor_join", "refldata", "candordata", tag="candor")
+    """
+    g = copy_func(f)
+    g.__name__ = new_name
+    g.__doc__ = re.sub(
+        rf"\({old_type}([^a-zA-Z_)]*)\)",
+        rf"({new_type}\1)",
+        f.__doc__)
+    if tag is not None:
+        g.group = tag
+    return g
+
+def get_modules(module, grouped=False, sorted=True):
+    """
+    Retrieve @module actions from a python module.
+
+    If *grouped*, return modules grouped by action tag.
+
+    If *sorted*, sort the actions by name attribute, otherwise they appear
+    in the original order in the module.
+    """
+    actions = [
+        fn for name in dir(module)
+        for fn in [getattr(module, name)]
+        if hasattr(fn, 'group')
+    ]
+    if sorted:
+        actions.sort(key=lambda fn: fn.__name__)
+    if grouped:
+        from collections import defaultdict
+        groups = defaultdict(list)
+        for fn in actions:
+            groups[fn.action].append(fn)
+        return groups
+    return actions
+
 def make_template(name, description, diagram, instrument, version):
     """
     Convert a diagram into a template.
@@ -306,11 +431,11 @@ def auto_module(action):
 timestamp = re.compile(r"^([|] )?(?P<date>[0-9]{4}-[0-9]{2}-[0-9]{2})\s+(?P<author>.*?)\s*(:\s*(?P<change>.*?)\s*)?$")
 def _parse_function(action):
     # grab arguments and defaults from the function definition
-    argspec = inspect.getargspec(action)
+    argspec = inspect.getfullargspec(action)
     args = argspec.args if not inspect.ismethod(action) else argspec.args[1:]
     defaults = (dict(zip(args[-len(argspec.defaults):], argspec.defaults))
                 if argspec.defaults else {})
-    if argspec.varargs is not None or argspec.keywords is not None:
+    if argspec.varargs is not None or argspec.varkw is not None:
         raise ValueError("function contains *args or **kwargs")
 
     # Grab the docstring from the function
@@ -422,13 +547,13 @@ def _unsplit_name(name):
 # parameter definition regular expression
 parameter_re = re.compile(r"""\A
     \s*(?P<id>\w+)                           # name
-    \s*([{]\s*(?P<label>.*?)\s*[}])?         # { label }    (optional)
-    \s*([(]                                  # (
+    \s*(\{\s*(?P<label>.*?)\s*\})?           # { label }    (optional)
+    \s*(\(                                   # (
         \s*(?P<datatype>.*?)                 #    datatype  (non-greedy)
-        \s*([[]\s*(?P<length>[0-9]*)\s*[]])? #    [length]  (optional)
+        \s*(\[\s*(?P<length>[0-9]*)\s*\])?   #    [length]  (optional)
         \s*(?P<multiple>[?*+])?              #    multiple  (optional [*+?])
         \s*(:\s*(?P<typeattr>.*?))?          #    :typeattr (optional)
-    \s*[)])?                                 # )
+    \s*\))?                                  # )
     \s*:                                     # :
     \s*(?P<description>.*?)                  # description  (non-greedy)
     \s*\Z""", re.VERBOSE)
@@ -662,9 +787,12 @@ def parse_datatype(par):
         attr["pattern"] = attrstr
 
     elif type == "range":
-        if attrstr not in ("x", "y", "xy", "ellipse"):
-            raise ValueError("range must be one of x, y, xy or ellipse for " + name)
+        if attrstr not in ("x", "y", "xy", "ellipse", "sector_centered"):
+            raise ValueError("range must be one of x, y, xy, ellipse or sector_centered for " + name)
         attr["axis"] = attrstr
+
+    elif type == "patch_metadata":
+        attr["key"] = attrstr
 
     else: # type in ["str", "bool", "fileinfo", "index", "coordinate"]:
         if par["typeattr"] is not None:
@@ -675,7 +803,7 @@ def parse_datatype(par):
     par["datatype"] = type
     par["typeattr"] = attr
 
-FIELD_TYPES = set("str bool int float opt regex range index coordinate fileinfo scale".split())
+FIELD_TYPES = set("str bool int float opt regex range index coordinate fileinfo scale patch_metadata".split())
 
 def check_multiplicity(par, values, bundle_length):
     """
@@ -705,7 +833,7 @@ def validate(par, value, as_default=False):
     n = par["length"]
     if n == 1:
         return _validate_one(par, value, as_default)
-    elif not isinstance(value, list):
+    elif not isinstance(value, (list, tuple)):
         raise ValueError("invalid value for %s, expected list"%name)
     elif n and len(value) != n:
         raise ValueError("invalid value for %s, wrong length"%name)
@@ -770,6 +898,9 @@ def _validate_one(par, value, as_default):
     elif datatype == "scale":
         value = _type_check(name, value, float)
 
+    elif datatype == "patch_metadata":
+        value = _patch_check(name, value)
+
     else:
         raise ValueError("no %s type check for %s"%(datatype, name))
 
@@ -794,6 +925,30 @@ def _finfo_check(name, value):
         #raise
         raise ValueError("value %r is not {source: str, path: str, mtime: int, entries: [str, ...]} for %s"
                          % (value, name))
+    return value
+
+def _patch_check(name, value):
+    if (not isinstance(value, dict)
+            or "op" not in value
+            or "path" not in value
+            or value["op"] not in ["test", "add", "replace", "copy", "move", "remove"]):
+        raise ValueError("patch must be a dict, with valid op code and path")
+
+    elif value["op"] in ["test", "add", "replace"]:
+        if not "value" in value:
+            raise ValueError("patch for test, add or replace must contain value field")
+        else:
+            value["value"] = _type_check(name, value["value"], str)
+
+    elif value["op"] in ["copy", "move"]:
+        if not "from" in value:
+            raise ValueError("patch for copy or move must contain from field")
+        else:
+            value["from"] = _type_check(name, value["from"], str)
+
+    value["op"] = _type_check(name, value["op"], str)
+    value["path"] = _type_check(name, value["path"], str)
+
     return value
 
 def _list_check(name, values, n, ptype):

@@ -27,17 +27,17 @@ sudo cp proxy_protocol.load /etc/apache2/mods-available/proxy_protocol.load
 sudo a2enmod proxy_protocol
 
 sudo mkdir /var/www/html/reductus
-sudo cp -r $REDUCTUS_HOME/reflweb/static/* /var/www/html/reductus
+sudo cp -r $REDUCTUS_HOME/web_gui/static/* /var/www/html/reductus
 sudo chown -R $USER:$USER /var/www/html/reductus
 sudo chmod -R a+r /var/www/html/reductus
 sudo find /var/www/html -type d -exec chmod 755 {} \;
 # only need this if ansible has set this to permissions 750:
 #sudo chmod a+x /var/spool/cron;
 
-echo -e '#!/bin/sh\ncp -r reflweb/static/* /var/www/html/reductus\n\necho "copied to web"' > $REDUCTUS_HOME/.git/hooks/post-merge
+echo -e '#!/bin/sh\ncp -r web_gui/static/* /var/www/html/reductus\n\necho "copied to web"' > $REDUCTUS_HOME/.git/hooks/post-merge
 
 # copy the config.py from server...
-cp $PROVISION_DIR/config.py $REDUCTUS_HOME/reflweb/config.py
+cp $PROVISION_DIR/config.py $REDUCTUS_HOME/web_gui/config.py
 
 # set up vhosts file...
 #sudo cp $PROVISION_DIR/apache_vhosts /etc/apache2/sites-available/reductus_server.conf
@@ -47,7 +47,7 @@ sudo a2enmod ssl
 sudo a2ensite reductus_server_ssl
 
 # start the workers
-cd $REDUCTUS_HOME/reflweb && $REDUCTUS_HOME/reflweb/start_flask_many_py3.sh 8001 5
+cd $REDUCTUS_HOME/web_gui && $REDUCTUS_HOME/web_gui/start_flask_many_py3.sh 8001 5
 
 # start the website
 sudo service apache2 reload
@@ -71,7 +71,7 @@ sudo aideinit
 sudo sed -i -e 's/rotate [0-9]\+/rotate 31/g' /etc/logrotate.d/apache2
 
 # set up cron job to start uwsgi servers on reboot
-echo -e "@reboot cd $REDUCTUS_HOME/reflweb && $REDUCTUS_HOME/reflweb/start_flask_many_py3.sh 8001 5" > $HOME/crontab.txt
+echo -e "@reboot cd $REDUCTUS_HOME/web_gui && $REDUCTUS_HOME/web_gui/start_flask_many_py3.sh 8001 5" > $HOME/crontab.txt
 crontab $HOME/crontab.txt
 
 # set up the secondary, static IP:

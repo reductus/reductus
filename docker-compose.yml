@@ -1,6 +1,6 @@
 version: '3'
 services:
-  reflweb:
+  web_gui:
       build:
         context: .
         dockerfile: docker-compose/Dockerfile
@@ -14,7 +14,7 @@ services:
         context: .
         dockerfile: docker-compose/gevent/Dockerfile
       volumes:
-        - ./reflweb/testdata:/data
+        - ./web_gui/testdata:/data
       links:
           - redis
       expose:

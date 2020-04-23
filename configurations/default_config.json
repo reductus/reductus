@@ -1,0 +1,26 @@
+{
+    "cache": {
+        "engine": "diskcache", 
+        "params": {"size_limit": 4e9}
+    },
+    "data_sources": [
+        {
+            "name": "local",
+            "url": "file:///",
+            "start_path": ""
+        },
+        {
+            "name": "ncnr",
+            "url": "http://ncnr.nist.gov/pub/",
+            "start_path": "ncnrdata",
+            "file_helper_url": "https://ncnr.nist.gov/ncnrdata/listftpfiles.php"
+        },
+        {
+            "name": "charlotte",
+            "url": "http://charlotte.ncnr.nist.gov/pub",
+            "start_path": "",
+            "file_helper_url": "http://charlotte.ncnr.nist.gov/ipeek/listftpfiles.php"
+        }
+    ],
+    "instruments": ["refl", "ospec", "sans"]
+}

@@ -1,0 +1,354 @@
+{
+  "modules": [
+    {
+      "x": 10,
+      "module": "ncnr.sans.SuperLoadSANS",
+      "config": {
+        "filelist": [],
+        "do_mon_norm": true,
+        "do_atten_correct": true,
+        "do_det_eff": true,
+        "do_deadtime": true
+      },
+      "y": 5,
+      "title": "sample"
+    },
+    {
+      "x": 10,
+      "module": "ncnr.sans.SuperLoadSANS",
+      "config": {
+        "filelist": [],
+        "do_mon_norm": true,
+        "do_atten_correct": true,
+        "do_det_eff": true
+      },
+      "y": 65,
+      "title": "empty cell"
+    },
+    {
+      "x": 10,
+      "module": "ncnr.sans.SuperLoadSANS",
+      "config": {
+        "filelist": [],
+        "do_atten_correct": true,
+        "do_mon_norm": false,
+        "do_det_eff": true
+      },
+      "y": 140,
+      "title": "open trans"
+    },
+    {
+      "x": 5,
+      "module": "ncnr.sans.SuperLoadSANS",
+      "config": {
+        "filelist": [],
+        "do_mon_norm": false,
+        "do_atten_correct": true,
+        "do_det_eff": true
+      },
+      "y": 110,
+      "title": "sample trans"
+    },
+    {
+      "x": 255,
+      "module": "ncnr.sans.generate_transmission",
+      "y": 110,
+      "title": "Gen trans",
+      "config": {
+        "align_by": "",
+        "integration_box": [
+          58.05363984674328,
+          74,
+          57.86973180076629,
+          72
+        ]
+      }
+    },
+    {
+      "x": 10,
+      "module": "ncnr.sans.SuperLoadSANS",
+      "config": {
+        "filelist": [],
+        "do_mon_norm": true,
+        "do_atten_correct": true,
+        "do_det_eff": true
+      },
+      "y": 35,
+      "title": "blocked"
+    },
+    {
+      "x": 200,
+      "module": "ncnr.sans.subtract",
+      "y": 5,
+      "title": "Subtract"
+    },
+    {
+      "x": 230,
+      "module": "ncnr.sans.subtract",
+      "y": 55,
+      "title": "Subtract"
+    },
+    {
+      "x": 380,
+      "module": "ncnr.sans.product",
+      "y": 30,
+      "title": "Product"
+    },
+    {
+      "x": 515,
+      "module": "ncnr.sans.subtract",
+      "y": 5,
+      "title": "Subtract"
+    },
+    {
+      "x": 935,
+      "module": "ncnr.sans.absolute_scaling",
+      "y": 50,
+      "title": "Abs Scale",
+      "config": {
+        "auto_box": false,
+        "integration_box": [
+          106,
+          121,
+          56,
+          73
+        ]
+      }
+    },
+    {
+      "module": "ncnr.sans.LoadDIV",
+      "title": "DIV",
+      "x": 590,
+      "y": 140,
+      "config": {
+        "filelist": [
+          {
+            "path": "ncnrdata/ancillary/ng7sans/DIV/PLEX_20190719_NG7.DIV",
+            "source": "ncnr",
+            "mtime": 1564154809,
+            "entries": [
+              "entry"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "module": "ncnr.sans.PixelsToQ",
+      "title": "Pixelstoq",
+      "x": 1085,
+      "y": 50,
+      "config": {
+        "correct_solid_angle": true
+      }
+    },
+    {
+      "module": "ncnr.sans.circular_av_new",
+      "title": "Circular Av New",
+      "x": 1230,
+      "y": 50,
+      "config": {
+        "dQ_method": "IGOR",
+        "mask_width": 3
+      }
+    },
+    {
+      "module": "ncnr.sans.correct_detector_sensitivity",
+      "title": "Div Correction",
+      "x": 725,
+      "y": 5
+    },
+    {
+      "module": "ncnr.sans.SuperLoadSANS",
+      "title": "empty trans",
+      "x": 755,
+      "y": 50,
+      "config": {
+        "filelist": [],
+        "do_mon_norm": false
+      }
+    }
+  ],
+  "wires": [
+    {
+      "target": [
+        6,
+        "subtrahend"
+      ],
+      "source": [
+        0,
+        "output"
+      ]
+    },
+    {
+      "target": [
+        6,
+        "minuend"
+      ],
+      "source": [
+        5,
+        "output"
+      ]
+    },
+    {
+      "target": [
+        7,
+        "minuend"
+      ],
+      "source": [
+        5,
+        "output"
+      ]
+    },
+    {
+      "target": [
+        7,
+        "subtrahend"
+      ],
+      "source": [
+        1,
+        "output"
+      ]
+    },
+    {
+      "target": [
+        4,
+        "in_beam"
+      ],
+      "source": [
+        3,
+        "output"
+      ]
+    },
+    {
+      "target": [
+        4,
+        "empty_beam"
+      ],
+      "source": [
+        2,
+        "output"
+      ]
+    },
+    {
+      "target": [
+        8,
+        "factor_param"
+      ],
+      "source": [
+        4,
+        "output"
+      ]
+    },
+    {
+      "target": [
+        8,
+        "data"
+      ],
+      "source": [
+        7,
+        "output"
+      ]
+    },
+    {
+      "target": [
+        9,
+        "subtrahend"
+      ],
+      "source": [
+        6,
+        "output"
+      ]
+    },
+    {
+      "target": [
+        9,
+        "minuend"
+      ],
+      "source": [
+        8,
+        "output"
+      ]
+    },
+    {
+      "source": [
+        11,
+        "output"
+      ],
+      "target": [
+        10,
+        "div"
+      ]
+    },
+    {
+      "source": [
+        4,
+        "output"
+      ],
+      "target": [
+        10,
+        "Tsam"
+      ]
+    },
+    {
+      "source": [
+        10,
+        "abs"
+      ],
+      "target": [
+        12,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        12,
+        "output"
+      ],
+      "target": [
+        13,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        11,
+        "output"
+      ],
+      "target": [
+        14,
+        "sensitivity"
+      ]
+    },
+    {
+      "source": [
+        9,
+        "output"
+      ],
+      "target": [
+        14,
+        "sansdata"
+      ]
+    },
+    {
+      "source": [
+        14,
+        "output"
+      ],
+      "target": [
+        10,
+        "sample"
+      ]
+    },
+    {
+      "source": [
+        15,
+        "output"
+      ],
+      "target": [
+        10,
+        "empty"
+      ]
+    }
+  ]
+}

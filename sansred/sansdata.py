@@ -10,10 +10,13 @@ import datetime
 from copy import copy, deepcopy
 import json
 from io import BytesIO
+from collections import OrderedDict
 
 import numpy as np
 
 from dataflow.lib.uncertainty import Uncertainty
+from dataflow.lib.exporters import exports_HDF5, exports_text
+from vsansred.vsansdata import RawVSANSData, _toDictItem
 
 IS_PY3 = sys.version_info[0] >= 3
 
@@ -27,9 +30,12 @@ def _b(s):
 
 def _s(b):
     if IS_PY3:
-        return b.decode('utf-8')
+        return b.decode('utf-8') if hasattr(b, 'decode') else b
     else:
         return b
+
+class RawSANSData(RawVSANSData):
+    suffix = ".sans"
 
 class SansData(object):
     """SansData object used for storing values from a sample file (not div/mask).
@@ -46,7 +52,7 @@ class SansData(object):
             self.data = Uncertainty(data, data + (data==0))
         else:
             self.data = data
-        self.metadata = metadata
+        self.metadata = metadata if metadata is not None else {}
         # There are many places where q was not set, i think i fixed most,
         # but there might be more; be wary
         self.q = q
@@ -137,10 +143,10 @@ class SansData(object):
             else:
                 zmax = data.max()
         if self.qx is None or self.qy is None:
-            xmin = 0.5
-            xmax = 128.5
-            ymin = 0.5
-            ymax = 128.5
+            xmin = 0.0
+            xmax = 128
+            ymin = 0.0
+            ymax = 128
         else:
             xmin = self.qx_min if self.qx_min is not None else self.qx.min()
             xmax = self.qx_max if self.qx_max is not None else self.qx.max()
@@ -181,26 +187,8 @@ class SansData(object):
 
     def get_metadata(self):
         metadata = {}
-        metadata.update(pythonize(self.metadata))
+        metadata.update(_toDictItem(self.metadata, convert_bytes=True))
         return metadata
-
-def pythonize(obj):
-    output = {}
-    for a in obj:
-        attr = obj.get(a, None)
-        if isinstance(attr, np.integer):
-            attr = int(attr)
-        elif isinstance(attr, np.floating):
-            attr = float(attr)
-        elif isinstance(attr, np.ndarray):
-            attr = attr.tolist()
-        elif isinstance(attr, datetime.datetime):
-            attr = [attr.year, attr.month, attr.day,
-                    attr.hour, attr.minute, attr.second]
-        elif isinstance(attr, dict):
-            attr = pythonize(attr)
-        output[a] = attr
-    return output
 
 class Sans1dData(object):
     properties = ['x', 'v', 'dx', 'dv', 'xlabel', 'vlabel', 'xunits', 'vunits', 'xscale', 'vscale', 'metadata', 'fit_function']
@@ -221,14 +209,18 @@ class Sans1dData(object):
 
     def to_dict(self):
         props = dict([(p, getattr(self, p, None)) for p in self.properties])
-        return pythonize(props)
+        return _toDictItem(props, convert_bytes=True)
 
     def get_plottable(self):
         label = "%s: %s" % (self.metadata['run.experimentScanID'], self.metadata['sample.labl'])
         xdata = self.x.tolist()
         ydata = self.v.tolist()
-        yerr = self.dv.tolist()
-        data = [[x, y, {"yupper": y+dy, "ylower": y-dy, "xupper": x, "xlower": x}] for x,y,dy in zip(xdata, ydata, yerr)]
+        if not hasattr(self.dx, 'tolist'):
+            xerr = np.zeros_like(xdata).tolist()
+        else:
+            xerr = np.sqrt(self.dx).tolist()
+        yerr = np.sqrt(self.dv).tolist()
+        data = [[x, y, {"yupper": y+dy, "ylower": y-dy, "xupper": x+dx, "xlower": x-dx}] for x,y,dx,dy in zip(xdata, ydata, xerr, yerr)]
         plottable = {
             "type": "1d",
             "options": {
@@ -245,22 +237,147 @@ class Sans1dData(object):
     def get_metadata(self):
         return self.to_dict()
 
-    def export(self):
-        fid = BytesIO()
-        fid.write(_b("# %s\n" % json.dumps(pythonize(self.metadata)).strip("{}")))
-        columns = {"columns": [self.xlabel, self.vlabel, "uncertainty", "resolution"]}
-        units = {"units": [self.xunits, self.vunits, self.vunits, self.xunits]}
-        fid.write(_b("# %s\n" % json.dumps(columns).strip("{}")))
-        fid.write(_b("# %s\n" % json.dumps(units).strip("{}")))
-        np.savetxt(fid, np.vstack([self.x, self.v, self.dv, self.dx]).T, fmt="%.10e")
-        fid.seek(0)
-        name = getattr(self, "name", "default_name")
-        entry = getattr(self.metadata, "entry", "default_entry")
-        return {"name": name, "entry": entry, "export_string": fid.read(), "file_suffix": ".sans1d.dat"}
+    @exports_text(name="column")
+    def to_column_text(self):
+        with BytesIO() as fid:
+            fid.write(_b("# %s\n" % json.dumps(_toDictItem(self.metadata, convert_bytes=True)).strip("{}")))
+            columns = {"columns": [self.xlabel, self.vlabel, "uncertainty", "resolution"]}
+            units = {"units": [self.xunits, self.vunits, self.vunits, self.xunits]}
+            fid.write(_b("# %s\n" % json.dumps(columns).strip("{}")))
+            fid.write(_b("# %s\n" % json.dumps(units).strip("{}")))
+            np.savetxt(fid, np.vstack([self.x, self.v, self.dv, self.dx]).T, fmt="%.10e")
+            fid.seek(0)
+            value = fid.read()
 
-class Parameters(dict):
+        return {
+            "name": getattr(self, "name", "default_name"),
+            "entry": self.metadata.get("entry", "default_entry"),
+            "file_suffix": ".sans1d.dat",
+            "value": value.decode('utf-8'),
+        }
+
+class SansIQData(object):
+    def __init__(self, I=None, dI=None, Q=None, dQ=None, meanQ=None, ShadowFactor=None, label='', metadata=None):
+        self.I = I
+        self.dI = dI
+        self.Q = Q
+        self.dQ = dQ
+        self.meanQ = meanQ
+        self.ShadowFactor = ShadowFactor
+        self.label = label
+        self.metadata = metadata if metadata is not None else {}
+    
+    def get_plottable(self):
+        columns = OrderedDict([
+            ('Q', {'label': "Q", 'units': "1/Ang", 'errorbars': 'dQ'}),
+            ('I', {'label': "I(Q)", 'units': "1/cm", 'errorbars': 'dI'}),
+            ('meanQ', {'label': 'Mean Q', 'units': "1/Ang"}),
+            ('Q^4', {'label': 'Q^4', 'units': '1/Ang**4'}),
+            ('I*Q^4', {'label': 'I * Q^4', 'units': '1/cm * 1/Ang**4'}),
+            ('I*Q^2', {'label': 'I * Q^2', 'units': '1/cm * 1/Ang**2'}),
+        ])
+        datas = OrderedDict([
+            ("Q", {"values": self.Q.tolist(), "errorbars": self.dQ.tolist()}),
+            ("I", {"values": self.I.tolist(), "errorbars": self.dI.tolist()}),
+            ("meanQ", {"values": self.meanQ.tolist(), "errorbars": self.dQ.tolist()}),
+            ("Q^4", {"values": (self.meanQ**4).tolist()}),
+            ("I*Q^4", {"values": (self.I * self.meanQ**4).tolist()}),
+            ("I*Q^2", {"values": (self.I * self.meanQ**2).tolist()}),
+        ])
+        
+        name = self.metadata.get("name", "default_name")
+        entry_name = self.metadata.get("entry", "default_entry")
+        series = [{"label": "%s:%s" % (name, entry_name)}]
+        xcol = "Q"
+        ycol = "I"
+        plottable = {
+            "type": "nd",
+            "title": "%s:%s" % (name, entry_name),
+            "entry": entry_name,
+            "columns": columns,
+            "options": {
+                "series": series,
+                "xtransform": "log",
+                "ytransform": "log",
+                "axes": {
+                    "xaxis": {"label": "%s(%s)" % (columns[xcol]["label"], columns[xcol]["units"])},
+                    "yaxis": {"label": "%s(%s)" % (columns[ycol]["label"], columns[ycol]["units"])}
+                },
+                "xcol": xcol,
+                "ycol": ycol,
+                "errorbar_width": 0
+            },
+            "datas": datas
+        }
+        #print(plottable)
+        return plottable
+
+    @exports_text(name="column")
+    def to_column_text(self):
+        # export to 6-column format compatible with SASVIEW
+        # The 6 columns are | Q (1/A) | I(Q) (1/cm) | std. dev. I(Q) (1/cm) | sigmaQ | meanQ | ShadowFactor|
+        column_names = ["Q", "I", "dI", "dQ", "meanQ", "ShadowFactor"]
+        column_values = [getattr(self, cn) for cn in column_names]
+        labels = ["Q (1/A)", "I(Q) (1/cm)", "std. dev. I(Q) (1/cm)", "sigmaQ", "meanQ", "ShadowFactor"]
+
+        with BytesIO() as fid:
+            fid.write(_b("# %s\n" % json.dumps(_toDictItem(self.metadata, convert_bytes=True)).strip("{}")))
+            fid.write(_b("# %s\n" % json.dumps({"columns": labels}).strip("{}")))
+            np.savetxt(fid, np.vstack(column_values).T, fmt="%.10e")
+            fid.seek(0)
+            value = fid.read()
+
+        return {
+            "name": _s(self.metadata.get("name", "default_name")),
+            "entry": _s(self.metadata.get("entry", "default_entry")),
+            "file_suffix": ".sansIQ.dat",
+            "value": value.decode('utf-8'),
+        }
+
+    @exports_HDF5(name="NXcanSAS")
+    def to_NXcanSAS(self):
+        import h5py
+
+        fid = BytesIO()
+        h5_item = h5py.File(fid)
+
+        entry_name = self.metadata.get("entry", "entry")
+        nxentry = h5_item.create_group(entry_name)
+        nxentry.attrs.update({
+            "NX_class": "NXentry",
+            "canSAS_class": "SASentry",
+            "version": "1.0"
+        })
+        nxentry["definition"] = "NXcanSAS"
+        nxentry["run"] = "<see the documentation>"
+        nxentry["title"] = self.metadata["sample.description"]
+        datagroup = nxentry.create_group("data")
+        datagroup.attrs.update({
+            "NX_class": "NXdata",
+            "canSAS_class": "SASdata",
+            "signal": "I",
+            "I_axes": "<see the documentation>",
+            "Q_indices": 1
+        })
+        datagroup["I"] = self.I
+        datagroup["I"].attrs["units"] = "1/m"
+        datagroup["Q"] = self.Q
+        datagroup["Q"].attrs["units"] = "1/nm"
+
+        return {
+            "name": _s(self.metadata.get("name", "default_name")),
+            "entry": _s(self.metadata.get("entry", "default_entry")),
+            "file_suffix": ".sansIQ.nx.h5",
+            "value": h5_item,
+        }
+
+class Parameters(object):
+    def __init__(self, params=None):
+        self.params = params
+
     def get_metadata(self):
-        return self
+        return self.params
 
     def get_plottable(self):
-        return self
+        #return {"entry": "entry", "type": "params", "params": _toDictItem(self.metadata)}
+        return {"entry": "entry", "type": "params", "params": _toDictItem(self.params)}

@@ -41,7 +41,7 @@ Configure a python session to run the template::
 
      $ cd ~/path/to/reductus
      $ ipython --pylab
-     >>> import reflweb.config
+     >>> import web_gui.config
 
 It either case, you first need to create the template and save it to
 your disk.  To load the template into python, type the following::

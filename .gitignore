@@ -11,5 +11,6 @@ __pycache__
 /doc/sansred/
 /reflred/src/_rebin.cc
 /reflred.egg-info/
-/reflweb/config.py
-/reflweb/git_version_*
+/web_gui/config.py
+/web_gui/git_version*
+/dataflow/git_version*

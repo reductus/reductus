@@ -86,7 +86,8 @@ from io import BytesIO
 import numpy as np
 from numpy import inf, arctan2, sqrt, sin, cos, pi, radians
 
-from . import resolution
+from dataflow.lib.exporters import exports_text, exports_json, NumpyEncoder
+from .resolution import calc_Qx, calc_Qz, dTdL2dQ
 
 IS_PY3 = sys.version_info[0] >= 3
 
@@ -315,6 +316,26 @@ class Beamstop(Group):
 
 
 @set_fields
+class Monochromator(Group):
+    """
+    Monochromator properties.
+    wavelength (k nanometre)
+        Wavelength for each channel
+    wavelength_resolution (k %)
+        Wavelength resolution of the beam for each channel using 1-sigma
+        gaussian approximation dL, expressed as 100*dL/L.  The actual
+        wavelength distribution is considerably more complicated, being
+        approximately square for multi-sheet monochromators and highly
+        skewed on TOF machines.
+    """
+    columns = {
+        "wavelength": {"units": "Angstroms", "variance": "wavelength_resolution"},
+    }
+    wavelength = None # angstrom
+    wavelength_resolution = None # angstrom
+
+
+@set_fields
 class Detector(Group):
     """
     Define the detector properties.  Note that this defines a virtual
@@ -344,14 +365,20 @@ class Detector(Group):
         Detector solid angle [x,y], calculated from distance and size.
     center (2 x millimetre)
         Location of the center pixel [x,y] relative to the detector arm.
-    widths_x (nx x millimetre)
-    widths_y (ny x millimetre)
-        Pixel widths in x and y.  We assume no space between the pixels.
+    width_x (nx x millimetre)
+    width_y (ny x millimetre)
+        Pixel width in x and y.
+    offset_x (nx x millimetre)
+    offset_y (ny x millimetre)
+        Pixel offset in x and y.
     angle_x (n x degree)
     angle_y (n x degree)
         Angle of the detector arm relative to the main beam in x and y.
         This may be constant or an array of length n for the number of
         measurements in the scan.
+    angle_x_offset (nx x degree)
+    angle_y_offset (ny x degree)
+        Pixel angle relative to detector angle in x and y.
     rotation (degree)
         Angle of rotation of the detector relative to the beam.  This
         will affect how vertical integration in the region of interest
@@ -382,6 +409,9 @@ class Detector(Group):
 
         Note: There may be separate per pixel and per detector
         saturation levels.
+    mask (nx x ny)
+        Ignore data when (mask&0xFFFF != 0)
+        https://manual.nexusformat.org/classes/base_classes/NXdetector.html
 
     Measurement
     ===========
@@ -395,34 +425,40 @@ class Detector(Group):
         skewed on TOF machines.
     time_of_flight (k+1 millisecond)
         Time boundaries for time-of-flight measurement
-    counts (nx x ny x k counts OR n x nx x ny counts)
+    counts (nx x ny x k counts OR n x nx x ny counts OR n x nx x ny x k counts)
         nx x ny detector pixels
         n number of measurements
-        k time/wavelength channels
+        k time-of-flight/wavelength channels
+    counts_variance (like counts)
     """
     dims = (1, 1) # i,j
     distance = None # mm
     size = (1., 1.)  # mm
     center = (0., 0.) # mm
-    widths_x = 1. # mm
-    widths_y = 1. # mm
+    width_x = 1. # mm
+    width_y = 1. # mm
+    offset_x = 0. # mm
+    offset_y = 0. # mm
     angle_x = 0.  # degree
     angle_y = 0.  # degree
     angle_x_target = 0.  # degree
+    angle_x_offset = 0. # degree
+    angle_y_offset = 0. # degree
     rotation = 0. # degree
     efficiency = 1. # proportion
     saturation = inf # counts/sec
-    wavelength = 1. # angstrom
-    wavelength_resolution = 0. # angstrom
+    wavelength = None # angstrom
+    wavelength_resolution = None # angstrom
     time_of_flight = None  # ms
     counts = None
     counts_variance = None
+    mask = None
     deadtime = None
     deadtime_error = None
     columns = {
         "counts": {"units": "counts", "variance": "counts_variance"},
         "angle_x": {"units": "degrees"},
-        "wavelength": {"units": "Angstroms", "variance": "wavelength_resolution"}
+        "wavelength": {"units": "Angstroms", "variance": "wavelength_resolution"},
     }
 
     @property
@@ -475,27 +511,20 @@ class Monitor(Group):
         user may generate a counts vector, for example by estimating
         the count rate by other means, in order to combine data
         measured by time with data measured by monitor when the
-        monitor values are otherwise unreliable.  Variance is assumed
-        to be the number of counts, after any necessary rebinning.
+        monitor values are otherwise unreliable.
+    counts_variance (n x k counts)
+        Variance is set to the number of counts but scaled during
+        monitor saturation and deadtime corrections.
+    roi_counts (n x k counts)
+        Count against a region of interest (ROI) on the detector.
+        **TODO**: ROI is **not** scaled during detector deadtime corrections,
+        and there is no correction for detector efficiency.
+    roi_variance (n x k counts)
+        Variance is to be the number of counts.
     count_time (n seconds)
         Duration of the measurement.  For scanning instruments, there is
         a separate duration for each measurement.  For TOF, this is a
         single value equal to the duration of the entire measurement.
-    source_power (n source_power_units)
-        The source power for each measurement.  For situations when the
-        monitor cannot be trusted (which can happen from time to time on
-        some instruments), we can use the number of protons incident on
-        the target (proton charge) or the energy of the source (reactor
-        power integrated over the duration of each measurement) as a proxy
-        for the monitor.  So long as the we normalize both the slit
-        measurement and the reflectivity measurement by the power, this
-        should give us a reasonable estimate of the reflectivity.  If
-        the information is available, this will be a better proxy for
-        monitor than measurement duration.
-    base ('time' | 'monitor' | 'power')
-        The measurement rate basis which should be used to normalize
-        the data.  This is initialized by the file loader, but may
-        be overridden during reduction.
     time_step (seconds)
         The count_time timer has a reporting unit, e.g. second, or
         millisecond, or in the case of NCNR ICP files, hundredths of
@@ -503,6 +532,21 @@ class Monitor(Group):
         is assumed to be uniform over the time_step, centered on
         the reported time, with a gaussian approximation of uncertainty
         being sqrt(time_step/12).
+    source_power (n source_power_units)
+        The average source power for each measurement. For situations when
+        the monitor cannot be trusted (which can happen from time to time on
+        some instruments), we can use the number of protons incident on
+        the target (proton charge) or the energy of the source (reactor
+        power integrated over the duration of each measurement) as a proxy
+        for the monitor.
+    source_power_units ('coulombs/s' | 'megawatts')
+        Units for source power.
+    source_power_variance (n source_power_units)
+        Variance in the measured source power
+    base ('time' | 'monitor' | 'roi' | 'power')
+        The measurement rate basis which should be used to normalize
+        the data.  This is initialized by the file loader, but may
+        be overridden during reduction.
     start_time (n seconds)
         For scanning instruments the start of each measurement relative
         to start of the scan.  Note that this is not simply sum of the
@@ -522,10 +566,6 @@ class Monitor(Group):
         ratio used to normalize data on some instruments.
     time_of_flight (k+1 millisecond)
         Time boundaries for the time-of-flight measurement
-    source_power_units ('coulombs' | 'megawatthours')
-        Units for source power.
-    source_power_variance (n source_power_units)
-        Variance in the measured source power
 
     The corrected monitor counts field will start as None, but may be
     set by a dead time correction, which scales the monitor according
@@ -537,6 +577,8 @@ class Monitor(Group):
     sampled_fraction = None
     counts = None
     counts_variance = None
+    roi_counts = None
+    roi_variance = None
     start_time = None
     count_time = None
     time_step = 1 # Default to nearest second
@@ -548,6 +590,7 @@ class Monitor(Group):
     saturation = None
     columns = {
         "counts": {"units": "counts", "variance": "counts_variance"},
+        "roi_counts": {"units": "counts", "variance": "roi_variance"},
         "count_time": {"units": "seconds"}
     }
     deadtime = None
@@ -575,6 +618,7 @@ class Intent(object):
     """
     slit = 'intensity'
     spec = 'specular'
+    back = 'background'
     backp = 'background+'
     backm = 'background-'
     rockQ = 'rock qx'
@@ -586,7 +630,7 @@ class Intent(object):
     other = 'other'
     scan = 'scan'
 
-    intents = (slit, spec, backp, backm, rockQ, rock3, rock4,
+    intents = (slit, spec, back, backp, backm, rockQ, rock3, rock4,
                deff, time, other, scan, none)
 
     @staticmethod
@@ -662,8 +706,10 @@ class ReflData(Group):
     Reflectometry data structure, giving a predictable name space for the
     reduction steps regardless of input file format.
     """
+
     _groups = (
         ("slit1", Slit), ("slit2", Slit), ("slit3", Slit), ("slit4", Slit),
+        ("monochromator", Monochromator),
         ("detector", Detector),
         ("sample", Sample),
         ("monitor", Monitor),
@@ -680,6 +726,8 @@ class ReflData(Group):
     slit3 = None      # type: Slit
     #: Post sample slits
     slit4 = None      # type: Slit
+    #: Monochromator wavelength
+    monochromator = None  # type: Monochromator
     #: Detector geometry, efficiency and counts
     detector = None   # type: Detector
     #: Counts and/or durations
@@ -717,6 +765,8 @@ class ReflData(Group):
     date = datetime.datetime(1970, 1, 1)
     #: Duration of the measurement.
     duration = 0
+    #: Nominal attenuation as recorded in the data file, or 1.0 if not recorded
+    attenuation = 1.0
     #: '' unpolarized
     #: '+' spin up
     #: '-' spin down
@@ -727,8 +777,6 @@ class ReflData(Group):
     normbase = None
     #: List of warnings generated when the file was loaded
     warnings = None
-    #: List of corrections that have been applied to the data
-    messages = None
     #: Value label for y-axis on 1-D or colorbar on 2-D plots.
     #: Label will change when the value is normalized.
     vlabel = 'Intensity'
@@ -842,35 +890,81 @@ class ReflData(Group):
         self._dv = dv
 
     @property
+    def Ti(self):
+        return self.sample.angle_x
+
+    @property
+    def Td(self):
+        return self.detector.angle_x
+
+    @property
+    def Tf(self):
+        Ti, Td = self.Ti, self.Td
+        return Td - Ti if Ti is not None and Td is not None else None
+
+    @property
+    def Ti_target(self):
+        return self.sample.angle_x_target
+
+    @property
+    def Td_target(self):
+        return self.detector.angle_x_target
+
+    @property
+    def Tf_target(self):
+        Ti, Td = self.Ti_target, self.Td_target
+        return Td - Ti if Ti is not None and Td is not None else None
+
+    @property
+    def Li(self):
+        return self.monochromator.wavelength
+
+    @property
+    def Ld(self):
+        return self.detector.wavelength
+
+    @property
     def Qz(self):
-        A, B, L = self.sample.angle_x, self.detector.angle_x, self.detector.wavelength
+        # Note: specular reflectivity assumes elastic scattering
+        Li = Ld = self.Ld
+        #print("Qz_basis", self.Qz_basis, self.Ti.shape, self.Td.shape, self.Ti_target.shape, self.Td_target.shape, Li.shape)
         if self.Qz_basis == 'actual':
-            retval = 2*pi/L * (sin(radians(B - A)) + sin(radians(A)))
-        elif self.Qz_basis == 'detector':
-            retval = 4*pi/L * (sin(radians(B)/2.0))
-        elif self.Qz_basis == 'sample':
-            retval = 4*pi/L * (sin(radians(A)))
-        elif self.Qz_basis == 'target':
-            retval = self.Qz_target
-        else:
-            raise KeyError("Qz basis must be one of [actual, detector, sample, target]")
-        return retval
+            return calc_Qz(self.Ti, self.Td, Li, Ld)
+        if self.Qz_basis == 'target':
+            if self.Qz_target is not None:
+                return self.Qz_target
+            return calc_Qz(self.Ti_target, self.Td_target, Li, Ld)
+        if self.Qz_basis == 'detector':
+            return calc_Qz(self.Td/2, self.Td, Li, Ld)
+        if self.Qz_basis == 'sample':
+            return calc_Qz(self.Ti, 2*self.Ti, Li, Ld)
+        raise KeyError("Qz basis must be one of [actual, detector, sample, target]")
 
     @property
     def Qx(self):
-        A, B, L = self.sample.angle_x, self.detector.angle_x, self.detector.wavelength
+        # Note: specular reflectivity assumes elastic scattering
+        Li = Ld = self.Ld
         if self.Qz_basis == 'actual':
-            return 2*pi/L * (cos(radians(B - A)) - cos(radians(A)))
-        else:
-            return np.zeros_like(A)
+            return calc_Qx(self.Ti, self.Td, Li, Ld)
+        if self.Qz_basis == 'target':
+            return np.zeros_like(self.Td)
+            #return calc_Qx(self.Ti_target, self.Td_target, Li, Ld)
+        if self.Qz_basis == 'detector':
+            return np.zeros_like(self.Td)
+        if self.Qz_basis == 'sample':
+            return np.zeros_like(self.Ti)
+        raise KeyError("Qz basis must be one of [actual, detector, sample, target]")
 
     @property
     def dQ(self):
         if self.angular_resolution is None:
-            raise ValueError("Need to estimate divergence before requesting dQ")
-        T, dT = self.sample.angle_x, self.angular_resolution+self.sample.broadening
-        L, dL = self.detector.wavelength, self.detector.wavelength_resolution
-        return resolution.dTdL2dQ(T, dT, L, dL)
+            return None
+            #raise ValueError("Need to estimate divergence before requesting dQ")
+        # TODO: move sample broadening to to the dQ calculation
+        T, dT = self.Ti, self.angular_resolution
+        L, dL = self.Ld, self.detector.wavelength_resolution
+        #print(T.shape, dT.shape, L.shape, dL.shape)
+        return dTdL2dQ(T, dT, L, dL)
 
     @property
     def columns(self):
@@ -884,7 +978,8 @@ class ReflData(Group):
             ('Qx', {'label': 'Qx', 'units': "1/Ang"}),
             ('angular_resolution', {'label': 'Angular Resolution (1-sigma)', 'units': 'degrees'})
         ])
-        for subclsnm in ['sample', 'detector', 'monitor', 'slit1', 'slit2', 'slit3', 'slit4']:
+        # TODO: duplicate code in columns, apply_mask and refldata._group
+        for subclsnm in ['sample', 'detector', 'monitor', 'slit1', 'slit2', 'slit3', 'slit4', 'monochromator']:
             subcls = getattr(self, subclsnm, None)
             if subcls is None:
                 continue
@@ -921,11 +1016,13 @@ class ReflData(Group):
         for prop in ['_v', '_dv', 'angular_resolution', 'Qz_target']:
             v = getattr(self, prop, None)
             if check_array(v):
-                setattr(self, prop, v[make_mask(v, mask_indices)])
+                masked_v = v[make_mask(v, mask_indices)]
+                setattr(self, prop, masked_v)
+                self.points = len(masked_v)
 
         self.scan_value = [v[make_mask(v, mask_indices)] if check_array(v) else v for v in self.scan_value]
 
-        for subclsnm in ['sample', 'detector', 'monitor', 'slit1', 'slit2', 'slit3', 'slit4']:
+        for subclsnm in ['sample', 'detector', 'monitor', 'slit1', 'slit2', 'slit3', 'slit4', 'monochromator']:
             subcls = getattr(self, subclsnm, None)
             if subcls is None:
                 continue
@@ -934,6 +1031,11 @@ class ReflData(Group):
                 v = getattr(subcls, col, None)
                 if check_array(v):
                     setattr(subcls, col, v[make_mask(v, mask_indices)])
+                # handle col_target
+                target_name = col + "_target"
+                v = getattr(subcls, target_name, None)
+                if check_array(v):
+                    setattr(subcls, target_name, v[make_mask(v, mask_indices)])
                 # handle variance
                 dv_name = sub_cols[col].get('variance', None)
                 if dv_name is not None:
@@ -944,24 +1046,23 @@ class ReflData(Group):
         for attr, cls in ReflData._groups:
             setattr(self, attr, cls())
         self.warnings = []
-        self.messages = []
         Group.__init__(self, **kw)
 
     def __str__(self):
         base = [_str(self, indent=2)]
         others = ["".join(("  ", s, "\n", str(getattr(self, s))))
                   for s, _ in ReflData._groups]
-        return "\n".join(base+others+self.messages)
+        return "\n".join(base+others)
 
-    def todict(self):
-        state = _toDict(self)
-        groups = dict((s, _toDict(getattr(self, s)))
-                      for s, _ in ReflData._groups)
+    def todict(self, maxsize=np.inf):
+        state = _toDict(self, maxsize=maxsize)
+        groups = {s: _toDict(getattr(self, s), maxsize=maxsize)
+                  for s, _ in ReflData._groups}
         state.update(groups)
         return state
 
     def fromdict(self, state):
-        props = dict((k, v) for k, v in state.items() if k in self._fields)
+        props = {k: v for k, v in state.items() if k in self._fields}
         props = _fromDict(props)
         for k, v in props.items():
             setattr(self, k, v)
@@ -969,38 +1070,67 @@ class ReflData(Group):
             props = _fromDict(state[attr])
             setattr(self, attr, cls(**props))
 
-    def __or__(self, pipeline):
-        return pipeline(self)
-
-    def __ior__(self, pipeline):
-        return pipeline.apply_and_log(self)
-
     def warn(self, msg):
         """Record a warning that should be displayed to the user"""
         warnings.warn(msg)
         self.warnings.append(msg)
 
-    def log(self, msg):
-        """Record corrections that have been applied to the data"""
-        #print "log:",msg
-        self.messages.append(msg)
+    def get_metadata(self):
+        """
+        Return metadata used by webreduce.
 
-    def log_dependency(self, label, other):
-        if other.messages:
-            self.messages.append(label + ":")
-            self.messages.extend("  "+s for s in other.messages)
-        if other.warnings:
-            self.warnings.append(label + ":")
-            self.warnings.extend("  "+s for s in other.warnings)
+        The following are used in webreduce/instruments/ncnr.refl.js::
+
+            {
+                x: [..., xmin, ..., xmax, ...]}
+                sample: {name: str, description: str}
+                intent: str
+                polarization: str
+                filenumber: int
+                filename: str
+                entryname: str
+                mtime: int
+                source: str name of data server uri
+            }
+
+        *x* min and max are used for drawing the range indicators.
+
+        *sample.description* is displayed when hovering over link.
+
+        *source* and *filename* are needed for creating the hdf reader link.
+
+        *sample.name > intent > filenumber > polarization* forms the default
+        tree ordering.
+
+        Users can define their own tree organization from the other fields
+        in the dataset, so we should probably include trajectoryData entries.
+        Sample environment conditions could also be useful for some
+        experiments.  In practice, though, the defaults are going to be
+        good enough, and users won't be changing them.  Not sure what
+        happens when a vector field is used as a sort criterion.
+        """
+        # TODO: Load and return minimal metadata for the file browser.
+        # TODO: Delay loading bulk of the data until file is selected.
+
+        # Limit metadata to scalars and small arrays
+        data = self.todict(maxsize=1000)
+        # If data['x'] is not a vector or if it was too big, then override
+        if self.x.ndim > 1 or len(data['x']) == 0 or self.x.ndim > 1:
+            if Intent.isslit(self.intent):
+                data['x'] = self.slit1.x.tolist()
+            else:
+                data['x'] = self.sample.angle_x.tolist()
+        return data
 
     def plot(self, label=None):
-        from matplotlib import pyplot as plt
         if label is None:
             label = self.name+self.polarization
+
+        from matplotlib import pyplot as plt
         xerr = self.dx if self.angular_resolution is not None else None
         x, dx, xunits, xlabel = self.x, xerr, self.xunits, self.xlabel
         #x, dx, xunits, xlabel = self.detector.angle_x, self.angular_resolution, 'detector angle', 'deg'
-        plt.errorbar(x, self.v, yerr=self.dv, xerr=xerr, label=label, fmt='.')
+        plt.errorbar(x, self.v, yerr=self.dv, xerr=xerr, label=label, fmt='.-')
         plt.xlabel("%s (%s)"%(xlabel, xunits) if xunits else xlabel)
         plt.ylabel("%s (%s)"%(self.vlabel, self.vunits) if self.vunits else self.vlabel)
         if not Intent.isslit(self.intent):
@@ -1008,69 +1138,75 @@ class ReflData(Group):
 
     def save(self, filename):
         with open(filename, 'w') as fid:
-            fid.write(self.export())
+            fid.write(self.to_column_text()["value"])
 
-    def export(self):
-        fid = BytesIO()  # numpy.savetxt requires a byte stream
-        for n in ['name', 'entry', 'polarization']:
-            _write_key_value(fid, n, getattr(self, n))
-        wavelength = getattr(self.detector, "wavelength", None)
-        wavelength_resolution = getattr(self.detector, "wavelength_resolution", None)
-        if wavelength is not None:
-            _write_key_value(fid, "wavelength", float(wavelength[0]))
-        if wavelength_resolution is not None:
-            _write_key_value(fid, "wavelength_resolution", float(wavelength_resolution[0]))
-        if Intent.isscan(self.intent):
-            _write_key_value(fid, "columns", list(self.columns.keys()))
-            _write_key_value(fid, "units", [c.get("units", "") for c in self.columns.values()])
-            # add column headers
-            header_string = "\t".join(list(self.columns.keys())) + "\n"
-            if IS_PY3:
-                header_string = header_string.encode('utf-8')
-            fid.write(header_string)
-            def get_item(obj, path):
-                result = obj
-                keylist = path.split("/")
-                while len(keylist) > 0:
-                    result = getattr(result, keylist.pop(0), {})
-                return result
-            data_arrays = [self.scan_value[self.scan_label.index(p)] if v.get('is_scan', False) else get_item(self, p) for p,v in self.columns.items()]
-            data_arrays = [np.resize(d, self.points) for d in data_arrays]
-            format_string = "\t".join(["%s" if d.dtype.kind in ["S", "U"] else "%.10e" for d in data_arrays]) + "\n"
-            for i in range(self.points):
-                datarow = format_string % tuple([d[i] for d in data_arrays])
-                if IS_PY3:
-                    datarow = datarow.encode('utf-8')
-                fid.write(datarow)
-            export_string = fid.getvalue()
-            if IS_PY3:
-                export_string = export_string.decode('utf-8')
-            name = getattr(self, "name", "default_name")
-            entry = getattr(self, "entry", "default_entry")
-            return {"name": name, "entry": entry, "export_string": export_string, "file_suffix": ".dat"}
-        else:
-            _write_key_value(fid, "columns", [self.xlabel, self.vlabel, "uncertainty", "resolution"])
-            _write_key_value(fid, "units", [self.xunits, self.vunits, self.vunits, self.xunits])
-            data = np.vstack([self.x, self.v, self.dv, self.dx]).T
-            np.savetxt(fid, data, fmt="%.10e")
-            export_string = fid.getvalue()
-            if IS_PY3:
-                export_string = export_string.decode('utf-8')
-            name = getattr(self, "name", "default_name")
-            entry = getattr(self, "entry", "default_entry")
-            return {"name": name, "entry": entry, "export_string": export_string, "file_suffix": ".refl"}
+    # TODO: split refldata in to ReflBase and PointRefl so PSD doesn't inherit column format
+    @exports_text("column")
+    def to_column_text(self):
+        # Note: subclass this for non-traditional reflectometry measurements
+        with BytesIO() as fid:  # numpy.savetxt requires a byte stream
+            for n in ['name', 'entry', 'polarization']:
+                _write_key_value(fid, n, getattr(self, n))
+            wavelength = getattr(self.detector, "wavelength", None)
+            wavelength_resolution = getattr(self.detector, "wavelength_resolution", None)
+            if wavelength is not None:
+                _write_key_value(fid, "wavelength", float(wavelength[0]))
+            if wavelength_resolution is not None:
+                _write_key_value(fid, "wavelength_resolution", float(wavelength_resolution[0]))
+            if Intent.isscan(self.intent):
+                _write_key_value(fid, "columns", list(self.columns.keys()))
+                _write_key_value(fid, "units", [c.get("units", "") for c in self.columns.values()])
+                # add column headers
+                header_string = "\t".join(list(self.columns.keys())) + "\n"
+                fid.write(header_string.encode('utf-8'))
+                data_arrays = [
+                    self.scan_value[self.scan_label.index(p)] if v.get('is_scan', False)
+                    else get_item_from_path(self, p)
+                    for p, v in self.columns.items()
+                ]
+                data_arrays = [np.resize(d, self.points) for d in data_arrays]
+                format_string = "\t".join([
+                    "%s" if d.dtype.kind in ["S", "U"]
+                    else "%.10e"
+                    for d in data_arrays
+                    ]) + "\n"
+                for i in range(self.points):
+                    datarow = format_string % tuple([d[i] for d in data_arrays])
+                    fid.write(datarow.encode('utf-8'))
+                suffix = ".dat"
+            else:
+                _write_key_value(fid, "columns", [self.xlabel, self.vlabel, "uncertainty", "resolution"])
+                _write_key_value(fid, "units", [self.xunits, self.vunits, self.vunits, self.xunits])
+                data = np.vstack([self.x, self.v, self.dv, self.dx]).T
+                np.savetxt(fid, data, fmt="%.10e")
+                suffix = ".refl"
+            value = fid.getvalue()
+
+        return {
+            "name": self.name,
+            "entry": self.entry,
+            "file_suffix": suffix,
+            "value": value.decode('utf-8'),
+        }
 
     def get_plottable(self):
-        columns = self.columns
-        data_arrays = [self.scan_value[self.scan_label.index(p)] if v.get('is_scan', False) else get_item(self, p) for p,v in columns.items()]
+        # Note: subclass this for non-traditional reflectometry measurements
+        columns = self.columns # {name: {label: str, units: str, errorbars: str}}
+        data_arrays = [
+            self.scan_value[self.scan_label.index(p)] if v.get('is_scan', False)
+            else get_item_from_path(self, p)
+            for p, v in columns.items()]
         data_arrays = [np.resize(d, self.points).tolist() for d in data_arrays]
-        datas = dict([(c, {"values": d}) for c,d in zip(columns.keys(), data_arrays)])
+        datas = {c: {"values": d} for c, d in zip(columns.keys(), data_arrays)}
         # add errorbars:
         for k in columns.keys():
             if 'errorbars' in columns[k]:
-                print('errorbars found for column %s' % (k,))
-                errorbars = get_item(self, columns[k]['errorbars'])
-                datas[k]["errorbars"] = errorbars.tolist()
+                #print('errorbars found for column %s' % (k,))
+                errorbars = get_item_from_path(self, columns[k]['errorbars'])
+                if errorbars is not None:
+                    datas[k]["errorbars"] = errorbars.tolist()
+                else:
+                    print(f"===> missing errorbars {columns[k]['errorbars']} for {k}")
         name = getattr(self, "name", "default_name")
         entry = getattr(self, "entry", "default_entry")
         series = [{"label": "%s:%s" % (name, entry)}]
@@ -1096,18 +1232,114 @@ class ReflData(Group):
         #print(plottable)
         return plottable
 
-    def get_metadata(self):
-        return self.todict()
 
-def get_item(obj, path):
-    result = obj
-    keylist = path.split("/")
-    while len(keylist) > 0:
-        result = getattr(result, keylist.pop(0), {})
-    return result
+class PSDData(ReflData):
+    """PSD data for reflectometer"""
+    def plot(self, label=None):
+        if label is None:
+            label = self.name+self.polarization
+
+        from matplotlib import pyplot as plt
+        data = np.log(self.v + (self.v == 0))
+        plt.pcolormesh(data, label=label)
+        plt.xlabel("pixel")
+        plt.ylabel("%s (%s)"%(self.xlabel, self.xunits))
+
+    def get_axes(self):
+        ny, nx = self.v.shape
+        x, xlabel = np.arange(1, nx+1), "pixel"
+        if Intent.isslit(self.intent):
+            y, ylabel = self.slit1.x, "S1"
+        elif Intent.isspec(self.intent):
+            y, ylabel = self.Qz_target, "Qz"
+        else:
+            y, ylabel = np.arange(1, ny+1), "point"
+        return (x, xlabel), (y, ylabel)
+
+    def get_plottable(self):
+        name = getattr(self, "name", "default_name")
+        entry = getattr(self, "entry", "default_entry")
+        def limits(v, n):
+            low, high = v.min(), v.max()
+            delta = (high - low) / max(n-1, 1)
+            # TODO: move range cleanup to plotter
+            if delta == 0.:
+                delta = v[0]/10.
+            return low - delta/2, high+delta/2
+        data = self.v
+        ny, nx = data.shape
+        (x, xlabel), (y, ylabel) = self.get_axes()
+        #print("data shape", nx, ny)
+        xmin, xmax = limits(x, nx)
+        ymin, ymax = limits(y, ny)
+        # TODO: self.detector.mask
+        zmin, zmax = data.min(), data.max()
+        # TODO: move range cleanup to plotter
+        if zmin <= 0.:
+            if (data > 0).any():
+                zmin = data[data > 0].min()
+            else:
+                data[:] = zmin = 1e-10
+            if zmin >= zmax:
+                zmax = 10*zmin
+        dims = {
+            "xmin": xmin, "xmax": xmax, "xdim": nx,
+            "ymin": ymin, "ymax": ymax, "ydim": ny,
+            "zmin": zmin, "zmax": zmax,
+        }
+        z = data.T.ravel('C').tolist()
+        plottable = {
+            #'type': '2d_multi',
+            #'dims': {'zmin': zmin, 'zmax': zmax},
+            #'datasets': [{'dims': dims, 'data': z}],
+            'type': '2d',
+            'dims': dims,
+            'z': [z],
+            'entry': entry,
+            'title': "%s:%s" % (name, entry),
+            'options': {
+                'fixedAspect': {
+                    'fixAspect': False,
+                    'aspectRatio': 1.0,
+                },
+            },
+            'xlabel': xlabel,
+            'ylabel': ylabel,
+            'zlabel': 'Intensity (I)',
+            'ztransform': 'log',
+        }
+        #print(plottable)
+        return plottable
+
+    # TODO: Define export format for partly reduced PSD data.
+    @exports_json("json")
+    def to_json_text(self):
+        name = getattr(self, "name", "default_name")
+        entry = getattr(self, "entry", "default_entry")
+        return {
+            "name": name,
+            "entry": entry,
+            "file_suffix": ".dat",
+            "value": self._toDict(),
+            }
+
+    # Kill column writer for now
+    def to_column_text(self):
+        pass
+
+def get_item_from_path(obj, path):
+    """
+    Fetch *obj.a.b.c* from path *"a/b/c"*.
+
+    Returns None if path does not exist.
+    """
+    *head, tail = path.split("/")
+    for key in head:
+        obj = getattr(obj, key, {})
+    return getattr(obj, tail, None)
 
 def _write_key_value(fid, key, value):
-    value_str = json.dumps(value)
+    value_str = json.dumps(value, cls=NumpyEncoder)
     if IS_PY3:
         fid.write('# "{0}": {1}\n'.format(key, value_str).encode('utf-8'))
     else:
@@ -1122,25 +1354,24 @@ def _str(object, indent=4):
     prefix = " "*indent
     return prefix+("\n"+prefix).join(props)
 
-def _toDict(obj):
-    props = {}
+def _toDict(obj, maxsize=np.inf):
     properties = list(getattr(obj, '_fields', ()))
     properties += list(getattr(obj, '_props', ()))
-    for a in properties:
-        props[a] = _toDictItem(getattr(obj, a))
+    props = {a: _toDictItem(getattr(obj, a), maxsize=maxsize)
+             for a in properties}
     return props
 
-def _toDictItem(obj):
+def _toDictItem(obj, maxsize=None):
     if isinstance(obj, np.integer):
         obj = int(obj)
     elif isinstance(obj, np.floating):
         obj = float(obj)
     elif isinstance(obj, np.ndarray):
-        obj = obj.tolist()
+        obj = obj.tolist() if obj.size < maxsize else [] #[float(obj.min()), float(obj.max())]
     elif isinstance(obj, datetime.datetime):
         obj = [obj.year, obj.month, obj.day, obj.hour, obj.minute, obj.second]
-    elif isinstance(obj, list):
-        obj = [_toDictItem(a) for a in obj]
+    elif isinstance(obj, (list, tuple)):
+        obj = [_toDictItem(a, maxsize) for a in obj]
     return obj
 
 def _fromDict(props):

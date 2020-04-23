@@ -17,7 +17,7 @@ from numpy import (cos, pi, cumsum, arange, ndarray, ones, zeros, array,
 
 from numpy.ma import MaskedArray
 
-from reflred.nexusref import h5_open_zip
+from dataflow.lib.h5_open import h5_open_zip
 
 from dataflow.core import Template
 from dataflow.calc import process_template

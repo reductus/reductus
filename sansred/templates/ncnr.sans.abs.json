@@ -1,0 +1,293 @@
+{
+  "modules": [
+    {
+      "x": 10,
+      "module": "ncnr.sans.SuperLoadSANS",
+      "config": {
+        "filelist": []
+      },
+      "y": 5,
+      "title": "sample"
+    },
+    {
+      "x": 10,
+      "module": "ncnr.sans.SuperLoadSANS",
+      "config": {
+        "filelist": []
+      },
+      "y": 65,
+      "title": "empty cell"
+    },
+    {
+      "x": 10,
+      "module": "ncnr.sans.SuperLoadSANS",
+      "config": {
+        "filelist": []
+      },
+      "y": 140,
+      "title": "empty trans"
+    },
+    {
+      "x": 5,
+      "module": "ncnr.sans.SuperLoadSANS",
+      "config": {
+        "filelist": []
+      },
+      "y": 110,
+      "title": "sample trans"
+    },
+    {
+      "x": 195,
+      "module": "ncnr.sans.generate_transmission",
+      "y": 135,
+      "title": "Gen trans"
+    },
+    {
+      "x": 10,
+      "module": "ncnr.sans.SuperLoadSANS",
+      "config": {
+        "filelist": []
+      },
+      "y": 35,
+      "title": "blocked"
+    },
+    {
+      "x": 200,
+      "module": "ncnr.sans.subtract",
+      "y": 5,
+      "title": "Subtract"
+    },
+    {
+      "x": 230,
+      "module": "ncnr.sans.subtract",
+      "y": 55,
+      "title": "Subtract"
+    },
+    {
+      "x": 380,
+      "module": "ncnr.sans.product",
+      "y": 30,
+      "title": "Product"
+    },
+    {
+      "x": 515,
+      "module": "ncnr.sans.subtract",
+      "y": 5,
+      "title": "Subtract"
+    },
+    {
+      "x": 680,
+      "module": "ncnr.sans.correct_detector_sensitivity",
+      "y": 5,
+      "title": "Det sensit"
+    },
+    {
+      "x": 385,
+      "module": "ncnr.sans.LoadSANS",
+      "y": 130,
+      "title": "empty"
+    },
+    {
+      "x": 520,
+      "module": "ncnr.sans.generate_transmission",
+      "y": 75,
+      "title": "Gen trans"
+    },
+    {
+      "x": 935,
+      "module": "ncnr.sans.absolute_scaling",
+      "y": 50,
+      "title": "Abs Scale"
+    },
+    {
+      "module": "ncnr.sans.LoadDIV",
+      "title": "DIV",
+      "x": 385,
+      "y": 160,
+      "config": {
+        "filelist": [
+          {
+            "path": "ncnrdata/ancillary/ng7sans/DIV/PLEX_20190315_NG7.DIV",
+            "source": "ncnr",
+            "mtime": 1552662424,
+            "entries": [
+              "entry"
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "wires": [
+    {
+      "target": [
+        6,
+        "subtrahend"
+      ],
+      "source": [
+        0,
+        "output"
+      ]
+    },
+    {
+      "target": [
+        6,
+        "minuend"
+      ],
+      "source": [
+        5,
+        "output"
+      ]
+    },
+    {
+      "target": [
+        7,
+        "minuend"
+      ],
+      "source": [
+        5,
+        "output"
+      ]
+    },
+    {
+      "target": [
+        7,
+        "subtrahend"
+      ],
+      "source": [
+        1,
+        "output"
+      ]
+    },
+    {
+      "target": [
+        4,
+        "in_beam"
+      ],
+      "source": [
+        3,
+        "output"
+      ]
+    },
+    {
+      "target": [
+        4,
+        "empty_beam"
+      ],
+      "source": [
+        2,
+        "output"
+      ]
+    },
+    {
+      "target": [
+        8,
+        "factor_param"
+      ],
+      "source": [
+        4,
+        "output"
+      ]
+    },
+    {
+      "target": [
+        8,
+        "data"
+      ],
+      "source": [
+        7,
+        "output"
+      ]
+    },
+    {
+      "target": [
+        9,
+        "subtrahend"
+      ],
+      "source": [
+        6,
+        "output"
+      ]
+    },
+    {
+      "target": [
+        9,
+        "minuend"
+      ],
+      "source": [
+        8,
+        "output"
+      ]
+    },
+    {
+      "target": [
+        10,
+        "sansdata"
+      ],
+      "source": [
+        9,
+        "output"
+      ]
+    },
+    {
+      "target": [
+        12,
+        "in_beam"
+      ],
+      "source": [
+        3,
+        "output"
+      ]
+    },
+    {
+      "target": [
+        12,
+        "empty_beam"
+      ],
+      "source": [
+        11,
+        "output"
+      ]
+    },
+    {
+      "target": [
+        13,
+        "sample"
+      ],
+      "source": [
+        10,
+        "output"
+      ]
+    },
+    {
+      "target": [
+        13,
+        "empty"
+      ],
+      "source": [
+        11,
+        "output"
+      ]
+    },
+    {
+      "target": [
+        13,
+        "Tsam"
+      ],
+      "source": [
+        12,
+        "output"
+      ]
+    },
+    {
+      "source": [
+        14,
+        "output"
+      ],
+      "target": [
+        13,
+        "div"
+      ]
+    }
+  ]
+}

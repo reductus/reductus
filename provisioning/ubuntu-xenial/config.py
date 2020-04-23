@@ -18,10 +18,8 @@ data_sources = [
     {
         "name": "ncnr",
         "url": "https://www.ncnr.nist.gov/pub/",
-        "start_path": "ncnrdata"
+        "start_path": "ncnrdata",
+        "file_helper_url": "https://www.ncnr.nist.gov/ipeek/listftpfiles.php"
     },
 ]
-file_helper_url = {
-    "ncnr": "https://www.ncnr.nist.gov/ipeek/listftpfiles.php"
-}
 instruments = ["refl", "ospec", "sans"]

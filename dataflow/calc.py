@@ -232,7 +232,7 @@ def _eval_node(node_id, module, inputs, template_fields, user_fields):
     for par in module.inputs:
         name = par["id"]
         values = inputs[name]
-        #print "inputs", node_id, name, values
+        #print("inputs", node_id, name, values)
         # for value in values: _check_datatype(par, value)
         if len(values) == 0:
             # If no inputs, then either send an empty list or None, depending
@@ -330,7 +330,7 @@ def fingerprint_node(module, node_config, inputs_fp):
     """
     Create a unique sha1 hash for a module based on its attributes and inputs.
     """
-    config = module.get('config', {})
+    config = module.get('config', {}).copy()
     config.update(node_config)
     config_str = str(_format_ordered(config))
     current_module_version = lookup_module(module['module']).version

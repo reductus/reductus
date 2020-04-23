@@ -147,13 +147,15 @@ def _build_all_units():
 
     energy = _build_metric_units('electronvolt', 'eV')
 
+    power = _build_metric_units('watt', 'W')
+
     # APS files may be using 'a.u.' for 'arbitrary units'.  Other
     # facilities are leaving the units blank, using ??? or not even
     # writing the units attributes.
     unknown = {None:1, '???':1, '': 1, 'a.u.':1}
 
     dims = [unknown, distance, time, angle, frequency,
-            temperature, charge, sld, Q, energy]
+            temperature, charge, sld, Q, energy, power]
     return dims
 
 

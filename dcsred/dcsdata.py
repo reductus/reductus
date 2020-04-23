@@ -16,22 +16,25 @@ def _b(s):
         return s
 
 from dataflow.lib import octave
+from dataflow.lib.exporters import exports_HDF5, exports_text
 
 class RawData(object):
     def __init__(self, name, data):
         histo_array = data.pop("histodata")
         self.histodata = histo_array
         #self.histodata = Uncertainty(histo_array, histo_array)
-        self.metadata = data
+        self.metadata = {
+            "name": name,
+            "entry": "entry"
+        }
+        self.metadata.update(data)
         self.name = name
-        self.metadata["name"] = name
-        self.metadata["entry"] = "entry"
 
     def todict(self):
         return _toDictItem(self.metadata)
 
     def get_plottable(self):
-        return {"entry": "entry", "type": "params", "params": {"name": self.name}}
+        return {"entry": "entry", "type": "metadata", "values": _toDictItem(self.metadata)}
 
     def get_metadata(self):
         return _toDictItem(self.metadata)
@@ -168,27 +171,33 @@ class DCS1dData(object):
     def get_metadata(self):
         return self.to_dict()
 
-    def export(self):
-        fid = io.BytesIO()
-        #fid.write(_b("# %s\n" % json.dumps(_toDictItem(self.metadata)).strip("{}")))
-        metadata = {"name": self.metadata["name"]}
-        fid.write(_b("# %s\n" % json.dumps(metadata).strip("{}")))
-        columns = {"columns": [self.xlabel, self.vlabel, "uncertainty", "resolution"]}
-        units = {"units": [self.xunits, self.vunits, self.vunits, self.xunits]}
-        fid.write(_b("# %s\n" % json.dumps(columns).strip("{}")))
-        fid.write(_b("# %s\n" % json.dumps(units).strip("{}")))
-        np.savetxt(fid, np.vstack([self.x, self.v, self.dv, self.dx]).T, fmt="%.10e")
-        fid.seek(0)
-        name = getattr(self, "name", "default_name")
-        entry = getattr(self.metadata, "entry", "default_entry")
-        return {"name": name, "entry": entry, "export_string": fid.read(), "file_suffix": ".dcs.dat"}
+    @exports_text(name="column")
+    def to_column_text(self):
+        with io.BytesIO() as fid:
+            #fid.write(_b("# %s\n" % json.dumps(_toDictItem(self.metadata)).strip("{}")))
+            metadata = {"name": self.metadata["name"]}
+            fid.write(_b("# %s\n" % json.dumps(metadata).strip("{}")))
+            columns = {"columns": [self.xlabel, self.vlabel, "uncertainty", "resolution"]}
+            units = {"units": [self.xunits, self.vunits, self.vunits, self.xunits]}
+            fid.write(_b("# %s\n" % json.dumps(columns).strip("{}")))
+            fid.write(_b("# %s\n" % json.dumps(units).strip("{}")))
+            np.savetxt(fid, np.vstack([self.x, self.v, self.dv, self.dx]).T, fmt="%.10e")
+            fid.seek(0)
+            value = fid.read()
+
+        return {
+            "name": self.metadata.get("name", "default_name"),
+            "entry": self.metadata.get("entry", "default_entry"),
+            "file_suffix": ".dcs.dat",
+            "value": value.decode(),
+        }
 
 class Parameters(dict):
     def get_metadata(self):
-        return self
+        return _toDictItem(self)
 
     def get_plottable(self):
-        return self    
+        return {"entry": "entry", "type": "metadata", "values": _toDictItem(self)}
 
 def readDCS(name, fid):
     gzf = gzip.GzipFile(fileobj=fid)

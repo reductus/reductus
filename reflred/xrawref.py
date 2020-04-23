@@ -21,33 +21,7 @@ from . import bruker
 from . import rigaku
 from . import refldata
 from .resolution import FWHM2sigma
-from .util import fetch_url
 
-
-def load_from_string(filename, data, entries=None):
-    """
-    Load a nexus file from a string, e.g., as returned from url.read().
-    """
-    fd = BytesIO(data)
-    entries = load_entries(filename, fd, entries=entries)
-    fd.close()
-    return entries
-
-
-def load_from_uri(uri, entries=None, url_cache="/tmp"):
-    """
-    Load a nexus file from disk or from http://, https:// or file://.
-
-    Remote files are cached in *url_cache*.  Use None to fetch without caching.
-    """
-    if uri.startswith('file://'):
-        return load_entries(uri[7:], entries=entries)
-    elif uri.startswith('http://') or uri.startswith('https://'):
-        filename = os.path.basename(uri)
-        data = fetch_url(uri, url_cache=url_cache)
-        return load_from_string(filename, data, entries=entries)
-    else:
-        return load_entries(uri, entries=entries)
 
 def load_entries(filename, file_obj=None, entries=None):
     """
@@ -126,12 +100,20 @@ class BrukerRefl(refldata.ReflData):
         self.instrument = 'BrukerXray'
         # 1-sigma angular resolution (degrees) reported by Bruker.  Our own
         # measurements give a similar value (~ 0.033 degrees FWHM)
-        self.angular_resolution = FWHM2sigma(0.03)
+        nominal_resolution = 0.03
+        self.angular_resolution = FWHM2sigma(nominal_resolution)
         self.slit1.distance = -275.5
         self.slit2.distance = -192.7
         self.slit3.distance = +175.0
-        self.slit1.x = 0.03 # TODO: check
-        self.slit2.x = 0.03 # TODO: check
+        # Set the slit openings so that divergence calculation will yield
+        # the nominal resolution for the given slit positions.
+        # In practice the xray resolution is defined by optical elements
+        # such as Goebel mirrors, and so the slit geometry should not be
+        # used to compute resolution.  Slit openings could be used to estimate
+        # beam footprint on the sample if we knew the true value...
+        nominal_slits = (np.radians(nominal_resolution)
+                         * abs(self.slit1.distance - self.slit2.distance))
+        self.slit1.x = self.slit2.x = nominal_slits
         self.slit1.y = self.slit2.y = 20.0 # Note: back slits unused in reduction
         #self.slit4.distance = data_as(entry,'instrument/predetector_slit2/distance','mm')
         #self.detector.distance = data_as(entry,'instrument/detector/distance','mm')
@@ -303,18 +285,20 @@ class RigakuRefl(refldata.ReflData):
 
 
 def demo():
+    import sys
+    from .load import setup_fetch, fetch_uri
     from .scale import apply_norm
     from .steps import divergence
-    import sys
     if len(sys.argv) == 1:
         print("usage: python -m reflred.xrawref file...")
         sys.exit(1)
+    setup_fetch()
     plotted_datasets = 0
-    for filename in sys.argv[1:]:
+    for uri in sys.argv[1:]:
         try:
-            entries = load_from_uri(filename)
+            entries = fetch_uri(uri, loader=load_entries)
         except Exception as exc:
-            print("Error while loading", filename, ':', str(exc))
+            print("Error while loading", uri, ':', str(exc))
             #traceback.print_exc(); raise
             continue
 

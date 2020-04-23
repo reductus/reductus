@@ -1,0 +1,269 @@
+{
+  "modules": [
+    {
+      "module": "ncnr.refl.ng7_psd",
+      "title": "PSD spec",
+      "x": 20,
+      "y": 0,
+      "config": {
+        "filelist": [],
+        "base": "none",
+        "center": 132,
+        "detector_correction": false,
+        "monitor_correction": true
+      }
+    },
+    {
+      "module": "ncnr.refl.psd_integrate",
+      "title": "Psd Integrate",
+      "x": 190,
+      "y": 0
+    },
+    {
+      "module": "ncnr.refl.subtract_background",
+      "title": "Subtract Background",
+      "x": 360,
+      "y": 0
+    },
+    {
+      "module": "ncnr.refl.join",
+      "title": "Join",
+      "x": 595,
+      "y": 0
+    },
+    {
+      "module": "ncnr.refl.ng7_psd",
+      "title": "PSD slit",
+      "x": 20,
+      "y": 45,
+      "config": {
+        "base": "none",
+        "center": 132,
+        "detector_correction": false,
+        "monitor_correction": true
+      }
+    },
+    {
+      "module": "ncnr.refl.psd_integrate",
+      "title": "Psd Integrate",
+      "x": 155,
+      "y": 45
+    },
+    {
+      "module": "ncnr.refl.rescale",
+      "title": "Rescale",
+      "x": 585,
+      "y": 135
+    },
+    {
+      "module": "ncnr.refl.join",
+      "title": "Join",
+      "x": 725,
+      "y": 135
+    },
+    {
+      "module": "ncnr.refl.divide_intensity",
+      "title": "Divide Intensity",
+      "x": 730,
+      "y": 0
+    },
+    {
+      "module": "ncnr.refl.fit_footprint",
+      "title": "Fit Footprint",
+      "x": 775,
+      "y": 50
+    },
+    {
+      "module": "ncnr.refl.correct_footprint",
+      "title": "Correct Footprint",
+      "x": 920,
+      "y": 0
+    },
+    {
+      "module": "ncnr.refl.normalize",
+      "title": "Normalize",
+      "x": 420,
+      "y": 30
+    },
+    {
+      "module": "ncnr.refl.normalize",
+      "title": "Normalize",
+      "x": 305,
+      "y": 135
+    },
+    {
+      "module": "ncnr.refl.mask_points",
+      "title": "Mask Points",
+      "x": 415,
+      "y": 60
+    },
+    {
+      "module": "ncnr.refl.mask_points",
+      "title": "Mask Points",
+      "x": 440,
+      "y": 135
+    }
+  ],
+  "wires": [
+    {
+      "source": [
+        1,
+        "specular"
+      ],
+      "target": [
+        2,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        1,
+        "background"
+      ],
+      "target": [
+        2,
+        "backp"
+      ]
+    },
+    {
+      "source": [
+        6,
+        "output"
+      ],
+      "target": [
+        7,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        3,
+        "output"
+      ],
+      "target": [
+        8,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        7,
+        "output"
+      ],
+      "target": [
+        8,
+        "base"
+      ]
+    },
+    {
+      "source": [
+        8,
+        "output"
+      ],
+      "target": [
+        9,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        8,
+        "output"
+      ],
+      "target": [
+        10,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        9,
+        "fitted_footprint"
+      ],
+      "target": [
+        10,
+        "fitted_footprint"
+      ]
+    },
+    {
+      "source": [
+        12,
+        "output"
+      ],
+      "target": [
+        14,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        14,
+        "output"
+      ],
+      "target": [
+        6,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        11,
+        "output"
+      ],
+      "target": [
+        13,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        13,
+        "output"
+      ],
+      "target": [
+        3,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        5,
+        "specular"
+      ],
+      "target": [
+        12,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        2,
+        "output"
+      ],
+      "target": [
+        11,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        0,
+        "output"
+      ],
+      "target": [
+        1,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        4,
+        "output"
+      ],
+      "target": [
+        5,
+        "data"
+      ]
+    }
+  ]
+}

@@ -14,9 +14,10 @@ from numpy import array
 attenuation = {}
 
 # From NCNR_Utils.ipf in IGOR reduction:
+# 08/27/2019 bbm: modified NGBatt0 so that it is the same length as all the others.
 ngb_source_string = """\
   // new calibrations MAY 2013
-	root:myGlobals:Attenuators:NGBatt0 = {1,1,1,1,1,1,1,1,1,1,1,1,1}
+	root:myGlobals:Attenuators:NGBatt0 = {1,1,1,1,1,1,1,1,1,1,1,1}
 	root:myGlobals:Attenuators:NGBatt1 = {0.512,0.474,0.418,0.392,0.354,0.325,0.294,0.27,0.255,0.222,0.185,0.155}
  	root:myGlobals:Attenuators:NGBatt2 = {0.268,0.227,0.184,0.16,0.129,0.108,0.0904,0.0777,0.0689,0.0526,0.0372,0.0263}
   	root:myGlobals:Attenuators:NGBatt3 = {0.135,0.105,0.0769,0.0629,0.0455,0.0342,0.0266,0.0212,0.0178,0.0117,0.007,0.00429}
@@ -30,7 +31,7 @@ ngb_source_string = """\
 
   // percent errors as measured, MAY 2013 values
   // zero error for zero attenuators, large values put in for unknown values (either 2% or 5%)
-	root:myGlobals:Attenuators:NGBatt0_err = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }
+	root:myGlobals:Attenuators:NGBatt0_err = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }
 	root:myGlobals:Attenuators:NGBatt1_err = {0.174,0.256,0.21,0.219,0.323,0.613,0.28,0.135,0.195,0.216,0.214,19.8}
 	root:myGlobals:Attenuators:NGBatt2_err = {0.261,0.458,0.388,0.419,0.354,0.668,0.321,0.206,0.302,0.305,0.315,31.1}
 	root:myGlobals:Attenuators:NGBatt3_err = {0.319,0.576,0.416,0.448,0.431,0.688,0.37,0.247,0.368,0.375,0.41,50.6}
@@ -125,3 +126,28 @@ compile_source(ng7_source_string, attenuation)
 attenuation['NG7']['lambda'] = array([4, 5, 6, 7, 8, 10, 12, 14, 17, 20], dtype="float")
 compile_source(ngb_source_string, attenuation)
 attenuation['NGB']['lambda'] = array([3, 4, 5, 6, 8, 10, 12, 14, 16, 20, 25, 30], dtype="float")
+
+def make_csv_files():
+	import numpy as np
+	import csv
+
+	for instr in attenuation:
+		att = attenuation[instr]
+		for key, label in [['att', '_attenuator'], ['att_err', '_attenuator_error']]:
+
+			cols = [att['lambda']]
+			header_items = ["lambda"]
+			index = 0
+			rowdict = att[key]
+			while str(index) in rowdict:
+				cols.append(rowdict[str(index)])
+				header_items.append("att%d" % (index,))
+				index += 1
+
+			a = np.vstack(cols).T
+			
+			with open(instr + label + ".csv", "wt") as fout:
+				fout.write(",".join(header_items) + "\r\n")
+				writer = csv.writer(fout)
+				writer.writerows(a.tolist())
+			    

@@ -3,56 +3,10 @@ import os
 import numpy as np
 from copy import copy
 
+from dataflow.automod import cache, nocache, module
+
 # TODO: maybe bring back formula to show the math of each step
 # TODO: what about polarized data?
-
-# Action names
-__all__ = [] # type: List[str]
-
-# Action methods
-ALL_ACTIONS = [] # type: List[Callable[Any, Any]]
-
-def cache(action):
-    """
-    Decorator which adds the *cached* attribute to the function.
-
-    Use *@cache* to force caching to always occur (for example, when
-    the function references remote resources, vastly reduces memory, or is
-    expensive to compute.  Use *@nocache* when debugging a function
-    so that it will be recomputed each time regardless of whether or not it
-    is seen again.
-    """
-    action.cached = True
-    return action
-
-def nocache(action):
-    """
-    Decorator which adds the *cached* attribute to the function.
-
-    Use *@cache* to force caching to always occur (for example, when
-    the function references remote resources, vastly reduces memory, or is
-    expensive to compute.  Use *@nocache* when debugging a function
-    so that it will be recomputed each time regardless of whether or not it
-    is seen again.
-    """
-    action.cached = False
-    return action
-
-def module(action):
-    """
-    Decorator which records the action in *ALL_ACTIONS*.
-
-    This just collects the action, it does not otherwise modify it.
-    """
-    ALL_ACTIONS.append(action)
-    __all__.append(action.__name__)
-
-    # Sort modules alphabetically
-    ALL_ACTIONS.sort(key=lambda action: action.__name__)
-    __all__.sort()
-
-    # This is a decorator, so return the original function
-    return action
 
 @module
 def nop(data):
@@ -87,19 +41,19 @@ def ncnr_load(filelist=None, check_timestamps=True):
     output (refldata[]): All entries of all files in the list.
 
     2016-06-29 Brian Maranville
-    | 2017-08-21 Brian Maranville change to refldata, force cache invalidate
-    | 2018-06-18 Brian Maranville change to nexusref to ignore areaDetector
+    | 2017-08-21 Brian Maranville Change to refldata, force cache invalidate
+    | 2018-06-18 Brian Maranville Change to nexusref to ignore areaDetector
     | 2018-12-10 Brian Maranville get_plottable routines moved to python data container from js
+    | 2020-03-03 Paul Kienzle Just load.  Don't even compute divergence
     """
+    # NB: used mainly to set metadata for processing, so keep it minimal
+    # TODO: make a metadata loader that does not send all data to browser
     # NB: Fileinfo is a structure with
     #     { path: "location/on/server", mtime: timestamp }
     from .load import url_load_list
-    auto_divergence = True
 
     datasets = []
     for data in url_load_list(filelist, check_timestamps=check_timestamps):
-        if auto_divergence:
-            data = divergence(data)
         datasets.append(data)
     return datasets
 
@@ -126,12 +80,6 @@ def fit_dead_time(data, source='detector', mode='auto'):
     from .deadtime import fit_dead_time
 
     data = fit_dead_time(data, source=source, mode=mode)
-
-    data.log("fit_dead_time(attenuated, unattenuated, source=%r, mode=%r)"
-             % (source, mode))
-    #for k, d in enumerate(data):
-    #    data.log("data %d:"%k)
-    #    data.log(d.messages)
     return data
 
 
@@ -169,13 +117,9 @@ def monitor_dead_time(data, dead_time, nonparalyzing=0.0, paralyzing=0.0):
     data = copy(data)
     data.monitor = copy(data.monitor)
     if nonparalyzing != 0.0 or paralyzing != 0.0:
-        data.log('monitor_dead_time(nonparalyzing=%.15g, paralyzing=%.15g)'
-                 % (nonparalyzing, paralyzing))
         apply_monitor_dead_time(data, tau_NP=nonparalyzing,
                                 tau_P=paralyzing)
     elif dead_time is not None:
-        data.log('monitor_dead_time(dead_time)')
-        data.log_dependency('dead_time', dead_time)
         apply_monitor_dead_time(data, tau_NP=dead_time.tau_NP,
                                 tau_P=dead_time.tau_P)
     elif data.monitor.deadtime is not None and np.isfinite(data.monitor.deadtime).all():
@@ -183,7 +127,6 @@ def monitor_dead_time(data, dead_time, nonparalyzing=0.0, paralyzing=0.0):
             tau_NP, tau_P = data.monitor.deadtime
         except Exception:
             tau_NP, tau_P = data.monitor.deadtime, 0.0
-        data.log('monitor_dead_time()')
         apply_monitor_dead_time(data, tau_NP=tau_NP, tau_P=tau_P)
     else:
         pass  # no deadtime correction parameters available.
@@ -219,17 +162,13 @@ def detector_dead_time(data, dead_time, nonparalyzing=0.0, paralyzing=0.0):
     """
     from .deadtime import apply_detector_dead_time
 
+    # TODO: why is copy suppressed?
     #data = copy(data)
     #data.detector = copy(data.detector)
-    data.log('trying to do detector_dead_time()' + str(data.detector.deadtime))
     if nonparalyzing != 0.0 or paralyzing != 0.0:
-        data.log('detector_dead_time(nonparalyzing=%.15g, paralyzing=%.15g)'
-                 % (nonparalyzing, paralyzing))
         apply_detector_dead_time(data, tau_NP=nonparalyzing,
                                  tau_P=paralyzing)
     elif dead_time is not None:
-        data.log('detector_dead_time(dead_time)')
-        data.log_dependency('dead_time', dead_time)
         apply_detector_dead_time(data, tau_NP=dead_time.tau_NP,
                                  tau_P=dead_time.tau_P)
     elif data.detector.deadtime is not None and not np.all(np.isnan(data.detector.deadtime)):
@@ -237,8 +176,6 @@ def detector_dead_time(data, dead_time, nonparalyzing=0.0, paralyzing=0.0):
             tau_NP, tau_P = data.detector.deadtime
         except Exception:
             tau_NP, tau_P = data.detector.deadtime, 0.0
-        data.log('detector_dead_time(nonparalyzing=%.15g, paralyzing=%.15g)'
-                 % (tau_NP, tau_P))
         apply_detector_dead_time(data, tau_NP=tau_NP, tau_P=tau_P)
     else:
         raise ValueError("no valid deadtime provided in file or parameter")
@@ -265,7 +202,6 @@ def monitor_saturation(data):
     data = copy(data)
     if getattr(data.monitor, 'saturation', None) is not None:
         data.monitor = copy(data.monitor)
-        data.log('monitor_saturation()')
         apply_monitor_saturation(data)
     else:
         data.warn("no monitor saturation for %r"%data.name)
@@ -292,7 +228,6 @@ def detector_saturation(data):
     if getattr(data.detector, 'saturation', None) is not None:
         #print("detector "+str(data.detector.__dict__))
         data.detector = copy(data.detector)
-        data.log('detector_saturation()')
         apply_detector_saturation(data)
     else:
         data.warn("no detector saturation for %r"%data.name)
@@ -324,7 +259,6 @@ def theta_offset(data, offset=0.0):
     data.detector = copy(data.detector)
     data.sample.angle_x = copy(data.sample.angle_x)
     data.detector.angle_x = copy(data.detector.angle_x)
-    data.log('theta_offset(%.15g)' % offset)
     apply_theta_offset(data, offset)
     return data
 
@@ -351,7 +285,6 @@ def back_reflection(data):
     data.detector = copy(data.detector)
     data.sample.angle_x = copy(data.sample.angle_x)
     data.detector.angle_x = copy(data.detector.angle_x)
-    data.log("back_reflection()")
     apply_back_reflection(data)
     return data
 
@@ -378,7 +311,6 @@ def absolute_angle(data):
     data.detector = copy(data.detector)
     data.sample.angle_x = copy(data.sample.angle_x)
     data.detector.angle_x = copy(data.detector.angle_x)
-    data.log("absolute_angle()")
     apply_absolute_angle(data)
     return data
 
@@ -408,9 +340,9 @@ def divergence(data, sample_width=None, sample_broadening=0):
     2016-06-15 Paul Kienzle
     """
     from .angles import apply_divergence
+    # TODO: why is copy suppressed
     #data = copy(data)
     if data.angular_resolution is None:
-        data.log('divergence()')
         apply_divergence(data, sample_width, sample_broadening)
     return data
 
@@ -436,7 +368,6 @@ def mask_specular(data):
     """
     from .background import apply_specular_mask
     data = copy(data)
-    data.log('mask_specular()')
     apply_specular_mask(data)
     return data
 
@@ -471,10 +402,10 @@ def mask_points(data, mask_indices=None):
 
     output (refldata) : masked data
 
-    2018-04-30 Brian Maranville
+    | 2018-04-30 Brian Maranville
+    | 2019-07-02 Brian Maranville: change self.points after mask
     """
     data = copy(data)
-    data.log('mask_points(%r)' % mask_indices)
     output = mask_action(data=data, mask_indices=mask_indices)
     return output
 
@@ -511,7 +442,6 @@ def mark_intent(data, intent='auto'):
     """
     from .intent import apply_intent
     #data = copy(data)
-    data.log('mark_intent(%r)' % intent)
     apply_intent(data, intent)
     return data
 
@@ -569,13 +499,14 @@ def extract_xs(data, xs="++"):
 
     data (refldata[]): data files in of all cross sections
 
-    xs {Cross-section} (opt:++\|--\|+-\|-+\|unpolarized): cross-section to extract
+    xs {Cross-section} (opt:++\|--\|+-\|-+\|+\|-\|unpolarized): cross-section to extract
 
     **Returns**
 
     output (refldata[]): data matching just that cross-section
 
-    2016-05-05 Brian Maranville
+    | 2016-05-05 Brian Maranville
+    | 2020-03-24 Brian Maranville: added half-pol cross-sections
     """
     data = copy(data)
     if xs == 'unpolarized':
@@ -630,23 +561,31 @@ def normalize(data, base='auto'):
     """
     Estimate the detector count rate.
 
-    *base* can be monitor, time, power, or none for no normalization.
+    *base* can be monitor, time, roi, power, or none for no normalization.
     For example, if base='monitor' then the count rate will be counts
     per monitor count.  Note that operations that combine datasets require
     the same normalization on the points.
 
     If *base* is auto then the default will be chosen, which is 'monitor'
-    if the monitor exists, otherwise it is 'time'.
+    if the monitor exists, otherwise it is 'time'.  If neither exists
+    (not sure that can happen) then the data will be unnormalized.
 
-    When viewing data, you sometimes want to scale it to a nice number
-    such that the number of counts displayed for the first point is
-    approximately the number of counts on the detector.
+    The detector region of interest (*roi*) and reactor *power* have not been
+    tested and should not be used. The detector efficient, the dead time
+    corrections and attenuator scaling have not been applied to the roi
+    measurement.  Since the measurement is only useful if a portion of the
+    detector is exposed to the incident beam, this corrections will be
+    especially important.  In the case where the monitor is unreliable and
+    reactor power has been fluctuating, you may be able to estimate the
+    incident intensity based on the integrated reactor power. This uses
+    a simple average of the reactor power measurements multiplied by the
+    measurement time.
 
     **Inputs**
 
     data (refldata) : data to normalize
 
-    base {Normalize by} (opt:auto|monitor|time|power|none)
+    base {Normalize by} (opt:auto|monitor|time|roi|power|none)
     : how to convert from counts to count rates
 
     **Returns**
@@ -654,13 +593,139 @@ def normalize(data, base='auto'):
     output (refldata) : data with count rate rather than counts
 
     2015-12-17 Paul Kienzle
+    2020-03-10 Paul Kienzle auto almost always equals monitor
     """
+    # Note: reflpak supported visualization like "counts per 10000 monitor"
+    # so that the displayed data looked roughly like the measured data, except
+    # all scaled to a common monitor.  This is not available in reductus.
+
+    # TODO: consistent use of data.detector.counts vs. data.v
+    # see in particular the detector/monitor dead time, spectral efficiency,
+    # dark current, etc.
+
     from .scale import apply_norm
     data = copy(data)
-    data.log('normalize(base=%r)' % base)
     apply_norm(data, base)
     return data
 
+
+@module
+def psd_center(data, center=128):
+    """
+    Set center pixel for the detector.
+
+    **Inputs**
+
+    data (psddata) : data to scale
+
+    center (float) : beam center pixel (should be the same for all datasets)
+
+    **Returns**
+
+    output (psddata) : scaled data
+
+    2020-02-04 Paul Kienzle
+    """
+    data = copy(data)
+    data.detector = copy(data.detector)
+    data.detector.center = (center, 0)
+    return data
+
+@module
+def psd_integrate(
+        data, spec_scale=1, spec_pixel=5.,
+        left_scale=1., left_pixel=5., right_scale=1., right_pixel=5.,
+        min_pixel=5., max_pixel=251., degree=1., mc_samples=1000,
+        slices=None, #(0.01, 0.05, 0.10, 0.15),
+        ):
+    r"""
+    Integrate specular and background from psd.
+
+    Specular and background regions are computed from beam divergence and
+    pixel width using the following:
+
+        spec = spec scale * divergence + spec pixels
+        left = left scale * divergence + left pixels
+        right = right scale * divergence + right pixels
+
+    The beam divergence used in the equations above is estimated from
+    the slit openings. The specular signal is the sum over pixels
+    in [-spec, +spec]. The background signal is determined by fitting
+    a polynomial of degree n to the pixels in [-spec - left, -spec)
+    and (spec, spec + right), then integrating that polynomial over
+    the specular pixels.
+
+    Specular uncertainty comes from simply integrating over the pixels.
+    Background uncertainty comes from the uncertainty in the polynomial
+    fitting parameters.  It can be estimated using Monte Carlo sampling,
+    or by simple Gaussian propagation of uncertainty if mc samples is 0.
+    MC estimates are stochastic, so rerunning with a different random
+    number sequence will give a different result.  To make the reduction
+    reproducible, the number of samples is used as the seed value for the
+    random number generator.  To assess the variation in the background
+    estimate, try slightly longer sequence lengths.  We have found 100
+    samples gives a background estimate that is approximately stable
+    (variation in estimate is well within uncertainty). A default value
+    of 1000 was chosen because it is reasonably fast and reasonably stable.
+    Test on your own data by comparing mc_samples to mc_samples+1
+
+    The residual after subtracting the background estimate is also
+    returned. Use this to verify that the integration ranges are
+    chosen appropriately.  There is an additional output to show slices
+    for selected frames---this will show the quality of background estimate.
+
+    **Inputs**
+
+    data (refldata) : data to integrate
+
+    spec_scale {Spec scale}(float:<0,inf>) : Specular width as a divergence multiple, or zero for fixed width.
+
+    spec_pixel {Spec offset}(float:pixel) : Fixed broadening in pixels (or narrowing if negative)
+
+    left_scale {Back- scale}(float:<0,inf>) : Left background width as a divergence multiple, or zero for fixed width.
+
+    left_pixel {Back- offset}(float:pixel) : Left background shift in pixels.
+
+    right_scale {Back+ scale}(float:<0,inf>) : Right background width as a divergence multiple, or zero for fixed width.
+
+    right_pixel {Back+ offset}(float:pixel) : Right background shift in pixels.
+
+    min_pixel {Left edge}(float:pixel<1,256>) : Left background cutoff pixel.
+
+    max_pixel {Right edge}(float:pixel<1,256>) : Right background cutoff pixel.
+
+    degree {Polynomial degree}(int:<0,9>) : Background polynomial degree.
+
+    mc_samples {MC samples}(int:<0,inf>) : Number of MC samples for uncertainty analysis, or zero for simple gaussian.
+
+    slices {Slice value}(float) : Display data cross-sections at the given values.
+
+    **Returns**
+
+    specular (refldata) : integrated specular
+
+    background (refldata) : integrated background
+
+    residual (psddata) : background subtracted psd data
+
+    sliceplot (plot) : slices plot
+
+    | 2020-02-03 Paul Kienzle
+    """
+    from .ng7psd import apply_integration
+    from dataflow.data import Plottable
+
+    mc_seed = mc_samples if mc_samples > 0 else None
+    #print("slices", slices)
+    spec, back, resid, sliceplot = apply_integration(
+        data, spec=(spec_scale, spec_pixel),
+        left=(left_scale, left_pixel), right=(right_scale, right_pixel),
+        pixel_range=(min_pixel, max_pixel),
+        degree=degree, mc_samples=mc_samples, seed=mc_seed,
+        slices=[slices] if slices is not None else [],
+    )
+
+    return spec, back, resid, Plottable(sliceplot)
 
 @module
 def rescale(data, scale=1.0, dscale=0.0):
@@ -683,7 +748,6 @@ def rescale(data, scale=1.0, dscale=0.0):
     """
     from .scale import apply_rescale
     data = copy(data)
-    data.log("scale(%.15g,%.15g)" % (scale, dscale))
     apply_rescale(data, scale, dscale)
     return data
 
@@ -760,6 +824,7 @@ def join(data, Q_tolerance=0.5, dQ_tolerance=0.002, order='file',
     from .util import group_by_key
     # No copy necessary; join is never in-place.
 
+    # TODO: parse **deprecated** in automod and hide deprecated inputs on ui
     if tolerance is not None:
         Q_tolerance = dQ_tolerance = tolerance
     datasets = [v for k, v in sorted(group_by_key(group_by, data).items())]
@@ -767,11 +832,6 @@ def join(data, Q_tolerance=0.5, dQ_tolerance=0.002, order='file',
     for group in datasets:
         group = sort_files(group, order)
         result = join_datasets(group, Q_tolerance, dQ_tolerance)
-
-        result.log("join(*data)")
-        for i, d in enumerate(group):
-            result.log_dependency('data[%d]' % i, d)
-        #print "join", result.name, result.v, result.dv
         output.append(result)
     return output
 
@@ -812,10 +872,7 @@ def align_background(data, offset='auto'):
         offset = 'auto'
     from .background import set_background_alignment
     #data = copy(data)
-    # TODO: do we want to log the alignment chosen when alignment is auto?
-    # Or do we log the fact that auto alignment was chosen?
     set_background_alignment(data, offset)
-    data.log('align_background(%r)'%data.Qz_basis)
     return data
 
 
@@ -859,15 +916,10 @@ def subtract_background(data, backp, backm, align="none"):
     from .background import apply_background_subtraction
 
     data = copy(data)
-    data.log("background(%s,%s)"
-             % ("backp" if backp is not None else "None",
-                "backm" if backm is not None else "None"))
     if backp is not None:
-        data.log_dependency("back+", backp)
         if align != "none":
             align_background(backp, offset=align)
     if backm is not None:
-        data.log_dependency("back-", backm)
         if align != "none":
             align_background(backm, offset=align)
     #print "%s - (%s+%s)/2"%(data.name, (backp.name if backp else "none"), (backm.name if backm else "none"))
@@ -875,7 +927,7 @@ def subtract_background(data, backp, backm, align="none"):
     return data
 
 @module
-def fit_background_field(back, fit_scale=True, scale=1.0, epsD0=0.01, epssi=2.857e-4, LS3=380, LS4=1269, LSD=1675, HD=150, maxF=75, Qcutoff=0.05):
+def fit_background_field(back, fit_scale=True, scale=1.0, epsD0=0.01, epssi=1.109e-4, LS3=380, LS4=1269, LSD=1675, HD=150, maxF=76.2, Qcutoff=0.05):
     """
     Fit the background field from a thin liquid reservoir to background
     datasets. Background datasets:
@@ -1024,8 +1076,6 @@ def divide_intensity(data, base):
     if base is not None:
         from .scale import apply_intensity_norm
         data = copy(data)
-        data.log("divide(base)")
-        data.log_dependency("base", base)
         apply_intensity_norm(data, base)
     return data
 
@@ -1062,9 +1112,6 @@ def smooth_slits(datasets, degree=1, span=2, dx=0.01):
     datasets = [copy(d) for d in datasets]
     for d in datasets:
         d.slit1, d.slit2 = copy(d.slit1), copy(d.slit2)
-        # TODO: not reproducible from log
-        # no info in log about which datasets were smoothed together
-        d.log("smooth_slits(degree=%d, span=%d, dx=%g)" % (degree, span, dx))
 
     apply_smoothing(datasets, dx=dx, degree=degree, span=span)
     return datasets
@@ -1101,8 +1148,6 @@ def abinitio_footprint(data, Io=1., width=None, offset=0.):
     from .footprint import apply_abinitio_footprint
 
     data = copy(data)
-    data.log("abinitio_footprint(Io=%s,width=%s,offset=%s)"
-             % (str(Io), str(width), str(offset)))
     apply_abinitio_footprint(data, Io, width, offset)
     return data
 
@@ -1184,8 +1229,6 @@ def correct_footprint(data, fitted_footprint, correction_range=[None, None],
     # in all cases, overwrite the error in fitted_footprint with specified
     # values:
     fitted_footprint.dp = dp
-    data.log("footprint(p=%s,dp=%s)"
-             % (str(fitted_footprint.p), str(fitted_footprint.dp)))
     apply_fitted_footprint(data, fitted_footprint, correction_range)
     return data
 
@@ -1233,11 +1276,6 @@ def estimate_polarization(data, FRbalance=50.0, Emin=0.0, Imin=0.0, clip=False):
 
     poldata = PolarizationData(data, FRbal=0.01*FRbalance,
                                Emin=0.01*Emin, Imin=Imin, clip=clip)
-
-    poldata.log("PolarizationData(beam, Imin=%.15g, Emin=%.15g%%, FRbal=%.15g%%, clip=%d)"
-                % (Imin, Emin, FRbalance, 0+clip))
-    #for xs in ('++','+-','-+','--'):
-    #    poldata.log_dependency("beam"+xs, data[xs])
     return poldata
 
 
@@ -1264,8 +1302,6 @@ def correct_polarization(data, polarization, spinflip=True):
     """
     from .polarization import apply_polarization_correction
     data = copy(data)
-    #data.log("correct_polarization(polarization, splinflip=True)")
-    #data.log_dependency("polarization", polarization)
     apply_polarization_correction(data, polarization, spinflip)
     return data
 
@@ -1291,7 +1327,6 @@ def save(data, name='auto', ext='auto', path='auto'):
     if path == 'auto':
         path = '.'
     if ext == 'auto':
-        # TODO: look in the log to guess an extension
         ext = '.dat'
     elif not ext.startswith('.'):
         ext = '.' + ext
@@ -1299,6 +1334,85 @@ def save(data, name='auto', ext='auto', path='auto'):
         name = data.name
     filename = os.path.join(path, name+ext)
     data.save(filename)
+
+
+@cache
+@module
+def ng7_psd(
+        filelist=None,
+        detector_correction=False,
+        monitor_correction=False,
+        center=None,
+        intent='auto',
+        sample_width=None,
+        base='none'):
+    r"""
+    Load a list of NG7 PSD files from the NCNR data server.
+
+    **Inputs**
+
+    filelist (fileinfo[]): List of files to open.
+
+    detector_correction {Apply detector deadtime correction} (bool)
+    : If True, use deadtime constants in file to correct detector counts.
+
+    monitor_correction {Apply monitor saturation correction} (bool)
+    : If True, use the measured saturation curve in file to correct
+    : the monitor counts.
+
+    center {Beam center} (int)
+    : Detector pixel containing the beam center.  This is needed for
+    : plotting Qx-Qz, etc., and for setting the specular integration region.
+
+    intent (opt:auto|specular|intensity|scan)
+    : Measurement intent (specular, slit, or some other scan), auto or infer.
+    : If intent is 'scan', then use the first scanned variable.
+
+    sample_width {Sample width (mm)} (float?)
+    : Width of the sample along the beam direction in mm, used for
+    calculating the effective resolution when the sample is smaller
+    than the beam.  Leave blank to use value from data file.
+
+    base {Normalize by} (opt:auto|monitor|time|roi|power|none)
+    : How to convert from counts to count rates.
+    : Leave this as none if your template does normalization after integration.
+
+    **Returns**
+
+    output (refldata[]): All entries of all files in the list.
+
+    | 2020-02-05 Paul Kienzle
+    | 2020-02-11 Paul Kienzle include divergence estimate in startup
+    """
+    from .load import url_load_list
+    from .ng7psd import load_entries
+
+    # Note: divergence is required for join, so always calculate it.  If you
+    # really want it optional then use:
+    #
+    #  auto_divergence {Calculate dQ} (bool)
+    #    : Automatically calculate the angular divergence of the beam.
+    #
+    auto_divergence = True
+
+    datasets = []
+    for data in url_load_list(filelist, loader=load_entries):
+        data.Qz_basis = 'target'
+        if intent not in [None, 'auto']:
+            data.intent = intent
+        if center is not None:
+            data = psd_center(data, center)
+        if auto_divergence:
+            data = divergence(data, sample_width)
+        if detector_correction:
+            data = detector_dead_time(data, None)
+        if monitor_correction:
+            data = monitor_saturation(data)
+        data = normalize(data, base=base)
+        #print "data loaded and normalized"
+        datasets.append(data)
+
+    return datasets
 
 @cache
 @module
@@ -1348,7 +1462,7 @@ def super_load(filelist=None,
     calculating the effective resolution when the sample is smaller
     than the beam.  Leave blank to use value from data file.
 
-    base {Normalize by} (opt:auto|monitor|time|power|none)
+    base {Normalize by} (opt:auto|monitor|time|roi|power|none)
     : how to convert from counts to count rates
 
     **Returns**
@@ -1366,6 +1480,7 @@ def super_load(filelist=None,
     | 2018-06-20 Brian Maranville promote detector.wavelength to column (and resolution)
     | 2018-08-29 Paul Kienzle ignore sampleTilt field for NG7
     | 2018-12-10 Brian Maranville get_plottable routines moved to python data container from js
+    | 2020-01-21 Brian Maranville updated loader to handle hdf-nexus
     """
     from .load import url_load_list
     #from .intent import apply_intent
@@ -1380,6 +1495,8 @@ def super_load(filelist=None,
     #    : Automatically calculate the angular divergence of the beam.
     #
     auto_divergence = True
+
+    # TODO: sample_width is ignored if datafile defines angular_divergence
 
     datasets = []
     for data in url_load_list(filelist):
@@ -1424,7 +1541,7 @@ def super_load_sorted(filelist=None,
     beam direction in mm, used for calculating the effective resolution when
     the sample is smaller than the beam.  Leave blank to use value from data file.
 
-    base {Normalize by} (opt:auto|monitor|time|power|none)
+    base {Normalize by} (opt:auto|monitor|time|roi|power|none)
     : how to convert from counts to count rates
 
     **Returns**
@@ -1475,8 +1592,8 @@ def spin_asymmetry(data):
 
     2016-04-04 Brian Maranville
     """
-    mm = [d for d in data if d.polarization == '--'][0]
-    pp = [d for d in data if d.polarization == '++'][0]
+    mm = [d for d in data if d.polarization in ('-', '--')][0]
+    pp = [d for d in data if d.polarization in ('+', '++')][0]
     output = copy(mm)
     output.vscale = "linear"
     output.vlabel = "Spin asymmetry (pp-mm)/(pp+mm) "

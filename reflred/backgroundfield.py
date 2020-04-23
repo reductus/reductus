@@ -45,7 +45,8 @@ def background_reservoir(ai, epsD, af, epssi, Fd, scale):
 
         res = (1 - A) / (1. + np.sin(ai) / np.sin(af))
 
-        si = epssi * (Fd * np.sin(af) / np.sin(ai + af)) * (0.5 + 0.5 * A)
+#        si = epssi * (Fd * np.sin(af) / np.sin(ai + af)) * (0.5 + 0.5 * A)
+        si = epssi * Fd / np.cos(ai) * (0.5 + 0.5 * A)
 
     # first term is the background value; the second contains intermediates used
     # in the Jacobian function and error calculation
@@ -61,7 +62,8 @@ def background_reservoir_jac(ai, epsD, af, epssi, Fd, scale):
     with np.errstate(divide='ignore'):
         dA_depsD = -(1. / np.sin(ai) + 1. / np.sin(af)) * A
         dres_depsD = -dA_depsD / (1. + np.sin(ai) / np.sin(af))
-        dsi_depsD = epssi * (Fd * np.sin(af) / np.sin(ai + af)) * (0.5 * dA_depsD)
+        #dsi_depsD = epssi * (Fd * np.sin(af) / np.sin(ai + af)) * (0.5 * dA_depsD)
+        dsi_depsD = epssi * Fd / np.cos(ai) * (0.5 * dA_depsD)
 
     J = np.array([res + si, scale*(dres_depsD + dsi_depsD)])
 
@@ -175,8 +177,8 @@ def fit_background_field(back, epsD0, epssi, fit_scale, scale_value=1.0, LS3=380
         pout, pcov = so.leastsq(lambda epsD: minfunc([scale_value, epsD]), epsD0, Dfun=lambda epsD: jacfunc([1.0, epsD])[:,1], full_output=True, ftol=1e-15,
                                 xtol=1e-15)[:2]
         lenpout = len(pout)
-        pout = np.array([scale_value, pout])
-        pcov = np.array([[0.0, 0.0],[0.0, pcov[0]]])
+        pout = np.array([scale_value, pout[0]])
+        pcov = np.array([[0.0, 0.0],[0.0, pcov[0][0]]])
     else:
         pout, pcov = so.leastsq(minfunc, np.array([scale_value, epsD0]), Dfun=jacfunc, full_output=True, ftol=1e-15, xtol=1e-15)[:2]
         lenpout = len(pout)

@@ -10,13 +10,17 @@ from __future__ import print_function
 from posixpath import basename, join
 from copy import copy, deepcopy
 from io import BytesIO
+from collections import OrderedDict
 
 import numpy as np
 
 from dataflow.lib.uncertainty import Uncertainty
 from dataflow.lib import uncertainty
 
-from .sansdata import SansData, Sans1dData, Parameters
+from .sansdata import RawSANSData, SansData, Sans1dData, SansIQData, Parameters, _s
+from .sans_vaxformat import readNCNRSensitivity
+
+from vsansred.steps import _s, _b
 
 ALL_ACTIONS = []
 IGNORE_CORNER_PIXELS = True
@@ -62,15 +66,201 @@ def module(action):
 # Loader stuff
 #################
 
-def url_load(fileinfo):
-    from dataflow.fetch import url_get
+@cache
+@module
+def LoadDIV(filelist=None, variance=0.0001):
+    """
+    loads a DIV file (VAX format) into a SansData obj and returns that.
 
-    path, mtime, entries = fileinfo['path'], fileinfo['mtime'], fileinfo['entries']
-    name = basename(path)
-    fid = BytesIO(url_get(fileinfo))
-    nx_entries = LoadMAGIKPSD.load_entries(name, fid, entries=entries)
-    fid.close()
-    return nx_entries
+    **Inputs**
+
+    filelist (fileinfo[]): Files to open.
+
+    variance (float): Target variance of DIV measurement (default 0.0001, i.e. 1% error)
+    
+    **Returns**
+
+    output (sans2d[]): all the entries loaded.
+
+    2018-04-21 Brian Maranville
+    """
+    from dataflow.fetch import url_get
+    from .sans_vaxformat import readNCNRSensitivity
+
+    output = []
+    if filelist is not None:
+        for fileinfo in filelist:
+            path, mtime, entries = fileinfo['path'], fileinfo.get('mtime', None), fileinfo.get('entries', None)
+            name = basename(path)
+            fid = BytesIO(url_get(fileinfo, mtime_check=False))
+            sens_raw = readNCNRSensitivity(fid)
+            sens = SansData(Uncertainty(sens_raw, sens_raw * variance))
+            sens.metadata = OrderedDict([
+                ("run.filename", name),
+                ("analysis.groupid", -1),
+                ("analysis.intent", "DIV"),
+                ("analysis.filepurpose", "Sensitivity"),
+                ("run.experimentScanID", name), 
+                ("sample.description", "PLEX"),
+                ("entry", "entry"),
+                ("sample.labl", "PLEX"),
+                ("run.configuration", "DIV"),
+            ])
+            output.append(sens)
+    return output
+
+@cache
+@module
+def LoadRawSANS(filelist=None, check_timestamps=True):
+    """
+    loads a data file into a RawSansData obj and returns that.
+
+    **Inputs**
+
+    filelist (fileinfo[]): Files to open.
+    
+    check_timestamps (bool): verify that timestamps on file match request
+
+    **Returns**
+
+    output (raw[]): all the entries loaded.
+
+    2018-04-23 Brian Maranville
+    """
+    from dataflow.fetch import url_get
+    from .loader import readSANSNexuz
+    if filelist is None:
+        filelist = []
+    data = []
+    for fileinfo in filelist:
+        path, mtime, entries = fileinfo['path'], fileinfo.get('mtime', None), fileinfo.get('entries', None)
+        name = basename(path)
+        fid = BytesIO(url_get(fileinfo, mtime_check=check_timestamps))
+        if name.upper().endswith(".DIV"):
+            sens_raw = readNCNRSensitivity(fid)
+            detectors = [{"detector": {"data": {"value": Uncertainty(sens_raw, sens_raw * 0.0001)}}}]
+            metadata = OrderedDict([
+                ("run.filename", name),
+                ("analysis.groupid", -1),
+                ("analysis.intent", "DIV"),
+                ("analysis.filepurpose", "Sensitivity"),
+                ("run.experimentScanID", name), 
+                ("sample.description", "PLEX"),
+                ("entry", "entry"),
+                ("sample.labl", "PLEX"),
+                ("run.configuration", "DIV"),
+            ])
+            sens = RawSANSData(metadata=metadata, detectors=detectors)
+            entries = [sens]
+        else:
+            entries = readSANSNexuz(name, fid)
+        
+        data.extend(entries)
+
+    return data
+
+@cache
+@module
+def patch(data, patches=None):
+    """
+    loads a data file into a VSansData obj and returns that.
+
+    **Inputs**
+
+    data (raw[]): datafiles with metadata to patch
+
+    patches (patch_metadata[]:run.filename): patches to be applied, with run.filename used as unique key
+
+    **Returns**
+
+    patched (raw[]): datafiles with patched metadata
+
+    2019-07-26 Brian Maranville
+    """
+    if patches is None:
+        return data
+    
+    from jsonpatch import JsonPatch
+        # make a master dict of metadata from provided key:
+
+    key="run.filename"
+
+    master = OrderedDict([(_s(d.metadata[key]), d.metadata) for d in data])
+    to_apply = JsonPatch(patches)
+    to_apply.apply(master, in_place=True)
+
+    return data
+
+@cache
+@module
+def autosort(rawdata, subsort="det.des_dis", add_scattering=True):
+    """
+    redirects a batch of files to different outputs based on metadata in the files
+
+    **Inputs**
+
+    rawdata (raw[]): datafiles with metadata to allow sorting
+
+    subsort (str): key on which to order subitems within output lists
+
+    add_scattering {Add sample scatterings together} (bool): Add sample scatterings, within
+    group defined by subsort key
+
+    **Returns**
+
+    sample_scatt (sans2d[]): Sample Scattering
+
+    blocked_beam (sans2d[]): Blocked Beam
+
+    empty_scatt (sans2d[]): Empty Cell Scattering
+
+    sample_trans (sans2d[]): Sample Transmission
+
+    empty_trans (sans2d[]): Empty Cell Transmission
+
+    2019-07-24 Brian Maranville
+    """
+
+    sample_scatt = []
+    blocked_beam = []
+    empty_scatt = []
+    sample_trans = []
+    empty_trans = []
+
+    print(rawdata)
+
+    for r in rawdata:
+        purpose = _s(r.metadata['analysis.filepurpose'])
+        intent = _s(r.metadata['analysis.intent'])
+        if intent.lower().strip().startswith('blo'):
+            blocked_beam.extend(to_sansdata(r))
+        elif purpose.lower() == 'scattering' and intent.lower() == 'sample':
+            sample_scatt.extend(to_sansdata(r))
+        elif purpose.lower() == 'scattering' and intent.lower().startswith('empty'):
+            empty_scatt.extend(to_sansdata(r))
+        elif purpose.lower() == 'transmission' and intent.lower() == 'sample':
+            sample_trans.extend(to_sansdata(r))
+        elif purpose.lower() == 'transmission' and intent.lower().startswith('empty'):
+            empty_trans.extend(to_sansdata(r))
+
+    def keyFunc(l):
+        return l.metadata.get(subsort, 0)
+
+    for output in [sample_scatt, blocked_beam, empty_scatt, sample_trans, empty_trans]:
+        output.sort(key=keyFunc)
+    
+    if add_scattering:
+        added_samples = OrderedDict()
+        for s in sample_scatt:
+            key = keyFunc(s)
+            added_samples.setdefault(key, [])
+            added_samples[key].append(s)
+        for key in added_samples:
+            added_samples[key] = addSimple(added_samples[key])
+        sample_scatt = list(added_samples.values())
+
+    return sample_scatt, blocked_beam, empty_scatt, sample_trans, empty_trans
+
 
 @cache
 @module
@@ -91,28 +281,37 @@ def LoadSANS(filelist=None, flip=False, transpose=False, check_timestamps=True):
 
     **Returns**
 
-    output (sans2d[]): all the entries loaded.
+    output (raw[]): all the entries loaded.
 
-    2018-04-20 Brian Maranville
+    | 2019-07-26 Brian Maranville
+    | 2019-08-09 Brian Maranville adding new stripped sample description
     """
-    from dataflow.fetch import url_get
-    from .loader import readSANSNexuz
-    if filelist is None:
-        filelist = []
-    data = []
-    for fileinfo in filelist:
-        path, mtime, entries = fileinfo['path'], fileinfo.get('mtime', None), fileinfo.get('entries', None)
-        name = basename(path)
-        fid = BytesIO(url_get(fileinfo, mtime_check=check_timestamps))
-        entries = readSANSNexuz(name, fid)
-        for entry in entries:
-            if flip:
-                entry.data.x = np.fliplr(entry.data.x)
-            if transpose:
-                entry.data.x = entry.data.x.T
-        data.extend(entries)
 
-    return data
+    rawdata = LoadRawSANS(filelist, check_timestamps=check_timestamps)
+    sansdata = []
+    for r in rawdata:
+        sansdata.extend(to_sansdata(r, flip=flip, transpose=transpose))
+    return sansdata
+
+def to_sansdata(rawdata, flip=False, transpose=False):
+    areaDetector = rawdata.detectors['detector']['data']['value']
+    shape = areaDetector.shape
+    if len(shape) < 2 or len(shape) > 3:
+        raise ValueError("areaDetector data must have dimension 2 or 3")
+        return
+    if len(shape) == 2:
+        # add another dimension at the front
+        shape = (1,) + shape
+        areaDetector = areaDetector.reshape(shape)
+    datasets = []
+    for i in range(shape[0]):
+        subset = areaDetector[i].copy()
+        if flip:
+            subset = np.fliplr(subset)
+        if transpose:
+            subset = subset.T
+        datasets.append(SansData(data=subset, metadata=rawdata.metadata))
+    return datasets
 
 """
     Variable vz_1 = 3.956e5		//velocity [cm/s] of 1 A neutron
@@ -166,6 +365,26 @@ def LoadSANS(filelist=None, flip=False, transpose=False, check_timestamps=True):
 End
 """
 
+#@module
+def draw_ellipse(data, ellipse=[0,0,0.01,0.01]):
+    """
+    draw an ellipse on the data
+
+    **Inputs**
+
+    data (sans2d): data in
+
+    ellipse (range:ellipse): ellipse to draw
+
+    **Returns**
+
+    output (sans2d): the same data
+
+    2019-07-31  Brian Maranville
+    """
+
+    return data
+
 #@cache
 #@module
 def calculateDQ(data):
@@ -196,21 +415,20 @@ def calculateDQ(data):
     # the detector pixel is square, so correct for phi
     DDetX = data.metadata["det.pixelsizex"]
     DDetY = data.metadata["det.pixelsizey"]
-    x_offset = data.metadata["det.pixeloffsetx"]
-    y_offset = data.metadata["det.pixeloffsety"]
     xctr = data.metadata["det.beamx"]
     yctr = data.metadata["det.beamy"]
 
     shape = data.data.x.shape
-    x, y = np.indices(shape)
+    x, y = np.indices(shape) + 1.0 # detector indexing starts at 1...
     X = DDetX * (x-xctr)
     Y = DDetY * (y-yctr)
 
-    apOff = data.metadata["sample.position"]
-    S1 = data.metadata["resolution.ap1"]
-    S2 = data.metadata["resolution.ap2"]
-    L1 = data.metadata["resolution.ap12dis"] - apOff
-    L2 = data.metadata["det.dis"] + apOff
+    sampleOff = data.metadata["sample.position"]
+    apOff = data.metadata["resolution.ap2Off"]
+    S1 = data.metadata["resolution.ap1"] / 2.0 # use radius
+    S2 = data.metadata["resolution.ap2"] / 2.0 # use radius
+    L1 = data.metadata["resolution.ap12dis"]
+    L2 = data.metadata["det.dis"] + sampleOff + apOff
     LP = 1.0/( 1.0/L1 + 1.0/L2)
     SDD = L2
     SSD = L1
@@ -234,7 +452,202 @@ def calculateDQ(data):
     data.dq_para = sig_para_new
     return data
 
-@nocache
+def calculateMeanQ(data):
+    """ calculate the overlap of the beamstop with the pixel """
+    from scipy.special import erf
+
+    BS = data.metadata['det.bstop'] / 2.0 # diameter to radius, already in cm
+
+    DDetX = data.metadata["det.pixelsizex"]
+    DDetY = data.metadata["det.pixelsizey"]
+    sampleOff = data.metadata["sample.position"]
+    apOff = data.metadata["resolution.ap2Off"]
+    wavelength = data.metadata['resolution.lmda']
+    L1 = data.metadata["resolution.ap12dis"]
+    L2 = data.metadata["det.dis"] + sampleOff + apOff
+    LB = 20.1 + 1.61*BS # empirical formula from NCNR_Utils.ipf, line 123 in "getResolution"
+    BS_prime = BS + (BS * LB / (L2 - LB)) # adding triangular shadow from LB to L2
+
+    r0 = data.r
+    r0_mean = r0.copy()
+    # width of the resolution function, on average
+    # could be corrected for phi if taking into account non-square pixels...
+    v_d = ((DDetX + DDetY) / (2.0 * np.sqrt(np.log(256.0))))**2
+
+    # cutoff_weight ~ integral[-inf, r0-BS_prime]1/sqrt(2*pi*dq**2) * exp(-r**2 / (2*dq**2))
+    #               = 0.5 * (1.0 + erf((r0 - BS_prime)/(2.0 * dq)))
+    shadow_factor = 0.5 * (1.0 + erf((r0 - BS_prime) / np.sqrt(2.0 * v_d)))
+    shadow_factor[shadow_factor<1e-16] = 1e-16
+
+    #inside_mask = (r0 <= BS_prime)
+    #outside_mask = np.logical_not(inside_mask)
+    # inside the beamstop, the center of mass of the distribution is displaced by 
+    # the center of the cutoff tail (relative to r0) on the high side, approx. 
+    # cutoff_weighted_integral ~ integral[BS_prime - r0, inf] 1/sqrt(2*pi*dq**2) * r * exp(-r**2 / (2*dq**2))
+    #               = 1.0/sqrt(2*pi*dq**2) * 1.0/dq**2 * exp(-(BS_prime - r0)**2 / (2 * dq**2))
+    #  
+    # then new_center = r0 + cutoff_weighted_integral / cutoff_integral
+    # but the cutoff_integral = shadow_factor, so :
+    #
+    # cutoff_weighted_integral_inside = 1.0/(np.sqrt(2.0 * np.pi) * dq[inside_mask]**3) * np.exp(-(BS_prime - r0[inside_mask])**2 / (2 * dq[inside_mask]**2))
+    # cutoff_center_inside = cutoff_weighted_integral_inside / shadow_factor[inside_mask]
+    # r0_mean[inside_mask] += cutoff_center_inside
+
+    # outside the beamstop, the center of mass of the distribution is displaced by the center
+    # of what is left after subtracting the cutoff tail, but the weighted sum of 
+    # cutoff_center * cutoff_integral + remainder_center * remainder_integral == 0!
+    # (equivalent to saying cutoff_weighted_integral + remainder_weighted_integral = 0)
+    # and also we know that cutoff_integral + remainder_integral = 1 (normalized gaussian)
+    # cutoff_weighted_integral ~ integral[-inf, r0-BS_prime] 1/sqrt(2*pi*dq**2) r exp(-r**2 / (2*dq**2))
+    #               = -1.0/sqrt(2*pi*dq**2) * 1.0/dq**2 * exp(-(r0 - BS_prime)**2 / (2 * dq**2))
+    # remainder_weighted_integral = -(cutoff_weighted_integral)
+    # 
+    # remainder_center = remainder_weighted_integral / remainder_integral
+    #                  = remainder_weighted_integral / (1 - cutoff_integral)
+    #                  = -cutoff_weighted_integral / (1 - cutoff_integral)
+    # then new_center *  = r0 - cutoff_weighted_integral / shadow_factor
+    # but the cutoff_weight = shadow_factor and total_weight = 1.0, so:
+    #
+    ## cutoff_weighted_integral_outside = -1.0/(np.sqrt(2.0 * np.pi) * dq[outside_mask]**3) * np.exp(-(r0[outside_mask] - BS_prime)**2 / (2 * dq[outside_mask]**2))
+
+    # but noticing that the expression for cutoff_weighted_integral_inside is the same numerically 
+    # (swapping positions of r0 and BS_prime has no effect) then this gets easier:
+
+    cutoff_weighted_integral = np.sqrt(v_d / (2.0 * np.pi)) * np.exp(-(r0 - BS_prime)**2 / (2 * v_d))
+    r0_mean += cutoff_weighted_integral / shadow_factor
+    
+    meanTheta = np.arctan2(r0_mean, L2)/2.0 #remember to convert L2 to cm from meters
+    data.meanQ = (4*np.pi/wavelength)*np.sin(meanTheta)
+    # TODO: shadow factor is calculated, but shouldn't the normalization to solid angle
+    # include the reduction from the shadow factor?  This will greatly increase the intensity
+    # of pixels near or below the beam stop!
+    data.shadow_factor = shadow_factor
+    return data
+
+
+def calculateDQ_IGOR(data, inQ, del_r=None):
+    """
+    Add the dQ column to the data, based on slit apertures and gravity
+    r_dist is the real-space distance from ctr of detector to QxQy pixel location
+
+    From `NCNR_Utils.ipf` (Steve R. Kline) in which the math is in turn from:
+
+    | D.F.R Mildner, J.G. Barker & S.R. Kline J. Appl. Cryst. (2011). 44, 1127-1129.
+    | *The effect of gravity on the resolution of small-angle neutron diffraction peaks*
+    | [ doi:10.1107/S0021889811033322 ]
+
+    | J. Appl. Cryst. (1995). 28, 105-114
+    | https://doi.org/10.1107/S0021889894010095 (Cited by 90)
+    | Instrumental Smearing Effects in Radially Symmetric Small-Angle Neutron Scattering by Numerical and Analytical Methods
+    | J. G. Barker and J. S. Pedersen
+
+    **Inputs**
+
+    data (sans2d): data in
+
+    del_r (float): width of circular slice in realspace (cm)
+
+    **Returns**
+
+    output (sans2d): data in with dQ column filled in
+
+    2017-06-16  Brian Maranville
+    """
+    from scipy.special import gammaln, gammainc, erf
+
+    G = 981.  #!    ACCELERATION OF GRAVITY, CM/SEC^2
+    vz_1 = 3.956e5 # velocity [cm/s] of 1 A neutron
+    # the detector pixel is square, so correct for phi
+    DDet = data.metadata["det.pixelsizex"]
+    if del_r is None:
+        del_r = DDet
+
+    apOff = data.metadata["resolution.ap2Off"]
+    sampleOff = data.metadata["sample.position"]
+    S1 = data.metadata["resolution.ap1"] * 0.5 # convert to radius, already cm
+    S2 = data.metadata["resolution.ap2"] * 0.5 # to radius
+    # no need to subtract apOff below - this is done in device model
+    # but for comparison with IGOR, leave it in:
+    L1 = data.metadata["resolution.ap12dis"] - apOff 
+    L2 = data.metadata["det.dis"] + sampleOff + apOff
+    LP = 1.0/( 1.0/L1 + 1.0/L2)
+    
+    BS = data.metadata['det.bstop'] / 2.0 # diameter to radius, already in cm
+    LB = 20.1 + 1.61*BS # empirical formula from NCNR_Utils.ipf, line 123 in "getResolution"
+    BS_prime = BS + (BS * LB / (L2 - LB)) # adding triangular shadow from LB to L2
+
+    lambda0 = data.metadata["resolution.lmda"]    #  15
+    labmdaWidth = data.metadata["resolution.dlmda"]    # 0.236
+
+    # these are defined in the IGOR code, but never get used therein...
+    ##a2 = S1*L2/L1 + S2*(L1+L2)/L1
+    ##q_small = 2.0*np.pi*(BS_prime-a2)*(1.0-lambdaWidth)/(lambda*L2)
+    LP = 1.0/( 1.0/L1 + 1.0/L2)
+    v_lambda = labmdaWidth**2/6.0
+
+    if 'LENS' in _s(data.metadata['run.guide'].upper()):
+        # NOTE: this might need adjustment.  Ticket #677 filed in trac to change to:
+        # v_b = 0.25*(S1*L2/L1)**2 +0.25*(2/3)*(labmdaWidth)**2*(S2*L2/LP)**2	
+        v_b = 0.25*(S1*L2/L1)**2 +0.25*(2/3)*(labmdaWidth/lambda0)**2*(S2*L2/LP)**2		# correction to 2nd term
+    else:
+        v_b = 0.25*(S1*L2/L1)**2 +0.25*(S2*L2/LP)**2		# original form
+
+    v_d = (DDet/2.3548)**2 + del_r**2/12.0	# the 2.3548 is a conversion from FWHM->Gauss, see http://mathworld.wolfram.com/GaussianFunction.html
+    vz = vz_1 / lambda0
+    yg = 0.5*G*L2*(L1+L2)/vz**2
+    v_g = 2.0*(2.0*yg**2*v_lambda)					# factor of 2 correction, B. Hammouda, 2007
+
+    r0 = L2*np.tan(2.0*np.arcsin(lambda0*inQ/(4.0*np.pi) ))
+    delta = 0.5*(BS_prime - r0)**2/v_d
+
+    #if (r0 < BS_prime):
+    #    inc_gamma=np.exp(gammaln(1.5))*(1-gammainc(1.5,delta))
+    #else:
+    #    inc_gamma=np.exp(gammaln(1.5))*(1+gammainc(1.5,delta))
+    inc_gamma = np.ones_like(r0)
+    r0_less = (r0 < BS_prime)
+    r0_more = (r0 >= BS_prime)
+    inc_gamma[r0_less] = np.exp(gammaln(1.5))*(1-gammainc(1.5,delta[r0_less]))
+    inc_gamma[r0_more] = np.exp(gammaln(1.5))*(1+gammainc(1.5,delta[r0_more]))
+ 
+
+    fSubS = 0.5*(1.0+erf( (r0-BS_prime)/np.sqrt(2.0*v_d) ) )
+    #if (fSubS <= 0.0):
+    #    fSubS = 1.e-10
+    fSubS[fSubS <= 0.0] = 1.e-10
+
+    fr = 1.0 + np.sqrt(v_d)*np.exp(-1.0*delta) /(r0*fSubS*np.sqrt(2.0*np.pi))
+    fv = inc_gamma/(fSubS*np.sqrt(np.pi)) - r0**2*(fr-1.0)**2/v_d
+
+    rmd = fr*r0
+    v_r1 = v_b + fv*v_d +v_g
+
+    rm = rmd + 0.5*v_r1/rmd
+    v_r = v_r1 - 0.5*(v_r1/rmd)**2
+    #if (v_r < 0.0):
+    #    v_r = 0.0
+    v_r[v_r < 0.0] = 0.0
+
+    QBar = (4.0*np.pi/lambda0)*np.sin(0.5*np.arctan(rm/L2))
+    SigmaQ = QBar*np.sqrt(v_r/rmd**2 + v_lambda)
+
+    return QBar, SigmaQ
+
+def _calculate_Q(X, Y, Z, q0):
+    r = np.sqrt(X**2+Y**2)
+    theta = np.arctan2(r, Z)/2 #remember to convert Z to cm from meters
+    q = q0*np.sin(theta)
+    phi = np.arctan2(Y, X)
+    qx = q*np.cos(theta)*np.cos(phi)
+    qy = q*np.cos(theta)*np.sin(phi)
+    qz = q*np.sin(theta)
+
+    return r, theta, q, phi, qx, qy, qz
+
+def FX(xx,sx3,xcenter,sx):
+    return sx3*np.tan((xx-xcenter)*sx/sx3)
+
+@cache
 @module
 def PixelsToQ(data, beam_center=[None,None], correct_solid_angle=True):
     """
@@ -254,45 +667,83 @@ def PixelsToQ(data, beam_center=[None,None], correct_solid_angle=True):
 
     output (sans2d): converted to I vs. Qx, Qy
 
-    2016-04-16 Brian Maranville
+    2016-04-17 Brian Maranville
     """
 
-    L2 = data.metadata['det.dis']
+    sampleOffset = data.metadata["sample.position"]
+    Z = data.metadata["det.dis"] + sampleOffset
     beamx_override, beamy_override = beam_center
     x0 = beamx_override if beamx_override is not None else data.metadata['det.beamx'] #should be close to 64
     y0 = beamy_override if beamy_override is not None else data.metadata['det.beamy'] #should be close to 64
     wavelength = data.metadata['resolution.lmda']
+    q0 = (4*np.pi/wavelength)
     shape = data.data.x.shape
 
-    qx = np.empty(shape, 'float')
-    qy = np.empty(shape, 'float')
+    x, y = np.indices(shape) + 1.0 # center of first pixel is 1, 1 (Detector indexing)
+    xcenter, ycenter = [(dd + 1.0)/2.0 for dd in shape] # = 64.5 for 128x128 array
+    sx = data.metadata['det.pixelsizex'] # cm
+    sy = data.metadata['det.pixelsizey']
+    sx3 = 1000.0 # constant, = 10000(mm) = 1000 cm; not in the nexus file for some reason.
+    sy3 = 1000.0 # (cm) also not in the nexus file 
+    # centers of pixels:
+    dxbm = sx3*np.tan((x0-xcenter)*sx/sx3)
+    dybm = sy3*np.tan((y0-ycenter)*sy/sy3)
 
-    x, y = np.indices(shape) + 0.5 # left, bottom edge of first pixel is 0.5, 0.5 pix.
-    X = data.metadata['det.pixelsizex']*(x-x0) # in mm in nexus, but converted by loader
-    Y = data.metadata['det.pixelsizey']*(y-y0)
-    r = np.sqrt(X**2+Y**2)
-    theta = np.arctan2(r, L2)/2 #remember to convert L2 to cm from meters
-    q = (4*np.pi/wavelength)*np.sin(theta)
-    alpha = np.arctan2(Y, X)
-    qx = q*np.cos(alpha)
-    qy = q*np.sin(alpha)
+    X = sx3*np.tan((x-xcenter)*sx/sx3) - dxbm # in mm in nexus, but converted by loader
+    Y = sy3*np.tan((y-ycenter)*sy/sy3) - dybm
+    r, theta, q, phi, qx, qy, qz = _calculate_Q(X, Y, Z, q0)
+    
     if correct_solid_angle:
-        data.data.x = data.data.x * (np.cos(theta)**3)
+        """
+        rad = sqrt(dtdis2 + xd^2 + yd^2)
+		domega = rad/dtdist
+		ratio = domega^3
+		xy = xx[ii]*yy[jj]
+
+		data[ii][jj] *= xy*ratio
+        """
+        xx = (np.cos((x-xcenter)*sx/sx3))**2
+        yy = (np.cos((y-ycenter)*sy/sy3))**2
+        #data.data.x = data.data.x / (np.cos(theta)**3)
+        data.data.x = data.data.x * xx * yy / (np.cos(2*theta)**3)
+
+    # bin corners:
+    X_low = sx3*np.tan((x - 0.5 - xcenter)*sx/sx3) - dxbm # in mm in nexus, but converted by loader
+    X_high = sx3*np.tan((x + 0.5 - xcenter)*sx/sx3) - dxbm # in mm in nexus, but converted by loader
+    Y_low = sy3*np.tan((y - 0.5 - ycenter)*sy/sy3) - dybm
+    Y_high = sy3*np.tan((y + 0.5 - ycenter)*sy/sy3) - dybm
+
+    r_low, theta_low, q_low, phi_low, qx_low, qy_low, qz_low = _calculate_Q(X_low, Y_low, Z, q0)
+    r_high, theta_high, q_high, phi_high, qx_high, qy_high, qz_high = _calculate_Q(X_high, Y_high, Z, q0)
+
     res = data.copy()
     #Adding res.q
     res.q = q
     res.qx = qx
     res.qy = qy
+    res.qz = qz
+    # bin edges:
+    res.qx_low = qx_low
+    res.qy_low = qy_low
+    res.qx_high = qx_high
+    res.qy_high = qy_high
+
+    res.X = X
+    res.Y = Y
+    res.Z = Z
+    res.r = r
     res.metadata['det.beamx'] = x0
     res.metadata['det.beamy'] = y0
-    q0 = (4*np.pi/wavelength)
-    res.qx_min = q0/2.0 * data.metadata['det.pixelsizex']*(0.5 - x0)/ L2
-    res.qy_min = q0/2.0 * data.metadata['det.pixelsizex']*(0.5 - y0)/ L2
-    res.qx_max = q0/2.0 * data.metadata['det.pixelsizex']*(128.5 - x0)/ L2
-    res.qy_max = q0/2.0 * data.metadata['det.pixelsizex']*(128.5 - y0)/ L2
+    res.qx_min = q0/2.0 * data.metadata['det.pixelsizex']*(0.5 - x0)/ Z
+    res.qy_min = q0/2.0 * data.metadata['det.pixelsizex']*(0.5 - y0)/ Z
+    res.qx_max = q0/2.0 * data.metadata['det.pixelsizex']*(128.5 - x0)/ Z
+    res.qy_max = q0/2.0 * data.metadata['det.pixelsizex']*(128.5 - y0)/ Z
     res.xlabel = "Qx (inv. Angstroms)"
     res.ylabel = "Qy (inv. Angstroms)"
     res.theta = theta
+
+    calculateDQ(res)
+    calculateMeanQ(res)
     return res
 
 @cache
@@ -312,7 +763,7 @@ def circular_av(data):
 
     mean_output (sans1d): converted to I vs. mean Q within integrated region
 
-    2016-04-11 Brian Maranville
+    2016-04-13 Brian Maranville
     """
     from .draw_annulus_aa import annular_mask_antialiased
 
@@ -330,7 +781,8 @@ def circular_av(data):
     shape1 = data.data.x.shape
     x0 = data.metadata['det.beamx'] # should be close to 64
     y0 = data.metadata['det.beamy'] # should be close to 64
-    L2 = data.metadata['det.dis']
+    sampleOffset = data.metadata["sample.position"]
+    L2 = data.metadata["det.dis"] + sampleOffset
     wavelength = data.metadata['resolution.lmda']
 
     center = (x0, y0)
@@ -390,9 +842,141 @@ def circular_av(data):
 
     return nominal_output, mean_output
 
+def oversample_2d(input_array, oversampling):
+    return np.repeat(np.repeat(input_array, oversampling, 0), oversampling, 1)
+
+@nocache
+@module
+def circular_av_new(data, q_min=None, q_max=None, q_step=None, mask_width=3, dQ_method='none'):
+    """
+    Using a circular average, it converts data to 1D (Q vs. I)
+
+
+    **Inputs**
+
+    data (sans2d): data in
+
+    q_min (float): minimum Q value for binning (defaults to q_step)
+
+    q_max (float): maxiumum Q value for binning (defaults to max of q values in data)
+
+    q_step (float): step size for Q bins (defaults to minimum qx step)
+
+    mask_width (int): number of pixels to mask around the perimeter of the detector
+
+    dQ_method (opt:none|IGOR|statistical) : method for calculating dQ
+
+    **Returns**
+
+    nominal_output (sans1d): converted to I vs. nominal Q
+
+    mean_output (sans1d): converted to I vs. mean Q within integrated region
+
+    output (sansIQ): canonical I vs Q output for sans data.
+
+    | 2019-01-01 Brian Maranville
+    | 2019-09-05 Adding mask_width as a temporary way to handle basic masking
+    | 2019-12-11 Brian Maranville adding dQ_method opts
+    """
+
+    # adding simple width-based mask around the perimeter:
+    mask = np.zeros_like(data.q, dtype=np.bool)
+    mask_width = abs(mask_width)
+    if (mask_width > 0):
+        mask[mask_width:-mask_width, mask_width:-mask_width] = True
+    else:
+        mask[:] = True
+
+    # calculate the change in q that corresponds to a change in pixel of 1
+    if data.qx is None:
+        raise ValueError("Q is not defined - convert pixels to Q first")
+
+    if q_step is None:
+        q_step = data.qx[1, 0]-data.qx[0, 0] / 1.0
+
+    if q_min is None:
+        q_min = q_step
+    
+    if q_max is None:
+        q_max = data.q[mask].max()
+
+    q_bins = np.arange(q_min, q_max+q_step, q_step)
+    Q = (q_bins[:-1] + q_bins[1:])/2.0
+
+    oversampling = 3
+
+    o_mask = oversample_2d(mask, oversampling)
+    #o_q = oversample_2d(data.q, oversampling)
+    o_qxi, o_qyi = np.indices(o_mask.shape)
+    o_qx_offsets = ((o_qxi % oversampling) + 0.5) / oversampling
+    o_qy_offsets = ((o_qyi % oversampling) + 0.5) / oversampling
+    qx_width = oversample_2d(data.qx_high - data.qx_low, oversampling)
+    qy_width = oversample_2d(data.qy_high - data.qy_low, oversampling)
+    original_lookups = (np.floor_divide(o_qxi, oversampling), np.floor_divide(o_qyi, oversampling))
+    o_qx = data.qx_low[original_lookups] + (qx_width * o_qx_offsets)
+    o_qy = data.qy_low[original_lookups] + (qy_width * o_qy_offsets)
+    o_qz = oversample_2d(data.qz, oversampling)
+    o_q = np.sqrt(o_qx**2 + o_qy**2 + o_qz**2)
+    o_data = oversample_2d(data.data, oversampling) # Uncertainty object...
+    o_meanQ = oversample_2d(data.meanQ, oversampling)
+    o_shadow_factor = oversample_2d(data.shadow_factor, oversampling)
+    o_dq_para = oversample_2d(data.dq_para, oversampling)
+
+    # dq = data.dq_para if hasattr(data, 'dqpara') else np.ones_like(data.q) * q_step
+    I, _bins_used = np.histogram(o_q[o_mask], bins=q_bins, weights=o_data.x[o_mask])
+    I_norm, _ = np.histogram(o_q[o_mask], bins=q_bins, weights=np.ones_like(o_data.x[o_mask]))
+    I_var, _ = np.histogram(o_q[o_mask], bins=q_bins, weights=o_data.variance[o_mask])
+    #Q_ave, _ = np.histogram(o_q[o_mask], bins=q_bins, weights=o_q[o_mask])
+    #Q_var, _ = np.histogram(data.q, bins=q_bins, weights=data.dq_para**2)
+    Q_mean, _ = np.histogram(o_q[o_mask], bins=q_bins, weights=o_meanQ[o_mask])
+    ShadowFactor, _ = np.histogram(o_q[o_mask], bins=q_bins, weights=o_shadow_factor[o_mask])
+
+    nonzero_mask = I_norm > 0
+
+    I[nonzero_mask] /= I_norm[nonzero_mask]
+    I_var[nonzero_mask] /= (I_norm[nonzero_mask]**2)
+    Q_mean[nonzero_mask] /= I_norm[nonzero_mask]
+    #Q_ave[nonzero_mask] /= I_norm[nonzero_mask]
+    ShadowFactor[nonzero_mask] /= I_norm[nonzero_mask]
+
+    # calculate Q_var...
+    # remarkably, the variance of a sum of normalized gaussians 
+    # with variances v_i, displaced from the mean center by xc_i
+    # is the sum of (xc_i**2 + v_i).   Gaussians are weird.
+
+    
+    if dQ_method == 'IGOR':
+        Q_mean, Q_mean_error = calculateDQ_IGOR(data, Q)
+    elif dQ_method == 'statistical':
+        # exclude Q_mean_lookups that overflow the length of the calculated Q_mean:
+        Q_lookup = np.digitize(o_q[o_mask], bins=q_bins)
+        Q_lookup_mask = (Q_lookup < len(Q))
+        Q_mean_center = Q_mean[Q_lookup[Q_lookup_mask]]
+        Q_var_contrib = (o_meanQ[o_mask][Q_lookup_mask] - Q_mean_center)**2 + (o_dq_para[o_mask][Q_lookup_mask])**2
+        Q_var, _ = np.histogram(o_meanQ[o_mask][Q_lookup_mask], bins=q_bins, weights=Q_var_contrib)
+        Q_var[nonzero_mask] /= I_norm[nonzero_mask]
+        Q_mean_error = np.sqrt(Q_var)
+    else:
+        # 'none' is the default
+        Q_mean_error = np.zeros_like(Q)
+
+    nominal_output = Sans1dData(Q, I, dx=Q_mean_error, dv=I_var, xlabel="Q", vlabel="I",
+                        xunits="inv. A", vunits="neutrons")
+    nominal_output.metadata = deepcopy(data.metadata)
+    nominal_output.metadata['extra_label'] = "_circ"
+
+    mean_output = Sans1dData(Q_mean, I, dx=Q_mean_error, dv=I_var, xlabel="Q", vlabel="I",
+                        xunits="inv. A", vunits="neutrons")
+    mean_output.metadata = deepcopy(data.metadata)
+    mean_output.metadata['extra_label'] = "_circ"
+
+    canonical_output = SansIQData(I, np.sqrt(I_var), Q, Q_mean_error, Q_mean, ShadowFactor, metadata=deepcopy(data.metadata))
+    
+    return nominal_output, mean_output, canonical_output
+
 @cache
 @module
-def sector_cut(data, angle=0.0, width=90.0, mirror=True):
+def sector_cut(data, sector=[0.0, 90.0], mirror=True):
     """
     Using annular averging, it converts data to 1D (Q vs. I)
     over a particular angle range
@@ -402,9 +986,7 @@ def sector_cut(data, angle=0.0, width=90.0, mirror=True):
 
     data (sans2d): data in
 
-    angle (float): center angle of sector cut (degrees)
-
-    width (float): width of cut (degrees)
+    sector (range:sector_centered): angle and opening of sector cut (radians)
 
     mirror (bool): extend sector cut on both sides of origin
         (when false, integrates over a single cone centered at angle)
@@ -419,6 +1001,9 @@ def sector_cut(data, angle=0.0, width=90.0, mirror=True):
     """
     from .draw_annulus_aa import sector_cut_antialiased
 
+    if sector is None:
+        sector = [0.0, 90.0]
+
     #annular_mask_antialiased(shape, center, inner_radius, outer_radius,
     #                         background_value=0.0, mask_value=1.0, oversampling=8)
 
@@ -430,7 +1015,8 @@ def sector_cut(data, angle=0.0, width=90.0, mirror=True):
     shape1 = data.data.x.shape
     x0 = data.metadata['det.beamx'] # should be close to 64
     y0 = data.metadata['det.beamy'] # should be close to 64
-    L2 = data.metadata['det.dis']
+    apOff = data.metadata["sample.position"]
+    L2 = data.metadata["det.dis"] + apOff
     wavelength = data.metadata['resolution.lmda']
 
     center = (x0, y0)
@@ -445,6 +1031,7 @@ def sector_cut(data, angle=0.0, width=90.0, mirror=True):
     I = []
     I_error = []
     dx = np.zeros_like(Q, dtype="float")
+    angle, width = sector
     start_angle = np.radians(angle - width/2.0)
     end_angle = np.radians(angle + width/2.0)
     for i, qq in enumerate(Q):
@@ -493,6 +1080,32 @@ def sector_cut(data, angle=0.0, width=90.0, mirror=True):
     return nominal_output, mean_output
 
 @module
+def rescale_1d(data, scale=1.0, dscale=0.0):
+    """
+    Multiply 1d data by a scale factor
+
+    **Inputs**
+
+    data (sans1d): data in
+
+    scale (scale*) : amount to scale, one for each dataset
+
+    dscale {Scale err} (float*:<0,inf>) : scale uncertainty for gaussian error propagation
+
+    **Returns**
+
+    output (sans1d) : scaled data
+
+    2016-04-17 Brian Maranville
+    """
+    from dataflow.lib import err1d
+
+    I, varI = err1d.mul(data.v, data.dv, scale, dscale**2)
+    data.v, data.dv = I, varI
+    
+    return data
+
+@module
 def correct_detector_efficiency(sansdata):
     """
     Given a SansData object, corrects for the efficiency of the detection process
@@ -505,18 +1118,32 @@ def correct_detector_efficiency(sansdata):
 
     output (sans2d): corrected for efficiency
 
-    2016-08-04 Brian Maranville and Andrew Jackson
+    | 2016-08-04 Brian Maranville and Andrew Jackson
+    | 2019-12-13 updated to detector coordinates
     """
 
-    L2 = sansdata.metadata['det.dis']
+    sampleOff = sansdata.metadata["sample.position"]
+    Z = sansdata.metadata["det.dis"] + sampleOff # cm
     lambd = sansdata.metadata["resolution.lmda"]
     shape = sansdata.data.x.shape
-    (x0, y0) = np.shape(sansdata.data.x)
-    x, y = np.indices(shape)
-    X = sansdata.metadata['det.pixelsizex']/10.0*(x-x0/2)
-    Y = sansdata.metadata['det.pixelsizey']/10.0*(y-y0/2)
+    x0 = sansdata.metadata['det.beamx'] #should be close to 64
+    y0 = sansdata.metadata['det.beamy'] #should be close to 64
+    xcenter, ycenter = [(dd + 1.0)/2.0 for dd in shape]
+
+    x, y = np.indices(shape) + 1.0 # detector coordinates
+
+    sx = sansdata.metadata['det.pixelsizex'] # cm
+    sy = sansdata.metadata['det.pixelsizey']
+    sx3 = 1000.0 # constant, = 10000(mm) = 1000 cm; not in the nexus file for some reason.
+    sy3 = 1000.0 # (cm) also not in the nexus file 
+    # centers of pixels:
+    dxbm = sx3*np.tan((x0-xcenter)*sx/sx3)
+    dybm = sy3*np.tan((y0-ycenter)*sy/sy3)
+
+    X = sx3*np.tan((x-xcenter)*sx/sx3) - dxbm # in mm in nexus, but converted by loader
+    Y = sy3*np.tan((y-ycenter)*sy/sy3) - dybm
     r = np.sqrt(X**2+Y**2)
-    theta_det = np.arctan2(r, L2*100)/2
+    theta_det = np.arctan2(r, Z)/2
 
     stAl = 0.00967*lambd*0.8 # dimensionless, constants from JGB memo
     stHe = 0.146*lambd*2.5
@@ -582,7 +1209,7 @@ def monitor_normalize(sansdata, mon0=1e8):
     return res
 
 @module
-def generate_transmission(in_beam, empty_beam, integration_box=[55, 74, 53, 72]):
+def generate_transmission(in_beam, empty_beam, integration_box=[55, 74, 53, 72], align_by="run.configuration", auto_integrate=True, margin=5):
     """
     To calculate the transmission, we integrate the intensity in a box
     for a measurement with the substance in the beam and with the substance
@@ -593,88 +1220,161 @@ def generate_transmission(in_beam, empty_beam, integration_box=[55, 74, 53, 72])
 
     **Inputs**
 
-    in_beam (sans2d): measurement with sample in the beam
+    in_beam (sans2d[]): measurement with sample in the beam
 
-    empty_beam (sans2d): measurement with no sample in the beam
+    empty_beam (sans2d[]): measurement with no sample in the beam
 
     integration_box (range:xy): region over which to integrate
 
+    align_by (str): for multiple in_beam and empty_beam, line up by this metadata key
+    use "none" to align by positional order
+
+    auto_integrate (bool): automatically select integration region
+
+    margin {Box margin, width = 4*gauss_width + 2*margin:} (int): Extra margin 
+    to add to automatically calculated peak width in x and y
+
     **Returns**
 
-    output (params): calculated transmission for the integration area
+    output (params[]): calculated transmission for the integration area
 
-    2017-02-29 Brian Maranville
+    | 2017-02-29 Brian Maranville
+    | 2019-06-03 Adding auto-integrate, Brian Maranville
+    | 2019-08-14 Adding metadata for grouping later, Brian Maranville
+    | 2019-08-22 Adding align_by for inputs, Brian Maranville
     """
-    #I_in_beam = 0.0
-    #I_empty_beam = 0.0
-    #xmax, ymax = np.shape(in_beam.data.x)
-    #print(xmax, ymax)
-    # Vectorize this loop, it's quick, but could be quicker
-    # test against this simple minded implementation
-    #print(ymax-coords_bottom_left[1], ymax-coords_upper_right[1])
+    
+    if align_by == "none":
+        if len(in_beam) != len(empty_beam):
+            raise ValueError("number of in_beam must match number of empty_beam when align_by is none")
+        output = []
+        for ib, eb in zip(in_beam, empty_beam):
+            output.append(_generate_transmission(ib, eb, integration_box=integration_box, auto_integrate=auto_integrate, margin=margin))
+        return output
+    else:
+        eb_lookup = dict([(get_compound_key(eb.metadata, align_by), eb) for eb in empty_beam])
+        output = []
+        for ib in in_beam:
+            eb = eb_lookup.get(get_compound_key(ib.metadata, align_by), None)
+            if eb is None:
+                raise ValueError("no matching empty was found for configuration: " + get_compound_key(ib.metadata, align_by))
+            output.append(_generate_transmission(ib, eb, integration_box=integration_box, auto_integrate=auto_integrate, margin=margin))
+        return output        
+        
+def _generate_transmission(in_beam, empty_beam, integration_box=None, auto_integrate=True, margin=5):
+    if auto_integrate:
+        height, x, y, width_x, width_y = moments(empty_beam.data.x)
+        center_x = x + 0.5
+        center_y = y + 0.5
 
-    #for x in range(coords_bottom_left[0], coords_upper_right[0]+1):
-    #    for y in range(ymax-coords_upper_right[1], ymax-coords_bottom_left[1]+1):
-    #        I_in_beam = I_in_beam+in_beam.data.x[x, y]
-    #        I_empty_beam = I_empty_beam+empty_beam.data.x[x, y]
-
-    xmin, xmax, ymin, ymax = map(int, integration_box)
+        xmin = int(max(0, np.floor(center_x - width_x*2.0) - margin))
+        xmax = int(min(empty_beam.data.shape[0], np.ceil(center_x + width_x*2.0) + margin))
+        ymin = int(max(0, np.floor(center_y - width_y*2.0) - margin))
+        ymax = int(min(empty_beam.data.shape[1], np.ceil(center_y + width_y*2.0) + margin))
+    
+    else:
+        xmin, xmax, ymin, ymax = map(int, integration_box)
+    
     I_in_beam = np.sum(in_beam.data[xmin:xmax+1, ymin:ymax+1])
     I_empty_beam = np.sum(empty_beam.data[xmin:xmax+1, ymin:ymax+1])
 
     ratio = I_in_beam/I_empty_beam
-    result = Parameters(factor=ratio.x, factor_variance=ratio.variance,
-                        factor_err=np.sqrt(ratio.variance))
+    result = Parameters(OrderedDict([
+        ("factor", ratio.x), 
+        ("factor_variance", ratio.variance),
+        ("factor_err", np.sqrt(ratio.variance)),
+        ("run.configuration", in_beam.metadata['run.configuration']),
+        ("sample.description", in_beam.metadata['sample.description']),
+        ("det.des_dis", in_beam.metadata['det.des_dis']),
+        ("resolution.lmda", in_beam.metadata['resolution.lmda']),
+        ("run.guide", in_beam.metadata['run.guide']),
+        ("box_used", {"xmin": xmin, "xmax": xmax, "ymin": ymin, "ymax": ymax})
+    ]))
 
     return result
 
+def moments(data):
+    """Returns (height, x, y, width_x, width_y)
+    the gaussian parameters of a 2D distribution by calculating its
+    moments """
+    total = data.sum()
+    X, Y = np.indices(data.shape)
+    x = (X*data).sum()/total
+    y = (Y*data).sum()/total
+    col = data[:, int(round(y))]
+    width_x = np.sqrt(np.abs((np.arange(col.size)-x)**2*col).sum()/col.sum())
+    row = data[int(round(x)), :]
+    width_y = np.sqrt(np.abs((np.arange(row.size)-y)**2*row).sum()/row.sum())
+    height = data.max()
+    return height, x, y, width_x, width_y
+
 @module
-def subtract(subtrahend, minuend):
+def subtract(subtrahend, minuend, align_by='run.configuration'):
     """
     Algebraic subtraction of datasets pixel by pixel
 
     **Inputs**
 
-    subtrahend (sans2d): a in (a-b) = c
+    subtrahend (sans2d[]): a in (a-b) = c
 
-    minuend (sans2d?): b in (a-b) = c, defaults to zero
+    minuend (sans2d[]?): b in (a-b) = c, defaults to zero
+
+    align_by (str): for multiple inputs, subtract minuend that matches subtrahend
+    for this metadata value 
+    (use "none" to align each subtrahend and minuend by position in the data list)
 
     **Returns**
 
-    output (sans2d): c in (a-b) = c
+    output (sans2d[]): c in (a-b) = c
 
-    2010-01-01 unknown
+    | 2010-01-01 unknown
+    | 2019-08-14 Brian Maranville adding group by config
     """
-    if minuend is not None:
-        return subtrahend - minuend
-    else:
+
+    if not minuend or len(minuend) == 0:
         return subtrahend
+    elif len(minuend) == 1:
+        return [s - minuend[0] for s in subtrahend]
+    elif align_by.lower() != "none":
+        # make lookup:
+        align_lookup = dict([(get_compound_key(m.metadata, align_by), m) for m in minuend])
+        return [(s - align_lookup[get_compound_key(s.metadata, align_by)]) for s in subtrahend]
+    else:
+        return [(s - m) for s,m in zip(subtrahend, minuend)]
 
 @module
-def product(data, factor_param, propagate_error=True):
+def product(data, factor_param, align_by="det.des_dis,resolution.lmda,run.guide"):
     """
     Algebraic multiplication of dataset
 
     **Inputs**
 
-    data (sans2d): data in (a)
+    data (sans2d[]): data in (a)
 
-    factor_param (params?): multiplication factor (b), defaults to 1
+    factor_param (params[]?): multiplication factor (b), defaults to 1
 
-    propagate_error {Propagate error} (bool): if factor_error is passed in, use it
+    align_by (str): for multiple inputs, multiply data that matches factor_param with this 
+    metadata value
 
     **Returns**
 
-    output (sans2d): result (c in a*b = c)
+    output (sans2d[]): result (c in a*b = c)
 
-    2010-01-02 unknown
+    | 2010-01-02 unknown
+    | 2019-07-27 Brian Maranville
     """
-    if factor_param is not None:
-        if propagate_error:
-            variance = factor_param.get('factor_variance', 0.0)
-        return data * Uncertainty(factor_param.get('factor', 1.0), variance)
-    else:
+    # follow broadcast rules:
+    if not factor_param or len(factor_param) == 0:
         return data
+    elif len(factor_param) == 1:
+        f = factor_param[0]
+        return [(d * Uncertainty(f.params.get('factor', 1.0), f.params.get('factor_variance', 0.0))) for d in data]
+    elif align_by.lower() != "none":
+        # make lookup:
+        align_lookup = dict([(get_compound_key(f.params, align_by), Uncertainty(f.params.get('factor', 1.0), f.params.get('factor_variance', 0.0))) for f in factor_param])
+        return [(d * align_lookup[get_compound_key(d.metadata, align_by)]) for d in data]
+    else:
+        return [d * Uncertainty(f.params.get('factor', 1.0), f.params.get('factor_variance', 0.0)) for d,f in zip(data, factor_param)]
 
 @module
 def divide(data, factor_param):
@@ -694,7 +1394,7 @@ def divide(data, factor_param):
     2010-01-01 unknown
     """
     if factor_param is not None:
-        return data.__truediv__(factor_param['factor'])
+        return data.__truediv__(factor_param.params['factor'])
     else:
         return data
 
@@ -795,7 +1495,7 @@ def correct_attenuation(sample, instrument="NG7"):
 
 @cache
 @module
-def absolute_scaling(sample, empty, div, Tsam, instrument="NG7", integration_box=[55, 74, 53, 72]):
+def absolute_scaling(empty, sample, Tsam, div, instrument="NG7", integration_box=[55, 74, 53, 72], auto_box=True, margin=5):
     """
     Calculate absolute scaling
 
@@ -803,31 +1503,41 @@ def absolute_scaling(sample, empty, div, Tsam, instrument="NG7", integration_box
 
     **Inputs**
 
-    sample (sans2d): measurement with sample in the beam
-
     empty (sans2d): measurement with no sample in the beam
 
-    div (sans2d): DIV measurement
+    sample (sans2d): measurement with sample in the beam
 
     Tsam (params): sample transmission
+
+    div (sans2d): DIV measurement
 
     instrument (opt:NG7|NGB|NGB30): instrument name, should be NG7 or NG3
 
     integration_box (range:xy): region over which to integrate
 
+    auto_box (bool): automatically select integration region
+
+    margin {Box margin, width = 4*gauss_width + 2*margin:} (int): Extra margin 
+    to add to automatically calculated peak width in x and y
+
     **Returns**
 
     abs (sans2d): data on absolute scale
 
-    2017-01-13 Andrew Jackson
+    params (params): parameter outputs
+
+    | 2017-01-13 Andrew Jackson
+    | 2019-07-04 Brian Maranville
+    | 2019-07-14 Brian Maranville
     """
-    # data (that is going through reduction), empty beam,
+        # data (that is going through reduction), empty beam,
     # div, Transmission of the sample, instrument(NG3.NG5, NG7)
     # ALL from metadata
     detCnt = empty.metadata['run.detcnt']
     countTime = empty.metadata['run.rtime']
     monCnt = empty.metadata['run.moncnt']
-    sdd = empty.metadata['det.dis'] # already in cm
+    sampleOff = empty.metadata["sample.position"]
+    sdd = empty.metadata["det.dis"] + sampleOff # already in cm
     pixel = empty.metadata['det.pixelsizex'] # already in cm
     lambd = wavelength = empty.metadata['resolution.lmda']
 
@@ -846,29 +1556,53 @@ def absolute_scaling(sample, empty, div, Tsam, instrument="NG7", integration_box
     #-------------------------------------------------------------------------------------#
 
     # Correct empty beam by the sensitivity
-    data = empty.__truediv__(div.data)
+    data = empty.data/div.data
     # Then take the sum in XY box, including stat. error
-    xmin, xmax, ymin, ymax = map(int, integration_box)
-    detCnt = np.sum(data.data[xmin:xmax+1, ymin:ymax+1])
+    if auto_box:
+        height, x, y, width_x, width_y = moments(empty.data.x)
+        center_x = x + 0.5
+        center_y = y + 0.5
+
+        xmin = int(max(0, np.floor(center_x - width_x*2.0) - margin))
+        xmax = int(min(empty.data.shape[0], np.ceil(center_x + width_x*2.0) + margin))
+        ymin = int(max(0, np.floor(center_y - width_y*2.0) - margin))
+        ymax = int(min(empty.data.shape[1], np.ceil(center_y + width_y*2.0) + margin))
+    
+    else:
+        xmin, xmax, ymin, ymax = map(int, integration_box)
+
+    detCnt = np.sum(data[xmin:xmax+1, ymin:ymax+1])
     print("DETCNT: ", detCnt)
+    print('attentrans: ', attenTrans)
+    print('monCnt: ', monCnt)
 
     #------End Result-------#
     # This assumes that the data is has not been normalized at all.
     # Thus either fix this or pass un-normalized data.
     # Compute kappa = incident intensity * solid angle of the pixel
     kappa = detCnt / attenTrans * 1.0e8 / monCnt * (pixel/sdd)**2
-    #print("Kappa: ", kappa)
+    print("Kappa: ", kappa.x, "+/-", np.sqrt(kappa.variance))
 
     #utc_datetime = date.datetime.utcnow()
     #print(utc_datetime.strftime("%Y-%m-%d %H:%M:%S"))
 
-    Tsam_factor = Uncertainty(Tsam['factor'], Tsam['factor_variance'])
+    Tsam_factor = Uncertainty(Tsam.params['factor'], Tsam.params['factor_variance'])
+    print('Tsam_factor: ', Tsam_factor.x)
 
     #-----Using Kappa to Scale data-----#
     Dsam = sample.metadata['sample.thk']
     ABS = sample.__mul__(1/(kappa*Dsam*Tsam_factor))
+
+    params = OrderedDict([
+        ("DETCNT", detCnt.x),
+        ("attentrans", attenTrans.x),
+        ("monCnt", monCnt),
+        ("kappa", kappa.x),
+        ("Dsam", Dsam),
+        ("box_used", {"xmin": xmin, "xmax": xmax, "ymin": ymin, "ymax": ymax})
+    ])
     #------------------------------------
-    return ABS
+    return ABS, Parameters(params)
 
 @cache
 @module
@@ -933,6 +1667,47 @@ def addSimple(data):
         output.metadata['run.detcnt'] += d.metadata['run.detcnt']
     return output
 
+def get_compound_key(data_dict, compound_key, separator=","):
+    subkeys = [s.strip() for s in compound_key.split(separator)]
+    key = separator.join([_s(data_dict.get(sk, 'unknown')) for sk in subkeys])
+    return key
+
+@module
+def groupAddData(data, group_by="run.configuration,sample.description"):
+    """
+    Addition of counts and monitor from different datasets,
+    assuming all datasets were taken under identical conditions
+    (except for count time)
+
+    Groups by the metadata fields in "group_by" (comma-separated)
+    e.g. all data with the same sample.description and run.configuration
+    will be added together for group_by="run.configuration,sample.description"
+
+    Use "group_by" = "none" to just add all together (like addSimple)
+
+    Use metadata from first dataset in each group for output.
+
+    **Inputs**
+
+    data (sans2d[]): measurements to be added together
+
+    group_by {Group by} (str): grouping key from metadata
+
+    **Returns**
+
+    sum (sans2d[]): sum of inputs, grouped
+
+    2017-06-29  Brian Maranville
+    """
+
+    groups = OrderedDict()
+    for d in data:
+        key = get_compound_key(d.metadata, group_by)
+        groups.setdefault(key, [])
+        groups[key].append(d)
+    
+    output = [addSimple(g) for g in groups.values()]
+    return output
 
 @cache
 @module
@@ -1090,11 +1865,89 @@ def sliceData(data, slicebox=[None,None,None,None]):
                         
     return x_output, y_output
 
+@nocache
+@module
+def transmissionDecay(data, slicebox=[None,None,None,None], autosort=True):
+    """
+    Sum 2d data along in the box and return intensity vs time
 
+    **Inputs**
+
+    data (sans2d[]) : data in
+    
+    slicebox (range?:xy): region over which to integrate (in data coordinates)
+
+    autosort (bool): sort results by time
+
+    **Returns**
+
+    sum (sans1d) : integrated counts vs. middle of count time (average of start and end times)
+
+    2018-04-24 Brian Maranville
+    """
+    import datetime, iso8601
+    if slicebox is None:
+        slicebox = [None, None, None, None]
+    xmin, xmax, ymin, ymax = slicebox
+    
+    times = []
+    sums = []
+    sums_variance = []
+    for dataset in data:
+        box_sum = sumBox(dataset, xmin, xmax, ymin, ymax)
+        sums.append(box_sum.x)
+        sums_variance.append(box_sum.variance)
+        start_time = iso8601.parse_date(_s(dataset.metadata['start_time']))
+        end_time = iso8601.parse_date(_s(dataset.metadata['end_time']))
+        avg_time = (end_time - start_time)/2.0 + start_time
+        times.append(avg_time.timestamp())
+    
+    xdata = np.array(times)
+    dxdata = np.zeros_like(xdata)
+
+    ydata = np.array(sums)
+    dydata = np.array(sums_variance)
+    if autosort:
+        sorting_indices = np.argsort(xdata)
+        xdata = xdata[sorting_indices]
+        dxdata = dxdata[sorting_indices]
+        ydata = ydata[sorting_indices]
+        dydata = dydata[sorting_indices]
+
+
+    output = Sans1dData(xdata, ydata, dx=dxdata, dv=dydata, xlabel='time', vlabel="I",
+                    xunits="s", vunits="neutrons", xscale="time", metadata=data[0].metadata)
+    
+    return output
+    
+
+def sumBox(data, xmin, xmax, ymin, ymax):
+    res = data.copy()
+    if data.qx is None or data.qy is None:
+        # then use pixels
+        xslice = slice(int(np.ceil(xmin)) if xmin is not None else None, int(np.floor(xmax)) if xmax is not None else None)
+        yslice = slice(int(np.ceil(ymin)) if ymin is not None else None, int(np.floor(ymax)) if ymax is not None else None)
+        
+    else:
+        # then use q-values
+        qxmin = data.qx_min if data.qx_min is not None else data.qx.min()
+        qxmax = data.qx_max if data.qx_max is not None else data.qx.max()
+        qx_in = np.linspace(qxmin, qxmax, data.data.x.shape[0])
+        qymin = data.qy_min if data.qy_min is not None else data.qy.min()
+        qymax = data.qy_max if data.qy_max is not None else data.qy.max()
+        qy_in = np.linspace(qymin, qymax, data.data.x.shape[1])
+        
+        xslice = slice(get_index(qx_in, xmin), get_index(qx_in, xmax))
+        yslice = slice(get_index(qy_in, ymin), get_index(qy_in, ymax))
+        
+    dataslice = (xslice, yslice)
+    box_sum = uncertainty.sum(data.data[dataslice])
+    return box_sum
+    
 @cache
 @module
 def SuperLoadSANS(filelist=None, do_det_eff=True, do_deadtime=True,
-                  deadtime=1.0e-6, do_mon_norm=True, do_atten_correct=False, mon0=1e8,
+                  deadtime=1.0e-6, do_mon_norm=True, do_atten_correct=True, mon0=1e8,
                   check_timestamps=True):
     """
     loads a data file into a SansData obj, and performs common reduction steps
@@ -1123,7 +1976,8 @@ def SuperLoadSANS(filelist=None, do_det_eff=True, do_deadtime=True,
 
     output (sans2d[]): all the entries loaded.
 
-    2018-04-20 Brian Maranville
+    | 2018-04-21 Brian Maranville
+    | 2019-12-11 Changed loader to include sample aperture offset position
     """
     data = LoadSANS(filelist, flip=False, transpose=False, check_timestamps=check_timestamps)
 

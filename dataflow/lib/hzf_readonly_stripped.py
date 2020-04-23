@@ -56,7 +56,8 @@ class Node(object):
         return self.path
 
     def keys(self):
-        return [x for x in self.root.listdir(self.path) if not "." in x]
+        return [x for x in self.root.listdir(self.path)
+                if not x.endswith('.attrs') and not x.endswith('.link')]
 
     def values(self):
         keys = self.keys()

@@ -191,7 +191,6 @@ class PolarizationData:
         self.Imin = Imin
         self.clip = clip
 
-        self.messages = []
         self.warnings = []
 
     def apply(self, data, spinflip=True):
@@ -201,17 +200,6 @@ class PolarizationData:
 
     def plot(self):
         raise NotImplementedError("see polarization.py for plots we want to create")
-
-    def log(self, msg):
-        self.messages.append(msg)
-
-    def log_dependency(self, label, other):
-        if other.messages:
-            self.messages.append(label + ":")
-            self.messages.append(other.messages)
-        if other.warnings:
-            self.messages.append(label + ":")
-            self.messages.append(other.messages)
 
     def get_metadata(self):
         eff = polarization_efficiency(self.beam, Imin=self.Imin, Emin=self.Emin,

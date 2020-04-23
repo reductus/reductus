@@ -54,7 +54,7 @@ except ImportError:
 import pytz
 
 from .calc import _format_ordered, generate_fingerprint
-from .cache import get_file_cache
+from .cache import get_cache
 from .doi_resolve import get_target
 from .lib.iso8601 import seconds_since_epoch
 
@@ -62,6 +62,7 @@ from .lib.iso8601 import seconds_since_epoch
 # in particular, remove the "local" option if deploying in the cloud!
 
 DATA_SOURCES = []
+FILE_HELPERS = []
 DEFAULT_DATA_SOURCE = "ncnr"
 
 def check_datasource(source):
@@ -83,12 +84,12 @@ def check_datasource(source):
 def url_get(fileinfo, mtime_check=True):
     path, mtime, entries = fileinfo['path'], fileinfo.get('mtime', None), fileinfo.get('entries', None)
     # fingerprint the get, leaving off entries information:
-    cache = get_file_cache()
+    cache = get_cache()
     fileinfo_minimal = {'path': path, 'mtime': mtime}
     config_str = str(_format_ordered(fileinfo_minimal))
     fp = generate_fingerprint(("url_get", config_str))
-    if cache.exists(fp):
-        ret = cache.get(fp)
+    if cache.file_exists(fp):
+        ret = cache.retrieve_file(fp)
         print("getting " + path + " from cache!")
     else:
         source = fileinfo.get("source", DEFAULT_DATA_SOURCE)
@@ -117,7 +118,7 @@ def url_get(fileinfo, mtime_check=True):
 
             ret = url.read()
             print("caching " + path)
-            cache.set(fp, ret)
+            cache.store_file(fp, ret)
         except urllib2.HTTPError as exc:
             raise ValueError("Could not open %r\n%s"%(path, str(exc)))
         finally:

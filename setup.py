@@ -1,7 +1,8 @@
 #!/usr/bin/env python
-import sys, os
-from os.path import join as joinpath, dirname
-import re
+import sys
+import os
+
+from setuptools import setup, find_packages
 
 if len(sys.argv) == 1:
     sys.argv.append('install')
@@ -9,17 +10,11 @@ if len(sys.argv) == 1:
 if sys.argv[1] == 'test':
     from subprocess import call
     sys.exit(call([sys.executable, '-m', 'pytest'] + sys.argv[2:]))
-#    #sys.exit(call(['test.sh'] + sys.argv[2:]))
 
-#sys.dont_write_bytecode = True
-
-from setuptools import setup, Extension, find_packages
-
-import subprocess
-git_version_hash = subprocess.Popen(["git", "rev-parse", "HEAD"], stdout=subprocess.PIPE).stdout.read()
-open("reflweb/git_version_hash", "wb").write(git_version_hash)
-server_mtime = subprocess.Popen(["git", "log", "-1", "--pretty=format:%ct"], stdout=subprocess.PIPE).stdout.read()
-open("reflweb/git_version_mtime", "wb").write(server_mtime)
+# Create the resource file dataflow/git_revision
+if os.system(f'"{sys.executable}" dataflow/rev.py') != 0:
+    print("setup.py failed to build dataflow/git_revision", file=sys.stderr)
+    sys.exit(1)
 
 packages = find_packages(exclude=['reflbin'])
 
@@ -39,9 +34,6 @@ dist = setup(
         'License :: Public Domain',
         'Operating System :: OS Independent',
         'Programming Language :: Python',
-        'Programming Language :: Python :: 2.7',
-        'Programming Language :: Python :: 3.5',
-        'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
         'Topic :: Scientific/Engineering',
         'Topic :: Scientific/Engineering :: Chemistry',
@@ -51,14 +43,16 @@ dist = setup(
     packages=packages,
     include_package_data=True,
     entry_points = {
-        'console_scripts': ['reductus=reflweb.run:main'],
+        'console_scripts': ['reductus=web_gui.run:main'],
     },
     install_requires=[
-        'scipy', 'numpy', 'h5py', 'uncertainties', 'docutils', 'wheel', 'pytz', 'msgpack-python', 'flask'],
+        'scipy', 'numpy', 'h5py', 'uncertainties', 'docutils',
+        'wheel', 'pytz', 'msgpack-python', 'flask',
+        ],
     extras_require={
         'masked_curve_fit': ['numdifftools'],
         },
-    tests_require = ['pytest'],
+    tests_require=['pytest'],
     )
 
 # End of file
