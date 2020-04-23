@@ -182,12 +182,9 @@ function file_objs_to_tree(file_objs, categories, datasource) {
       // modify the last entry to include key of file_obj
       leaf['li_attr'] = {"filename": p, "entryname": entryname, "mtime": entry.mtime, "source": datasource};
     }
-    out.sort(function(aa, bb) { return sortAlphaNumeric(aa.id, bb.id) });
-
-    // if not empty, push in the root node:
-    if (out.length > 0) { out.unshift({'id': "root", 'parent': "#", 'text': "", 'state': {'opened': true}}); }
-    return out
   }
+  out.sort(function(aa, bb) { return sortAlphaNumeric(aa.id, bb.id) });
+
   // if not empty, push in the root node:
   if (out.length > 0) { out.push({'id': "root", 'parent': "#", 'text': "", 'state': {'opened': true}}); }
   return out

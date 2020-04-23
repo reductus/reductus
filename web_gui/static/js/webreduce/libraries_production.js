@@ -5,7 +5,7 @@ import * as messagepack from 'messagepack';
 export {messagepack};
 import PouchDB from 'pouchdb-browser';
 export {PouchDB};
-export {xyChart, heatChart, dataflowEditor} from './node_modules/d3-science/src/index.js';
+export {xyChart, heatChart, colormap_names, get_colormap, dataflowEditor} from './node_modules/d3-science/src/index.js';
 export {
     extend,
     rectangleSelect,

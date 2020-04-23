@@ -160,6 +160,7 @@ window.onload = function() {
       }),
       direction: 'vertical'
     })
+    app.vertical_layout = layout;
 
     //app.layout = layout;
     app.download = (function () {
@@ -311,7 +312,6 @@ window.onload = function() {
   
     $("input#template_file").change(function() {
       var file = this.files[0]; // only one file allowed
-      datafilename = file.name;
       this.value = "";
       upload_dialog.dialog("close");
       var reader = new FileReader();
@@ -324,7 +324,6 @@ window.onload = function() {
     });
     $("input#exported_file").change(function() {
       var file = this.files[0]; // only one file allowed
-      datafilename = file.name;
       this.value = "";
       reload_exported_dialog.dialog("close");
       var reader = new FileReader();

@@ -5,11 +5,11 @@ export var editor = {};
 import {app} from './main.js';
 import {server_api} from './server_api/api_msgpack.js';
 import {dependencies} from './deps.js';
-import {Sha1} from '../sha1.es.js';
+import {Sha1} from './sha1.es.js';
 import {instruments} from './instruments/index.js';
 // now a global...
 import {d3} from './libraries.js';
-import {extend, heatChart, xyChart, dataflowEditor} from './libraries.js';
+import {extend, heatChart, xyChart, dataflowEditor, colormap_names, get_colormap} from './libraries.js';
 import {PouchDB} from './libraries.js';
 import {filebrowser} from './filebrowser.js';
 import {make_fieldUI} from './fieldUI.js';
@@ -621,12 +621,12 @@ editor.show_plots_2d = function(plotdata) {
       .append("select")
       .attr("id", "colormap_select")
       .on("change", function() {
-        var new_colormap = colormap.get_colormap(this.value);
+        var new_colormap = get_colormap(this.value, d3);
         editor._active_plot.colormap(new_colormap).redrawImage();
         editor._active_plot.colorbar.update();
       })
     colormap_select
-      .selectAll("option").data(colormap.colormap_names)
+      .selectAll("option").data(colormap_names)
         .enter().append("option")
         .attr("value", function(d) {return d})
         .property("selected", function(d) {return d == 'jet'})
@@ -663,7 +663,7 @@ editor.show_plots_2d = function(plotdata) {
       .ylabel(data.ylabel);
     //d3.selectAll("#plotdiv").selectAll("svg, div").remove();
     //d3.selectAll("#plotdiv").data(data.z).call(mychart);
-    var new_colormap = colormap.get_colormap($("select#colormap_select").val());
+    var new_colormap = get_colormap($("select#colormap_select").val(), d3);
     mychart.colormap(new_colormap);
     mychart.source_data(data.z[0]);
     mychart.zoomScroll(true);
@@ -750,12 +750,12 @@ editor.show_plots_2d_multi = function(plotdata) {
       .append("select")
       .attr("id", "colormap_select")
       .on("change", function() {
-        var new_colormap = colormap.get_colormap(this.value);
+        var new_colormap = get_colormap(this.value, d3);
         editor._active_plot.colormap(new_colormap).redrawImage();
         editor._active_plot.colorbar.update();
       })
     colormap_select
-      .selectAll("option").data(colormap.colormap_names)
+      .selectAll("option").data(colormap_names)
         .enter().append("option")
         .attr("value", function(d) {return d})
         .property("selected", function(d) {return d == 'jet'})
@@ -796,7 +796,7 @@ editor.show_plots_2d_multi = function(plotdata) {
       .ylabel(data.ylabel);
     //d3.selectAll("#plotdiv").selectAll("svg, div").remove();
     //d3.selectAll("#plotdiv").data(data.z).call(mychart);
-    var new_colormap = colormap.get_colormap($("select#colormap_select").val());
+    var new_colormap = get_colormap($("select#colormap_select").val(), d3);
     mychart.colormap(new_colormap);
     mychart.source_data(data.datasets);
     mychart.zoomScroll(true);
@@ -1412,7 +1412,7 @@ editor.get_signature = function(params) {
       export_type = params.export_type || 'column',
       concatenate = params.concatenate || false;
   
-  var versioned = webreduce.editor.get_versioned_template(template), 
+  var versioned = this.get_versioned_template(template), 
       sig = Sha1.hash(JSON.stringify({
         method: "calculate",
         template: versioned,

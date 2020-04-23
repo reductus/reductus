@@ -2,46 +2,10 @@
   "name": "reductus",
   "version": "1.0.0",
   "description": "Web-based data reduction for neutron reflectometry with python backend",
-  "main": "static/js/webreduce/main.js",
-  "dependencies": {
-    "babel-polyfill": "^6.26.0",
-    "block-ui": "^2.70.1",
-    "bower": "^1.8.0",
-    "css": "^2.2.4",
-    "d3": "^5.9.2",
-    "d3-science": "github:bmaranville/d3-science-v4#es_modules",
-    "jquery": "^3.4.1",
-    "jquery-layout": "^1.0.0",
-    "jquery-ui": "^1.12.1",
-    "jquery-ui-dist": "^1.12.1",
-    "jstree": "^3.3.8",
-    "messagepack": "^1.1.10",
-    "msgpack-lite": "~0.1.26",
-    "npm": "^6.9.0",
-    "pouchdb-browser": "^7.0.0",
-    "split.js": "^1.5.11",
-    "unistore": "^3.4.1",
-    "webpack": "^4.27.1",
-    "webpack-cli": "^3.1.2"
-  },
-  "devDependencies": {
-    "@jspm/core": "^1.0.4",
-    "@pika/web": "~0.3.2",
-    "cssnano": "^4.1.10",
-    "rollup": "^1.14.3",
-    "rollup-plugin-commonjs": "^10.0.0",
-    "rollup-plugin-node-builtins": "^2.1.2",
-    "rollup-plugin-node-globals": "^1.4.0",
-    "rollup-plugin-node-resolve": "^5.0.1",
-    "rollup-plugin-postcss": "^2.0.3"
-  },
-  "@pika/web": {
-    "webDependencies": [
-      "d3-science",
-      "messagepack",
-      "pouchdb-browser"
-    ]
-  },
+  "main": "static/js/webreduce/dist/main.js",
+  "browserslist": [
+    "last 1 Chrome versions"
+  ],
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -59,5 +23,19 @@
     "url": "https://github.com/reductus/reductus/issues"
   },
   "homepage": "https://github.com/reductus/reductus#readme",
-  "type": "module"
+  "type": "module",
+  "devDependencies": {
+    "babel-core": "^6.26.3",
+    "snowpack": "^1.7.1"
+  },
+  "dependencies": {
+    "d3": "^5.16.0",
+    "d3-science": "github:bmaranville/d3-science-v4",
+    "jquery": "^3.5.0",
+    "jquery-ui": "^1.12.1",
+    "jstree": "^3.3.9",
+    "messagepack": "^1.1.10",
+    "pouchdb-browser": "^7.2.1",
+    "split.js": "^1.5.11"
+  }
 }
