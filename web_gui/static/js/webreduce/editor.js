@@ -9,7 +9,7 @@ import {dependencies} from './deps.js';
 import {instruments} from './instruments/index.js';
 // now a global...
 import {d3} from './libraries.js';
-import {extend, heatChart, xyChart, dataflowEditor, colormap_names, get_colormap} from './libraries.js';
+import {extend, heatChart, heatChartMultiMasked, xyChart, dataflowEditor, colormap_names, get_colormap} from './libraries.js';
 import {PouchDB} from './libraries.js';
 import {sha1} from './libraries.js';
 import {filebrowser} from './filebrowser.js';
@@ -766,7 +766,7 @@ editor.show_plots_2d_multi = function(plotdata) {
   if (!(mychart && mychart.type && mychart.type == "heatmap_2d_multi")) {
     d3.selectAll("#plotdiv").selectAll("svg, div").remove();
     d3.select("#plotdiv").classed("plot", true);
-    mychart = new heatChartMultiMasked.default(options);
+    mychart = new heatChartMultiMasked(options);
     var data = values[0];
     d3.selectAll("#plotdiv").data([values[0].datasets]).call(mychart);
     app.callbacks.resize_center = function() {mychart.autofit()};
