@@ -8,6 +8,7 @@ export {PouchDB};
 export {
     xyChart,
     heatChart,
+    heatChartMultiMasked,
     colormap_names,
     get_colormap,
     dataflowEditor,

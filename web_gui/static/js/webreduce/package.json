@@ -9,7 +9,7 @@
   ],
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "parcel build main.js --public-url=\"./\""
+    "build": "parcel build main.js template_editor_main.js --public-url=\"./\""
   },
   "alias": {
     "./libraries.js": "./libraries_production.js"
@@ -35,7 +35,7 @@
   },
   "dependencies": {
     "d3": "^5.16.0",
-    "d3-science": "github:bmaranville/d3-science-v4",
+    "d3-science": "github:usnistgov/d3-science#v0.2.0",
     "jquery": "^3.5.0",
     "jquery-ui-dist": "^1.12.1",
     "jstree": "^3.3.9",
