@@ -766,7 +766,7 @@ editor.show_plots_2d_multi = function(plotdata) {
   if (!(mychart && mychart.type && mychart.type == "heatmap_2d_multi")) {
     d3.selectAll("#plotdiv").selectAll("svg, div").remove();
     d3.select("#plotdiv").classed("plot", true);
-    mychart = new heatChartMultiMasked(options);
+    mychart = new heatChartMultiMasked(options, d3);
     var data = values[0];
     d3.selectAll("#plotdiv").data([values[0].datasets]).call(mychart);
     app.callbacks.resize_center = function() {mychart.autofit()};
