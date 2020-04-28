@@ -24,4 +24,5 @@ import {default as jquery} from "https://dev.jspm.io/npm:jquery@latest";
 export {jquery};
 export {default as Split} from "https://dev.jspm.io/split.js@1.5.11";
 export {default as sha1} from "https://dev.jspm.io/sha1@1.1.1";
+export const template_editor_url = "template_editor_live.html";
 

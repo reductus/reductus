@@ -7,7 +7,7 @@ var debug = false;
 window.onload = async function() {
   await server_api.__init__();
 
-  let e = new dataflowEditor(); //Class2.editorFactory();
+  let e = new dataflowEditor(null, d3); //Class2.editorFactory();
   e._outer = []; // contexts for embedded templates;
   e._clipboard = null;
   d3.select("#editor_div").call(e);

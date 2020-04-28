@@ -12,6 +12,7 @@ import {d3} from './libraries.js';
 import {extend, heatChart, heatChartMultiMasked, xyChart, dataflowEditor, colormap_names, get_colormap} from './libraries.js';
 import {PouchDB} from './libraries.js';
 import {sha1} from './libraries.js';
+import {template_editor_url} from './libraries.js';
 import {filebrowser} from './filebrowser.js';
 import {make_fieldUI} from './fieldUI.js';
 
@@ -160,13 +161,13 @@ editor.create_instance = function(target_id) {
 }
 
 function module_clicked_multiple() {
-  var editor = d3.select("#" + editor._target_id);
+  var editor_select = d3.select("#" + editor._target_id);
   var active_template = editor._active_template;
   app.layout.collapse(2);
   var config_target = d3.select(".ui-layout-east");
   config_target.selectAll("div").remove();
   var to_compare = [];
-  editor.selectAll("g.module").each(function(dd, ii) {
+  editor_select.selectAll("g.module").each(function(dd, ii) {
     d3.select(this).selectAll("g.selected rect.terminal").each(function(ddd,iii) {
       var tid = d3.select(this).attr("terminal_id");
       to_compare.push({"node": ii, "terminal": tid})
@@ -678,7 +679,7 @@ editor.show_plots_2d = function(plotdata) {
     .on("click", update_plotselect)
     .on("input", update_plotselect)
   
-  update_plotselect();
+  update_plotselect.call(null);
   mychart.interactors(null);
   mychart.autofit();
   return mychart
@@ -775,7 +776,7 @@ editor.show_plots_2d_multi = function(plotdata) {
   var update_plotselect = function() {
     //d3.select(this).datum(parseInt(this.value));
     //console.log(d3.select(this), d3.select(this).datum(), this.value);
-    var plotnum = (this.value != null) ? parseInt(this.value) : 0,
+    var plotnum = (this && this.value != null) ? parseInt(this.value) : 0,
         data = values[plotnum];
     var title = data.title || "";
     d3.select("#plot_title").text(title);
@@ -813,7 +814,7 @@ editor.show_plots_2d_multi = function(plotdata) {
     .on("input", update_plotselect)
   
   mychart.interactors(null);
-  update_plotselect();
+  update_plotselect.call(null);
   mychart.autofit();
   return mychart
 }
@@ -963,7 +964,7 @@ editor.show_plots_nd = function(plotdata) {
               transform = this.value;
           editor._active_plot[axis](transform);  
         })
-        .selectAll("option").data(["linear", "log"])
+        .selectAll("option").data(["linear", "log", "ln", "pow(2)", "pow(4)"])
           .enter().append("option")
           .attr("value", function(d) {return d})
           .text(function(d) {return d})
@@ -1265,7 +1266,7 @@ editor.stash_data = function(suggested_name) {
   }
   existing_stashes[stashname] = subroutine;
   _save_stashes(existing_stashes);
-  webreduce.editor.load_stashes(existing_stashes);
+  editor.load_stashes(existing_stashes);
 }
 
 editor.load_stashes = function(stashes) {
@@ -1335,7 +1336,7 @@ function remove_stash(stashname) {
   if (stashname in existing_stashes) {
     delete existing_stashes[stashname];
     _save_stashes(existing_stashes);
-    webreduce.editor.load_stashes();
+    editor.load_stashes();
   }
 }
 
@@ -1963,7 +1964,7 @@ editor.edit_template = function(template_def, instrument_id) {
     });
   }
   if (this._active_template_editor == null || this._active_template_editor.closed) {
-    var te = window.open("template_editor_live.html", "template_editor", "width=960,height=480");
+    var te = window.open(template_editor_url, "template_editor", "width=960,height=480");
     this._active_template_editor = te;
     te.addEventListener('editor_ready', post_load, false);
   }
