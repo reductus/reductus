@@ -1149,7 +1149,7 @@ editor.show_plots_1d = function(plotdata) {
   options.show_line = $("#show_line").prop("checked");
   
   // create the 1d chart:
-  var mychart = new xyChart.default(options);
+  var mychart = new xyChart(options, d3);
   d3.selectAll("#plotdiv").selectAll("svg, div").remove();
   d3.select("#plotdiv").classed("plot", true);
   d3.selectAll("#plotdiv").data([plotdata.data]).call(mychart);
