@@ -1,5 +1,5 @@
-@import url("https://cdnjs.cloudflare.com/ajax/libs/jstree/3.3.8/themes/default/style.min.css");
-@import url("https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css");
+@import "jstree/dist/themes/default/style.min.css";
+@import "jquery-ui-dist/jquery-ui.min.css";
 @import "./web_reduction_filebrowser.css";
 @import "./splitting.css";
 @import "./menu.css";

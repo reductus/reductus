@@ -31,12 +31,14 @@
   "type": "module",
   "devDependencies": {
     "babel-core": "^6.26.3",
+    "cssnano": "^4.1.10",
     "snowpack": "^1.7.1"
   },
   "dependencies": {
     "d3": "^5.16.0",
     "d3-science": "github:usnistgov/d3-science#v0.2.0",
     "jquery": "^3.5.0",
+    "jquery-ui": "^1.12.1",
     "jquery-ui-dist": "^1.12.1",
     "jstree": "^3.3.9",
     "messagepack": "^1.1.10",
