@@ -422,7 +422,7 @@ var rangeUI = function() {
         x1: value[0],
         x2: value[1]
       }
-      var interactor = new xSliceInteractor.default(opts);
+      var interactor = new xSliceInteractor(opts, null, null, d3);
       active_plot.interactors(interactor);
       subinputs.on("change", function(d,i) { 
         if (datum.value == null) { datum.value = datum.default_value }
@@ -507,7 +507,7 @@ var rangeUI = function() {
         ymin: value[2],
         ymax: value[3]
       }
-      var interactor = new rectangleInteractor.default(opts);
+      var interactor = new rectangleInteractor(opts, null, null, d3);
       active_plot.interactors(interactor);
       // bind the update after init, so that it doesn't alter the field at init.
       subinputs.on("change", function(d,i) { 
@@ -556,7 +556,7 @@ var rangeUI = function() {
         rx: value[2], 
         ry: value[3]
       }
-      var interactor = new ellipseInteractor.default(opts);
+      var interactor = new ellipseInteractor(opts, null, null, d3);
       active_plot.interactors(interactor);
       // bind the update after init, so that it doesn't alter the field at init.
       subinputs.on("change", function(d,i) { 
