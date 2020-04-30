@@ -294,6 +294,7 @@ function updateFileBrowserPane(target, datasource, pathlist, dirdata) {
     var new_pathlist = $.extend(true, [], pathlist);
     $.each(new_pathlist, function(index, pathitem) {
       dirlink = document.createElement('span');
+      dirlink.classList.add("pathitem");
       dirlink.textContent = pathitem + "/";
       dirlink.onclick = function() {
         server_api.get_file_metadata({source: datasource, pathlist: new_pathlist.slice(0, index+1)})
