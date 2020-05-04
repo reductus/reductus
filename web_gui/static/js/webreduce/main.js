@@ -380,7 +380,7 @@ window.onload = function() {
     }
     $("button#refresh_all").on("click", function() {refreshAllSources("#datasources")});
 
-    app.update_file_mtimes = function(template) {
+    app.update_file_mtimes = async function(template) {
       var template = template || editor._active_template;
       // First, generate a list of all sources/paths for getting needed info from server
       var fsp = filebrowser.getAllTemplateSourcePaths(template);
@@ -388,42 +388,34 @@ window.onload = function() {
       // now step through the list of sources and paths and get the mtimes from the server:
       var times_promise = new Promise(function(resolve, reject) {resolve(null)});
       var updated_times = {};
-      var get_updated = function(source, path) {
-        return function() {
-          return server_api.get_file_metadata({source: source, pathlist: path.split("/")}).then(function(r) {
-            for (var fn in r.files_metadata) {
-              updated_times[source][path + "/" + fn] = r.files_metadata[fn].mtime;
-            }
-          });
-        }
-      }
       for (var source in fsp) {
-        updated_times[source] = {};
-        for (var path in fsp[source]) {
-          times_promise = times_promise.then(get_updated(source, path));
+        let times = {};
+        let r = await server_api.get_file_metadata({source: source, pathlist: path.split("/")});
+        for (var fn in r.files_metadata) {
+          let d = r.files_metadata[fn];
+          times[path + "/" + fn] = d.mtime;
         }
+        updated_times[source] = times;
       }
-      
-      // then step through all the modules again and update the mtimes from the new list
-      times_promise = times_promise.then(function() {
-        template.modules.forEach(function(m, i) {
-          var def = editor._module_defs[m.module];
-          var fileinfo_fields = def.fields.filter(function(f) { return f.datatype == "fileinfo" })
-            .map(function(f) {return f.id});
-          fileinfo_fields.forEach(function(fname) {
-            if (m.config && m.config[fname]) {
-              m.config[fname].forEach(function(finfo) {
-                var new_mtime = updated_times[finfo.source][finfo.path];
-                if (finfo.mtime != new_mtime) {
-                  console.log(finfo.path + " old mtime=" + finfo.mtime + ", new mtime=" + new_mtime);
-                }
-                finfo.mtime = new_mtime;
-              });
-            }
-          });
+
+      template.modules.forEach(function(m, i) {
+        var def = editor._module_defs[m.module];
+        var fileinfo_fields = def.fields.filter(function(f) { return f.datatype == "fileinfo" })
+          .map(function(f) {return f.id});
+        fileinfo_fields.forEach(function(fname) {
+          if (m.config && m.config[fname]) {
+            m.config[fname].forEach(function(finfo) {
+              var new_mtime = updated_times[finfo.source][finfo.path];
+              if (finfo.mtime != new_mtime) {
+                console.log(finfo.path + " old mtime=" + finfo.mtime + ", new mtime=" + new_mtime);
+              }
+              finfo.mtime = new_mtime;
+            });
+          }
         });
-      })
-      return times_promise;
+      });
+
+      return
     }
     
     function api_exception_handler(exc) {
