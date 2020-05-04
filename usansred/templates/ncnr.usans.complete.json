@@ -3,56 +3,62 @@
     {
       "module": "ncnr.usans.LoadRawUSANS",
       "title": "LoadRawSample",
-      "x": 70,
-      "y": 35
+      "x": 20,
+      "y": 30
     },
     {
       "module": "ncnr.usans.setPeakCenter",
       "title": "Set Peak Center",
-      "x": 595,
-      "y": 35
+      "x": 545,
+      "y": 30
     },
     {
       "module": "ncnr.usans.getPeakParams",
       "title": "Get Peak",
-      "x": 455,
-      "y": 65
+      "x": 405,
+      "y": 60
     },
     {
       "module": "ncnr.usans.LoadRawUSANS",
       "title": "LoadRawEmpty",
-      "x": 70,
-      "y": 110
+      "x": 20,
+      "y": 105
     },
     {
       "module": "ncnr.usans.convert_to_countrate",
       "title": "Convert To Countrate",
-      "x": 245,
-      "y": 35
+      "x": 195,
+      "y": 30
     },
     {
       "module": "ncnr.usans.setPeakCenter",
       "title": "Set Peak Center",
-      "x": 595,
-      "y": 110
+      "x": 545,
+      "y": 105
     },
     {
       "module": "ncnr.usans.getPeakParams",
       "title": "Get Peak",
-      "x": 455,
-      "y": 140
+      "x": 405,
+      "y": 135
     },
     {
       "module": "ncnr.usans.convert_to_countrate",
       "title": "Convert To Countrate",
-      "x": 244,
-      "y": 110
+      "x": 194,
+      "y": 105
     },
     {
       "module": "ncnr.usans.correctJoinData",
       "title": "Correct + Join",
-      "x": 780,
-      "y": 60
+      "x": 730,
+      "y": 55
+    },
+    {
+      "module": "ncnr.usans.crop_corrected",
+      "title": "Crop Corrected",
+      "x": 895,
+      "y": 55
     }
   ],
   "wires": [
@@ -154,6 +160,16 @@
       "target": [
         8,
         "empty"
+      ]
+    },
+    {
+      "source": [
+        8,
+        "corrected"
+      ],
+      "target": [
+        9,
+        "data"
       ]
     }
   ]
