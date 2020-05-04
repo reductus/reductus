@@ -371,6 +371,35 @@ def correctJoinData(sample, empty, q_tol=0.01, bkg_level=0.0, emp_level=0.0, thi
     
     return corrected, [Parameters(info) for info in reduced_infos]
 
+@module
+def crop_corrected(data, start_stop=[None, None]):
+    """
+    Crop USANS corrected data
+
+    **Inputs**
+
+    data (cor): USANS corrected input
+
+    start_stop {Crop start and stop} (range?:x) : Select which part of the data (along x-axis) to keep
+
+    **Returns**
+
+    cropped (cor): cropped data
+
+    | 2020-05-04 Brian Maranville
+    """
+
+    if start_stop is None:
+        start_stop = [None, None]
+    
+    cropped = copy(data)
+    start, stop = start_stop
+    left_index = None if start is None else np.searchsorted(data.Q, start, side='left')
+    right_index = None if stop is None else np.searchsorted(data.Q, stop, side='right')
+    new_slice = slice(left_index, right_index)
+    cropped.Q = data.Q[new_slice]
+    cropped.iqCOR = data.iqCOR[new_slice]
+    return cropped
     
 
 def make_groups(xvals_list, xtol=0):
