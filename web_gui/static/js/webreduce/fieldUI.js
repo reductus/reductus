@@ -58,7 +58,7 @@ var fileinfoUI = function () {
     .on("click", function () {
       $(".remote-filebrowser").trigger("fileinfo.update", d3.select(this).datum());
     });
-  $("#fileinfo").buttonset();
+  //$("#fileinfo").buttonset();
   $(".remote-filebrowser").trigger("fileinfo.update", d3.select("div#fileinfo input").datum());
   // if there is data loaded, an output terminal is selected... and will be plotted instead
   if (datasets_in == null) { filebrowser.handleChecked(null, null, true) };
