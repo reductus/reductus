@@ -11,7 +11,7 @@ changed.  The output is stored in a file in /tmp [sorry windows users], so
 that the regression test can be quickly updated if the change is a valid
 change (e.g., if there is a bug fix in the monitor normalization for example).
 
-The location of the data sources is read from reflweb.config.
+The location of the data sources is read from configurations.default.config
 
 Note: if the filename ends with .json, then assume it is a template file
 and run the reduction, saving the output to *replay.dat*.  This may make it
@@ -31,11 +31,7 @@ from dataflow.cache import set_test_cache
 from dataflow.core import Template, load_instrument, lookup_module
 from dataflow.calc import process_template
 from dataflow.rev import revision_info
-
-try:
-    from reflweb import config
-except ImportError:
-    from reflweb import default_config as config
+from dataflow.configure import apply_config
 
 IS_PY3 = sys.version_info[0] >= 3
 if IS_PY3:
@@ -54,13 +50,10 @@ TEMPLATE = re.compile(r"^(#|//) *([\"']?template(_data)?[\"']?)? *[:=]? *\{")
 
 def prepare_dataflow(template_def):
     # Set up caching if not already done.
-    fetch.DATA_SOURCES = config.data_sources
-    set_test_cache()
-
     # Find the instrument name from the first module and register it.
     first_module = template_def['modules'][0]['module']
     instrument_id = first_module.split('.')[1]
-    load_instrument(instrument_id)
+    apply_config(user_overrides={"instruments": [instrument_id], "cache": None})
 
 def run_template(template_data, concatenate=True):
     """

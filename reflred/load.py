@@ -45,7 +45,7 @@ def url_load_list(files=None, check_timestamps=True, loader=None):
     return result
 
 def setup_fetch():
-    #from reflweb import default_config
+    #from web_gui import default_config
     from dataflow.cache import set_test_cache
     from dataflow import fetch
 

@@ -26,7 +26,7 @@ sansred
 
     A python package for loading, modifying and saving small-angle neutron scattering (SANS) data sets.
 
-reflweb
+web_gui
 
     RPC access to reduction libraries, with javascript frontend (stateless)
 
@@ -60,10 +60,10 @@ into the repository and run::
     docker-compose up -d
 
 This will result in a trio of docker containers being spun up, one with a web
-server for the interface ('reflweb'), one with the backend calculation RPC
+server for the interface ('web_gui'), one with the backend calculation RPC
 server ('reductus') and one with the Redis cache.
 
-Files in ./reflweb/testdata/ will be mapped into the server at /data, for
+Files in ./web_gui/testdata/ will be mapped into the server at /data, for
 testing the local file handling. Changes to the python code can be
 incorporated into the containers by stopping them, then repeating the build
 and up commands above.
@@ -73,13 +73,13 @@ To stop::
     docker-compose stop
 
 To access the client, if using the new Docker beta navigate to
-http://localhost:8000/reflweb/web_reduction_filebrowser.html On Windows 7,
+http://localhost:8000/web_gui/web_reduction_filebrowser.html On Windows 7,
 if using docker-machine, you will have to get the IP of the default docker
 install and use that instead of localhost, e.g. ::
 
     docker-machine ip default
 
-*In my case it was http://192.168.99.100:8000/reflweb/web_reduction_filebrowser.html*
+*In my case it was http://192.168.99.100:8000/web_gui/web_reduction_filebrowser.html*
 
 Method 3: Clone github repo and build, run directly in console
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -92,7 +92,7 @@ e.g.
 
 Then start the server with::
 
-    cd reflweb
+    cd web_gui
     python server_flask.py 8002
 
 and visit the page http://localhost:8002/static/index.html

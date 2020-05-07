@@ -25,10 +25,10 @@ Clone the repo, the change directories into the repository and run::
     docker-compose up -d
 
 This will result in a trio of docker containers being spun up, one with a
-web server for the interface (reflweb), one with the backend calculation
+web server for the interface (web_gui), one with the backend calculation
 RPC server (reductus) and one with the Redis cache.
 
-Files in `./reflweb/testdata/` will be mapped into the server at /data, for
+Files in `./web_gui/testdata/` will be mapped into the server at /data, for
 testing the local file handling. Changes to the python code can be
 incorporated into the containers by stopping them, then repeating
 the build and up commands above.
@@ -38,7 +38,7 @@ To stop::
     docker-compose stop
 
 To access the client, if using the new Docker beta navigate to
-http://localhost:8000/reflweb/web_reduction_filebrowser.html
+http://localhost:8000/web_gui/web_reduction_filebrowser.html
 On Windows 7, if using docker-machine, you will have to get the IP of
 the default docker install and use that instead of localhost, e.g.,
 
@@ -46,7 +46,7 @@ the default docker install and use that instead of localhost, e.g.,
 
     docker-machine ip default
 
-*In my case it was http://192.168.99.100:8000/reflweb/web_reduction_filebrowser.html*
+*In my case it was http://192.168.99.100:8000/web_gui/web_reduction_filebrowser.html*
 
 
 Running a local server
@@ -99,7 +99,7 @@ needed for rebinning in off-specular reduction, so maybe you can avoid it.
 Running the server
 ~~~~~~~~~~~~~~~~~~
 
-To start the reflweb server::
+To start the web_gui server::
 
     # if using anaconda, the next line sets the anaconda path
     source activate reductus
@@ -151,7 +151,7 @@ using flask (python2.7+, python3.4+)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 * install apache2, libapache2-mod-proxy-uwsgi (and uwsgi-plugin-python3 if using py3)
-* copy contents of `reductus/reflweb/static` under apache home
+* copy contents of `reductus/web_gui/static` under apache home
   (usually in a folder called `reductus`)
 * enable the site by adding the following to the apache configuration file
 
@@ -180,7 +180,7 @@ using flask (python2.7+, python3.4+)
   </VirtualHost>
 
 
-* start a bunch of rpc servers (in the reflweb folder) with
+* start a bunch of rpc servers (in the web_gui folder) with
 
 ::
 
@@ -194,5 +194,5 @@ This runs `uwsgi --umask "$UMASK" --socket "127.0.0.1:$p" --manage-script-name -
 
 ::
 
-    @reboot cd path/to/reductus/reflweb && path/to/reductus/reflweb/start_flask_many.sh 8001 5
+    @reboot cd path/to/reductus/web_gui && path/to/reductus/web_gui/start_flask_many.sh 8001 5
 

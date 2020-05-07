@@ -27,9 +27,9 @@ class Environment:
 
     def _prepare(self):
         try:
-            from reflweb import config
+            from web_gui import config
         except ImportError:
-            from reflweb import default_config as config
+            from web_gui import default_config as config
         from dataflow.cache import set_test_cache
         from dataflow import fetch
 

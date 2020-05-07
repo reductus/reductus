@@ -573,7 +573,7 @@ class DataType(object):
     Data objects are displayed to the user, with the display format
     returned by *data.get_plottable()*.  The details of the plottable
     object are still fluid, and defined by the webreduce server.  See
-    reflweb/static/js/webreduce/editor.js for the implementation.
+    web_gui/static/js/webreduce/editor.js for the implementation.
 
     **Metadata**
 

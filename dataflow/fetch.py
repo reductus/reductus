@@ -62,6 +62,7 @@ from .lib.iso8601 import seconds_since_epoch
 # in particular, remove the "local" option if deploying in the cloud!
 
 DATA_SOURCES = []
+FILE_HELPERS = []
 DEFAULT_DATA_SOURCE = "ncnr"
 
 def check_datasource(source):
