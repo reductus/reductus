@@ -128,7 +128,7 @@ def run_template(template_data, concatenate=True):
     export_type = template_data.get("export_type", "column")
     if export_type in bundle.datatype.export_types:
         export = bundle.get_export(
-            template_data=template_data,
+            template_data={"template_data": template_data},
             concatenate=concatenate,
             export_type=export_type,
             )
