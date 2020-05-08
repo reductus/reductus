@@ -161,7 +161,7 @@ class NG7PSD(PSDData):
         self.detector.angle_x_target = self.detector.angle_x
 
         # TODO: what does angular resolution mean before integration?
-        from .angles import divergence
+        from .angles import divergence_simple as divergence
         # Use slit2 and pixel width for the collimation geometry. The values
         # for pixel width and distances are stored as slit 4.
         slits = (self.slit4.x, self.slit2.x)
@@ -170,7 +170,6 @@ class NG7PSD(PSDData):
         self.angular_resolution = divergence(
             slits=slits, distance=distance, T=theta,
             sample_width=np.inf,
-            sample_broadening=0.,
             use_sample=False,
         )
 

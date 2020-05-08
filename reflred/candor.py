@@ -68,6 +68,18 @@ class Candor(ReflData):
         if raw_intent in TRAJECTORY_INTENTS:
             self.intent = TRAJECTORY_INTENTS[raw_intent]
 
+        # Figure out beam mode:
+        #    Q.beamMode = WHITE_BEAM|SINGLE_BEAM
+        #    convergingGuideMap.key = IN|OUT
+        # For white beam with non-converging guide use the active bank to
+        # determine which Q values to look at. For now look at both banks.
+        #beam_mode = str_data(das, 'Q/beamMode', '')
+        #if beam_mode != 'WHITE_BEAM':
+        #    raise ValueError(f"candor reduction requires Q/beamMode=WHITE_BEAM in '{self.path}'")
+        #active_bank = data_as(das, 'Q/angleIndex', 1) - 1
+        #active_channel = data_as(das, 'Q/wavelenghtIndex', 1) - 1
+        #is_converging = (str_data(das, 'convergingGuidesMap/key', 'OUT') == 'IN')
+
         # Polarizers
         self.polarization = (
             get_pol(das, 'frontPolarization')
@@ -76,7 +88,9 @@ class Candor(ReflData):
 
         # Counts
         # Load counts early so we can tell whether channels are axis 1 or 2
-        counts = data_as(das, 'areaDetector/counts', '', dtype='d')
+        counts = data_as(das, 'multiDetector/counts', '', dtype='d')
+        if counts is None: # CRUFT: NICE Ticket #00113618 - Renamed detector from area to multi
+            counts = data_as(das, 'areaDetector/counts', '', dtype='d')
         if counts is None or counts.size == 0:
             raise ValueError(f"Candor file '{self.path}' has no area detector data.")
 
@@ -88,8 +102,9 @@ class Candor(ReflData):
         self.detector.dims = counts.shape[1:]
 
         # Monochromator
-        ismono = (str_data(das, 'monoTrans/key', 'OUT') == 'IN')
-        if ismono:
+        # Note: could test Q/beamMode == 'SINGLE_BEAM" for is_mono
+        is_mono = (str_data(das, 'monoTrans/key', 'OUT') == 'IN')
+        if is_mono:
             self.warn("monochromatic beams not yet supported for Candor reduction")
             self.monochromator.wavelength = data_as(entry, 'instrument/monochromator/wavelength', 'Ang', rep=n)
             # TODO: make sure wavelength_error is 1-sigma, not FWHM %
@@ -184,7 +199,7 @@ class Candor(ReflData):
         self.detector.wavelength = wavelength[None, :, :]
         self.detector.wavelength_resolution = wavelength_resolution[None, :, :]
         self.detector.efficiency = efficiency[None, :, :]
-        self.angular_resolution = divergence[None, :, :]
+        #self.angular_resolution = divergence[None, :, :]
         # TODO: sample broadening?
 
         # Angles
@@ -426,6 +441,24 @@ class QData(ReflData):
     def dQ(self):
         return self._dq
 
+def nobin(data, q):
+    """
+    Dump the raw data points into a single Q vector.
+    """
+
+    if data.normbase not in ("monitor", "time", "none"):
+        raise ValueError("expected norm to be time, monitor or none")
+    datasets = []
+    for bank in range(data.v.shape[2]):
+        qz, dq, v, dv = _rebin_bank(data, bank, q_edges)
+        #output = ReflData()
+        #output.v, output.dv = v, dv
+        #output.x, output.dx = q, dq
+        datasets.append(QData(data, qz, dq, v, dv))
+
+    # Only look at bank 0 for now
+    return datasets[0]
+
 def rebin(data, q):
     if data.normbase not in ("monitor", "time", "none"):
         raise ValueError("expected norm to be time, monitor or none")
@@ -499,7 +532,7 @@ def _rebin_bank(data, bank, q_edges):
             bar_dy = 1./combined_monitors * np.sqrt(1. + 1./combined_monitors)
             idx = (bar_y != 0)
             bar_dy[idx] = bar_y[idx] * np.sqrt(1./combined_counts[idx]
-                                            + 1./combined_monitors[idx])
+                                               + 1./combined_monitors[idx])
 
     # Find Q center and resolution, weighting by intensity
     # TODO: use intensity weighting when finding q centers?
@@ -508,15 +541,14 @@ def _rebin_bank(data, bank, q_edges):
     bar_w = np.bincount(bin_index, weights=w, minlength=nbins)
     bar_w += (bar_w == 0)  # protect against divide by zero
     bar_q = np.bincount(bin_index, weights=q*w, minlength=nbins)/bar_w
-    # TODO: proper dQ calculation
     # Combined dq according to mixture distribution.
-    #qsq = np.bincount(bin_index, weights=q**2*w, minlength=nbins)
-    #dqsq = np.bincount(bin_index, weights=dq**2*w, minlength=nbins)
-    #bar_dq = np.sqrt((dqsq + qsq)/bar_w - bar_q**2)
-    # Combined dq according average of variance.
+    qsq = np.bincount(bin_index, weights=q**2*w, minlength=nbins)
+    dqsq = np.bincount(bin_index, weights=dq**2*w, minlength=nbins)
+    bar_dq = np.sqrt((dqsq + qsq)/bar_w - bar_q**2)
+    ## Combined dq according average of variance.
     #bar_dq = np.sqrt(np.bincount(bin_index, weights=dq*w, minlength=nbins)/bar_w)
     # Set dq to 1% for now...
-    bar_dq = bar_q*0.01
+    #bar_dq = bar_q*0.01
 
     # Need to drop catch-all bins before and after q edges.
     # Also need to drop q bins which don't contain any values.

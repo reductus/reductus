@@ -11,7 +11,7 @@ import numpy as np
 from dataflow.lib import unit
 from .refldata import Intent, ReflData, Environment
 from .util import poisson_average, extend
-from .resolution import divergence, dTdL2dQ, TiTdL2Qxz
+from .resolution import divergence_simple, dTdL2dQ, TiTdL2Qxz
 
 try:
     #from typing import List, Dict, Union, Sequence
@@ -425,7 +425,7 @@ def _target_dT(data):
     """
     distance = abs(data.slit1.distance), abs(data.slit2.distance)
     slits = data.slit1.x_target, data.slit2.x_target
-    return divergence(slits=slits, distance=distance, use_sample=False)
+    return divergence_simple(slits=slits, distance=distance, use_sample=False)
 
 
 def group_by_target_angles(columns):
