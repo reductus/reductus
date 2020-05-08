@@ -503,8 +503,6 @@ editor.show_plots = function(results) {
         .text(function(d) { return d })
         .on("click", function(d) {
           let action = this.getAttribute("action");
-          console.log(this, action);
-          console.log($("div.paramsDisplay"))
           $("div.paramsDisplay").each(function() {
             $(this).jstree(action);
           });

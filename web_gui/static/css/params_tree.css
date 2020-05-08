@@ -14,6 +14,6 @@ div.paramsDisplay {
 .json_string span {
     color: red;
 }
-.json_string span::before {
-    content: "\""
+.json_string span::before, .json_string span::after {
+    content: "\"";
 }
