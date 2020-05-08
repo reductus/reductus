@@ -494,14 +494,92 @@ editor.show_plots = function(results) {
     var params = data.values.map(function(v) { return v.params });
     d3.selectAll("#plotdiv").selectAll("svg, div").remove();
     d3.select("#plotdiv").classed("plot", false);
-    d3.select("#plotdiv")
+    d3.select("#plotdiv").append("div")
+      .classed("params_controls", true)
+      .selectAll(".parambuttons").data(["open all", "close all"])
+      .enter()
+        .append("button")
+        .attr("action", function(d) {return d.replace(" ", "_")})
+        .text(function(d) { return d })
+        .on("click", function(d) {
+          let action = this.getAttribute("action");
+          console.log(this, action);
+          console.log($("div.paramsDisplay"))
+          $("div.paramsDisplay").each(function() {
+            $(this).jstree(action);
+          });
+        })
+    let param_divs = d3.select("#plotdiv")
       .selectAll(".paramsDisplay")
       .data(params).enter()
-        .append("div").append("pre")
+        .append("div")
         .style("overflow", "auto")
         .classed("paramsDisplay", true)
-        .text(function(d) {return JSON.stringify(d, null, 2)})
+
+    param_divs.each(function(d, i) {
+      let tree = JSON_to_tree('#', d);
+      tree.state = {opened: true};
+      tree.text = String(i);
+      $(this).jstree({
+        "core": {"data": tree}
+      });
+    })
     return data
+  }
+
+  function JSON_to_tree(name, value) {
+    console.log(name, value)
+    let label = `<label>${name}</label>:`;
+    if (value == null) {
+      return {
+        li_attr: {class: "json_null json_item"},
+        icon: false,
+        text: label + `<span>null</span>`
+      }
+    }
+    else if (Array.isArray(value)) {
+      let return_obj = {
+        li_attr: {class: "json_array json_item"},
+        icon:false
+      }
+      if (value.length > 0) {
+        return_obj.text = label + `Array(${value.length})`;
+        return_obj.children = value.map(function(v, n) { return JSON_to_tree(n, v) });
+      }
+      else {
+        return_obj.text = label + " []";
+      }
+      return return_obj;
+    }
+    else if (value instanceof Object) {
+      let entries = Object.entries(value);
+      let return_obj = {
+        li_attr: {class: "json_object json_item"},
+        icon: false
+      }
+      if (entries.length > 0) {
+        return_obj.text = label;
+        return_obj.children = entries.map(function(nv) { return JSON_to_tree(nv[0], nv[1])});
+      }
+      else {
+        return_obj.text = label + " {}";
+      }
+      return return_obj;
+    }
+    else if (typeof(value) == "number") {
+      return {
+        li_attr: {class: "json_number json_item"},
+        icon: false,
+        text: label + `<span>${value}</span>`
+      }
+    }
+    else if (typeof(value) == "string") {
+      return {
+        li_attr: {class: "json_string json_item"},
+        icon: false,
+        text: label + `<span>${value}</span>`
+      }
+    }
   }
 
   editor.show_plots_metadata = function(data) {
