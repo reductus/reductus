@@ -339,6 +339,27 @@ def _loadDivData(entry):
     
     return div_entries
 
+@module
+def SortDataAutomatic(data):
+    """
+    Sorting with algorithms to categorize all files and auto-associate
+
+    **Inputs**
+
+    data (raw[]): data files to sort, typically all of them
+
+    **Returns**
+
+    sorting_info (params): associations and metadata, by filenumber
+
+    2020-05-06 Brian Maranville
+    """
+
+    from .categorize import SortDataAutomatic
+    from .vsansdata import Parameters
+
+    return Parameters(SortDataAutomatic(data))
+
 @cache
 @module
 def He3_transmission(he3data, trans_panel="auto"):
