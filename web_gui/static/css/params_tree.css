@@ -1,0 +1,19 @@
+div.paramsDisplay {
+    font-family: 'Courier New', Courier, monospace;
+}
+.json_item label {
+    /* font-style: italic; */
+    color: purple;
+}
+.json_item span {
+    padding-left: 0.4em;
+}
+.json_number span {
+    color: blue;
+}
+.json_string span {
+    color: red;
+}
+.json_string span::before {
+    content: "\""
+}
