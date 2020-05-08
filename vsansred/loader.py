@@ -45,6 +45,7 @@ metadata_lookup = OrderedDict([
     ("polarization.front", "DAS_logs/frontPolarization/direction"),
     ("polarization.back", "DAS_logs/backPolarization/direction"),
     ("polarization.backname", "DAS_logs/backPolarization/name"),
+    ("polarization.backstart", "DAS_logs/backPolarization/timestamp"),
     ("run.filePrefix", "DAS_logs/trajectoryData/filePrefix"),
     ("run.instFileNum", "DAS_logs/trajectoryData/instFileNum"),
     ("run.pointnum", "DAS_logs/trajectoryData/pointNum"),
@@ -57,9 +58,11 @@ metadata_lookup = OrderedDict([
     ("sample.thk", "DAS_logs/sample/thickness"),
     ("adam.voltage", "DAS_logs/adam4021/voltage"),
     ("sample.temp", "DAS_logs/temp/primaryNode/average_value"),
+    ("sample_des.temp", "DAS_logs/temp/desiredPrimaryNode"),
     ("resolution.ap1", "DAS_logs/geometry/sourceAperture"),
     ("resolution.ap2", "instrument/sample_aperture/size"),
     ("resolution.ap12dis", "instrument/source_aperture/distance"),
+    ("resolution.guide", "DAS_logs/guide/guide"),
     ("sample.position", "instrument/sample_aperture/distance"),
     ("electromagnet_lrm.field","DAS_logs/electromagnet_lrm/field"),
     ("mag.value","DAS_logs/mag/value"),
@@ -70,7 +73,9 @@ metadata_lookup = OrderedDict([
     ("huberRotation.softPosition",  "DAS_logs/huberRotation/softPosition"),
     ("start_time","start_time"),
     ("end_time","end_time"),
-    ("eventfile", "DAS_logs/areaDetector/eventFileName")
+    ("eventfile", "DAS_logs/areaDetector/eventFileName"),
+    ("he3_back.opacity", "DAS_logs/backPolarization/opacityAt1Ang"),
+    ("he3_back.te", "DAS_logs/backPolarization/glassTransmission"),
 ])
 
 he3_metadata_lookup = OrderedDict([
