@@ -67,7 +67,7 @@ def load_instrument(name):
         if module.INSTRUMENT not in _instrument_registry:
             module.define_instrument()
         else:
-            raise ValueError(f"Instrument {module.INSTRUMENT} already defined.")
+            raise ValueError("Instrument {module.INSTRUMENT} already defined.".format(module=module))
 
 def register_instrument(instrument):
     """
@@ -659,7 +659,7 @@ class Bundle(object):
 
     def get_export(self, export_type="column", template_data=None, concatenate=True):
         if export_type not in self.datatype.export_types:
-            raise ValueError(f"{self.datatype.id} does not provide {export_type} export.")
+            raise ValueError("{self.datatype.id} does not provide {export_type} export.".format(self=self, export_type=export_type))
         exporter_info = self.datatype.export_types[export_type]
         exporter = exporter_info["exporter"]
         to_export = exporter(

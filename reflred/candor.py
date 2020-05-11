@@ -78,7 +78,7 @@ class Candor(ReflData):
         # Load counts early so we can tell whether channels are axis 1 or 2
         counts = data_as(das, 'areaDetector/counts', '', dtype='d')
         if counts is None or counts.size == 0:
-            raise ValueError(f"Candor file '{self.path}' has no area detector data.")
+            raise ValueError("Candor file '{self.path}' has no area detector data.".format(self=self))
 
         channels_at_end = (counts.shape[2] == NUM_CHANNELS)
         if channels_at_end:
@@ -98,7 +98,7 @@ class Candor(ReflData):
             if self.monochromator.wavelength is None:
                 self.monochromator.wavelength = data_as(das, 'mono/wavelength', 'Ang', rep=n)
             if self.monochromator.wavelength is None:
-                self.warn(f"Wavelength is missing; using {MONO_WAVELENGTH} A")
+                self.warn("Wavelength is missing; using {MONO_WAVELENGTH} A".format(MONO_WAVELENGTH=MONO_WAVELENGTH))
                 self.monochromator.wavelength = MONO_WAVELENGTH
             # TODO: generate wavelength_error directly with the nexus writer
             if self.monochromator.wavelength_resolution is None:
@@ -156,7 +156,7 @@ class Candor(ReflData):
             try:
                 mask = float(mask_str)
             except ValueError:
-                raise ValueError(f"mask value {mask_str} cannot be converted to float")
+                raise ValueError("mask value {mask_str} cannot be converted to float".format(mask_str=mask_str))
             self.slit4.x_target = self.slit4.x = np.full(n, mask)
 
         # Detector
@@ -256,14 +256,14 @@ class Candor(ReflData):
             plt.subplot(211)
             plt.pcolormesh(x[:, :, 0].T, y[:, :, 0].T, v[:, :, 0].T)
             plt.xlabel(xlabel)
-            plt.ylabel(f"{ylabel} - bank 0")
+            plt.ylabel("{ylabel} - bank 0".format(ylabel=ylabel))
             plt.colorbar()
             plt.subplot(212)
             plt.pcolormesh(x[:, :, 1].T, y[:, :, 1].T, v[:, :, 1].T)
             plt.xlabel(xlabel)
-            plt.ylabel(f"{ylabel} - bank 1")
+            plt.ylabel("{ylabel} - bank 1".format(ylabel=ylabel))
             plt.colorbar()
-            plt.suptitle(f'detector counts for {self.name}')
+            plt.suptitle('detector counts for {self.name}'.format(self=self))
 
         if False: # lambda-theta
             x, xlabel = self.detector.wavelength, 'detector wavelength (Ang)'
@@ -274,12 +274,12 @@ class Candor(ReflData):
             plt.subplot(211)
             plt.pcolormesh(edges(x[0, :, 0]), edges(y), v[:, :, 0])
             plt.xlabel(xlabel)
-            plt.ylabel(f"{ylabel} - bank 0")
+            plt.ylabel("{ylabel} - bank 0".format(ylabel=ylabel))
             plt.colorbar()
             plt.subplot(212)
             plt.pcolormesh(edges(x[0, :, 1]), edges(y), v[:, :, 1])
             plt.xlabel(xlabel)
-            plt.ylabel(f"{ylabel} - bank 1")
+            plt.ylabel("{ylabel} - bank 1".format(ylabel=ylabel))
             plt.colorbar()
             plt.suptitle(f'detector counts for {self.name}')
 
