@@ -42,6 +42,11 @@ cp $PROVISION_DIR/config.py $REDUCTUS_HOME/web_gui/config.py
 # set up vhosts file...
 #sudo cp $PROVISION_DIR/apache_vhosts /etc/apache2/sites-available/reductus_server.conf
 sudo cp $PROVISION_DIR/apache_vhosts_ssl /etc/apache2/sites-available/reductus_server_ssl.conf
+# copy SSL keys (MANUAL FOR NOW!)
+sudo mkdir /etc/apache2/ssl
+sudo chmod 700 /etc/apache2/ssl
+# manually copy /etc/apache2/ssl/*.crt and *.key to the new host, and
+# sudo chmod 600 /etc/apache2/ssl/*
 sudo a2dissite 000-default
 sudo a2enmod ssl
 sudo a2ensite reductus_server_ssl
