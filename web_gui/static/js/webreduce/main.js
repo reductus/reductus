@@ -381,6 +381,7 @@ window.onload = function() {
     $("button#refresh_all").on("click", function() {refreshAllSources("#datasources")});
 
     app.update_file_mtimes = async function(template) {
+      // modifies template in-place with new mtimes
       var template = template || editor._active_template;
       // First, generate a list of all sources/paths for getting needed info from server
       var fsp = filebrowser.getAllTemplateSourcePaths(template);
@@ -389,13 +390,14 @@ window.onload = function() {
       var times_promise = new Promise(function(resolve, reject) {resolve(null)});
       var updated_times = {};
       for (var source in fsp) {
-        let times = {};
-        let r = await server_api.get_file_metadata({source: source, pathlist: path.split("/")});
-        for (var fn in r.files_metadata) {
-          let d = r.files_metadata[fn];
-          times[path + "/" + fn] = d.mtime;
+        updated_times[source] = updated_times[source] || {};
+        for (var path in fsp[source]){
+          let r = await server_api.get_file_metadata({source: source, pathlist: path.split("/")});
+          for (var fn in r.files_metadata) {
+            let d = r.files_metadata[fn];
+            updated_times[source][path + "/" + fn] = d.mtime;
+          }
         }
-        updated_times[source] = times;
       }
 
       template.modules.forEach(function(m, i) {
