@@ -1,7 +1,7 @@
 #!/bin/bash
 
 REDUCTUS_HOME=$HOME/reductus
-PROVISION_DIR=$REDUCTUS_HOME/provisioning/ubuntu-trusty
+PROVISION_DIR=$REDUCTUS_HOME/provisioning/ubuntu-xenial
 
 sudo apt update
 sudo apt install -y apache2 apache2-dev libapache2-mod-proxy-uwsgi gcc g++ g++-5 python3-dev uwsgi-plugin-python3 git
