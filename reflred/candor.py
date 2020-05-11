@@ -281,7 +281,7 @@ class Candor(ReflData):
             plt.xlabel(xlabel)
             plt.ylabel("{ylabel} - bank 1".format(ylabel=ylabel))
             plt.colorbar()
-            plt.suptitle(f'detector counts for {self.name}')
+            plt.suptitle('detector counts for {self.name}'.format(self=self))
 
         if False: # detector efficiency
             eff = self.detector.efficiency[0]
@@ -292,7 +292,7 @@ class Candor(ReflData):
             plt.plot(channel, eff[:, 1], label='bank 1')
             plt.xlabel('channel number')
             plt.ylabel('wavelength efficiency')
-            plt.suptitle(f'detectorTable.detectorEfficiencies for {self.name}')
+            plt.suptitle('detectorTable.detectorEfficiencies for {self.name}'.format(self=self))
             plt.legend()
 
         if False: # detector wavelength
@@ -305,7 +305,7 @@ class Candor(ReflData):
             plt.errorbar(channel, y[0, :, 1], yerr=dy[0, :, 1], label='bank 1')
             plt.xlabel('channel number')
             plt.ylabel(ylabel)
-            plt.suptitle(f'detectorTable.wavelength for {self.name}')
+            plt.suptitle('detectorTable.wavelength for {self.name}'.format(self=self))
             plt.legend()
 
     def get_axes(self):
