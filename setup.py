@@ -12,7 +12,7 @@ if sys.argv[1] == 'test':
     sys.exit(call([sys.executable, '-m', 'pytest'] + sys.argv[2:]))
 
 # Create the resource file dataflow/git_revision
-if os.system(f'"{sys.executable}" dataflow/rev.py') != 0:
+if os.system('"{sys.executable}" dataflow/rev.py'.format(sys=sys)) != 0:
     print("setup.py failed to build dataflow/git_revision", file=sys.stderr)
     sys.exit(1)
 
