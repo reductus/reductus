@@ -15,7 +15,7 @@ $HOME/.local/bin/pip install --user -r requirements.txt
 python3 setup.py develop --user
 
 # apache setup
-sudo a2enmod headers proxy_balancer lbmethod_byrequests
+sudo a2enmod headers proxy_balancer proxy_uwsgi lbmethod_byrequests
 # add mod_proxy_protocol
 # sudo apt install -y apache2-dev
 git clone https://github.com/roadrunner2/mod-proxy-protocol $HOME/mod-proxy-protocol
@@ -37,7 +37,7 @@ sudo find /var/www/html -type d -exec chmod 755 {} \;
 echo -e '#!/bin/sh\ncp -r web_gui/static/* /var/www/html/reductus\n\necho "copied to web"' > $REDUCTUS_HOME/.git/hooks/post-merge
 
 # copy the config.py from server...
-cp $PROVISION_DIR/config.py $REDUCTUS_HOME/web_gui/config.py
+cp $PROVISION_DIR/config.py $REDUCTUS_HOME/configurations/config.py
 
 # set up vhosts file...
 #sudo cp $PROVISION_DIR/apache_vhosts /etc/apache2/sites-available/reductus_server.conf
