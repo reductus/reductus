@@ -81,7 +81,7 @@ class Parameters(OrderedDict):
     def __getattr__(self, name):
         if name in self:
             return self[name]
-        raise AttributeError(f"Name '{name}' is not {self.__class__.__name__}")
+        raise AttributeError("Name '{name}' is not {self.__class__.__name__}".format(name=name, self=self))
 
     @exports_json("json")
     def to_json_text(self):
