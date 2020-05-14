@@ -1206,7 +1206,7 @@ class ReflData(Group):
                 if errorbars is not None:
                     datas[k]["errorbars"] = errorbars.tolist()
                 else:
-                    print(f"===> missing errorbars {columns[k]['errorbars']} for {k}")
+                    print("===> missing errorbars {eb} for {k}".format(eb=columns[k]['errorbars'], k=k))
         name = getattr(self, "name", "default_name")
         entry = getattr(self, "entry", "default_entry")
         series = [{"label": "%s:%s" % (name, entry)}]

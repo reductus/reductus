@@ -23,11 +23,11 @@ def json_dumps(obj, compact=True):
         return json.dumps(obj, indent=2, cls=NumpyEncoder)
 
 def _build_filename(export, ext="", index=None):
-    index_tag = f"_{index}" if index is not None else ""
+    index_tag = "_{index}".format(index=index) if index is not None else ""
     name = export.get("name", "unknown"+index_tag)
     entry = export.get("entry", "entry")
     ext = export.get("file_suffix", ext)
-    filename = f"{name}_{entry}{ext}"
+    filename = "{name}_{entry}{ext}".format(**locals())
     return filename
 
 def json_writer(datasets, export_method=None, template_data=None, concatenate=False):
@@ -59,7 +59,7 @@ def json_writer(datasets, export_method=None, template_data=None, concatenate=Fa
 
 def text(datasets, export_method=None, template_data=None, concatenate=False):
     header_string = json_dumps(template_data)
-    header_string = f"#{header_string[1:-1]}\n"
+    header_string = "#{h}\n".format(h=header_string[1:-1])
     exports = [getattr(d, export_method)() for d in datasets]
     outputs = []
     if concatenate and exports:

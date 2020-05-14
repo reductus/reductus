@@ -117,7 +117,7 @@ def spectral_efficiency(data, spectrum=()):
     # TODO: generalize to detector shapes beyond candor
     #print(data.v.shape, data.detector.efficiency.shape)
     if len(spectrum)%NUM_CHANNELS != 0:
-        raise ValueError(f"Vector length {len(spectrum)} must be a multiple of {NUM_CHANNELS}")
+        raise ValueError("Vector length {s_len} must be a multiple of {NUM_CHANNELS}".format(s_len=len(spectrum), NUM_CHANNELS=NUM_CHANNELS))
     if spectrum:
         spectrum = np.reshape(spectrum, (NUM_CHANNELS, -1)).T[None, :, :]
     else:

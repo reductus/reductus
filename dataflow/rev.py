@@ -128,14 +128,14 @@ def git_rev(repo):
 
     # Find head file .git/HEAD (e.g. ref: ref/heads/master => .git/ref/heads/master)
     if not head_ref.startswith("ref: "):
-        warn(f"expected 'ref: path/to/head' in {git_head}")
+        warn("expected 'ref: path/to/head' in {git_head}".format(git_head=git_head))
         return None
     head_ref = head_ref[5:].strip()
 
     # Read commit id from head file
     head_path = git_root.joinpath(*head_ref.split("/"))
     if not head_path.exists():
-        warn(f"path {head_path} referenced from {git_head} does not exist")
+        warn("path {head_path} referenced from {git_head} does not exist".format(head_path=head_path, git_head=git_head))
         return None
 
     with head_path.open("r") as fd:

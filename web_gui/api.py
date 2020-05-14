@@ -65,6 +65,8 @@ def get_file_metadata(source="ncnr", pathlist=None):
     if pathlist is None:
         pathlist = []
 
+    if source not in [s['name'] for s in fetch.DATA_SOURCES]:
+        raise ValueError("Source '{source}' not in available data sources".format(source=source))
     if source == "local":
         metadata = local_file_metadata(pathlist)
     else:
