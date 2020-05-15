@@ -924,6 +924,10 @@ class ReflData(Group):
         return self.detector.wavelength
 
     @property
+    def dL(self):
+        return self.detector.wavelength_resolution
+
+    @property
     def Qz(self):
         # Note: specular reflectivity assumes elastic scattering
         Li = Ld = self.Ld
@@ -1147,12 +1151,14 @@ class ReflData(Group):
         with BytesIO() as fid:  # numpy.savetxt requires a byte stream
             for n in ['name', 'entry', 'polarization']:
                 _write_key_value(fid, n, getattr(self, n))
-            wavelength = getattr(self.detector, "wavelength", None)
-            wavelength_resolution = getattr(self.detector, "wavelength_resolution", None)
-            if wavelength is not None:
-                _write_key_value(fid, "wavelength", float(wavelength[0]))
-            if wavelength_resolution is not None:
-                _write_key_value(fid, "wavelength_resolution", float(wavelength_resolution[0]))
+            if self.Ld is not None:
+                _write_key_value(fid, "wavelength", self.Ld)
+            if self.dL is not None:
+                _write_key_value(fid, "wavelength_resolution", self.dL)
+            if self.Ti is not None:
+                _write_key_value(fid, "angle", self.Ti)
+            if self.angular_resolution is not None:
+                _write_key_value(fid, "angular_resolution", self.angular_resolution)
             if Intent.isscan(self.intent):
                 _write_key_value(fid, "columns", list(self.columns.keys()))
                 _write_key_value(fid, "units", [c.get("units", "") for c in self.columns.values()])

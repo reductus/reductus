@@ -275,7 +275,7 @@ def candor_rebin(data, qmin=None, qmax=None, qstep=0.003):
 
     qmax (float) : End of q range, or empty to infer from data
 
-    qstep (float) : q step size
+    qstep (float) : q step size or 0 for no rebinning
 
     **Returns**
 
@@ -283,17 +283,18 @@ def candor_rebin(data, qmin=None, qmax=None, qstep=0.003):
 
     | 2020-03-04 Paul Kienzle
     """
-    from .candor import rebin
+    from .candor import rebin, nobin
 
-    if qmin is None:
-        qmin = data.Qz.min()
+    if qstep == 0.0:
+        data = nobin(data)
+    else:
+        if qmin is None:
+            qmin = data.Qz.min()
+        if qmax is None:
+            qmax = data.Qz.max()
+        q = np.arange(qmin, qmax, qstep)
+        data = rebin(data, q)
 
-    if qmax is None:
-        qmax = data.Qz.max()
-
-    q = np.arange(qmin, qmax, qstep)
-
-    data = rebin(data, q)
     return data
 
 candor_join = copy_module(

@@ -40,7 +40,7 @@ def apply_divergence_simple(data, sample_width):
     data.angular_resolution = dtheta
 
 def apply_sample_broadening(data, sample_broadening):
-    """
+    r"""
     Modify angular divergence by a sample broadening (or focussing) amount.
 
     *sample_broadening* : float | |deg| 1-\ $\sigma$

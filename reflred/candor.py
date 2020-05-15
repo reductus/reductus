@@ -406,7 +406,7 @@ class Candor(ReflData):
         pass
 
 class QData(ReflData):
-    def __init__(self, data, q, dq, v, dv):
+    def __init__(self, data, q, dq, v, dv, ti=None, dt=None, ld=None, dl=None):
         super().__init__()
         self.sample = data.sample
         self.probe = data.probe
@@ -417,17 +417,19 @@ class QData(ReflData):
         self.description = data.description
         self.polarization = data.polarization
         self.normbase = data.normbase
-        self._q = q
-        self._dq = dq
         self.v = v
         self.dv = dv
         self.intent = Intent.spec
         self.points = len(q)
-        # TODO: set something for dL and dT
-        self.angular_resolution = 1.
         self.scan_value = []
         self.scan_units = []
         self.scan_label = []
+        self._q = q
+        self._dq = dq
+        self._incident_angle = ti
+        self.angular_resolution = dt
+        self._wavelength = ld
+        self._wavelength_spread = dl
 
     @property
     def Qz(self):
@@ -441,20 +443,35 @@ class QData(ReflData):
     def dQ(self):
         return self._dq
 
-def nobin(data, q):
+    @property
+    def Ti(self):
+        return self._incident_angle
+    @property
+    def Ld(self):
+        return self._wavelength
+    @property
+    def dL(self):
+        return self._wavelength_spread
+
+
+def nobin(data):
     """
     Dump the raw data points into a single Q vector.
     """
+    # Make all data have the same shape
+    columns = (
+        data.Qz, data.dQ, data.v, data.dv,
+        data.Ti, data.angular_resolution, data.Ld, data.dL)
+    columns = [np.broadcast_to(p, data.v.shape, True) for p in columns]
 
-    if data.normbase not in ("monitor", "time", "none"):
-        raise ValueError("expected norm to be time, monitor or none")
+    # Process the detector banks into different data sets
     datasets = []
     for bank in range(data.v.shape[2]):
-        qz, dq, v, dv = _rebin_bank(data, bank, q_edges)
-        #output = ReflData()
-        #output.v, output.dv = v, dv
-        #output.x, output.dx = q, dq
-        datasets.append(QData(data, qz, dq, v, dv))
+        columns_bank = [p[..., bank].flatten() for p in columns]
+        index = np.argsort(columns_bank[0])
+        columns_bank = [p[index] for p in columns_bank]
+        Qx, dQ, v, dv, Ti, dT, L, dL = columns_bank
+        datasets.append(QData(data, Qx, dQ, v, dv, Ti, dT, L, dL))
 
     # Only look at bank 0 for now
     return datasets[0]
