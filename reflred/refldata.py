@@ -82,11 +82,13 @@ import datetime
 import warnings
 import json
 from io import BytesIO
+import posixpath
 
 import numpy as np
 from numpy import inf, arctan2, sqrt, sin, cos, pi, radians
 
-from dataflow.lib.exporters import exports_text, exports_json, NumpyEncoder
+from dataflow.lib.exporters import exports_text, exports_json, exports_HDF5, NumpyEncoder
+from dataflow.lib.strings import _s, _b
 from .resolution import calc_Qx, calc_Qz, dTdL2dQ
 
 IS_PY3 = sys.version_info[0] >= 3
@@ -1187,6 +1189,120 @@ class ReflData(Group):
             "entry": self.entry,
             "file_suffix": suffix,
             "value": value.decode('utf-8'),
+        }
+
+    @exports_HDF5(name="NXcanSAS")
+    def to_NXcanSAS(self):
+        import h5py
+        from io import BytesIO
+
+        fid = BytesIO()
+        h5_item = h5py.File(fid)
+        string_dt = h5py.string_dtype(encoding='utf-8')
+
+        #entry_name = metadata.get("entry", "entry")
+        nxentry = h5_item.create_group(self.entry)
+        nxentry.attrs.update({
+            "NX_class": "NXentry",
+            "canSAS_class": "SASentry",
+            "version": "1.0"
+        })
+        nxentry["definition"] = "NXcanSAS"
+        nxentry["run"] = str(self.name)
+        nxentry["polarization"] = str(self.polarization)
+        nxentry["title"] = ""
+
+        instrument = nxentry.create_group("instrument")
+        instrument.attrs.update({
+            "canSAS_class": "SASinstrument",
+            "NX_class": "NXinstrument"
+        })
+        instrument["name"] = str(self.instrument)
+
+        sasdetector = instrument.create_group("detector")
+        sasdetector.attrs.update({
+            "canSAS_class": "SASdetector",
+            "NX_class": "NXdetector"
+        })
+        sasdetector["name"] = "DETECTOR"
+        
+        sassample = nxentry.create_group("sassample")
+        sassample.attrs.update({
+            "canSAS_class": "SASsample",
+            "NX_class": "NXsample"
+        })
+        sassample["name"] = str(self.sample.name)
+        sassample["description"] = str(self.sample.description)
+        
+        sassource = instrument.create_group("sassource")
+        sassource.attrs.update({
+            "canSAS_class": "sassource",
+            "NX_class": "NXdetector"
+        })
+        sassource["radiation"] = "Reactor Neutron Source"
+
+        datagroup = nxentry.create_group("sasdata")
+        datagroup.attrs.update({
+            "NX_class": "NXdata",
+            "canSAS_class": "SASdata",
+            "signal": "I",
+            "I_axes": "Qz",
+            #"Q_indices": 0,
+            "timestamp": self.date.isoformat(),
+        })
+
+        datagroup["I"] = self.v
+        datagroup["I_dev"] = np.sqrt(self.dv)
+        datagroup["Q"] = self.Qz
+        datagroup["Q_dev"] = self.dQ
+        datagroup["Theta"] = self.Ti_target
+        datagroup["Theta_dev"] = self.angular_resolution
+        wavelength_path = posixpath.join(instrument.name, 'detector', 'wavelength')
+        print(posixpath.join(instrument.name, 'detector', 'wavelength'))
+        datagroup["Lambda"] = h5py.SoftLink(wavelength_path)
+        wavelength_resolution_path = posixpath.join(instrument.name, 'detector', 'wavelength_spread')
+        datagroup["Lambda_dev"] = h5py.SoftLink(wavelength_resolution_path)
+
+        for p, v in self.columns.items():
+            d = self.scan_value[self.scan_label.index(p)] if v.get('is_scan', False) else get_item_from_path(self, p)
+            d = np.resize(d, self.points)
+
+            instrument[p] = d
+
+        # sasaperture = instrument.create_group("sasaperture")
+        # sasaperture.attrs.update({
+        #     "canSAS_class": "SASaperture",
+        #     "NX_class": "NXaperture"
+        # })
+        # sasaperture["shape"] = "slit"
+        # sasaperture["x_gap"] = np.array([0.1], dtype='float')
+        # sasaperture["x_gap"].attrs["units"] = "cm"
+        # sasaperture["y_gap"] = np.array([5.0], dtype='float')
+        # sasaperture["y_gap"].attrs["units"] = "cm"
+        
+        # wavelength = getattr(self.detector, "wavelength", None)
+        # wavelength_resolution = getattr(self.detector, "wavelength_resolution", None)
+        # if wavelength is not None:
+        #      sassource["incident_wavelength"] = wavelength
+        # if wavelength_resolution is not None:
+        #     sassource["incident_wavelength_spread"] = wavelength_resolution
+
+        # sassource["incident_wavelength"].attrs["units"] = "A"
+        # sassource["incident_wavelength_spread"].attrs["units"] = "A"
+        
+
+        sasprocess = nxentry.create_group("sasprocess")
+        sasprocess.attrs.update({
+            "canSAS_class": "SASprocess",
+            "NX_class": "NXprocess"
+        })
+        sasprocess["name"] = "NIST reductus"
+
+        return {
+            "name": self.name,
+            "entry": self.entry,
+            "file_suffix": ".nxrefl.h5",
+            "value": h5_item,
         }
 
     def get_plottable(self):
