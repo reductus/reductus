@@ -82,7 +82,6 @@ import datetime
 import warnings
 import json
 from io import BytesIO
-import posixpath
 
 import numpy as np
 from numpy import inf, arctan2, sqrt, sin, cos, pi, radians
@@ -1197,7 +1196,7 @@ class ReflData(Group):
             "value": value.decode('utf-8'),
         }
 
-    @exports_HDF5(name="NXcanSAS")
+    @exports_HDF5(name="NXrefl")
     def to_NXcanSAS(self):
         import h5py
         from io import BytesIO
@@ -1210,7 +1209,6 @@ class ReflData(Group):
         nxentry = h5_item.create_group(self.entry)
         nxentry.attrs.update({
             "NX_class": "NXentry",
-            "canSAS_class": "SASentry",
             "version": "1.0"
         })
         nxentry["definition"] = "NXcanSAS"
