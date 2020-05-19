@@ -1219,16 +1219,25 @@ class ReflData(Group):
         })
         instrument["name"] = str(self.instrument)
 
+        refl = nxentry.create_group("columns")
+        refl.attrs.update({
+            "NX_class": ""
+        })
+        
+        for p, v in self.columns.items():
+            d = self.scan_value[self.scan_label.index(p)] if v.get('is_scan', False) else get_item_from_path(self, p)
+            if d is not None:
+                d = np.resize(d, self.points)
+                refl[p] = d
+
         sasdetector = instrument.create_group("detector")
         sasdetector.attrs.update({
-            "canSAS_class": "SASdetector",
             "NX_class": "NXdetector"
         })
         sasdetector["name"] = "DETECTOR"
         
         sassample = nxentry.create_group("sassample")
         sassample.attrs.update({
-            "canSAS_class": "SASsample",
             "NX_class": "NXsample"
         })
         sassample["name"] = str(self.sample.name)
@@ -1241,33 +1250,36 @@ class ReflData(Group):
         })
         sassource["radiation"] = "Reactor Neutron Source"
 
-        datagroup = nxentry.create_group("sasdata")
+        datagroup = nxentry.create_group("nxrefl")
         datagroup.attrs.update({
             "NX_class": "NXdata",
-            "canSAS_class": "SASdata",
+            "canSAS_class": "REFLdata",
             "signal": "I",
-            "I_axes": "Qz",
+            #"I_axes": "Qz",
             #"Q_indices": 0,
             "timestamp": self.date.isoformat(),
         })
 
         datagroup["I"] = self.v
+        datagroup["I"].attrs["units"] = "arbitrary"
+        datagroup["I"].attrs["uncertainties"] = "I_dev"
         datagroup["I_dev"] = np.sqrt(self.dv)
+        datagroup["I_dev"].attrs["units"] = "arbitrary"
         datagroup["Q"] = self.Qz
+        datagroup["Q"].attrs["units"] = "1/angstrom"
+        datagroup["Q"].attrs["uncertainties"] = "Q_dev"
         datagroup["Q_dev"] = self.dQ
-        datagroup["Theta"] = self.Ti_target
+        datagroup["Theta"] = self.Td
+        datagroup["Theta"].attrs["units"] = "degrees"
+        datagroup["Theta"].attrs["resolutions"] = "Theta_dev"
+        datagroup["Theta"].attrs["resolutions_description"] = "Gaussian"
         datagroup["Theta_dev"] = self.angular_resolution
-        wavelength_path = posixpath.join(instrument.name, 'detector', 'wavelength')
-        print(posixpath.join(instrument.name, 'detector', 'wavelength'))
-        datagroup["Lambda"] = h5py.SoftLink(wavelength_path)
-        wavelength_resolution_path = posixpath.join(instrument.name, 'detector', 'wavelength_spread')
-        datagroup["Lambda_dev"] = h5py.SoftLink(wavelength_resolution_path)
-
-        for p, v in self.columns.items():
-            d = self.scan_value[self.scan_label.index(p)] if v.get('is_scan', False) else get_item_from_path(self, p)
-            d = np.resize(d, self.points)
-
-            instrument[p] = d
+        datagroup["Theta_dev"].attrs["units"] = "degrees"
+        datagroup["Lambda"] = self.detector.wavelength
+        datagroup["Lambda"].attrs["resolutions"] = "Lambda_dev"
+        datagroup["Lambda"].attrs["units"] = "A"
+        datagroup["Lambda_dev"] = self.detector.wavelength_resolution
+        datagroup["Lambda_dev"].attrs["units"] = "A"
 
         # sasaperture = instrument.create_group("sasaperture")
         # sasaperture.attrs.update({
