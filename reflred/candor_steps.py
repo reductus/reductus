@@ -120,7 +120,7 @@ def spectral_efficiency(data, spectrum=()):
     # TODO: generalize to detector shapes beyond candor
     #print(data.v.shape, data.detector.efficiency.shape)
     if len(spectrum)%NUM_CHANNELS != 0:
-        raise ValueError(f"Vector length {len(spectrum)} must be a multiple of {NUM_CHANNELS}")
+        raise ValueError("Vector length {s_len} must be a multiple of {NUM_CHANNELS}".format(s_len=len(spectrum), NUM_CHANNELS=NUM_CHANNELS))
     if spectrum:
         spectrum = np.reshape(spectrum, (NUM_CHANNELS, -1)).T[None, :, :]
     else:
@@ -275,7 +275,7 @@ def candor_rebin(data, qmin=None, qmax=None, qstep=0.003):
 
     qmax (float) : End of q range, or empty to infer from data
 
-    qstep (float) : q step size
+    qstep (float) : q step size or 0 for no rebinning
 
     **Returns**
 
@@ -283,17 +283,18 @@ def candor_rebin(data, qmin=None, qmax=None, qstep=0.003):
 
     | 2020-03-04 Paul Kienzle
     """
-    from .candor import rebin
+    from .candor import rebin, nobin
 
-    if qmin is None:
-        qmin = data.Qz.min()
+    if qstep == 0.0:
+        data = nobin(data)
+    else:
+        if qmin is None:
+            qmin = data.Qz.min()
+        if qmax is None:
+            qmax = data.Qz.max()
+        q = np.arange(qmin, qmax, qstep)
+        data = rebin(data, q)
 
-    if qmax is None:
-        qmax = data.Qz.max()
-
-    q = np.arange(qmin, qmax, qstep)
-
-    data = rebin(data, q)
     return data
 
 candor_join = copy_module(

@@ -113,8 +113,8 @@ def copy_module(f, new_name, old_type, new_type, tag=None):
     g = copy_func(f)
     g.__name__ = new_name
     g.__doc__ = re.sub(
-        rf"\({old_type}([^a-zA-Z_)]*)\)",
-        rf"({new_type}\1)",
+        r"\({old_type}([^a-zA-Z_)]*)\)".format(old_type=old_type),
+        r"({new_type}\1)".format(new_type=new_type),
         f.__doc__)
     if tag is not None:
         g.group = tag

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 REDUCTUS_HOME=$HOME/reductus
-PROVISION_DIR=$REDUCTUS_HOME/provisioning/ubuntu-trusty
+PROVISION_DIR=$REDUCTUS_HOME/provisioning/ubuntu-xenial
 
 sudo apt update
 sudo apt install -y apache2 apache2-dev libapache2-mod-proxy-uwsgi gcc g++ g++-5 python3-dev uwsgi-plugin-python3 git
@@ -15,10 +15,10 @@ $HOME/.local/bin/pip install --user -r requirements.txt
 python3 setup.py develop --user
 
 # apache setup
-sudo a2enmod headers proxy_balancer lbmethod_byrequests
+sudo a2enmod headers proxy_balancer proxy_uwsgi lbmethod_byrequests
 # add mod_proxy_protocol
 # sudo apt install -y apache2-dev
-git clone git clone https://github.com/roadrunner2/mod-proxy-protocol $HOME/mod-proxy-protocol
+git clone https://github.com/roadrunner2/mod-proxy-protocol $HOME/mod-proxy-protocol
 cd $HOME/mod-proxy-protocol
 sudo make
 sudo cp .libs/mod_proxy_protocol.so /usr/lib/apache2/modules/mod_proxy_protocol.so
@@ -37,11 +37,16 @@ sudo find /var/www/html -type d -exec chmod 755 {} \;
 echo -e '#!/bin/sh\ncp -r web_gui/static/* /var/www/html/reductus\n\necho "copied to web"' > $REDUCTUS_HOME/.git/hooks/post-merge
 
 # copy the config.py from server...
-cp $PROVISION_DIR/config.py $REDUCTUS_HOME/web_gui/config.py
+cp $PROVISION_DIR/config.py $REDUCTUS_HOME/configurations/config.py
 
 # set up vhosts file...
 #sudo cp $PROVISION_DIR/apache_vhosts /etc/apache2/sites-available/reductus_server.conf
 sudo cp $PROVISION_DIR/apache_vhosts_ssl /etc/apache2/sites-available/reductus_server_ssl.conf
+# copy SSL keys (MANUAL FOR NOW!)
+sudo mkdir /etc/apache2/ssl
+sudo chmod 700 /etc/apache2/ssl
+# manually copy /etc/apache2/ssl/*.crt and *.key to the new host, and
+# sudo chmod 600 /etc/apache2/ssl/*
 sudo a2dissite 000-default
 sudo a2enmod ssl
 sudo a2ensite reductus_server_ssl
