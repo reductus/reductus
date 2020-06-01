@@ -17,48 +17,81 @@ Setting up the development environment
 --------------------------------------
 
 We will assume you have a python environment, such as Anaconda for windows
-or Mac, and that you have a C compiler available ("conda install mingw" or
-download and install "Microsoft C++ for Python" on windows; on mac you
-need to install X Code and install the X Code command line tools ---
-instructions discoverable in your favourite search engine).  You will
-also need git (download and install git-bash for windows; mac comes with it).
+or Mac. You will also need git (download and install git-bash for windows;
+mac comes with it).
+
+For anaconda you can create an environment as follows:
+
+    $ conda create -n reductus numpy scipy matplotlib h5py docutils wheel \
+    pytz msgpack-python flask ipython
+    $ conda activate reductus
+    $ pip install uncertainties pylru diskcache
 
 You will need to have a local copy of the sources on your machine::
 
-     $ cd preferred/working/directory
-     $ git clone https://github.com/reflectometry/reductus.git
-     $ cd reductus
-     $ python setup.py build_ext --inplace
-
-With mingw, you will need to add "--ccompiler=mingw32" to the last line.
-This will allow you to run directly from the local repositories without
-installing. (not sure
+    $ cd preferred/working/directory
+    $ git clone https://github.com/reflectometry/reductus.git
+    $ cd reductus
+    $ pip install -e .
 
 Preparing python
 ----------------
 
-Configure a python session to run the template::
+Configure a python session::
 
-     $ cd ~/path/to/reductus
-     $ ipython --pylab
-     >>> import web_gui.config
+    $ cd ~/path/to/reductus
+    $ ipython --pylab
+    from dataflow.configure import apply_config
+    user_overrides = {'instruments': ['refl']}
+    apply_config(user_overrides=user_overrides)
 
-It either case, you first need to create the template and save it to
-your disk.  To load the template into python, type the following::
+To load a previous reduction into python, type the following::
 
-    >>> import json
-    >>> from pprint import pprint
-    >>> template = json.load(open('~/Downloads/some_template.json'))
-    >>> pprint(json)
+    filename = 'tests/regression_files/Pt15nm23552.refl'
+    with open(filename, 'r') as fid: content = fid.read()
+    first_line, _ = content.split('\n', maxsplit=1)
+    import json
+    template_def = json.loads('{' + first_line[1:] + '}')
+    template_data = template_def['template_data']
+
+Show the template data::
+
+    from pprint import pprint
+    pprint(template_data)
+
+Show just the template modules, numbered::
+
+    template = template_data['template']
+    for k, v in enumerate(template['modules']): print(f'{k}: {v}')
 
 Scan through the list of nodes to find the one containing the data of
-interest.  This could be tricky since different nodes sometimes have
-the same name.   You should be able to guess the correct one by looking
-at the y value of the node position.  You will need to count from the
-start of the node list until you see the node you are interested.  For
-example, it might be node 9.  Confirm the count by typing::
+interest. This could be tricky since different nodes sometimes have
+the same name. You should be able to guess the correct one by looking
+at the y value of the node position. Or just use the node+terminal
+combination stored with the output file::
 
-    template['modules'][9]
+    target = template_data['node'], template_data['terminal']
+    config = template_data.get('config', {})
+    from dataflow.core import Template
+    from dataflow.calc import process_template
+    bundle = process_template(Template(**template), config, target=target)
 
-You can now compute the value of that node.  You should first turn
-on
+You can access various fields in the bundle. In this case it is a
+reflectometry object so we know that it has a Qz value which we can print::
+
+    data = bundle.values[0]
+    print(data.Qz)
+
+Many other fields are available::
+
+    data.<Tab>
+
+Print the column file::
+
+    export = bundle.get_export(template_data=template_def, export_type='column')
+    print(export['values'][0]['value'])
+
+This documentation may be out of date. See the file *regression.py* which
+has code for replaying existing reductions and for creating new reductions
+from a template. This program is part of the reductus test suite and so
+will be kept up to date.
