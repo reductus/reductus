@@ -351,8 +351,8 @@ class Candor(ReflData):
         data = self.v
         ny, nx, _ = data.shape  # nangles, nwavelengths, nbanks
         (x, xlabel), (y, ylabel) = self.get_axes()
-        x, nx = np.hstack((x, x + (x.max()-x.min()))), 2*nx
-        xmin, xmax = limits(x, nx)
+        x, nx = np.hstack((x, x - (x.max()-x.min()))), 2*nx
+        xmax, xmin = limits(x, nx) # reversed because wavelengths are reversed
         ymin, ymax = limits(y, ny)
         # TODO: self.detector.mask
         zmin, zmax = data.min(), data.max()
