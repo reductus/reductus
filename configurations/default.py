@@ -40,7 +40,7 @@ config = {
             "name": "charlotte",
             "url": "http://charlotte.ncnr.nist.gov/pub",
             "start_path": "",
-            "file_helper_url": "http://charlotte.ncnr.nist.gov/ipeek/listftpfiles.php",
+            "file_helper_url": "http://charlotte.ncnr.nist.gov/ncnrdata/listftpfiles.php",
         },
         # set start_path for local files to usr/local/nice/server_data/experiments
         # for instrument installs
