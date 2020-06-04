@@ -116,7 +116,6 @@ class Group(object):
     def _toDict(self):
         return _toDict(self)
 
-
 def set_fields(cls):
     groups = set(name for name, type in getattr(cls, '_groups', ()))
     properties = []
@@ -1046,6 +1045,10 @@ class ReflData(Group):
                 if dv_name is not None:
                     dv = getattr(subcls, dv_name, None)
                     if check_array(dv): setattr(subcls, dv_name, dv[make_mask(dv, mask_indices)])
+                rv_name = sub_cols[col].get('resolution', None)
+                if rv_name is not None:
+                    rv = getattr(subcls, rv_name, None)
+                    if check_array(rv): setattr(subcls, rv_name, rv[make_mask(rv, mask_indices)])
 
     def __init__(self, **kw):
         for attr, cls in ReflData._groups:
@@ -1229,9 +1232,13 @@ class ReflData(Group):
         })
         
         for p, v in self.columns.items():
-            d = self.scan_value[self.scan_label.index(p)] if v.get('is_scan', False) else get_item_from_path(self, p)
+            if v.get('is_scan', False):
+                d = self.scan_value[self.scan_label.index(p)]
+            else:
+                d = get_item_from_path(self, p)
+                #if v.get('')
             if d is not None:
-                d = np.resize(d, self.points)
+                #d = np.resize(d, self.points)
                 refl[p] = d
 
         sasdetector = instrument.create_group("detector")
@@ -1273,7 +1280,7 @@ class ReflData(Group):
         datagroup["Q"].attrs["units"] = "1/angstrom"
         datagroup["Q"].attrs["uncertainties"] = "Q_dev"
         datagroup["Q_dev"] = self.dQ
-        datagroup["Theta"] = self.Td
+        datagroup["Theta"] = self.Td / 2.0
         datagroup["Theta"].attrs["units"] = "degrees"
         datagroup["Theta"].attrs["resolutions"] = "Theta_dev"
         datagroup["Theta"].attrs["resolutions_description"] = "Gaussian"
