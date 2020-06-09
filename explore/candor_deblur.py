@@ -51,9 +51,8 @@ datadir = Path(__file__).parent
 # There is a big increase in noise starting at 66.8 degrees (bank 0)
 # and 66.6 degrees (bank 1), corresponding to a Bragg wavelength of ~6 A.
 # These long wavelength neutrons are minimally reflected by the first
-# leaf, and so are available to the second and subsequent leaves. Since
-# the wavelength response for the leaves is pretty broad, the first 
-# Unfortunately, this broadens 
+# leaf, and so are available to the second and subsequent leaves. This
+# will lead to resolution broadening near the critical edge.
 
 # Be data is not entirely consistent with PSI measurements[1], which indicates
 # that a cooled Be filter should start to see a cutoff at 4.05 A, dropping by
@@ -280,7 +279,7 @@ class Data:
         #rate = rate/np.sum(rate, axis=0, keepdims=True)*np.mean(rate)
         ## cut off
         #rate[rate<CUTOFF_RATE] = CUTOFF_RATE/2
-        if scale == 'log': rate = np.log10(rate)
+        if scale == 'log': rate = log10(rate)
         if 0:
             plt.pcolormesh(x, y, rate)
         else:
@@ -319,6 +318,7 @@ def q_bin(q_edges, angle, wavelength, rate):
     return bar_q, bar_y
 
 def q_res(q_edges, angle, wavelength, incident_intensity, spectrum):
+    # TODO: incorporate delta theta
     from dataflow.lib.rebin import rebin
 
     # Determine q values of measured points.
@@ -355,6 +355,36 @@ def q_res(q_edges, angle, wavelength, incident_intensity, spectrum):
     dq /= np.sum(dq, axis=1, keepdims=True)
     #print(q_edges[1]-q_edges[0], dq_edges[1]-dq_edges[0])
     return q_edges, dq_edges, dq
+
+def binned_dL(q_edges, angle, wavelength, incident_intensity, spectrum):
+    from dataflow.lib.rebin import rebin
+
+    # Determine q values of measured points.
+    q = 4*pi/wavelength[None, :] * sin(radians(angle[:, None]))
+
+    # Determine the q values for each incident angle and spectrum wavelength.
+    # Reversing L so that q is increasing rather than decreasing.
+    L = spectrum.bragg_wavelength()
+
+    # Initialize the sum of distributions return value.
+    dL = np.zeros((len(q_edges)-1, len(L)), 'd')
+
+    # Bin L according to q binning.
+    I = spectrum.scale()
+    for i in range(len(angle)):
+        for j in range(len(wavelength)):
+            # Determine which q column we are incrementing.
+            k = np.searchsorted(q_edges, q[i, j])
+            # Scale by relative intensity and add to q column.
+            dL[k] += incident_intensity[i]*I[:, j]
+            if False and k == 40:
+                print(f"q[{i},{j}]={q[i,j]}")
+                plt.semilogy(L, I[:, j])
+
+    # Normalize so that dL represents the relative contribution of each q.
+    dL /= np.sum(dL, axis=1, keepdims=True)
+    #print(q_edges[1]-q_edges[0], dq_edges[1]-dq_edges[0])
+    return q_edges, edges(L), dL
 
 
 def edges(c, extended=False):
@@ -456,7 +486,7 @@ def demo():
         L, T, I = spec.deblur(d0, trim=trim, smoothing=smoothing)
         plot_q(L, T, I)
 
-    if 1:
+    if 0:
         # Compare L fitted
         L1, dL1, area1 = d0.leaflets()
         L2, dL2, area2 = d1.leaflets()
@@ -513,7 +543,7 @@ def demo():
         plt.yscale('log')
         plt.legend()
 
-    if 0:
+    if 1:
         # show resolution
         nq = 1301
         #nq = 901
@@ -521,7 +551,7 @@ def demo():
         #nq = 131
         q_edges = np.linspace(0., 0.55, nq)
         fitted_L, dL, area = d0.leaflets()
-        # assume incident beam is proportional to counting time and slit 1
+        # Assume incident beam is proportional to counting time and slit 1
         # opening so that when combining points from different lines we can
         # get the relative wavelength distribution correct.
         intensity = spec.count_time[:, 0] * spec.slit1
@@ -537,22 +567,38 @@ def demo():
         relative_qc = np.clip(delta_qc/nominal_qc[:, None], -1, 1)
 
         #x, xlabel = actual_qc, "actual q (1/Å)"
-        x, xlabel = delta_qc, "actual q - nominal q (1/Å)"
-        #x, xlabel = relative_qc, "δq/q (1/Å)"
+        #x, xlabel = delta_qc, "actual q - nominal q (1/Å)"
+        x, xlabel = relative_qc, "δq/q (1/Å)"
 
-        dq = np.log10(dq)
+        dq = np.clip(dq, 1e-6, 1)
+        dq = log10(dq)
 
         plt.figure()
         if 1:
             plt.pcolormesh(x, nominal_qc, dq)
             plt.xlabel(xlabel)
             plt.ylabel("nominal q (1/Å)")
-            plt.grid(True)
+            plt.title("q variation due to wavelength")
+            #plt.grid(True)
             plt.colorbar()
-        else:
+        elif 0:
             plt.plot(x, dq)
             plt.xlabel(xlabel)
             plt.ylabel("intensity (a. u.)")
+
+        if 0:
+            # Show wavelength variation within q points
+            Q_edges, L_edges, dL = binned_dL(
+                q_edges, spec.angle, fitted_L, intensity, d0)
+            dL = log10(dL)
+
+            plt.figure()
+            plt.pcolormesh(L_edges, Q_edges, dL)
+            plt.xlabel("wavelength (Å)")
+            plt.ylabel("nominal q (1/Å)")
+            plt.grid(True)
+            plt.title("wavelength variation within q points")
+            plt.colorbar()
 
     plt.show(); sys.exit()
 
