@@ -31,7 +31,7 @@ def rebin(x, I, xo, dtype=np.float64):
     I = np.asarray(I)
     x, xo = np.asarray(x, dtype='d'), np.asarray(xo, dtype='d')
     if len(x.shape) != 1 or len(xo.shape) != 1 or len(x)-1 != len(I):
-        raise TypeError("input array incorrect shape %s"%I.shape)
+        raise TypeError("input array incorrect shape %s"%str(I.shape))
 
     ix = _rebin_counts(x, I, xo, dtype=dtype)
     return ix
