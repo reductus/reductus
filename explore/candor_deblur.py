@@ -1,3 +1,7 @@
+"""
+Candor deconvolution exploration
+"""
+
 import sys
 from pathlib import Path
 
@@ -8,7 +12,8 @@ from scipy.signal import medfilt, savgol_filter
 import h5py as h5
 import matplotlib.pyplot as plt
 
-datadir = Path(__file__).parent
+DATA_URL = "ncnr/candor/202003/nonims4/data"
+DATA_DIR = Path(__file__).parent
 
 # Ge (111) d-spacing = 6.532/2 = 3.266
 # Be cutoff at 37.25 deg for Ge 111 => lambda = 3.954 Ang
@@ -71,18 +76,20 @@ Be_CUTOFF_ANGLE = 37.33
 #: cutoff wavelength for Be filter (computed from measured angle)
 Be_CUTOFF_WAVELENGTH = 2*Ge111 * sin(radians(Be_CUTOFF_ANGLE)) # 3.96 A
 #: angles used for spectral analysis
-SPECTRUM_ANGLES = (Be_CUTOFF_ANGLE+0.5, 68-1) # measured from data
-#SPECTRUM_ANGLES = (0, np.inf) # all angles
+#SPECTRUM_ANGLES = (Be_CUTOFF_ANGLE+0.5, 68-1) # measured from data
+SPECTRUM_ANGLES = (0, np.inf) # all angles
 #: data dependent cutoff needed to fit leaflets to gaussians, as determined
 #: by fiddling the cutoff value and looking at the spectral plots per leaf.
 RATE_CUTOFF = 25
 
 class Data:
     def __init__(self, filename, bank, base, spectrum=False):
+        if not (DATA_DIR/filename).exists():
+            raise RuntimeError(f"Can't find {filename}. Download from {DATA_URL}")
         self.filename = filename
         self.bank = bank
         self.base = base
-        fid = h5.File(datadir/filename, 'r')
+        fid = h5.File(DATA_DIR/filename, 'r')
         entry = list(fid.values())[0]  # grab the first entry
         das = entry['DAS_logs']
         self.fid = fid
@@ -404,6 +411,28 @@ def edges(c, extended=False):
 def centers(c):
     return 0.5*(c[:-1] + c[1:])
 
+def cm_divided(vcenter=0, vmin=None, vmax=None):
+    from matplotlib.colors import LinearSegmentedColormap
+    try:
+        from matplotlib.colors import TwoSlopeNorm
+    except ImportError:
+        from matplotlib.colors import DivergingNorm as TwoSlopeNorm
+
+    # https://matplotlib.org/3.2.0/gallery/userdemo/colormap_normalizations_diverging.html
+    # make a colormap that has land and ocean clearly delineated and of the
+    # same length (256 + 256)
+    colors_undersea = plt.cm.terrain(np.linspace(0, 0.17, 256))
+    colors_land = plt.cm.terrain(np.linspace(0.25, 1, 256))
+    all_colors = np.vstack((colors_undersea, colors_land))
+    terrain_map = LinearSegmentedColormap.from_list('terrain_map', all_colors)
+
+    # make the norm:  Note the center is offset so that the land has more
+    # dynamic range:
+    divnorm = TwoSlopeNorm(vmin=vmin, vcenter=vcenter, vmax=vmax)
+
+    return {'norm': divnorm, 'cmap': terrain_map}
+
+
 def demo():
     # Monitors vary between 30,000 and 31,000 during bank 1 measurement
     # so normalize them by monitor rather than time.
@@ -567,24 +596,43 @@ def demo():
         relative_qc = np.clip(delta_qc/nominal_qc[:, None], -1, 1)
 
         #x, xlabel = actual_qc, "actual q (1/Å)"
-        #x, xlabel = delta_qc, "actual q - nominal q (1/Å)"
-        x, xlabel = relative_qc, "δq/q (1/Å)"
+        x, xlabel = delta_qc, "actual q - nominal q (1/Å)"
+        #x, xlabel = relative_qc, "δq/q (1/Å)"
+
+        pcut = 1e-3
+        peak = np.sum(dq*(dq>=pcut), axis=1)
+        lower = np.sum(dq*(dq<pcut)*(relative_qc<0), axis=1)
+        higher = np.sum(dq*(dq<pcut)*(relative_qc>0), axis=1)
 
         dq = np.clip(dq, 1e-6, 1)
         dq = log10(dq)
 
-        plt.figure()
         if 1:
-            plt.pcolormesh(x, nominal_qc, dq)
+            plt.figure()
+            plt.pcolormesh(x, nominal_qc, dq, **cm_divided(vcenter=np.log10(pcut)))
             plt.xlabel(xlabel)
             plt.ylabel("nominal q (1/Å)")
-            plt.title("q variation due to wavelength")
+            plt.title(f"q variation due to wavelength Δq={q_edges[1]:.6f}")
             #plt.grid(True)
-            plt.colorbar()
-        elif 0:
+            cbar = plt.colorbar()
+            cbar.ax.set_ylabel('Log10 relative intensity')
+
+        if 0:
+            plt.figure()
             plt.plot(x, dq)
             plt.xlabel(xlabel)
             plt.ylabel("intensity (a. u.)")
+
+        if 1:
+            plt.figure()
+            #plt.plot(nominal_qc, peak, label='p(q) ≥ 0.1%')
+            plt.plot(nominal_qc, 100*lower, label=f'δq < 0 and p(q) < {100*pcut}%')
+            plt.plot(nominal_qc, 100*higher, label=f'δq > 0 and p(q) < {100*pcut}%')
+            #plt.scale('log')
+            plt.legend()
+            plt.xlabel('nominal q')
+            plt.ylabel('probability (%)')
+            plt.title('Integrated probability')
 
         if 0:
             # Show wavelength variation within q points
