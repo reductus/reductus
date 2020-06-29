@@ -127,6 +127,10 @@ def _apply_footprint(data, footprint):
         footprint.x = copy(footprint.x)
         footprint.x[bad_correction] = 1.0
         footprint.variance[bad_correction] = 0.0
+    cdims = refl.x.ndim
+    fdims = footprint.x.ndim
+    for n in range(cdims - fdims):
+        footprint = footprint[:,None]
     corrected_refl = refl/footprint
     data.v, data.dv = corrected_refl.x, corrected_refl.dx
 
