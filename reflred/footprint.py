@@ -5,6 +5,7 @@ from numpy import pi, sqrt, polyval, radians, tan, arctan, inf, sin
 
 from dataflow.lib.wsolve import wpolyfit
 from dataflow.lib.uncertainty import Uncertainty as U, interp
+from .util import extend
 
 class FootprintData(object):
     def __init__(self, p, dp):
@@ -127,7 +128,7 @@ def _apply_footprint(data, footprint):
         footprint.x = copy(footprint.x)
         footprint.x[bad_correction] = 1.0
         footprint.variance[bad_correction] = 0.0
-    corrected_refl = refl/footprint
+    corrected_refl = refl/extend(footprint, refl)
     data.v, data.dv = corrected_refl.x, corrected_refl.dx
 
 
