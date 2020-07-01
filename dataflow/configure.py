@@ -73,6 +73,7 @@ def apply_config(user_config=None, user_overrides=None):
     # through a firewall that doesn't resolve IPV6 addresses correctly,
     # the application slows down tremendously.  There is no built-in
     # way to ask requests to use IPV4, so this is the recipe found:
+    # https://stackoverflow.com/questions/33046733/force-requests-to-use-ipv4-ipv6/46972341#46972341
     if config.get('force_IPV4', False):
         import socket
         import requests.packages.urllib3.util.connection as urllib3_cn
