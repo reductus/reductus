@@ -12,6 +12,7 @@ from . import steps
 @module("candor")
 def candor(
         filelist=None,
+        bank_select=None,
         dc_rate=0.,
         dc_slope=0.,
         detector_correction=False,
@@ -26,6 +27,8 @@ def candor(
     **Inputs**
 
     filelist (fileinfo[]): List of files to open.
+
+    bank_select {Select bank} (int) : Choose bank to output (default is all)
 
     dc_rate {Dark counts per minute} (float)
     : Number of dark counts to subtract from each detector channel per
@@ -77,6 +80,8 @@ def candor(
         data.Qz_basis = 'target'
         if intent not in (None, 'none', 'auto'):
             data.intent = intent
+        if bank_select is not None:
+            data = select_bank(data, bank_select)
         if auto_divergence:
             data = steps.divergence_fb(data, sample_width)
         if dc_rate != 0. or dc_slope != 0.:
@@ -91,6 +96,38 @@ def candor(
         datasets.append(data)
 
     return datasets
+
+@module("candor")
+def select_bank(data, bank_select=None):
+    r"""
+    Remove banks from Candor data.
+
+    **Inputs**
+
+    data (candordata): Input data with 1 or more banks
+
+    bank_select {Select bank} (int) : Choose banks to output (default is all)
+
+    **Returns**
+
+    output (candordata): Data with indices not listed in bank_select removed.
+
+    | 2020-07-07 Brian Maranville 
+    """
+
+    if bank_select is not None:
+        data = copy(data)
+        data.detector.counts = data.detector.counts[:,:,[bank_select]]
+        data.detector.counts_variance = data.detector.counts.copy()
+        data.detector.dims = data.detector.counts.shape
+
+        data.detector.efficiency = data.detector.efficiency[:,:,[bank_select]]
+        data.detector.angle_x_offset = data.detector.angle_x_offset[[bank_select]]
+        data.detector.wavelength = data.detector.wavelength[:,:,[bank_select]]
+        data.detector.wavelength_resolution = data.detector.wavelength_resolution[:,:,[bank_select]]
+    
+    return data
+
 
 @module("candor")
 def spectral_efficiency(data, spectrum=()):
