@@ -13,11 +13,13 @@ from . import steps
 def candor(
         filelist=None,
         bank_select=None,
+        channel_select=None,
         dc_rate=0.,
         dc_slope=0.,
         detector_correction=False,
         monitor_correction=False,
         spectral_correction=False,
+        Qz_basis='target',
         intent='auto',
         sample_width=None,
         base='auto'):
@@ -29,6 +31,8 @@ def candor(
     filelist (fileinfo[]): List of files to open.
 
     bank_select {Select bank} (int) : Choose bank to output (default is all)
+
+    channel_select {Select channel(s)} (int[]*) : Choose channels to output from bank (default is all)
 
     dc_rate {Dark counts per minute} (float)
     : Number of dark counts to subtract from each detector channel per
@@ -48,6 +52,9 @@ def candor(
     spectral_correction {Apply detector efficiency correction} (bool)
     : If True, scale counts by the detector efficiency calibration given
     in the file (see Spectral Efficiency).
+
+    Qz_basis (opt:target|sample|detector|actual)
+    : How to calculate Qz from instrument angles.
 
     intent (opt:auto|specular|background+\|background-\|intensity|rock sample|rock detector|rock qx|scan)
     : Measurement intent (specular, background+, background-, slit, rock),
@@ -77,11 +84,13 @@ def candor(
     datasets = []
     for data in url_load_list(filelist, loader=load_entries):
         # TODO: drop data rows where fastShutter.openState is 0
-        data.Qz_basis = 'target'
+        data.Qz_basis = Qz_basis
         if intent not in (None, 'none', 'auto'):
             data.intent = intent
         if bank_select is not None:
             data = select_bank(data, bank_select)
+        if channel_select is not None:
+            data = select_channel(data, channel_select)
         if auto_divergence:
             data = steps.divergence_fb(data, sample_width)
         if dc_rate != 0. or dc_slope != 0.:
@@ -125,6 +134,36 @@ def select_bank(data, bank_select=None):
         data.detector.angle_x_offset = data.detector.angle_x_offset[[bank_select]]
         data.detector.wavelength = data.detector.wavelength[:,:,[bank_select]]
         data.detector.wavelength_resolution = data.detector.wavelength_resolution[:,:,[bank_select]]
+    
+    return data
+
+@module("candor")
+def select_channel(data, channel_select=None):
+    r"""
+    Select channels from bank of Candor data.
+
+    **Inputs**
+
+    data (candordata): Input data with 1 or more banks
+
+    channel_select {Select channel(s)} (int[]*) : Choose channels to output (default is all)
+
+    **Returns**
+
+    output (candordata): Data with indices not listed in channel_select removed.
+
+    | 2020-07-09 Brian Maranville 
+    """
+
+    if channel_select is not None:
+        data = copy(data)
+        data.detector.counts = data.detector.counts[:,channel_select,:]
+        data.detector.counts_variance = data.detector.counts.copy()
+        data.detector.dims = data.detector.counts.shape
+
+        data.detector.efficiency = data.detector.efficiency[:,channel_select,:]
+        data.detector.wavelength = data.detector.wavelength[:,channel_select,:]
+        data.detector.wavelength_resolution = data.detector.wavelength_resolution[:,channel_select,:]
     
     return data
 
