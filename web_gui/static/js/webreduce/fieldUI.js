@@ -849,17 +849,33 @@ webreduce.editor.make_fieldUI = webreduce.editor.make_fieldUI || {};
         target = this.target,
         datasets_in = this.datasets_in,
         module = this.active_module;
-    var input = target.append("div")
-      .classed("fields", true)
-      .datum(datum)
-      .append("label")
-        .text(field.label)
-        .append("input")
-          .attr("type", "number")
-          .attr("field_id", field.id)
-          .attr("value", datum.value)
-          .attr("placeholder", JSON.stringify(datum.default_value))
-          .on("input", function(d) { datum.value = (this.value == "") ? null : parseInt(this.value) });
+    var input;
+    if (field.multiple) { 
+      //datum.value = [datum.value]; 
+      input = target.append("div")
+        .classed("fields", true)
+        .datum(datum)
+        .append("label")           
+          .text(field.label)
+          .append("input")
+            .attr("type", "text")
+            .attr("field_id", field.id)
+            .attr("value", JSON.stringify(datum.value))
+            .attr("placeholder", JSON.stringify(datum.default_value))
+            .on("change", function(d) { datum.value = JSON.parse(this.value) });
+    } else {
+      input = target.append("div")
+        .classed("fields", true)
+        .datum(datum)
+        .append("label")
+          .text(field.label)
+          .append("input")
+            .attr("type", "number")
+            .attr("field_id", field.id)
+            .attr("value", datum.value)
+            .attr("placeholder", JSON.stringify(datum.default_value))
+            .on("input", function(d) { datum.value = (this.value == "") ? null : parseInt(this.value) });
+    }
     return input;
   }
   fieldUI.int = intUI;
