@@ -152,18 +152,68 @@ def select_channel(data, channel_select=None):
 
     output (candordata): Data with indices not listed in channel_select removed.
 
-    | 2020-07-09 Brian Maranville 
+    | 2020-07-12 Brian Maranville 
     """
 
     if channel_select is not None:
         data = copy(data)
         data.detector.counts = data.detector.counts[:,channel_select,:]
-        data.detector.counts_variance = data.detector.counts.copy()
+        data.detector.counts_variance = data.detector.counts_variance[:,channel_select,:]
         data.detector.dims = data.detector.counts.shape
 
         data.detector.efficiency = data.detector.efficiency[:,channel_select,:]
         data.detector.wavelength = data.detector.wavelength[:,channel_select,:]
         data.detector.wavelength_resolution = data.detector.wavelength_resolution[:,channel_select,:]
+    
+    return data
+
+@module("candor")
+def select_points(data, point_select=None):
+    r"""
+    Select data points from scan of Candor.
+
+    **Inputs**
+
+    data (candordata): Input data with 1 or more banks
+
+    point_select {Select points(s)} (int[]*) : Choose points to output (default is all)
+
+    **Returns**
+
+    output (candordata): Data with point indices not listed in point_select removed.
+
+    | 2020-07-03 Brian Maranville 
+    """
+
+    if point_select is not None:
+        data = copy(data)
+        data.detector.counts = data.detector.counts[point_select]
+        data.detector.counts_variance = data.detector.counts_variance[point_select]
+        data.detector.dims = data.detector.counts.shape
+        monitor = data.monitor
+        monitor.counts = monitor.counts[point_select]
+        monitor.counts_variance = monitor.counts_variance[point_select]
+        monitor.count_time = monitor.count_time[point_select]
+        monitor.roi_counts = monitor.roi_counts[point_select]
+        monitor.roi_variance = monitor.roi_variance[point_select]
+        monitor.source_power = monitor.source_power[point_select]
+        monitor.source_power_variance = monitor.source_power_variance[point_select]
+
+        if data._v is not None:
+            data.v = data.v[point_select]
+        if data._dv is not None:
+            data.dv = data.dv[point_select]
+        if data.angular_resolution is not None:
+            data.angular_resolution = data.angular_resolution[point_select]
+
+        for slit in (data.slit1, data.slit2, data.slit3, data.slit4):
+            slit.x = slit.x[point_select]
+            slit.x_target = slit.x_target[point_select]
+
+        data.sample.angle_x = data.sample.angle_x[point_select]
+        data.sample.angle_x_target = data.sample.angle_x_target[point_select]
+        data.detector.angle_x = data.detector.angle_x[point_select]
+        data.detector.angle_x_target = data.detector.angle_x_target[point_select]
     
     return data
 
