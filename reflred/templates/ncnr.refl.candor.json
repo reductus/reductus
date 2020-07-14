@@ -57,18 +57,27 @@
     {
       "module": "ncnr.refl.candor_join",
       "title": "Join",
+      "config": {
+        "Q_tolerance": 0.0
+      },
       "x": 190,
       "y": 5
     },
     {
       "module": "ncnr.refl.candor_join",
       "title": "Join",
+      "config": {
+        "Q_tolerance": 0.0
+      },
       "x": 190,
       "y": 35
     },
     {
       "module": "ncnr.refl.candor_join",
       "title": "Join",
+      "config": {
+        "Q_tolerance": 0.0
+      },
       "x": 190,
       "y": 65
     },

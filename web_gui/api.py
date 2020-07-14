@@ -5,12 +5,7 @@ from pprint import pprint
 import json
 import traceback
 
-try:
-    from urllib.parse import urlencode
-    import urllib.request as urllib2
-except ImportError:
-    from urllib import urlencode
-    import urllib2
+import requests
 
 import dataflow
 from dataflow.core import Template, load_instrument, lookup_instrument
@@ -70,18 +65,9 @@ def get_file_metadata(source="ncnr", pathlist=None):
     if source == "local":
         metadata = local_file_metadata(pathlist)
     else:
-        url = fetch.FILE_HELPERS[source] #'http://ncnr.nist.gov/ipeek/listftpfiles.php'
-        values = {'pathlist[]' : pathlist}
-        data = urlencode(values, True)
-        req = urllib2.Request(url, data.encode('ascii'))
-        #print("request", url, data, req, type(req))
-        response = urllib2.urlopen(req)
-        fn = response.read()
-        #print("response", fn)
-        metadata = json.loads(fn.decode('ascii'))
-        #print("parsed response", metadata)
-        # this converts json to python object, then the json-rpc lib converts it
-        # right back, but it is more consistent for the client this way:
+        url = fetch.FILE_HELPERS[source] #'http://ncnr.nist.gov/ipeek/listftpfiles_json.php'
+        req = requests.post(url, json={"pathlist": pathlist})
+        metadata = req.json()
 
     return metadata
 

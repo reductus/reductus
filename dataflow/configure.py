@@ -68,3 +68,18 @@ def apply_config(user_config=None, user_overrides=None):
     instruments = config.get('instruments', ['refl'])
     for name in instruments:
         load_instrument(name)
+
+    # this is a strange thing to have here... but when connected
+    # through a firewall that doesn't resolve IPV6 addresses correctly,
+    # the application slows down tremendously.  There is no built-in
+    # way to ask requests to use IPV4, so this is the recipe found:
+    # https://stackoverflow.com/questions/33046733/force-requests-to-use-ipv4-ipv6/46972341#46972341
+    if config.get('force_IPV4', False):
+        import socket
+        import requests.packages.urllib3.util.connection as urllib3_cn
+
+        def allowed_gai_family():
+            family = socket.AF_INET    # force IPv4
+            return family
+
+        urllib3_cn.allowed_gai_family = allowed_gai_family

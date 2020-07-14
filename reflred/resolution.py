@@ -7,11 +7,7 @@ from numpy import pi, sqrt, log, degrees, radians, cos, sin, tan
 from numpy import arcsin as asin, ceil
 from numpy import ones_like, arange, isscalar, asarray, hstack
 
-try:
-    #from typing import Tuple
-    pass
-except ImportError:
-    pass
+from . import util
 
 
 def QL2T(Q=None, L=None):
@@ -80,6 +76,23 @@ def dTdL2dQ(T=None, dT=None, L=None, dL=None):
     *L*, *dL*  (|Ang|) wavelength and 1-\ $\sigma$ wavelength dispersion
 
     Returns 1-\ $\sigma$ $\Delta Q$
+
+    Given $Q = 4 \pi sin(\theta)/\lambda$, this follows directly from
+    gaussian error propagation using
+
+    ..math::
+
+        \Delta Q^2
+            &= \left(\frac{\partial Q}{\partial \lambda}\right)^2\Delta\lambda^2
+            + \left(\frac{\partial Q}{\partial \theta}\right)^2\Delta\theta^2
+
+            &= Q^2 \left(\frac{\Delta \lambda}{\lambda}\right)^2
+            + Q^2 \left(\frac{\Delta \theta}{\tan \theta}\right)^2
+
+            &= Q^2 \left(\frac{\Delta \lambda}{\lambda}\right)^2
+            + \left(\frac{4\pi\cos\theta\,\Delta\theta}{\lambda}\right)^2
+
+    with the final form chosen to avoid cancellation at $Q=0$.
     """
 
     # Compute dQ from wavelength dispersion (dL) and angular divergence (dT)
@@ -90,6 +103,26 @@ def dTdL2dQ(T=None, dT=None, L=None, dL=None):
 
     #sqrt((dL/L)**2+(radians(dT)/tan(radians(T)))**2)*probe.Q
     return dQ
+
+
+def dQ_broadening(dQ, L, T, dT, width):
+    r"""
+    Broaden an existing dQ by the given divergence.
+
+    *dQ* |1/Ang|, with 1-\ $\sigma$ $Q$ resolution
+    *L* |Ang|
+    *T*, *dT* |deg|, with 1-\ $\sigma$ angular divergence
+    *width* |deg|, with 1-\ $\sigma$ increased angular divergence
+
+    The calculation is derived by substituting
+    $\Delta\theta' = \Delta\theta + \omega$ for sample broadening $\omega$.
+    """
+    T, dT = radians(asarray(T, 'd')), radians(asarray(dT, 'd'))
+    width = radians(width)
+    dQsq = dQ**2 + (4*pi/L*cos(T))**2*(2*width*dT + width**2)
+
+    return sqrt(dQsq)
+
 
 def dQdT2dLoL(Q, dQ, T, dT):
     r"""
@@ -237,23 +270,20 @@ def binedges(L):
     return hstack((E, E[-1]*last))
 
 def divergence(slits=None, distance=None, T=None,
-               sample_width=np.inf, sample_broadening=0.,
-               use_sample=True):
+               sample_width=np.inf, use_sample=True):
     # type: (Tuple[np.ndarray, np.ndarray], Tuple[float, float], np.ndarray, float, float) -> np.ndarray
     r"""
     Calculate divergence due to slit and sample geometry.
 
     :Parameters:
-        *slits*     : float OR (float,float) | mm
-            s1,s2 slit openings for slit 1 and slit 2
-        *distance*  : (float,float) | mm
-            d1,d2 distance from sample to slit 1 and slit 2
+        *slits*     : float OR (float, ...) | mm
+            s1,s2,s3,s4 slit openings for all available slits
+        *distance*  : (float, ...) | mm
+            d1,d2,d3,d4 distance to each slit
         *T*         : float OR [float] | |deg|
             incident angles
         *sample_width*      : float | mm
             w, width of the sample
-        *sample_broadening* : float | |deg| 1-\ $\sigma$
-            additional divergence caused by sample
         *use_sample* : bool
             True if sample profile should be treated as a slit.  If false,
             then incident angle, sample width and sample broadening are not
@@ -276,34 +306,79 @@ def divergence(slits=None, distance=None, T=None,
 
         p &= w \sin\left(\frac{\pi}{180}\theta\right)
 
-    Depending on whether $p$ is larger than $s_2$, determine the slit
-    divergence $\Delta\theta_d$ in radians:
+    Define this as slit s0 at distance d0=0.
+
+    Given a set of slit openings $s_i$ with distance from sample $d_i$,
+    the $\Delta\theta_d$ full width at half maximum (FWHM) in radians is
+    computed as:
 
     .. math::
 
-        \Delta\theta_d &= \left\{
-          \begin{array}{ll}
-            \frac{1}{2}\frac{s_1+s_2}{d_1-d_2} & \mbox{if } p \geq s_2 \\
-            \frac{1}{2}\frac{s_1+p}{d_1}       & \mbox{if } p < s_2
-          \end{array}
-        \right.
+        \Delta\theta_d = \min_{i \ne j) \frac{1}{2}\frac{s_i+s_j}{|d_i-d_j|}
 
     In addition to the slit divergence, we need to add in any sample
     broadening $\Delta\theta_s$ returning the total divergence in degrees:
 
     .. math::
 
-        \Delta\theta &= \frac{180}{\pi} \Delta\theta_d + \Delta\theta_s
+        \Delta\theta = \frac{180}{\pi} \Delta\theta_d + \Delta\theta_s
 
     Reversing this equation, the sample broadening contribution can
-    be measured from the full width at half maximum of the rocking
-    curve, $B$, measured in degrees at a particular angle and slit
-    opening:
+    be measured from the FWHM of the rocking curve, $B$, measured in
+    degrees at a particular angle and slit opening:
 
     .. math::
 
         \Delta\theta_s = B - \frac{180}{\pi}\Delta\theta_d
+
+    If any of the slits is not centered or the sample is offset from the
+    center of rotation then this calculation will not be correct.
+
+    Depending on the slit openings and distances, the angular distribution
+    in the beam from a set of slits will vary from triangular
+    ($\sigma^2 = w^2/24$) to uniform ($\sigma^2 = w^2/12) where $w$ is the
+    width of the base, as determined by the minimum and maximum achievable
+    angles through all the slits. Any slits that are not centered on the
+    beam path can introduce a skew in this distribution.
+
+    The present algorithm computes the symmetric trapezoidal distribution
+    for each pair of slits along the beam path and uses the minimum divergence
+    as the divergence of the complete beam.  Monte Carlo simulations show that
+    this method underestimates the divergence by up to 30% when slit 1 is
+    much more open than slit 2, but handles the other conditions very well.
+    Note that the sample itself can act like slit 2 at low angles, as
+    can slit 3.
+
+    **TODO**: fix S1 >> S2 condition
     """
+    # Extend all arrays to look like T (for use in candor data)
+    slits = [util.extend(s, T) for s in slits]
+    distance = [util.extend(d, T) for d in distance]
+
+    # Add sample projection at distance zero
+    if False and use_sample and np.isfinite(sample_width):
+        sample_projection = sample_width * abs(sin(radians(T)))
+        slits = slits + [sample_projection]
+        distance = distance + [0.]
+
+    # Compute pair-wise delta-theta
+    def _divergence(i, j):
+        s1, s2, d = slits[i], slits[j], distance[i] - distance[j]
+        w, t = np.arctan(abs((s1 + s2)/2/d)), np.arctan(abs((s1 - s2)/2/d))
+        return np.sqrt((w**2 + t**2)/6)
+    n = len(slits)
+    sigma = [_divergence(i, j) for i in range(n) for j in range(i+1, n)]
+
+    # Find the minimum delta-theta across all pairs
+    # Sample slit is one per angle, so some divergence values will be vectors
+    sigma = np.asarray(np.broadcast_arrays(*sigma))
+    min_sigma = np.min(sigma, axis=0)
+
+    # Convert to 1-sigma distribution in degrees
+    return degrees(min_sigma)
+
+def divergence_simple(slits=None, distance=None, T=None,
+                      sample_width=np.inf, use_sample=True):
     # TODO: check that the formula is correct for T=0 => dT = s1 / d1
     # TODO: add sample_offset and compute full footprint
     d1, d2 = distance
@@ -320,7 +395,7 @@ def divergence(slits=None, distance=None, T=None,
         dT_s1_sample = 0.5*(s1+sample)/abs(d1)
         dT_s2_sample = 0.5*(s2+sample)/abs(d2)
         dT = np.minimum(dT_s1_s2, np.minimum(dT_s1_sample, dT_s2_sample))
-        return FWHM2sigma(degrees(dT)) + sample_broadening
+        return FWHM2sigma(degrees(dT))
     else:
         return FWHM2sigma(degrees(dT_s1_s2))
 

@@ -68,6 +68,7 @@ def candor(
     """
     from .load import url_load_list
     from .candor import load_entries
+    auto_divergence = True
 
     # Note: candor automatically computes divergence.
     datasets = []
@@ -76,6 +77,8 @@ def candor(
         data.Qz_basis = 'target'
         if intent not in (None, 'none', 'auto'):
             data.intent = intent
+        if auto_divergence:
+            data = steps.divergence_fb(data, sample_width)
         if dc_rate != 0. or dc_slope != 0.:
             data = dark_current(data, dc_rate, dc_slope)
         if detector_correction:
@@ -272,7 +275,7 @@ def candor_rebin(data, qmin=None, qmax=None, qstep=0.003):
 
     qmax (float) : End of q range, or empty to infer from data
 
-    qstep (float) : q step size
+    qstep (float) : q step size or 0 for no rebinning
 
     **Returns**
 
@@ -280,17 +283,18 @@ def candor_rebin(data, qmin=None, qmax=None, qstep=0.003):
 
     | 2020-03-04 Paul Kienzle
     """
-    from .candor import rebin
+    from .candor import rebin, nobin
 
-    if qmin is None:
-        qmin = data.Qz.min()
+    if qstep == 0.0:
+        data = nobin(data)
+    else:
+        if qmin is None:
+            qmin = data.Qz.min()
+        if qmax is None:
+            qmax = data.Qz.max()
+        q = np.arange(qmin, qmax, qstep)
+        data = rebin(data, q)
 
-    if qmax is None:
-        qmax = data.Qz.max()
-
-    q = np.arange(qmin, qmax, qstep)
-
-    data = rebin(data, q)
     return data
 
 candor_join = copy_module(
@@ -311,4 +315,12 @@ candor_background = copy_module(
 
 candor_divide = copy_module(
     steps.divide_intensity, "candor_divide",
+    "refldata", "candordata", tag="candor")
+
+candor_divergence_fb = copy_module(
+    steps.divergence_fb, "candor_divergence",
+    "refldata", "candordata", tag="candor")
+
+candor_sample_broadening = copy_module(
+    steps.sample_broadening, "candor_sample_broadening",
     "refldata", "candordata", tag="candor")

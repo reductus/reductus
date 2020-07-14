@@ -68,6 +68,18 @@ class Candor(ReflData):
         if raw_intent in TRAJECTORY_INTENTS:
             self.intent = TRAJECTORY_INTENTS[raw_intent]
 
+        # Figure out beam mode:
+        #    Q.beamMode = WHITE_BEAM|SINGLE_BEAM
+        #    convergingGuideMap.key = IN|OUT
+        # For white beam with non-converging guide use the active bank to
+        # determine which Q values to look at. For now look at both banks.
+        #beam_mode = str_data(das, 'Q/beamMode', '')
+        #if beam_mode != 'WHITE_BEAM':
+        #    raise ValueError(f"candor reduction requires Q/beamMode=WHITE_BEAM in '{self.path}'")
+        #active_bank = data_as(das, 'Q/angleIndex', 1) - 1
+        #active_channel = data_as(das, 'Q/wavelenghtIndex', 1) - 1
+        #is_converging = (str_data(das, 'convergingGuidesMap/key', 'OUT') == 'IN')
+
         # Polarizers
         self.polarization = (
             get_pol(das, 'frontPolarization')
@@ -76,7 +88,9 @@ class Candor(ReflData):
 
         # Counts
         # Load counts early so we can tell whether channels are axis 1 or 2
-        counts = data_as(das, 'areaDetector/counts', '', dtype='d')
+        counts = data_as(das, 'multiDetector/counts', '', dtype='d')
+        if counts is None: # CRUFT: NICE Ticket #00113618 - Renamed detector from area to multi
+            counts = data_as(das, 'areaDetector/counts', '', dtype='d')
         if counts is None or counts.size == 0:
             raise ValueError("Candor file '{self.path}' has no area detector data.".format(self=self))
 
@@ -88,8 +102,9 @@ class Candor(ReflData):
         self.detector.dims = counts.shape[1:]
 
         # Monochromator
-        ismono = (str_data(das, 'monoTrans/key', 'OUT') == 'IN')
-        if ismono:
+        # Note: could test Q/beamMode == 'SINGLE_BEAM" for is_mono
+        is_mono = (str_data(das, 'monoTrans/key', 'OUT') == 'IN')
+        if is_mono:
             self.warn("monochromatic beams not yet supported for Candor reduction")
             self.monochromator.wavelength = data_as(entry, 'instrument/monochromator/wavelength', 'Ang', rep=n)
             # TODO: make sure wavelength_error is 1-sigma, not FWHM %
@@ -184,7 +199,7 @@ class Candor(ReflData):
         self.detector.wavelength = wavelength[None, :, :]
         self.detector.wavelength_resolution = wavelength_resolution[None, :, :]
         self.detector.efficiency = efficiency[None, :, :]
-        self.angular_resolution = divergence[None, :, :]
+        #self.angular_resolution = divergence[None, :, :]
         # TODO: sample broadening?
 
         # Angles
@@ -336,8 +351,8 @@ class Candor(ReflData):
         data = self.v
         ny, nx, _ = data.shape  # nangles, nwavelengths, nbanks
         (x, xlabel), (y, ylabel) = self.get_axes()
-        x, nx = np.hstack((x, x + (x.max()-x.min()))), 2*nx
-        xmin, xmax = limits(x, nx)
+        x, nx = np.hstack((x, x - (x.max()-x.min()))), 2*nx
+        xmax, xmin = limits(x, nx) # reversed because wavelengths are reversed
         ymin, ymax = limits(y, ny)
         # TODO: self.detector.mask
         zmin, zmax = data.min(), data.max()
@@ -391,7 +406,7 @@ class Candor(ReflData):
         pass
 
 class QData(ReflData):
-    def __init__(self, data, q, dq, v, dv):
+    def __init__(self, data, q, dq, v, dv, ti=None, dt=None, ld=None, dl=None):
         super().__init__()
         self.sample = data.sample
         self.probe = data.probe
@@ -402,17 +417,19 @@ class QData(ReflData):
         self.description = data.description
         self.polarization = data.polarization
         self.normbase = data.normbase
-        self._q = q
-        self._dq = dq
         self.v = v
         self.dv = dv
         self.intent = Intent.spec
         self.points = len(q)
-        # TODO: set something for dL and dT
-        self.angular_resolution = 1.
         self.scan_value = []
         self.scan_units = []
         self.scan_label = []
+        self._q = q
+        self._dq = dq
+        self._incident_angle = ti
+        self.angular_resolution = dt
+        self._wavelength = ld
+        self._wavelength_spread = dl
 
     @property
     def Qz(self):
@@ -426,17 +443,50 @@ class QData(ReflData):
     def dQ(self):
         return self._dq
 
+    @property
+    def Ti(self):
+        return self._incident_angle
+    @property
+    def Ld(self):
+        return self._wavelength
+    @property
+    def dL(self):
+        return self._wavelength_spread
+
+
+def nobin(data):
+    """
+    Dump the raw data points into a single Q vector.
+    """
+    # Make all data have the same shape
+    columns = (
+        data.Qz, data.dQ, data.v, data.dv,
+        data.Ti, data.angular_resolution, data.Ld, data.dL)
+    columns = [np.broadcast_to(p, data.v.shape) for p in columns]
+
+    # Process the detector banks into different data sets
+    datasets = []
+    for bank in range(data.v.shape[2]):
+        columns_bank = [p[..., bank].flatten() for p in columns]
+        index = np.argsort(columns_bank[0])
+        columns_bank = [p[index] for p in columns_bank]
+        Qx, dQ, v, dv, Ti, dT, L, dL = columns_bank
+        datasets.append(QData(data, Qx, dQ, v, dv, Ti, dT, L, dL))
+
+    # Only look at bank 0 for now
+    return datasets[0]
+
 def rebin(data, q):
     if data.normbase not in ("monitor", "time", "none"):
         raise ValueError("expected norm to be time, monitor or none")
     q_edges = edges(q, extended=True)
     datasets = []
     for bank in range(data.v.shape[2]):
-        qz, dq, v, dv = _rebin_bank(data, bank, q_edges)
+        qz, dq, v, dv, Ti, dT, L, dL = _rebin_bank(data, bank, q_edges)
         #output = ReflData()
         #output.v, output.dv = v, dv
         #output.x, output.dx = q, dq
-        datasets.append(QData(data, qz, dq, v, dv))
+        datasets.append(QData(data, qz, dq, v, dv, Ti, dT, L, dL))
 
     # Only look at bank 0 for now
     return datasets[0]
@@ -449,26 +499,69 @@ def _rebin_bank(data, bank, q_edges):
 
     Q values (Q, dQ) for the combined measurements are weighted by intensity.
     This means that identical measurement conditions may give different
-    (Q, dQ) depending on the randomness in the measured value.
+    (Q, dQ) depending on the specific values measured.
 
-    There is a simple expression for the moments of a mixture of distributions:
-        T = (sum wk . T) / (sum wk)
-        dT^2 = (sum wk . (dTk^2 + Tk^2)) / (sum wk) - T^2
-    See: https://en.wikipedia.org/wiki/Mixture_density#Moments
+    The following are computed from the combined points::
 
-    When rebinning Candor values as a function of Q then apply this directly
-    to (Q, dQ) since the resolution function is curved in theta-lambda space.
-    Note that the fitting function will need a weighted wavelength distribution
-    for rare earths and for strongly absorbing samples where the scattering is
-    wavelength dependent. It may suffice to compute the joint dQ and dL then
-    assign dT so that it is consistent: this will underestimate the true dT,
-    but it should be good enough for fitting. Alternatively, measure fewer
-    angles for longer and do not merge points so that you can ignore
-    wavelength variation within each theory value.
+        [q] = <q> = <4π/λ sin(θ)>
+        [λ] = 1/<1/λ>
+        [θ] = arcsin([q] [λ] / 4π)
+        [Δq]² = <q √ {(Δλ/λ)² + (Δθ/tan θ)²}> + <q²> - <q>²
+        [Δλ]² = <Δλ²> + <λ²> - <λ>²
+        [Δθ]² = <Δθ²>
+        [q'] = 4π/[λ] sin([θ] + δ)                     for θ-offset δ
+        [Δq']² = [Δq]² + ([q]/tan[θ])² (2ω [Δθ] + ω²)  for sample broadening ω
+
+    The result for [q'] and [Δq'] are with 1% over a wide range of angles
+    and slits. Only small θ-offset values were checked since large errors
+    in incident angle are readily visible in the data. The reflectivity curves
+    will be clearly misaligned especially near the critical edge for θ-offset
+    above about 0.1°. Large values of sample broadening are supported, with
+    up to 2° tested. Negative sample broadening will lead to anomalies at low
+    angles.
+
+    The <q²> - <q>² term in [Δq] comes from the formula for variance in a
+    mixture distribution, which averages the variances of the individual
+    distributions and adds a spread term in case the means are not overlapping.
+    See <https://en.wikipedia.org/wiki/Mixture_distribution#Moments>_.
+
+    The sample broadening formula [Δq'] comes from substituting Δθ+ω for Δθ
+    in [Δq] and expanding the square. By using [Δq]² to compute [Δq']², the
+    spread term is automatically incorporated. This change may require updates
+    to the fitting software, which compute [Δq'] from (θ,λ,Δθ,Δλ) directly.
+
+    Since θ and λ are completely correlated based on the q value each bin
+    has thin resolution function following the constant q curve on a θ-λ plot.
+    The resulting Δq is smaller than would be expected from the full Δθ and Δλ
+    within the bin.
+
+    Since the distribution is not a simple gaussian, we are free to choose
+    [θ], [λ], [Δθ] and [Δλ] in a way that is convenient for fitting.  Choosing
+    wavelength based on the average of the inverse, and angle so that it
+    matches the corresponding [q] works well for computing θ-offset.
+    Using this [θ] and averaging the variance for [Δθ] works well for
+    estimating the effects of sample broadening.
+
+    The [Δλ] term is set from the second central moment from the mixture
+    distribution. This gives some idea of the range of wavelengths included
+    in each [q], but it is not not directly useful. To properly fit data in
+    which reflectivity is wavelength dependent the correct wavelength
+    distribution is needed, not just the first and second moment. Because
+    points with different intensity are combined, even knowing that incident
+    wavelength follows a truncated Maxwell-Boltzmann distribution with a
+    given temperature is not enough to reconstruct the measured distribution.
+    In these situations measure fewer angles for longer without binning the
+    data so that you can ignore wavelength variation within each theory value.
     """
-    norm = data.normbase
-    y, dy, q, dq = (val[:, :, bank].flatten()
-                    for val in (data.v, data.dv, data.Qz, data.dQ))
+    # Make all data have the same shape
+    columns = (
+        data.Qz, data.dQ, data.v, data.dv,
+        data.Ti, data.angular_resolution, data.Ld, data.dL)
+    columns = [np.broadcast_to(p, data.v.shape) for p in columns]
+    columns = [p[:, :, bank].flatten() for p in columns]
+    q, dq, y, dy, T, dT, L, dL = columns
+
+    # Sort q values into bins
     nbins = len(q_edges) - 1
     bin_index = np.searchsorted(q_edges, q)
 
@@ -478,6 +571,7 @@ def _rebin_bank(data, bank, q_edges):
     # The following is cribbed from util.poisson_average, replacing
     # np.sum with np.bincount.
     # TODO: update poisson average so it handles grouping
+    norm = data.normbase
     if norm == "none":
         bar_y = np.bincount(bin_index, weights=y, minlength=nbins)
         bar_dy = np.bincount(bin_index, weights=dy**2, minlength=nbins)
@@ -499,30 +593,41 @@ def _rebin_bank(data, bank, q_edges):
             bar_dy = 1./combined_monitors * np.sqrt(1. + 1./combined_monitors)
             idx = (bar_y != 0)
             bar_dy[idx] = bar_y[idx] * np.sqrt(1./combined_counts[idx]
-                                            + 1./combined_monitors[idx])
+                                               + 1./combined_monitors[idx])
 
     # Find Q center and resolution, weighting by intensity
-    # TODO: use intensity weighting when finding q centers?
-    #weights = y
-    w = np.ones_like(y)  # Weights must be positivie; use equal weights for now
-    bar_w = np.bincount(bin_index, weights=w, minlength=nbins)
-    bar_w += (bar_w == 0)  # protect against divide by zero
-    bar_q = np.bincount(bin_index, weights=q*w, minlength=nbins)/bar_w
-    # TODO: proper dQ calculation
+    w = np.ones_like(y)  # Weights must be positive; use equal weights for now
+    #w = y # use intensity weighting when finding q centers
+    sum_w = np.bincount(bin_index, weights=w, minlength=nbins)
+    sum_w += (sum_w == 0)  # protect against divide by zero
+    sum_q = np.bincount(bin_index, weights=q*w, minlength=nbins)
+    bar_q = sum_q / sum_w
     # Combined dq according to mixture distribution.
-    #qsq = np.bincount(bin_index, weights=q**2*w, minlength=nbins)
-    #dqsq = np.bincount(bin_index, weights=dq**2*w, minlength=nbins)
-    #bar_dq = np.sqrt((dqsq + qsq)/bar_w - bar_q**2)
-    # Combined dq according average of variance.
+    sum_dqsq = np.bincount(bin_index, weights=w*(dq**2 + q**2), minlength=nbins)
+    bar_dq = np.sqrt(sum_dqsq/sum_w - bar_q**2)
+    ## Combined dq according average of variance.
     #bar_dq = np.sqrt(np.bincount(bin_index, weights=dq*w, minlength=nbins)/bar_w)
     # Set dq to 1% for now...
-    bar_dq = bar_q*0.01
+    #bar_dq = bar_q*0.01
+
+    # Combine wavelengths
+    sum_Linv = np.bincount(bin_index, weights=w/L, minlength=nbins)
+    bar_Linv = sum_w/sum_Linv  # Not the first moment of L
+    sum_L = np.bincount(bin_index, weights=w*L, minlength=nbins)
+    sum_dLsq = np.bincount(bin_index, weights=w*(dL**2+L**2), minlength=nbins)
+    bar_dL = np.sqrt(sum_dLsq/sum_w - (sum_L/sum_w)**2)
+
+    # Combine angles
+    bar_T = np.degrees(np.arcsin(bar_q*bar_Linv / 4 / np.pi))
+    sum_dT = np.bincount(bin_index, weights=w*dT**2, minlength=nbins)
+    bar_dT = np.sqrt(sum_dT/sum_w)
 
     # Need to drop catch-all bins before and after q edges.
     # Also need to drop q bins which don't contain any values.
     keep = ~empty_q
     keep[0] = keep[-1] = False
-    return bar_q[keep], bar_dq[keep], bar_y[keep], bar_dy[keep]
+    columns = (bar_q, bar_dq, bar_y, bar_dy, bar_T, bar_dT, bar_Linv, bar_dL)
+    return [p[keep] for p in columns]
 
 def edges(c, extended=False):
     r"""

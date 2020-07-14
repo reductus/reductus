@@ -86,7 +86,8 @@ from io import BytesIO
 import numpy as np
 from numpy import inf, arctan2, sqrt, sin, cos, pi, radians
 
-from dataflow.lib.exporters import exports_text, exports_json, NumpyEncoder
+from dataflow.lib.exporters import exports_text, exports_json, exports_HDF5, NumpyEncoder
+from dataflow.lib.strings import _s, _b
 from .resolution import calc_Qx, calc_Qz, dTdL2dQ
 
 IS_PY3 = sys.version_info[0] >= 3
@@ -114,7 +115,6 @@ class Group(object):
         return _str(self)
     def _toDict(self):
         return _toDict(self)
-
 
 def set_fields(cls):
     groups = set(name for name, type in getattr(cls, '_groups', ()))
@@ -924,6 +924,10 @@ class ReflData(Group):
         return self.detector.wavelength
 
     @property
+    def dL(self):
+        return self.detector.wavelength_resolution
+
+    @property
     def Qz(self):
         # Note: specular reflectivity assumes elastic scattering
         Li = Ld = self.Ld
@@ -1041,6 +1045,10 @@ class ReflData(Group):
                 if dv_name is not None:
                     dv = getattr(subcls, dv_name, None)
                     if check_array(dv): setattr(subcls, dv_name, dv[make_mask(dv, mask_indices)])
+                rv_name = sub_cols[col].get('resolution', None)
+                if rv_name is not None:
+                    rv = getattr(subcls, rv_name, None)
+                    if check_array(rv): setattr(subcls, rv_name, rv[make_mask(rv, mask_indices)])
 
     def __init__(self, **kw):
         for attr, cls in ReflData._groups:
@@ -1147,12 +1155,14 @@ class ReflData(Group):
         with BytesIO() as fid:  # numpy.savetxt requires a byte stream
             for n in ['name', 'entry', 'polarization']:
                 _write_key_value(fid, n, getattr(self, n))
-            wavelength = getattr(self.detector, "wavelength", None)
-            wavelength_resolution = getattr(self.detector, "wavelength_resolution", None)
-            if wavelength is not None:
-                _write_key_value(fid, "wavelength", float(wavelength[0]))
-            if wavelength_resolution is not None:
-                _write_key_value(fid, "wavelength_resolution", float(wavelength_resolution[0]))
+            if self.Ld is not None:
+                _write_key_value(fid, "wavelength", self.Ld)
+            if self.dL is not None:
+                _write_key_value(fid, "wavelength_resolution", self.dL)
+            if self.Ti is not None:
+                _write_key_value(fid, "angle", self.Ti)
+            if self.angular_resolution is not None:
+                _write_key_value(fid, "angular_resolution", self.angular_resolution)
             if Intent.isscan(self.intent):
                 _write_key_value(fid, "columns", list(self.columns.keys()))
                 _write_key_value(fid, "units", [c.get("units", "") for c in self.columns.values()])
@@ -1187,6 +1197,135 @@ class ReflData(Group):
             "entry": self.entry,
             "file_suffix": suffix,
             "value": value.decode('utf-8'),
+        }
+
+    @exports_HDF5(name="NXrefl")
+    def to_NXcanSAS(self):
+        import h5py
+        from io import BytesIO
+
+        fid = BytesIO()
+        h5_item = h5py.File(fid)
+        string_dt = h5py.string_dtype(encoding='utf-8')
+
+        #entry_name = metadata.get("entry", "entry")
+        nxentry = h5_item.create_group(self.entry)
+        nxentry.attrs.update({
+            "NX_class": "NXentry",
+            "version": "1.0"
+        })
+        nxentry["definition"] = "NXcanSAS"
+        nxentry["run"] = str(self.name)
+        nxentry["polarization"] = str(self.polarization)
+        nxentry["title"] = ""
+
+        instrument = nxentry.create_group("instrument")
+        instrument.attrs.update({
+            "canSAS_class": "SASinstrument",
+            "NX_class": "NXinstrument"
+        })
+        instrument["name"] = str(self.instrument)
+
+        refl = nxentry.create_group("columns")
+        refl.attrs.update({
+            "NX_class": ""
+        })
+        
+        for p, v in self.columns.items():
+            if v.get('is_scan', False):
+                d = self.scan_value[self.scan_label.index(p)]
+            else:
+                d = get_item_from_path(self, p)
+                #if v.get('')
+            if d is not None:
+                #d = np.resize(d, self.points)
+                refl[p] = d
+
+        sasdetector = instrument.create_group("detector")
+        sasdetector.attrs.update({
+            "NX_class": "NXdetector"
+        })
+        sasdetector["name"] = "DETECTOR"
+        
+        sassample = nxentry.create_group("sassample")
+        sassample.attrs.update({
+            "NX_class": "NXsample"
+        })
+        sassample["name"] = str(self.sample.name)
+        sassample["description"] = str(self.sample.description)
+        
+        sassource = instrument.create_group("sassource")
+        sassource.attrs.update({
+            "canSAS_class": "sassource",
+            "NX_class": "NXdetector"
+        })
+        sassource["radiation"] = "Reactor Neutron Source"
+
+        datagroup = nxentry.create_group("nxrefl")
+        datagroup.attrs.update({
+            "NX_class": "NXdata",
+            "canSAS_class": "REFLdata",
+            "signal": "I",
+            #"I_axes": "Qz",
+            #"Q_indices": 0,
+            "timestamp": self.date.isoformat(),
+        })
+
+        datagroup["I"] = self.v
+        datagroup["I"].attrs["units"] = "arbitrary"
+        datagroup["I"].attrs["uncertainties"] = "I_dev"
+        datagroup["I_dev"] = np.sqrt(self.dv)
+        datagroup["I_dev"].attrs["units"] = "arbitrary"
+        datagroup["Q"] = self.Qz
+        datagroup["Q"].attrs["units"] = "1/angstrom"
+        datagroup["Q"].attrs["uncertainties"] = "Q_dev"
+        datagroup["Q_dev"] = self.dQ
+        datagroup["Theta"] = self.Td / 2.0
+        datagroup["Theta"].attrs["units"] = "degrees"
+        datagroup["Theta"].attrs["resolutions"] = "Theta_dev"
+        datagroup["Theta"].attrs["resolutions_description"] = "Gaussian"
+        datagroup["Theta_dev"] = self.angular_resolution
+        datagroup["Theta_dev"].attrs["units"] = "degrees"
+        datagroup["Lambda"] = self.detector.wavelength
+        datagroup["Lambda"].attrs["resolutions"] = "Lambda_dev"
+        datagroup["Lambda"].attrs["units"] = "A"
+        datagroup["Lambda_dev"] = self.detector.wavelength_resolution
+        datagroup["Lambda_dev"].attrs["units"] = "A"
+
+        # sasaperture = instrument.create_group("sasaperture")
+        # sasaperture.attrs.update({
+        #     "canSAS_class": "SASaperture",
+        #     "NX_class": "NXaperture"
+        # })
+        # sasaperture["shape"] = "slit"
+        # sasaperture["x_gap"] = np.array([0.1], dtype='float')
+        # sasaperture["x_gap"].attrs["units"] = "cm"
+        # sasaperture["y_gap"] = np.array([5.0], dtype='float')
+        # sasaperture["y_gap"].attrs["units"] = "cm"
+        
+        # wavelength = getattr(self.detector, "wavelength", None)
+        # wavelength_resolution = getattr(self.detector, "wavelength_resolution", None)
+        # if wavelength is not None:
+        #      sassource["incident_wavelength"] = wavelength
+        # if wavelength_resolution is not None:
+        #     sassource["incident_wavelength_spread"] = wavelength_resolution
+
+        # sassource["incident_wavelength"].attrs["units"] = "A"
+        # sassource["incident_wavelength_spread"].attrs["units"] = "A"
+        
+
+        sasprocess = nxentry.create_group("sasprocess")
+        sasprocess.attrs.update({
+            "canSAS_class": "SASprocess",
+            "NX_class": "NXprocess"
+        })
+        sasprocess["name"] = "NIST reductus"
+
+        return {
+            "name": self.name,
+            "entry": self.entry,
+            "file_suffix": ".nxrefl.h5",
+            "value": h5_item,
         }
 
     def get_plottable(self):

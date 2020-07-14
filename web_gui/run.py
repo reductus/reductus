@@ -18,6 +18,12 @@ def main():
         config = load_config(name="config", fallback=True)
     if args.instruments is not None:
         config["instruments"] = args.instruments
+    # Strip "local" from data sources if running external
+    if args.external:
+        config["data_sources"] = [
+            d for d in config["data_sources"]
+            if d["name"] != "local"
+        ]
 
     from web_gui.server_flask import create_app
     app = create_app(config)

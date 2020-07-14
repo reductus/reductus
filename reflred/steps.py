@@ -314,12 +314,66 @@ def absolute_angle(data):
     apply_absolute_angle(data)
     return data
 
+@module
+def sample_broadening(data, width=0):
+    r"""
+    Increase (or decrease) nominal divergence due to the effects of sample
+    broadening (or focussing) if this is not supported by the reflectivity
+    analysis program.
+
+    **Inputs**
+
+    data (refldata): data without resolution estimate
+
+    width (float) : amount of increased divergence in degrees, using
+    1-\ $\sigma$ change in width.  This can be estimated from the FWHM of the
+    rocking curve relative to the expected value with no broadening, divided
+    by 2.35 to convert FWHM to 1-\ $\sigma$.
+
+    **Returns**
+
+    output (refldata): data with resolution estimate
+
+    2020-05-05 Paul Kienzle
+    """
+    from .angles import apply_sample_broadening
+    if width != 0:
+        data = copy(data)
+        apply_sample_broadening(data, width)
+    return data
+
+@module
+def divergence_fb(data, sample_width=None):
+    r"""
+    Estimate divergence from slit openings.  Does nothing if divergence
+    is already defined by the instrument.
+
+    **Inputs**
+
+    data (refldata): data without resolution estimate
+
+    sample_width (float?:<0,inf>) : width of the sample in mm if it acts like a slit.
+    By default, this uses the value in the file.
+
+    **Returns**
+
+    output (refldata): data with resolution estimate
+
+    2020-05-05 Paul Kienzle
+    """
+    from .angles import apply_divergence_front_back
+    data = copy(data)
+    if data.angular_resolution is None:
+        apply_divergence_front_back(data, sample_width)
+    return data
 
 @module
 def divergence(data, sample_width=None, sample_broadening=0):
     r"""
     Estimate divergence from slit openings.  Does nothing if divergence
     is already defined by the instrument.
+
+    **DEPRECATED** use divergence_fb instead
 
     **Inputs**
 
@@ -338,12 +392,14 @@ def divergence(data, sample_width=None, sample_broadening=0):
     output (refldata): data with resolution estimate
 
     2016-06-15 Paul Kienzle
+    2020-05-05 Paul Kienzle
     """
-    from .angles import apply_divergence
+    from .angles import apply_divergence_simple, apply_sample_broadening
     # TODO: why is copy suppressed
     #data = copy(data)
     if data.angular_resolution is None:
-        apply_divergence(data, sample_width, sample_broadening)
+        apply_divergence_simple(data, sample_width)
+        apply_sample_broadening(data, sample_broadening)
     return data
 
 

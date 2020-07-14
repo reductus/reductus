@@ -34,20 +34,20 @@ config = {
             "name": "ncnr",
             "url": "http://ncnr.nist.gov/pub/",
             "start_path": "ncnrdata",
-            "file_helper_url": "https://ncnr.nist.gov/ncnrdata/listftpfiles.php",
+            "file_helper_url": "https://ncnr.nist.gov/ncnrdata/listftpfiles_json.php",
         },
         {
             "name": "charlotte",
             "url": "http://charlotte.ncnr.nist.gov/pub",
             "start_path": "",
-            "file_helper_url": "http://charlotte.ncnr.nist.gov/ipeek/listftpfiles.php",
+            "file_helper_url": "http://charlotte.ncnr.nist.gov/ncnrdata/listftpfiles_json.php",
         },
         # set start_path for local files to usr/local/nice/server_data/experiments
         # for instrument installs
         {
             "name": "ncnr_DOI",
             "DOI": "10.18434/T4201B",
-            "file_helper_url": "https://ncnr.nist.gov/ncnrdata/listncnrdatafiles.php"
+            "file_helper_url": "https://ncnr.nist.gov/ncnrdata/listncnrdatafiles_json.php"
         },
     ],
     

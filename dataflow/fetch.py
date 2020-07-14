@@ -46,10 +46,8 @@ from posixpath import basename, join, sep
 import os
 import hashlib
 
-try:
-    import urllib.request as urllib2
-except ImportError:
-    import urllib2
+import requests
+import urllib
 
 import pytz
 
@@ -64,6 +62,8 @@ from .lib.iso8601 import seconds_since_epoch
 DATA_SOURCES = []
 FILE_HELPERS = []
 DEFAULT_DATA_SOURCE = "ncnr"
+
+SESSION = requests.Session()
 
 def check_datasource(source):
     datasource = next((x for x in DATA_SOURCES if x['name'] == source), {})
@@ -95,15 +95,15 @@ def url_get(fileinfo, mtime_check=True):
         source = fileinfo.get("source", DEFAULT_DATA_SOURCE)
         name = basename(path)
         if source == 'local':
-            path = urllib2.pathname2url(os.path.abspath(path))
+            path = urllib.request.pathname2url(os.path.abspath(path))
         source_url = check_datasource(source)
-        full_url = join(source_url, urllib2.quote(path.strip(sep), safe='/:'))
+        full_url = join(source_url, urllib.parse.quote(path.strip(sep), safe='/:'))
         url = None
         print("loading", full_url, name)
         try:
-            url = urllib2.urlopen(full_url)
+            req = SESSION.get(full_url)
             if mtime_check:
-                url_mtime = url.headers['last-modified']
+                url_mtime = req.headers['last-modified']
                 url_time_struct = time.strptime(url_mtime, '%a, %d %b %Y %H:%M:%S %Z')
                 t_repo = datetime.datetime(*url_time_struct[:6], tzinfo=pytz.utc)
                 t_request = datetime.datetime.fromtimestamp(mtime, pytz.utc)
@@ -116,26 +116,26 @@ def url_get(fileinfo, mtime_check=True):
                     print("request mtime = %s, repo mtime = %s"%(t_request, t_repo))
                     raise ValueError("Requested mtime is older than repository mtime for %r"%path)
 
-            ret = url.read()
+            ret = req.content
             print("caching " + path)
             cache.store_file(fp, ret)
-        except urllib2.HTTPError as exc:
+        except requests.HTTPError as exc:
             raise ValueError("Could not open %r\n%s"%(path, str(exc)))
         finally:
-            if url is not None:
-                url.close()
+            if req is not None:
+                req.close()
 
     return ret
 
 def find_mtime(path):
     check_datasource()
     try:
-        url = urllib2.urlopen(DEFAULT_DATA_SOURCE+path)
-        mtime = url.info().getdate('last-modified')
-    except urllib2.HTTPError as exc:
+        req = SESSION.head(DEFAULT_DATA_SOURCE+path)
+        mtime_str = req.headers['last-modified']
+        mtime = datetime.datetime.strptime(mtime_str, r'%a, %d %b %Y %H:%M:%S %Z')
+    except requests.HTTPError as exc:
         raise ValueError("Could not open %r\n%s"%(path, str(exc)))
-    mtime_obj = datetime.datetime(*mtime[:7], tzinfo=pytz.utc)
-    timestamp = seconds_since_epoch(mtime_obj)
+    timestamp = int(mtime.timestamp())
 
     return {'path': path, 'mtime': timestamp}
 
