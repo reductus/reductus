@@ -8,6 +8,8 @@
 //window.d3 = d3;
 import {extend} from './libraries.js';
 import {Split} from './libraries.js';
+import {zip} from './libraries.js';
+import {jquery as $} from './libraries.js';
 //import {jquery_ui} from './libraries.js';
 //window.jquery_ui = jquery_ui;
 import {editor} from './editor.js';
@@ -115,8 +117,8 @@ window.onpopstate = function(e) {
 window.onload = function() {
   window.app = app;
   window.editor = editor;
-  zip.workerScriptsPath = "js/";
-  zip.useWebWorkers = true;
+  //zip.workerScriptsPath = "js/";
+  zip.useWebWorkers = false;
   window.my_server_api = server_api;
   server_api.__init__().then(function() {
     server_api.exception_handler = api_exception_handler;
