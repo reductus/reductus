@@ -29,7 +29,7 @@ def create_app(config=None):
 
     @app.route('/')
     def root():
-        return redirect("static/index.html")
+        return redirect("webreduce/index.html")
 
     @app.route('/robots.txt')
     def static_from_root():
