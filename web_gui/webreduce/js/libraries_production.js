@@ -1,5 +1,15 @@
 //import * as d3 from "./web_modules/d3.js";
-import "../../css/index_prod.css";
+import "../css/index_prod.css";
+
+import jquery from './import_jquery.js';
+import "jquery-ui-dist/jquery-ui.js";
+import "jstree/dist/jstree.js";
+export {jquery};
+
+import {zip, Inflater, Deflater} from '../node_modules/zip.js/WebContent/index.js';
+zip.Inflater = Inflater;
+zip.Deflater = Deflater;
+export {zip};
 
 import * as d3 from 'd3';
 export {d3};
@@ -26,12 +36,3 @@ export {
 export {default as Split} from 'split.js';
 export {default as sha1} from 'sha1'
 export const template_editor_url = "template_editor_live_prod.html";
-//import {default as _jstree} from 'jstree';
-//window.jstree = _jstree
-//import './node_modules/jstree/dist/themes/default/style.css';
-//import {default as jquery} from 'jquery';
-//window.jQuery = jquery;
-//import {default as jquery_ui} from 'jquery-ui-dist';
-//export {jquery_ui};
-//window.jqui = _jquery_ui;
-//export {jquery, jquery as jQuery};
