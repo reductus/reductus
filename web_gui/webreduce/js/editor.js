@@ -8,6 +8,7 @@ import {dependencies} from './deps.js';
 //import {Sha1} from './sha1.es.js';
 import {instruments} from './instruments/index.js';
 // now a global...
+import {zip} from './libraries.js';
 import {d3} from './libraries.js';
 import {extend, heatChart, heatChartMultiMasked, xyChart, dataflowEditor, colormap_names, get_colormap} from './libraries.js';
 import {PouchDB} from './libraries.js';
