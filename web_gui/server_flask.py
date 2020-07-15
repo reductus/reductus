@@ -22,9 +22,9 @@ def create_app(config=None):
     from web_gui import api
 
     RPC_ENDPOINT = '/RPC2'
-    STATIC_PATH = pkg_resources.resource_filename('web_gui', 'static/')
+    STATIC_PATH = pkg_resources.resource_filename('web_gui', 'webreduce/')
 
-    app = Flask(__name__, static_folder=STATIC_PATH, static_url_path='/static')
+    app = Flask(__name__, static_folder=STATIC_PATH, static_url_path='/webreduce')
     app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 
     @app.route('/')
