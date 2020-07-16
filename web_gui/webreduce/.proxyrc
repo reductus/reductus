@@ -1,0 +1,8 @@
+{
+	"/RPC2": {
+		"target": "http://localhost:8002/RPC2",
+		"pathRewrite": {
+			"^/RPC2": ""
+		}
+	}
+}
