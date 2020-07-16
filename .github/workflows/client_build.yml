@@ -10,6 +10,10 @@ on:
   pull_request:
     branches: [ $default-branch ]
 
+defaults:
+  run:
+    working-directory: web_gui/webreduce
+
 jobs:
   build:
 
