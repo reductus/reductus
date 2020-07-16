@@ -19,9 +19,9 @@ jobs:
 
     runs-on: ubuntu-latest
 
-    strategy:
+    strategy:git dif
       matrix:
-        node-version: [10.x, 12.x, 14.x]
+        node-version: [12.x]
 
     steps:
     - uses: actions/checkout@v2
@@ -29,5 +29,6 @@ jobs:
       uses: actions/setup-node@v1
       with:
         node-version: ${{ matrix.node-version }}
+    - run: npm install -g parcel-bundler
     - run: npm ci
     - run: npm run build --if-present
