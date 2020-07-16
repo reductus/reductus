@@ -35,4 +35,4 @@ export {
 //}  from './node_modules/d3-science/src/index.js';
 export {default as Split} from 'split.js';
 export {default as sha1} from 'sha1'
-export const template_editor_url = "template_editor_live_prod.html";
+export const template_editor_url = "template_editor_live.html";
