@@ -12,11 +12,14 @@ from . import steps
 @module("candor")
 def candor(
         filelist=None,
+        bank_select=None,
+        channel_select=None,
         dc_rate=0.,
         dc_slope=0.,
         detector_correction=False,
         monitor_correction=False,
         spectral_correction=False,
+        Qz_basis='target',
         intent='auto',
         sample_width=None,
         base='auto'):
@@ -26,6 +29,10 @@ def candor(
     **Inputs**
 
     filelist (fileinfo[]): List of files to open.
+
+    bank_select {Select bank} (int) : Choose bank to output (default is all)
+
+    channel_select {Select channel(s)} (int[]*) : Choose channels to output from bank (default is all)
 
     dc_rate {Dark counts per minute} (float)
     : Number of dark counts to subtract from each detector channel per
@@ -45,6 +52,9 @@ def candor(
     spectral_correction {Apply detector efficiency correction} (bool)
     : If True, scale counts by the detector efficiency calibration given
     in the file (see Spectral Efficiency).
+
+    Qz_basis (opt:target|sample|detector|actual)
+    : How to calculate Qz from instrument angles.
 
     intent (opt:auto|specular|background+\|background-\|intensity|rock sample|rock detector|rock qx|scan)
     : Measurement intent (specular, background+, background-, slit, rock),
@@ -74,9 +84,13 @@ def candor(
     datasets = []
     for data in url_load_list(filelist, loader=load_entries):
         # TODO: drop data rows where fastShutter.openState is 0
-        data.Qz_basis = 'target'
+        data.Qz_basis = Qz_basis
         if intent not in (None, 'none', 'auto'):
             data.intent = intent
+        if bank_select is not None:
+            data = select_bank(data, bank_select)
+        if channel_select is not None:
+            data = select_channel(data, channel_select)
         if auto_divergence:
             data = steps.divergence_fb(data, sample_width)
         if dc_rate != 0. or dc_slope != 0.:
@@ -91,6 +105,118 @@ def candor(
         datasets.append(data)
 
     return datasets
+
+@module("candor")
+def select_bank(data, bank_select=None):
+    r"""
+    Remove banks from Candor data.
+
+    **Inputs**
+
+    data (candordata): Input data with 1 or more banks
+
+    bank_select {Select bank} (int) : Choose banks to output (default is all)
+
+    **Returns**
+
+    output (candordata): Data with indices not listed in bank_select removed.
+
+    | 2020-07-07 Brian Maranville 
+    """
+
+    if bank_select is not None:
+        data = copy(data)
+        data.detector.counts = data.detector.counts[:,:,[bank_select]]
+        data.detector.counts_variance = data.detector.counts.copy()
+        data.detector.dims = data.detector.counts.shape
+
+        data.detector.efficiency = data.detector.efficiency[:,:,[bank_select]]
+        data.detector.angle_x_offset = data.detector.angle_x_offset[[bank_select]]
+        data.detector.wavelength = data.detector.wavelength[:,:,[bank_select]]
+        data.detector.wavelength_resolution = data.detector.wavelength_resolution[:,:,[bank_select]]
+    
+    return data
+
+@module("candor")
+def select_channel(data, channel_select=None):
+    r"""
+    Select channels from bank of Candor data.
+
+    **Inputs**
+
+    data (candordata): Input data with 1 or more banks
+
+    channel_select {Select channel(s)} (int[]*) : Choose channels to output (default is all)
+
+    **Returns**
+
+    output (candordata): Data with indices not listed in channel_select removed.
+
+    | 2020-07-12 Brian Maranville 
+    """
+
+    if channel_select is not None:
+        data = copy(data)
+        data.detector.counts = data.detector.counts[:,channel_select,:]
+        data.detector.counts_variance = data.detector.counts_variance[:,channel_select,:]
+        data.detector.dims = data.detector.counts.shape
+
+        data.detector.efficiency = data.detector.efficiency[:,channel_select,:]
+        data.detector.wavelength = data.detector.wavelength[:,channel_select,:]
+        data.detector.wavelength_resolution = data.detector.wavelength_resolution[:,channel_select,:]
+    
+    return data
+
+@module("candor")
+def select_points(data, point_select=None):
+    r"""
+    Select data points from scan of Candor.
+
+    **Inputs**
+
+    data (candordata): Input data with 1 or more banks
+
+    point_select {Select points(s)} (int[]*) : Choose points to output (default is all)
+
+    **Returns**
+
+    output (candordata): Data with point indices not listed in point_select removed.
+
+    | 2020-07-03 Brian Maranville 
+    """
+
+    if point_select is not None:
+        data = copy(data)
+        data.detector.counts = data.detector.counts[point_select]
+        data.detector.counts_variance = data.detector.counts_variance[point_select]
+        data.detector.dims = data.detector.counts.shape
+        monitor = data.monitor
+        monitor.counts = monitor.counts[point_select]
+        monitor.counts_variance = monitor.counts_variance[point_select]
+        monitor.count_time = monitor.count_time[point_select]
+        monitor.roi_counts = monitor.roi_counts[point_select]
+        monitor.roi_variance = monitor.roi_variance[point_select]
+        monitor.source_power = monitor.source_power[point_select]
+        monitor.source_power_variance = monitor.source_power_variance[point_select]
+
+        if data._v is not None:
+            data.v = data.v[point_select]
+        if data._dv is not None:
+            data.dv = data.dv[point_select]
+        if data.angular_resolution is not None:
+            data.angular_resolution = data.angular_resolution[point_select]
+
+        for slit in (data.slit1, data.slit2, data.slit3, data.slit4):
+            slit.x = slit.x[point_select]
+            slit.x_target = slit.x_target[point_select]
+
+        data.sample.angle_x = data.sample.angle_x[point_select]
+        data.sample.angle_x_target = data.sample.angle_x_target[point_select]
+        data.detector.angle_x = data.detector.angle_x[point_select]
+        data.detector.angle_x_target = data.detector.angle_x_target[point_select]
+    
+    return data
+
 
 @module("candor")
 def spectral_efficiency(data, spectrum=()):

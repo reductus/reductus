@@ -96,7 +96,7 @@ def _ordinate(data):
     if data.Qz_basis == 'target':
         return data.sample.angle_x_target
     if data.Qz_basis == 'detector':
-        return data.sample.detector_x/2
+        return data.detector.angle_x/2
     if data.Qz_basis == 'sample':
         return data.sample.angle_x
     raise KeyError("Qz basis must be one of [actual, detector, sample, target]")
