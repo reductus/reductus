@@ -35,5 +35,5 @@ jobs:
     - name: Archive production artifacts
       uses: actions/upload-artifact@v1
       with:
-        name: web_gui/webreduce/dist
+        name: dist
         path: web_gui/webreduce/dist
