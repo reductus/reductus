@@ -6,62 +6,40 @@ export {filebrowser};
 //import {jquery as $} from './libraries.js';
 import {editor} from './editor.js';
 import {server_api} from './server_api/api_msgpack.js';
-
-var PARALLEL_LOAD = true;
-
-function make_range_icon(global_min_x, global_max_x, min_x, max_x) {
-  var icon_width = 75;
-  var rel_width = Math.abs((max_x - min_x) / (global_max_x - global_min_x));
-  var width = icon_width * rel_width;
-  var rel_x = Math.abs((min_x - global_min_x) / (global_max_x - global_min_x));
-  var x = icon_width * rel_x;
-  var output = "<svg class=\"range\" width=\"" + (icon_width + 2) + "\" height=\"12\">";
-  output += "<rect width=\"" + width + "\" height=\"10\" x=\"" + x + "\" style=\"fill:IndianRed;stroke:none\"/>"
-  output += "<rect width=\"" + icon_width + "\" height=\"10\" style=\"fill:none;stroke:black;stroke-width:1\"/>"
-  output += "</svg>"
-  return output
-}
+import {Tree} from './libraries.js';
+import { makeSourceList } from './ui_components/sourcelist.js';
 
 async function categorizeFiles(files_metadata, datasource, path, target_in) {
+  let file_objs = await editor.load_metadata(files_metadata, datasource, path);
   var instrument_id = editor._instrument_id;
   var instrument = editor.instruments[instrument_id];
-  var load_promises = [];
-  var fileinfo = {};
-  var file_objs = {};
-  var loader = instrument.load_file;
-  var files_filter = instrument.files_filter || function(x) {return true};
-  var files = Object.keys(files_metadata);
-  var datafiles = files.filter(files_filter);
-  var numloaded = 0;
-  var numdatafiles = datafiles.length;
-
-  ////////////////////////////////////////////////////////////////////////////
-  // Send rpc requests one after the other to the server
-  ////////////////////////////////////////////////////////////////////////////
-  var load_params = datafiles.map(function(j) {
-    return {
-      "source": datasource,
-      "path": path + "/" + j,
-      "mtime": files_metadata[j].mtime
-    }
-  });
-
-  let loader_template = loader(load_params, file_objs, false, 'metadata');
-  let results = await editor.calculate(loader_template, false, false);
-  results.forEach(function(result, i) {
-    var lp = load_params[i];
-    if (result && result.values) {
-      result.values.forEach(function(v) {v.mtime = lp.mtime});
-      file_objs[lp.path] = result;
-    }
-  });
-  
-  editor._datafiles = results;
   var categories = instrument.categories;
-  var treeinfo = file_objs_to_tree(file_objs, categories, datasource);
-  // add decorators etc to the tree with postprocess:
-  var postprocess = instrument.postprocess;
-  if (postprocess) { postprocess(treeinfo, file_objs) }
+  var treedata = file_objs_to_tree(file_objs, categories, datasource);
+  const node_list = [];
+  const leaf_list = [];
+  const parents = {};
+  const walkTree = function(nodes, parent) {
+    nodes.forEach(node => {
+      node_list.push(node);
+      if (parent) parents[node.id] = parent;
+      if (node.children && node.children.length) {
+        walkTree(node.children, node);
+      }
+      else {
+        leaf_list.push(node);
+      }
+    });
+  };
+  walkTree(treedata);
+  if (instrument.decorators) {
+    instrument.decorators.forEach(function(d) {
+      d(node_list, leaf_list, parents, file_objs);
+    });
+  }
+  return treedata;
+}
+
+async function reference(files_metadata, datasource, path, target_in) {
   var target = $(target_in).find(".remote-filebrowser");
   var ready;
   if (!target.jstree(true)) {
@@ -153,9 +131,21 @@ async function categorizeFiles(files_metadata, datasource, path, target_in) {
 // categorizers are callbacks that take an info object and return category string
 function file_objs_to_tree(file_objs, categories, datasource) {
   // file_obj should always be a list of entries
-  var out = [], categories_obj = {}, fm;
+  var tree = {id: "root", children: []};
+  var branch;
+  var categories_obj = {};
+  var fm;
+  console.log(file_objs);
+  
+  function* category_generator(entry) {
+    var index = 0;
+    for (var category_def of categories) {
+      yield category_def.map(
+        keylist => keylist.reduce((info, key) => info[key], entry)
+      ).join(':');
+    }
+  }
 
-  //var out = [], categories_obj = {}, file_obj;      
   for (var p in file_objs) {
     //if (!p) { continue }
     fm = file_objs[p].values;
@@ -164,30 +154,37 @@ function file_objs_to_tree(file_objs, categories, datasource) {
           entryname = entry.entry;
       var parent = "root",
           cobj = categories_obj,
+          branch = tree,
           category, id;
-      for (var c=0; c<categories.length; c++) {
-        category = categories[c]
-          .map(function(keylist) { 
-            return keylist.reduce(function(info, key) { return info[key] }, entry)
-          }).join(":");
+      let gen = category_generator(entry);
+      
+      for (var c=0; c<categories.length - 1; c++) {
+        category = gen.next().value;
         id = parent + ":" + category;
-        if (!(category in cobj)) {
-          cobj[category] = {};
-          var leaf = {'id': id, text: category, parent: parent, "icon": false};
-          out.push(leaf);
+        let subindex = branch.children.findIndex(c => (c.id == id));
+        if (subindex < 0) {
+          // not found... add new branch
+          let subbranch = {'id': id, text: category, children: []};
+          subindex = branch.children.push(subbranch) - 1;
+          branch = subbranch;
+        }
+        else {
+          branch = branch.children[subindex];
         }
         parent = id;
-        cobj = cobj[category]; // walk the tree...
       }
-      // modify the last entry to include key of file_obj
-      leaf['li_attr'] = {"filename": p, "entryname": entryname, "mtime": entry.mtime, "source": datasource};
+      category = gen.next().value; // last one...
+      id = [datasource,p,entryname,entry.mtime].join(':');
+      let fileinfo = {"filename": p, "entryname": entryname, "mtime": entry.mtime, "source": datasource};
+      let leaf = {id, text: category, attributes: {entry: true, fileinfo}}
+      branch.children.push(leaf);
     }
   }
-  out.sort(function(aa, bb) { return sortAlphaNumeric(aa.id, bb.id) });
+  //out.sort(function(aa, bb) { return sortAlphaNumeric(aa.id, bb.id) });
 
   // if not empty, push in the root node:
-  if (out.length > 0) { out.push({'id': "root", 'parent': "#", 'text': "", 'state': {'opened': true}}); }
-  return out
+  console.log(categories_obj);
+  return tree.children;
 }
 
 var add_data_source = function(target_id, source, pathlist) {
@@ -259,88 +256,31 @@ function updateHistory(target) {
   history.pushState({}, "", urlstr);
 }
 
-function updateFileBrowserPane(target, datasource, pathlist, dirdata) {
-  var buttons = $("<div />", {class: "buttons"});
-  var clear_all = $("<button />", {text: "uncheck all"});
-  clear_all.click(function() {$(".remote-filebrowser", target)
-    .jstree("uncheck_all"); handleChecked();
-  });
-  var remove_datasource = $("<button />", {text: "remove"});
-  remove_datasource.click(function() { var nav=$(target).parent(); $(target).empty().remove(); updateHistory(nav);});
-  var refresh = $("<button />", {text: "refresh", class: "refresh-button"});
-  refresh.click(function() {
-    server_api.get_file_metadata({source: datasource, pathlist: pathlist})
-      .then(function(metadata) {
-        categorizeFiles(metadata.files_metadata, datasource, pathlist.join("/"), target);
-      })
-  });
-
-  buttons
-    //.append($("<span />", {class: "ui-icon ui-icon-circle-close"}))
-    .append(clear_all)
-    .append(remove_datasource)
-    .append(refresh)
-    .append('<span class="datasource">source: ' + datasource + '</span>');
-
+async function updateFileBrowserPane(target, datasource, pathlist, dirdata) {
   var metadata = dirdata.files_metadata;
   var files = Object.keys(metadata);
   files.sort(function(a,b) { return dirdata.files_metadata[b].mtime - dirdata.files_metadata[a].mtime });
-  // dirdata is {'subdirs': list_of_subdirs, 'files': list_of_files, 'pathlist': list_of_path
 
-  var patheditor = document.createElement('div');
-  patheditor.className = 'patheditor';
-  var subdiritem, dirlink, new_pathlist;
-  if (pathlist.length > 0) {
-    var new_pathlist = $.extend(true, [], pathlist);
-    $.each(new_pathlist, function(index, pathitem) {
-      dirlink = document.createElement('span');
-      dirlink.classList.add("pathitem");
-      dirlink.textContent = pathitem + "/";
-      dirlink.onclick = function() {
-        server_api.get_file_metadata({source: datasource, pathlist: new_pathlist.slice(0, index+1)})
-        .then( function (metadata) {
-          updateFileBrowserPane(target, datasource, new_pathlist.slice(0, index+1), metadata);
-          //updateHistory($(target).parent());
-        })
-      }
-      patheditor.appendChild(dirlink);
+  let ds = makeSourceList([{name: datasource, subdirs: dirdata.subdirs, pathlist}]);
+  async function pathChange(new_pathlist, index) {
+    let dirdata = await server_api.get_file_metadata({source: datasource, pathlist: new_pathlist});
+    let treedata = await categorizeFiles(dirdata.files_metadata, datasource, new_pathlist.join("/"), target);
+    let tree_el = ds.$refs.sources[index].$refs.tree;
+    ds.$set(ds.datasources, index, {name: datasource, pathlist: new_pathlist, subdirs: dirdata.subdirs})
+    await ds.$nextTick();
+    let tree = new Tree(tree_el, {
+      data: treedata,
+      closeDepth: -1,
+      itemClickToggle: 'closed'
     });
   }
-
-  var dirbrowser = document.createElement('ul');
-  dirbrowser.id = "dirbrowser";
-  dirbrowser.setAttribute("style", "margin:0px;");
-  dirdata.subdirs.reverse();
-  $.each(dirdata.subdirs, function(index, subdir) {
-    subdiritem = document.createElement('li');
-    subdiritem.classList.add('subdiritem');
-    subdiritem.textContent = "(dir) " + subdir;
-    var new_pathlist = $.extend(true, [], pathlist);
-    new_pathlist.push(subdir);
-    subdiritem.onclick = function() {
-      server_api.get_file_metadata({source: datasource, pathlist: new_pathlist})
-        .then( function (metadata) {
-          updateFileBrowserPane(target, datasource, new_pathlist, metadata);
-          //updateHistory($(target).parent());
-        })
-    }
-    dirbrowser.appendChild(subdiritem);
-  });
-
-  var filebrowser = document.createElement('div');
-  filebrowser.classList.add("remote-filebrowser");
-
+  ds.$on("pathChange", pathChange)
+  
   $(target).empty()
-    .append(buttons)
-    .append(patheditor)
-    //.append(deadtime_choose)
-    .append(dirbrowser)
-    .append(filebrowser)
+    .append(ds.$el)
     .append("<hr>");
 
-  // instrument-specific categorizers
-  // editor.instruments[instrument_id].categorizeFiles(files, metadata, pathlist.join("/"), target_id);
-  return categorizeFiles(metadata, datasource, pathlist.join("/"), target);
+  await pathChange(pathlist, 0)
 }
 
 async function handleChecked(d, i, stopPropagation) {

@@ -62,62 +62,51 @@ instrument.default_categories = [
 ];
 instrument.categories = extend(true, [], instrument.default_categories);
 
-function add_range_indicators(target, file_objs) {
+function add_range_indicators(node_list, leaf_list, node_parents, file_objs) {
   var propagate_up_levels = 2; // levels to push up xmin and xmax.
-  var jstree = target.jstree(true);
   
   // first set min and max for entries:
-  var to_decorate = jstree.get_json("#", {"flat": true})
-    .filter(function(leaf) { 
-      return (leaf.li_attr && 
-              'filename' in leaf.li_attr && 
-              leaf.li_attr.filename in file_objs &&
-              'entryname' in leaf.li_attr && 
-              'source' in leaf.li_attr &&
-              'mtime' in leaf.li_attr) 
-      })
-  
-  to_decorate.forEach(function(leaf, i) {
-    var filename = leaf.li_attr.filename;
+  for (let leaf of leaf_list) {
+    let fileinfo = leaf.attributes.fileinfo;
+    var filename = fileinfo.filename;
     var file_obj = file_objs[filename];
-    var entry = file_obj.values.filter(function(f) {return f.entry == leaf.li_attr.entryname});
+    var entry = file_obj.values.filter(function(f) {return f.entry == fileinfo.entryname});
     if (entry && entry[0]) {
       var e = entry[0];
       var xaxis = 'x'; // primary_axis[e.intent || 'specular'];
       if (!(get_refl_item(entry[0], xaxis))) { console.log(entry[0]); throw "error: no such axis " + xaxis + " in entry for intent " + e.intent }
       var extent = get_extent(get_refl_item(entry[0], xaxis));
-      var leaf_actual = jstree._model.data[leaf.id];
-      leaf_actual.li_attr.xmin = extent[0];
-      leaf_actual.li_attr.xmax = extent[1];
-      var parent = leaf;
+      leaf.attributes.range = extent;
+      let node_id = leaf.id;
       for (var i=0; i<propagate_up_levels; i++) {
-        var parent_id = parent.parent;
-        parent = jstree._model.data[parent_id];
-        if (parent.li_attr.xmin != null) {
-          parent.li_attr.xmin = Math.min(extent[0], parent.li_attr.xmin);
+        var parent = node_parents[node_id];
+        if (!parent) { break }
+
+        parent.attributes = parent.attributes || {};
+        if (parent.attributes.range != null) {
+          parent.attributes.range = [
+            Math.min(extent[0], parent.attributes.range[0]),
+            Math.max(extent[1], parent.attributes.range[1])
+          ]
         }
         else {
-          parent.li_attr.xmin = extent[0];
+          parent.attributes.range = extent;
         }
-        if (parent.li_attr.xmax != null) {
-          parent.li_attr.xmax = Math.max(extent[1], parent.li_attr.xmax);
-        }
-        else {
-          parent.li_attr.xmax = extent[1];
-        }
+        node_id = parent.id;
       }
     }
-  });
+  }
 
   // then go back through add range indicators
-  for (var fn in jstree._model.data) {
-    let leaf = jstree._model.data[fn];
-    if (leaf.parent == null) {continue}
-    var l = leaf.li_attr;
-    var p = jstree._model.data[leaf.parent].li_attr;
-    if (l.xmin != null && l.xmax != null && p.xmin != null && p.xmax != null) {
-      var range_icon = make_range_icon(parseFloat(p.xmin), parseFloat(p.xmax), parseFloat(l.xmin), parseFloat(l.xmax));
-      leaf.text += range_icon;
+  for (let node of node_list) {
+    let parent = node_parents[node.id];
+    if (!parent) {continue}
+    var l = (node.attributes || {}).range;
+    var p = (parent.attributes || {}).range;
+    if (l != null && p != null) {
+      var range_icon = make_range_icon(parseFloat(p[0]), parseFloat(p[1]), parseFloat(l[0]), parseFloat(l[1]));
+      (node.attributes.right_decorators = node.attributes.right_decorators || []).push(range_icon);
+      node.text += range_icon;
     }
   }
 }
@@ -149,47 +138,37 @@ function add_sample_description(target, file_objs) {
   });
 }
 
-function add_viewer_link(target, file_objs) {
-  var jstree = target.jstree(true);
-  var parents_decorated = {};
-  var to_decorate = jstree.get_json("#", {"flat": true})
-    .filter(function(leaf) { 
-      return (leaf.li_attr && 
-              'filename' in leaf.li_attr && 
-              'source' in leaf.li_attr) 
-      })
-  // for refl, this will return a list of entries, but
-  // we want to decorate the file that contains the entries.
-  var viewer_link = {
+function add_viewer_link(node_list, leaf_list, node_parents, file_objs) {
+  var parents_decorated = new Set();
+  const viewer_link = {
     "ncnr": "https://ncnr.nist.gov/ncnrdata/view/nexus-zip-viewer.html",
     "ncnr_DOI": "https://ncnr.nist.gov/ncnrdata/view/nexus-zip-viewer.html",
     "charlotte": "https://charlotte.ncnr.nist.gov/ncnrdata/view/nexus-zip-viewer.html"
   }
-  to_decorate.forEach(function(leaf, i) {
-    var parent_id = leaf.parent;
-    // only add link once per file
-    if (parent_id in parents_decorated) { return }
-    var fullpath = leaf.li_attr.filename;
-    var datasource = leaf.li_attr.source;
-    if (viewer_link[datasource]) {
-      if (datasource == "ncnr_DOI") { fullpath = "ncnrdata" + fullpath; }
-      var pathsegments = fullpath.split("/");
-      var pathlist = pathsegments.slice(0, pathsegments.length-1).join("+");
-      var filename = pathsegments.slice(-1);
-      var viewer = viewer_link[datasource];
-      var hdf_or_zip = (NEXUS_REGEXP.test(fullpath) ? viewer.replace("-zip-", "-hdf-") : viewer);
-      var link = "<a href=\"" + hdf_or_zip;
-      link += "?pathlist=" + pathlist;
-      link += "&filename=" + filename;
-      link += "\" style=\"text-decoration:none;\">&#9432;</a>";
-      var parent_actual = jstree._model.data[parent_id];
-      parent_actual.text += link;
-      parents_decorated[parent_id] = true;
+
+  for (let leaf of leaf_list) {
+    let parent = node_parents[leaf.id];
+    if (parent && parent.id && !(parents_decorated.has(parent.id))) {
+      let fileinfo = leaf.attributes.fileinfo;
+      let datasource = fileinfo.source;
+      let fullpath = fileinfo.filename;
+      if (viewer_link[datasource]) {
+        if (datasource == "ncnr_DOI") { fullpath = "ncnrdata" + fullpath; }
+        let pathsegments = fullpath.split("/");
+        let pathlist = pathsegments.slice(0, pathsegments.length-1).join("+");
+        let filename = pathsegments.slice(-1);
+        let viewer = viewer_link[datasource];
+        let hdf_or_zip = (NEXUS_REGEXP.test(fullpath) ? viewer.replace("-zip-", "-hdf-") : viewer);
+        let link = `<a href="${hdf_or_zip}?pathlist=${pathlist}&filename=${filename}" target="_blank" style="text-decoration:none;">&#9432;</a>`;
+        
+        parent.text += link;
+        parents_decorated.add(parent.id);
+      }
     }
-  })
+  }
 }
 
-instrument.decorators = [add_range_indicators, add_sample_description, add_viewer_link];
+instrument.decorators = [add_range_indicators, add_viewer_link];//, add_sample_description];
 
 instrument.export_targets = [
   { 

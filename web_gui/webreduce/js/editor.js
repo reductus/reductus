@@ -247,7 +247,7 @@ function module_clicked_single() {
       module_clicked_single();
     })
     
-  $(buttons_div.node()).buttonset();
+  //$(buttons_div.node()).buttonset();
   
   var terminals_to_calculate = module_def.inputs.map(function(inp) {return inp.id});
   var fields_in = {};
@@ -2103,4 +2103,37 @@ editor.load_template = function(template_def, selected_module, selected_terminal
   });
   return r;
   
+}
+
+editor.load_metadata = async function(files_metadata, datasource, path) {
+  var instrument_id = editor._instrument_id;
+  var instrument = editor.instruments[instrument_id];
+  var file_objs = {};
+  var files_filter = instrument.files_filter || function(x) {return true};
+  var files = Object.keys(files_metadata);
+  var datafiles = files.filter(files_filter);
+
+  ////////////////////////////////////////////////////////////////////////////
+  // Send rpc requests one after the other to the server
+  ////////////////////////////////////////////////////////////////////////////
+  var load_params = datafiles.map(function(j) {
+    return {
+      "source": datasource,
+      "path": path + "/" + j,
+      "mtime": files_metadata[j].mtime
+    }
+  });
+
+  let loader_template = instrument.load_file(load_params, file_objs, false, 'metadata');
+  let results = await editor.calculate(loader_template, false, false);
+  results.forEach(function(result, i) {
+    var lp = load_params[i];
+    if (result && result.values) {
+      result.values.forEach(function(v) {v.mtime = lp.mtime});
+      file_objs[lp.path] = result;
+    }
+  });
+  
+  editor._datafiles = results;
+  return file_objs;
 }

@@ -10,6 +10,10 @@ zip.Inflater = Inflater;
 zip.Deflater = Deflater;
 export {zip};
 
+//export {default as Tree} from 'https://cdn.jsdelivr.net/gh/bmaranville/treejs@latest/src/index.js';
+export {default as Tree} from './treejs/src/index.js';
+
+export { default as Vue } from 'https://cdn.jsdelivr.net/npm/vue@2.6.11/dist/vue.esm.browser.js';
 import { default as d3 } from "https://dev.jspm.io/d3@5";
 export { d3 };
 import { default as messagepack } from "https://dev.jspm.io/npm:messagepack@1.1";
