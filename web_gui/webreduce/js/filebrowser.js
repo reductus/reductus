@@ -45,7 +45,6 @@ function file_objs_to_tree(file_objs, categories, datasource) {
   var branch;
   var categories_obj = {};
   var fm;
-  console.log(file_objs);
   
   function* category_generator(entry) {
     var index = 0;
@@ -148,24 +147,15 @@ async function createFileBrowserPane(target) {
   async function pathChange(source, pathlist, index) {
     let dirdata = await server_api.get_file_metadata({source, pathlist});
     let treedata = await categorizeFiles(dirdata.files_metadata, source, pathlist.join("/"));
-    ds.datasources[index] = {name: source, pathlist, subdirs: dirdata.subdirs, treedata}
-    //filebrowser.datasources[index] = {name: source, pathlist, subdirs: dirdata.subdirs, treedata}
-    //let tree_el = ds.$refs.sources[index].$refs.tree;
     ds.$set(ds.datasources, index, {name: source, pathlist, subdirs: dirdata.subdirs, treedata})
-    //await ds.$nextTick();
-    //ds.set_treedata(index, treedata);
   }
-  window.ds = ds;
-  window.getchecked = ds.get_checked;
   ds.$on("pathChange", pathChange)
   ds.$on("checkedChange", handleChecked)
-  ds.$watch('datasources', (ov, nv) => {console.log(JSON.stringify(ov), JSON.stringify(nv))} )
   
   $(target).empty()
     .append(ds.$el)
     .append("<hr>");
   filebrowser.ds = ds;
-  //await pathChange(pathlist, 0)
 }
 
 createFileBrowserPane("div#datasources");

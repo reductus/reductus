@@ -5,6 +5,10 @@ import 'https://www.unpkg.com/jquery-ui-dist@1.12.1/jquery-ui.min.js';
 let jquery = window.jQuery;
 export {jquery};
 
+import 'https://unpkg.com/d3@5.16.0/dist/d3.min.js';
+let d3 = window.d3;
+export {d3};
+
 import {zip, Inflater, Deflater} from 'https://cdn.jsdelivr.net/gh/bmaranville/zip.js@0.0.3/WebContent/index.js';
 zip.Inflater = Inflater;
 zip.Deflater = Deflater;
@@ -14,8 +18,8 @@ export {zip};
 export {default as Tree} from './treejs/src/index.js';
 
 export { default as Vue } from 'https://cdn.jsdelivr.net/npm/vue@2.6.11/dist/vue.esm.browser.js';
-import { default as d3 } from "https://dev.jspm.io/d3@5";
-export { d3 };
+//import { default as d3 } from "https://dev.jspm.io/d3@5";
+//export { d3 };
 import * as messagepack from "https://unpkg.com/messagepack@1.1.10/dist/messagepack.es.js";
 //import { default as messagepack } from "https://dev.jspm.io/npm:messagepack@1.1";
 export { messagepack };
