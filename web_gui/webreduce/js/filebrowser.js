@@ -1,15 +1,14 @@
 // require(jstree, webreduce.server_api)
 'use strict';
 const filebrowser = {};
-export {filebrowser};
-//import {jstree} from './libraries.js';
-//import {jquery as $} from './libraries.js';
-import {editor} from './editor.js';
-import {server_api} from './server_api/api_msgpack.js';
-import {Tree} from './libraries.js';
+export { filebrowser };
+import { editor } from './editor.js';
+import { server_api } from './server_api/api_msgpack.js';
 import { makeSourceList } from './ui_components/sourcelist.js';
 
-async function categorizeFiles(files_metadata, datasource, path, target_in) {
+filebrowser.datasources = [];
+
+async function categorizeFiles(files_metadata, datasource, path) {
   let file_objs = await editor.load_metadata(files_metadata, datasource, path);
   var instrument_id = editor._instrument_id;
   var instrument = editor.instruments[instrument_id];
@@ -37,95 +36,6 @@ async function categorizeFiles(files_metadata, datasource, path, target_in) {
     });
   }
   return treedata;
-}
-
-async function reference(files_metadata, datasource, path, target_in) {
-  var target = $(target_in).find(".remote-filebrowser");
-  var ready;
-  if (!target.jstree(true)) {
-    target.jstree({
-      "plugins": ["sort", "checkbox", "changed"],
-      "checkbox" : {
-        "three_state": true,
-        //"cascade": "down",
-        "tie_selection": false,
-        "whole_node": false
-      },
-      "sort": sortAlphaNumeric,
-      "core": {"data": treeinfo}
-    });
-    ready = new Promise(function(resolve, reject) {
-      target.on("ready.jstree", async function() {
-        if (instrument.decorators) {
-            instrument.decorators.forEach(async function(d) {
-                await d(target, file_objs);
-            });
-          }
-        resolve();
-      });
-    });
-  }
-  else {
-    //target.off("refresh.jstree");
-    target
-      .off("check_node.jstree", handleChecked)
-      .off("uncheck_node.jstree", handleChecked);
-    ready = new Promise(function(resolve, reject) {
-      target.one("refresh.jstree", async function(ev, tree) {
-        if (instrument.decorators) {
-          instrument.decorators.forEach(async function(d) {
-              await d(target, file_objs);
-          });
-          tree.instance.redraw(true);
-        }
-        
-        resolve();
-      });
-    });
-    target.jstree(true).settings.core.data = treeinfo;
-    target.jstree(true).refresh();
-  }
-
-  await ready;
-
-  target
-    .on("check_node.jstree", handleChecked)
-    .on("uncheck_node.jstree", handleChecked);
-  target.on("click", "a:not(.jstree-anchor)", function(e) {
-    window.open(e.target.href, "_blank");
-    e.preventDefault();
-    e.stopPropagation();
-  });
-  target.on("click", "a.jstree-anchor", function(e) {
-    if (!(e.target.classList.contains("jstree-checkbox"))) {
-      //console.log(e.target, e.target.tagName.toLowerCase());
-      target.jstree().toggle_node(e.currentTarget.id);
-    }
-  });
-
-  target.on("fileinfo.update", function(ev, info) {
-    var jstree = target.jstree(true);
-    jstree.uncheck_all();
-    var keys = Object.keys(jstree._model.data);
-    info.value.forEach(function(fi) {
-      var matching = keys.filter(function(k) {
-        var leaf = jstree._model.data[k];
-        var isMatch = ((leaf.li_attr) &&
-                        leaf.li_attr.entryname == fi.entries[0] &&
-                        leaf.li_attr.filename == fi.path &&
-                        leaf.li_attr.mtime == fi.mtime)
-        return isMatch;
-      });
-      // turn off the handler for a moment
-      // so it doesn't trigger for every check operation:
-      target.off("check_node.jstree", handleChecked);
-      jstree.check_node(matching);
-      // then turn it back on.
-      target.on("check_node.jstree", handleChecked);
-    });
-    //handleChecked(null, null, true);
-  });
-  return;
 }
 
 // categorizers are callbacks that take an info object and return category string
@@ -174,7 +84,7 @@ function file_objs_to_tree(file_objs, categories, datasource) {
         parent = id;
       }
       category = gen.next().value; // last one...
-      id = [datasource,p,entryname,entry.mtime].join(':');
+      id = JSON.stringify([datasource,p,entryname,entry.mtime]);
       let fileinfo = {"filename": p, "entryname": entryname, "mtime": entry.mtime, "source": datasource};
       let leaf = {id, text: category, attributes: {entry: true, fileinfo}}
       branch.children.push(leaf);
@@ -182,18 +92,14 @@ function file_objs_to_tree(file_objs, categories, datasource) {
   }
   //out.sort(function(aa, bb) { return sortAlphaNumeric(aa.id, bb.id) });
 
-  // if not empty, push in the root node:
-  console.log(categories_obj);
   return tree.children;
 }
 
-var add_data_source = function(target_id, source, pathlist) {
-  var pathlist = pathlist || [];
-  var new_div = $("<div />", {"class": "databrowser", "datasource": source});
-  $("#" + target_id).prepend(new_div);
-  return server_api.get_file_metadata({source: source, pathlist: pathlist}).then(function(result) {
-    return updateFileBrowserPane(new_div[0], source, pathlist, result);
-  });
+async function add_data_source(source, pathlist) {
+  let dirdata = await server_api.get_file_metadata({source, pathlist});
+  let treedata = await categorizeFiles(dirdata.files_metadata, source, pathlist.join("/"));
+  filebrowser.datasources.unshift({name: source, pathlist, treedata, subdirs: dirdata.subdirs});
+  //filebrowser.ds.$emit("pathChange", source, pathlist, 0)
 }
 
 filebrowser.getAllTemplateSourcePaths = function(template) {
@@ -222,28 +128,9 @@ filebrowser.getAllTemplateSourcePaths = function(template) {
   return fsp;
 }
 
-var getCurrentPath = function(target_id) {
-  // get the path from a specified path browser element
-  var target_id = (target_id == null) ? "body" : target_id;
-  var path = "";
-  $(target_id).find(".patheditor .pathitem").each(function(i,v) {
-    path += $(v).text();
-  });
-  if (/\/$/.test(path)) {path = path.slice(0,-1)}
-  return path;
-}
 
-var getDataSource = function(target) {
-  return $(target).attr("datasource");
-}
-
-function getAllBrowserSourcePaths(nav_div) {
-  var nav_div = (nav_div == null) ? "#datasources" : nav_div;
-  var sourcepaths = [];
-  $(nav_div).find(".databrowser").each(function(i,d) {
-    sourcepaths.push({source: getDataSource(d), path: getCurrentPath(d)})
-  });
-  return sourcepaths
+function getAllBrowserSourcePaths() {
+  return filebrowser.datasources.map(d => ({source: d.name, path: d.pathlist.join("/")}));
 }
 
 function updateHistory(target) {
@@ -256,54 +143,50 @@ function updateHistory(target) {
   history.pushState({}, "", urlstr);
 }
 
-async function updateFileBrowserPane(target, datasource, pathlist, dirdata) {
-  var metadata = dirdata.files_metadata;
-  var files = Object.keys(metadata);
-  files.sort(function(a,b) { return dirdata.files_metadata[b].mtime - dirdata.files_metadata[a].mtime });
-
-  let ds = makeSourceList([{name: datasource, subdirs: dirdata.subdirs, pathlist}]);
-  async function pathChange(new_pathlist, index) {
-    let dirdata = await server_api.get_file_metadata({source: datasource, pathlist: new_pathlist});
-    let treedata = await categorizeFiles(dirdata.files_metadata, datasource, new_pathlist.join("/"), target);
-    let tree_el = ds.$refs.sources[index].$refs.tree;
-    ds.$set(ds.datasources, index, {name: datasource, pathlist: new_pathlist, subdirs: dirdata.subdirs})
-    await ds.$nextTick();
-    let tree = new Tree(tree_el, {
-      data: treedata,
-      closeDepth: -1,
-      itemClickToggle: 'closed'
-    });
+async function createFileBrowserPane(target) {
+  let ds = makeSourceList(filebrowser.datasources);
+  async function pathChange(source, pathlist, index) {
+    let dirdata = await server_api.get_file_metadata({source, pathlist});
+    let treedata = await categorizeFiles(dirdata.files_metadata, source, pathlist.join("/"));
+    ds.datasources[index] = {name: source, pathlist, subdirs: dirdata.subdirs, treedata}
+    //filebrowser.datasources[index] = {name: source, pathlist, subdirs: dirdata.subdirs, treedata}
+    //let tree_el = ds.$refs.sources[index].$refs.tree;
+    ds.$set(ds.datasources, index, {name: source, pathlist, subdirs: dirdata.subdirs, treedata})
+    //await ds.$nextTick();
+    //ds.set_treedata(index, treedata);
   }
+  window.ds = ds;
+  window.getchecked = ds.get_checked;
   ds.$on("pathChange", pathChange)
+  ds.$on("checkedChange", handleChecked)
+  ds.$watch('datasources', (ov, nv) => {console.log(JSON.stringify(ov), JSON.stringify(nv))} )
   
   $(target).empty()
     .append(ds.$el)
     .append("<hr>");
-
-  await pathChange(pathlist, 0)
+  filebrowser.ds = ds;
+  //await pathChange(pathlist, 0)
 }
 
-async function handleChecked(d, i, stopPropagation) {
+createFileBrowserPane("div#datasources");
+
+filebrowser.fileinfoUpdate = function(info) {
+  let keys = info.value.map(fi => (
+    JSON.stringify([fi.source, fi.path, fi.entries[0], fi.mtime])
+  ));
+  filebrowser.ds.set_checked(keys);
+  handleChecked(keys);
+}
+
+async function handleChecked(values, stopPropagation) {
   var instrument_id = editor._instrument_id;
   var loader = editor.instruments[instrument_id].load_file;
-  var fileinfo = [];
-  var loaded_promise = Promise.resolve();
-  $(".remote-filebrowser").each(function() {
-    var jstree = $(this).jstree(true);
-    if (jstree) {
-      var checked_nodes = jstree.get_checked().map(function(s) {return jstree.get_node(s)});
-      var entrynodes = checked_nodes.filter(function(n) {
-        var li = n.li_attr;
-        return (li.filename != null && li.entryname != null && li.source != null && li.mtime != null)
-      });
-      var new_fileinfo = entrynodes.map(function(leaf) {
-        var li = leaf.li_attr;
-        return {path: li.filename, source: li.source, mtime: li.mtime, entries: [li.entryname]}
-      });
-      fileinfo = fileinfo.concat(new_fileinfo);
-
-    }
-  });
+  var fileinfo = values.map(v => {
+    let f = JSON.parse(v);
+    let [source,path,entryname,mtime] = JSON.parse(v);
+    return {source, path, mtime, entries: [entryname]}
+  })
+  
   if (!stopPropagation) {
     $("div.fields").trigger("fileinfo.update", [fileinfo]);
   }
@@ -362,9 +245,7 @@ function sortAlphaNumeric(a,b) {
   return 0
 }
 
-filebrowser.updateFileBrowserPane = updateFileBrowserPane;
+//filebrowser.updateFileBrowserPane = updateFileBrowserPane;
 filebrowser.handleChecked = handleChecked;
-filebrowser.getCurrentPath = getCurrentPath;
 filebrowser.addDataSource = add_data_source;
 filebrowser.getAllBrowserSourcePaths = getAllBrowserSourcePaths;
-

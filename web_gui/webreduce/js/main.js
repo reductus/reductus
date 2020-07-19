@@ -88,7 +88,7 @@ window.onpopstate = function(e) {
     if (v[0] == 'pathlist' && v[1] && v[1].length) {
       start_path = v[1];
       var pathlist = start_path.split("/");
-      filebrowser.addDataSource("datasources", source, pathlist);
+      filebrowser.addDataSource(source, pathlist);
     }
     else if (v[0] == 'source' && v[1]) {
       source = v[1];
@@ -108,7 +108,7 @@ window.onpopstate = function(e) {
       start_path = datasource['start_path'];
     }
     var pathlist = start_path.split("/");
-    filebrowser.addDataSource("datasources", source, pathlist);
+    filebrowser.addDataSource(source, pathlist);
   }
 }
 
@@ -357,7 +357,7 @@ window.onload = function() {
             start_path: dsource.start_path || "",
             click: function() {
               hide_menu();
-              filebrowser.addDataSource("datasources", dsource.name, pathlist);
+              filebrowser.addDataSource(dsource.name, pathlist);
             }
           })));
           $("#main_menu").menu("refresh");

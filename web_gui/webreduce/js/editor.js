@@ -1966,7 +1966,7 @@ editor.update_completions = function() {
 }
 
 editor.fileinfo_update = function(fileinfo) {
-  $(".remote_filebrowser").trigger("fileinfo.update", [fileinfo]);
+  filebrowser.fileinfoUpdate(fileinfo);
 }
 
 editor.load_instrument = function(instrument_id) {
@@ -2058,7 +2058,7 @@ editor.load_template = function(template_def, selected_module, selected_terminal
       paths.forEach(function(path,i) {
         if (browser_sourcepaths.findIndex(function(sp) {return sp.source == source && sp.path == path}) < 0) {
           sources_loaded = sources_loaded.then(function() {
-            return filebrowser.addDataSource("datasources", source, path.split("/"));
+            return filebrowser.addDataSource(source, path.split("/"));
           });
         }
       });
