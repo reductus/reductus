@@ -36,7 +36,7 @@ class inMemoryCache {
   destroy() {
     this.storage = null;
   }
-  get(key) {
+  async get(key) {
     let storage = this.storage;
     return new Promise(function(resolve, reject) {
       if (storage.has(key)) {

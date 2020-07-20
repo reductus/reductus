@@ -26,9 +26,9 @@ var active_reduction = {
 app.current_instrument = "ncnr.refl";
 
 var statusline_log = function(message) {
-  var statusline = $("#statusline");
-  if (statusline && statusline.html) {
-    statusline.html(message);
+  var statusline = document.getElementById("statusline");
+  if (statusline && statusline.innerHTML) {
+    statusline.innerHTML = message;
   }
 }
 
@@ -134,24 +134,7 @@ window.onload = function() {
       minSize: 0
     });
     app.layout = middle_layout;
-    /*
-    var layout = $('body').layout({
-          west__size:          350
-      ,  east__size:          300
-      ,  south__size:         200
-        // RESIZE Accordion widget when panes resize
-      ,  west__onresize:	    $.layout.callbacks.resizePaneAccordions
-      ,  east__onresize:	    $.layout.callbacks.resizePaneAccordions
-      ,  south__onresize:     $.layout.callbacks.resizePaneAccordions
-      ,  center__onresize:    function() {app.callbacks.resize_center()}
-    });
-
-    layout.toggle('east');
-    layout.allowOverflow('north');
-    */
     //$("#menu").menu({width: '200px;', position: {my: "left top", at: "left+15 bottom"}});
-    $(".ui-layout-west")
-      .tabs()
 
     var layout = Split(["#middle_content", "#bottom_panel"], {
       sizes: [95, 5],
@@ -346,6 +329,7 @@ window.onload = function() {
       reader.readAsText(file);
     });
     editor.create_instance("bottom_panel");
+    filebrowser.create_instance("filebrowser");
     
     var list_datasources = server_api.list_datasources()
       .then(function(datasources) {
@@ -483,8 +467,8 @@ window.onload = function() {
     }
 
     Promise.all([list_instruments, list_datasources]).then(function(results) {
-      var instr = results[0],
-          datasource = results[1];
+      var instr = results[0];
+      var datasource = results[1];
       editor.switch_instrument(instr)
         .then(function() { window.onpopstate() })
         .catch(function(e) { console.log(e) });

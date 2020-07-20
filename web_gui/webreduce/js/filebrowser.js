@@ -4,7 +4,9 @@ const filebrowser = {};
 export { filebrowser };
 import { editor } from './editor.js';
 import { server_api } from './server_api/api_msgpack.js';
-import { makeSourceList } from './ui_components/sourcelist.js';
+//import { makeSourceList } from './ui_components/sourcelist.js';
+import { Vue } from './libraries.js';
+import { FilePanel } from './ui_components/filepanel.js';
 
 filebrowser.datasources = [];
 
@@ -17,7 +19,10 @@ async function categorizeFiles(files_metadata, datasource, path) {
   const node_list = [];
   const leaf_list = [];
   const parents = {};
-  const walkTree = function(nodes, parent) {
+  const walkTree = function(nodes, parent, do_sort=true) {
+    if (do_sort) {
+      nodes.sort(function(aa, bb) { return sortAlphaNumeric(aa.id, bb.id) });
+    }
     nodes.forEach(node => {
       node_list.push(node);
       if (parent) parents[node.id] = parent;
@@ -94,11 +99,11 @@ function file_objs_to_tree(file_objs, categories, datasource) {
   return tree.children;
 }
 
-async function add_data_source(source, pathlist) {
+filebrowser.addDataSource = async function (source, pathlist) {
   let dirdata = await server_api.get_file_metadata({source, pathlist});
   let treedata = await categorizeFiles(dirdata.files_metadata, source, pathlist.join("/"));
   filebrowser.datasources.unshift({name: source, pathlist, treedata, subdirs: dirdata.subdirs});
-  //filebrowser.ds.$emit("pathChange", source, pathlist, 0)
+  //filebrowser.instance.pathChange(source, pathlist, 0);
 }
 
 filebrowser.getAllTemplateSourcePaths = function(template) {
@@ -142,29 +147,33 @@ function updateHistory(target) {
   history.pushState({}, "", urlstr);
 }
 
-async function createFileBrowserPane(target) {
-  let ds = makeSourceList(filebrowser.datasources);
-  async function pathChange(source, pathlist, index) {
-    let dirdata = await server_api.get_file_metadata({source, pathlist});
-    let treedata = await categorizeFiles(dirdata.files_metadata, source, pathlist.join("/"));
-    ds.$set(ds.datasources, index, {name: source, pathlist, subdirs: dirdata.subdirs, treedata})
-  }
-  ds.$on("pathChange", pathChange)
-  ds.$on("checkedChange", handleChecked)
-  
-  $(target).empty()
-    .append(ds.$el)
-    .append("<hr>");
-  filebrowser.ds = ds;
-}
+filebrowser.create_instance = function(target_id) {
+  let target = document.getElementById(target_id);
+  const FilePanelClass = Vue.extend(FilePanel);
+  filebrowser.instance = new FilePanelClass({
+    data: () => ({
+      datasources: filebrowser.datasources
+    }),
+    methods: {
+      handleChecked,
+      async pathChange(source, pathlist, index) {
+        let dirdata = await server_api.get_file_metadata({source, pathlist});
+        let treedata = await categorizeFiles(dirdata.files_metadata, source, pathlist.join("/"));
+        this.$set(this.datasources, index, {name: source, pathlist, subdirs: dirdata.subdirs, treedata})
+      },
+      setChecked(values) {
+        this.$refs.sourcelist.set_checked(values);
+      }
+    }
 
-createFileBrowserPane("div#datasources");
+  }).$mount(target);
+}
 
 filebrowser.fileinfoUpdate = function(info) {
   let keys = info.value.map(fi => (
     JSON.stringify([fi.source, fi.path, fi.entries[0], fi.mtime])
   ));
-  filebrowser.ds.set_checked(keys);
+  this.instance.setChecked(keys);
   handleChecked(keys);
 }
 
@@ -237,5 +246,4 @@ function sortAlphaNumeric(a,b) {
 
 //filebrowser.updateFileBrowserPane = updateFileBrowserPane;
 filebrowser.handleChecked = handleChecked;
-filebrowser.addDataSource = add_data_source;
 filebrowser.getAllBrowserSourcePaths = getAllBrowserSourcePaths;
