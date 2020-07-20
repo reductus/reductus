@@ -3,10 +3,6 @@ from copy import deepcopy
 from posixpath import basename, join
 import time
 from io import BytesIO
-try:
-    import urllib.request as urllib2
-except ImportError:
-    import urllib2
 
 import pytz
 from numpy import (cos, pi, cumsum, arange, ndarray, ones, zeros, array,
@@ -25,48 +21,11 @@ from dataflow.fetch import url_get
 from dataflow.lib import rebin as reb
 from dataflow.lib.iso8601 import seconds_since_epoch
 
+from dataflow.automod import cache, nocache, module
+
 from .FilterableMetaArray import FilterableMetaArray as MetaArray
 
-ALL_ACTIONS = []
-DATA_SOURCES = {"ncnr": "http://ncnr.nist.gov/pub/"}
 DEBUG = False
-
-def cache(action):
-    """
-    Decorator which adds the *cached* attribute to the function.
-
-    Use *@cache* to force caching to always occur (for example, when
-    the function references remote resources, vastly reduces memory, or is
-    expensive to compute.  Use *@nocache* when debugging a function
-    so that it will be recomputed each time regardless of whether or not it
-    is seen again.
-    """
-    action.cached = True
-    return action
-
-def nocache(action):
-    """
-    Decorator which adds the *cached* attribute to the function.
-
-    Use *@cache* to force caching to always occur (for example, when
-    the function references remote resources, vastly reduces memory, or is
-    expensive to compute.  Use *@nocache* when debugging a function
-    so that it will be recomputed each time regardless of whether or not it
-    is seen again.
-    """
-    action.cached = False
-    return action
-
-def module(action):
-    """
-    Decorator which records the action in *ALL_ACTIONS*.
-
-    This just collects the action, it does not otherwise modify it.
-    """
-    ALL_ACTIONS.append(action)
-
-    # This is a decorator, so return the original function
-    return action
 
 def get_index(t, x):
         if (x == "" or x == None):
@@ -99,7 +58,7 @@ def fitPSDCalibration(calibration, minimum_peak_intensity=500.0):
 
     2016-04-01 Brian Maranville
     """
-    from dataflow.modules.ospec import Parameters
+    from .dataflow import Parameters
     counts = calibration['Measurements':'counts']
     twotheta = calibration.extrainfo['det_angle']
     cpixels = []
@@ -949,36 +908,6 @@ def add_to_grid(dataset, grid, counts_multiplier=1.0):
 # Loader stuff
 #################
 DETECTOR_ACTIVE = (320, 340)
-
-def url_load(fileinfo):
-    path, mtime, entries = fileinfo['path'], fileinfo['mtime'], fileinfo['entries']
-    name = basename(path)
-    fid = BytesIO(url_get(fileinfo))
-    nx_entries = LoadMAGIKPSD.load_entries(name, fid, entries=entries)
-    fid.close()
-    return nx_entries
-
-def url_load_list(files=None):
-    if files is None: return []
-    result = [entry for fileinfo in files for entry in url_load(fileinfo)]
-    return result
-
-def check_datasource(source):
-    if not source in DATA_SOURCES:
-        raise RuntimeError("Need to set reflred.steps.load.DATA_SOURCES['" + source + "'] first!")
-
-def find_mtime(path, source="ncnr"):
-    check_datasource(source)
-    print(DATA_SOURCES[source])
-    try:
-        url = urllib2.urlopen(DATA_SOURCES[source]+path)
-        mtime = url.info().getdate('last-modified')
-    except urllib2.HTTPError as exc:
-        raise ValueError("Could not open %r\n%s"%(path, str(exc)))
-    mtime_obj = datetime.datetime(*mtime[:7], tzinfo=pytz.utc)
-    timestamp = seconds_since_epoch(mtime_obj)
-
-    return { 'path': path, 'mtime': timestamp }
 
 @module
 def LoadMAGIKPSDMany(fileinfo=None, collapse=True, collapse_axis='y', auto_PolState=False, PolState='', flip=True, transpose=True):

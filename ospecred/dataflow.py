@@ -1,5 +1,5 @@
 from dataflow import core as df
-from dataflow.automod import make_modules, make_template
+from dataflow.automod import get_modules, make_modules, make_template
 
 from . import magik_filters_func as steps
 from . import templates
@@ -15,7 +15,8 @@ class Parameters(dict):
 
 def define_instrument():
     # Define modules
-    modules = make_modules(steps.ALL_ACTIONS, prefix=INSTRUMENT+'.')
+    actions = get_modules(steps)
+    modules = make_modules(actions, prefix=INSTRUMENT+'.')
 
     # Define data types
     ospec2d = df.DataType(INSTRUMENT+".ospec2d", FilterableMetaArray)
