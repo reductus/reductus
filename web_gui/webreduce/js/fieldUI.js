@@ -305,7 +305,7 @@ var scaleUI = function () {
     .text(JSON.stringify(datum.value, null, 2))
     .on("change", function (d) { datum.value = JSON.parse(this.value) });
 
-  unscaled_data = [];
+  var unscaled_data = [];
 
   if (this.add_interactors) {
     var active_plot = this.active_plot;

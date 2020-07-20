@@ -226,7 +226,7 @@ function module_clicked_single() {
       if (selected_terminal.empty()) {
         // then it's a loader that's clicked, with no output selected;
         let first_output = module_def.outputs[0].id;
-        let selected_title = editor.select("g.module g.title.selected");
+        let selected_title = editor_select.select("g.module g.title.selected");
         let module_elem = d3.select(selected_title.node().parentNode);
         module_elem.selectAll("g.terminals").classed('selected', function(d) { return d.id == first_output });
       }
