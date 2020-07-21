@@ -15,6 +15,7 @@ import {jquery as $} from './libraries.js';
 import {editor} from './editor.js';
 import {server_api} from './server_api/api_msgpack.js';
 import {filebrowser} from './filebrowser.js';
+import { plotter } from './plot.js';
 
 const app = {}; // put state here.
 export {app};
@@ -346,6 +347,8 @@ window.onload = function() {
       reader.readAsText(file);
     });
     editor.create_instance("bottom_panel");
+    
+    plotter.create_instance("plotdiv");
     
     var list_datasources = server_api.list_datasources()
       .then(function(datasources) {

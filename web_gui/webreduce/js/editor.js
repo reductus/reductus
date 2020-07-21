@@ -16,7 +16,7 @@ import {sha1} from './libraries.js';
 import {template_editor_url} from './libraries.js';
 import {filebrowser} from './filebrowser.js';
 import {make_fieldUI} from './fieldUI.js';
-import { create_instance as create_plotPanel } from './plot.js';
+import { plotter  } from './plot.js';
 
 editor.instruments = instruments;
 
@@ -431,8 +431,6 @@ function compare_in_template(to_compare, template) {
       editor.show_plots(results);
     });
 }
-
-let plotPanel = create_plotPanel('#plotdiv');
 
 editor.show_plots = function(results) {
   var new_plotdata;
