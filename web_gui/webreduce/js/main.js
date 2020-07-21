@@ -27,9 +27,9 @@ var active_reduction = {
 app.current_instrument = "ncnr.refl";
 
 var statusline_log = function(message) {
-  var statusline = $("#statusline");
-  if (statusline && statusline.html) {
-    statusline.html(message);
+  var statusline = document.getElementById("statusline");
+  if (statusline && statusline.innerHTML) {
+    statusline.innerHTML = message;
   }
 }
 
@@ -89,7 +89,7 @@ window.onpopstate = function(e) {
     if (v[0] == 'pathlist' && v[1] && v[1].length) {
       start_path = v[1];
       var pathlist = start_path.split("/");
-      filebrowser.addDataSource("datasources", source, pathlist);
+      filebrowser.addDataSource(source, pathlist);
     }
     else if (v[0] == 'source' && v[1]) {
       source = v[1];
@@ -109,7 +109,7 @@ window.onpopstate = function(e) {
       start_path = datasource['start_path'];
     }
     var pathlist = start_path.split("/");
-    filebrowser.addDataSource("datasources", source, pathlist);
+    filebrowser.addDataSource(source, pathlist);
   }
 }
 
@@ -135,24 +135,7 @@ window.onload = function() {
       minSize: 0
     });
     app.layout = middle_layout;
-    /*
-    var layout = $('body').layout({
-          west__size:          350
-      ,  east__size:          300
-      ,  south__size:         200
-        // RESIZE Accordion widget when panes resize
-      ,  west__onresize:	    $.layout.callbacks.resizePaneAccordions
-      ,  east__onresize:	    $.layout.callbacks.resizePaneAccordions
-      ,  south__onresize:     $.layout.callbacks.resizePaneAccordions
-      ,  center__onresize:    function() {app.callbacks.resize_center()}
-    });
-
-    layout.toggle('east');
-    layout.allowOverflow('north');
-    */
     //$("#menu").menu({width: '200px;', position: {my: "left top", at: "left+15 bottom"}});
-    $(".ui-layout-west")
-      .tabs()
 
     var layout = Split(["#middle_content", "#bottom_panel"], {
       sizes: [95, 5],
@@ -347,6 +330,7 @@ window.onload = function() {
       reader.readAsText(file);
     });
     editor.create_instance("bottom_panel");
+    filebrowser.create_instance("filebrowser");
     
     plotter.create_instance("plotdiv");
     
@@ -360,7 +344,7 @@ window.onload = function() {
             start_path: dsource.start_path || "",
             click: function() {
               hide_menu();
-              filebrowser.addDataSource("datasources", dsource.name, pathlist);
+              filebrowser.addDataSource(dsource.name, pathlist);
             }
           })));
           $("#main_menu").menu("refresh");
@@ -486,8 +470,8 @@ window.onload = function() {
     }
 
     Promise.all([list_instruments, list_datasources]).then(function(results) {
-      var instr = results[0],
-          datasource = results[1];
+      var instr = results[0];
+      var datasource = results[1];
       editor.switch_instrument(instr)
         .then(function() { window.onpopstate() })
         .catch(function(e) { console.log(e) });

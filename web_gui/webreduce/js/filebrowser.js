@@ -1,161 +1,65 @@
 // require(jstree, webreduce.server_api)
 'use strict';
 const filebrowser = {};
-export {filebrowser};
-//import {jstree} from './libraries.js';
-//import {jquery as $} from './libraries.js';
-import {editor} from './editor.js';
-import {server_api} from './server_api/api_msgpack.js';
+export { filebrowser };
+import { editor } from './editor.js';
+import { server_api } from './server_api/api_msgpack.js';
+//import { makeSourceList } from './ui_components/sourcelist.js';
+import { Vue } from './libraries.js';
+import { FilePanel } from './ui_components/filepanel.js';
 
-var PARALLEL_LOAD = true;
+filebrowser.datasources = [];
 
-function make_range_icon(global_min_x, global_max_x, min_x, max_x) {
-  var icon_width = 75;
-  var rel_width = Math.abs((max_x - min_x) / (global_max_x - global_min_x));
-  var width = icon_width * rel_width;
-  var rel_x = Math.abs((min_x - global_min_x) / (global_max_x - global_min_x));
-  var x = icon_width * rel_x;
-  var output = "<svg class=\"range\" width=\"" + (icon_width + 2) + "\" height=\"12\">";
-  output += "<rect width=\"" + width + "\" height=\"10\" x=\"" + x + "\" style=\"fill:IndianRed;stroke:none\"/>"
-  output += "<rect width=\"" + icon_width + "\" height=\"10\" style=\"fill:none;stroke:black;stroke-width:1\"/>"
-  output += "</svg>"
-  return output
-}
-
-async function categorizeFiles(files_metadata, datasource, path, target_in) {
+async function categorizeFiles(files_metadata, datasource, path) {
+  let file_objs = await editor.load_metadata(files_metadata, datasource, path);
   var instrument_id = editor._instrument_id;
   var instrument = editor.instruments[instrument_id];
-  var load_promises = [];
-  var fileinfo = {};
-  var file_objs = {};
-  var loader = instrument.load_file;
-  var files_filter = instrument.files_filter || function(x) {return true};
-  var files = Object.keys(files_metadata);
-  var datafiles = files.filter(files_filter);
-  var numloaded = 0;
-  var numdatafiles = datafiles.length;
-
-  ////////////////////////////////////////////////////////////////////////////
-  // Send rpc requests one after the other to the server
-  ////////////////////////////////////////////////////////////////////////////
-  var load_params = datafiles.map(function(j) {
-    return {
-      "source": datasource,
-      "path": path + "/" + j,
-      "mtime": files_metadata[j].mtime
-    }
-  });
-
-  let loader_template = loader(load_params, file_objs, false, 'metadata');
-  let results = await editor.calculate(loader_template, false, false);
-  results.forEach(function(result, i) {
-    var lp = load_params[i];
-    if (result && result.values) {
-      result.values.forEach(function(v) {v.mtime = lp.mtime});
-      file_objs[lp.path] = result;
-    }
-  });
-  
-  editor._datafiles = results;
   var categories = instrument.categories;
-  var treeinfo = file_objs_to_tree(file_objs, categories, datasource);
-  // add decorators etc to the tree with postprocess:
-  var postprocess = instrument.postprocess;
-  if (postprocess) { postprocess(treeinfo, file_objs) }
-  var target = $(target_in).find(".remote-filebrowser");
-  var ready;
-  if (!target.jstree(true)) {
-    target.jstree({
-      "plugins": ["sort", "checkbox", "changed"],
-      "checkbox" : {
-        "three_state": true,
-        //"cascade": "down",
-        "tie_selection": false,
-        "whole_node": false
-      },
-      "sort": sortAlphaNumeric,
-      "core": {"data": treeinfo}
-    });
-    ready = new Promise(function(resolve, reject) {
-      target.on("ready.jstree", async function() {
-        if (instrument.decorators) {
-            instrument.decorators.forEach(async function(d) {
-                await d(target, file_objs);
-            });
-          }
-        resolve();
-      });
-    });
-  }
-  else {
-    //target.off("refresh.jstree");
-    target
-      .off("check_node.jstree", handleChecked)
-      .off("uncheck_node.jstree", handleChecked);
-    ready = new Promise(function(resolve, reject) {
-      target.one("refresh.jstree", async function(ev, tree) {
-        if (instrument.decorators) {
-          instrument.decorators.forEach(async function(d) {
-              await d(target, file_objs);
-          });
-          tree.instance.redraw(true);
-        }
-        
-        resolve();
-      });
-    });
-    target.jstree(true).settings.core.data = treeinfo;
-    target.jstree(true).refresh();
-  }
-
-  await ready;
-
-  target
-    .on("check_node.jstree", handleChecked)
-    .on("uncheck_node.jstree", handleChecked);
-  target.on("click", "a:not(.jstree-anchor)", function(e) {
-    window.open(e.target.href, "_blank");
-    e.preventDefault();
-    e.stopPropagation();
-  });
-  target.on("click", "a.jstree-anchor", function(e) {
-    if (!(e.target.classList.contains("jstree-checkbox"))) {
-      //console.log(e.target, e.target.tagName.toLowerCase());
-      target.jstree().toggle_node(e.currentTarget.id);
+  var treedata = file_objs_to_tree(file_objs, categories, datasource);
+  const node_list = [];
+  const leaf_list = [];
+  const parents = {};
+  const walkTree = function(nodes, parent, do_sort=true) {
+    if (do_sort) {
+      nodes.sort(function(aa, bb) { return sortAlphaNumeric(aa.id, bb.id) });
     }
-  });
-
-  target.on("fileinfo.update", function(ev, info) {
-    var jstree = target.jstree(true);
-    jstree.uncheck_all();
-    var keys = Object.keys(jstree._model.data);
-    info.value.forEach(function(fi) {
-      var matching = keys.filter(function(k) {
-        var leaf = jstree._model.data[k];
-        var isMatch = ((leaf.li_attr) &&
-                        leaf.li_attr.entryname == fi.entries[0] &&
-                        leaf.li_attr.filename == fi.path &&
-                        leaf.li_attr.mtime == fi.mtime)
-        return isMatch;
-      });
-      // turn off the handler for a moment
-      // so it doesn't trigger for every check operation:
-      target.off("check_node.jstree", handleChecked);
-      jstree.check_node(matching);
-      // then turn it back on.
-      target.on("check_node.jstree", handleChecked);
+    nodes.forEach(node => {
+      node_list.push(node);
+      if (parent) parents[node.id] = parent;
+      if (node.children && node.children.length) {
+        walkTree(node.children, node);
+      }
+      else {
+        leaf_list.push(node);
+      }
     });
-    //handleChecked(null, null, true);
-  });
-  return;
+  };
+  walkTree(treedata);
+  if (instrument.decorators) {
+    instrument.decorators.forEach(function(d) {
+      d(node_list, leaf_list, parents, file_objs);
+    });
+  }
+  return treedata;
 }
 
 // categorizers are callbacks that take an info object and return category string
 function file_objs_to_tree(file_objs, categories, datasource) {
   // file_obj should always be a list of entries
-  var out = [], categories_obj = {}, fm;
+  var tree = {id: "root", children: []};
+  var branch;
+  var categories_obj = {};
+  var fm;
+  
+  function* category_generator(entry) {
+    var index = 0;
+    for (var category_def of categories) {
+      yield category_def.map(
+        keylist => keylist.reduce((info, key) => info[key], entry)
+      ).join(':');
+    }
+  }
 
-  //var out = [], categories_obj = {}, file_obj;      
   for (var p in file_objs) {
     //if (!p) { continue }
     fm = file_objs[p].values;
@@ -164,39 +68,42 @@ function file_objs_to_tree(file_objs, categories, datasource) {
           entryname = entry.entry;
       var parent = "root",
           cobj = categories_obj,
+          branch = tree,
           category, id;
-      for (var c=0; c<categories.length; c++) {
-        category = categories[c]
-          .map(function(keylist) { 
-            return keylist.reduce(function(info, key) { return info[key] }, entry)
-          }).join(":");
+      let gen = category_generator(entry);
+      
+      for (var c=0; c<categories.length - 1; c++) {
+        category = gen.next().value;
         id = parent + ":" + category;
-        if (!(category in cobj)) {
-          cobj[category] = {};
-          var leaf = {'id': id, text: category, parent: parent, "icon": false};
-          out.push(leaf);
+        let subindex = branch.children.findIndex(c => (c.id == id));
+        if (subindex < 0) {
+          // not found... add new branch
+          let subbranch = {'id': id, text: category, children: []};
+          subindex = branch.children.push(subbranch) - 1;
+          branch = subbranch;
+        }
+        else {
+          branch = branch.children[subindex];
         }
         parent = id;
-        cobj = cobj[category]; // walk the tree...
       }
-      // modify the last entry to include key of file_obj
-      leaf['li_attr'] = {"filename": p, "entryname": entryname, "mtime": entry.mtime, "source": datasource};
+      category = gen.next().value; // last one...
+      id = JSON.stringify([datasource,p,entryname,entry.mtime]);
+      let fileinfo = {"filename": p, "entryname": entryname, "mtime": entry.mtime, "source": datasource};
+      let leaf = {id, text: category, attributes: {entry: true, fileinfo}}
+      branch.children.push(leaf);
     }
   }
-  out.sort(function(aa, bb) { return sortAlphaNumeric(aa.id, bb.id) });
+  //out.sort(function(aa, bb) { return sortAlphaNumeric(aa.id, bb.id) });
 
-  // if not empty, push in the root node:
-  if (out.length > 0) { out.push({'id': "root", 'parent': "#", 'text': "", 'state': {'opened': true}}); }
-  return out
+  return tree.children;
 }
 
-var add_data_source = function(target_id, source, pathlist) {
-  var pathlist = pathlist || [];
-  var new_div = $("<div />", {"class": "databrowser", "datasource": source});
-  $("#" + target_id).prepend(new_div);
-  return server_api.get_file_metadata({source: source, pathlist: pathlist}).then(function(result) {
-    return updateFileBrowserPane(new_div[0], source, pathlist, result);
-  });
+filebrowser.addDataSource = async function (source, pathlist) {
+  let dirdata = await server_api.get_file_metadata({source, pathlist});
+  let treedata = await categorizeFiles(dirdata.files_metadata, source, pathlist.join("/"));
+  filebrowser.datasources.unshift({name: source, pathlist, treedata, subdirs: dirdata.subdirs});
+  //filebrowser.instance.pathChange(source, pathlist, 0);
 }
 
 filebrowser.getAllTemplateSourcePaths = function(template) {
@@ -225,28 +132,9 @@ filebrowser.getAllTemplateSourcePaths = function(template) {
   return fsp;
 }
 
-var getCurrentPath = function(target_id) {
-  // get the path from a specified path browser element
-  var target_id = (target_id == null) ? "body" : target_id;
-  var path = "";
-  $(target_id).find(".patheditor .pathitem").each(function(i,v) {
-    path += $(v).text();
-  });
-  if (/\/$/.test(path)) {path = path.slice(0,-1)}
-  return path;
-}
 
-var getDataSource = function(target) {
-  return $(target).attr("datasource");
-}
-
-function getAllBrowserSourcePaths(nav_div) {
-  var nav_div = (nav_div == null) ? "#datasources" : nav_div;
-  var sourcepaths = [];
-  $(nav_div).find(".databrowser").each(function(i,d) {
-    sourcepaths.push({source: getDataSource(d), path: getCurrentPath(d)})
-  });
-  return sourcepaths
+function getAllBrowserSourcePaths() {
+  return filebrowser.datasources.map(d => ({source: d.name, path: d.pathlist.join("/")}));
 }
 
 function updateHistory(target) {
@@ -259,111 +147,45 @@ function updateHistory(target) {
   history.pushState({}, "", urlstr);
 }
 
-function updateFileBrowserPane(target, datasource, pathlist, dirdata) {
-  var buttons = $("<div />", {class: "buttons"});
-  var clear_all = $("<button />", {text: "uncheck all"});
-  clear_all.click(function() {$(".remote-filebrowser", target)
-    .jstree("uncheck_all"); handleChecked();
-  });
-  var remove_datasource = $("<button />", {text: "remove"});
-  remove_datasource.click(function() { var nav=$(target).parent(); $(target).empty().remove(); updateHistory(nav);});
-  var refresh = $("<button />", {text: "refresh", class: "refresh-button"});
-  refresh.click(function() {
-    server_api.get_file_metadata({source: datasource, pathlist: pathlist})
-      .then(function(metadata) {
-        categorizeFiles(metadata.files_metadata, datasource, pathlist.join("/"), target);
-      })
-  });
-
-  buttons
-    //.append($("<span />", {class: "ui-icon ui-icon-circle-close"}))
-    .append(clear_all)
-    .append(remove_datasource)
-    .append(refresh)
-    .append('<span class="datasource">source: ' + datasource + '</span>');
-
-  var metadata = dirdata.files_metadata;
-  var files = Object.keys(metadata);
-  files.sort(function(a,b) { return dirdata.files_metadata[b].mtime - dirdata.files_metadata[a].mtime });
-  // dirdata is {'subdirs': list_of_subdirs, 'files': list_of_files, 'pathlist': list_of_path
-
-  var patheditor = document.createElement('div');
-  patheditor.className = 'patheditor';
-  var subdiritem, dirlink, new_pathlist;
-  if (pathlist.length > 0) {
-    var new_pathlist = $.extend(true, [], pathlist);
-    $.each(new_pathlist, function(index, pathitem) {
-      dirlink = document.createElement('span');
-      dirlink.classList.add("pathitem");
-      dirlink.textContent = pathitem + "/";
-      dirlink.onclick = function() {
-        server_api.get_file_metadata({source: datasource, pathlist: new_pathlist.slice(0, index+1)})
-        .then( function (metadata) {
-          updateFileBrowserPane(target, datasource, new_pathlist.slice(0, index+1), metadata);
-          //updateHistory($(target).parent());
-        })
+filebrowser.create_instance = function(target_id) {
+  let target = document.getElementById(target_id);
+  const FilePanelClass = Vue.extend(FilePanel);
+  filebrowser.instance = new FilePanelClass({
+    data: () => ({
+      datasources: filebrowser.datasources
+    }),
+    methods: {
+      handleChecked,
+      async pathChange(source, pathlist, index) {
+        let dirdata = await server_api.get_file_metadata({source, pathlist});
+        let treedata = await categorizeFiles(dirdata.files_metadata, source, pathlist.join("/"));
+        this.$set(this.datasources, index, {name: source, pathlist, subdirs: dirdata.subdirs, treedata})
+      },
+      setChecked(values) {
+        this.$refs.sourcelist.set_checked(values);
       }
-      patheditor.appendChild(dirlink);
-    });
-  }
-
-  var dirbrowser = document.createElement('ul');
-  dirbrowser.id = "dirbrowser";
-  dirbrowser.setAttribute("style", "margin:0px;");
-  dirdata.subdirs.reverse();
-  $.each(dirdata.subdirs, function(index, subdir) {
-    subdiritem = document.createElement('li');
-    subdiritem.classList.add('subdiritem');
-    subdiritem.textContent = "(dir) " + subdir;
-    var new_pathlist = $.extend(true, [], pathlist);
-    new_pathlist.push(subdir);
-    subdiritem.onclick = function() {
-      server_api.get_file_metadata({source: datasource, pathlist: new_pathlist})
-        .then( function (metadata) {
-          updateFileBrowserPane(target, datasource, new_pathlist, metadata);
-          //updateHistory($(target).parent());
-        })
     }
-    dirbrowser.appendChild(subdiritem);
-  });
 
-  var filebrowser = document.createElement('div');
-  filebrowser.classList.add("remote-filebrowser");
-
-  $(target).empty()
-    .append(buttons)
-    .append(patheditor)
-    //.append(deadtime_choose)
-    .append(dirbrowser)
-    .append(filebrowser)
-    .append("<hr>");
-
-  // instrument-specific categorizers
-  // editor.instruments[instrument_id].categorizeFiles(files, metadata, pathlist.join("/"), target_id);
-  return categorizeFiles(metadata, datasource, pathlist.join("/"), target);
+  }).$mount(target);
 }
 
-async function handleChecked(d, i, stopPropagation) {
+filebrowser.fileinfoUpdate = function(info) {
+  let keys = info.value.map(fi => (
+    JSON.stringify([fi.source, fi.path, fi.entries[0], fi.mtime])
+  ));
+  this.instance.setChecked(keys);
+  handleChecked(keys);
+}
+
+async function handleChecked(values, stopPropagation) {
   var instrument_id = editor._instrument_id;
   var loader = editor.instruments[instrument_id].load_file;
-  var fileinfo = [];
-  var loaded_promise = Promise.resolve();
-  $(".remote-filebrowser").each(function() {
-    var jstree = $(this).jstree(true);
-    if (jstree) {
-      var checked_nodes = jstree.get_checked().map(function(s) {return jstree.get_node(s)});
-      var entrynodes = checked_nodes.filter(function(n) {
-        var li = n.li_attr;
-        return (li.filename != null && li.entryname != null && li.source != null && li.mtime != null)
-      });
-      var new_fileinfo = entrynodes.map(function(leaf) {
-        var li = leaf.li_attr;
-        return {path: li.filename, source: li.source, mtime: li.mtime, entries: [li.entryname]}
-      });
-      fileinfo = fileinfo.concat(new_fileinfo);
-
-    }
-  });
+  var fileinfo = values.map(v => {
+    let f = JSON.parse(v);
+    let [source,path,entryname,mtime] = JSON.parse(v);
+    return {source, path, mtime, entries: [entryname]}
+  })
+  
   if (!stopPropagation) {
     $("div.fields").trigger("fileinfo.update", [fileinfo]);
   }
@@ -422,9 +244,6 @@ function sortAlphaNumeric(a,b) {
   return 0
 }
 
-filebrowser.updateFileBrowserPane = updateFileBrowserPane;
+//filebrowser.updateFileBrowserPane = updateFileBrowserPane;
 filebrowser.handleChecked = handleChecked;
-filebrowser.getCurrentPath = getCurrentPath;
-filebrowser.addDataSource = add_data_source;
 filebrowser.getAllBrowserSourcePaths = getAllBrowserSourcePaths;
-

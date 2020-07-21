@@ -3,7 +3,7 @@ const server_api = {};
 export {server_api};
 
 function wrap_hug_msgpack(method_name) {
-  function wrapped(args) {
+  async function wrapped(args) {
     var r = new Promise(function(resolve, reject) {
       var xhr = new XMLHttpRequest();
       var endpoint = "/RPC2/" + method_name;

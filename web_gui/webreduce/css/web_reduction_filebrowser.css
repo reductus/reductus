@@ -351,8 +351,8 @@ div.block-overlay .overlay-message {
     padding-left: 10px;
     padding-right: 10px;
 }
-#dirbrowser { list-style-type: none; margin: 0; padding: 0; }
-#dirbrowser li { margin: 3px; padding: 0em 0.4em; font-size: 1.2em; }
+ul.dirbrowser { list-style-type: none; margin: 0; padding: 0; }
+ul.dirbrowser li { margin: 3px; padding: 0em 0.4em; font-size: 1.2em; }
 
 div.remote-filebrowser {
   overflow-x: auto;
