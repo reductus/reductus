@@ -16,7 +16,7 @@ import {sha1} from './libraries.js';
 import {template_editor_url} from './libraries.js';
 import {filebrowser} from './filebrowser.js';
 import {make_fieldUI} from './fieldUI.js';
-import { plot } from './plot.js';
+import { create_instance as create_plotPanel } from './plot.js';
 
 editor.instruments = instruments;
 
@@ -432,6 +432,8 @@ function compare_in_template(to_compare, template) {
     });
 }
 
+let plotPanel = create_plotPanel('#plotdiv');
+
 editor.show_plots = function(results) {
   var new_plotdata;
   if (results.length == 0 || results[0] == null || results[0].values.length == 0) { 
@@ -452,29 +454,32 @@ editor.show_plots = function(results) {
   }
 
     var active_plot;
-    d3.select("#plot_title").text("");
-    d3.select("#plotdiv").on("mouseover.setRawHandler", function() {
-      d3.select("body").on("keydown.triggerRawDump", function() {
-        if (d3.event.key.toLowerCase() == "r") {
-          console.log(results);
-        }
-      })
-    });
+    //d3.select("#plot_title").text("");
+    // d3.select("#plotdiv").on("mouseover.setRawHandler", function() {
+    //   d3.select("body").on("keydown.triggerRawDump", function() {
+    //     if (d3.event.key.toLowerCase() == "r") {
+    //       console.log(results);
+    //     }
+    //   })
+    // });
     if (new_plotdata == null) {
-      active_plot = null;
-      d3.select("#plotdiv").selectAll("svg, div").remove();
-      d3.select("#plotdiv").classed("plot", false);
-      d3.select("#plotdiv").append("div")
-        //.style("position", "absolute")
-        .style("top", "0px")
-        .style("text-align", "center")
-        .append("h1").html("&#8709;")
+      window.plotPanel = plotPanel;
+      plotPanel.setPlotData({type: 'null'});
+      // active_plot = null;
+      // d3.select("#plotdiv").selectAll("svg, div").remove();
+      // d3.select("#plotdiv").classed("plot", false);
+      // d3.select("#plotdiv").append("div")
+      //   //.style("position", "absolute")
+      //   .style("top", "0px")
+      //   .style("text-align", "center")
+      //   .append("h1").html("&#8709;")
     }
     else if (new_plotdata.type == '1d') {
       active_plot = this.show_plots_1d(new_plotdata);
     }
     else if (new_plotdata.type == 'nd') {
-      active_plot = this.show_plots_nd(new_plotdata);
+      plotPanel.setPlotData(new_plotdata);
+      //active_plot = this.show_plots_nd(new_plotdata);
     }
     else if (new_plotdata.type == '2d') {
       active_plot = this.show_plots_2d(new_plotdata);
