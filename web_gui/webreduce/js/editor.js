@@ -461,8 +461,8 @@ editor.show_plots = function(results) {
     //   })
     // });
     if (new_plotdata == null) {
-      window.plotPanel = plotPanel;
-      plotPanel.setPlotData({type: 'null'});
+      window.plotter = plotter;
+      plotter.instance.setPlotData({type: 'null'});
       // active_plot = null;
       // d3.select("#plotdiv").selectAll("svg, div").remove();
       // d3.select("#plotdiv").classed("plot", false);
@@ -476,7 +476,7 @@ editor.show_plots = function(results) {
       active_plot = this.show_plots_1d(new_plotdata);
     }
     else if (new_plotdata.type == 'nd') {
-      plotPanel.setPlotData(new_plotdata);
+      plotter.instance.setPlotData(new_plotdata);
       //active_plot = this.show_plots_nd(new_plotdata);
     }
     else if (new_plotdata.type == '2d') {
