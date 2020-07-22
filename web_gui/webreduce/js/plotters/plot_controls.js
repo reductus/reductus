@@ -1,5 +1,15 @@
 let template = `
 <div class="plot-controls">
+  <label v-if="plotnumber.show">
+    dataset
+    <input 
+      type="number"
+      v-model="plotnumber.value"
+      :max="plotnumber.max"
+      min="0"
+      @change="plotNumberChange(plotnumber.value)"
+    />
+  </label>
   <template v-for="(axis, axis_name) in axes">
     <label v-if="axis.coord.show || axis.transform.show">
       {{axis_name}}
@@ -35,7 +45,19 @@ let template = `
         oldchange="$emit('settingChange', setting_name, setting.value)"/>
     </label>
   </template>
-  <button @click="$emit('downloadSVG')">&darr; svg</button> 
+  <button @click="$emit('downloadSVG')">&darr; svg</button>
+  <label v-if="colormap.show">
+    colormap
+    <select
+      class="colormap-select"
+      v-model="colormap.value"
+      @change="colormapChange(colormap.value)"
+      >
+      <option v-for="opt in colormap.options">
+        {{opt}}
+      </option>
+    </select>
+  </label>
 </div>
 `
 
@@ -99,6 +121,10 @@ export const PlotControls = {
       }
     },
     settings: {
+      grid: {
+        value: true,
+        show: false
+      },
       errorbars: {
         value: true,
         show: true
@@ -111,6 +137,16 @@ export const PlotControls = {
         value: true,
         show: true
       }
+    },
+    colormap: {
+      show: false,
+      value: 'jet',
+      options: ['jet']
+    },
+    plotnumber: {
+      show: false,
+      value: 0,
+      max: 0
     }
   }),
   methods: {

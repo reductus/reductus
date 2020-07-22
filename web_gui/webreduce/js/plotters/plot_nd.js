@@ -1,6 +1,6 @@
 import { d3, extend, xyChart } from '../libraries.js';
 
-export function showPlotsND(plotdata, plot_controls, target) {
+export function showPlotsND(plotdata, plot_controls, target, old_plot) {
   var plotdata = merge_nd_plotdata(plotdata);
   var options = {
     series: [],
@@ -56,13 +56,20 @@ export function showPlotsND(plotdata, plot_controls, target) {
   mychart.zoomRect(true);
   app.callbacks.resize_center = mychart.autofit;
 
+  plot_controls.plotnumber.show = false;
+  plot_controls.settings.grid.show = false;
+  plot_controls.settings.errorbar.show = true;
+  plot_controls.settings.point.show = true;
+  plot_controls.settings.line.show = true;
+  plot_controls.colormap.show = false;
+
+
   plot_controls.settingChange = function(setting_name, value) { 
     var o = mychart.options();
     let opt_name = 'show_' + setting_name;
     o[opt_name] = value;
     mychart.options(o).update();
   }
-
 
   plot_controls.coordChange = function(axis, coord) {
     xcol = (axis == 'x') ? coord : xcol;

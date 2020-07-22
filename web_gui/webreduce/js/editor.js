@@ -481,7 +481,7 @@ editor.show_plots = function(results) {
       active_plot = this.show_plots_2d(new_plotdata);
     }
     else if (new_plotdata.type == '2d_multi') {
-      active_plot = this.show_plots_2d_multi(new_plotdata);
+      plotter.instance.setPlotData(new_plotdata);
     }
     else if (new_plotdata.type == 'params') {
       active_plot = this.show_plots_params(new_plotdata);

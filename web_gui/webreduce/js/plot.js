@@ -1,6 +1,7 @@
 import { Vue } from './libraries.js';
 import { PlotControls } from './plotters/plot_controls.js';
 import { showPlotsND } from './plotters/plot_nd.js';
+import { showPlots2dMulti } from './plotters/plot_2d.js'
 import { download } from './main.js';
 
 const plotter = {};
@@ -24,6 +25,7 @@ let template = `
 
 const plotters = {
   'nd': showPlotsND,
+  '2d_multi': showPlots2dMulti,
   'null': (data, controls, plotdiv) => { plotdiv.innerHTML="<div><h1 style=\"text-align:center;\">&#8709</h1></div>" }
 };
 
@@ -71,9 +73,10 @@ plotter.create_instance = function(target_id) {
     }),
     methods: {
       async setPlotData(plotdata) {
+        let typeChange = (this.type != plotdata.type);
         this.type = plotdata.type;
         //await this.$nextTick();
-        this.active_plot = plotters[plotdata.type](plotdata, this.$refs.controls, this.$refs.plotdiv);
+        this.active_plot = plotters[plotdata.type](plotdata, this.$refs.controls, this.$refs.plotdiv, this.active_plot);
       }
     }
   }).$mount(target);

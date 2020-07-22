@@ -85,45 +85,31 @@ function add_sample_description(target, file_objs) {
   });
 }
   
-function add_viewer_link(target, file_objs) {
-  var jstree = target.jstree(true);
-  var to_decorate = jstree.get_json("#", {"flat": true})
-    .filter(function(leaf) { 
-      return (leaf.li_attr && 
-              'filename' in leaf.li_attr && 
-              'source' in leaf.li_attr) 
-      })
-  to_decorate.forEach(function(leaf, i) {
-    var fullpath = leaf.li_attr.filename;
-    var datasource = leaf.li_attr.source;
-    var link;
-    var base_path;
-    if (datasource == "ncnr") {
-      link = "<a href=\"https://ncnr.nist.gov/ncnrdata/view/nexus-hdf-viewer.html";
-      base_path = "";
+function add_viewer_link(node_list, leaf_list, node_parents, file_objs) {
+  const viewer_link = {
+    "ncnr": "https://ncnr.nist.gov/ncnrdata/view/nexus-zip-viewer.html",
+    "ncnr_DOI": "https://ncnr.nist.gov/ncnrdata/view/nexus-zip-viewer.html",
+    "charlotte": "https://charlotte.ncnr.nist.gov/ncnrdata/view/nexus-zip-viewer.html"
+  }
+
+  for (let leaf of leaf_list) {
+    let fileinfo = leaf.attributes.fileinfo;
+    let datasource = fileinfo.source;
+    let fullpath = fileinfo.filename;
+    if (!(NEXUS_REGEXP.test(fullpath) || NEXUZ_REGEXP.test(fullpath))) {
+      continue
     }
-    else if (datasource == "ncnr_DOI") {
-      link = "<a href=\"https://ncnr.nist.gov/ncnrdata/view/nexus-hdf-viewer.html";
-      base_path = "ncnrdata";
+    if (viewer_link[datasource]) {
+      if (datasource == "ncnr_DOI") { fullpath = "ncnrdata" + fullpath; }
+      let pathsegments = fullpath.split("/");
+      let pathlist = pathsegments.slice(0, pathsegments.length-1).join("+");
+      let filename = pathsegments.slice(-1);
+      let viewer = viewer_link[datasource];
+      let hdf_or_zip = (NEXUS_REGEXP.test(fullpath) ? viewer.replace("-zip-", "-hdf-") : viewer);
+      let link = `<a href="${hdf_or_zip}?pathlist=${pathlist}&filename=${filename}" target="_blank" style="text-decoration:none;">&#9432;</a>`;
+      leaf.text += link; 
     }
-    else if (datasource == "charlotte") {
-      link = "<a href=\"https://charlotte.ncnr.nist.gov/ncnrdata/view/nexus-hdf-viewer.html";
-      base_path = "";
-    }
-    else {
-      return
-    }
-    var pathsegments = (base_path + fullpath).split("/");
-    var pathlist = pathsegments.slice(0, pathsegments.length-1).join("+");
-    var filename = pathsegments.slice(-1);
-    
-    var link = "<a href=\"https://ncnr.nist.gov/ncnrdata/view/nexus-hdf-viewer.html";
-    link += "?pathlist=" + pathlist;
-    link += "&filename=" + filename;
-    link += "\" style=\"text-decoration:none;\">&#9432;</a>";
-    var leaf_actual = jstree._model.data[leaf.id];
-    leaf_actual.text += link;
-  })
+  }
 }
   
 instrument.decorators = [add_viewer_link];
