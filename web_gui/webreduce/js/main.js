@@ -77,6 +77,30 @@ window.onbeforeunload = function (e) {
   return msg;
 };
 
+export const download = (function () {
+  var a = document.createElement("a");
+  document.body.appendChild(a);
+  a.style = "display: none";
+  a.id = "savedata";
+  return function (data, fileName) {
+    var blob = (data instanceof Blob) ? data : new Blob([data], {type: "text/plain"});
+    // IE 10 / 11 
+    if (window.navigator.msSaveOrOpenBlob) { 
+      window.navigator.msSaveOrOpenBlob(blob, fileName); 
+    } else {
+      var url = window.URL.createObjectURL(blob);
+      a.href = url;
+      a.download = fileName;
+      a.target = "_blank";
+      //window.open(url, '_blank', fileName);
+      a.click();
+      setTimeout(function() { window.URL.revokeObjectURL(url) }, 1000);
+    }
+    // cleanup: this seems to break things!
+    //document.body.removeChild(a);
+  };
+}());
+
 window.onpopstate = function(e) {
   // called by load on Safari with null state, so be sure to skip it.
   //if (e.state) {
@@ -148,31 +172,6 @@ window.onload = function() {
       direction: 'vertical'
     })
     app.vertical_layout = layout;
-
-    //app.layout = layout;
-    app.download = (function () {
-      var a = document.createElement("a");
-      document.body.appendChild(a);
-      a.style = "display: none";
-      a.id = "savedata";
-      return function (data, fileName) {
-        var blob = (data instanceof Blob) ? data : new Blob([data], {type: "text/plain"});
-        // IE 10 / 11 
-        if (window.navigator.msSaveOrOpenBlob) { 
-          window.navigator.msSaveOrOpenBlob(blob, fileName); 
-        } else {
-          var url = window.URL.createObjectURL(blob);
-          a.href = url;
-          a.download = fileName;
-          a.target = "_blank";
-          //window.open(url, '_blank', fileName);
-          a.click();
-          setTimeout(function() { window.URL.revokeObjectURL(url) }, 1000);
-        }
-        // cleanup: this seems to break things!
-        //document.body.removeChild(a);
-      };
-    }());
     
     var api_exception_dialog = $("div#api_exception").dialog({autoOpen: false, width: 600});
     var upload_dialog = $("#upload_template").dialog({autoOpen: false, width: 400});
@@ -201,7 +200,7 @@ window.onload = function() {
               hide_menu();
               var filename = prompt("Save template as:", "template.json");
               if (filename == null) {return} // cancelled
-              app.download(JSON.stringify(editor._active_template, null, 2), filename);
+              download(JSON.stringify(editor._active_template, null, 2), filename);
             })
           )
           .append($("<li><div>Upload</div></li>")
@@ -331,7 +330,6 @@ window.onload = function() {
     });
     editor.create_instance("bottom_panel");
     filebrowser.create_instance("filebrowser");
-    
     plotter.create_instance("plotdiv");
     
     var list_datasources = server_api.list_datasources()

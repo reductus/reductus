@@ -6,6 +6,7 @@ let jquery = window.jQuery;
 export {jquery};
 
 import 'https://unpkg.com/d3@5.16.0/dist/d3.min.js';
+//import 'https://unpkg.com/d3@4.13.0/build/d3.min.js';
 let d3 = window.d3;
 export {d3};
 

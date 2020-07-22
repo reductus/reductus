@@ -2,7 +2,7 @@
 // require(d3, dataflow)
 export var editor = {};
 
-import {app} from './main.js';
+import { app, download } from './main.js';
 import {server_api} from './server_api/api_msgpack.js';
 import {dependencies} from './deps.js';
 //import {Sha1} from './sha1.es.js';
@@ -272,7 +272,7 @@ function module_clicked_single() {
     var datasets_in = im[data_to_show];
     var field_inputs = module_def.inputs
       .filter(function(d) {return /\.params$/.test(d.datatype)})
-      .map(function(d) {return im[d.id]})
+      .map(function(d) {return im[d.id]});
     field_inputs.forEach(function(d) {
       d.values.forEach(function(v) {
         extend(true, fields_in, v.params);
@@ -305,7 +305,6 @@ function module_clicked_single() {
           datasets_in: datasets_in,
           active_module: active_module,
           add_interactors: add_interactors,
-          active_plot: editor._active_plot
         }
         var fieldUI = fieldUImaker.call(context);
         var auto_accept = function() {
@@ -461,7 +460,6 @@ editor.show_plots = function(results) {
     //   })
     // });
     if (new_plotdata == null) {
-      window.plotter = plotter;
       plotter.instance.setPlotData({type: 'null'});
       // active_plot = null;
       // d3.select("#plotdiv").selectAll("svg, div").remove();
@@ -1027,7 +1025,7 @@ editor.show_plots_1d = function(plotdata) {
           var output = serializer.serializeToString(svg);
           var filename = prompt("Save svg as:", "plot.svg");
           if (filename == null) {return} // cancelled
-          app.download(output, filename);
+          download(output, filename);
         });
   }
   
@@ -1366,7 +1364,7 @@ var export_handlers = {
     
   download: function(result, filename) {
     if (result.values.length == 1) {
-      app.download(result.values[0].value, filename);
+      download(result.values[0].value, filename);
     }
     else {
       var filect = 0;
@@ -1386,7 +1384,7 @@ var export_handlers = {
         }
         else { 
           writer.close(function(blob) {
-            app.download(blob, filename + ".zip");
+            download(blob, filename + ".zip");
           });
         }
       }

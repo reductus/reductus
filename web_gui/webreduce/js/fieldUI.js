@@ -1,5 +1,6 @@
 import { editor } from './editor.js';
 import { filebrowser } from './filebrowser.js';
+import { plotter } from './plot.js';
 // now a global...
 import { d3 } from './libraries.js';
 import {
@@ -110,7 +111,7 @@ var indexUI = function () {
 
   // add interactors:
   if (this.add_interactors) {
-    var active_plot = this.active_plot;
+    var active_plot = plotter.instance.active_plot;
     var drag_instance = d3.drag();
     active_plot.svg.call(drag_instance);
     var selector = new rectangleSelect(drag_instance, null, null, d3);
@@ -310,7 +311,7 @@ var scaleUI = function () {
   var unscaled_data = [];
 
   if (this.add_interactors) {
-    var active_plot = this.active_plot;
+    var active_plot = plotter.instance.active_plot;
     d3.selectAll("#plotdiv .dot").on("click", null); // clear previous handlers
     d3.selectAll("#plotdiv svg g.series").each(function (d, i) {
       // i is index of dataset
@@ -407,7 +408,7 @@ var rangeUI = function() {
     .property("value", function(d,i) { return (datum.value) ? datum.value[i] : null })
         
   if (this.add_interactors) {
-    var active_plot = this.active_plot;
+    var active_plot = plotter.instance.active_plot;
     if (axis == 'x' && active_plot &&  active_plot.interactors) {
       // add x-range interactor
       var xrange = active_plot.x().domain();
@@ -699,7 +700,7 @@ var patchUI = function() {
   var op = "replace";
 
   if (this.add_interactors) {
-    var active_plot = this.active_plot;
+    var active_plot = plotter.instance.active_plot;
     cols = active_plot.selectAll("th.colHeader").data();
     key_col = cols.indexOf(key);
     active_plot.selectAll(".metadata-row")
