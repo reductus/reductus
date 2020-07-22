@@ -1,0 +1,81 @@
+import { Vue } from './libraries.js';
+import { PlotControls } from './plotters/plot_controls.js';
+import { showPlotsND } from './plotters/plot_nd.js';
+import { download } from './main.js';
+
+const plotter = {};
+export { plotter };
+
+let template = `
+<div class="plot-panel"
+  style="flex:1;display:flex;flex-direction:column;">
+  <div id="plotdiv" class="plotdiv" ref="plotdiv" style="flex:1;">
+  </div>
+  <plot-controls
+    ref="controls"
+    v-show="type != 'null'"
+    style="min-height:1em;"
+    @transformChange="transformChange"
+    @settingChange="settingChange"
+    @downloadSVG="downloadSVG"
+  ></plot-controls>
+</div>
+`;
+
+const plotters = {
+  'nd': showPlotsND,
+  'null': (data, controls, plotdiv) => { plotdiv.innerHTML="<div><h1 style=\"text-align:center;\">&#8709</h1></div>" }
+};
+
+export const PlotPanel = {
+  name: 'plot-panel',
+  components: { PlotControls },
+  data: () => ({
+    type: 'null',
+    instances: {},
+    active_plot: null
+  }),
+  methods: {
+    transformChange(axis, new_transform) {
+      console.log(`changing transform for axis ${axis} to ${new_transform}`);
+    },
+    settingChange(name, value){
+      console.log(`setting change: ${name} to ${value}`);
+    },
+    downloadSVG() {
+      let svg = this.active_plot.export_svg();
+      let serializer = new XMLSerializer();
+        var output = serializer.serializeToString(svg);
+        var filename = prompt("Save svg as:", "plot.svg");
+        if (filename == null) { return } // cancelled
+        download(output, filename);
+    }
+  },
+  template  
+};
+
+
+plotter.plot = function(plotdata) {
+  this.instance.setPlotData(plotdata);
+}
+
+plotter.create_instance = function(target_id) {
+  let target = document.getElementById(target_id);
+  const PlotPanelClass = Vue.extend(PlotPanel);
+  this.dothing = function() {console.log('doing the thing');}
+  plotter.instance = new PlotPanelClass({
+    data: () => ({
+      type: 'null',
+      instances: {},
+      active_plot: null
+    }),
+    methods: {
+      async setPlotData(plotdata) {
+        this.type = plotdata.type;
+        //await this.$nextTick();
+        this.active_plot = plotters[plotdata.type](plotdata, this.$refs.controls, this.$refs.plotdiv);
+      }
+    }
+  }).$mount(target);
+}
+
