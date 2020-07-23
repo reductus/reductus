@@ -9,11 +9,14 @@ def apply_rescale(data, scale, dscale):
     I, varI = err1d.mul(data.v, data.dv**2, scale, dscale**2)
     data.v, data.dv = I, np.sqrt(varI)
 
-# from https://stackoverflow.com/questions/31174295/getattr-and-setattr-on-nested-subobjects-chained-properties  
-def rgetattr(obj, attr, *args):
-    def _getattr(obj, attr):
-        return getattr(obj, attr, *args)
-    return functools.reduce(_getattr, [obj] + attr.split('.'))
+# from https://stackoverflow.com/questions/31174295/getattr-and-setattr-on-nested-subobjects-chained-properties/54547158#54547158
+def rgetattr(obj, path, *default):
+    try:
+        return functools.reduce(getattr, path.split('.'), obj)
+    except AttributeError:
+        if default:
+            return default[0]
+        raise
 
 def apply_intensity_norm(data, base, align_by='angular_resolution'):
     assert data.normbase == base.normbase, "can't mix time and monitor normalized data"
