@@ -1110,7 +1110,7 @@ def subtract_background_field(data, bfparams, epsD=None, epsD_var=None, scale=No
     return data
 
 @module
-def divide_intensity(data, base):
+def divide_intensity(data, base, align_by="angular_resolution"):
     """
     Scale data by incident intensity.
 
@@ -1123,6 +1123,10 @@ def divide_intensity(data, base):
 
     base (refldata) : intensity data
 
+    align_by (opt:angular_resolution|slit1.x|sample.angle_x) : data column to align on 
+    (for regular slit scans, this should be "angular_resolution", for Candor "slit1.x",
+    and for MAGIK horizontal, "sample.angle_x")
+
     **Returns**
 
     output (refldata) : reflected intensity
@@ -1132,7 +1136,7 @@ def divide_intensity(data, base):
     if base is not None:
         from .scale import apply_intensity_norm
         data = copy(data)
-        apply_intensity_norm(data, base)
+        apply_intensity_norm(data, base, align_by=align_by)
     return data
 
 
