@@ -1634,6 +1634,7 @@ def magik_horizontal(filelist=None,
     output (refldata[]): All entries of all files in the list.
 
     | 2020-07-21 Brian Maranville
+    | 2020-07-23 Brian Maranville Added a flag to the loader, to control divide_intensity align_by
     """
     from .load import url_load_list
     from .magik_horizontal import load_entries
