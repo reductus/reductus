@@ -1573,6 +1573,96 @@ def super_load(filelist=None,
 
 @cache
 @module
+def magik_horizontal(filelist=None,
+                    detector_correction=False,
+                    monitor_correction=False,
+                    intent='auto',
+                    Qz_basis='actual',
+                    sample_width=None,
+                    base='auto'):
+    r"""
+    Load a list of nexus files from the NCNR data server.
+
+    *Qz_basis* uses one of the following values:
+
+        **actual**
+            calculates Qx and Qz as (x,z)-components of
+            $(\vec k_{\text{out}} - \vec k_\text{in})$ in sample coordinates,
+        **detector**
+            ignores the sample angle and calculates Qz
+            as $(4\pi/\lambda \sin(\theta_\text{detector}/2))$,
+        **sample**
+            ignores the detector angle and calculates Qz
+            as $(4\pi/\lambda \sin(\theta_\text{sample}))$
+        **target**
+            uses the user-supplied Qz_target values
+
+    **Inputs**
+
+    filelist (fileinfo[]): List of files to open.
+
+    detector_correction {Apply detector deadtime correction} (bool)
+    : Which deadtime constant to use for detector deadtime.
+
+    monitor_correction {Apply monitor deadtime correction} (bool)
+    : Which deadtime constant to use for monitor deadtime.
+
+    intent (opt:auto|specular|background+\|background-\|intensity|rock sample|rock detector|rock qx|scan)
+    : Measurement intent (specular, background+, background-, slit, rock),
+    auto or infer.  If intent is 'scan', then use the first scanned variable.
+
+    Qz_basis (opt:actual|detector|sample|target)
+    : How to calculate Qz from instrument angles.
+
+    sample_width {Sample width (mm)} (float?)
+    : Width of the sample along the beam direction in mm, used for
+    calculating the effective resolution when the sample is smaller
+    than the beam.  Leave blank to use value from data file.
+
+    base {Normalize by} (opt:auto|monitor|time|roi|power|none)
+    : how to convert from counts to count rates
+
+    **Returns**
+
+    output (refldata[]): All entries of all files in the list.
+
+    | 2020-07-21 Brian Maranville
+    """
+    from .load import url_load_list
+    from .magik_horizontal import load_entries
+    
+    # Note: Fileinfo is a structure with
+    #     { path: "location/on/server", mtime: timestamp }
+
+    # Note: divergence is required for join, so always calculate it.  If you
+    # really want it optional then use:
+    #
+    #  auto_divergence {Calculate dQ} (bool)
+    #    : Automatically calculate the angular divergence of the beam.
+    #
+    auto_divergence = True
+
+    # TODO: sample_width is ignored if datafile defines angular_divergence
+
+    datasets = []
+    for data in url_load_list(filelist, loader=load_entries):
+        data.Qz_basis = Qz_basis
+        if intent not in [None, 'auto']:
+            data.intent = intent
+        if auto_divergence:
+            data = divergence(data, sample_width)
+        if detector_correction:
+            data = detector_dead_time(data, None)
+        if monitor_correction:
+            data = monitor_dead_time(data, None)
+        data = normalize(data, base=base)
+        #print "data loaded and normalized"
+        datasets.append(data)
+
+    return datasets
+
+@cache
+@module
 def super_load_sorted(filelist=None,
                       detector_correction=False,
                       monitor_correction=False,
