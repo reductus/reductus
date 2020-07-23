@@ -25,7 +25,7 @@ def unescape(s):
 
 def get_target(doi=NCNR_DATA_DOI):
     # an easier way to get the target value... not tested extensively
-    url = "http://dx.doi.org/%s" % (doi,)
+    url = "https://dx.doi.org/%s" % (doi,)
     file_pointer = urllib2.urlopen(url)
     return file_pointer.url
 

@@ -1191,7 +1191,7 @@ def loadMAGIKPSD_helper(file_obj, name, path, collapse=True, collapse_axis='y', 
 
 def test():
     from dataflow import fetch
-    fetch.DATA_SOURCES = [{"name": "ncnr", "url": "http://ncnr.nist.gov/pub/"}]
+    fetch.DATA_SOURCES = [{"name": "ncnr", "url": "https://ncnr.nist.gov/pub/"}]
     fileinfo = {
         'mtime': 1457795231.0,
         'path': 'ncnrdata/cgd/201603/21237/data/wp10v132.nxz.cgd',

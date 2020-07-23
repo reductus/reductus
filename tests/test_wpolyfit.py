@@ -2,7 +2,7 @@
 Tests for wpolyfit.
 
 Test cases are taken from the NIST Statistical Reference Datasets
-   http://www.itl.nist.gov/div898/strd/
+   https://www.itl.nist.gov/div898/strd/
 
 These problems are chosen to challenge statistical software, and
 cannot be expected to be matched precisely in limited precision

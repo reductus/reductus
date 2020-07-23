@@ -77,7 +77,7 @@ def setup_fetch():
         },
         {
             "name": "ncnr",
-            "url": "http://ncnr.nist.gov/pub/",
+            "url": "https://ncnr.nist.gov/pub/",
             "start_path": "",
         },
         {

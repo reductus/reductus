@@ -141,7 +141,7 @@ References
 
 .. [Lebigot], Lebigot, Eric O. (2015).
     *Uncertainties: a Python package for calculations with uncertainties*,
-    `http://pythonhosted.org/uncertainties/`_.
+    `https://pythonhosted.org/uncertainties/`_.
 
 """
 from __future__ import division, print_function
@@ -229,7 +229,7 @@ def zero_insert(A, index):
     Insert zero rows/columns into matrix A at each index.
 
     Solution by Warren Weckesser, on
-    `stack overflow <http://stackoverflow.com/questions/26864619/inserting-rows-and-columns-into-a-numpy-array/26865792#26865792>`_.
+    `stack overflow <https://stackoverflow.com/questions/26864619/inserting-rows-and-columns-into-a-numpy-array/26865792#26865792>`_.
     """
     n_b = A.shape[0] + len(index)
     not_index = np.array([k for k in range(n_b) if k not in index])
