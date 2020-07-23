@@ -18,9 +18,12 @@ def rgetattr(obj, path, *default):
             return default[0]
         raise
 
-def apply_intensity_norm(data, base, align_by='angular_resolution'):
+def apply_intensity_norm(data, base, align_by=None):
     assert data.normbase == base.normbase, "can't mix time and monitor normalized data"
 
+    if align_by is None:
+        # use the one suggested by the data structure, or error out if missing.
+        align_by = getattr(data, 'align_intensity')
     # use "slit1.x" for 'align_by' with Candor data
     data_x, base_x = rgetattr(data, align_by), rgetattr(base, align_by)
     

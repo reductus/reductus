@@ -795,6 +795,8 @@ class ReflData(Group):
     mask = None
     #: Computed 1-sigma angular resolution in degrees
     angular_resolution = None  # type: np.ndarray
+    #: Hint for axis to use for aligning data with intensity scans:
+    align_intensity = 'angular_resolution'
     #: For background scans, the choice of Qz for the
     #: points according to theta (sample angle), 2theta (detector angle)
     #: or qz (Qz value of background computed from sample and detector angle)

@@ -1110,12 +1110,17 @@ def subtract_background_field(data, bfparams, epsD=None, epsD_var=None, scale=No
     return data
 
 @module
-def divide_intensity(data, base, align_by="angular_resolution"):
+def divide_intensity(data, base):
     """
     Scale data by incident intensity.
 
-    Data is matched according to angular resolution, assuming all data with
-    the same angular resolution was subject to the same incident intensity.
+    Data is matched to the incident scan according to the measurement type:
+    By default it is aligned by the angular resolution of both scans,
+    assuming all data with the same angular resolution was subject to the
+    same incident intensity.
+
+    For Candor data it is aligned by the slit 1 opening (slit.x),
+    and for MAGIK horizontal mode it is aligned by the incident angle (sample.angle_x)
 
     **Inputs**
 
@@ -1123,20 +1128,18 @@ def divide_intensity(data, base, align_by="angular_resolution"):
 
     base (refldata) : intensity data
 
-    align_by (opt:angular_resolution|slit1.x|sample.angle_x) : data column to align on 
-    (for regular slit scans, this should be "angular_resolution", for Candor "slit1.x",
-    and for MAGIK horizontal, "sample.angle_x")
-
     **Returns**
 
     output (refldata) : reflected intensity
 
-    2015-12-17 Paul Kienzle
+    | 2015-12-17 Paul Kienzle
+    | 2020-07-23 Brian Maranville add align_intensity flag to data to match incident and reflected points
+
     """
     if base is not None:
         from .scale import apply_intensity_norm
         data = copy(data)
-        apply_intensity_norm(data, base, align_by=align_by)
+        apply_intensity_norm(data, base)
     return data
 
 

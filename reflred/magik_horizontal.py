@@ -13,9 +13,16 @@ def load_entries(filename, file_obj=None, entries=None):
                               meta_only=False, entry_loader=MagikHorizontal)
 
 class MagikHorizontal(NCNRNeXusRefl):
+    """
+    MAGIK horizontal-mode data entry.
+
+    See :class:`refldata.ReflData` for details.
+    """
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.geometry = "horizontal"
+        self.align_intensity = "sample.angle_x"
 
     def load(self, entry):
         super().load(entry)
