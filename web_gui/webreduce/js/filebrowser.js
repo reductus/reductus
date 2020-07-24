@@ -78,7 +78,7 @@ function file_objs_to_tree(file_objs, categories, datasource) {
         let subindex = branch.children.findIndex(c => (c.id == id));
         if (subindex < 0) {
           // not found... add new branch
-          let subbranch = {'id': id, text: category, children: []};
+          let subbranch = {'id': id, text: category, metadata: {}, attributes: {}, children: []};
           subindex = branch.children.push(subbranch) - 1;
           branch = subbranch;
         }
@@ -90,7 +90,7 @@ function file_objs_to_tree(file_objs, categories, datasource) {
       category = gen.next().value; // last one...
       id = JSON.stringify([datasource,p,entryname,entry.mtime]);
       let fileinfo = {"filename": p, "entryname": entryname, "mtime": entry.mtime, "source": datasource};
-      let leaf = {id, text: category, attributes: {entry: true, fileinfo}}
+      let leaf = {id, text: category, metadata: {fileinfo}, attributes: {entry: true}}
       branch.children.push(leaf);
     }
   }

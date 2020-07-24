@@ -38,5 +38,4 @@ instrument.default_categories = [
   [["name"]]
 ];
 instrument.categories = extend(true, [], instrument.default_categories);  
-
 instrument.decorators = [];

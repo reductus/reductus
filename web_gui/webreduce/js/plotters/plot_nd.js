@@ -58,8 +58,8 @@ export function showPlotsND(plotdata, plot_controls, target, old_plot) {
 
   plot_controls.plotnumber.show = false;
   plot_controls.settings.grid.show = false;
-  plot_controls.settings.errorbar.show = true;
-  plot_controls.settings.point.show = true;
+  plot_controls.settings.errorbars.show = true;
+  plot_controls.settings.points.show = true;
   plot_controls.settings.line.show = true;
   plot_controls.colormap.show = false;
 

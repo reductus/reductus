@@ -1,4 +1,5 @@
 import {extend} from '../libraries.js';
+import { add_viewer_link, add_counts } from './decorators.js';
 const instrument = {};
 export default instrument;
 
@@ -49,79 +50,5 @@ instrument.default_categories = [
   [["analysis.intent"]],
   [["run.experimentScanID"]]
 ];
-instrument.categories = extend(true, [], instrument.default_categories);  
-
-function add_sample_description(target, file_objs) {
-  var jstree = target.jstree(true);
-  //var path = webreduce.getCurrentPath(target.parent());
-  var to_decorate = jstree.get_json("#", {"flat": true})
-    .filter(function(leaf) { 
-      return (leaf.li_attr && 
-              'filename' in leaf.li_attr &&
-              leaf.li_attr.filename in file_objs &&
-              'entryname' in leaf.li_attr &&
-              'source' in leaf.li_attr &&
-              'mtime' in leaf.li_attr) 
-      })
-
-  to_decorate.forEach(function(leaf, i) {
-    var filename = leaf.li_attr.filename;
-    var file_obj = file_objs[filename];
-    var entry = file_obj.values.filter(function(f) {return f.entry == leaf.li_attr.entryname});
-    if (entry && entry[0]) {
-      var e = entry[0];
-      if ('sample.description' in e) {
-        leaf.li_attr.title = e['sample.description'];
-        var parent_id = leaf.parent;
-        parent = jstree._model.data[parent_id];
-        parent.li_attr.title = e['sample.description'];
-      }
-    }
-  });
-}
-
-
-function add_counts(node_list, leaf_list, node_parents, file_objs) {
-  for (let leaf of leaf_list) {
-    let fileinfo = leaf.attributes.fileinfo;
-    let filename = fileinfo.filename;
-    let file_obj = file_objs[filename];
-    var entry = file_obj.values.filter(function(f) {return f.entry == fileinfo.entryname});
-    if (entry && entry[0]) {
-      var e = entry[0];
-      //console.log(e, ('run.detcnt' in e && 'run.moncnt' in e && 'run.rtime' in e));
-      if ('run.detcnt' in e && 'run.moncnt' in e && 'run.rtime' in e) {
-        leaf.attributes.title = 't:' + e['run.rtime'] + ' det:' + e['run.detcnt'] + ' mon:' + e['run.moncnt'];
-      }
-    }
-  };
-}
-
-function add_viewer_link(node_list, leaf_list, node_parents, file_objs) {
-  const viewer_link = {
-    "ncnr": "https://ncnr.nist.gov/ncnrdata/view/nexus-zip-viewer.html",
-    "ncnr_DOI": "https://ncnr.nist.gov/ncnrdata/view/nexus-zip-viewer.html",
-    "charlotte": "https://charlotte.ncnr.nist.gov/ncnrdata/view/nexus-zip-viewer.html"
-  }
-
-  for (let leaf of leaf_list) {
-    let fileinfo = leaf.attributes.fileinfo;
-    let datasource = fileinfo.source;
-    let fullpath = fileinfo.filename;
-    if (!(NEXUS_REGEXP.test(fullpath) || NEXUZ_REGEXP.test(fullpath))) {
-      continue
-    }
-    if (viewer_link[datasource]) {
-      if (datasource == "ncnr_DOI") { fullpath = "ncnrdata" + fullpath; }
-      let pathsegments = fullpath.split("/");
-      let pathlist = pathsegments.slice(0, pathsegments.length-1).join("+");
-      let filename = pathsegments.slice(-1);
-      let viewer = viewer_link[datasource];
-      let hdf_or_zip = (NEXUS_REGEXP.test(fullpath) ? viewer.replace("-zip-", "-hdf-") : viewer);
-      let link = `<a href="${hdf_or_zip}?pathlist=${pathlist}&filename=${filename}" target="_blank" style="text-decoration:none;">&#9432;</a>`;
-      leaf.text += link; 
-    }
-  }
-}
-
+instrument.categories = extend(true, [], instrument.default_categories);
 instrument.decorators = [add_viewer_link, add_counts];

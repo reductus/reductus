@@ -1,4 +1,5 @@
 import {extend} from '../libraries.js';
+import { add_viewer_link } from './decorators.js';
 const instrument = {};
 export default instrument;
 
@@ -62,37 +63,4 @@ instrument.default_categories = [
   [["polarization"]]
 ];
 instrument.categories = extend(true, [], instrument.default_categories);
-
-function add_viewer_link(target, file_objs) {
-  var jstree = target.jstree(true);
-  var parents_decorated = {};
-  var to_decorate = jstree.get_json("#", {"flat": true})
-    .filter(function(leaf) { 
-      return (leaf.li_attr && 
-              'filename' in leaf.li_attr && 
-              'source' in leaf.li_attr) 
-      })
-  // for refl, this will return a list of entries, but
-  // we want to decorate the file that contains the entries.
-  to_decorate.forEach(function(leaf, i) {
-    var parent_id = leaf.parent;
-    // only add link once per file
-    if (parent_id in parents_decorated) { return }
-    var fullpath = leaf.li_attr.filename;
-    var datasource = leaf.li_attr.source;
-    if (["ncnr", "ncnr_DOI"].indexOf(datasource) < 0) { return }
-    if (datasource == "ncnr_DOI") { fullpath = "ncnrdata" + fullpath; }
-    var pathsegments = fullpath.split("/");
-    var pathlist = pathsegments.slice(0, pathsegments.length-1).join("+");
-    var filename = pathsegments.slice(-1);
-    var link = "<a href=\"http://ncnr.nist.gov/ipeek/nexus-zip-viewer.html";
-    link += "?pathlist=" + pathlist;
-    link += "&filename=" + filename;
-    link += "\" style=\"text-decoration:none;\">&#9432;</a>";
-    var parent_actual = jstree._model.data[parent_id];
-    parent_actual.text += link;
-    parents_decorated[parent_id] = true;
-  })
-}
-
 instrument.decorators = [add_viewer_link];

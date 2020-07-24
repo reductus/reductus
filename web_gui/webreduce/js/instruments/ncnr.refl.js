@@ -1,4 +1,5 @@
 import {extend} from '../libraries.js';
+import { add_viewer_link } from './decorators.js';
 const instrument = {};
 export default instrument;
 
@@ -67,7 +68,7 @@ function add_range_indicators(node_list, leaf_list, node_parents, file_objs) {
   
   // first set min and max for entries:
   for (let leaf of leaf_list) {
-    let fileinfo = leaf.attributes.fileinfo;
+    let fileinfo = leaf.metadata.fileinfo;
     var filename = fileinfo.filename;
     var file_obj = file_objs[filename];
     var entry = file_obj.values.filter(function(f) {return f.entry == fileinfo.entryname});
@@ -76,21 +77,21 @@ function add_range_indicators(node_list, leaf_list, node_parents, file_objs) {
       var xaxis = 'x'; // primary_axis[e.intent || 'specular'];
       if (!(get_refl_item(entry[0], xaxis))) { console.log(entry[0]); throw "error: no such axis " + xaxis + " in entry for intent " + e.intent }
       var extent = get_extent(get_refl_item(entry[0], xaxis));
-      leaf.attributes.range = extent;
+      leaf.metadata.range = extent;
       let node_id = leaf.id;
       for (var i=0; i<propagate_up_levels; i++) {
         var parent = node_parents[node_id];
         if (!parent) { break }
 
-        parent.attributes = parent.attributes || {};
-        if (parent.attributes.range != null) {
-          parent.attributes.range = [
-            Math.min(extent[0], parent.attributes.range[0]),
-            Math.max(extent[1], parent.attributes.range[1])
+        parent.metadata = parent.metadata || {};
+        if (parent.metadata.range != null) {
+          parent.metadata.range = [
+            Math.min(extent[0], parent.metadata.range[0]),
+            Math.max(extent[1], parent.metadata.range[1])
           ]
         }
         else {
-          parent.attributes.range = extent;
+          parent.metadata.range = extent;
         }
         node_id = parent.id;
       }
@@ -101,75 +102,17 @@ function add_range_indicators(node_list, leaf_list, node_parents, file_objs) {
   for (let node of node_list) {
     let parent = node_parents[node.id];
     if (!parent) {continue}
-    var l = (node.attributes || {}).range;
-    var p = (parent.attributes || {}).range;
+    var l = (node.metadata || {}).range;
+    var p = (parent.metadata || {}).range;
     if (l != null && p != null) {
       var range_icon = make_range_icon(parseFloat(p[0]), parseFloat(p[1]), parseFloat(l[0]), parseFloat(l[1]));
-      (node.attributes.right_decorators = node.attributes.right_decorators || []).push(range_icon);
+      (node.metadata.right_decorators = node.metadata.right_decorators || []).push(range_icon);
       node.text += range_icon;
     }
   }
 }
 
-function add_sample_description(target, file_objs) {
-  var jstree = target.jstree(true);
-  var to_decorate = jstree.get_json("#", {"flat": true})
-    .filter(function(leaf) { 
-      return (leaf.li_attr && 
-              'filename' in leaf.li_attr &&
-              leaf.li_attr.filename in file_objs &&
-              'entryname' in leaf.li_attr && 
-              'source' in leaf.li_attr &&
-              'mtime' in leaf.li_attr) 
-      })
-  to_decorate.forEach(function(leaf, i) {
-    var values = file_objs[leaf.li_attr.filename].values || [];
-    var entry = values.filter(function(f) {return f.entry == leaf.li_attr.entryname});
-    if (entry && entry[0]) {
-      var e = entry[0];
-      if ('sample' in e && 'description' in e.sample) {
-        var leaf_actual = jstree._model.data[leaf.id];
-        leaf_actual.li_attr.title = e.sample.description;
-        var parent_id = leaf.parent;
-        var parent = jstree._model.data[parent_id];
-        parent.li_attr.title = e.sample.description;
-      }
-    }
-  });
-}
-
-function add_viewer_link(node_list, leaf_list, node_parents, file_objs) {
-  var parents_decorated = new Set();
-  const viewer_link = {
-    "ncnr": "https://ncnr.nist.gov/ncnrdata/view/nexus-zip-viewer.html",
-    "ncnr_DOI": "https://ncnr.nist.gov/ncnrdata/view/nexus-zip-viewer.html",
-    "charlotte": "https://charlotte.ncnr.nist.gov/ncnrdata/view/nexus-zip-viewer.html"
-  }
-
-  for (let leaf of leaf_list) {
-    let parent = node_parents[leaf.id];
-    if (parent && parent.id && !(parents_decorated.has(parent.id))) {
-      let fileinfo = leaf.attributes.fileinfo;
-      let datasource = fileinfo.source;
-      let fullpath = fileinfo.filename;
-      if (viewer_link[datasource]) {
-        if (datasource == "ncnr_DOI") { fullpath = "ncnrdata" + fullpath; }
-        let pathsegments = fullpath.split("/");
-        let pathlist = pathsegments.slice(0, pathsegments.length-1).join("+");
-        let filename = pathsegments.slice(-1);
-        let viewer = viewer_link[datasource];
-        let hdf_or_zip = (NEXUS_REGEXP.test(fullpath) ? viewer.replace("-zip-", "-hdf-") : viewer);
-        let link = `<a href="${hdf_or_zip}?pathlist=${pathlist}&filename=${filename}" target="_blank" style="text-decoration:none;">&#9432;</a>`;
-        
-        parent.text += link;
-        parents_decorated.add(parent.id);
-      }
-    }
-  }
-}
-
 instrument.decorators = [add_range_indicators, add_viewer_link];//, add_sample_description];
-
 instrument.export_targets = [
   { 
     "id": "unpolarized_reflcalc",
