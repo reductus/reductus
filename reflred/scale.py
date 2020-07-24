@@ -1,4 +1,5 @@
 import numpy as np
+import functools
 
 from dataflow.lib import err1d
 from .util import extend
@@ -8,14 +9,24 @@ def apply_rescale(data, scale, dscale):
     I, varI = err1d.mul(data.v, data.dv**2, scale, dscale**2)
     data.v, data.dv = I, np.sqrt(varI)
 
+# from https://stackoverflow.com/questions/31174295/getattr-and-setattr-on-nested-subobjects-chained-properties/54547158#54547158
+def rgetattr(obj, path, *default):
+    try:
+        return functools.reduce(getattr, path.split('.'), obj)
+    except AttributeError:
+        if default:
+            return default[0]
+        raise
 
-def apply_intensity_norm(data, base):
+def apply_intensity_norm(data, base, align_by=None):
     assert data.normbase == base.normbase, "can't mix time and monitor normalized data"
 
-    if data.angular_resolution.ndim == 1:
-        data_x, base_x = data.angular_resolution, base.angular_resolution
-    else:
-        data_x, base_x = data.slit1.x, base.slit1.x
+    if align_by is None:
+        # use the one suggested by the data structure, or error out if missing.
+        align_by = getattr(data, 'align_intensity')
+    # use "slit1.x" for 'align_by' with Candor data
+    data_x, base_x = rgetattr(data, align_by), rgetattr(base, align_by)
+    
     S, varS = err1d.interp(data_x, base_x, base.v, base.dv**2)
     # Candor may have only one detector bank active, and so the other may
     # have zeros in it.  Ignore those channels.

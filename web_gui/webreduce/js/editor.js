@@ -420,9 +420,9 @@ editor.handle_module_clicked = function(d,i,current_group,clicked_elem) {
 }
 
 function compare_in_template(to_compare, template) {
-  var template = template || editor._active_template,
-      recalc_mtimes = $("#auto_reload_mtimes").prop("checked");
-      params_to_calc = to_compare.map(function(a) {
+  var template = template || editor._active_template;
+  let recalc_mtimes = $("#auto_reload_mtimes").prop("checked");
+  let params_to_calc = to_compare.map(function(a) {
         return {template: template, config: {}, node: a.node, terminal: a.terminal, return_type: "plottable"}
       });
   return editor.calculate(params_to_calc, recalc_mtimes)

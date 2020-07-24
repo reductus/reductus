@@ -59,6 +59,8 @@ class Candor(ReflData):
         super().__init__()
         nexus_common(self, entry, entryname, filename)
         self.geometry = 'vertical'
+        self.align_intensity = "slit1.x"
+
 
     def load(self, entry):
         #print(entry['instrument'].values())
