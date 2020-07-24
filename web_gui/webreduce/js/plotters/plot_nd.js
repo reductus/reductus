@@ -56,13 +56,14 @@ export function showPlotsND(plotdata, plot_controls, target, old_plot) {
   mychart.zoomRect(true);
   app.callbacks.resize_center = mychart.autofit;
 
-  plot_controls.plotnumber.show = false;
-  plot_controls.settings.grid.show = false;
-  plot_controls.settings.errorbars.show = true;
-  plot_controls.settings.points.show = true;
-  plot_controls.settings.line.show = true;
-  plot_controls.colormap.show = false;
-
+  plot_controls.updateShow([
+    "axes/x", 
+    "axes/y", 
+    "settings/errorbars", 
+    "settings/points", 
+    "settings/line",
+    "download_svg"
+  ]);
 
   plot_controls.settingChange = function(setting_name, value) { 
     var o = mychart.options();

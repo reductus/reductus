@@ -1,3 +1,5 @@
+//import { json_patch } from '../libraries.js';
+
 let template = `
 <div class="plot-controls">
   <label v-if="plotnumber.show">
@@ -36,7 +38,7 @@ let template = `
     </label>
   </template>
   <template v-for="(setting, setting_name) in settings">
-    <label>
+    <label v-if="setting.show">
       {{setting_name}}
       <input
         type="checkbox"
@@ -45,7 +47,7 @@ let template = `
         oldchange="$emit('settingChange', setting_name, setting.value)"/>
     </label>
   </template>
-  <button @click="$emit('downloadSVG')">&darr; svg</button>
+  <button v-if="download_svg.show" @click="$emit('downloadSVG')">&darr; svg</button>
   <label v-if="colormap.show">
     colormap
     <select
@@ -77,6 +79,25 @@ const configurations = {
   oned: {
 
   }
+}
+
+function lookup(obj, name) {
+  return name.split("/").reduce((sub, n) => sub[n], obj);
+}
+
+function update_descendants(obj, key, value) {
+  // assume that all descendants are objects?
+  if (key in obj) {
+    console.log('changing key:', obj);
+    obj[key] = value;
+  }
+  Object.entries(obj).forEach(([k,v]) => {
+    console.log(v,k);
+    if (v instanceof Object && !Array.isArray(v)) {
+      console.log(v);
+      update_descendants(v, key, value)
+    }
+  });
 }
 
 export const PlotControls = {
@@ -147,9 +168,20 @@ export const PlotControls = {
       show: false,
       value: 0,
       max: 0
-    }
+    },
+    download_svg: {show: true}
   }),
   methods: {
+    updateShow(names) {
+      // mark every 'show' attribute below item as 'value'
+      // first, hide everything:
+      update_descendants(this.$data, 'show', false);
+      // then show the selected items:
+      names.forEach((n) => {
+        let subobj = lookup(this, n);
+        update_descendants(subobj, 'show', true);
+      });
+    },
     settingChange(setting_name, value) {},
     coordChange(axis_name, coord) {},
     transformChange(axis_name, transform) {},

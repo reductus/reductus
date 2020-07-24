@@ -1,8 +1,10 @@
 import { Vue } from './libraries.js';
 import { PlotControls } from './plotters/plot_controls.js';
-import { showPlotsND } from './plotters/plot_nd.js';
-import { showPlots2dMulti } from './plotters/plot_2d.js'
 import { download } from './main.js';
+import { showPlotsND } from './plotters/plot_nd.js';
+import { showPlots2dMulti } from './plotters/plot_2d.js';
+import { show_plots_metadata } from './plotters/plot_metadata.js';
+import { show_plots_params } from './plotters/plot_params.js';
 
 const plotter = {};
 export { plotter };
@@ -14,8 +16,7 @@ let template = `
   </div>
   <plot-controls
     ref="controls"
-    v-show="type != 'null'"
-    style="min-height:1em;"
+    style="min-height:2em;"
     @transformChange="transformChange"
     @settingChange="settingChange"
     @downloadSVG="downloadSVG"
@@ -26,7 +27,9 @@ let template = `
 const plotters = {
   'nd': showPlotsND,
   '2d_multi': showPlots2dMulti,
-  'null': (data, controls, plotdiv) => { plotdiv.innerHTML="<div><h1 style=\"text-align:center;\">&#8709</h1></div>" }
+  'metadata': show_plots_metadata,
+  'params': show_plots_params,
+  'null': (data, controls, plotdiv) => { controls.updateShow([]); plotdiv.innerHTML="<div><h1 style=\"text-align:center;\">&#8709</h1></div>" }
 };
 
 export const PlotPanel = {
@@ -75,7 +78,7 @@ plotter.create_instance = function(target_id) {
       async setPlotData(plotdata) {
         let typeChange = (this.type != plotdata.type);
         this.type = plotdata.type;
-        //await this.$nextTick();
+        await this.$nextTick();
         this.active_plot = plotters[plotdata.type](plotdata, this.$refs.controls, this.$refs.plotdiv, this.active_plot);
       }
     }
