@@ -169,12 +169,16 @@ filebrowser.create_instance = function(target_id) {
   }).$mount(target);
 }
 
-filebrowser.fileinfoUpdate = function(info) {
+filebrowser.refreshAll = function() {
+  this.instance.refreshAll();
+}
+
+filebrowser.fileinfoUpdate = function(info, update_plots=false) {
   let keys = info.value.map(fi => (
     JSON.stringify([fi.source, fi.path, fi.entries[0], fi.mtime])
   ));
   this.instance.setChecked(keys);
-  handleChecked(keys);
+  if (update_plots) { handleChecked(keys) };
 }
 
 async function handleChecked(values, stopPropagation) {

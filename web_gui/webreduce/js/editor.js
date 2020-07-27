@@ -10,13 +10,14 @@ import {instruments} from './instruments/index.js';
 // now a global...
 import {zip} from './libraries.js';
 import {d3} from './libraries.js';
-import {extend, heatChart, heatChartMultiMasked, xyChart, dataflowEditor, colormap_names, get_colormap} from './libraries.js';
+import {extend, dataflowEditor} from './libraries.js';
 import {PouchDB} from './libraries.js';
 import {sha1} from './libraries.js';
 import {template_editor_url} from './libraries.js';
 import {filebrowser} from './filebrowser.js';
 import {make_fieldUI} from './fieldUI.js';
 import { plotter  } from './plot.js';
+import { category_editor } from './ui_components/category_editor.js';
 
 editor.instruments = instruments;
 
@@ -451,7 +452,7 @@ editor.show_plots = function(results) {
     if (new_plotdata == null) {
       plotter.instance.setPlotData({type: 'null'});
     }
-    else if (['nd', '1d', '2d', '2d_multi', 'params', 'metadata'].contains(new_plotdata.type)) {
+    else if (['nd', '1d', '2d', '2d_multi', 'params', 'metadata'].includes(new_plotdata.type)) {
       plotter.instance.setPlotData(new_plotdata);
     }
   }
@@ -838,7 +839,31 @@ var export_handlers = {
   }
 }
 
+function isObject(val) { return typeof val === 'object' && !Array.isArray(val) };
+function get_all_keys(obj) {
+  var keys = Object.keys(obj);
+  keys = keys.filter(function (k) { return !Array.isArray(obj[k]) });
+  var output_keys = [];
+  keys.forEach(function (k) {
+    if (obj[k] && isObject(obj[k])) {
+      output_keys.push([k, get_all_keys(obj[k])]);
+    }
+    else {
+      output_keys.push([k]);
+    }
+  });
+  return output_keys.sort();
+}
+
 editor.edit_categories = function() {
+  let instrument_id = editor._instrument_id;
+  let default_categories = editor.instruments[instrument_id].default_categories;
+  let categories = editor.instruments[instrument_id].categories;
+  let category_keys = get_all_keys(editor._datafiles[0]["values"][0]);
+  category_editor(categories, default_categories, category_keys);
+}
+
+editor.edit_categories_old = function() {
   if (!editor._datafiles[0]) {
     alert("no datafiles loaded");
     return
