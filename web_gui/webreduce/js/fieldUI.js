@@ -54,14 +54,16 @@ var fileinfoUI = function () {
     }
   });
 
+  let update_plots = (datasets_in == null);
   target.select("#fileinfo input").property("checked", true); // first one
   target.selectAll("div#fileinfo input")
     .on("click", function () {
-      filebrowser.fileinfoUpdate(d3.select(this).datum());
+      filebrowser.fileinfoUpdate(d3.select(this).datum(), update_plots);
       $(".remote-filebrowser").trigger("fileinfo.update", d3.select(this).datum());
     });
   //$("#fileinfo").buttonset();
-  filebrowser.fileinfoUpdate(d3.select("div#fileinfo input").datum());
+  
+  filebrowser.fileinfoUpdate(d3.select("div#fileinfo input").datum(), update_plots);
   $(".remote-filebrowser").trigger("fileinfo.update", d3.select("div#fileinfo input").datum());
   // if there is data loaded, an output terminal is selected... and will be plotted instead
   //if (datasets_in == null) { filebrowser.handleChecked(null, null, true) };
