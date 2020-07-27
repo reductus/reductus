@@ -1,6 +1,7 @@
 import { d3, extend, xyChart } from '../libraries.js';
+import { app } from '../main.js'
 
-export function showPlotsND(plotdata, plot_controls, target, old_plot) {
+export function show_plots_nd(plotdata, plot_controls, target, old_plot) {
   var plotdata = merge_nd_plotdata(plotdata);
   var options = {
     series: [],

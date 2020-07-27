@@ -88,13 +88,10 @@ function lookup(obj, name) {
 function update_descendants(obj, key, value) {
   // assume that all descendants are objects?
   if (key in obj) {
-    console.log('changing key:', obj);
     obj[key] = value;
   }
   Object.entries(obj).forEach(([k,v]) => {
-    console.log(v,k);
     if (v instanceof Object && !Array.isArray(v)) {
-      console.log(v);
       update_descendants(v, key, value)
     }
   });

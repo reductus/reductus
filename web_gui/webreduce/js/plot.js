@@ -1,10 +1,11 @@
 import { Vue } from './libraries.js';
 import { PlotControls } from './plotters/plot_controls.js';
 import { download } from './main.js';
-import { showPlotsND } from './plotters/plot_nd.js';
-import { showPlots2dMulti } from './plotters/plot_2d.js';
+import { show_plots_nd } from './plotters/plot_nd.js';
+import { show_plots_2d_multi, show_plots_2d } from './plotters/plot_2d.js';
 import { show_plots_metadata } from './plotters/plot_metadata.js';
 import { show_plots_params } from './plotters/plot_params.js';
+import { show_plots_1d } from './plotters/plot_1d.js';
 
 const plotter = {};
 export { plotter };
@@ -25,8 +26,10 @@ let template = `
 `;
 
 const plotters = {
-  'nd': showPlotsND,
-  '2d_multi': showPlots2dMulti,
+  '1d': show_plots_1d,
+  'nd': show_plots_nd,
+  '2d_multi': show_plots_2d_multi,
+  '2d': show_plots_2d,
   'metadata': show_plots_metadata,
   'params': show_plots_params,
   'null': (data, controls, plotdiv) => { controls.updateShow([]); plotdiv.innerHTML="<div><h1 style=\"text-align:center;\">&#8709</h1></div>" }
