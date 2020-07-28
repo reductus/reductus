@@ -16,6 +16,7 @@ import {editor} from './editor.js';
 import {server_api} from './server_api/api_msgpack.js';
 import {filebrowser} from './filebrowser.js';
 import { plotter } from './plot.js';
+import { fieldUI } from './ui_components/fields_panel.js';
 
 const app = {}; // put state here.
 export {app};
@@ -331,6 +332,7 @@ window.onload = function() {
     editor.create_instance("bottom_panel");
     filebrowser.create_instance("filebrowser");
     plotter.create_instance("plotdiv");
+    fieldUI.create_instance("fieldsdiv");
     
     var list_datasources = server_api.list_datasources()
       .then(function(datasources) {

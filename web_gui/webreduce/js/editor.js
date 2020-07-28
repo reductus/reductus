@@ -15,7 +15,8 @@ import {PouchDB} from './libraries.js';
 import {sha1} from './libraries.js';
 import {template_editor_url} from './libraries.js';
 import {filebrowser} from './filebrowser.js';
-import {make_fieldUI} from './fieldUI.js';
+//import {make_fieldUI} from './fieldUI.js';
+import { fieldUI } from './ui_components/fields_panel.js';
 import { plotter  } from './plot.js';
 import { category_editor } from './ui_components/category_editor.js';
 
@@ -193,61 +194,61 @@ function module_clicked_single() {
 
   // TODO: fix for split layout
   // webreduce.layout.open("east");
-  var config_target = d3.select(".ui-layout-east");
-  config_target.selectAll("div").remove();
-  var header = config_target
-    .append("div")
-    .style("display", "block");
-  header
-    .append("h3")
-    .style("margin", "5px")
-    .style("display", "inline-block")
-    .text(module_def.name);
-  header
-    .append("button")
-    .text("help")
-    .on("click", function() {
-      var helpwindow = window.open("", "help", "location=0,toolbar=no,menubar=no,scrollbars=yes,resizable=yes,width=960,height=480");
-      helpwindow.document.title = "Web reduction help";
-      helpwindow.document.write(module_def.description);
-      helpwindow.document.close();
-      if (helpwindow.MathJax) {
-        helpwindow.MathJax.Hub.Queue(["Typeset", helpwindow.MathJax.Hub]);
-      }
-    });
+  // var config_target = d3.select(".ui-layout-east");
+  // config_target.selectAll("div").remove();
+  // var header = config_target
+  //   .append("div")
+  //   .style("display", "block");
+  // header
+  //   .append("h3")
+  //   .style("margin", "5px")
+  //   .style("display", "inline-block")
+  //   .text(module_def.name);
+  // header
+  //   .append("button")
+  //   .text("help")
+  //   .on("click", function() {
+  //     var helpwindow = window.open("", "help", "location=0,toolbar=no,menubar=no,scrollbars=yes,resizable=yes,width=960,height=480");
+  //     helpwindow.document.title = "Web reduction help";
+  //     helpwindow.document.write(module_def.description);
+  //     helpwindow.document.close();
+  //     if (helpwindow.MathJax) {
+  //       helpwindow.MathJax.Hub.Queue(["Typeset", helpwindow.MathJax.Hub]);
+  //     }
+  //   });
   
-  var buttons_div = config_target.append("div")
-    .classed("control-buttons", true)
-    .style("position", "absolute")
-    .style("bottom", "10px")
-  buttons_div.append("button")
-    .text( $("#auto_accept_changes").prop("checked") ? "replot": "accept")
-    .classed("accept config", true)
-    .on("click", function() {
-      editor.accept_parameters(config_target, active_module);
-      if (selected_terminal.empty()) {
-        // then it's a loader that's clicked, with no output selected;
-        let first_output = module_def.outputs[0].id;
-        let selected_title = editor_select.select("g.module g.title.selected");
-        let module_elem = d3.select(selected_title.node().parentNode);
-        module_elem.selectAll("g.terminals").classed('selected', function(d) { return d.id == first_output });
-      }
-      else if (!(selected_terminal.classed("output"))) {
-        // find the first output and select that one...
-        let first_output = module_def.outputs[0].id;
-        let module_elem = d3.select(selected_terminal.node().parentNode.parentNode);
-        module_elem.selectAll("g.terminals").classed('selected', function(d) { return d.id == first_output });
-      }
-      module_clicked_single();
-    })
-  buttons_div.append("button")
-    .text("clear")
-    .classed("clear config", true)
-    .on("click", function() {
-      //console.log('clear: ', config_target, JSON.stringify(active_module, null, 2));
-      if (active_module.config) { delete active_module.config }
-      module_clicked_single();
-    })
+  // var buttons_div = config_target.append("div")
+  //   .classed("control-buttons", true)
+  //   .style("position", "absolute")
+  //   .style("bottom", "10px")
+  // buttons_div.append("button")
+  //   .text( $("#auto_accept_changes").prop("checked") ? "replot": "accept")
+  //   .classed("accept config", true)
+  //   .on("click", function() {
+  //     editor.accept_parameters(config_target, active_module);
+  //     if (selected_terminal.empty()) {
+  //       // then it's a loader that's clicked, with no output selected;
+  //       let first_output = module_def.outputs[0].id;
+  //       let selected_title = editor_select.select("g.module g.title.selected");
+  //       let module_elem = d3.select(selected_title.node().parentNode);
+  //       module_elem.selectAll("g.terminals").classed('selected', function(d) { return d.id == first_output });
+  //     }
+  //     else if (!(selected_terminal.classed("output"))) {
+  //       // find the first output and select that one...
+  //       let first_output = module_def.outputs[0].id;
+  //       let module_elem = d3.select(selected_terminal.node().parentNode.parentNode);
+  //       module_elem.selectAll("g.terminals").classed('selected', function(d) { return d.id == first_output });
+  //     }
+  //     module_clicked_single();
+  //   })
+  // buttons_div.append("button")
+  //   .text("clear")
+  //   .classed("clear config", true)
+  //   .on("click", function() {
+  //     //console.log('clear: ', config_target, JSON.stringify(active_module, null, 2));
+  //     if (active_module.config) { delete active_module.config }
+  //     module_clicked_single();
+  //   })
     
   //$(buttons_div.node()).buttonset();
   
@@ -280,49 +281,49 @@ function module_clicked_single() {
       });
     });
     editor.show_plots([datasets_in]);
-    fields.forEach(function(field) {
-      if (make_fieldUI[field.datatype]) {
-        var value;
-        var passthrough = false;
-        var field_copy =  extend(true, {}, field);
-        var default_value = field_copy.default;
-        if (field.id in fields_in) {
-          //value = fields_in[field.id];
-          default_value = fields_in[field.id];
-          passthrough = true;
-        }
-        if (active_module.config && field.id in active_module.config) {
-          value = active_module.config[field.id];
-        }
+    fieldUI.instance.config = active_module.config;
+    fieldUI.instance.module_def = module_def;
+    // fields.forEach(function(field) {
+    //   if (make_fieldUI[field.datatype]) {
+    //     var value;
+    //     var passthrough = false;
+    //     var field_copy =  extend(true, {}, field);
+    //     var default_value = field_copy.default;
+    //     if (field.id in fields_in) {
+    //       //value = fields_in[field.id];
+    //       default_value = fields_in[field.id];
+    //       passthrough = true;
+    //     }
+    //     if (active_module.config && field.id in active_module.config) {
+    //       value = active_module.config[field.id];
+    //     }
         
-        var datum = {"id": field.id, "value": value, "default_value": default_value, "passthrough": passthrough};
-        var fieldUImaker = make_fieldUI[field.datatype];
-        var context = {
-          field: field,
-          active_template: active_template,
-          datum: datum,
-          module_def: module_def,
-          target: config_target,
-          datasets_in: datasets_in,
-          active_module: active_module,
-          add_interactors: add_interactors,
-        }
-        var fieldUI = fieldUImaker.call(context);
-        var auto_accept = function() {
-          //console.log(this, d3.select(this).datum(), 'changing!');
-          if ($("#auto_accept_changes").prop("checked")) {
-            editor.accept_parameters(config_target, active_module);
-          }
-        }
-        //if (passthrough) {fieldUI.property("disabled", true)};
-        fieldUI
-          .on("input.auto_accept", auto_accept)
-          .on("change.auto_accept", auto_accept)
-        // add tooltip with description of parameter
-        d3.select(fieldUI.node().parentNode).attr("title", field.description);
+    //     var datum = {"id": field.id, "value": value, "default_value": default_value, "passthrough": passthrough};
+    //     var fieldUImaker = make_fieldUI[field.datatype];
+    //     var context = {
+    //       field: field,
+    //       datum: datum,
+    //       target: config_target,
+    //       datasets_in: datasets_in,
+    //       active_module: active_module,
+    //       add_interactors: add_interactors,
+    //     }
+    //     var fieldUI = fieldUImaker.call(context);
+    //     var auto_accept = function() {
+    //       //console.log(this, d3.select(this).datum(), 'changing!');
+    //       if ($("#auto_accept_changes").prop("checked")) {
+    //         editor.accept_parameters(config_target, active_module);
+    //       }
+    //     }
+    //     //if (passthrough) {fieldUI.property("disabled", true)};
+    //     fieldUI
+    //       .on("input.auto_accept", auto_accept)
+    //       .on("change.auto_accept", auto_accept)
+    //     // add tooltip with description of parameter
+    //     d3.select(fieldUI.node().parentNode).attr("title", field.description);
           
-      }
-    });
+    //   }
+    // });
   });
 }
 
