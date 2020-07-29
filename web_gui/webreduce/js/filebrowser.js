@@ -7,6 +7,7 @@ import { server_api } from './server_api/api_msgpack.js';
 //import { makeSourceList } from './ui_components/sourcelist.js';
 import { Vue } from './libraries.js';
 import { FilePanel } from './ui_components/file_panel.js';
+import { fieldUI } from './ui_components/fields_panel.js';
 
 filebrowser.datasources = [];
 
@@ -174,11 +175,11 @@ filebrowser.refreshAll = function() {
 }
 
 filebrowser.fileinfoUpdate = function(info, update_plots=false) {
-  let keys = info.value.map(fi => (
+  let keys = info.map(fi => (
     JSON.stringify([fi.source, fi.path, fi.entries[0], fi.mtime])
   ));
   this.instance.setChecked(keys);
-  if (update_plots) { handleChecked(keys) };
+  if (update_plots) { handleChecked(keys, true) };
 }
 
 async function handleChecked(values, stopPropagation) {
@@ -191,8 +192,9 @@ async function handleChecked(values, stopPropagation) {
   })
   
   if (!stopPropagation) {
-    $("div.fields").trigger("fileinfo.update", [fileinfo]);
-  }
+		fieldUI.instance.update_fileinfo(fileinfo);
+	}
+	
   let loader_template = loader(fileinfo, null, false, 'plottable');
   let results = await editor.calculate(loader_template, false, false);
   let entries = results.map(function(r,i) {

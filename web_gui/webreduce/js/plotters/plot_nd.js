@@ -1,7 +1,7 @@
 import { d3, extend, xyChart } from '../libraries.js';
 import { app } from '../main.js'
 
-export function show_plots_nd(plotdata, plot_controls, target, old_plot) {
+export async function show_plots_nd(plotdata, plot_controls, target, old_plot) {
   var plotdata = merge_nd_plotdata(plotdata);
   var options = {
     series: [],
@@ -49,13 +49,6 @@ export function show_plots_nd(plotdata, plot_controls, target, old_plot) {
   var chartdata = make_chartdata(plotdata.data, xcol, ycol);
   // create the nd chart:
   var mychart = new xyChart(options, d3);
-  d3.select(target).selectAll("svg, div").remove();
-  d3.select(target).classed("plot", true);
-  d3.selectAll([target])
-    .data([chartdata])
-    .call(mychart);
-  mychart.zoomRect(true);
-  app.callbacks.resize_center = mychart.autofit;
 
   plot_controls.updateShow([
     "axes/x", 
@@ -105,6 +98,15 @@ export function show_plots_nd(plotdata, plot_controls, target, old_plot) {
         .duration(500)
         .style("opacity", 0);
     });
+
+    await plot_controls.$nextTick();
+    d3.select(target).selectAll("svg, div").remove();
+    d3.select(target).classed("plot", true);
+    d3.selectAll([target])
+      .data([chartdata])
+      .call(mychart);
+    mychart.zoomRect(true);
+    app.callbacks.resize_center = mychart.autofit;
 
   return mychart
 };

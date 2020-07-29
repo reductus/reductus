@@ -282,6 +282,8 @@ function module_clicked_single() {
     });
     editor.show_plots([datasets_in]);
     fieldUI.instance.config = active_module.config;
+    fieldUI.instance.module_id = i;
+    fieldUI.instance.terminal_id = data_to_show;
     fieldUI.instance.module_def = module_def;
     // fields.forEach(function(field) {
     //   if (make_fieldUI[field.datatype]) {

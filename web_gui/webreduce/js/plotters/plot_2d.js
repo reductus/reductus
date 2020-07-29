@@ -1,7 +1,7 @@
 import { d3, get_colormap, colormap_names, heatChartMultiMasked, heatChart } from '../libraries.js';
 import { app } from '../main.js';
 
-export function show_plots_2d_multi(plotdata, plot_controls, target, old_plot) {
+export async function show_plots_2d_multi(plotdata, plot_controls, target, old_plot) {
   var aspect_ratio = null,
     values = plotdata.values,
     mychart = old_plot;
@@ -14,9 +14,7 @@ export function show_plots_2d_multi(plotdata, plot_controls, target, old_plot) {
 
     mychart = new heatChartMultiMasked(options, d3);
     data = values[0];
-    d3.selectAll([target]).data([values[0].datasets]).call(mychart);
-    app.callbacks.resize_center = function () { mychart.autofit() };
-
+    
     if (options.ztransform) {
       plot_controls.axes.z.transform.value = options.ztransform;
     } else {
@@ -67,6 +65,10 @@ export function show_plots_2d_multi(plotdata, plot_controls, target, old_plot) {
       mychart.zoomScroll(true);
       mychart.ztransform(plot_controls.axes.z.transform.value);
     }
+    
+    await plot_controls.$nextTick();
+    d3.selectAll([target]).data([values[0].datasets]).call(mychart);
+    app.callbacks.resize_center = function () { mychart.autofit() };
   }
 
   plot_controls.plotnumber.max = plotdata.values.length - 1;
