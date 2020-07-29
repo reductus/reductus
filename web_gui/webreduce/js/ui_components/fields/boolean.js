@@ -15,7 +15,7 @@ let template = `
 export const BoolUi = {
   name: "bool-ui",
   props: ["field", "value"],
-  data: function() {
+  data: function () {
     return {
       local_value: ((this.value == null) ? this.field.default : this.value)
     }

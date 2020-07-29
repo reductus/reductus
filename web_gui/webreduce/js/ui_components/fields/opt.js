@@ -5,9 +5,9 @@ let template = `
     <select
       :id="field.id"
       v-model="local_value"
-      @change="$emit('change', id, local_value)"
+      @change="$emit('change', field.id, local_value)"
     >
-      <option v-for="(c, i) in field.typeattr.choices">{{c}}</option>
+      <option v-for="(c, i) in field.typeattr.choices" :value="c[1]">{{c[0]}}</option>
     </select>
   </label>
 </div>

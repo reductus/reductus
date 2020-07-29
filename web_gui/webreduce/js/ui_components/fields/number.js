@@ -17,9 +17,19 @@ export const IntUi = {
   name: "int-ui",
   props: ["field", "value"],
   data: function() {
-    return {
-      local_value: ((this.value == null) ? this.field.default : this.value)
+    let local_value;
+    if (this.multiple) {
+      if (this.value != null) {
+        local_value = extend(true, [], this.value);
+      }
+      else {
+        local_value = extend(true, [], this.field.default);
+      }
     }
+    else {
+      local_value = ((this.value == null) ? this.field.default : this.value)
+    }
+    return { local_value }
   },
   computed: {
     display_value: {
@@ -51,9 +61,19 @@ export const FloatUi = {
   name: "float-ui",
   props: ["field", "value"],
   data: function() {
-    return {
-      local_value: ((this.value == null) ? this.field.default : this.value)
+    let local_value;
+    if (this.multiple) {
+      if (this.value != null) {
+        local_value = extend(true, [], this.value);
+      }
+      else {
+        local_value = extend(true, [], this.field.default);
+      }
     }
+    else {
+      local_value = ((this.value == null) ? this.field.default : this.value)
+    }
+    return { local_value }
   },
   computed: {
     display_value: {
