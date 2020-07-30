@@ -41,7 +41,7 @@ function merge_1d_plotdata(plotdata) {
   return output;
 }
 
-export function show_plots_1d(plotdata, plot_controls, target, old_plot) {
+export async function show_plots_1d(plotdata, plot_controls, target, old_plot) {
   var plotdata = merge_1d_plotdata(plotdata);
   var options = {
     series: [],

@@ -82,7 +82,7 @@ plotter.create_instance = function(target_id) {
         let typeChange = (this.type != plotdata.type);
         this.type = plotdata.type;
         await this.$nextTick();
-        this.active_plot = plotters[plotdata.type](plotdata, this.$refs.controls, this.$refs.plotdiv, this.active_plot);
+        this.active_plot = await plotters[plotdata.type](plotdata, this.$refs.controls, this.$refs.plotdiv, this.active_plot);
       }
     }
   }).$mount(target);

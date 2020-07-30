@@ -13,7 +13,7 @@ let template = `
 		ref="fileinfos"
 		:active="active_fileinfo == index"
 		:field="field"
-    :value="(config || {})[field.id]"
+    :value="(module.config || {})[field.id]"
 		@activate="activate_fileinfo(index)"
 		>
 
@@ -21,13 +21,15 @@ let template = `
   <div 
 		v-for="(field, index) in fields"
 		:class="['fields', field.datatype]"
-		:key="JSON.stringify(field)"
+    oldkey="JSON.stringify(field)+(module.config || {})[field.id]"
+    :key="JSON.stringify(field)"
 		ref="fields"
     >
     <component 
 			v-bind:is="field.datatype + '-ui'"
 			:field="field"
-      :value="(config || {})[field.id]"
+      :value="(module.config || {})[field.id]"
+      :num_datasets_in="num_datasets_in"
 			class="item-component"
 			@change="changed">
     </component>
@@ -43,6 +45,8 @@ export const FieldsPanel = {
   name: "fields-panel",
   components: Components,
   data: () => ({
+    module: {},
+    num_datasets_in: 0,
     module_def: {},
     module_id: null,
     terminal_id: null,
@@ -70,7 +74,10 @@ export const FieldsPanel = {
     },
     changed(id, value) {
       if (app.settings.auto_accept_changes) {
-        this.$set(this.config, id, value);
+        if (!this.module.config) {
+          this.$set(this.module, 'config', {});
+        }
+        this.$set(this.module.config, id, value);
       }
     },
     type_count(field) {
@@ -85,7 +92,7 @@ export const FieldsPanel = {
         this.active_fileinfo = index;
       }
       let active_field = this.fileinfos[this.active_fileinfo];
-      let value = (active_field) ? (this.config[active_field.id] || []) : [];
+      let value = (active_field) ? ((this.module.config || {})[active_field.id] || []) : [];
       this.fileinfoChanged(value);
     },
     update_fileinfo(value) {
@@ -97,7 +104,7 @@ export const FieldsPanel = {
     accept() {
     },
     clear() {
-      if (this.config) { delete this.config }
+      if (this.module.config) { this.$delete(this.module, 'config') }
       this.$emit("clear");
     },
     fileinfoChanged(value) {
@@ -122,6 +129,7 @@ fieldUI.create_instance = function (target_id) {
   const FieldsPanelClass = Vue.extend(FieldsPanel);
   this.instance = new FieldsPanelClass({
     data: () => ({
+      module: {},
       module_def: {},
       config: {},
       auto_accept: true
