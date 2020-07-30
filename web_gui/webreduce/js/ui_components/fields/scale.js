@@ -19,7 +19,7 @@ let template = `
 
 export const ScaleUi = {
   name: "scale-ui",
-  props: ["field", "value", "num_datasets_in"],
+  props: ["field", "value", "num_datasets_in", "add_interactors"],
   data: function () {
     let local_value;
     if (this.value != null) {
@@ -45,25 +45,27 @@ export const ScaleUi = {
     }
   },
   mounted: function () {
-    // create the interactor here.
-    let chart = plotter.instance.active_plot;
-    let scales = [...this.local_value];
-    let opts = {
-      scales,
-      point_size: 10
+    // create the interactor here, if commanded
+    if (this.add_interactors) {
+      let chart = plotter.instance.active_plot;
+      let scales = [...this.local_value];
+      let opts = {
+        scales,
+        point_size: 10
+      }
+      let scaler = new scaleInteractor(opts, chart.x(), chart.y(), d3);
+      scaler.dispatch.on("updated", () => {
+        opts.scales.forEach((v,i) => this.$set(this.local_value, i, v));
+        chart.update()
+      });
+      scaler.dispatch.on("end", () => {
+        this.$emit("change", this.field.id, opts.scales);
+      });
+      chart.interactors(scaler);
+      chart.update();
+      chart.do_autoscale();
+      chart.resetzoom();
     }
-    let scaler = new scaleInteractor(opts, chart.x(), chart.y(), d3);
-    scaler.dispatch.on("updated", () => {
-			opts.scales.forEach((v,i) => this.$set(this.local_value, i, v));
-      chart.update()
-    });
-    scaler.dispatch.on("end", () => {
-      this.$emit("change", this.field.id, opts.scales);
-    });
-    chart.interactors(scaler);
-    chart.update();
-    //chart.do_autoscale();
-    //chart.resetzoom();
   },
   template
 }

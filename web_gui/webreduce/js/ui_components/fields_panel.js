@@ -6,32 +6,33 @@ import { app } from '../main.js';
 let template = `
 <div class="fields-panel">
   <h3>{{ module_def.name }}</h3>
-	<button @click="help">help</button>
-	<fileinfo-ui 
-		v-for="(field, index) in fileinfos"
-		:key="module_id + ':' + field.id"
-		ref="fileinfos"
-		:active="active_fileinfo == index"
-		:field="field"
+  <button @click="help">help</button>
+  <fileinfo-ui 
+    v-for="(field, index) in fileinfos"
+    :key="module_id + ':' + terminal_id + ':' + field.id"
+    ref="fileinfos"
+    :active="active_fileinfo == index"
+    :field="field"
     :value="(module.config || {})[field.id]"
-		@activate="activate_fileinfo(index)"
-		>
+    @activate="activate_fileinfo(index)"
+    >
 
-	</fileinfo-ui>
+  </fileinfo-ui>
   <div 
-		v-for="(field, index) in fields"
-		:class="['fields', field.datatype]"
+    v-for="(field, index) in fields"
+    :class="['fields', field.datatype]"
     oldkey="JSON.stringify(field)+(module.config || {})[field.id]"
-    :key="JSON.stringify(field)"
-		ref="fields"
+    :key="module_id + ':' + terminal_id + ':' + field.id"
+    ref="fields"
     >
     <component 
-			v-bind:is="field.datatype + '-ui'"
-			:field="field"
+      v-bind:is="field.datatype + '-ui'"
+      :field="field"
       :value="(module.config || {})[field.id]"
       :num_datasets_in="num_datasets_in"
-			class="item-component"
-			@change="changed">
+      :add_interactors="add_interactors"
+      class="item-component"
+      @change="changed">
     </component>
   </div>
   <div class="control-buttons" style="position:absolute;bottom:10px;">
@@ -60,6 +61,9 @@ export const FieldsPanel = {
     },
     fields() {
       return (this.module_def.fields || []).filter(f => (f.datatype != 'fileinfo'));
+    },
+    add_interactors() {
+      return (this.terminal_id != null && this.terminal_id == (this.module_def.inputs[0] || {}).id);
     }
   },
   methods: {
