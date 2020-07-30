@@ -270,7 +270,7 @@ function module_clicked_single() {
       inputs_map[id] = r;
     })
     return inputs_map
-  }).then(function(im) {
+  }).then(async function(im) {
     var datasets_in = im[data_to_show];
     var field_inputs = module_def.inputs
       .filter(function(d) {return /\.params$/.test(d.datatype)})
@@ -280,8 +280,10 @@ function module_clicked_single() {
         extend(true, fields_in, v.params);
       });
     });
-    editor.show_plots([datasets_in]);
-    fieldUI.instance.config = active_module.config;
+    await editor.show_plots([datasets_in]);
+    fieldUI.instance.num_datasets_in = ((datasets_in || {}).values || []).length;
+    fieldUI.instance.module = active_module;
+    fieldUI.instance.config = active_module.config || {};
     fieldUI.instance.module_id = i;
     fieldUI.instance.terminal_id = data_to_show;
     fieldUI.instance.module_def = module_def;
@@ -434,7 +436,7 @@ function compare_in_template(to_compare, template) {
     });
 }
 
-editor.show_plots = function(results) {
+editor.show_plots = async function(results) {
   var new_plotdata;
   if (results.length == 0 || results[0] == null || results[0].values.length == 0) { 
     new_plotdata = null; 
@@ -453,10 +455,10 @@ editor.show_plots = function(results) {
     });
   }
     if (new_plotdata == null) {
-      plotter.instance.setPlotData({type: 'null'});
+      await plotter.instance.setPlotData({type: 'null'});
     }
     else if (['nd', '1d', '2d', '2d_multi', 'params', 'metadata'].includes(new_plotdata.type)) {
-      plotter.instance.setPlotData(new_plotdata);
+      await plotter.instance.setPlotData(new_plotdata);
     }
   }
 
