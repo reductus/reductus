@@ -1,6 +1,6 @@
 import { d3, extend } from '../../libraries.js';
 import { plotter } from '../../plot.js';
-import { scaleInteractor } from '../../plotters/interactor_scale.js';
+import { scaleInteractor } from '../../plotters/interactor-scale.js';
 
 let template = `
 <div class="fields">
@@ -53,7 +53,7 @@ export const ScaleUi = {
         scales,
         point_size: 10
       }
-      let scaler = new scaleInteractor(opts, chart.x(), chart.y(), d3);
+      let scaler = new scaleInteractor(opts, null, null, d3);
       scaler.dispatch.on("updated", () => {
         opts.scales.forEach((v,i) => this.$set(this.local_value, i, v));
         chart.update()

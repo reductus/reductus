@@ -3,6 +3,7 @@ import { FloatUi, IntUi } from './number.js';
 import { BoolUi } from './boolean.js';
 import { OptUi } from './opt.js';
 import { ScaleUi } from './scale.js';
+import { IndexUi } from './index.js';
 
 export const Components = {
   FileinfoUi,
@@ -10,5 +11,6 @@ export const Components = {
   IntUi,
   BoolUi,
   OptUi,
-  ScaleUi
+  ScaleUi,
+  IndexUi
 }
