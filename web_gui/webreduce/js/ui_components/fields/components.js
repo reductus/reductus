@@ -5,6 +5,7 @@ import { BoolUi } from './boolean.js';
 import { OptUi } from './opt.js';
 import { ScaleUi } from './scale.js';
 import { IndexUi } from './index.js';
+import { PatchUi } from './patch.js';
 
 export const Components = {
   FileinfoUi,
@@ -14,5 +15,6 @@ export const Components = {
   BoolUi,
   OptUi,
   ScaleUi,
-  IndexUi
+  IndexUi,
+  PatchUi
 }
