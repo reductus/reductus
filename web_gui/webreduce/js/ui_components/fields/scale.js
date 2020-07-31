@@ -1,6 +1,5 @@
-import { d3, extend } from '../../libraries.js';
+import { d3, extend, scaleInteractor } from '../../libraries.js';
 import { plotter } from '../../plot.js';
-import { scaleInteractor } from '../../plotters/interactor-scale.js';
 
 let template = `
 <div class="fields">

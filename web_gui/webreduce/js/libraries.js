@@ -39,8 +39,11 @@ export {
     ySliceInteractor,
     rectangleInteractor,
     ellipseInteractor,
-    monotonicFunctionInteractor 
-}  from 'https://cdn.jsdelivr.net/gh/usnistgov/d3-science@0.2.2/src/index.js';
+    monotonicFunctionInteractor,
+    scaleInteractor,
+    rectangleSelectPoints
+}  from 'https://cdn.jsdelivr.net/gh/usnistgov/d3-science@0.2.4/src/index.js';
+// export { scaleInteractor, rectangleSelectPoints } from './d3-science/src/index.js';
 //import jquery from "./import_jquery_dev.js";
 //import 'https://www.unpkg.com/jstree@3.3.10/dist/jstree.min.js';
 //import {default as _jstree} from "https://dev.jspm.io/npm:jstree@3.3/dist/jstree.js";

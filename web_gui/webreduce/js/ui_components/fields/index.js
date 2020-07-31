@@ -1,4 +1,4 @@
-import { d3, extend, rectangleSelect } from '../../libraries.js';
+import { d3, extend, rectangleSelectPoints } from '../../libraries.js';
 import { plotter } from '../../plot.js';
 
 let template = `
@@ -31,8 +31,13 @@ export const IndexUi = {
   props: ["field", "value", "num_datasets_in", "add_interactors"],
   data: function () {
     let local_value;
+    let value_length = (this.value || []).length;
+    if (this.value != null && this.num_datasets_in != value_length) {
+      alert(`${value_length} masks defined for ${this.num_datasets_in} datasets; 
+      Extending with empty masks or truncating to match data length`);
+    }
     if (this.value != null) {
-      local_value = extend(true, [], this.value);
+      local_value = Array.from(Array(this.num_datasets_in)).map((x,i) => (this.value[i] || []));
     }
     else {
       local_value = Array.from(Array(this.num_datasets_in)).map((x) => []);
@@ -65,84 +70,69 @@ export const IndexUi = {
     // create the interactor here, if commanded
     if (this.add_interactors) {
       let chart = plotter.instance.active_plot;
-      let selected = extend(true, [], this.local_value);
+      var selected = extend(true, [], this.local_value);
       let state = {
-        selected,
+        skip_points: false
       }
-      var drag_instance = d3.drag();
-      chart.svg.call(drag_instance);
-      var selector = new rectangleSelect(drag_instance, null, null, d3);
-      chart.interactors(selector);
-      let interaction = () => (this.interaction); // make this into ref
+
       var update = (values) => {
         values.forEach((v,i) => {
           this.$set(this.local_value, i, v)
         });
-        this.$emit("change", this.field.id, state.selected);
+        this.$emit("change", this.field.id, this.local_value);
       }
       this.changed = () => {
         this.$emit('change', this.field.id, this.local_value);
-        state.selected = extend(true, [], this.local_value);
+        selected = extend(true, [], this.local_value);
         update_plot();
       }
       function update_plot() {
         chart.svg.selectAll("g.series").each(function (d, i) {
           // i is index of dataset
           let series_select = d3.select(this);
-          let index_list = state.selected[i];
+          let index_list = selected[i];
           series_select.selectAll("circle.dot")
             .classed("masked", function(dd,ii) { return index_list.includes(ii) });
         })
         chart.update();
       }
 
-      update_plot();
-
-      var onselect = function (xmin, xmax, ymin, ymax) {
-        if (interaction() == 'zoom') {
-          chart.x().domain([xmin, xmax]);
-          chart.y().domain([ymin, ymax]);
+      let selector = new rectangleSelectPoints(state, null, null, d3);
+      chart.interactors(selector);
+      // TODO: make this.interaction into ref?
+      let that = this; 
+      selector.dispatch.on("selection", function() {
+        let mode = that.interaction;
+        if (mode == 'zoom') {
+          chart.x().domain([this.limits.xmin, this.limits.xmax]);
+          chart.y().domain([this.limits.ymin, this.limits.ymax]);
           chart.update();
         }
-        else {
-          chart.svg.selectAll("g.series").each(function (d, i) {
-            // i is index of dataset
-            var series_select = d3.select(this);
-            if (series_select.classed("hidden")) {
-              // don't interact with hidden series.
-              return
-            }
-            var index_list = state.selected[i];
-            series_select.selectAll(".dot").each(function (dd, ii) {
-              // ii is the index of the point in that dataset.
-              var [x,y] = dd;
-              if (x >= xmin && x <= xmax && y >= ymin && y <= ymax) {
-                // manipulate data list directly:
-                let index_index = index_list.indexOf(ii);
-                let included = index_index > -1;
-                if (included && interaction() != 'select') {
-                  // then the index exists, but we're deselecting:
-                  let index_index = index_list.indexOf(ii);
-                  index_list.splice(index_index, 1);
-                }
-                else if (!included && interaction() == 'select') {
-                  // then the index doesn't exist and we're selecting
-                  index_list.push(ii);
-                }
-              }
-            });
-            index_list.sort();
-          });
-          // do update
-          update(state.selected);
+        else if (mode == 'select') {
+          for (let i in selected) {
+            selected[i] = [...selected[i], ...this.indices[i]];
+            selected[i].sort();
+          }
+          update(selected);
           update_plot();
         }
-      }
-      selector.callbacks(onselect);
+        else if (mode == 'deselect') {
+          for (let i in selected) {
+            let to_remove = this.indices[i];
+            selected[i] = selected[i].filter((ii) => (!to_remove.includes(ii)));
+          }
+          update(selected);
+          update_plot();
+          update
+        }
+
+      })
+      
+      update_plot();
 
       chart.svg.selectAll(".dot").on("click", null); // clear previous handlers
       chart.svg.selectAll("g.series").each(function (d, i) {
-        let index_list = state.selected[i];
+        let index_list = selected[i];
         d3.select(this).selectAll('.dot').on('click', (dd,ii) => {
           d3.event.stopPropagation();
           d3.event.preventDefault();
@@ -153,9 +143,9 @@ export const IndexUi = {
           }
           else {
             index_list.push(ii);
+            index_list.sort();
           }
-          index_list.sort();
-          update(state.selected);
+          update(selected);
           update_plot();
         });
       });
