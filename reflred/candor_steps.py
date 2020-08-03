@@ -389,7 +389,7 @@ def stitch_intensity(data, tol=0.001):
 
 
 @module("candor")
-def candor_rebin(data, qmin=None, qmax=None, qstep=0.003):
+def candor_rebin(data, qmin=None, qmax=None, qstep=0.003, qstep_max=None):
     r"""
     Join the intensity measurements into a single entry.
 
@@ -401,7 +401,9 @@ def candor_rebin(data, qmin=None, qmax=None, qstep=0.003):
 
     qmax (float) : End of q range, or empty to infer from data
 
-    qstep (float) : q step size or 0 for no rebinning
+    qstep (float) : q step size at qmin, or 0 for no rebinning
+
+    qstep_max (float) : maximum q step size at qmax, or empty to use qstep over entire q range
 
     **Returns**
 
@@ -418,7 +420,11 @@ def candor_rebin(data, qmin=None, qmax=None, qstep=0.003):
             qmin = data.Qz.min()
         if qmax is None:
             qmax = data.Qz.max()
-        q = np.arange(qmin, qmax, qstep)
+        if qstep_max is None:
+            q = np.arange(qmin, qmax, qstep)
+        else:
+            dq = np.linspace(qstep,qstep_max, int(np.ceil(2*(qmax-qmin)/(qstep_max+qstep))))
+            q = (qmin-qstep) + np.cumsum(dq) 
         data = rebin(data, q)
 
     return data
