@@ -17,6 +17,7 @@ import { server_api } from './server_api/api_msgpack.js';
 import { filebrowser } from './filebrowser.js';
 import { plotter } from './plot.js';
 import { fieldUI } from './ui_components/fields_panel.js';
+import { vueMenu } from './menu.js';
 
 const app = {}; // put state here.
 export { app };
@@ -339,6 +340,7 @@ window.onload = function () {
     filebrowser.create_instance("filebrowser");
     plotter.create_instance("plotdiv");
     fieldUI.create_instance("fieldsdiv");
+    vueMenu.create_instance("vue_menu");
     // set up the communication between these panels:
     // fieldUI.fileinfoUpdateCallback = filebrowser.fileinfoUpdate;
     // filebrowser.fileinfoUpdateCallback = fieldUI.fileinfoUpdate;
