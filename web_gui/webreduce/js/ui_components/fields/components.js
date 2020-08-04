@@ -16,5 +16,5 @@ export const Components = {
   OptUi,
   ScaleUi,
   IndexUi,
-  PatchUi
+  "patch_metadata-ui": PatchUi
 }

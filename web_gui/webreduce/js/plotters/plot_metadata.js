@@ -10,11 +10,19 @@ let template = `
     </thead>
     <tbody>
       <tr 
+        ref="rows"
         v-for="row in metadata" 
         :key="JSON.stringify(row)"
         class="metadata-row"
         >
-        <td v-for="col in cols" :key="col">{{pretty(row[col])}}</td>
+        <td 
+          v-for="col in cols" 
+          :key="col"
+          :style="{backgroundColor: (patched(row, col) == null) ? null : 'yellow'}"
+          :class="{patched: patched(row, col) != null}"
+          :contenteditable="editing && col != key_col"
+          @blur="onInput(row, col, $event.target.innerText)"
+        >{{pretty(patched(row, col) || row[col])}}</td>
       </tr>
     </tbody>
   </table>
@@ -26,8 +34,22 @@ const MetadataTable = {
   data: () => ({
     cols: [],
     metadata: [],
+    patches: [],
+    patchesByPathNew: {},
+    editing: false,
+    key_col: "",
     precision: 5
   }),
+  computed: {
+    rowByKey() {
+      return Object.fromEntries(this.metadata.map(row => [row[this.key_col], row]));
+    },
+    patchesByPath() {
+      let result = Object.fromEntries(this.patches.map(p => [p.path, p]));
+      console.log(JSON.stringify(result));
+      return result;
+    }
+  },
   methods: {
     pretty(value) {
       if (value && value.toPrecision) {
@@ -36,6 +58,17 @@ const MetadataTable = {
       else {
         return value;
       }
+    },
+    onInput(row, col, value) {
+      //let key = row[this.key_col];
+      let oldVal = this.pretty(row[col]);
+      if (value != oldVal) {
+        this.$emit("change", row, col, value);
+      }
+    },
+    patched(row, col) {
+      let path = `/${row[this.key_col]}/${col}`;
+      return (this.patchesByPath[path] || {}).value;
     }
   },
   template
@@ -61,14 +94,23 @@ export function show_plots_metadata(plotdata, plot_controls, target, old_plot) {
     target.removeChild(target.firstChild);
   }
   target.classList.remove("plot");
+  let container = document.createElement("div");
+  container.classList.add("metadata-table");
+  container.style.overflowX = "scroll";
+  target.appendChild(container);
 
   let MetadataTableClass = Vue.extend(MetadataTable);
   let metadata_table = new MetadataTableClass({
     data: () => ({
       cols,
       metadata
-    })
-  }).$mount(target);
+    }),
+    mounted: function () {
+      console.log(this.metadata, this.$refs.rows);
+      // reset patches?
+      //this.patched = [];
+    }
+  }).$mount(container);
   // let metadata_table = d3.select(target).append("div").append("table").classed("metadata", true)
   // metadata_table
   //   .append("thead").append("tr")

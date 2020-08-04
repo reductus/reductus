@@ -84,10 +84,6 @@ export const FieldsPanel = {
         this.$set(this.module.config, id, value);
       }
     },
-    type_count(field) {
-      this.datatype_count[field.datatype] = this.datatype_count[field.datatype] || 0;
-      return this.datatype_count[field.datatype]++;
-    },
     field_value(field_id) {
       return config[field_id];
     },
@@ -101,8 +97,12 @@ export const FieldsPanel = {
     },
     update_fileinfo(value) {
       let active_field = this.fileinfos[this.active_fileinfo];
+      //this.config[active_field.id] = value;
       if (active_field) {
-        this.$set(this.config, active_field.id, value);
+        if (!this.module.config) {
+          this.$set(this.module, 'config', {});
+        }
+       this.$set(this.module.config, active_field.id, value);
       }
     },
     accept() {

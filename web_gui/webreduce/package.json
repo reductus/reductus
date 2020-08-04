@@ -38,7 +38,7 @@
   },
   "dependencies": {
     "d3": "^5.16.0",
-    "d3-science": "github:usnistgov/d3-science#v0.2.2",
+    "d3-science": "github:usnistgov/d3-science#v0.2.4",
     "jquery": "^3.5.0",
     "jquery-ui": "^1.12.1",
     "jquery-ui-dist": "^1.12.1",

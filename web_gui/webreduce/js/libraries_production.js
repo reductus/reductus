@@ -30,7 +30,9 @@ export {
     ySliceInteractor,
     rectangleInteractor,
     ellipseInteractor,
-    monotonicFunctionInteractor 
+    monotonicFunctionInteractor,
+    scaleInteractor,
+    rectangleSelectPoints
 } from 'd3-science';
 //}  from './node_modules/d3-science/src/index.js';
 export {default as Split} from 'split.js';
