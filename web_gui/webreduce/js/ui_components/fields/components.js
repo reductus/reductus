@@ -6,6 +6,7 @@ import { OptUi } from './opt.js';
 import { ScaleUi } from './scale.js';
 import { IndexUi } from './index.js';
 import { PatchUi } from './patch.js';
+import { CoordinateUi } from './coordinate.js';
 
 export const Components = {
   FileinfoUi,
@@ -16,5 +17,6 @@ export const Components = {
   OptUi,
   ScaleUi,
   IndexUi,
-  "patch_metadata-ui": PatchUi
+  "patch_metadata-ui": PatchUi,
+  CoordinateUi
 }
