@@ -43,7 +43,7 @@ export function show_plots_params(plotdata, plot_controls, target, old_plot) {
       itemClickToggle: 'closed'
     });
   });
-  return data
+  return param_divs
 }
 /**
  *
