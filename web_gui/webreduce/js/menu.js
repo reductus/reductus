@@ -8,25 +8,30 @@ let template = `
       <span class="md-title">My App name</span>
     </md-toolbar>
 
-    <md-list md-expand-single="true">
+    <md-list>
       <md-list-item md-expand>
         <md-icon>mediation</md-icon>
         <span class="md-list-item-text">Template</span>
         <md-list slot="md-expand">
-          <md-list-item @click="hide(); new_template()" class="md-inset">
+          <md-list-item @click="action('new_template')" class="md-inset">
             <span class="md-list-item-text">New</span>
             <md-icon class="md-primary">add</md-icon>      
           </md-list-item>
-          <md-list-item @click="hide()" class="md-inset">
+          <md-list-item @click="action('edit_template')" class="md-inset">
             <span class="md-list-item-text">Edit</span>
             <md-icon class="md-primary">edit</md-icon>      
           </md-list-item>
-          <md-list-item @click="hide()" class="md-inset">
+          <md-list-item @click="action('download_template')" class="md-inset">
             <span class="md-list-item-text">Download</span>
             <md-icon class="md-primary">get_app</md-icon>      
           </md-list-item>
-          <md-list-item @click="hide()" class="md-inset">
-            <span class="md-list-item-text">Upload</span>
+          <md-list-item class="md-inset">
+            <md-field>
+              <label>Upload Template</label>
+              <md-file 
+                v-model="template_to_upload" 
+                @change="action('upload_template', $event.target.files[0]); template_to_upload=null;"/>
+            </md-field>
             <md-icon class="md-primary">publish</md-icon>      
           </md-list-item>
           <md-list-item class="md-inset md-double-line">
@@ -41,7 +46,7 @@ let template = `
             <md-button 
               class="md-raised md-primary"
               :disabled="predefined_template == ''"
-              @click="hide();load_predefined(predefined_template)">
+              @click="action('load_predefined', predefined_template)">
               Load
             </md-button>
           </md-list-item>
@@ -52,6 +57,26 @@ let template = `
         <md-icon>source</md-icon>
         <span class="md-list-item-text">Data</span>
         <md-list slot="md-expand">
+          <md-list-item @click="action('stash_data')" class="md-inset">
+            <span class="md-list-item-text">Stash Data</span>
+            <md-icon class="md-primary">input</md-icon>
+          </md-list-item>
+          <md-list-item @click="action('edit_categories')" class="md-inset">
+            <span class="md-list-item-text">Edit Categories</span>
+            <md-icon class="md-primary">list</md-icon>      
+          </md-list-item>
+          <md-list-item @click="action('export_data')" class="md-inset">
+            <span class="md-list-item-text">Export</span>
+            <md-icon class="md-primary">cloud_download</md-icon>      
+          </md-list-item>
+          <md-list-item @click="hide(); reload_exported()" class="md-inset">
+            <span class="md-list-item-text">Reload Exported</span>
+            <md-icon class="md-primary">cloud_upload</md-icon>      
+          </md-list-item>
+          <md-list-item @click="hide(); clear_cache()" class="md-inset">
+            <span class="md-list-item-text">Clear Cache</span>
+            <md-icon class="md-primary">remove_circle</md-icon>      
+          </md-list-item>
           <md-list-item class="md-inset">
             <md-field>
             <label for="select_datasource">Data Sources</label>
@@ -66,41 +91,6 @@ let template = `
               @click="hide();add_datasource(source)">
               Add
             </md-button>
-          </md-list-item>
-          <md-list-item @click="hide()" class="md-inset">
-            <span class="md-list-item-text">Stash</span>
-            <md-icon class="md-primary">input</md-icon>      
-          </md-list-item>
-          <md-list-item @click="hide()" class="md-inset">
-            <span class="md-list-item-text">Edit Categories</span>
-            <md-icon class="md-primary">list</md-icon>      
-          </md-list-item>
-          <md-list-item @click="hide()" class="md-inset">
-            <span class="md-list-item-text">Export</span>
-            <md-icon class="md-primary">cloud_download</md-icon>      
-          </md-list-item>
-          <md-list-item @click="hide()" class="md-inset">
-            <span class="md-list-item-text">Reload Exported</span>
-            <md-icon class="md-primary">cloud_upload</md-icon>      
-          </md-list-item>
-          <md-list-item @click="hide()" class="md-inset">
-            <span class="md-list-item-text">Clear Cache</span>
-            <md-icon class="md-primary">remove_circle</md-icon>      
-          </md-list-item>
-          <md-list-item md-expand>
-            
-            <span class="md-list-item-text">Add Source</span>
-            <md-icon>create_new_folder</md-icon>
-            <md-list slot="md-expand">
-              <md-list-item v-for="source in datasources">
-                <span class="md-list-item-text">{{source}}</span>
-                <md-button
-                  class="md-raised md-primary"
-                  @click="hide();add_datasource(source)">
-                  Add
-                </md-button>
-              </md-list-item>
-            </md-list>
           </md-list-item>
         </md-list>  
       </md-list-item>
@@ -139,7 +129,7 @@ let template = `
         <md-list slot="md-expand">
           <md-list-item class="md-inset" v-for="instrument in instruments">
             <span class="md-list-item-text">{{instrument}}</span>
-            <md-button class="md-raised md-primary" @click.stop="">
+            <md-button class="md-raised md-primary" @click.stop="hide(); switch_instruments(instrument)">
               switch
             </md-button>
           </md-list-item>
@@ -182,8 +172,6 @@ let template = `
 </div >
 `;
 
-let al = `<md-icon @click="alert('  If unchecked, you must click Accept button to apply changes')">info</md-icon>`;
-
 export const VueMenu = {
   name: 'vue-menu',
   data: () => ({
@@ -192,15 +180,14 @@ export const VueMenu = {
     datasources: ["ncnr", "charlotte"],
     select_datasource: "ncnr",
     showNavigation: false,
-    expandTemplate: false,
-    expandData: false,
-    expandSettings: false,
     showSettingsHelp: false,
     settingsHelpActiveTab: "",
+    template_to_upload: null,
     predefined_template: "complex",
     predefined_templates: [
       "simple", "complex"
     ],
+    stash_name: null,
     settings: {
       auto_accept: true,
       check_mtimes: true,
@@ -209,13 +196,24 @@ export const VueMenu = {
   }),
   methods: {
     hide() { this.showNavigation = false },
-    new_template() {},
-    edit_template() {},
-    load_predefined(name) {},
-    add_datasource(name) {}
+    action(name, argument) {
+      this.hide();
+      this.$emit("action", name, argument);
+    },
+    new_template: nop
+  },
+  watch: {
+    predefined_templates: {
+      handler: function(val, oldVal) {
+        this.predefined_template = val[0] || "";
+      },
+      deep: true
+    }
   },
   template
 }
+
+function nop(x) {console.log(x)};
 
 export const vueMenu = {};
 

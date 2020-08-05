@@ -132,6 +132,7 @@ window.onpopstate = function (e) {
   })
 
   editor.load_stashes();
+  vueMenu.instance.predefined_templates = Object.keys(editor._instrument_def.templates || {});
 
   if (start_path == "") {
     // no data sources added - add the default
@@ -341,6 +342,37 @@ window.onload = function () {
     plotter.create_instance("plotdiv");
     fieldUI.create_instance("fieldsdiv");
     vueMenu.create_instance("vue_menu");
+    const menu_actions = {
+      new_template() {
+        var empty_template = { modules: [], wires: [] };
+        editor.edit_template(empty_template)
+      },
+      edit_template() { editor.edit_template() },
+      download_template() {
+        let filename = prompt("Save template as:", "template.json");
+        if (filename != null) {
+          download(JSON.stringify(editor._active_template, null, 2), filename);
+        }
+      },
+      upload_template(file) {
+        const reader = new FileReader();
+        reader.onload = res => { 
+          editor.load_template(JSON.parse(res.target.result)) }
+        reader.readAsText(file);
+      },
+      load_predefined(template_id) {
+        let instrument_id = editor._instrument_id;
+        let template_copy = extend(true, {}, editor._instrument_def.templates[template_id]);
+        editor.load_template(template_copy, null, null, instrument_id);
+      },
+      // data functions
+      stash_data() { editor.stash_data() },
+      edit_categories() { editor.edit_categories() }
+    }
+    vueMenu.instance.$on("action", function(name, argument) {
+      menu_actions[name](argument);
+    })
+      
     // set up the communication between these panels:
     // fieldUI.fileinfoUpdateCallback = filebrowser.fileinfoUpdate;
     // filebrowser.fileinfoUpdateCallback = fieldUI.fileinfoUpdate;
