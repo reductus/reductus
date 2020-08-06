@@ -4,11 +4,11 @@
   <title>reductus - data reduction from the web</title>
   <link rel="icon" type="image/x-icon" href="favicon.ico">
   <link rel="stylesheet" href="dist/main.css" />
-  <script src="dist/main.js"></script>
 </head>
 
 <body>
   <div id="body_wrapper">
+    <div id="vue_menu"></div>
     <div id="fullscreen_modal" class="block-overlay">
       <div class="overlay-positioner">
         <div class="overlay-message"></div>
@@ -44,14 +44,11 @@
           </div>
       
           <div id="centerpane" class="ui-layout-center split content split-horizontal">
-            <header id="plot_title"></header>
             <div id="plotdiv"></div>
-            <div id="plot_controls"></div>
           </div>
       
           <div id="east_panel" class="ui-layout-east split content split-horizontal">
-            <div id="device_values"></div>
-            <div id="device_attrs"></div>
+            <div id="fieldsdiv"></div>
           </div>
       
         </div>
@@ -98,6 +95,6 @@
 <div id="reload_exported" title="Reload Exported">
   <p>to upload: <input type="file" multiple="false" id="exported_file" name="exported_file" /></p>
 </div>
-  
+<script src="dist/main.js"></script>
 </body>
 </html>
