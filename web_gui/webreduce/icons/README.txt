@@ -1,0 +1,1 @@
+Icons are from Google Material-Icons collection (but are missing from the npm-distributed font version)
