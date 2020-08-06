@@ -1,4 +1,4 @@
-@import "jstree/dist/themes/default/style.min.css";
+@import "vue-material/dist/vue-material.min.css";
 @import "jquery-ui-dist/jquery-ui.min.css";
 @import "./web_reduction_filebrowser.css";
 @import "./splitting.css";
