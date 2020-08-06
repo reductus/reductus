@@ -97,6 +97,15 @@ function update_descendants(obj, key, value) {
   });
 }
 
+class Deferred {
+  constructor() {
+      this.promise = new Promise((resolve, reject) => {
+          this.resolve = resolve;
+          this.reject  = reject;
+      });
+  }
+}
+
 export const PlotControls = {
   name: "plot-controls",
   data: () => ({
@@ -183,5 +192,6 @@ export const PlotControls = {
     coordChange(axis_name, coord) {},
     transformChange(axis_name, transform) {},
   },
+  mounted: function() { this.$emit("mounted") },
   template
 }

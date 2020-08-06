@@ -30,7 +30,7 @@ let template = `
               <label>Upload Template</label>
               <md-file 
                 v-model="template_to_upload" 
-                @change="action('upload_template', $event.target.files[0]); template_to_upload=null;"/>
+                @change="action('upload_file', $event.target.files[0]); template_to_upload=null;"/>
             </md-field>
             <md-icon class="md-primary">publish</md-icon>      
           </md-list-item>
@@ -69,11 +69,16 @@ let template = `
             <span class="md-list-item-text">Export</span>
             <md-icon class="md-primary">cloud_download</md-icon>      
           </md-list-item>
-          <md-list-item @click="hide(); reload_exported()" class="md-inset">
-            <span class="md-list-item-text">Reload Exported</span>
-            <md-icon class="md-primary">cloud_upload</md-icon>      
+          <md-list-item class="md-inset">
+            <md-field>
+              <label>Reload Exported</label>
+              <md-file 
+                v-model="template_to_upload" 
+                @change="action('upload_file', $event.target.files[0]); template_to_upload=null;"/>
+            </md-field>
+            <md-icon class="md-primary">publish</md-icon>      
           </md-list-item>
-          <md-list-item @click="hide(); clear_cache()" class="md-inset">
+          <md-list-item @click="action('clear_cache')" class="md-inset">
             <span class="md-list-item-text">Clear Cache</span>
             <md-icon class="md-primary">remove_circle</md-icon>      
           </md-list-item>
@@ -88,7 +93,7 @@ let template = `
             </md-field>
             <md-button 
               class="md-raised md-primary"
-              @click="hide();add_datasource(source)">
+              @click="action('add_datasource', source)">
               Add
             </md-button>
           </md-list-item>
@@ -99,22 +104,22 @@ let template = `
         <md-icon>settings</md-icon>
         <span class="md-list-item-text">Settings</span>
         <md-list slot="md-expand">
-          <md-list-item class="md-inset">
-            <md-checkbox v-model="settings.auto_accept" class="md-primary" />
-            <span class="md-list-item-text">Auto-accept changes</span>
-            <md-button class="md-icon-button" @click.stop="settingsHelpActiveTab='auto_accept'; showSettingsHelp = true">
+          <md-list-item v-for="(setting, setting_name) in settings" class="md-inset" @mousedown="">
+            <md-checkbox v-model="setting.value" class="md-primary" />
+            <span class="md-list-item-text">{{setting.label}}</span>
+            <md-button class="md-icon-button" @click.stop="settingsHelpActiveTab=setting_name; showSettingsHelp = true">
               <md-icon class="md-primary">info</md-icon>
             </md-button>
           </md-list-item>
           <md-list-item class="md-inset">
-            <md-checkbox v-model="settings.check_mtimes" class="md-primary" />
+            <md-checkbox v-model="settings.check_mtimes.value" class="md-primary" />
             <span class="md-list-item-text">Auto-reload modified files</span>
             <md-button class="md-icon-button" @click.stop="settingsHelpActiveTab='check_mtimes'; showSettingsHelp = true">
               <md-icon class="md-primary">info</md-icon>
             </md-button>
           </md-list-item>
           <md-list-item class="md-inset">
-            <md-checkbox v-model="settings.cache_calculations" class="md-primary" />
+            <md-checkbox v-model="settings.cache_calculations.value" class="md-primary" />
             <span class="md-list-item-text">Cache calculations</span>
             <md-button class="md-icon-button" @click.stop="settingsHelpActiveTab='cache_calculations'; showSettingsHelp = true">
               <md-icon class="md-primary">info</md-icon>
@@ -129,7 +134,7 @@ let template = `
         <md-list slot="md-expand">
           <md-list-item class="md-inset" v-for="instrument in instruments">
             <span class="md-list-item-text">{{instrument}}</span>
-            <md-button class="md-raised md-primary" @click.stop="hide(); switch_instruments(instrument)">
+            <md-button class="md-raised md-primary" @click.stop="action('switch_instruments', instrument)">
               switch
             </md-button>
           </md-list-item>
@@ -189,9 +194,9 @@ export const VueMenu = {
     ],
     stash_name: null,
     settings: {
-      auto_accept: true,
-      check_mtimes: true,
-      cache_calculations: true
+      auto_accept: {label: "Auto-accept changes", value: true},
+      check_mtimes: {label: "Auto-reload newer files", value: true},
+      cache_calculations: {label: "Cache calculations", value: true}
     }
   }),
   methods: {

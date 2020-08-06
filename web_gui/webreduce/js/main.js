@@ -18,6 +18,7 @@ import { filebrowser } from './filebrowser.js';
 import { plotter } from './plot.js';
 import { fieldUI } from './ui_components/fields_panel.js';
 import { vueMenu } from './menu.js';
+import { reload } from './reload.js';
 
 const app = {}; // put state here.
 export { app };
@@ -84,7 +85,7 @@ window.onbeforeunload = function (e) {
   return msg;
 };
 
-export const download = (function () {
+function create_downloader() {
   var a = document.createElement("a");
   document.body.appendChild(a);
   a.style = "display: none";
@@ -106,7 +107,7 @@ export const download = (function () {
     // cleanup: this seems to break things!
     //document.body.removeChild(a);
   };
-}());
+};
 
 window.onpopstate = function (e) {
   // called by load on Safari with null state, so be sure to skip it.
@@ -149,6 +150,7 @@ window.onpopstate = function (e) {
 
 window.onload = function () {
   window.app = app;
+  app.download = create_downloader();
   window.editor = editor;
   //zip.workerScriptsPath = "js/";
   zip.useWebWorkers = false;
@@ -209,7 +211,7 @@ window.onload = function () {
               hide_menu();
               var filename = prompt("Save template as:", "template.json");
               if (filename == null) { return } // cancelled
-              download(JSON.stringify(editor._active_template, null, 2), filename);
+              app.download(JSON.stringify(editor._active_template, null, 2), filename);
             })
           )
           .append($("<li><div>Upload</div></li>")
@@ -351,14 +353,18 @@ window.onload = function () {
       download_template() {
         let filename = prompt("Save template as:", "template.json");
         if (filename != null) {
-          download(JSON.stringify(editor._active_template, null, 2), filename);
+          app.download(JSON.stringify(editor._active_template, null, 2), filename);
         }
       },
-      upload_template(file) {
+      upload_file(file) {
+        window.fheader = file.slice(0, 20).arrayBuffer();
         const reader = new FileReader();
         reader.onload = res => { 
-          editor.load_template(JSON.parse(res.target.result)) }
-        reader.readAsText(file);
+          let contents = new Uint8Array(res.target.result);
+          let template_data = reload(contents);
+          editor.load_template(template_data.template, template_data.node, template_data.terminal, template_data.instrument_id);
+        }
+        reader.readAsArrayBuffer(file);
       },
       load_predefined(template_id) {
         let instrument_id = editor._instrument_id;
@@ -367,7 +373,8 @@ window.onload = function () {
       },
       // data functions
       stash_data() { editor.stash_data() },
-      edit_categories() { editor.edit_categories() }
+      edit_categories() { editor.edit_categories() },
+      export_data() { editor.export_data() }
     }
     vueMenu.instance.$on("action", function(name, argument) {
       menu_actions[name](argument);

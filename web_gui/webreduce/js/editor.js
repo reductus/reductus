@@ -2,7 +2,7 @@
 // require(d3, dataflow)
 export var editor = {};
 
-import { app, download } from './main.js';
+import { app } from './main.js';
 import {server_api} from './server_api/api_msgpack.js';
 import {dependencies} from './deps.js';
 //import {Sha1} from './sha1.es.js';
@@ -794,7 +794,7 @@ var export_handlers = {
     
   download: function(result, filename) {
     if (result.values.length == 1) {
-      download(result.values[0].value, filename);
+      app.download(result.values[0].value, filename);
     }
     else {
       var filect = 0;
@@ -814,7 +814,7 @@ var export_handlers = {
         }
         else { 
           writer.close(function(blob) {
-            download(blob, filename + ".zip");
+            app.download(blob, filename + ".zip");
           });
         }
       }

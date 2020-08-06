@@ -1,6 +1,6 @@
 import { Vue } from './libraries.js';
 import { PlotControls } from './plotters/plot_controls.js';
-import { download } from './main.js';
+import { app } from './main.js';
 import { show_plots_nd } from './plotters/plot_nd.js';
 import { show_plots_2d_multi, show_plots_2d } from './plotters/plot_2d.js';
 import { show_plots_metadata } from './plotters/plot_metadata.js';
@@ -21,6 +21,7 @@ let template = `
     @transformChange="transformChange"
     @settingChange="settingChange"
     @downloadSVG="downloadSVG"
+    @mounted = "controlsMounted"
   ></plot-controls>
 </div>
 `;
@@ -32,7 +33,10 @@ const plotters = {
   '2d': show_plots_2d,
   'metadata': show_plots_metadata,
   'params': show_plots_params,
-  'null': (data, controls, plotdiv) => { controls.updateShow([]); plotdiv.innerHTML="<div><h1 style=\"text-align:center;\">&#8709</h1></div>" }
+  'null': (data, controls, plotdiv) => { 
+    controls.updateShow([]); 
+    plotdiv.innerHTML="<div><h1 style=\"text-align:center;\">&#8709</h1></div>";
+  }
 };
 
 export const PlotPanel = {
@@ -56,7 +60,7 @@ export const PlotPanel = {
         var output = serializer.serializeToString(svg);
         var filename = prompt("Save svg as:", "plot.svg");
         if (filename == null) { return } // cancelled
-        download(output, filename);
+        app.download(output, filename);
     }
   },
   template  
@@ -67,24 +71,51 @@ plotter.plot = function(plotdata) {
   this.instance.setPlotData(plotdata);
 }
 
+class Deferred {
+  constructor() {
+      this.promise = new Promise((resolve, reject) => {
+          this.resolve = resolve;
+          this.reject  = reject;
+      });
+  }
+}
+
 plotter.create_instance = function(target_id) {
   let target = document.getElementById(target_id);
+  let plotPanelMounted = new Deferred();
+  let plotControlsMounted = new Deferred();
   const PlotPanelClass = Vue.extend(PlotPanel);
-  this.dothing = function() {console.log('doing the thing');}
   plotter.instance = new PlotPanelClass({
     data: () => ({
       type: 'null',
       instances: {},
-      active_plot: null
+      active_plot: null,
+      plot_controls: null
     }),
     methods: {
       async setPlotData(plotdata) {
         let typeChange = (this.type != plotdata.type);
         this.type = plotdata.type;
         await this.$nextTick();
+        await this.ready();
+        if (!this.$refs.control) {return}
         this.active_plot = await plotters[plotdata.type](plotdata, this.$refs.controls, this.$refs.plotdiv, this.active_plot);
+      },
+      async ready() {
+        return Promise.all([
+          plotPanelMounted.promise,
+          //plotControlsMounted.promise
+        ]);
+      },
+      controlsMounted() {
+        console.log("controls mounted");
+        plotControlsMounted.resolve(true);
       }
+    },
+    mounted: function() {
+      plotPanelMounted.resolve(true);
     }
   }).$mount(target);
+
 }
 
