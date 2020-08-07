@@ -21,7 +21,6 @@ let template = `
     @transformChange="transformChange"
     @settingChange="settingChange"
     @downloadSVG="downloadSVG"
-    @mounted = "controlsMounted"
   ></plot-controls>
 </div>
 `;
@@ -82,8 +81,6 @@ class Deferred {
 
 plotter.create_instance = function(target_id) {
   let target = document.getElementById(target_id);
-  let plotPanelMounted = new Deferred();
-  let plotControlsMounted = new Deferred();
   const PlotPanelClass = Vue.extend(PlotPanel);
   plotter.instance = new PlotPanelClass({
     data: () => ({
@@ -97,23 +94,11 @@ plotter.create_instance = function(target_id) {
         let typeChange = (this.type != plotdata.type);
         this.type = plotdata.type;
         await this.$nextTick();
-        await this.ready();
-        if (!this.$refs.control) {return}
         this.active_plot = await plotters[plotdata.type](plotdata, this.$refs.controls, this.$refs.plotdiv, this.active_plot);
-      },
-      async ready() {
-        return Promise.all([
-          plotPanelMounted.promise,
-          //plotControlsMounted.promise
-        ]);
-      },
-      controlsMounted() {
-        console.log("controls mounted");
-        plotControlsMounted.resolve(true);
       }
     },
     mounted: function() {
-      plotPanelMounted.resolve(true);
+      //plotPanelMounted.resolve(true);
     }
   }).$mount(target);
 
