@@ -10,7 +10,7 @@ let template = `
 
     <md-list>
       <md-list-item md-expand>
-        <md-icon>mediation</md-icon>
+        <md-icon md-src="icons/mediation-black-18dp.svg"></md-icon>
         <span class="md-list-item-text">Template</span>
         <md-list slot="md-expand">
           <md-list-item @click="action('new_template')" class="md-inset">
@@ -54,7 +54,7 @@ let template = `
       </md-list-item>
       
       <md-list-item md-expand>
-        <md-icon>source</md-icon>
+        <md-icon md-src="icons/source-black-18dp.svg"></md-icon>
         <span class="md-list-item-text">Data</span>
         <md-list slot="md-expand">
           <md-list-item @click="action('stash_data')" class="md-inset">
@@ -93,7 +93,7 @@ let template = `
             </md-field>
             <md-button 
               class="md-raised md-primary"
-              @click="action('add_datasource', source)">
+              @click="action('add_datasource', select_datasource)">
               Add
             </md-button>
           </md-list-item>
@@ -104,24 +104,10 @@ let template = `
         <md-icon>settings</md-icon>
         <span class="md-list-item-text">Settings</span>
         <md-list slot="md-expand">
-          <md-list-item v-for="(setting, setting_name) in settings" class="md-inset" @mousedown="">
+          <md-list-item v-for="(setting, setting_name) in settings" class="md-inset">
             <md-checkbox v-model="setting.value" class="md-primary" />
             <span class="md-list-item-text">{{setting.label}}</span>
             <md-button class="md-icon-button" @click.stop="settingsHelpActiveTab=setting_name; showSettingsHelp = true">
-              <md-icon class="md-primary">info</md-icon>
-            </md-button>
-          </md-list-item>
-          <md-list-item class="md-inset">
-            <md-checkbox v-model="settings.check_mtimes.value" class="md-primary" />
-            <span class="md-list-item-text">Auto-reload modified files</span>
-            <md-button class="md-icon-button" @click.stop="settingsHelpActiveTab='check_mtimes'; showSettingsHelp = true">
-              <md-icon class="md-primary">info</md-icon>
-            </md-button>
-          </md-list-item>
-          <md-list-item class="md-inset">
-            <md-checkbox v-model="settings.cache_calculations.value" class="md-primary" />
-            <span class="md-list-item-text">Cache calculations</span>
-            <md-button class="md-icon-button" @click.stop="settingsHelpActiveTab='cache_calculations'; showSettingsHelp = true">
               <md-icon class="md-primary">info</md-icon>
             </md-button>
           </md-list-item>
@@ -129,7 +115,7 @@ let template = `
       </md-list-item>
 
       <md-list-item md-expand>
-        <md-icon>biotech</md-icon>
+        <md-icon md-src="icons/biotech-black-18dp.svg"></md-icon>
         <div class="md-list-item-text">Instrument: <span class="md-title">{{current_instrument}}</span></div>
         <md-list slot="md-expand">
           <md-list-item class="md-inset" v-for="instrument in instruments">
@@ -172,8 +158,6 @@ let template = `
       <md-button class="md-primary" @click="showSettingsHelp = false">Close</md-button>
     </md-dialog-actions>
   </md-dialog>
-
-  
 </div >
 `;
 
@@ -188,10 +172,8 @@ export const VueMenu = {
     showSettingsHelp: false,
     settingsHelpActiveTab: "",
     template_to_upload: null,
-    predefined_template: "complex",
-    predefined_templates: [
-      "simple", "complex"
-    ],
+    predefined_template: "",
+    predefined_templates: [""],
     stash_name: null,
     settings: {
       auto_accept: {label: "Auto-accept changes", value: true},
@@ -228,7 +210,7 @@ vueMenu.create_instance = function (target_id) {
   const VueMenuClass = Vue.extend(VueMenu);
   this.instance = new VueMenuClass({
     data: () => ({
-      showNavigation: true
+      showNavigation: false
     })
   }).$mount(target);
 }
