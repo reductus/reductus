@@ -671,7 +671,7 @@ editor.get_signature = function(params) {
   return sig
 }
 
-function calculate_one(params, caching) {
+async function calculate_one(params, caching) {
   var r = new Promise(function(resolve, reject) {resolve()});
   var template = params.template,
         config = params.config || {},
@@ -727,11 +727,11 @@ function calculate_one(params, caching) {
   return r
 }
 
-editor.calculate = function(params, recalc_mtimes, noblock, result_callback) {
+editor.calculate = async function(params, recalc_mtimes, noblock, result_callback) {
   //var recalc_mtimes = $("#auto_reload_mtimes").prop("checked");
   // call result_callback on each result individually (this function will return all results
   // if you want to act on the aggregate after)
-  var caching = $("#cache_calculations").prop("checked");
+  var caching = app.settings.cache_calculations.value;
   var status_message = $("<div />");
   status_message.append($("<h1 />", {text: "Processing..."}));
   status_message.append($("<progress />"));
@@ -1013,58 +1013,40 @@ editor.fileinfo_update = function(fileinfo) {
   filebrowser.fileinfoUpdate(fileinfo);
 }
 
-editor.load_instrument = function(instrument_id) {
-  var editor = this;
+editor.load_instrument = async function(instrument_id) {
   editor._instrument_id = instrument_id;
-  return server_api.get_instrument({instrument_id: instrument_id})
-    .then(function(instrument_def) {
-      editor._instrument_def = instrument_def;
-      editor._module_defs = {};
-      if ('modules' in instrument_def) {
-        for (var i=0; i<instrument_def.modules.length; i++) {
-          var m = instrument_def.modules[i];
-          editor._module_defs[m.id] = m;
-        }
-      }
-      // load into the editor instance
-      editor._instance.module_defs(editor._module_defs);
-      // pass it through:
-      return instrument_def;
-    })
+  let instrument_def = await server_api.get_instrument({instrument_id});
+  editor._instrument_def = instrument_def;
+  editor._module_defs = Object.fromEntries((instrument_def.modules || []).map(m => (
+    [m.id, m]
+  )));
+  // load into the editor instance
+  editor._instance.module_defs(editor._module_defs);
+  // pass it through:
+  return instrument_def;
 }
 
-editor.switch_instrument = function(instrument_id, load_default) {
+editor.switch_instrument = async function(instrument_id, load_default) {
   // load_default_template is a boolean: true if you want to do that action
   // (defaults to true)
   var load_default = (load_default == null) ? true : load_default;
-  if (instrument_id == editor._instrument_id) {
-    // then there's nothing to do...
-    return Promise.resolve();
-  }
-  return this.load_instrument(instrument_id)
-    .then(function(instrument_def) { 
-        var template_names = Object.keys(instrument_def.templates);
-        $("#main_menu #predefined_templates ul").empty();
-        template_names.forEach(function (t,i) {
-          $("#main_menu #predefined_templates ul").append($("<li />").append($("<div />", {text: t})));
-          $("#main_menu").menu("refresh");
-        })
-        var default_template = template_names[0];
-        if (localStorage) {
-          var lookup_id = "webreduce.instruments." + instrument_id + ".last_used_template";
-          var test_template_name = localStorage.getItem(lookup_id);
-          if (test_template_name != null && test_template_name in instrument_def.templates) {
-            default_template = test_template_name;
-          }
-        }
-        if (load_default) {
-          app.current_instrument = instrument_id;
-          var template_copy = extend(true, {}, instrument_def.templates[default_template]);
-          return editor.load_template(template_copy);
-        } else {
-          return 
-        }
-      });
+  if (instrument_id !== editor._instrument_id) {
+    let instrument_def = await this.load_instrument(instrument_id);
+    let template_names = Object.keys(instrument_def.templates);
+    let default_template = template_names[0];
+    if (localStorage) {
+      var lookup_id = "webreduce.instruments." + instrument_id + ".last_used_template";
+      var test_template_name = localStorage.getItem(lookup_id);
+      if (test_template_name != null && test_template_name in instrument_def.templates) {
+        default_template = test_template_name;
+      }
+    }
+    if (load_default) {
+      app.current_instrument = instrument_id;
+      var template_copy = extend(true, {}, instrument_def.templates[default_template]);
+      return editor.load_template(template_copy);
+    }
+  } 
 }
 
 editor.edit_template = function(template_def, instrument_id) {
@@ -1088,65 +1070,57 @@ editor.edit_template = function(template_def, instrument_id) {
   }
 }
 
-editor.load_template = function(template_def, selected_module, selected_terminal, instrument_id) {
+editor.load_template = async function(template_def, selected_module, selected_terminal, instrument_id) {
   var we = this;
   var instrument_id = instrument_id || we._instrument_id;
-  var r = we.switch_instrument(instrument_id, false).then(function() {
+  await editor.switch_instrument(instrument_id, false);
+  editor._active_template = template_def;
+  //var r = we.switch_instrument(instrument_id, false).then(function() {
       
-    we._active_template = template_def;
-    var template_sourcepaths = filebrowser.getAllTemplateSourcePaths(template_def),
-        browser_sourcepaths = filebrowser.getAllBrowserSourcePaths();
+  let template_sourcepaths = filebrowser.getAllTemplateSourcePaths(template_def);
+  let browser_sourcepaths = filebrowser.getAllBrowserSourcePaths();
     var sources_loaded = Promise.resolve();
-    for (var source in template_sourcepaths) {
-      var paths = Object.keys(template_sourcepaths[source]);
-      paths.forEach(function(path,i) {
-        if (browser_sourcepaths.findIndex(function(sp) {return sp.source == source && sp.path == path}) < 0) {
-          sources_loaded = sources_loaded.then(function() {
-            return filebrowser.addDataSource(source, path.split("/"));
-          });
-        }
-      });
-    }
-    
-    var target = d3.select("#" + we._target_id);    
-    we._instance.import(template_def);
-
-    target.selectAll(".module").classed("draggable wireable", false);
-    target.selectAll("g.module").on("click", editor.handle_module_clicked);
-    //target.selectAll("g.module").on("contextmenu", editor.handle_module_contextmenu);
-    
-    var autoselected = template_def.modules.findIndex(function(m) {
-      var has_fileinfo = editor._module_defs[m.module].fields
-        .findIndex(function(f) {return f.datatype == 'fileinfo'}) > -1
-      return has_fileinfo;
-    });
-    
-    if (selected_module != null) {
-      autoselected = selected_module;
-    }
-    
-    if (autoselected > -1) {
-      var toselect = target.selectAll('.module')
-        .filter(function(d,i) { return i == autoselected })
-      // choose the module directly by default
-      var toselect_target = toselect.select(".title").node();
-      // but if a terminal is specified, use that as target instead.
-      if (selected_terminal != null) {
-        var term = toselect.select('rect.terminal[terminal_id="'+selected_terminal+'"]').node();
-        if (term != null) {toselect_target = term} // override the selection with terminal
+  Object.entries(template_sourcepaths).forEach(async (source, pathobj) => {
+    let paths = Object.keys(pathobj);
+    paths.forEach(async (path) => {
+      if (browser_sourcepaths.findIndex(sp => (sp.source == source && sp.path == path)) < 0) {
+        await filebrowser.addDataSource(source, path.split("/"));
       }
-      
-      sources_loaded = sources_loaded.then(function() {
-        return editor.handle_module_clicked.call(toselect.node(), toselect.datum(), autoselected, null, toselect_target); 
-      }).then(function() {
-        return editor.update_completions();
-      });
-    }
-    app.autoselected = autoselected;
-    return
-  });
-  return r;
+    })
+  })
+    
+  var target = d3.select("#" + we._target_id);    
+  we._instance.import(template_def);
+
+  target.selectAll(".module").classed("draggable wireable", false);
+  target.selectAll("g.module").on("click", editor.handle_module_clicked);
+  //target.selectAll("g.module").on("contextmenu", editor.handle_module_contextmenu);
   
+  var autoselected = template_def.modules.findIndex(function(m) {
+    var has_fileinfo = editor._module_defs[m.module].fields
+      .findIndex(function(f) {return f.datatype == 'fileinfo'}) > -1
+    return has_fileinfo;
+  });
+  
+  if (selected_module != null) {
+    autoselected = selected_module;
+  }
+  
+  if (autoselected > -1) {
+    var toselect = target.selectAll('.module')
+      .filter(function(d,i) { return i == autoselected })
+    // choose the module directly by default
+    var toselect_target = toselect.select(".title").node();
+    // but if a terminal is specified, use that as target instead.
+    if (selected_terminal != null) {
+      var term = toselect.select('rect.terminal[terminal_id="'+selected_terminal+'"]').node();
+      if (term != null) {toselect_target = term} // override the selection with terminal
+    }
+    
+    await editor.handle_module_clicked.call(toselect.node(), toselect.datum(), autoselected, null, toselect_target);
+    await editor.update_completions();
+  }
+  app.autoselected = autoselected;  
 }
 
 editor.load_metadata = async function(files_metadata, datasource, path) {
