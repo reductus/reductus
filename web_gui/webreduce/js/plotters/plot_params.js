@@ -1,4 +1,4 @@
-import {Tree} from '../libraries.js';
+import { Tree, d3 } from '../libraries.js';
 
 /**
  *
@@ -27,7 +27,7 @@ export function show_plots_params(plotdata, plot_controls, target, old_plot) {
       //$("div.paramsDisplay").each(function () {
       console.log(d3.selectAll('div.paramsDisplay'));
     });
-    
+
   let param_divs = d3.selectAll([target])
     .selectAll(".paramsDisplay")
     .data(params).enter()
@@ -53,7 +53,7 @@ export function show_plots_params(plotdata, plot_controls, target, old_plot) {
  * @param {number} [id=0]
  * @returns
  */
-function JSON_to_tree(name, value, id=0) {
+function JSON_to_tree(name, value, id = 0) {
   let label = `<label class="json_label">${name}</label>:`;
   if (value == null) {
     return {
@@ -85,7 +85,7 @@ function JSON_to_tree(name, value, id=0) {
       return_obj.children = entries.map(function (nv) { return JSON_to_tree(nv[0], nv[1], id) });
     }
     else {
-      return_obj.text = label +  `<span class="json_array"> {}</span>`;
+      return_obj.text = label + `<span class="json_array"> {}</span>`;
     }
     return return_obj;
   }
