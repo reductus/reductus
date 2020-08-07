@@ -9,10 +9,14 @@
   ],
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "parcel build js/main.js js/template_editor_main.js --public-url=\"./\""
+    "build": "parcel build js/main.js js/template_editor_main.js --public-url=\"./\"; cp -r icons/ dist/",
+    "build_index": "parcel build index.html --public-url=\"./\"; sed -i 's/type=\"module\" //g' dist/index.html; cp -r icons/ dist/;",
+    "build_main": "parcel build index.js --public-url=\"./\"; cp -r index.html icons/ dist/;"
   },
   "alias": {
-    "*js/libraries.js": "/libraries_production.js"
+    "*js/libraries.js": "./js/libraries_production.js",
+    "*css/index.css": "./css/index_prod.css",
+    "vue": "./node_modules/vue/dist/vue.common.js"
   },
   "repository": {
     "type": "git",
@@ -34,6 +38,7 @@
     "babel-plugin-transform-es2015-modules-umd": "^6.24.1",
     "babel-preset-es2015": "^6.24.1",
     "cssnano": "^4.1.10",
+    "sass": "^1.26.10",
     "snowpack": "^1.7.1"
   },
   "dependencies": {
@@ -43,8 +48,11 @@
     "jquery-ui": "^1.12.1",
     "jquery-ui-dist": "^1.12.1",
     "jstree": "^3.3.9",
+    "material-design-icons": "^3.0.1",
+    "material-icons": "^0.3.1",
     "messagepack": "^1.1.10",
     "pouchdb-browser": "^7.2.1",
+    "roboto-fontface": "^0.10.0",
     "sha1": "^1.1.1",
     "split.js": "^1.5.11",
     "vue": "^2.6.11",
