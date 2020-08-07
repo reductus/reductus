@@ -77,7 +77,7 @@ export const FieldsPanel = {
       }
     },
     changed(id, value) {
-      if (app.settings.auto_accept_changes) {
+      if (app.settings.auto_accept.value) {
         if (!this.module.config) {
           this.$set(this.module, 'config', {});
         }

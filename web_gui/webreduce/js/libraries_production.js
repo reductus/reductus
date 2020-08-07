@@ -1,5 +1,5 @@
 //import * as d3 from "./web_modules/d3.js";
-import "../css/index_prod.css";
+// import "../css/index_prod.css";
 
 import jquery from './import_jquery.js';
 import "jquery-ui-dist/jquery-ui.js";
