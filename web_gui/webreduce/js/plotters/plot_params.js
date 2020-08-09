@@ -24,7 +24,6 @@ export function show_plots_params(plotdata, plot_controls, target, old_plot) {
     .text(function (d) { return d })
     .on("click", function (d) {
       let action = this.getAttribute("action");
-      //$("div.paramsDisplay").each(function () {
       console.log(d3.selectAll('div.paramsDisplay'));
     });
 

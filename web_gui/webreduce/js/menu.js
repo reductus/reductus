@@ -1,4 +1,5 @@
 import { Vue, VueMaterial } from './libraries.js';
+import { categoriesEditor } from './ui_components/categories_editor.js';
 
 let template = `
 <div class="page-container md-layout-column">
@@ -61,7 +62,7 @@ let template = `
             <span class="md-list-item-text">Stash Data</span>
             <md-icon class="md-primary">input</md-icon>
           </md-list-item>
-          <md-list-item @click="action('edit_categories')" class="md-inset">
+          <md-list-item @click="showCategoriesEditor = true; showNavigation = false" class="md-inset">
             <span class="md-list-item-text">Edit Categories</span>
             <md-icon class="md-primary">list</md-icon>      
           </md-list-item>
@@ -158,18 +159,30 @@ let template = `
       <md-button class="md-primary" @click="showSettingsHelp = false">Close</md-button>
     </md-dialog-actions>
   </md-dialog>
+
+  <categories-editor 
+    :dialog="showCategoriesEditor" 
+    :categories="categories"
+    @close="showCategoriesEditor=false"
+    @apply="set_categories">
+  </categories-editor>
 </div >
 `;
 
 export const VueMenu = {
   name: 'vue-menu',
+  components: {
+    categoriesEditor
+  },
   data: () => ({
     current_instrument: "ncnr.refl",
     instruments: ["ncnr.refl", "ncnr.sans", "ncnr.vsans"],
     datasources: ["ncnr", "charlotte"],
+    categories: [],
     select_datasource: "ncnr",
     showNavigation: false,
     showSettingsHelp: false,
+    showCategoriesEditor: false,
     settingsHelpActiveTab: "",
     template_to_upload: null,
     predefined_template: "",
@@ -187,7 +200,11 @@ export const VueMenu = {
       this.hide();
       this.$emit("action", name, argument);
     },
-    new_template: nop
+    new_template: nop,
+    set_categories(new_categories) {
+      this.categories.splice(0, this.categories.length, ...new_categories);
+      this.$emit("action", 'set_categories', this.categories);
+    }
   },
   watch: {
     predefined_templates: {

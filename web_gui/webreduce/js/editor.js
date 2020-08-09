@@ -19,6 +19,7 @@ import {filebrowser} from './filebrowser.js';
 import { fieldUI } from './ui_components/fields_panel.js';
 import { plotter  } from './plot.js';
 import { category_editor } from './ui_components/category_editor.js';
+import { vueMenu } from './menu.js';
 
 editor.instruments = instruments;
 
@@ -257,10 +258,10 @@ function module_clicked_single() {
   if (data_to_show != null && terminals_to_calculate.indexOf(data_to_show) < 0) {
     terminals_to_calculate.push(data_to_show);
   }
-  var recalc_mtimes = $("#auto_reload_mtimes").prop("checked"),
-      params_to_calc = terminals_to_calculate.map(function(terminal_id) {
-        return {template: active_template, config: {}, node: i, terminal: terminal_id, return_type: "plottable"}
-      })
+  let recalc_mtimes = app.settings.check_mtimes.value;
+  let params_to_calc = terminals_to_calculate.map(function(terminal_id) {
+    return {template: active_template, config: {}, node: i, terminal: terminal_id, return_type: "plottable"}
+  })
   editor.calculate(params_to_calc, recalc_mtimes)
     .then(function(results) {
     var inputs_map = {};
@@ -395,8 +396,8 @@ editor.handle_module_clicked = function(d,i,current_group,clicked_elem) {
     var module_def = editor._module_defs[active_module.module];
     var fields = module_def.fields || [];
     if (fields.filter(function(d) {return d.datatype == 'fileinfo'}).length == 0) {
-        var nav = $("#datasources");
-        nav.find("div.block-overlay").show();
+        // var nav = $("#datasources");
+        // nav.find("div.block-overlay").show();
     }
     
     if (d3.select(clicked_elem).classed("title")) {
@@ -426,7 +427,7 @@ editor.handle_module_clicked = function(d,i,current_group,clicked_elem) {
 
 function compare_in_template(to_compare, template) {
   var template = template || editor._active_template;
-  let recalc_mtimes = $("#auto_reload_mtimes").prop("checked");
+  let recalc_mtimes = app.settings.check_mtimes.value;
   let params_to_calc = to_compare.map(function(a) {
         return {template: template, config: {}, node: a.node, terminal: a.terminal, return_type: "plottable"}
       });
@@ -604,7 +605,7 @@ function compare_stashed(stashnames) {
   d3.selectAll("g.module .selected").classed("selected", false);
   var existing_stashes = _fetch_stashes();
   var stashnames = stashnames.filter(function(s) {return (s in existing_stashes)});
-  var recalc_mtimes = $("#auto_reload_mtimes").prop("checked");
+  var recalc_mtimes = app.settings.check_mtimes.value;
   var params_to_calc = stashnames.map(function(stashname) {
     var stashed = existing_stashes[stashname];
     return {
@@ -940,7 +941,7 @@ editor.export_data = function() {
 
 function initiate_export(params) {
   var w = editor;
-  var recalc_mtimes = $("#auto_reload_mtimes").prop("checked");
+  var recalc_mtimes = app.settings.check_mtimes.value;
   editor.calculate(params, recalc_mtimes).then(function(result) {
     // add the template and target node, terminal to the header of the file:
     var suggested_name = (result.values[0] || {}).filename || "myfile.refl";
@@ -1026,12 +1027,14 @@ editor.load_instrument = async function(instrument_id) {
   return instrument_def;
 }
 
-editor.switch_instrument = async function(instrument_id, load_default) {
+editor.switch_instrument = async function(instrument_id, load_default=true) {
   // load_default_template is a boolean: true if you want to do that action
   // (defaults to true)
-  var load_default = (load_default == null) ? true : load_default;
   if (instrument_id !== editor._instrument_id) {
     let instrument_def = await this.load_instrument(instrument_id);
+    let categories = editor.instruments[instrument_id].categories;
+    let old_categories = vueMenu.instance.categories;
+    old_categories.splice(0, old_categories.length, ...categories);
     let template_names = Object.keys(instrument_def.templates);
     let default_template = template_names[0];
     if (localStorage) {

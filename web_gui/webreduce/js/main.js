@@ -183,7 +183,6 @@ window.onload = async function () {
   var api_exception_dialog = $("div#api_exception").dialog({ autoOpen: false, width: 600 });
   var initiate_export_data = $("#initiate_export").dialog({ autoOpen: false, width: 400 });
   var route_export_data = $("#route_export_data").dialog({ autoOpen: false, width: 400 });
-  var categories_editor = $("#categories_editor").dialog({ autoOpen: false, width: 600 });
 
   document.getElementById("menu_open").addEventListener("click", () => {
     vueMenu.instance.showNavigation = !vueMenu.instance.showNavigation;
@@ -225,6 +224,9 @@ window.onload = async function () {
     // data functions
     stash_data() { editor.stash_data() },
     edit_categories() { editor.edit_categories() },
+    set_categories(new_categories) {
+      editor.instruments[editor._instrument_id].categories = new_categories;
+    },
     export_data() { editor.export_data() },
     add_datasource,
     clear_cache() { editor.clear_cache() }

@@ -21,6 +21,7 @@ export {default as Tree} from './treejs/src/index.js';
 export { default as Vue } from 'https://cdn.jsdelivr.net/npm/vue@2.6.11/dist/vue.esm.browser.js';
 // export { default as VueSidebarMenu } from 'https://cdn.skypack.dev/vue-sidebar-menu@4.6.2';
 export { default as VueMaterial } from 'https://cdn.skypack.dev/vue-material@latest';
+export { default as vuedraggable } from 'https://cdn.skypack.dev/vuedraggable@^2.23.2';
 //import { default as d3 } from "https://dev.jspm.io/d3@5";
 //export { d3 };
 import * as messagepack from "https://unpkg.com/messagepack@1.1.10/dist/messagepack.es.js";
