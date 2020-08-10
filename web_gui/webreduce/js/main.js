@@ -128,7 +128,6 @@ window.onpopstate = async function (e) {
   app.current_instrument = instrument;
   await editor.switch_instrument(instrument);
   editor.load_stashes();
-  vueMenu.instance.predefined_templates = Object.keys(editor._instrument_def.templates || {});
 
   add_datasource(source, start_path);
 }
@@ -229,7 +228,10 @@ window.onload = async function () {
     },
     export_data() { editor.export_data() },
     add_datasource,
-    clear_cache() { editor.clear_cache() }
+    clear_cache() { editor.clear_cache() },
+    switch_instrument(instrument_id) {
+      editor.switch_instrument(instrument_id);
+    }
   }
   vueMenu.instance.$on("action", function (name, argument) {
     menu_actions[name](argument);

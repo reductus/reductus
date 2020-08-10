@@ -121,7 +121,7 @@ let template = `
         <md-list slot="md-expand">
           <md-list-item class="md-inset" v-for="instrument in instruments">
             <span class="md-list-item-text">{{instrument}}</span>
-            <md-button class="md-raised md-primary" @click.stop="action('switch_instruments', instrument)">
+            <md-button class="md-raised md-primary" @click.stop="action('switch_instrument', instrument)">
               switch
             </md-button>
           </md-list-item>
