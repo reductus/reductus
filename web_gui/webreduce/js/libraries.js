@@ -15,8 +15,8 @@ zip.Inflater = Inflater;
 zip.Deflater = Deflater;
 export {zip};
 
-//export {default as Tree} from 'https://cdn.jsdelivr.net/gh/bmaranville/treejs@latest/src/index.js';
-export {default as Tree} from './treejs/src/index.js';
+export {default as Tree} from 'https://cdn.jsdelivr.net/gh/bmaranville/treejs@latest/src/index.js';
+//export {default as Tree} from './treejs/src/index.js';
 
 export { default as Vue } from 'https://cdn.jsdelivr.net/npm/vue@2.6.11/dist/vue.esm.browser.js';
 // export { default as VueSidebarMenu } from 'https://cdn.skypack.dev/vue-sidebar-menu@4.6.2';

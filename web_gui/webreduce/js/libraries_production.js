@@ -10,7 +10,7 @@ zip.Inflater = Inflater;
 zip.Deflater = Deflater;
 export { zip };
 
-export { default as Tree } from './treejs/src/index.js';
+export { default as Tree } from '@widgetjs/tree/src/index.js';
 export { default as Vue } from 'vue';
 export { default as VueMaterial } from 'vue-material';
 
