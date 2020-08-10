@@ -288,6 +288,7 @@ function module_clicked_single() {
     fieldUI.instance.module_id = i;
     fieldUI.instance.terminal_id = data_to_show;
     fieldUI.instance.module_def = module_def;
+    fieldUI.instance.timestamp = Date.now();
     // fields.forEach(function(field) {
     //   if (make_fieldUI[field.datatype]) {
     //     var value;

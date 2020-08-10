@@ -9,7 +9,7 @@ let template = `
   <button @click="help">help</button>
   <fileinfo-ui 
     v-for="(field, index) in fileinfos"
-    :key="module_id + ':' + terminal_id + ':' + field.id"
+    :key="base_key + field.id"
     ref="fileinfos"
     :active="active_fileinfo == index"
     :field="field"
@@ -22,7 +22,7 @@ let template = `
     v-for="(field, index) in fields"
     :class="['fields', field.datatype]"
     oldkey="JSON.stringify(field)+(module.config || {})[field.id]"
-    :key="module_id + ':' + terminal_id + ':' + field.id"
+    :key="base_key + field.id"
     ref="fields"
     >
     <component 
@@ -46,6 +46,7 @@ export const FieldsPanel = {
   name: "fields-panel",
   components: Components,
   data: () => ({
+    timestamp: 0, // last clicked
     module: {},
     num_datasets_in: 0,
     module_def: {},
@@ -64,6 +65,9 @@ export const FieldsPanel = {
     },
     add_interactors() {
       return (this.terminal_id != null && this.terminal_id == (this.module_def.inputs[0] || {}).id);
+    },
+    base_key() {
+      return `${this.module_id}:${this.terminal_id}:${this.timestamp}:`;
     }
   },
   methods: {
