@@ -11,8 +11,11 @@ zip.Deflater = Deflater;
 export { zip };
 
 export { default as Tree } from '@widgetjs/tree/src/index.js';
-export { default as Vue } from 'vue';
-export { default as VueMaterial } from 'vue-material';
+import { default as Vue } from 'vue';
+import { default as VueMaterial } from 'vue-material';
+import * as VueMaterialComponents from 'vue-material/dist/components';
+Vue.use(VueMaterial);
+export { Vue, VueMaterial, VueMaterialComponents };
 
 import * as d3 from 'd3';
 export { d3 };

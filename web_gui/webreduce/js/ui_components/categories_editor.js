@@ -43,6 +43,7 @@ let template = `
         </md-field>
       </md-card-content>
       <md-dialog-actions>
+        <md-button class="md-primary" @click="reload_defaults">Load Defaults</md-button>
         <md-button class="md-raised md-accent" @click="close">Cancel</md-button>
         <md-button class="md-raised md-primary" @click="apply">Apply</md-button>
         <md-button class="md-raised md-primary" @click="apply(); close()">Apply and Close</md-button>
@@ -170,7 +171,8 @@ export const categoriesEditor = {
       let new_sub = JSON.parse(item.id);
       subcategory.splice(0, subcategory.length, ...new_sub)
       this.pick_category.open = false;
-    }
+    },
+    reload_defaults() {}
   },
   data: function() {
     return {

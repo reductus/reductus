@@ -189,6 +189,20 @@ window.onload = async function () {
 
   editor.create_instance("bottom_panel");
   filebrowser.create_instance("filebrowser");
+  const filebrowser_actions = {
+    remove_stash(stashname) {
+      editor.remove_stash(stashname);
+    },
+    reload_stash(stashname) {
+      editor.reload_stash(stashname);
+    },
+    compare_stashed(stashnames) {
+      editor.compare_stashed(stashnames);
+    }
+  }
+  filebrowser.instance.$on("action", function (name, argument) {
+    filebrowser_actions[name](argument);
+  });
   plotter.create_instance("plotdiv");
   fieldUI.create_instance("fieldsdiv");
   vueMenu.create_instance("vue_menu");

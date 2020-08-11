@@ -8,10 +8,11 @@ let template = `
     :source="source" 
     :index="index" 
     :key="source.name + ':' + source.pathlist.join('/') + ':' + JSON.stringify(source.treedata)"
-    @change="pathChange" 
+    @change="pathChange"
     @remove="remove"
     @refresh="refresh"
     @checked="checked"
+    @open-close="$emit('resize')"
     ref="sources"
   ></data-source>
 </div>

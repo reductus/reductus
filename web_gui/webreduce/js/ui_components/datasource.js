@@ -34,8 +34,12 @@ export const DataSource = {
         data: treedata,
         closeDepth: -1,
         itemClickToggle: 'closed',
-        onChange: (v) => {this.$emit("checked")}
+        onChange: (v) => {this.$emit("checked")},
+        onSwitch: async (v) => {
+          this.$emit("open-close")
+        } 
       })
+      
       //this.tree.onChange = () => this.$emit("checked");
     },
     get_checked() {
@@ -57,6 +61,26 @@ export const DataSource = {
     //console.log(this.source.treedata);
     // go get tree data
     this.set_treedata(this.source.treedata);
+    // var updater = null;
+    // this.$refs.tree.addEventListener('transitionstart', (evt) => {
+    //   if (evt.propertyName == 'transform') {        
+    //     if (updater == null) {
+    //       // don't start it if you've already ended transition.
+    //       updater = setInterval(() => {console.log('updating'); this.$emit('open-close')}, 10);
+    //     }
+    //   }
+    // });
+    // this.$refs.tree.addEventListener('transitionend', (evt) => {
+    //   if (evt.propertyName == 'transform') {
+    //     clearInterval(updater);
+    //     updater = null;
+    //   }
+    // });
+    this.$refs.tree.addEventListener('transitionend', (evt) => {
+        if (evt.propertyName == 'margin-top') {
+          this.$emit('open-close');
+        }
+    })
   },
   template
 }

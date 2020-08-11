@@ -4,7 +4,8 @@
 @import "roboto-fontface/css/roboto/sass/roboto-fontface-regular-italic.scss";
 /* @import 'material-icons/iconfont/material-icons.scss'; */
 
-@import "@widgetjs/tree/src/index.css";
+/* @import "@widgetjs/tree/src/index.css"; */
+@import "./treejs.css";
 @import "jquery-ui-dist/jquery-ui.min.css";
 @import "./web_reduction_filebrowser.css";
 @import "./splitting.css";

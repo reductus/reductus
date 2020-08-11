@@ -1,56 +1,60 @@
-import {SourceList} from './sourcelist.js';
+import { SourceList } from './sourcelist.js';
 
 let template = `
 <div class="filepanel">
-  <div id="filebrowser_tabselect">
-    <label 
-      :style="(tab_select == 'data') ? selected_tabstyle : unselected_tabstyle">
-      <input type="radio" name="fb_tabs" value="data" v-model="tab_select" checked />
-      raw data
-    </label>
-    <label 
-      :style="(tab_select == 'stashed') ? selected_tabstyle : unselected_tabstyle">
-      <input type="radio" name="fb_tabs" value="stashed" v-model="tab_select" />
-      stashed
-    </label>
-  </div>
-  <div v-show="tab_select == 'data'" id="navigation">
-    <source-list 
-      :datasources="datasources"
-      ref="sourcelist"
-      @checkedChange="handleChecked"
-      @pathChange="pathChange"
-    ></source-list>
-  </div>
-  <div v-show="tab_select == 'stashed'" id="stashedlist"></div>
+  <md-tabs ref="tabs">
+    <md-tab id="navigation" md-label="raw data">
+      <md-overlay :class="mdBackdropClass" md-fixed :md-active="true"/>
+      <source-list 
+        :datasources="datasources"
+        ref="sourcelist"
+        @checkedChange="handleChecked"
+        @pathChange="pathChange"
+        @resize="resize"
+      ></source-list>
+    </md-tab>
+    <md-tab id="stashedlist" md-label="stashed">
+      <md-list class="md-dense">
+        <md-subheader>Compare Stashed</md-subheader>
+        <md-list-item v-for="name in stashnames">
+          <md-checkbox 
+            v-model="selected_stashes" 
+            :value="name" 
+            @change="$emit('action', 'compare_stashed', selected_stashes)" />
+          <span class="md-list-item-text">{{name}}</span>
+          <md-button class="" @click.stop="$emit('action', 'reload_stash', name)">
+            reload
+            <md-icon>launch</md-icon>
+          </md-button>
+          <md-button class="md-icon-button md-accent" @click.stop="$emit('action', 'remove_stash', name)">
+            <md-icon>delete</md-icon>
+          </md-button>
+          <md-divider/>
+        </md-list-item>
+      </md-list>
+    </md-tab>
+  </md-tabs>
 </div>
 `
 
 export const FilePanel = {
   name: "file-panel",
-  components: {SourceList},
+  components: { SourceList },
   data: () => ({
     datasources: [],
     tab_select: 'data',
-    unselected_tabstyle: {
-      border: '1px solid grey',
-      padding: '0.5em',
-      "margin-top": '0.5em',
-      "border-bottom": '1px solid grey'
-    },
-    selected_tabstyle: {
-      border: '1px solid grey',
-      padding: '0.5em',
-      "margin-top": '0.5em',
-      "border-bottom": 'none'
-    }
+    stashnames: [],
+    selected_stashes: []
   }),
   methods: {
     refreshAll() {
       this.$refs.sourcelist.refreshAll();
     },
-    handleChecked() {},
-    pathChange() {}
+    handleChecked() { },
+    pathChange() { },
+    resize() {
+      this.$refs.tabs.calculateTabPos();
+    }
   },
   template
 }

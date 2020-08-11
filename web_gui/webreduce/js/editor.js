@@ -471,12 +471,12 @@ editor.stash_data = function(suggested_name) {
   try {
       if (!window.localStorage) { throw false; }
   } catch (e) {
-      alert("localStorage not supported in your browser");
-      return;
+    alert("localStorage not supported in your browser");
+    return;
   }
   if (editor._active_terminal == null) {
-          alert("please select one input or output terminal to stash"); 
-          return 
+    alert("please select one input or output terminal to stash"); 
+    return 
   }
   
   var suggested_name = (suggested_name == null) ?  "processed" : suggested_name;
@@ -517,51 +517,7 @@ editor.stash_data = function(suggested_name) {
 editor.load_stashes = function(stashes) {
   var existing_stashes = stashes || _fetch_stashes();
   var stashnames = Object.keys(existing_stashes);
-  d3.select("div#stashedlist").selectAll("ul").remove();
-  var stashedlist = d3.select("div#stashedlist")
-    .style("padding-left", "10px")
-    .append("ul")
-    .style("list-style", "none")
-    .style("padding", "0px")
-    
-  var sn = stashedlist.selectAll("li").data(stashnames)
-    .enter().append("li");
-    
-  sn.each(function() {
-    var li = d3.select(this);
-    li.append("input")
-      .attr("type", "checkbox")
-      .classed("compare", true)
-    li.append("span")
-      .text(function(d) {return d})
-    li.append("span")
-      .classed("stash-reload", true)
-      .style("color", "blue")
-      .text("reload")
-      .on('click', function(d) {reload_stash(d)});
-    li.append("span")
-      .classed("stash-remove", true)
-      .style("color", "red")
-      .text("remove")
-      .on('click', function(d) {remove_stash(d)});
-    });
-    
-    stashedlist.selectAll("span.stash-remove, span.stash-reload")
-      .style("text-decoration", "underline")
-      .style("font-style", "italic")
-      .style("cursor", "pointer")
-      .style("padding-left", "10px")
-      
-    stashedlist.selectAll("input.compare")
-      .on("change", function(d,i) {
-        var checked = stashedlist.selectAll("input.compare:checked");
-        var comparelist = [];
-        checked.each(function(dd,ii) {comparelist.push(dd)});
-        compare_stashed(comparelist);
-      })
-      
-    
-  //console.log(JSON.stringify(subroutine, null, 2));    
+  filebrowser.instance.stashnames = stashnames;
 }
 
 function _fetch_stashes() {
@@ -576,7 +532,7 @@ function _save_stashes(stashes) {
     localStorage['webreduce.editor.stashes'] = JSON.stringify(stashes);
   } catch (e) {}
 }
-function remove_stash(stashname) {
+editor.remove_stash = function(stashname) {
   var existing_stashes = _fetch_stashes();
   if (stashname in existing_stashes) {
     delete existing_stashes[stashname];
@@ -585,7 +541,7 @@ function remove_stash(stashname) {
   }
 }
 
-function reload_stash(stashname) {
+editor.reload_stash = function(stashname) {
   var overwrite = confirm("discard active template to load stashed?");
   if (!overwrite) {return}
   var existing_stashes = JSON.parse(localStorage['webreduce.editor.stashes'] || "{}");
@@ -599,7 +555,7 @@ function reload_stash(stashname) {
   }
 }
 
-function compare_stashed(stashnames) {
+editor.compare_stashed = function(stashnames) {
   // stashnames is a list of stashed data ids
   // eventually send these as-is to server, but for now since the server
   // doesn't handle subroutines...
