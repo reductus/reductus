@@ -318,7 +318,9 @@ div.block-overlay {
     background:rgba(128,128,128,0.5);
     left: 0;
     top: 0;
-    display: none;
+    right: 0;
+    bottom: 0;
+    /* display: none; */
     z-index: 500;
 }
 

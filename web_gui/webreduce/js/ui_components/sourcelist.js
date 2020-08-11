@@ -3,25 +3,28 @@ import { DataSource } from './datasource.js';
 let template = `
 <div class="sourcelist">
   <div><button id="refresh_all" @click="refreshAll">refresh all</button></div>
-  <data-source 
-    v-for="(source, index) in datasources" 
-    :source="source" 
-    :index="index" 
-    :key="source.name + ':' + source.pathlist.join('/') + ':' + JSON.stringify(source.treedata)"
-    @change="pathChange"
-    @remove="remove"
-    @refresh="refresh"
-    @checked="checked"
-    @open-close="$emit('resize')"
-    ref="sources"
-  ></data-source>
+  <div style="position: relative">
+    <div :class="{'block-overlay': blocked}"></div>
+    <data-source 
+      v-for="(source, index) in datasources" 
+      :source="source" 
+      :index="index" 
+      :key="source.name + ':' + source.pathlist.join('/') + ':' + JSON.stringify(source.treedata)"
+      @change="pathChange"
+      @remove="remove"
+      @refresh="refresh"
+      @checked="checked"
+      @open-close="$emit('resize')"
+      ref="sources"
+    ></data-source>
+  </div>
 </div>
 `
 
 export const SourceList = {
   name: "source-list",
   components: { DataSource },
-  props: ["datasources"],
+  props: ["datasources", "blocked"],
   methods: {
     pathChange(source, new_pathlist, index) {
       this.$emit("pathChange", source, new_pathlist, index);

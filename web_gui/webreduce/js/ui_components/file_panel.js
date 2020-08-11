@@ -4,9 +4,9 @@ let template = `
 <div class="filepanel">
   <md-tabs ref="tabs">
     <md-tab id="navigation" md-label="raw data">
-      <md-overlay :class="mdBackdropClass" md-fixed :md-active="true"/>
       <source-list 
         :datasources="datasources"
+        :blocked="blocked"
         ref="sourcelist"
         @checkedChange="handleChecked"
         @pathChange="pathChange"
@@ -44,7 +44,8 @@ export const FilePanel = {
     datasources: [],
     tab_select: 'data',
     stashnames: [],
-    selected_stashes: []
+    selected_stashes: [],
+    blocked: false
   }),
   methods: {
     refreshAll() {
