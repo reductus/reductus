@@ -1,7 +1,6 @@
-import { Vue } from '../libraries.js';
+import { Vue, extend } from '../libraries.js';
 import { Components } from './fields/components.js';
 import { filebrowser } from '../filebrowser.js';
-import { app } from '../main.js';
 
 let template = `
 <div class="fields-panel">
@@ -28,7 +27,7 @@ let template = `
     <component 
       v-bind:is="field.datatype + '-ui'"
       :field="field"
-      :value="(module.config || {})[field.id]"
+      :value="local_config[field.id]"
       :num_datasets_in="num_datasets_in"
       :add_interactors="add_interactors"
       class="item-component"
@@ -36,7 +35,7 @@ let template = `
     </component>
   </div>
   <div class="control-buttons" style="position:absolute;bottom:10px;">
-    <button class="accept config" @click="accept">{{(auto_accept) ? "replot" : "accept"}}</button>
+    <button class="accept config" @click="accept">{{(auto_accept.value) ? "replot" : "accept"}}</button>
     <button class="clear config" @click="clear">clear</button>
   </div>
 </div>
@@ -48,12 +47,12 @@ export const FieldsPanel = {
   data: () => ({
     timestamp: 0, // last clicked
     module: {},
+    local_config: {},
     num_datasets_in: 0,
     module_def: {},
     module_id: null,
     terminal_id: null,
-    config: {},
-    auto_accept: true,
+    auto_accept: {value: true},
     active_fileinfo: 0
   }),
   computed: {
@@ -71,6 +70,23 @@ export const FieldsPanel = {
     }
   },
   methods: {
+    reset_local_config() {
+      // this.fields.forEach((f) => {
+      //   let id = f.id;
+      //   if (this.module.config && id in this.module.config) {
+      //     if (Array.isArray(this.local_config[id]) && Array.isArray(this.module.config[id])) {
+      //       this.local_config[id].splice(0, this.local_config[id].length, ...this.module.config[id]);
+      //     }
+      //     else {
+      //       this.$set(this.local_config, id, this.module.config[id]);
+      //     }
+      //   }
+      //   else {
+      //     this.$delete(this.local_config, id);
+      //   }
+      // })
+      this.local_config = extend(true, {}, this.module.config);
+    },
     help() {
       let helpwindow = window.open("", "help", "location=0,toolbar=no,menubar=no,scrollbars=yes,resizable=yes,width=960,height=480");
       helpwindow.document.title = "Web reduction help";
@@ -81,15 +97,19 @@ export const FieldsPanel = {
       }
     },
     changed(id, value) {
-      if (app.settings.auto_accept.value) {
-        if (!this.module.config) {
-          this.$set(this.module, 'config', {});
-        }
-        this.$set(this.module.config, id, value);
+      if (this.auto_accept.value) {
+        this.accept_change(id, value);
+      }
+      else {
+        this.$set(this.local_config, id, value);
       }
     },
-    field_value(field_id) {
-      return config[field_id];
+    accept_change(id, value) {
+      if (!this.module.config) {
+        this.$set(this.module, 'config', {});
+      }
+      this.$set(this.module.config, id, value);
+      this.reset_local_config();
     },
     activate_fileinfo(index = null) {
       if (index != null) {
@@ -98,10 +118,10 @@ export const FieldsPanel = {
       let active_field = this.fileinfos[this.active_fileinfo];
       let value = (active_field) ? ((this.module.config || {})[active_field.id] || []) : [];
       this.fileinfoChanged(value);
+      this.$emit("action", "show_files");
     },
     update_fileinfo(value) {
       let active_field = this.fileinfos[this.active_fileinfo];
-      //this.config[active_field.id] = value;
       if (active_field) {
         if (!this.module.config) {
           this.$set(this.module, 'config', {});
@@ -109,11 +129,22 @@ export const FieldsPanel = {
        this.$set(this.module.config, active_field.id, value);
       }
     },
-    accept() {
+    accept(id, value) {
+      if (!this.auto_accept.value) {
+        this.accept_change(id, value);
+      }
+      this.$emit("action", "accept");
     },
     clear() {
-      if (this.module.config) { this.$delete(this.module, 'config') }
-      this.$emit("clear");
+      if (this.auto_accept.value) {
+        if (this.module.config) { this.$delete(this.module, 'config') }
+      }
+      else {
+        this.local_config = {};
+      }
+      this.reset_local_config();
+      this.timestamp = Date.now();
+      this.$emit("action", "clear");
     },
     fileinfoChanged(value) {
       // initialize this callback later?
@@ -126,6 +157,7 @@ export const FieldsPanel = {
   beforeUpdate: function () {
     // reset the active file picker to the first one.
     this.active_fileinfo = 0;
+    filebrowser.instance.blocked = (this.fileinfos.length < 1);
   },
   template
 }
@@ -139,8 +171,7 @@ fieldUI.create_instance = function (target_id) {
     data: () => ({
       module: {},
       module_def: {},
-      config: {},
-      auto_accept: true
+      auto_accept: {value: true}
     })
   }).$mount(target);
 }

@@ -30,18 +30,7 @@ export const IndexUi = {
   name: "index-ui",
   props: ["field", "value", "num_datasets_in", "add_interactors"],
   data: function () {
-    let local_value;
-    let value_length = (this.value || []).length;
-    if (this.value != null && this.num_datasets_in != value_length) {
-      alert(`${value_length} masks defined for ${this.num_datasets_in} datasets; 
-      Extending with empty masks or truncating to match data length`);
-    }
-    if (this.value != null) {
-      local_value = Array.from(Array(this.num_datasets_in)).map((x,i) => (this.value[i] || []));
-    }
-    else {
-      local_value = Array.from(Array(this.num_datasets_in)).map((x) => []);
-    }
+    let local_value = this.getLocal(this.value)
     return {
       local_value,
       interaction: 'select'
@@ -64,12 +53,23 @@ export const IndexUi = {
   methods: {
     changed: function() {
       this.$emit('change', this.field.id, this.local_value);
-    }
+    },
+    getLocal(value) {
+      let value_length = (this.value || []).length;
+      if (this.value != null && this.num_datasets_in != value_length) {
+        alert(`${value_length} masks defined for ${this.num_datasets_in} datasets; 
+        Extending with empty masks or truncating to match data length`);
+      }
+      return Array.from(Array(this.num_datasets_in)).map((x,i) => 
+          ((this.value || [])[i] || []));
+    },
+    setLocal() {}
   },
   mounted: function () {
     // create the interactor here, if commanded
     if (this.add_interactors) {
       let chart = plotter.instance.active_plot;
+      if (!chart) { return } // bail out
       var selected = extend(true, [], this.local_value);
       let state = {
         skip_points: false

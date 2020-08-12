@@ -10,7 +10,7 @@ let field_template = `
     </div>
     <div 
       class="patch" 
-      v-for="(patch, index) in local_value"
+      v-for="(patch, index) in (value || [])"
       :key="JSON.stringify(patch)"
       > 
         <button style="color:red;font-weight:bold;" @click="remove(index)">x</button>
@@ -24,28 +24,28 @@ let field_template = `
 export const PatchUi = {
   name: 'patch_metadata-ui',
   props: ["field", "value", "add_interactors"],
-  data: function() {
-    return {
-      local_value: extend(true, [], this.value),
-      key_col: this.field.typeattr.key
-    }
+  computed: {
+    local_value: function() { return extend(true, [], this.value) },
+    key_col: function() { return this.field.typeattr.key }
   },
   methods: {
     update_patch(row, col, value) {
       let key = row[this.key_col];
       let path = `/${key}/${col}`;
-      let existing = this.local_value.find(p => (p.path == path));
+      let local_value = this.local_value;
+      let existing = local_value.find(p => (p.path == path));
       if (existing) {
         existing.value = value;
       }
       else {
-        this.local_value.push({op: "replace", path, value});
+        local_value.push({op: "replace", path, value});
       }
-      this.$emit("change", this.field.id, this.local_value);
+      this.$emit("change", this.field.id, local_value);
     },
     remove(index) {
-      this.$delete(this.local_value, index);
-      this.$emit("change", this.field.id, this.local_value);
+      let local_value = this.local_value;
+      local_value.splice(index, 1);
+      this.$emit("change", this.field.id, local_value);
     }
   },
   template: field_template,
@@ -53,11 +53,17 @@ export const PatchUi = {
     if (this.add_interactors) {
       let chart = plotter.instance.active_plot;
       chart.editing = true;
-      chart.key_col = this.field.typeattr.key;
-      chart.$set(chart, 'patches', this.local_value);
+      chart.key_col = this.key_col;
+      chart.$set(chart, 'patches', this.value || []);
       chart.$on("change", (row, col, value) => {
         this.update_patch(row, col, value);
       })
+    }
+  },
+  updated: function() {
+    if (this.add_interactors) {
+      let chart = plotter.instance.active_plot;
+      chart.$set(chart, 'patches', this.value || []);
     }
   }
 }

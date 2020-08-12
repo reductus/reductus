@@ -6,8 +6,8 @@ let template = `
       :type="(field.multiple) ? 'text' : 'number'"
       :id="field.id"
       :placeholder="field.default"
-      v-model="display_value"
-      @change="$emit('change', field.id, local_value)"
+      :value="display_value"
+      @change="display_value = $event.target.value"
     />
   </label>
 </div>
@@ -16,87 +16,34 @@ let template = `
 export const IntUi = {
   name: "int-ui",
   props: ["field", "value"],
-  data: function() {
-    let local_value;
-    if (this.multiple) {
-      if (this.value != null) {
-        local_value = extend(true, [], this.value);
-      }
-      else {
-        local_value = extend(true, [], this.field.default);
-      }
+  methods: {
+    coerce(value) {
+      return 0 | value;
     }
-    else {
-      local_value = ((this.value == null) ? this.field.default : this.value)
-    }
-    return { local_value }
   },
   computed: {
     display_value: {
       get() {
+        let v = (this.value != null) ? this.value : this.field.default;
         if (this.multiple) {
-          return JSON.stringify(this.local_value)
+          return JSON.stringify(extend(true, [], v))
             .replace(/^\[/, '')
             .replace(/\]$/, '');
         }
         else {
-          return this.local_value
+          return v
         }
       },
       set(newValue) {
-        if (this.multiple) {
-          this.local_value = JSON.parse('[' + newValue + ']').map(x => (0 | x));
-        }
-        else {
-          // this is a js trick to cast to int
-          this.local_value = (0 | newValue);
-        }
+        let v = (this.multiple) ? JSON.parse('[' + newValue + ']').map(this.coerce) : this.coerce(newValue);
+        this.$emit("change", this.field.id, v);
       }
     }
   },
   template
 }
 
-export const FloatUi = {
-  name: "float-ui",
-  props: ["field", "value"],
-  data: function() {
-    let local_value;
-    if (this.multiple) {
-      if (this.value != null) {
-        local_value = extend(true, [], this.value);
-      }
-      else {
-        local_value = extend(true, [], this.field.default);
-      }
-    }
-    else {
-      local_value = ((this.value == null) ? this.field.default : this.value)
-    }
-    return { local_value }
-  },
-  computed: {
-    display_value: {
-      get() {
-        if (this.multiple) {
-          return JSON.stringify(this.local_value)
-            .replace(/^\[/, '')
-            .replace(/\]$/, '');
-        }
-        else {
-          return this.local_value
-        }
-      },
-      set(newValue) {
-        if (this.multiple) {
-          this.local_value = JSON.parse('[' + newValue + ']').map(x => (+x));
-        }
-        else {
-          // this is a js trick to cast to float
-          this.local_value = +newValue;
-        }
-      }
-    }
-  },
-  template
-}
+const FloatUi = Object.assign({}, IntUi);
+FloatUi.name = "float-ui";
+FloatUi.methods.coerce = function (value) { return +value }
+export { FloatUi }

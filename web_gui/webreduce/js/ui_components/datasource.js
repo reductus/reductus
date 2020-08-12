@@ -76,11 +76,11 @@ export const DataSource = {
     //     updater = null;
     //   }
     // });
-    this.$refs.tree.addEventListener('transitionend', (evt) => {
-        if (evt.propertyName == 'margin-top') {
-          this.$emit('open-close');
-        }
-    })
+    // this.$refs.tree.addEventListener('transitionend', (evt) => {
+    //     if (evt.propertyName == 'margin-top') {
+    //       this.$emit('open-close');
+    //     }
+    // })
   },
   template
 }

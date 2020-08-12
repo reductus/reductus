@@ -284,11 +284,14 @@ function module_clicked_single() {
     await editor.show_plots([datasets_in]);
     fieldUI.instance.num_datasets_in = ((datasets_in || {}).values || []).length;
     fieldUI.instance.module = active_module;
-    fieldUI.instance.config = active_module.config || {};
+    fieldUI.instance.reset_local_config();
+
     fieldUI.instance.module_id = i;
     fieldUI.instance.terminal_id = data_to_show;
     fieldUI.instance.module_def = module_def;
     fieldUI.instance.timestamp = Date.now();
+
+    fieldUI.instance.auto_accept = app.settings.auto_accept;
     // fields.forEach(function(field) {
     //   if (make_fieldUI[field.datatype]) {
     //     var value;

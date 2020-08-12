@@ -6,20 +6,18 @@ let template = `
       type="text"
       :id="field.id"
       :placeholder="field.default"
-      v-model="display_value"
-      @change="$emit('change', field.id, local_value)"
+      v-model="value"
+      @change="$emit('change', field.id, value)"
     />
   </label>
 </div>
 `;
 
-export const StringUi = {
-  name: "string-ui",
-  props: ["field", "value"],
-  data: function() {
-    return {
-      local_value: ((this.value == null) ? this.field.default : this.value)
-    }
+export const StrUi = {
+  name: "str-ui",
+  props: {
+    "field": Object, 
+    "value": String
   },
   template
 }
