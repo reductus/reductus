@@ -12,6 +12,7 @@ let template = `
   <path-editor :pathlist="source.pathlist" @change="new_subpath"></path-editor>
   <dir-browser :subdirs="source.subdirs" @change="new_subdir"></dir-browser>
   <div class="filetree" ref="tree"></div>
+  <hr style="border: 1px solid grey;" />
 </div>
 `
 
