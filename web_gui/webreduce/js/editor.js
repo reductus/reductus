@@ -1,11 +1,8 @@
-// require(d3.js, webreduce.server_api, dataflow)
-// require(d3, dataflow)
 export var editor = {};
 
 import { app } from './main.js';
 import {server_api} from './server_api/api_msgpack.js';
 import {dependencies} from './deps.js';
-//import {Sha1} from './sha1.es.js';
 import {instruments} from './instruments/index.js';
 // now a global...
 import {zip} from './libraries.js';
@@ -20,6 +17,8 @@ import { fieldUI } from './ui_components/fields_panel.js';
 import { plotter  } from './plot.js';
 import { category_editor } from './ui_components/category_editor.js';
 import { vueMenu } from './menu.js';
+import { export_dialog } from './ui_components/export_dialog.js';
+
 
 editor.instruments = instruments;
 
@@ -181,6 +180,29 @@ function module_clicked_multiple() {
   compare_in_template(to_compare, active_template);
 }
 
+editor.advance_to_output = function() {
+  let active_template = editor._active_template;
+  let editor_select = d3.select("#" + editor._target_id);
+  let selected_terminal = editor_select.select("g.module g.selected rect.terminal");
+  let i = editor._active_node;
+  let active_module = active_template.modules[i];
+  let module_def = editor._module_defs[active_module.module];
+  if (selected_terminal.empty()) {
+    // then it's a loader that's clicked, with no output selected;
+    let first_output = module_def.outputs[0].id;
+    let selected_title = editor_select.select("g.module g.title.selected");
+    let module_elem = d3.select(selected_title.node().parentNode);
+    module_elem.selectAll("g.terminals").classed('selected', function(d) { return d.id == first_output });
+  }
+  else if (!(selected_terminal.classed("output"))) {
+    // find the first output and select that one...
+    let first_output = module_def.outputs[0].id;
+    let module_elem = d3.select(selected_terminal.node().parentNode.parentNode);
+    module_elem.selectAll("g.terminals").classed('selected', function(d) { return d.id == first_output });
+  }
+  module_clicked_single();
+}
+
 function module_clicked_single() {
   var active_template = editor._active_template;
   var editor_select = d3.select("#" + editor._target_id);
@@ -190,68 +212,8 @@ function module_clicked_single() {
   let i = editor._active_node;
   let active_module = active_template.modules[i];
   let module_def = editor._module_defs[active_module.module];
-  let fields = module_def.fields || [];
-  var add_interactors = (data_to_show == (module_def.inputs[0] || {}).id);
-
-  // TODO: fix for split layout
-  // webreduce.layout.open("east");
-  // var config_target = d3.select(".ui-layout-east");
-  // config_target.selectAll("div").remove();
-  // var header = config_target
-  //   .append("div")
-  //   .style("display", "block");
-  // header
-  //   .append("h3")
-  //   .style("margin", "5px")
-  //   .style("display", "inline-block")
-  //   .text(module_def.name);
-  // header
-  //   .append("button")
-  //   .text("help")
-  //   .on("click", function() {
-  //     var helpwindow = window.open("", "help", "location=0,toolbar=no,menubar=no,scrollbars=yes,resizable=yes,width=960,height=480");
-  //     helpwindow.document.title = "Web reduction help";
-  //     helpwindow.document.write(module_def.description);
-  //     helpwindow.document.close();
-  //     if (helpwindow.MathJax) {
-  //       helpwindow.MathJax.Hub.Queue(["Typeset", helpwindow.MathJax.Hub]);
-  //     }
-  //   });
-  
-  // var buttons_div = config_target.append("div")
-  //   .classed("control-buttons", true)
-  //   .style("position", "absolute")
-  //   .style("bottom", "10px")
-  // buttons_div.append("button")
-  //   .text( $("#auto_accept_changes").prop("checked") ? "replot": "accept")
-  //   .classed("accept config", true)
-  //   .on("click", function() {
-  //     editor.accept_parameters(config_target, active_module);
-  //     if (selected_terminal.empty()) {
-  //       // then it's a loader that's clicked, with no output selected;
-  //       let first_output = module_def.outputs[0].id;
-  //       let selected_title = editor_select.select("g.module g.title.selected");
-  //       let module_elem = d3.select(selected_title.node().parentNode);
-  //       module_elem.selectAll("g.terminals").classed('selected', function(d) { return d.id == first_output });
-  //     }
-  //     else if (!(selected_terminal.classed("output"))) {
-  //       // find the first output and select that one...
-  //       let first_output = module_def.outputs[0].id;
-  //       let module_elem = d3.select(selected_terminal.node().parentNode.parentNode);
-  //       module_elem.selectAll("g.terminals").classed('selected', function(d) { return d.id == first_output });
-  //     }
-  //     module_clicked_single();
-  //   })
-  // buttons_div.append("button")
-  //   .text("clear")
-  //   .classed("clear config", true)
-  //   .on("click", function() {
-  //     //console.log('clear: ', config_target, JSON.stringify(active_module, null, 2));
-  //     if (active_module.config) { delete active_module.config }
-  //     module_clicked_single();
-  //   })
-    
-  //$(buttons_div.node()).buttonset();
+  let fileinfos = (module_def.fields || []).filter(f => (f.datatype == 'fileinfo'));
+  filebrowser.instance.blocked = (fileinfos.length < 1);
   
   var terminals_to_calculate = module_def.inputs.map(function(inp) {return inp.id});
   var fields_in = {};
@@ -292,49 +254,10 @@ function module_clicked_single() {
     fieldUI.instance.timestamp = Date.now();
 
     fieldUI.instance.auto_accept = app.settings.auto_accept;
-    // fields.forEach(function(field) {
-    //   if (make_fieldUI[field.datatype]) {
-    //     var value;
-    //     var passthrough = false;
-    //     var field_copy =  extend(true, {}, field);
-    //     var default_value = field_copy.default;
-    //     if (field.id in fields_in) {
-    //       //value = fields_in[field.id];
-    //       default_value = fields_in[field.id];
-    //       passthrough = true;
-    //     }
-    //     if (active_module.config && field.id in active_module.config) {
-    //       value = active_module.config[field.id];
-    //     }
-        
-    //     var datum = {"id": field.id, "value": value, "default_value": default_value, "passthrough": passthrough};
-    //     var fieldUImaker = make_fieldUI[field.datatype];
-    //     var context = {
-    //       field: field,
-    //       datum: datum,
-    //       target: config_target,
-    //       datasets_in: datasets_in,
-    //       active_module: active_module,
-    //       add_interactors: add_interactors,
-    //     }
-    //     var fieldUI = fieldUImaker.call(context);
-    //     var auto_accept = function() {
-    //       //console.log(this, d3.select(this).datum(), 'changing!');
-    //       if ($("#auto_accept_changes").prop("checked")) {
-    //         editor.accept_parameters(config_target, active_module);
-    //       }
-    //     }
-    //     //if (passthrough) {fieldUI.property("disabled", true)};
-    //     fieldUI
-    //       .on("input.auto_accept", auto_accept)
-    //       .on("change.auto_accept", auto_accept)
-    //     // add tooltip with description of parameter
-    //     d3.select(fieldUI.node().parentNode).attr("title", field.description);
-          
-    //   }
-    // });
   });
 }
+
+editor.module_clicked_single = module_clicked_single;
 
 editor.get_full = function() {
   console.log(this._active_node, this._active_template, this._active_terminal);
@@ -870,71 +793,24 @@ editor.export_data = function() {
   */
   else {
     // when there are more than one export types defined, ask which one to use:
-    var export_dialog = $("div#initiate_export").dialog("open");
-    var d3_handle = d3.select(export_dialog[0]);
-    var export_type_choices = d3_handle.select("span#export_types").selectAll("label")
-      .data(export_types, function(d) {return d})
-    export_type_choices
-      .enter().append("label")
-        .text(function(d) { return d })
-        .append("input")
-          .attr("type", "radio")
-          .property("checked", function(d,i) { return i==0 })
-          .attr("name", "export_type_switcher")
-          .attr("class", "custom-export")
-          .attr("id", function(d) { return d })
-    export_type_choices.exit().remove();
-
-    d3_handle.select("button#export_cancel").on("click", function() { export_dialog.dialog("close"); });
-    d3_handle.select("button#export_confirm").on("click", function() {
-      export_dialog.dialog("close");
-      var selected_export_type = d3_handle.select('input[name="export_type_switcher"]:checked');
-      let export_type = selected_export_type.attr("id");
-      let concatenate = d3_handle.select('input#concatenate_exports').property("checked");
+    export_dialog.instance.open(export_types);
+    export_dialog.instance.$once("export-select", async function(export_type, concatenate) {
+      var w = editor;
+      var recalc_mtimes = app.settings.check_mtimes.value;
       params.export_type = export_type;
       params.concatenate = concatenate;
-      initiate_export(params);
+      let exported = await editor.calculate(params, recalc_mtimes, true);
+      let suggested_name = (exported.values[0] || {}).filename || "myfile.refl";
+      let additional_export_targets = w.instruments[w._instrument_id].export_targets || [];
+      let export_targets = w.export_targets.concat(additional_export_targets);
+      export_dialog.instance.export_targets = export_targets;
+      export_dialog.instance.retrieved(suggested_name);
+      export_dialog.instance.$once("export-route", function(filename, target) {
+        export_handlers[target.type](exported, filename, target.data || {});
+      })
     });
   }
 
-}
-
-function initiate_export(params) {
-  var w = editor;
-  var recalc_mtimes = app.settings.check_mtimes.value;
-  editor.calculate(params, recalc_mtimes).then(function(result) {
-    // add the template and target node, terminal to the header of the file:
-    var suggested_name = (result.values[0] || {}).filename || "myfile.refl";
-    var additional_export_targets = editor.instruments[w._instrument_id].export_targets || [];
-    var dialog = $("div#route_export_data").dialog("open");
-    var d3_handle = d3.select(dialog[0]);
-    //d3_handle.selectAll("span#export_targets label").remove();
-    var export_targets = editor.export_targets.concat(additional_export_targets);
-    var route_choices = d3_handle.select("span#export_targets").selectAll("label")
-      .data(export_targets, function(d,i) { return w._instrument_id + d.id; })
-    route_choices
-      .enter().append("label")
-        .text(function(d) { return d.label })
-        .append("input")
-          .attr("type", "radio")
-          .property("checked", function(d,i) { return i==0 })
-          .attr("data-handler", function(d) { return d.type })
-          .attr("name", "export_switcher")
-          .attr("class", "custom-export")
-          .attr("id", function(d) { return d.id })
-    route_choices.exit().remove();
-      
-    d3_handle.select("input#export_filename").property("value", suggested_name);
-    d3_handle.select("button#export_cancel").on("click", function() { dialog.dialog("close"); });
-    d3_handle.select("button#export_confirm").on("click", function() {
-      dialog.dialog("close");
-      var filename = d3_handle.select("input#export_filename").node().value;
-      var selected_exporter = d3_handle.select('input[name="export_switcher"]:checked')
-      var handler = selected_exporter.attr("data-handler");
-      var data = (selected_exporter.datum) ? selected_exporter.datum() : {};
-      export_handlers[handler](result, filename, data);
-    });
-  });
 }
 
 editor.accept_parameters = function(target, active_module) {
@@ -1045,7 +921,7 @@ editor.load_template = async function(template_def, selected_module, selected_te
   let template_sourcepaths = filebrowser.getAllTemplateSourcePaths(template_def);
   let browser_sourcepaths = filebrowser.getAllBrowserSourcePaths();
     var sources_loaded = Promise.resolve();
-  Object.entries(template_sourcepaths).forEach(async (source, pathobj) => {
+  Object.entries(template_sourcepaths).forEach(async ([source, pathobj]) => {
     let paths = Object.keys(pathobj);
     paths.forEach(async (path) => {
       if (browser_sourcepaths.findIndex(sp => (sp.source == source && sp.path == path)) < 0) {
