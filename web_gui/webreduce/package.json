@@ -2,7 +2,7 @@
   "name": "reductus",
   "version": "1.0.0",
   "description": "Web-based data reduction for neutron reflectometry with python backend",
-  "main": "js/main.js",
+  "main": "dist/index.html",
   "browserslist": [
     "last 2 Chrome versions",
     "last 2 Firefox versions"
@@ -10,7 +10,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "parcel build js/main.js js/template_editor_main.js --public-url=\"./\"; cp -r icons/ dist/",
-    "build_index": "parcel build index.html --public-url=\"./\"; sed -i 's/type=\"module\" //g' dist/index.html; cp -r icons/ dist/;",
+    "build_index_sed": "parcel build index.html --public-url=\"./\"; sed -i 's/type=\"module\" //g' dist/index.html; cp -r icons/ dist/;",
+    "build_index": "parcel build index.html --public-url='./'; cp -r icons/ dist/;",
     "build_main": "parcel build index.js --public-url=\"./\"; cp -r index.html icons/ dist/;"
   },
   "alias": {
@@ -58,6 +59,7 @@
     "split.js": "^1.5.11",
     "vue": "^2.6.11",
     "vue-material": "^1.0.0-beta-14",
+    "vuedraggable": "^2.24.0",
     "zip.js": "github:bmaranville/zip.js#0.0.3"
   }
 }
