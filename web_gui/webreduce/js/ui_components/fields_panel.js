@@ -1,6 +1,5 @@
 import { Vue, extend } from '../libraries.js';
 import { Components } from './fields/components.js';
-import { filebrowser } from '../filebrowser.js';
 
 let template = `
 <div class="fields-panel">
@@ -117,8 +116,8 @@ export const FieldsPanel = {
       }
       let active_field = this.fileinfos[this.active_fileinfo];
       let value = (active_field) ? ((this.module.config || {})[active_field.id] || []) : [];
-      this.fileinfoChanged(value);
-      this.$emit("action", "show_files");
+      let no_terminal_selected = (this.terminal_id == null);
+      this.$emit("action", 'fileinfo_update', {value, no_terminal_selected});
     },
     update_fileinfo(value) {
       let active_field = this.fileinfos[this.active_fileinfo];
@@ -145,19 +144,11 @@ export const FieldsPanel = {
       this.reset_local_config();
       this.timestamp = Date.now();
       this.$emit("action", "clear");
-    },
-    fileinfoChanged(value) {
-      // initialize this callback later?
-      // if there is a terminal selected, let that be plotted, 
-      // else plot the loaded files:
-      let no_terminal_selected = (this.terminal_id == null);
-      filebrowser.fileinfoUpdate(value, no_terminal_selected);
     }
   },
   beforeUpdate: function () {
     // reset the active file picker to the first one.
     this.active_fileinfo = 0;
-    filebrowser.instance.blocked = (this.fileinfos.length < 1);
   },
   template
 }

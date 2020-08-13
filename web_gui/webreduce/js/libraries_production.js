@@ -16,6 +16,7 @@ import { default as VueMaterial } from 'vue-material';
 import * as VueMaterialComponents from 'vue-material/dist/components';
 Vue.use(VueMaterial);
 export { Vue, VueMaterial, VueMaterialComponents };
+export { default as vuedraggable } from 'vuedraggable';
 
 import * as d3 from 'd3';
 export { d3 };
