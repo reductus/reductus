@@ -11,7 +11,7 @@ import { Tree, d3 } from '../libraries.js';
  * @returns
  */
 export function show_plots_params(plotdata, plot_controls, target, old_plot) {
-  plot_controls.updateShow([]);
+  plot_controls.updateShow(["export_data"]);
   var params = plotdata.values.map(function (v) { return v.params });
   d3.select(target).selectAll("svg, div").remove();
   d3.select(target).classed("plot", false);

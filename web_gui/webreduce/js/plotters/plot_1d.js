@@ -81,7 +81,8 @@ export async function show_plots_1d(plotdata, plot_controls, target, old_plot) {
     "settings/errorbars",
     "settings/points",
     "settings/line",
-    "download_svg"
+    "download_svg",
+    "export_data"
   ]);
 
   plot_controls.settingChange = function (setting_name, value) {

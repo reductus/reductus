@@ -79,7 +79,7 @@ export function show_plots_metadata(plotdata, plot_controls, target, old_plot) {
   var metadata = plotdata.values.map(function (v) { return v.values });
   var m0 = metadata[0] || {};
 
-  plot_controls.updateShow([]);
+  plot_controls.updateShow(["export_data"]);
 
   var colset = new Set(Object.keys(m0));
   for (var nm of metadata.slice(1)) {

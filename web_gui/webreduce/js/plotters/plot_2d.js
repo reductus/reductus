@@ -25,7 +25,8 @@ export async function show_plots_2d_multi(plotdata, plot_controls, target, old_p
       "plotnumber",
       "axes/z",
       "settings/grid",
-      "colormap"
+      "colormap",
+      "export_data"
     ])
 
     plot_controls.colormap.options = colormap_names;
