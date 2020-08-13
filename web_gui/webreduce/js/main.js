@@ -18,6 +18,7 @@ import { filebrowser } from './filebrowser.js';
 import { plotter } from './plot.js';
 import { fieldUI } from './ui_components/fields_panel.js';
 import { vueMenu } from './menu.js';
+import { export_dialog } from './ui_components/export_dialog.js';
 import { reload } from './reload.js';
 
 const app = {}; // put state here.
@@ -204,7 +205,19 @@ window.onload = async function () {
     filebrowser_actions[name](argument);
   });
   plotter.create_instance("plotdiv");
+  plotter.instance.$on("action", function(name, argument) {
+    // there's only one action from plotter... export:
+    editor.export_data();
+  })
   fieldUI.create_instance("fieldsdiv");
+  const fieldUI_actions = {
+    accept() { editor.advance_to_output() },
+    clear() { editor.module_clicked_single() },
+    fileinfo_update({value, no_terminal_selected}) { filebrowser.fileinfoUpdate(value, no_terminal_selected) } 
+  };
+  fieldUI.instance.$on("action", function(name, argument) {
+    fieldUI_actions[name](argument);
+  });
   vueMenu.create_instance("vue_menu");
   app.settings = vueMenu.instance.settings;
   const menu_actions = {
@@ -239,6 +252,8 @@ window.onload = async function () {
     edit_categories() { editor.edit_categories() },
     set_categories(new_categories) {
       editor.instruments[editor._instrument_id].categories = new_categories;
+      console.log(filebrowser.instance);
+      filebrowser.instance.refreshAll();
     },
     export_data() { editor.export_data() },
     add_datasource,
@@ -250,6 +265,7 @@ window.onload = async function () {
   vueMenu.instance.$on("action", function (name, argument) {
     menu_actions[name](argument);
   })
+  export_dialog.create_instance();
 
   
   // set up the communication between these panels:
