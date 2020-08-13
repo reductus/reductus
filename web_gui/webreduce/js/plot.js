@@ -21,6 +21,7 @@ let template = `
     @transformChange="transformChange"
     @settingChange="settingChange"
     @downloadSVG="downloadSVG"
+    @export-data="$emit('action', 'export_data')"
   ></plot-controls>
 </div>
 `;

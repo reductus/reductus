@@ -48,6 +48,7 @@ let template = `
     </label>
   </template>
   <button v-if="download_svg.show" @click="$emit('downloadSVG')">&darr; svg</button>
+  <button v-if="export_data.show" @click="$emit('export-data')">export</button>
   <label v-if="colormap.show">
     colormap
     <select
@@ -175,7 +176,8 @@ export const PlotControls = {
       value: 0,
       max: 0
     },
-    download_svg: {show: true}
+    download_svg: {show: true},
+    export_data: {show: true}
   }),
   methods: {
     updateShow(names) {
