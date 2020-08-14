@@ -5,37 +5,15 @@
     <meta content="width=device-width,initial-scale=1,minimal-ui" name="viewport">
     <title>reductus - data reduction from the web</title>
     <link rel="icon" type="image/x-icon" href="favicon.ico">
-    <link rel="stylesheet" href="./css/index_prod.css" />
-    <script src="./js/main.js"></script>
+    <link rel="stylesheet" href="index.css" />
+    <script src="index.js"></script>
 </head>
 
 <body>
   <div id="body_wrapper">
+    <div id="app_header"></div>
     <div id="vue_menu"></div>
-    <div id="fullscreen_modal" class="block-overlay">
-      <div class="overlay-positioner">
-        <div class="overlay-message"></div>
-      </div>
-    </div>
-      <div id="top_panel" class="ui-layout-north">
-          <span id="menu_open" class="material-icons" style="cursor:pointer;padding-right: 0.5em;">menu</span>
-          <div id="status" style="display:inline-block;vertical-align:top;">
-              <span id="top_label">Reductus: </span>
-              <span id="citation">
-                <a href="https://doi.org/10.1107/S1600576718011974" title="J. Appl. Cryst. (2018). 51" target="_blank">
-                  citation</a></span>
-              <span id="instrument_name" class="instrument-name"></span>
-              <span id="statusline"></span>
-          </div>
-          <div id="branding" style="float:right;height:2em;">
-            <a href="https://www.nist.gov/ncnr" target="_blank">
-              <img src="NCNR_nonlogo.png" alt="NCNR logo" title="NIST Center for Neutron Research" style="height:2em;padding-right:1.5em;">
-            </a>
-            <a href="https://www.nist.gov" target="_blank">
-              <img src="nist-logo.svg" alt="NIST logo" title="National Institute of Standards and Technology" style="height:2em;">
-            </a>
-          </div>
-      </div>
+
       <div id="all_content" class="split">
         <div id="middle_content" class="split">
           <div id="west_panel" class="ui-layout-wrapper ui-layout-west split content split-horizontal">
