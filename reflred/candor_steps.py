@@ -157,6 +157,7 @@ def select_channel(data, channel_select=None):
 
     if channel_select is not None:
         data = copy(data)
+        data.detector = copy(data.detector)										   
         data.detector.counts = data.detector.counts[:,channel_select,:]
         data.detector.counts_variance = data.detector.counts_variance[:,channel_select,:]
         data.detector.dims = data.detector.counts.shape
@@ -164,7 +165,10 @@ def select_channel(data, channel_select=None):
         data.detector.efficiency = data.detector.efficiency[:,channel_select,:]
         data.detector.wavelength = data.detector.wavelength[:,channel_select,:]
         data.detector.wavelength_resolution = data.detector.wavelength_resolution[:,channel_select,:]
-    
+        if data._v is not None:
+            data._v = data._v[:,channel_select,:]
+        if data._dv is not None:
+            data._dv = data._dv[:,channel_select,:]
     return data
 
 @module("candor")
@@ -232,7 +236,7 @@ def spectral_efficiency(data, spectrum=()):
 
     data (candordata) : data to scale
 
-    spectrum (float[]) : override spectrum from data file
+    spectrum (float[]?) : override spectrum from data file
 
     **Returns**
 
@@ -240,21 +244,59 @@ def spectral_efficiency(data, spectrum=()):
 
     | 2020-03-03 Paul Kienzle
     """
-    from .candor import NUM_CHANNELS
+    #from .candor import NUM_CHANNELS
     # TODO: too many components operating directly on detector counts?
     # TODO: let the user paste their own spectral efficiency, overriding datafile
     # TODO: generalize to detector shapes beyond candor
     #print(data.v.shape, data.detector.efficiency.shape)
-    if len(spectrum)%NUM_CHANNELS != 0:
-        raise ValueError("Vector length {s_len} must be a multiple of {NUM_CHANNELS}".format(s_len=len(spectrum), NUM_CHANNELS=NUM_CHANNELS))
+    #if len(spectrum)%NUM_CHANNELS != 0:
+    #    raise ValueError("Vector length {s_len} must be a multiple of {NUM_CHANNELS}".format(s_len=len(spectrum), NUM_CHANNELS=NUM_CHANNELS))
     if spectrum:
-        spectrum = np.reshape(spectrum, (NUM_CHANNELS, -1)).T[None, :, :]
+        #spectrum = np.reshape(spectrum, (NUM_CHANNELS, -1)).T[None, :, :]
+        spectrum = np.reshape(spectrum, data.detector.efficiency.shape)
     else:
         spectrum = data.detector.efficiency
     data = copy(data)
     data.detector = copy(data.detector)
     data.detector.counts = data.detector.counts / spectrum
     data.detector.counts_variance = data.detector.counts_variance / spectrum
+    return data
+
+
+@module("candor")
+def recalibrate_wavelength(data, wavelengths=(), wavelength_resolutions=()):
+    r"""
+    Use different wavelength calibration from that already in the data file.
+
+    **Inputs**
+
+    data (candordata) : data to scale
+
+    wavelengths (float[]?) : override wavelengths from data file
+    
+    wavelength_resolutions (float[]?) : override wavelength spreads (sigma) from data file
+
+    **Returns**
+
+    output (candordata) : scaled data
+
+    | 2020-08-14 David Hoogerheide
+    """
+    # TODO: too many components operating directly on detector counts?
+    # TODO: let the user paste their own spectral efficiency, overriding datafile
+    # TODO: generalize to detector shapes beyond candor
+    if wavelengths:
+        wavelengths = np.reshape(wavelengths, data.detector.wavelength.shape)
+    else:
+        wavelengths = data.detector.wavelength
+    if wavelength_resolutions:
+        wavelength_resolutions = np.reshape(wavelength_resolutions, data.detector.wavelength_resolution.shape)
+    else:
+        wavelength_resolutions = data.detector.wavelength_resolution
+    data = copy(data)
+    data.detector = copy(data.detector)
+    data.detector.wavelength = wavelengths
+    data.detector.wavelength_resolution = wavelength_resolutions
     return data
 
 @module("candor")

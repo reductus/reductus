@@ -194,7 +194,7 @@ class Candor(ReflData):
         divergence = divergence.reshape(NUM_CHANNELS, -1)
         efficiency = efficiency.reshape(NUM_CHANNELS, -1)
 
-        wavelength_resolution = FWHM2sigma(wavelength * wavelength_spread)
+        wavelength_resolution = wavelength_spread # FWHM2sigma(wavelength * wavelength_spread)
         if (efficiency == 1.0).all():
             efficiency = detector_efficiency()
 
