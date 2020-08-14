@@ -1,10 +1,3 @@
-//import * as d3 from "./web_modules/d3.js";
-// import "../css/index_prod.css";
-
-import jquery from './import_jquery.js';
-import "jquery-ui-dist/jquery-ui.js";
-export { jquery };
-
 import { zip, Inflater, Deflater } from '../node_modules/zip.js/WebContent/index.js';
 zip.Inflater = Inflater;
 zip.Deflater = Deflater;
@@ -18,7 +11,7 @@ Vue.use(VueMaterial);
 export { Vue, VueMaterial, VueMaterialComponents };
 export { default as vuedraggable } from 'vuedraggable';
 
-import * as d3 from 'd3';
+import * as d3 from 'd3/dist/d3.min.js';
 export { d3 };
 import * as messagepack from 'messagepack';
 export { messagepack };
@@ -37,6 +30,7 @@ export {
   ySliceInteractor,
   rectangleInteractor,
   ellipseInteractor,
+  angleSliceInteractor,
   monotonicFunctionInteractor,
   scaleInteractor,
   rectangleSelectPoints
