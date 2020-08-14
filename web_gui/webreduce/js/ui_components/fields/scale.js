@@ -51,7 +51,7 @@ export const ScaleUi = {
         point_size: 10
       }
       let scaler = new scaleInteractor(opts, null, null, d3);
-      scaler.dispatch.on("updated", () => {
+      scaler.dispatch.on("update", () => {
         this.$emit("change", this.field.id, opts.scales);
       //   opts.scales.forEach((v,i) => this.$set(this.local_value, i, v));
         chart.update()
