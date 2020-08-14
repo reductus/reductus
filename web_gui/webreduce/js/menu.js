@@ -1,4 +1,4 @@
-import { Vue, VueMaterial } from './libraries.js';
+import { Vue } from './libraries.js';
 import { categoriesEditor } from './ui_components/categories_editor.js';
 
 let template = `
@@ -6,7 +6,7 @@ let template = `
 
   <md-drawer :md-active.sync="showNavigation" md-swipeable>
     <md-toolbar class="md-transparent" md-elevation="0">
-      <span class="md-title">My App name</span>
+      <span class="md-title">Reductus</span>
     </md-toolbar>
 
     <md-list>
@@ -166,6 +166,7 @@ let template = `
     @close="showCategoriesEditor=false"
     @apply="set_categories">
   </categories-editor>
+  
 </div >
 `;
 
@@ -182,6 +183,8 @@ export const VueMenu = {
     select_datasource: "ncnr",
     showNavigation: false,
     showSettingsHelp: false,
+    showApiError: false,
+    APIErrorMessage: "",
     showCategoriesEditor: false,
     settingsHelpActiveTab: "",
     template_to_upload: null,
@@ -222,7 +225,6 @@ function nop(x) {console.log(x)};
 export const vueMenu = {};
 
 vueMenu.create_instance = function (target_id) {
-  Vue.use(VueMaterial);
   let target = document.getElementById(target_id);
   const VueMenuClass = Vue.extend(VueMenu);
   this.instance = new VueMenuClass({

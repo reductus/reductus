@@ -20,9 +20,9 @@ import { fieldUI } from './ui_components/fields_panel.js';
 import { vueMenu } from './menu.js';
 import { export_dialog } from './ui_components/export_dialog.js';
 import { reload } from './reload.js';
+import { app_header } from './app_header.js';
 
-const app = {}; // put state here.
-export { app };
+export const app = {}; // put state here.
 
 var active_reduction = {
   "config": {},
@@ -180,15 +180,11 @@ window.onload = async function () {
   })
   app.vertical_layout = layout;
 
-  var api_exception_dialog = $("div#api_exception").dialog({ autoOpen: false, width: 600 });
-  var initiate_export_data = $("#initiate_export").dialog({ autoOpen: false, width: 400 });
-  var route_export_data = $("#route_export_data").dialog({ autoOpen: false, width: 400 });
-
-  document.getElementById("menu_open").addEventListener("click", () => {
-    vueMenu.instance.showNavigation = !vueMenu.instance.showNavigation;
-  });
-
   editor.create_instance("bottom_panel");
+  app_header.create_instance("app_header");
+  app_header.instance.$on("toggle-menu", () => {
+    vueMenu.instance.showNavigation = !vueMenu.instance.showNavigation
+  });
   filebrowser.create_instance("filebrowser");
   const filebrowser_actions = {
     remove_stash(stashname) {
@@ -249,7 +245,6 @@ window.onload = async function () {
     },
     // data functions
     stash_data() { editor.stash_data() },
-    edit_categories() { editor.edit_categories() },
     set_categories(new_categories) {
       editor.instruments[editor._instrument_id].categories = new_categories;
       console.log(filebrowser.instance);
@@ -359,9 +354,7 @@ window.onload = async function () {
       var notification = new Notification(message);
       notification.onclick = function (event) {
         event.preventDefault();
-        var dialog_div = $("div#api_exception");
-        dialog_div.find("pre").text(longmessage);
-        dialog_div.dialog("open")
+        app_header.instance.show_api_error(longmessage);
       }
       setTimeout(notification.close.bind(notification), 5000);
     }
@@ -374,9 +367,7 @@ window.onload = async function () {
           var notification = new Notification(message);
           notification.onclick = function (event) {
             event.preventDefault();
-            var dialog_div = $("div#api_exception");
-            dialog_div.find("pre").text(longmessage);
-            dialog_div.dialog("open")
+            app_header.instance.show_api_error(longmessage);
           }
           setTimeout(notification.close.bind(notification), 5000);
         }

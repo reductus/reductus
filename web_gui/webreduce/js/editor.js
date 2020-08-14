@@ -15,9 +15,9 @@ import {filebrowser} from './filebrowser.js';
 //import {make_fieldUI} from './fieldUI.js';
 import { fieldUI } from './ui_components/fields_panel.js';
 import { plotter  } from './plot.js';
-import { category_editor } from './ui_components/category_editor.js';
 import { vueMenu } from './menu.js';
 import { export_dialog } from './ui_components/export_dialog.js';
+import { app_header } from './app_header.js';
 
 
 editor.instruments = instruments;
@@ -616,62 +616,45 @@ editor.calculate = async function(params, recalc_mtimes, noblock, result_callbac
   // call result_callback on each result individually (this function will return all results
   // if you want to act on the aggregate after)
   var caching = app.settings.cache_calculations.value;
-  var status_message = $("<div />");
-  status_message.append($("<h1 />", {text: "Processing..."}));
-  status_message.append($("<progress />"));
-  status_message.append($("<span />"));
-  status_message.append($("<button />", {text: "cancel", class: "cancel"}));
-  
+  app_header.instance.calculation_progress.done = 0;
+  app_header.instance.$off("cancel-calculation"); // clear previous handlers
   editor._calculation_cancelled = false;
   var calculation_finished = false;
   var r = Promise.resolve();
   var cancel_promise = new Promise(function(resolve, reject) { 
-    status_message.find("button").on("click", function() {
+    app_header.instance.$on("cancel-calculation", function() {
       editor._calculation_cancelled = true;
       calculation_finished = true;
-      resolve({"cancelled": true})
+      resolve({"cancelled": true});
     });
   });
   
+  let results = [];
   if (!noblock) {
-    r = r.then(function() { 
-      window.setTimeout(function() {
-        if (!calculation_finished) {app.blockUI(status_message)}
-        }, 200)
-    })
+    app_header.instance.calculation_progress.visible = true;
   }
   if (recalc_mtimes) {
-    r = r.then(function() { return Promise.race([cancel_promise, app.update_file_mtimes()])})
+    await Promise.race([cancel_promise, app.update_file_mtimes()]);
   }
   if (params instanceof Array) {
-    var results = [],
-        numcalcs = params.length;
-    status_message.find("progress").attr("max", numcalcs.toFixed());
-    params.forEach(function(p,i) {
-      r = r.then(function() {
-        if (editor._calculation_cancelled) {
-          return {"cancelled": true}
-        }
-        return Promise.race(
-          [cancel_promise, calculate_one(p, caching).then(function(result) {
-            if (result_callback) {result_callback(r, p, i);}
-            status_message.find("span").text((i+1).toFixed() + " of " + numcalcs.toFixed());
-            status_message.find("progress").val(i+1);
-            results.push(result);
-          })]
-        )
-      })
-    });
-    r = r.then(function() { return results })
+    app_header.instance.calculation_progress.total = params.length;
+    for (let i=0; i<params.length; i++) {
+      let p = params[i];
+      if (!editor._calculation_cancelled) {
+        let result = await Promise.race([cancel_promise, calculate_one(p, caching)]);
+        if (result_callback) { await result_callback(r, p, i); }
+        app_header.instance.calculation_progress.done = i+1;
+        results.push(result);
+      }
+    }
   }
   else {
-    r = r.then(function() {return Promise.race([cancel_promise, calculate_one(params, caching)])})
+    results = await Promise.race([cancel_promise, calculate_one(params, caching)]);
   }
   if (!noblock) {
-    r = r.then(function(result) { calculation_finished = true; app.unblockUI(); return result; })
-       .catch(function(err) { calculation_finished = true; app.unblockUI(); throw err });
+    app_header.instance.calculation_progress.visible = false;
   }
-  return r;
+  return results;
 }
 
 var export_handlers = {
@@ -742,14 +725,6 @@ function get_all_keys(obj) {
     }
   });
   return output_keys.sort();
-}
-
-editor.edit_categories = function() {
-  let instrument_id = editor._instrument_id;
-  let default_categories = editor.instruments[instrument_id].default_categories;
-  let categories = editor.instruments[instrument_id].categories;
-  let category_keys = get_all_keys(editor._datafiles[0]["values"][0]);
-  category_editor(categories, default_categories, category_keys);
 }
 
 editor.export_targets = [
