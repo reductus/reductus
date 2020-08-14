@@ -14,10 +14,10 @@ let template = `
       </div>
       <div class="md-toolbar-section-end">
         <a href="https://www.nist.gov/ncnr" target="_blank">
-          <img src="/icons/NCNR_nonlogo.png" alt="NCNR logo" title="NIST Center for Neutron Research" style="height:2em;padding-right:1.5em;">
+          <img src="icons/NCNR_nonlogo.png" alt="NCNR logo" title="NIST Center for Neutron Research" style="height:2em;padding-right:1.5em;">
         </a>
         <a href="https://www.nist.gov" target="_blank">
-              <img src="/icons/nist-logo.svg" alt="NIST logo" title="National Institute of Standards and Technology" style="height:2em;">
+              <img src="icons/nist-logo.svg" alt="NIST logo" title="National Institute of Standards and Technology" style="height:2em;">
         </a>
       </div>
     </div>  
