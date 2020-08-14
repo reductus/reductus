@@ -1,0 +1,92 @@
+import { Vue } from './libraries.js';
+
+let template = `
+<div class="app">
+  <md-app>
+  <md-app-toolbar class="" style="background-color:yellow;">
+    <div class="md-toolbar-row">
+      <div class="md-toolbar-section-start md-primary">
+        <md-button class="md-icon-button" @click="$emit('toggle-menu')">
+          <md-icon>menu</md-icon>
+        </md-button>
+        <span class="md-title">Reductus</span>
+        <md-button class="md-primary md-small" href="https://doi.org/10.1107/S1600576718011974">[cite]</md-button>
+      </div>
+      <div class="md-toolbar-section-end">
+        <a href="https://www.nist.gov/ncnr" target="_blank">
+          <img src="/icons/NCNR_nonlogo.png" alt="NCNR logo" title="NIST Center for Neutron Research" style="height:2em;padding-right:1.5em;">
+        </a>
+        <a href="https://www.nist.gov" target="_blank">
+              <img src="/icons/nist-logo.svg" alt="NIST logo" title="National Institute of Standards and Technology" style="height:2em;">
+        </a>
+      </div>
+    </div>  
+  </md-app-toolbar>
+  </md-app>
+
+  <md-dialog :md-active.sync="api_error.visible">
+    <md-dialog-title>API Error</md-dialog-title>
+    <pre>{{api_error.message}}</pre>
+  </md-dialog>
+
+  <md-dialog 
+    :md-click-outside-to-close="false"
+    :md-close-on-esc="false"
+    :md-active.sync="calculation_progress.visible">
+    <md-dialog-title>Processing Calculations</md-dialog-title>
+    <md-dialog-content>
+      <md-progress-bar 
+        md-mode="determinate" 
+        class="md-primary"
+        :md-value="percent_done">
+      </md-progress-bar>
+      <span>{{calculation_progress.done}} of {{calculation_progress.total}}</span>
+    </md-dialog-content>
+    <md-dialog-actions>
+      <md-button class="md-accent" @click="$emit('cancel-calculation')">cancel</md-button>
+    </md-dialog-actions>
+  </md-dialog>
+
+</div>
+`;
+
+export const app_header = {};
+
+const header = {
+  name: 'reductus-header',
+  data: () => ({
+    api_error: {
+      visible: false,
+      message: ""
+    },
+    calculation_progress: {
+      visible: false,
+      done: 0,
+      total: 1
+    }
+  }),
+  computed: {
+    percent_done() {
+      return 100.0 * this.calculation_progress.done / (this.calculation_progress.total || 1);
+    }
+  },
+  methods: {
+    show_api_error(message) {
+      this.api_error.message = message;
+      this.api_error.visible = true;
+    },
+    async show_calculation_progress(total) {
+      this.$off("cancel-calculation");
+      this.calculation_progress.total = total;
+      this.calculation_progress.done = 0;
+      this.calculation_progress.visible = true;
+    }
+  },
+  template
+}
+
+app_header.create_instance = function(target_id) {
+  let target = document.getElementById(target_id);
+  const HeaderClass = Vue.extend(header);
+  this.instance = new HeaderClass({}).$mount(target);
+}
