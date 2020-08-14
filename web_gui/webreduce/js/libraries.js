@@ -1,10 +1,3 @@
-// side-effects... no esm for these yet
-import 'https://www.unpkg.com/jquery@2.2.4/dist/jquery.min.js';
-import 'https://www.unpkg.com/jstree@3.3.10/dist/jstree.min.js';
-import 'https://www.unpkg.com/jquery-ui-dist@1.12.1/jquery-ui.min.js';
-let jquery = window.jQuery;
-export {jquery};
-
 import 'https://unpkg.com/d3@5.16.0/dist/d3.min.js';
 //import 'https://unpkg.com/d3@4.13.0/build/d3.min.js';
 let d3 = window.d3;
@@ -18,10 +11,12 @@ export {zip};
 export {default as Tree} from 'https://cdn.jsdelivr.net/gh/bmaranville/treejs@latest/src/index.js';
 //export {default as Tree} from './treejs/src/index.js';
 
-export { default as Vue } from 'https://cdn.jsdelivr.net/npm/vue@2.6.11/dist/vue.esm.browser.js';
+import { default as Vue } from 'https://cdn.jsdelivr.net/npm/vue@2.6.11/dist/vue.esm.browser.js';
 // export { default as VueSidebarMenu } from 'https://cdn.skypack.dev/vue-sidebar-menu@4.6.2';
-export { default as VueMaterial } from 'https://cdn.skypack.dev/vue-material@latest';
+import { default as VueMaterial } from 'https://cdn.skypack.dev/vue-material@latest';
+Vue.use(VueMaterial);
 export { default as vuedraggable } from 'https://cdn.skypack.dev/vuedraggable@^2.23.2';
+export { Vue, VueMaterial }
 //import { default as d3 } from "https://dev.jspm.io/d3@5";
 //export { d3 };
 import * as messagepack from "https://unpkg.com/messagepack@1.1.10/dist/messagepack.es.js";
