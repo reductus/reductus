@@ -9,7 +9,6 @@
 import { extend } from './libraries.js';
 import { Split } from './libraries.js';
 import { zip } from './libraries.js';
-import { jquery as $ } from './libraries.js';
 //import {jquery_ui} from './libraries.js';
 //window.jquery_ui = jquery_ui;
 import { editor } from './editor.js';
@@ -51,22 +50,6 @@ function getUrlVars() {
 
 app.callbacks = {};
 app.callbacks.resize_center = function () { };
-
-app.blockUI = function (message, duration) {
-  var duration = duration || 0;
-  if (message != null) {
-    $("div#fullscreen_modal .overlay-message").html(message).show();
-  }
-  else {
-    $("div#fullscreen_modal .overlay-message").hide();
-  }
-  $("div#fullscreen_modal").fadeIn(duration);
-}
-
-app.unblockUI = function (duration) {
-  var duration = duration || 0;
-  $("div#fullscreen_modal").fadeOut(duration);
-}
 
 window.onbeforeunload = function (e) {
   var e = e || window.event;
