@@ -11,8 +11,8 @@ Vue.use(VueMaterial);
 export { Vue, VueMaterial, VueMaterialComponents };
 export { default as vuedraggable } from 'vuedraggable';
 
-import * as d3 from 'd3/dist/d3.min.js';
-export { d3 };
+// import * as d3 from 'd3/dist/d3.min.js';
+export { d3 } from './d3-custom.js';
 import * as messagepack from 'messagepack';
 export { messagepack };
 import PouchDB from 'pouchdb-browser';

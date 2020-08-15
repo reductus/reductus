@@ -1,5 +1,6 @@
 import {server_api} from './server_api/api_msgpack.js';
-import { extend, dataflowEditor, d3 } from './libraries.js';
+import { extend, dataflowEditor } from './libraries.js';
+import { d3 } from './d3-custom.js';
 
 var debug = false;
 
