@@ -6,9 +6,8 @@ export { zip };
 export { default as Tree } from '@widgetjs/tree/src/index.js';
 import { default as Vue } from 'vue';
 import { default as VueMaterial } from 'vue-material';
-import * as VueMaterialComponents from 'vue-material/dist/components';
 Vue.use(VueMaterial);
-export { Vue, VueMaterial, VueMaterialComponents };
+export { Vue };
 export { default as vuedraggable } from 'vuedraggable';
 
 // import * as d3 from 'd3/dist/d3.min.js';
