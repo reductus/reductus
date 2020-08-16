@@ -1,16 +1,8 @@
 "use strict";
 // SIDE-EFFECTS ONLY FOR NOW...
-//import * as webreduce from './webreduce';
-//const webreduce = {};
-//export {webreduce};
-//import {d3} from './libraries.js';
-// create a new global d3 object;
-//window.d3 = d3;
 import { extend } from './libraries.js';
 import { Split } from './libraries.js';
 import { zip } from './libraries.js';
-//import {jquery_ui} from './libraries.js';
-//window.jquery_ui = jquery_ui;
 import { editor } from './editor.js';
 import { server_api } from './server_api/api_msgpack.js';
 import { filebrowser } from './filebrowser.js';
