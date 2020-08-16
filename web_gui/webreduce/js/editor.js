@@ -71,17 +71,15 @@ editor.make_cache = function() {
 }
 editor.make_cache();
 
-editor.clear_cache = function() {
-  app.blockUI("clearing cache...", 1000);
-  this._cache.destroy().then(function () {
-    // cache destroyed, now create a new one
-    editor.make_cache();
-    app.unblockUI(1000);
-  }).catch(function (err) {
-    // error occurred
-    app.unblockUI(1000);
-    alert(err + "could not destroy cache");
-  });
+editor.clear_cache = async function() {
+  app_header.instance.show_snackbar("clearing cache...", 4000);
+  await this._cache.destroy();
+  try {
+    this.make_cache();
+    app_header.instance.show_snackbar("cache cleared", 4000);
+  } catch (e) {
+    alert(e + "could not destroy cache")
+  }
 }
 
 editor.create_instance = function(target_id) {
