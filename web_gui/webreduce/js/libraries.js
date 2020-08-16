@@ -1,5 +1,4 @@
 import 'https://unpkg.com/d3@5.16.0/dist/d3.min.js';
-//import 'https://unpkg.com/d3@4.13.0/build/d3.min.js';
 let d3 = window.d3;
 export {d3};
 
@@ -12,13 +11,11 @@ export {default as Tree} from 'https://cdn.jsdelivr.net/gh/bmaranville/treejs@la
 //export {default as Tree} from './treejs/src/index.js';
 
 import { default as Vue } from 'https://cdn.jsdelivr.net/npm/vue@2.6.11/dist/vue.esm.browser.js';
-// export { default as VueSidebarMenu } from 'https://cdn.skypack.dev/vue-sidebar-menu@4.6.2';
 import { default as VueMaterial } from 'https://cdn.skypack.dev/vue-material@latest';
 Vue.use(VueMaterial);
 export { default as vuedraggable } from 'https://cdn.skypack.dev/vuedraggable@^2.23.2';
-export { Vue, VueMaterial }
-//import { default as d3 } from "https://dev.jspm.io/d3@5";
-//export { d3 };
+export { Vue }
+
 import * as messagepack from "https://unpkg.com/messagepack@1.1.10/dist/messagepack.es.js";
 //import { default as messagepack } from "https://dev.jspm.io/npm:messagepack@1.1";
 export { messagepack };
@@ -37,16 +34,12 @@ export {
     ySliceInteractor,
     rectangleInteractor,
     ellipseInteractor,
+    angleSliceInteractor,
     monotonicFunctionInteractor,
     scaleInteractor,
     rectangleSelectPoints
 }  from 'https://cdn.jsdelivr.net/gh/usnistgov/d3-science@0.2.4/src/index.js';
-// export { scaleInteractor, rectangleSelectPoints } from './d3-science/src/index.js';
-//import jquery from "./import_jquery_dev.js";
-//import 'https://www.unpkg.com/jstree@3.3.10/dist/jstree.min.js';
-//import {default as _jstree} from "https://dev.jspm.io/npm:jstree@3.3/dist/jstree.js";
-//import {default as _ui} from "https://dev.jspm.io/npm:jquery-ui-dist@1.12.1/jquery-ui.js";
-//export {jquery};
+
 export {default as Split} from "https://dev.jspm.io/split.js@1.5.11";
 export {default as sha1} from "https://dev.jspm.io/sha1@1.1.1";
 export const template_editor_url = "template_editor_live_dev.html";
