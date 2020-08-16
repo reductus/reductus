@@ -47,6 +47,10 @@ let template = `
     </md-dialog-actions>
   </md-dialog>
 
+  <md-snackbar :md-active.sync="snackbar.visible" md-position="center" :md-duration="snackbar.duration">
+    <span>{{snackbar.message}}</span>
+  </md-snackbar>
+
 </div>
 `;
 
@@ -63,6 +67,11 @@ const header = {
       visible: false,
       done: 0,
       total: 1
+    },
+    snackbar: {
+      visible: false,
+      duration: 4000,
+      message: ""
     }
   }),
   computed: {
@@ -80,6 +89,11 @@ const header = {
       this.calculation_progress.total = total;
       this.calculation_progress.done = 0;
       this.calculation_progress.visible = true;
+    },
+    show_snackbar(message, duration=4000) {
+      this.snackbar.message = message;
+      this.snackbar.duration = duration;
+      this.snackbar.visible = true;
     }
   },
   template
