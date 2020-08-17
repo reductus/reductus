@@ -452,6 +452,7 @@ def candor_rebin(data, qmin=None, qmax=None, qstep=0.003, qstep_max=None):
     output (refldata) : joined data
 
     | 2020-03-04 Paul Kienzle
+    | 2020-08-03 David Hoogerheide adding progressive q step coarsening
     """
     from .candor import rebin, nobin
 
