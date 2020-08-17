@@ -1,7 +1,7 @@
 
 import copy
 
-from .core import load_instrument, lookup_instrument
+from .core import load_instrument
 from .cache import get_cache
 from . import fetch
 from configurations import default
@@ -41,12 +41,14 @@ def apply_config(user_config=None, user_overrides=None):
         config = copy.deepcopy(user_config)
     else:
         config = copy.deepcopy(DEFAULT_CONFIG)
-    
+
     if user_overrides is not None:
         config.update(user_overrides)
 
     fetch.DATA_SOURCES = config.get("data_sources", [])
-    fetch.FILE_HELPERS = dict([(source["name"], source.get("file_helper_url", None)) for source in fetch.DATA_SOURCES])
+    fetch.FILE_HELPERS = {
+        source["name"]: source.get("file_helper_url", None)
+        for source in fetch.DATA_SOURCES}
 
     cache_config = config.get('cache', False)
     if cache_config:

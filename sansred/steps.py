@@ -592,7 +592,7 @@ def calculateDQ_IGOR(data, inQ, del_r=None):
     else:
         v_b = 0.25*(S1*L2/L1)**2 +0.25*(S2*L2/LP)**2		# original form
 
-    v_d = (DDet/2.3548)**2 + del_r**2/12.0	# the 2.3548 is a conversion from FWHM->Gauss, see http://mathworld.wolfram.com/GaussianFunction.html
+    v_d = (DDet/2.3548)**2 + del_r**2/12.0	# the 2.3548 is a conversion from FWHM->Gauss, see https://mathworld.wolfram.com/GaussianFunction.html
     vz = vz_1 / lambda0
     yg = 0.5*G*L2*(L1+L2)/vz**2
     v_g = 2.0*(2.0*yg**2*v_lambda)					# factor of 2 correction, B. Hammouda, 2007

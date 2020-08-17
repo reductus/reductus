@@ -65,7 +65,7 @@ def get_file_metadata(source="ncnr", pathlist=None):
     if source == "local":
         metadata = local_file_metadata(pathlist)
     else:
-        url = fetch.FILE_HELPERS[source] #'http://ncnr.nist.gov/ipeek/listftpfiles_json.php'
+        url = fetch.FILE_HELPERS[source] #'https://ncnr.nist.gov/ipeek/listftpfiles_json.php'
         req = requests.post(url, json={"pathlist": pathlist})
         metadata = req.json()
 

@@ -83,7 +83,7 @@ def module(tag=""):
 
 # From unutbu and Glenn Maynard
 # https://stackoverflow.com/questions/13503079/how-to-create-a-copy-of-a-python-function/13503277#13503277
-# http://stackoverflow.com/a/6528148/190597
+# https://stackoverflow.com/a/6528148/190597
 def copy_func(f):
     """Make a copy of a function, including its attributes"""
     import types

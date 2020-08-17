@@ -26,9 +26,7 @@ import re
 import difflib
 import warnings
 
-from dataflow import fetch
-from dataflow.cache import set_test_cache
-from dataflow.core import Template, load_instrument, lookup_module
+from dataflow.core import Template, lookup_module
 from dataflow.calc import process_template
 from dataflow.rev import revision_info
 from dataflow.configure import apply_config
@@ -109,6 +107,7 @@ def run_template(template_data, concatenate=True):
     # TODO: use datasources given in template? It may be a security risk...
     #datasources = template_data.get('datasources', [])
     #if datasources:
+    #    from dataflow import fetch
     #    original = fetch.DATA_SOURCES
     #    fetch.DATA_SOURCES = datasources
     #    try:

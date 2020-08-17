@@ -207,8 +207,10 @@ def _eval_node(node_id, module, inputs, template_fields, user_fields):
 
     # determine field values
     fields = dict((field["id"], field["default"]) for field in module.fields)
-    fields.update(template_fields)  # override with template
-    fields.update(user_fields)  # override with config
+     # override with template
+    fields.update((k, v) for k, v in template_fields.items() if k in fields)
+    # override with config
+    fields.update((k, v) for k, v in user_fields.items() if k in fields)
 
     # validate fields
     for par in module.fields:

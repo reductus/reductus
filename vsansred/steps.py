@@ -380,7 +380,9 @@ def He3_transmission(he3data, trans_panel="auto"):
 
     mappings (params[]): cell parameters
 
-    2018-05-01 Brian Maranville
+    | 2018-05-01 Brian Maranville
+    | 2020-07-30 Brian Maranville update cell name
+
     """
     from .vsansdata import short_detectors, Parameters, VSans1dData,  _toDictItem
     import dateutil.parser
@@ -428,7 +430,7 @@ def He3_transmission(he3data, trans_panel="auto"):
         wavelength = d.metadata.get("resolution.lmda")
         mappings.setdefault(tstartstr, {
             "Insert_time": tstart,
-            "Cell_name": d.metadata.get("he3_back.name", "unknown"),
+            "Cell_name": _s(d.metadata.get("he3_back.name", "unknown")),
             "Te": d.metadata.get("he3_back.te", 1.0),
             "Mu": opacity*wavelength,
             "Transmissions": []
@@ -496,7 +498,7 @@ def He3_transmission(he3data, trans_panel="auto"):
         v = np.array(transmissions)
         dv = np.zeros_like(v)
         ordering = np.argsort(x)
-        trans_1d.append(VSans1dData(x[ordering], v[ordering], dx=dx, dv=dv, xlabel="timestamp", vlabel="Transmission", metadata={"title": m["Cell_name"]}))
+        trans_1d.append(VSans1dData(x[ordering], v[ordering], dx=dx, dv=dv, xlabel="timestamp", vlabel="Transmission", metadata={"title": _s(m["Cell_name"])}))
 
     return he3data, trans_1d, [Parameters({"cells": mappings, "blocked_beams": bb_out})]
 

@@ -599,9 +599,9 @@ class SmoothData(Filter2D):
     def apply(self, data, window="flat", width=5, axis=0):
         """smooth the data using a window with requested size.
 
-        ***************************************************************
-        *** Adapted from http://www.scipy.org/Cookbook/SignalSmooth ***
-        ***************************************************************
+        ****************************************************************
+        *** Adapted from https://www.scipy.org/Cookbook/SignalSmooth ***
+        ****************************************************************
 
         This method is based on the convolution of a scaled window with the signal.
         The signal is prepared by introducing reflected copies of the signal

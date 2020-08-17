@@ -32,7 +32,7 @@ config = {
         },
         {
             "name": "ncnr",
-            "url": "http://ncnr.nist.gov/pub/",
+            "url": "https://ncnr.nist.gov/pub/",
             "start_path": "ncnrdata",
             "file_helper_url": "https://ncnr.nist.gov/ncnrdata/listftpfiles_json.php",
         },

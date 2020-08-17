@@ -16,7 +16,7 @@ For example::
         },
         {
             "name": "ncnr",
-            "url": "http://ncnr.nist.gov/pub/",
+            "url": "https://ncnr.nist.gov/pub/",
             "start_path": "ncnrdata",
         },
         {
@@ -98,8 +98,8 @@ def url_get(fileinfo, mtime_check=True):
             path = urllib.request.pathname2url(os.path.abspath(path))
         source_url = check_datasource(source)
         full_url = join(source_url, urllib.parse.quote(path.strip(sep), safe='/:'))
-        url = None
         print("loading", full_url, name)
+        req = None  # Need placeholder for req in case SESSION.get fails.
         try:
             req = SESSION.get(full_url)
             if mtime_check:
@@ -126,21 +126,3 @@ def url_get(fileinfo, mtime_check=True):
                 req.close()
 
     return ret
-
-def find_mtime(path):
-    check_datasource()
-    try:
-        req = SESSION.head(DEFAULT_DATA_SOURCE+path)
-        mtime_str = req.headers['last-modified']
-        mtime = datetime.datetime.strptime(mtime_str, r'%a, %d %b %Y %H:%M:%S %Z')
-    except requests.HTTPError as exc:
-        raise ValueError("Could not open %r\n%s"%(path, str(exc)))
-    timestamp = int(mtime.timestamp())
-
-    return {'path': path, 'mtime': timestamp}
-
-def url_get_list(files=None):
-    if files is None:
-        return []
-    result = [entry for fileinfo in files for entry in url_get(fileinfo)]
-    return result

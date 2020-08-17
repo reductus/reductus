@@ -450,6 +450,9 @@ class Parameters(object):
     def get_metadata(self):
         return self.params
 
+    def todict(self):
+        return _toDictItem(self.params)
+
     def get_plottable(self):
         #return {"entry": "entry", "type": "params", "params": _toDictItem(self.metadata)}
         return {"entry": "entry", "type": "params", "params": _toDictItem(self.params)}

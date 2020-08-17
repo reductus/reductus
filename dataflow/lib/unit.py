@@ -54,7 +54,7 @@ getting the dimension from the units as we are currently doing.
 
 # TODO: Parse the udunits database directly
 # UDUnits:
-#  http://www.unidata.ucar.edu/software/udunits/udunits-1/udunits.txt
+#  https://www.unidata.ucar.edu/software/udunits/udunits-1/udunits.txt
 
 from __future__ import division
 
