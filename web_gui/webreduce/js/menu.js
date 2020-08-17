@@ -10,7 +10,7 @@ let template = `
     </md-toolbar>
 
     <md-list>
-      <md-list-item md-expand>
+      <md-list-item md-expand md-expanded>
         <md-icon md-src="icons/mediation-black-18dp.svg"></md-icon>
         <span class="md-list-item-text md-title">Template</span>
         <md-list slot="md-expand">
@@ -54,7 +54,7 @@ let template = `
         </md-list>
       </md-list-item>
       
-      <md-list-item md-expand>
+      <md-list-item md-expand md-expanded>
         <md-icon md-src="icons/source-black-18dp.svg"></md-icon>
         <span class="md-list-item-text md-title">Data</span>
         <md-list slot="md-expand">
