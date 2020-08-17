@@ -16,8 +16,7 @@ Vue.use(VueMaterial);
 export { default as vuedraggable } from 'https://cdn.skypack.dev/vuedraggable@^2.23.2';
 export { Vue }
 
-//import * as messagepack from "https://unpkg.com/messagepack@1.1.10/dist/messagepack.es.js";
-import * as messagepack from "https://cdn.jsdelivr.net/gh/bmaranville/msgpack-js@textdecoder_dist/dist/messagepack.es.js";
+import * as messagepack from "https://unpkg.com/messagepack@1.1.11/dist/messagepack.es.js";
 //import { default as messagepack } from "https://dev.jspm.io/npm:messagepack@1.1";
 export { messagepack };
 import { default as PouchDB } from "https://dev.jspm.io/npm:pouchdb-browser@7";
