@@ -12,7 +12,7 @@ let template = `
     <md-list>
       <md-list-item md-expand>
         <md-icon md-src="icons/mediation-black-18dp.svg"></md-icon>
-        <span class="md-list-item-text">Template</span>
+        <span class="md-list-item-text md-title">Template</span>
         <md-list slot="md-expand">
           <md-list-item @click="action('new_template')" class="md-inset">
             <span class="md-list-item-text">New</span>
@@ -56,7 +56,7 @@ let template = `
       
       <md-list-item md-expand>
         <md-icon md-src="icons/source-black-18dp.svg"></md-icon>
-        <span class="md-list-item-text">Data</span>
+        <span class="md-list-item-text md-title">Data</span>
         <md-list slot="md-expand">
           <md-list-item @click="action('stash_data')" class="md-inset">
             <span class="md-list-item-text">Stash Data</span>
@@ -103,7 +103,7 @@ let template = `
 
       <md-list-item md-expand>
         <md-icon>settings</md-icon>
-        <span class="md-list-item-text">Settings</span>
+        <span class="md-list-item-text md-title">Settings</span>
         <md-list slot="md-expand">
           <md-list-item v-for="(setting, setting_name) in settings" class="md-inset">
             <md-checkbox v-model="setting.value" class="md-primary" />
