@@ -786,16 +786,6 @@ editor.export_data = function() {
 
 }
 
-editor.accept_parameters = function(target, active_module) {
-  target.selectAll("div.fields")
-    .each(function(data) {
-      if (typeof data.value !== "undefined") {
-        if (!active_module.config) {active_module.config = {}};
-        active_module.config[data.id] = data.value;
-      }
-    });
-  editor.update_completions();
-}
 
 editor.update_completions = function() {
   var satisfactions = dependencies.mark_satisfied(this._active_template, this._module_defs);
@@ -817,10 +807,6 @@ editor.update_completions = function() {
       }
     });
   });
-}
-
-editor.fileinfo_update = function(fileinfo) {
-  filebrowser.fileinfoUpdate(fileinfo);
 }
 
 editor.load_instrument = async function(instrument_id) {
