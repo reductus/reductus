@@ -16,13 +16,16 @@ let template = `
     <md-tab id="stashedlist" md-label="stashed">
       <md-list class="md-dense">
         <md-subheader>Compare Stashed</md-subheader>
-        <md-list-item v-for="name in stashnames" style="margin-top:-1.5em;">
+        <md-list-item v-for="name in stashnames" :md-disabled="false">
           <md-checkbox 
             v-model="selected_stashes" 
-            :value="name" 
-            @change="$emit('action', 'compare_stashed', selected_stashes)" />
-          <span class="md-list-item-text">{{name}}</span>
-          <md-button class="" @click.stop="$emit('action', 'reload_stash', name)">
+            :value="name"
+            class="md-subheading"
+            @change="$emit('action', 'compare_stashed', selected_stashes)">
+          {{name}}
+          </md-checkbox>
+          <span class="md-list-item-text"></span>
+          <md-button @click.stop="$emit('action', 'reload_stash', name)">
             reload
             <md-icon>launch</md-icon>
           </md-button>

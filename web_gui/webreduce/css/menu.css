@@ -50,3 +50,10 @@
 #main_menu li {
     padding-left: 2px !important;
 }
+.md-list.md-dense .md-list-item-content {
+    min-height: 24px;
+    max-height: 30px;
+    font-size: 13px;
+    padding-top: 0;
+    padding-bottom: 0;
+}
