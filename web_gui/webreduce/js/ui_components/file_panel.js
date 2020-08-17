@@ -16,7 +16,7 @@ let template = `
     <md-tab id="stashedlist" md-label="stashed">
       <md-list class="md-dense">
         <md-subheader>Compare Stashed</md-subheader>
-        <md-list-item v-for="name in stashnames">
+        <md-list-item v-for="name in stashnames" style="margin-top:-1.5em;">
           <md-checkbox 
             v-model="selected_stashes" 
             :value="name" 
