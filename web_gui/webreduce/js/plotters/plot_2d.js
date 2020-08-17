@@ -53,7 +53,7 @@ export async function show_plots_2d_multi(plotdata, plot_controls, target, old_p
   plot_controls.plotNumberChange = function (plotnum) {
     var plotnum = plotnum || 0;
     let data = values[plotnum];
-    plot_controls.$emit("title", data.title || "");
+    plot_controls.$emit("plot-title", data.title || "");
     data.ztransform = plot_controls.axes.z.transform.value;
     var aspect_ratio = null;
     if ((((data.options || {}).fixedAspect || {}).fixAspect || null) == true) {

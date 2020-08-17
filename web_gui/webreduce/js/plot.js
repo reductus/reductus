@@ -11,13 +11,14 @@ const plotter = {};
 export { plotter };
 
 let template = `
-<div class="plot-panel"
-  style="flex:1;display:flex;flex-direction:column;">
-  <div id="plotdiv" class="plotdiv" ref="plotdiv" style="flex:1;">
+<div class="reductus-plot-panel">
+  <header id="plot_title">{{title}}</header>
+  <div id="plotdiv" class="plotdiv" ref="plotdiv">
   </div>
   <plot-controls
     ref="controls"
     style="min-height:2em;"
+    @plot-title="set_plot_title"
     @transformChange="transformChange"
     @settingChange="settingChange"
     @downloadSVG="downloadSVG"
@@ -45,7 +46,8 @@ export const PlotPanel = {
   data: () => ({
     type: 'null',
     instances: {},
-    active_plot: null
+    active_plot: null,
+    title: ""
   }),
   methods: {
     transformChange(axis, new_transform) {
@@ -61,6 +63,9 @@ export const PlotPanel = {
         var filename = prompt("Save svg as:", "plot.svg");
         if (filename == null) { return } // cancelled
         app.download(output, filename);
+    },
+    set_plot_title(title) {
+      this.title = title;
     }
   },
   template  
@@ -94,6 +99,7 @@ plotter.create_instance = function(target_id) {
       async setPlotData(plotdata) {
         let typeChange = (this.type != plotdata.type);
         this.type = plotdata.type;
+        this.title = "";
         await this.$nextTick();
         this.active_plot = await plotters[plotdata.type](plotdata, this.$refs.controls, this.$refs.plotdiv, this.active_plot);
       }

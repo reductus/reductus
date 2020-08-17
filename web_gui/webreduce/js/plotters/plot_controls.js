@@ -8,6 +8,7 @@ let template = `
       type="number"
       v-model="plotnumber.value"
       :max="plotnumber.max"
+      style="width:6em;"
       min="0"
       @change="plotNumberChange(plotnumber.value)"
     />
