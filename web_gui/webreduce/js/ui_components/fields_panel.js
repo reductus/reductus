@@ -11,7 +11,7 @@ let template = `
     ref="fileinfos"
     :active="active_fileinfo == index"
     :field="field"
-    :value="(module.config || {})[field.id]"
+    :value="local_config[field.id]"
     @activate="activate_fileinfo(index)"
     >
 
@@ -34,7 +34,7 @@ let template = `
     </component>
   </div>
   <div class="control-buttons" style="position:absolute;bottom:10px;">
-    <button class="accept config" @click="accept">{{(auto_accept.value) ? "replot" : "accept"}}</button>
+    <button class="accept config" @click="accept_clicked">{{(auto_accept.value) ? "replot" : "accept"}}</button>
     <button class="clear config" @click="clear">clear</button>
   </div>
 </div>
@@ -108,6 +108,7 @@ export const FieldsPanel = {
         this.$set(this.module, 'config', {});
       }
       this.$set(this.module.config, id, value);
+      this.$emit("action", "update");
       this.reset_local_config();
     },
     activate_fileinfo(index = null) {
@@ -115,35 +116,34 @@ export const FieldsPanel = {
         this.active_fileinfo = index;
       }
       let active_field = this.fileinfos[this.active_fileinfo];
-      let value = (active_field) ? ((this.module.config || {})[active_field.id] || []) : [];
+      let value = (active_field) ? ((this.local_config || {})[active_field.id] || []) : [];
       let no_terminal_selected = (this.terminal_id == null);
       this.$emit("action", 'fileinfo_update', {value, no_terminal_selected});
     },
     update_fileinfo(value) {
       let active_field = this.fileinfos[this.active_fileinfo];
       if (active_field) {
-        if (!this.module.config) {
-          this.$set(this.module, 'config', {});
-        }
-       this.$set(this.module.config, active_field.id, value);
+        this.changed(active_field.id, value);
       }
     },
-    accept(id, value) {
+    accept_clicked() {
       if (!this.auto_accept.value) {
-        this.accept_change(id, value);
+        this.$set(this.module, 'config', this.local_config);
+        this.$emit("action", "update");
       }
-      this.$emit("action", "accept");
+      this.$emit("action", "accept_button");
     },
     clear() {
       if (this.auto_accept.value) {
         if (this.module.config) { this.$delete(this.module, 'config') }
+        this.reset_local_config();
+        this.$emit("action", "update");
+        this.$emit("action", "clear");
       }
       else {
         this.local_config = {};
       }
-      this.reset_local_config();
       this.timestamp = Date.now();
-      this.$emit("action", "clear");
     }
   },
   beforeUpdate: function () {

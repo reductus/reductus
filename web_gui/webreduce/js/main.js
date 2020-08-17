@@ -182,7 +182,8 @@ window.onload = async function () {
   })
   fieldUI.create_instance("fieldsdiv");
   const fieldUI_actions = {
-    accept() { editor.advance_to_output() },
+    accept_button() { editor.advance_to_output() },
+    update() { editor.update_completions() },
     clear() { editor.module_clicked_single() },
     fileinfo_update({value, no_terminal_selected}) { filebrowser.fileinfoUpdate(value, no_terminal_selected) } 
   };
