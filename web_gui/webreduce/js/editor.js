@@ -631,25 +631,28 @@ editor.calculate = async function(params, recalc_mtimes, noblock, result_callbac
   if (!noblock) {
     app_header.instance.calculation_progress.visible = true;
   }
-  if (recalc_mtimes) {
-    await Promise.race([cancel_promise, app.update_file_mtimes()]);
-  }
-  if (params instanceof Array) {
-    app_header.instance.calculation_progress.total = params.length;
-    for (let i=0; i<params.length; i++) {
-      let p = params[i];
-      if (!editor._calculation_cancelled) {
-        let result = await Promise.race([cancel_promise, calculate_one(p, caching)]);
-        if (result_callback) { await result_callback(r, p, i); }
-        app_header.instance.calculation_progress.done = i+1;
-        results.push(result);
+  try {
+    if (recalc_mtimes) {
+      await Promise.race([cancel_promise, app.update_file_mtimes()]);
+    }
+    if (params instanceof Array) {
+      app_header.instance.calculation_progress.total = params.length;
+      for (let i=0; i<params.length; i++) {
+        let p = params[i];
+        if (!editor._calculation_cancelled) {
+          let result = await Promise.race([cancel_promise, calculate_one(p, caching)]);
+          if (result_callback) { await result_callback(r, p, i); }
+          app_header.instance.calculation_progress.done = i+1;
+          results.push(result);
+        }
       }
     }
-  }
-  else {
-    results = await Promise.race([cancel_promise, calculate_one(params, caching)]);
-  }
-  if (!noblock) {
+    else {
+      results = await Promise.race([cancel_promise, calculate_one(params, caching)]);
+    }
+  } catch(err) {
+
+  } finally {
     app_header.instance.calculation_progress.visible = false;
   }
   return results;

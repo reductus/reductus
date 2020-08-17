@@ -6,7 +6,7 @@ uwsgi --http 0.0.0.0:8002 --manage-script-name --mount /=server_flask:app
 To serve with python:
 
 python server_flask.py 8002
-(then visit http://localhost:8002/static/index.html in your browser)
+(then visit http://localhost:8002 in your browser)
 
 """
 import os, sys, posixpath
@@ -29,7 +29,7 @@ def create_app(config=None):
 
     @app.route('/')
     def root():
-        return redirect("webreduce/index.html")
+        return redirect("webreduce/index_dev.html")
 
     @app.route('/robots.txt')
     def static_from_root():
