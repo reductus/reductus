@@ -1,11 +1,13 @@
+import { extend } from '../../libraries.js';
+
 let template = `
 <div class="fields">
   <label>
     {{field.label}}
     <input
-      :type="(field.multiple) ? 'text' : 'number'"
+      :type="(field.multiple || field.length != 1) ? 'text' : 'number'"
       :id="field.id"
-      :placeholder="field.default"
+      :placeholder="JSON.stringify(defaultOuterValue)"
       :value="display_value"
       @change="display_value = $event.target.value"
     />
@@ -15,35 +17,53 @@ let template = `
 
 export const IntUi = {
   name: "int-ui",
-  props: ["field", "value"],
+  props: ["field", "value", "num_datasets_in"],
   methods: {
-    coerce(value) {
+    coerceAll(value) {
+      if (Array.isArray(value)) {
+        return value.map(x => (this.coerceAll(x)));
+      }
+      else {
+        return this.coerceType(value)
+      }
+    },
+    coerceType(value) {
       return 0 | value;
     }
   },
   computed: {
+    defaultInnerValue() {
+      let d = this.field.default;
+      if (this.field.length == 1) { return null }
+      else { return Array.from(new Array(this.field.length)).map(x => d) }
+    },
+    defaultOuterValue() {
+      if (this.field.multiple) {
+        return Array.from(new Array(this.num_datasets_in)).map(x => this.defaultInnerValue);
+      }
+      else { return this.defaultInnerValue }
+    },
     display_value: {
       get() {
-        let v = (this.value != null) ? this.value : this.field.default;
-        if (this.multiple) {
-          return JSON.stringify(extend(true, [], v))
-            .replace(/^\[/, '')
-            .replace(/\]$/, '');
+        if (this.value == null) {
+          return ""
         }
         else {
-          return v
+          let v = this.value;
+          return (this.field.multiple || this.field.length != 1) ? JSON.stringify(v) : v;
         }
       },
       set(newValue) {
-        let v = (this.multiple) ? JSON.parse('[' + newValue + ']').map(this.coerce) : this.coerce(newValue);
-        this.$emit("change", this.field.id, v);
+        let v = (this.multiple || this.field.length != 1) ? JSON.parse(newValue) : newValue;
+        let cv = this.coerceAll(v);
+        this.$emit("change", this.field.id, cv);
       }
     }
   },
   template
 }
 
-const FloatUi = Object.assign({}, IntUi);
+const FloatUi = extend(true, {}, IntUi);
 FloatUi.name = "float-ui";
-FloatUi.methods.coerce = function (value) { return +value }
+FloatUi.methods.coerceType = function (value) { return +value }
 export { FloatUi }

@@ -40,8 +40,6 @@ export const IndexUi = {
     display_value: {
       get() {
         return prettyJSON(this.local_value);
-        //.replace(/^\[\s*/, '')
-        //.replace(/\s*\]$/, '');
       },
       set(newValue) {
         //this.local_value = JSON.parse('[' + newValue + ']').map(x => (+x));
@@ -57,8 +55,8 @@ export const IndexUi = {
     getLocal(value) {
       let value_length = (this.value || []).length;
       if (this.value != null && this.num_datasets_in != value_length) {
-        alert(`${value_length} masks defined for ${this.num_datasets_in} datasets; 
-        Extending with empty masks or truncating to match data length`);
+        alert(`${value_length} index values defined for ${this.num_datasets_in} datasets; 
+        Extending with empty values or truncating to match data length`);
       }
       return Array.from(Array(this.num_datasets_in)).map((x,i) => 
           ((this.value || [])[i] || []));
