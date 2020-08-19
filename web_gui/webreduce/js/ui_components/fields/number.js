@@ -7,7 +7,7 @@ let template = `
     <input
       :type="(field.multiple || field.length != 1) ? 'text' : 'number'"
       :id="field.id"
-      :placeholder="JSON.stringify(defaultOuterValue)"
+      :placeholder="(defaultOuterValue == null) ? '' : JSON.stringify(defaultOuterValue)"
       :value="display_value"
       @change="display_value = $event.target.value"
     />
