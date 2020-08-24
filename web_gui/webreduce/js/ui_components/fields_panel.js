@@ -51,7 +51,7 @@ export const FieldsPanel = {
     module_def: {},
     module_id: null,
     terminal_id: null,
-    auto_accept: {value: true},
+    auto_accept: { value: true },
     active_fileinfo: 0
   }),
   computed: {
@@ -100,14 +100,31 @@ export const FieldsPanel = {
         this.accept_change(id, value);
       }
       else {
-        this.$set(this.local_config, id, value);
+        if (value == null) {
+          this.$delete(this.local_config, id);
+        }
+        else {
+          this.$set(this.local_config, id, value);
+        }
       }
     },
     accept_change(id, value) {
-      if (!this.module.config) {
-        this.$set(this.module, 'config', {});
+      if (value == null) {
+        // remove items where value is unset.
+        if (this.module.config) {
+          this.$delete(this.module.config, id);
+          if (Object.keys(this.module.config).length == 0) {
+            // remove config completely if it is empty.
+            this.$delete(this.module, 'config')
+          }
+        }
       }
-      this.$set(this.module.config, id, value);
+      else {
+        if (!this.module.config) {
+          this.$set(this.module, 'config', {});
+        }
+        this.$set(this.module.config, id, value);
+      }
       this.$emit("action", "update");
       this.reset_local_config();
     },
@@ -118,7 +135,7 @@ export const FieldsPanel = {
       let active_field = this.fileinfos[this.active_fileinfo];
       let value = (active_field) ? ((this.local_config || {})[active_field.id] || []) : [];
       let no_terminal_selected = (this.terminal_id == null);
-      this.$emit("action", 'fileinfo_update', {value, no_terminal_selected});
+      this.$emit("action", 'fileinfo_update', { value, no_terminal_selected });
     },
     update_fileinfo(value) {
       let active_field = this.fileinfos[this.active_fileinfo];
@@ -162,7 +179,7 @@ fieldUI.create_instance = function (target_id) {
     data: () => ({
       module: {},
       module_def: {},
-      auto_accept: {value: true}
+      auto_accept: { value: true }
     })
   }).$mount(target);
 }

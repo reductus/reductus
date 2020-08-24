@@ -54,8 +54,14 @@ export const IntUi = {
         }
       },
       set(newValue) {
-        let v = (this.multiple || this.field.length != 1) ? JSON.parse(newValue) : newValue;
-        let cv = this.coerceAll(v);
+        let cv;
+        if (newValue == "") {
+          cv = null
+        }
+        else {
+          let v = (this.multiple || this.field.length != 1) ? JSON.parse(newValue) : newValue;
+          cv = this.coerceAll(v);
+        }
         this.$emit("change", this.field.id, cv);
       }
     }
