@@ -205,7 +205,7 @@ window.onload = async function () {
       }
     },
     upload_file(file) {
-      window.fheader = file.slice(0, 20).arrayBuffer();
+      //window.fheader = file.slice(0, 20).arrayBuffer();
       const reader = new FileReader();
       reader.onload = res => {
         let contents = new Uint8Array(res.target.result);

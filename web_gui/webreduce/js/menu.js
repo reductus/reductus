@@ -31,7 +31,7 @@ let template = `
               <label>Upload Template</label>
               <md-file 
                 v-model="template_to_upload" 
-                @change="action('upload_file', $event.target.files[0]); template_to_upload=null;"/>
+                @change="upload"/>
             </md-field>
             <md-icon class="md-primary">publish</md-icon>      
           </md-list-item>
@@ -73,9 +73,9 @@ let template = `
           <md-list-item class="md-inset">
             <md-field>
               <label>Reload Exported</label>
-              <md-file 
+              <md-file single
                 v-model="template_to_upload" 
-                @change="action('upload_file', $event.target.files[0]); template_to_upload=null;"/>
+                @change="upload"/>
             </md-field>
             <md-icon class="md-primary">publish</md-icon>      
           </md-list-item>
@@ -192,9 +192,9 @@ export const VueMenu = {
     predefined_templates: [""],
     stash_name: null,
     settings: {
-      auto_accept: {label: "Auto-accept changes", value: true},
-      check_mtimes: {label: "Auto-reload newer files", value: true},
-      cache_calculations: {label: "Cache calculations", value: true}
+      auto_accept: { label: "Auto-accept changes", value: true },
+      check_mtimes: { label: "Auto-reload newer files", value: true },
+      cache_calculations: { label: "Cache calculations", value: true }
     }
   }),
   methods: {
@@ -207,11 +207,16 @@ export const VueMenu = {
     set_categories(new_categories) {
       this.categories.splice(0, this.categories.length, ...new_categories);
       this.$emit("action", 'set_categories', this.categories);
+    },
+    async upload(ev) {
+      this.action('upload_file', ev.target.files[0]);
+      await(this.$nextTick());
+      this.template_to_upload = null;
     }
   },
   watch: {
     predefined_templates: {
-      handler: function(val, oldVal) {
+      handler: function (val, oldVal) {
         this.predefined_template = val[0] || "";
       },
       deep: true
@@ -220,7 +225,7 @@ export const VueMenu = {
   template
 }
 
-function nop(x) {console.log(x)};
+function nop(x) { console.log(x) };
 
 export const vueMenu = {};
 
