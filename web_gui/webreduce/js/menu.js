@@ -6,7 +6,7 @@ let template = `
 
   <md-drawer :md-active.sync="showNavigation" md-swipeable>
     <md-toolbar class="md-transparent" md-elevation="0">
-      <span class="md-title">Reductus</span>
+      <span class="md-title"><img src="icons/reductus_logo.svg" style="height:2em;"/>Reductus</span>
     </md-toolbar>
 
     <md-list>

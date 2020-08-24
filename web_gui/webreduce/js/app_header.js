@@ -9,7 +9,7 @@ let template = `
         <md-button class="md-icon-button" @click="$emit('toggle-menu')">
           <md-icon title="MENU">menu</md-icon>
         </md-button>
-        <span class="md-title">Reductus</span>
+        <span class="md-title"><img src="icons/reductus_logo.svg" style="height:2em;"/>Reductus</span>
         <md-button class="md-primary md-small" href="https://doi.org/10.1107/S1600576718011974">[cite]</md-button>
       </div>
       <div class="md-toolbar-section-end">
