@@ -1,6 +1,6 @@
-import {Tree} from '../libraries.js';
-import {PathEditor} from './patheditor.js';
-import {DirBrowser} from './dirbrowser.js';
+import { Tree } from '../libraries.js';
+import { PathEditor } from './patheditor.js';
+import { DirBrowser } from './dirbrowser.js';
 
 let template = `
 <div class="datasource">
@@ -18,7 +18,7 @@ let template = `
 
 export const DataSource = {
   name: "data-source",
-  components: {PathEditor, DirBrowser},
+  components: { PathEditor, DirBrowser },
   props: ["source", "index"],
   data: () => ({
     tree: null
@@ -35,12 +35,12 @@ export const DataSource = {
         data: treedata,
         closeDepth: -1,
         itemClickToggle: 'closed',
-        onChange: (v) => {this.$emit("checked")},
+        onChange: (v) => { this.$emit("checked") },
         onSwitch: async (v) => {
           this.$emit("open-close")
-        } 
+        }
       })
-      
+
       //this.tree.onChange = () => this.$emit("checked");
     },
     get_checked() {
@@ -57,7 +57,7 @@ export const DataSource = {
       this.$emit("checked");
     }
   },
-  mounted: function() {
+  mounted: function () {
     //this.tree = new Tree(this.$refs.tree.$el, this.source.treedata);
     //console.log(this.source.treedata);
     // go get tree data
@@ -82,6 +82,11 @@ export const DataSource = {
     //       this.$emit('open-close');
     //     }
     // })
+    this.$refs.tree.addEventListener('transitionend', (evt) => {
+      if (evt.propertyName == 'transform') {
+        this.$emit('open-close');
+      }
+    });
   },
   template
 }
