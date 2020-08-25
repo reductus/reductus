@@ -53,23 +53,19 @@ class Attenuators(Group):
     This is used by the attenuation correction.
     
     The wavelength-dependent attenuation is defined by a fitted
-    slope and intercept for each attenuator, along with a 
+    polynomial for each attenuator, along with a 
     covariance matrix for uncertainty propagation.
 
-    slope (n 1/Angstrom)
-        slope of the linear fit of attenuation vs. wavelength
-        length n is the number of defined attenuators
-    intercept (n unitless)
-        y-intercept of the linear fit of attenuation vs. wavelength
-        length n is the number of defined attenuators
-    covariance (n x 2 x 2)
-        covariance matrices for linear fit of attenuation
+    poly_coeffs (n x m)
+        coefficients of the polynomial used to fit attenuation vs. wavelength
+        length n is the number of defined attenuators, m is polynomial order
+    covariance (n x m x m)
+        covariance matrices for polynomial fit of attenuation
     target_value (npts)
         attenuator setting, for each data point
     """
-    slope = None # 1/Angstrom
-    intercept = None # unitless
-    covariance = None # 2x2 matrices
+    poly_coeffs = None # 
+    covariance = None # m x m matrices
     target_value = None # attenuators in the beam; setting is per point, matching length of counts
 
 class Candor(ReflData):
@@ -239,8 +235,7 @@ class Candor(ReflData):
         self.detector.angle_x_offset = data_as(das, 'detectorTable/rowAngularOffsets', '')[0]
 
         # Attenuators
-        self.attenuators.slope = data_as(das, 'instrument/attenuators/slope', '1/Ang', dtype="float")
-        self.attenuators.intercept = data_as(das, 'instrument/attenuators/intercept', '', dtype="float")
+        self.attenuators.poly_coeffs = data_as(das, 'instrument/attenuators/poly_coeffs', '', dtype="float")
         self.attenuators.covariance = data_as(das, 'instrument/attenuators/covariance', '', dtype="float")
         self.attenuators.target_value = data_as(das, 'attenuator/key', '', rep=n)
 

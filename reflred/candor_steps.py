@@ -340,27 +340,33 @@ def dark_current(data, dc_rate=0., s1_slope=0.):
     return data
 
 @module("candor")
-def attenuation(data, slope=None, intercept=None, covariance=None):  
+def attenuation(data, poly_coeffs=None, covariance=None, target_value=None):  
     r"""
     Correct for wavelength-dependent attenuation from built-in attenuators
 
     Attenuation factor applied is 
-    AF_1 = (slope_1 * wavelength) + intercept_1 for attenuator 1, and
-    AF_2 = AF_1 * ((slope_2 * wavelength) + intercept_2) for attenuator 2, etc.
+    AF_0 = 1.0
+    AF_1 = AF_0 * (poly_coeffs[0][0] + poly_coeffs[0][1] * wavelength + ...)
+    AF_2 = AF_1 * (poly_coeffs[1][0] + poly_coeffs[1][1] * wavelength + ...)
+    ...
 
-    The covariance matrices overrides should be 2x2 arrays, flattened to C-order for user inputs.
-    If no override slope, intercept or covariance numbers are supplied, the values from the datafile are used.
+    The covariance matrices overrides should be n x m x m array, where n is the 
+    number of attenuators and m is the order of the polynomial used
+    (flattened to C-order for user inputs)
+
+    If no poly_coeffs or covariances are supplied, the values from the datafile are used.
 
     **Inputs**
 
     data (candordata) : data to correct
 
-    slope {slopes vs. wavelength} (float[]?) : slopes of attenuators wavelength dependence
-
-    intercept {intercept} (float[]?) : y-intercepts of attenuators wavelength dependence 
+    poly_coeffs {slopes vs. wavelength} (float[]?) : coefficients of polynomial fit of
+        attenuation vs. wavelength (n x m)
 
     covariance {Covariance (flattened)} (float[]?) : covariances of slopes and intercepts of attenuators,
-        should be length 4xN where N is the number of attenuators
+        should be length n x m x m where n is the number of attenuators and m is the polynomial order
+
+    target_value {Attenuator setting} (float[]?) : Attenuator number, per point.  E.g. 1 if attenuator.key = 1
 
     **Returns**
 
@@ -368,6 +374,9 @@ def attenuation(data, slope=None, intercept=None, covariance=None):
 
     | 2020-08-24 Brian Maranville
     """
+
+
+
 
 @module("candor")
 def stitch_intensity(data, tol=0.001):
