@@ -340,6 +340,36 @@ def dark_current(data, dc_rate=0., s1_slope=0.):
     return data
 
 @module("candor")
+def attenuation(data, slope=None, intercept=None, covariance=None):  
+    r"""
+    Correct for wavelength-dependent attenuation from built-in attenuators
+
+    Attenuation factor applied is 
+    AF_1 = (slope_1 * wavelength) + intercept_1 for attenuator 1, and
+    AF_2 = AF_1 * ((slope_2 * wavelength) + intercept_2) for attenuator 2, etc.
+
+    The covariance matrices overrides should be 2x2 arrays, flattened to C-order for user inputs.
+    If no override slope, intercept or covariance numbers are supplied, the values from the datafile are used.
+
+    **Inputs**
+
+    data (candordata) : data to correct
+
+    slope {slopes vs. wavelength} (float[]?) : slopes of attenuators wavelength dependence
+
+    intercept {intercept} (float[]?) : y-intercepts of attenuators wavelength dependence 
+
+    covariance {Covariance (flattened)} (float[]?) : covariances of slopes and intercepts of attenuators,
+        should be length 4xN where N is the number of attenuators
+
+    **Returns**
+
+    corrected (candordata) : corrected data
+
+    | 2020-08-24 Brian Maranville
+    """
+
+@module("candor")
 def stitch_intensity(data, tol=0.001):
     r"""
     Join the intensity measurements into a single entry.

@@ -5,7 +5,7 @@ import numpy as np
 
 from dataflow.lib.exporters import exports_json
 
-from .refldata import ReflData, Intent
+from .refldata import ReflData, Intent, Group, set_fields
 from .nexusref import load_nexus_entries, nexus_common, get_pol
 from .nexusref import data_as, str_data
 from .nexusref import TRAJECTORY_INTENTS
@@ -46,6 +46,32 @@ def detector_efficiency():
         _EFFICIENCY = np.vstack((eff, eff)).T
     return _EFFICIENCY
 
+@set_fields
+class Attenuators(Group):
+    """
+    Define built-in attenuators
+    This is used by the attenuation correction.
+    
+    The wavelength-dependent attenuation is defined by a fitted
+    slope and intercept for each attenuator, along with a 
+    covariance matrix for uncertainty propagation.
+
+    slope (n 1/Angstrom)
+        slope of the linear fit of attenuation vs. wavelength
+        length n is the number of defined attenuators
+    intercept (n unitless)
+        y-intercept of the linear fit of attenuation vs. wavelength
+        length n is the number of defined attenuators
+    covariance (n x 2 x 2)
+        covariance matrices for linear fit of attenuation
+    target_value (npts)
+        attenuator setting, for each data point
+    """
+    slope = None # 1/Angstrom
+    intercept = None # unitless
+    covariance = None # 2x2 matrices
+    target_value = None # attenuators in the beam; setting is per point, matching length of counts
+
 class Candor(ReflData):
     """
     Candor data entry.
@@ -54,6 +80,7 @@ class Candor(ReflData):
     """
     format = "NeXus"
     probe = "neutron"
+    _groups = ReflData._groups + (("attenuators", Attenuators),)
 
     def __init__(self, entry, entryname, filename):
         super().__init__()
@@ -210,6 +237,12 @@ class Candor(ReflData):
         self.detector.angle_x = data_as(das, 'detectorTableMotor/softPosition', 'degree', rep=n)
         self.detector.angle_x_target = data_as(das, 'detectorTableMotor/desiredSoftPosition', 'degree', rep=n)
         self.detector.angle_x_offset = data_as(das, 'detectorTable/rowAngularOffsets', '')[0]
+
+        # Attenuators
+        self.attenuators.slope = data_as(das, 'instrument/attenuators/slope', '1/Ang', dtype="float")
+        self.attenuators.intercept = data_as(das, 'instrument/attenuators/intercept', '', dtype="float")
+        self.attenuators.covariance = data_as(das, 'instrument/attenuators/covariance', '', dtype="float")
+        self.attenuators.target_value = data_as(das, 'attenuator/key', '', rep=n)
 
         #print("shapes", self.detector.counts.shape, self.detector.wavelength.shape, self.detector.efficiency.shape)
         #print("shapes", self.sample.angle_x.shape, self.detector.angle_x.shape, self.detector.angle_x_offset.shape)
