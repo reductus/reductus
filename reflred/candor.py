@@ -77,13 +77,14 @@ class Candor(ReflData):
     format = "NeXus"
     probe = "neutron"
     _groups = ReflData._groups + (("attenuator", Attenuator),)
+    attenuator = None
 
     def __init__(self, entry, entryname, filename):
         super().__init__()
+        self.attenuator = Attenuator()
         nexus_common(self, entry, entryname, filename)
         self.geometry = 'vertical'
         self.align_intensity = "slit1.x"
-
 
     def load(self, entry):
         #print(entry['instrument'].values())
@@ -236,7 +237,7 @@ class Candor(ReflData):
 
         # Attenuators
         self.attenuator.attenuation = data_as(entry, 'instrument/attenuator/attenuation', '', dtype="float")
-        self.attenuator.covariance = data_as(entry, 'instrument/attenuator/covariance', '', dtype="float")
+        self.attenuator.attenuation_err = data_as(entry, 'instrument/attenuator/attenuation_err', '', dtype="float")
         self.attenuator.target_value = data_as(das, 'attenuator/key', '', rep=n)
 
         #print("shapes", self.detector.counts.shape, self.detector.wavelength.shape, self.detector.efficiency.shape)

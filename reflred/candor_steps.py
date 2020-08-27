@@ -344,17 +344,12 @@ def attenuation(data, attenuation=None, attenuation_err=None, target_value=None)
     r"""
     Correct for wavelength-dependent attenuation from built-in attenuators
 
-    Attenuation factor applied is 
-    AF_0 = 1.0
-    AF_1 = AF_0 * (poly_coeffs[0][0] + poly_coeffs[0][1] * wavelength + ...)
-    AF_2 = AF_1 * (poly_coeffs[1][0] + poly_coeffs[1][1] * wavelength + ...)
-    ...
+    Attenuation is specified per attenuator and detector,
+    Attenuation_err should have the same shape, and is the width of the uncertainty for
+    each attenuation (1-sigma)
 
-    The covariance matrices overrides should be n x m x m array, where n is the 
-    number of attenuators and m is the order of the polynomial used
-    (flattened to C-order for user inputs)
-
-    If no poly_coeffs or covariances are supplied, the values from the datafile are used.
+    If user-defined values are supplied, they will overwite the values in the data
+    If no user-defined values are given, the values from the datafile will be used.
 
     **Inputs**
 
@@ -383,28 +378,32 @@ def attenuation(data, attenuation=None, attenuation_err=None, target_value=None)
     
     num_attenuators = data.attenuator.attenuation.shape[0]
 
-    if hasattr(data, '_v'):
-        for ai in range(1, num_attenuators+1):
-            # *= 1.0/data.attenuator.attenuation[ai-1]
-            av = data.attenuator.target_value
-            v = data._v[av == ai]
-            dv = data._dv[av == ai]
-            att = data.attenuator.attenuation[ai-1]
+    for ai in range(1, num_attenuators+1):
+        # *= 1.0/data.attenuator.attenuation[ai-1]
+        av = data.attenuator.target_value
+        matching = (av == ai)
+        att = data.attenuator.attenuation[ai-1]
+        if data.attenuator.attenuation_err is None or len(data.attenuator.attenuation_err) < (ai-1):
+            datt = np.zeros_like(att)
+        else:
             datt = data.attenuator.attenuation_err[ai-1]
+        
+        if data._v is not None:
+            v = data._v[matching]
+            if data._dv is not None:
+                dv = data._dv[matching]
+            else:
+                dv = np.zeros_like(v)
             new_dv = np.sqrt(dv**2 * (1.0/att)**2 + datt**2 * v**2)
-            data._dv[av == ai] = new_dv
-            data._v[av == ai] *= 1.0/att
-    
-    else:
-        for ai in range(1, num_attenuators+1):
-            av = data.attenuator.target_value
-            v = data.detector.counts[av == ai]
-            var_v = data.detector.counts_variance[av == ai]
-            att = data.attenuator.attenuation[ai-1]
-            datt = data.attenuator.attenuation_err[ai-1]
+            data._dv[matching] = new_dv
+            data._v[matching] *= 1.0/att
+
+        else:
+            v = data.detector.counts[matching]
+            var_v = data.detector.counts_variance[matching]
             new_var = var_v * (1.0/att)**2 + datt**2 * v**2
-            data.detector.counts_variance[av == ai] = new_var
-            data.detector.counts[av == ai] *= 1.0/att
+            data.detector.counts_variance[matching] = new_var
+            data.detector.counts[matching] *= 1.0/att
 
     return data
 

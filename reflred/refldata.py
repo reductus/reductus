@@ -1053,7 +1053,7 @@ class ReflData(Group):
                     if check_array(rv): setattr(subcls, rv_name, rv[make_mask(rv, mask_indices)])
 
     def __init__(self, **kw):
-        for attr, cls in ReflData._groups:
+        for attr, cls in self._groups:
             setattr(self, attr, cls())
         self.warnings = []
         Group.__init__(self, **kw)
@@ -1061,13 +1061,13 @@ class ReflData(Group):
     def __str__(self):
         base = [_str(self, indent=2)]
         others = ["".join(("  ", s, "\n", str(getattr(self, s))))
-                  for s, _ in ReflData._groups]
+                  for s, _ in self._groups]
         return "\n".join(base+others)
 
     def todict(self, maxsize=np.inf):
         state = _toDict(self, maxsize=maxsize)
         groups = {s: _toDict(getattr(self, s), maxsize=maxsize)
-                  for s, _ in ReflData._groups}
+                  for s, _ in self._groups}
         state.update(groups)
         return state
 
@@ -1076,7 +1076,7 @@ class ReflData(Group):
         props = _fromDict(props)
         for k, v in props.items():
             setattr(self, k, v)
-        for attr, cls in ReflData._groups:
+        for attr, cls in self._groups:
             props = _fromDict(state[attr])
             setattr(self, attr, cls(**props))
 
