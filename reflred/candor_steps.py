@@ -368,25 +368,28 @@ def attenuation(data, attenuation=None, attenuation_err=None, target_value=None)
 
     | 2020-08-24 Brian Maranville
     """
-    
+
+    from .candor import NUM_CHANNELS
     if attenuation is not None:
-        data.attenuator.attenuation = np.array(attenuation)
+        data.attenuator.attenuation = np.reshape(np.array(attenuation), (-1, NUM_CHANNELS))
     if attenuation_err is not None:
-        data.attenuator.attenuation_err = np.array(attenuation_err)
+        data.attenuator.attenuation_err = np.reshape(np.array(attenuation_err), (-1, NUM_CHANNELS))
     if target_value is not None:
         data.attenuator.target_value = np.array(target_value)
     
     num_attenuators = data.attenuator.attenuation.shape[0]
 
     for ai in range(1, num_attenuators+1):
-        # *= 1.0/data.attenuator.attenuation[ai-1]
         av = data.attenuator.target_value
         matching = (av == ai)
-        att = data.attenuator.attenuation[ai-1]
+        if not np.any(matching):
+            continue
+        
+        att = data.attenuator.attenuation[ai-1][None, :, None]
         if data.attenuator.attenuation_err is None or len(data.attenuator.attenuation_err) < (ai-1):
             datt = np.zeros_like(att)
         else:
-            datt = data.attenuator.attenuation_err[ai-1]
+            datt = data.attenuator.attenuation_err[ai-1][None,:,None]
         
         if data._v is not None:
             v = data._v[matching]
@@ -394,16 +397,16 @@ def attenuation(data, attenuation=None, attenuation_err=None, target_value=None)
                 dv = data._dv[matching]
             else:
                 dv = np.zeros_like(v)
-            new_dv = np.sqrt(dv**2 * (1.0/att)**2 + datt**2 * v**2)
+            new_dv = np.sqrt(dv**2 * att**2 + datt**2 * v**2)
             data._dv[matching] = new_dv
-            data._v[matching] *= 1.0/att
+            data._v[matching] *= att
 
         else:
             v = data.detector.counts[matching]
             var_v = data.detector.counts_variance[matching]
-            new_var = var_v * (1.0/att)**2 + datt**2 * v**2
+            new_var = var_v * att**2 + datt**2 * v**2
             data.detector.counts_variance[matching] = new_var
-            data.detector.counts[matching] *= 1.0/att
+            data.detector.counts[matching] *= att
 
     return data
 

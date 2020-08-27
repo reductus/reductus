@@ -114,7 +114,7 @@ class Candor(ReflData):
 
         # Counts
         # Load counts early so we can tell whether channels are axis 1 or 2
-        counts = data_as(entry, 'instrument/PSD/data', '', dtype='d')
+        counts = data_as(entry, 'multiDetector/counts', '', dtype='d')
         if counts is None: # CRUFT: NICE Ticket #00113618 - Renamed detector from area to multi
             counts = data_as(das, 'areaDetector/counts', '', dtype='d')
         if counts is None or counts.size == 0:
