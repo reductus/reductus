@@ -340,7 +340,7 @@ def dark_current(data, dc_rate=0., s1_slope=0.):
     return data
 
 @module("candor")
-def attenuation(data, poly_coeffs=None, covariance=None, target_value=None):  
+def attenuation(data, attenuation=None, attenuation_err=None, target_value=None):  
     r"""
     Correct for wavelength-dependent attenuation from built-in attenuators
 
@@ -360,13 +360,12 @@ def attenuation(data, poly_coeffs=None, covariance=None, target_value=None):
 
     data (candordata) : data to correct
 
-    poly_coeffs {slopes vs. wavelength} (float[]?) : coefficients of polynomial fit of
-        attenuation vs. wavelength (n x m)
+    attenuation (float[]?) : attenuation vs. detector number (num_atten x num_detectors)
 
-    covariance {Covariance (flattened)} (float[]?) : covariances of slopes and intercepts of attenuators,
-        should be length n x m x m where n is the number of attenuators and m is the polynomial order
+    attenuation_err (float[]?) : 1-sigma width of uncertainty distribution of attenuation
 
-    target_value {Attenuator setting} (float[]?) : Attenuator number, per point.  E.g. 1 if attenuator.key = 1
+    target_value {Attenuator setting} (float[]?) : Attenuator setting, per point.  (npts)
+        E.g. 1 if attenuator.key = 1 in NICE
 
     **Returns**
 
@@ -374,9 +373,40 @@ def attenuation(data, poly_coeffs=None, covariance=None, target_value=None):
 
     | 2020-08-24 Brian Maranville
     """
+    
+    if attenuation is not None:
+        data.attenuator.attenuation = np.array(attenuation)
+    if attenuation_err is not None:
+        data.attenuator.attenuation_err = np.array(attenuation_err)
+    if target_value is not None:
+        data.attenuator.target_value = np.array(target_value)
+    
+    num_attenuators = data.attenuator.attenuation.shape[0]
 
+    if hasattr(data, '_v'):
+        for ai in range(1, num_attenuators+1):
+            # *= 1.0/data.attenuator.attenuation[ai-1]
+            av = data.attenuator.target_value
+            v = data._v[av == ai]
+            dv = data._dv[av == ai]
+            att = data.attenuator.attenuation[ai-1]
+            datt = data.attenuator.attenuation_err[ai-1]
+            new_dv = np.sqrt(dv**2 * (1.0/att)**2 + datt**2 * v**2)
+            data._dv[av == ai] = new_dv
+            data._v[av == ai] *= 1.0/att
+    
+    else:
+        for ai in range(1, num_attenuators+1):
+            av = data.attenuator.target_value
+            v = data.detector.counts[av == ai]
+            var_v = data.detector.counts_variance[av == ai]
+            att = data.attenuator.attenuation[ai-1]
+            datt = data.attenuator.attenuation_err[ai-1]
+            new_var = var_v * (1.0/att)**2 + datt**2 * v**2
+            data.detector.counts_variance[av == ai] = new_var
+            data.detector.counts[av == ai] *= 1.0/att
 
-
+    return data
 
 @module("candor")
 def stitch_intensity(data, tol=0.001):

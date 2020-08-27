@@ -47,7 +47,7 @@ def detector_efficiency():
     return _EFFICIENCY
 
 @set_fields
-class Attenuators(Group):
+class Attenuator(Group):
     """
     Define built-in attenuators
     This is used by the attenuation correction.
@@ -56,16 +56,16 @@ class Attenuators(Group):
     polynomial for each attenuator, along with a 
     covariance matrix for uncertainty propagation.
 
-    poly_coeffs (n x m)
-        coefficients of the polynomial used to fit attenuation vs. wavelength
-        length n is the number of defined attenuators, m is polynomial order
-    covariance (n x m x m)
-        covariance matrices for polynomial fit of attenuation
+    attenuation (n x m)
+        attenuation vs. wavelength
+        length n is the number of defined attenuators, m is number of detectors
+    attenuation_err (n x m)
+        1-sigma width of uncertainty distribution for attenuation matrix
     target_value (npts)
-        attenuator setting, for each data point
+        attenuator setting, for each data point (in [0, n])
     """
-    poly_coeffs = None # 
-    covariance = None # m x m matrices
+    attenuation = None # n x m matrices
+    attenuation_err = None # m x m matrices
     target_value = None # attenuators in the beam; setting is per point, matching length of counts
 
 class Candor(ReflData):
@@ -76,7 +76,7 @@ class Candor(ReflData):
     """
     format = "NeXus"
     probe = "neutron"
-    _groups = ReflData._groups + (("attenuators", Attenuators),)
+    _groups = ReflData._groups + (("attenuator", Attenuator),)
 
     def __init__(self, entry, entryname, filename):
         super().__init__()
@@ -113,7 +113,7 @@ class Candor(ReflData):
 
         # Counts
         # Load counts early so we can tell whether channels are axis 1 or 2
-        counts = data_as(das, 'multiDetector/counts', '', dtype='d')
+        counts = data_as(entry, 'instrument/PSD/data', '', dtype='d')
         if counts is None: # CRUFT: NICE Ticket #00113618 - Renamed detector from area to multi
             counts = data_as(das, 'areaDetector/counts', '', dtype='d')
         if counts is None or counts.size == 0:
@@ -235,9 +235,9 @@ class Candor(ReflData):
         self.detector.angle_x_offset = data_as(das, 'detectorTable/rowAngularOffsets', '')[0]
 
         # Attenuators
-        self.attenuators.poly_coeffs = data_as(das, 'instrument/attenuators/poly_coeffs', '', dtype="float")
-        self.attenuators.covariance = data_as(das, 'instrument/attenuators/covariance', '', dtype="float")
-        self.attenuators.target_value = data_as(das, 'attenuator/key', '', rep=n)
+        self.attenuator.attenuation = data_as(entry, 'instrument/attenuator/attenuation', '', dtype="float")
+        self.attenuator.covariance = data_as(entry, 'instrument/attenuator/covariance', '', dtype="float")
+        self.attenuator.target_value = data_as(das, 'attenuator/key', '', rep=n)
 
         #print("shapes", self.detector.counts.shape, self.detector.wavelength.shape, self.detector.efficiency.shape)
         #print("shapes", self.sample.angle_x.shape, self.detector.angle_x.shape, self.detector.angle_x_offset.shape)
