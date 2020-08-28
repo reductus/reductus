@@ -123,6 +123,11 @@ class BrukerRefl(refldata.ReflData):
         # determine the wavelength and resolution, but the instrument at the
         # NCNR only has a Göbel mirror.
         self.detector.wavelength = entry['alpha_average']
+        if self.detector.wavelength == 0.0:
+            # this happens on some converted files...
+            if 'alpha_1' in entry and 'alpha_2' in entry and 'alpha_21' in entry:
+                self.detector.wavelength = (entry['alpha_1'] + entry['alpha_21'] * entry['alpha_2']) / (1.0 + entry['alpha_21'])
+                
         self.detector.wavelength_resolution = np.std([
             entry['alpha_1'], entry['alpha_1'], entry['alpha_2']], ddof=1)
         #print("res:", self.angular_resolution, self.detector.wavelength_resolution, self.detector.wavelength)
