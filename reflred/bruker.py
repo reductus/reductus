@@ -62,10 +62,18 @@ def _make_struct(fields, data, offset=0):
     names = list(zip(*fields))[0]
     types = "<"+"".join(dtype for _, dtype in fields)
     values = struct.unpack_from(types, data, offset=offset)
-    values = [(tostr(v).strip('\0') if t[-1] == 's' else v)
-              for (_, t), v in zip(fields, values)]
+    new_values = []
+    for (_, t), v in zip(fields, values):
+        if t[-1] == 's':
+            try:
+                output = tostr(v).strip('\0')
+            except UnicodeDecodeError:
+                output = "ERROR: could not decode"
+            new_values.append(output)
+        else:
+            new_values.append(v)
     offset += struct.calcsize(types)
-    return dict(zip(names, values)), offset
+    return dict(zip(names, new_values)), offset
 
 RAW_HEADER = (
     ('raw_id', '8s'),              # 0
