@@ -340,13 +340,13 @@ def dark_current(data, dc_rate=0., s1_slope=0.):
     return data
 
 @module("candor")
-def attenuation(data, attenuation=None, attenuation_err=None, target_value=None):  
+def attenuation(data, transmission=None, transmission_err=None, target_value=None):  
     r"""
     Correct for wavelength-dependent attenuation from built-in attenuators
 
     Attenuation is specified per attenuator and detector,
     Attenuation_err should have the same shape, and is the width of the uncertainty for
-    each attenuation (1-sigma)
+    each transmission (1-sigma)
 
     If user-defined values are supplied, they will overwite the values in the data
     If no user-defined values are given, the values from the datafile will be used.
@@ -355,9 +355,9 @@ def attenuation(data, attenuation=None, attenuation_err=None, target_value=None)
 
     data (candordata) : data to correct
 
-    attenuation (float[]?) : attenuation vs. detector number (num_atten x num_detectors)
+    transmission (float[]?) : transmission vs. detector number (num_atten x num_detectors)
 
-    attenuation_err (float[]?) : 1-sigma width of uncertainty distribution of attenuation
+    transmission_err (float[]?) : 1-sigma width of uncertainty distribution of transmission
 
     target_value {Attenuator setting} (float[]?) : Attenuator setting, per point.  (npts)
         E.g. 1 if attenuator.key = 1 in NICE
@@ -370,14 +370,14 @@ def attenuation(data, attenuation=None, attenuation_err=None, target_value=None)
     """
 
     from .candor import NUM_CHANNELS
-    if attenuation is not None:
-        data.attenuator.attenuation = np.reshape(np.array(attenuation), (-1, NUM_CHANNELS))
-    if attenuation_err is not None:
-        data.attenuator.attenuation_err = np.reshape(np.array(attenuation_err), (-1, NUM_CHANNELS))
+    if transmission is not None:
+        data.attenuator.transmission = np.reshape(np.array(transmission), (-1, NUM_CHANNELS))
+    if transmission_err is not None:
+        data.attenuator.transmission_err = np.reshape(np.array(transmission_err), (-1, NUM_CHANNELS))
     if target_value is not None:
         data.attenuator.target_value = np.array(target_value)
     
-    num_attenuators = data.attenuator.attenuation.shape[0]
+    num_attenuators = data.attenuator.transmission.shape[0]
 
     for ai in range(1, num_attenuators+1):
         av = data.attenuator.target_value
@@ -385,11 +385,13 @@ def attenuation(data, attenuation=None, attenuation_err=None, target_value=None)
         if not np.any(matching):
             continue
         
-        att = data.attenuator.attenuation[ai-1][None, :, None]
-        if data.attenuator.attenuation_err is None or len(data.attenuator.attenuation_err) < (ai-1):
+        trans = data.attenuator.transmission[ai-1][None, :, None]
+        trans_err = data.attenuator.transmission_err
+        att = 1.0 / (trans)
+        if trans_err is None or len(trans_err) < (ai-1):
             datt = np.zeros_like(att)
         else:
-            datt = data.attenuator.attenuation_err[ai-1][None,:,None]
+            datt = (trans_err[ai-1][None,:,None]) * att**2
         
         if data._v is not None:
             v = data._v[matching]

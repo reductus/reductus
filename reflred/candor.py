@@ -52,20 +52,20 @@ class Attenuator(Group):
     Define built-in attenuators
     This is used by the attenuation correction.
     
-    The wavelength-dependent attenuation is defined by a fitted
+    The wavelength-dependent transmission is defined by a fitted
     polynomial for each attenuator, along with a 
     covariance matrix for uncertainty propagation.
 
-    attenuation (n x m)
-        attenuation vs. wavelength
+    transmission (n x m)
+        transmission vs. wavelength
         length n is the number of defined attenuators, m is number of detectors
-    attenuation_err (n x m)
-        1-sigma width of uncertainty distribution for attenuation matrix
+    transmission_err (n x m)
+        1-sigma width of uncertainty distribution for transmission matrix
     target_value (npts)
         attenuator setting, for each data point (in [0, n])
     """
-    attenuation = None # n x m matrices
-    attenuation_err = None # m x m matrices
+    transmission = None # n x m matrices
+    transmission_err = None # m x m matrices
     target_value = None # attenuators in the beam; setting is per point, matching length of counts
 
 class Candor(ReflData):
@@ -236,8 +236,8 @@ class Candor(ReflData):
         self.detector.angle_x_offset = data_as(das, 'detectorTable/rowAngularOffsets', '')[0]
 
         # Attenuators
-        self.attenuator.attenuation = data_as(entry, 'instrument/attenuator/attenuation', '', dtype="float")
-        self.attenuator.attenuation_err = data_as(entry, 'instrument/attenuator/attenuation_err', '', dtype="float")
+        self.attenuator.transmission = data_as(entry, 'instrument/attenuator/transmission', '', dtype="float")
+        self.attenuator.transmission_err = data_as(entry, 'instrument/attenuator/transmission_err', '', dtype="float")
         self.attenuator.target_value = data_as(das, 'attenuator/key', '', rep=n)
 
         #print("shapes", self.detector.counts.shape, self.detector.wavelength.shape, self.detector.efficiency.shape)
