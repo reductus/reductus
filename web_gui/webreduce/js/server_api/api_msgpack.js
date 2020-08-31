@@ -10,6 +10,7 @@ function wrap_hug_msgpack(method_name) {
       xhr.open("POST", endpoint, true);
       
       xhr.setRequestHeader("Content-type", "application/json");
+      xhr.setRequestHeader("Accept", "application/msgpack");
       xhr.responseType = "arraybuffer";
 
       xhr.onreadystatechange = function() {

@@ -15,8 +15,10 @@ import logging
 import pkg_resources
 
 from flask import Flask, request, make_response, redirect, send_from_directory
+from flask_cors import CORS
 from werkzeug.exceptions import HTTPException
 import msgpack as msgpack_converter
+import json
 
 def create_app(config=None):
     from web_gui import api
@@ -25,6 +27,7 @@ def create_app(config=None):
     STATIC_PATH = pkg_resources.resource_filename('web_gui', 'webreduce/')
 
     app = Flask(__name__, static_folder=STATIC_PATH, static_url_path='/webreduce')
+    CORS(app)
     app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 
     @app.route('/')
@@ -47,10 +50,24 @@ def create_app(config=None):
     def wrap_method(mfunc):
         def wrapper(*args, **kwargs):
             real_kwargs = request.get_json() if request.get_data() else {}
-            content = mfunc(*args, **real_kwargs)
-            packed = msgpack_converter.packb(content, use_bin_type=True)
+            return_type = request.headers.get("Accept", "application/msgpack")
+            if return_type not in ["application/json", "application/msgpack"]:
+                code = 406
+                content = {'exception': 
+                    'no valid Accept return type provided. \
+                    (leave unspecified or use one of application/json or application/msgpack)'}
+                response.headers['Content-Type'] = 'application/msgpack'
+                response = make_response(json.dumps(content))
+                response = make_response()
+            else:
+                content = mfunc(*args, **real_kwargs)
+                if return_type == "application/msgpack":
+                    packed = msgpack_converter.packb(content, use_bin_type=True)
+                else:
+                    packed = json.dumps(content)
+
             response = make_response(packed)
-            response.headers['Content-Type'] = 'application/msgpack'
+            response.headers['Content-Type'] = return_type
             return response
         return wrapper
 
