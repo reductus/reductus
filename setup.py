@@ -47,7 +47,7 @@ dist = setup(
     },
     install_requires=[
         'scipy', 'numpy', 'h5py', 'uncertainties', 'docutils',
-        'wheel', 'pytz', 'msgpack-python', 'flask',
+        'wheel', 'pytz', 'msgpack-python', 'flask', 'flask-cors', 'requests'
         ],
     extras_require={
         'masked_curve_fit': ['numdifftools'],
