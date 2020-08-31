@@ -1,4 +1,5 @@
 recursive-include dataflow *.json
 recursive-include web_gui/webreduce *.js *.html *.css
+recursive-include web_gui/webreduce/icons *.svg *.png
 include dataflow/git_revision
 include */templates/*.json
