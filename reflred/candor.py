@@ -576,7 +576,7 @@ def _rebin_bank(data, bank, q_edges):
     norm = data.normbase
     if norm == "none":
         bar_y = np.bincount(bin_index, weights=y, minlength=nbins)
-        bar_dy = np.bincount(bin_index, weights=dy**2, minlength=nbins)
+        bar_dy = np.sqrt(np.bincount(bin_index, weights=dy**2, minlength=nbins))
     else:
         # Counts must be positive for poisson averaging...
         y = y.copy()
