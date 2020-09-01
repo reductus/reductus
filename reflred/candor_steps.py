@@ -377,6 +377,8 @@ def stitch_intensity(data, tol=0.001):
         # the smallest attenuators are needed, and (2) the attenuation
         # computed at the next cycle automatically includes the cumulative
         # attenuation up to the current cycle.
+        # Note: attenuators are wavelength-dependent, so keep separate
+        # attenuation for each detector in each the bank.
         # TODO: propagate uncertainties
         # TODO: maybe update counts (unnormalized) rather than v (normalized)
         atten = a.v[-1] / b.v[0]
@@ -431,9 +433,19 @@ def stitch_intensity(data, tol=0.001):
 
 
 @module("candor")
-def candor_rebin(data, qmin=None, qmax=None, qstep=0.003, qstep_max=None):
+def candor_rebin(data, qmin=None, qmax=None, qstep=0.003, qstep_max=None, average='poisson'):
     r"""
     Join the intensity measurements into a single entry.
+
+    Early in the processing, when only normalized by monitor and time, points
+    may be combined using Poisson statistics, where the uncertainty of the
+    averaged rates will match the uncertainty in the rate if the measurement
+    were performed in one step. As additional corrections are applied, such
+    as deadtime corrections or other scaling this becomes less correct. After
+    normalization by incident beam and more particularly, background
+    subtraction, Poisson statistics are no longer reasonable and Gaussian
+    statistics should be used to average the combined rates rather than
+    recomputing the rates from the inferred counts.
 
     **Inputs**
 
@@ -446,6 +458,8 @@ def candor_rebin(data, qmin=None, qmax=None, qstep=0.003, qstep_max=None):
     qstep (float) : q step size at qmin, or 0 for no rebinning
 
     qstep_max (float) : maximum q step size at qmax, or empty to use qstep over entire q range
+
+    average (opt:poisson|gauss) : combine bins using poisson or gaussian distribution
 
     **Returns**
 
@@ -467,8 +481,8 @@ def candor_rebin(data, qmin=None, qmax=None, qstep=0.003, qstep_max=None):
             q = np.arange(qmin, qmax, qstep)
         else:
             dq = np.linspace(qstep,qstep_max, int(np.ceil(2*(qmax-qmin)/(qstep_max+qstep))))
-            q = (qmin-qstep) + np.cumsum(dq) 
-        data = rebin(data, q)
+            q = (qmin-qstep) + np.cumsum(dq)
+        data = rebin(data, q, average)
 
     return data
 
