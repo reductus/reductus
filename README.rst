@@ -90,6 +90,12 @@ e.g.
 
     python setup.py install
 
+Maybe need to install the web client::
+
+    cd web_gui/reduce
+    wget https://github.com/reductus/reductus/releases/download/sid/dist.zip
+    unzip dist.zip
+
 Then start the server with::
 
     cd web_gui
@@ -97,3 +103,22 @@ Then start the server with::
 
 and visit the page http://localhost:8002/static/index.html
 
+Method 4: Run from repo
+~~~~~~~~~~~~~~~~~~~~~~~
+Clone the repo.
+
+Install node.js and build javascript packages. This step are outlined
+in .github/workflows/client_build.yml.
+
+::
+
+    cd web_gui/webreduce
+    npm install -g parcel-bundler
+    rm -rf dist
+    npm run build --if-present
+    cd ../..
+
+Then start the server. There is no compiled code, so no need to install,
+but you do need to put the repo on the python path::
+
+    PYTHONPATH=. web_gui/run.py

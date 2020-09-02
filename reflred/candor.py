@@ -478,13 +478,15 @@ def nobin(data):
     # Only look at bank 0 for now
     return datasets[0]
 
-def rebin(data, q):
-    if data.normbase not in ("monitor", "time", "none"):
-        raise ValueError("expected norm to be time, monitor or none")
+def rebin(data, q, average="poisson"):
+    if average not in ("poisson", "gauss"):
+        raise ValueError("expected average to be 'poisson' or 'gauss'")
+    if average == "poisson" and data.normbase not in ("monitor", "time", "none"):
+        raise ValueError("expected norm to be time, monitor or none for poisson average")
     q_edges = edges(q, extended=True)
     datasets = []
     for bank in range(data.v.shape[2]):
-        qz, dq, v, dv, Ti, dT, L, dL = _rebin_bank(data, bank, q_edges)
+        qz, dq, v, dv, Ti, dT, L, dL = _rebin_bank(data, bank, q_edges, average)
         #output = ReflData()
         #output.v, output.dv = v, dv
         #output.x, output.dx = q, dq
@@ -493,7 +495,7 @@ def rebin(data, q):
     # Only look at bank 0 for now
     return datasets[0]
 
-def _rebin_bank(data, bank, q_edges):
+def _rebin_bank(data, bank, q_edges, average):
     """
     Merge q points across channels and angles, returning q, dq, v, dv.
 
@@ -569,14 +571,21 @@ def _rebin_bank(data, bank, q_edges):
 
     # Some bins may not have any points contributing, such as those before
     # and after, or those in the middle if the q-step is too fine.
-    empty_q = (np.bincount(bin_index, minlength=nbins) == 0)
+    points_per_bin = np.bincount(bin_index, minlength=nbins)
+    empty_q = (points_per_bin == 0)
     # The following is cribbed from util.poisson_average, replacing
     # np.sum with np.bincount.
     # TODO: update poisson average so it handles grouping
     norm = data.normbase
-    if norm == "none":
+    if average == "gauss":
+        dy = dy + (dy == 0) # protect against zero uncertainty
+        Swx = np.bincount(bin_index, weights=y/dy**2, minlength=nbins)
+        Sw = np.bincount(bin_index, weights=dy**-2, minlength=nbins)
+        bar_y = Swx / Sw
+        bar_dy = 1/np.sqrt(Sw)
+    elif norm == "none":
         bar_y = np.bincount(bin_index, weights=y, minlength=nbins)
-        bar_dy = np.bincount(bin_index, weights=dy**2, minlength=nbins)
+        bar_dy = np.sqrt(np.bincount(bin_index, weights=dy**2, minlength=nbins))
     else:
         # Counts must be positive for poisson averaging...
         y = y.copy()
