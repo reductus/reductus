@@ -165,9 +165,7 @@ editor.create_instance = function(target_id) {
 function module_clicked_multiple() {
   var editor_select = d3.select("#" + editor._target_id);
   var active_template = editor._active_template;
-  app.layout.collapse(2);
-  var config_target = d3.select(".ui-layout-east");
-  config_target.selectAll("div").remove();
+  app.hide_fields();
   var to_compare = [];
   editor_select.selectAll("g.module").each(function(dd, ii) {
     d3.select(this).selectAll("g.selected rect.terminal").each(function(ddd,iii) {
@@ -202,6 +200,7 @@ editor.advance_to_output = function() {
 }
 
 function module_clicked_single() {
+  app.show_fields();
   var active_template = editor._active_template;
   var editor_select = d3.select("#" + editor._target_id);
   var selected_terminal = editor_select.select("g.module g.selected rect.terminal");

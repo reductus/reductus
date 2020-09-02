@@ -3,39 +3,41 @@ import { Components } from './fields/components.js';
 
 let template = `
 <div class="fields-panel">
-  <h3>{{ module_def.name }}</h3>
-  <button @click="help">help</button>
-  <fileinfo-ui 
-    v-for="(field, index) in fileinfos"
-    :key="base_key + field.id"
-    ref="fileinfos"
-    :active="active_fileinfo == index"
-    :field="field"
-    :value="local_config[field.id]"
-    @activate="activate_fileinfo(index)"
-    >
-
-  </fileinfo-ui>
-  <div 
-    v-for="(field, index) in fields"
-    :class="['fields', field.datatype]"
-    oldkey="JSON.stringify(field)+(module.config || {})[field.id]"
-    :key="base_key + field.id"
-    ref="fields"
-    >
-    <component 
-      v-bind:is="field.datatype + '-ui'"
+  <div class="hideable" v-show="visible">
+    <h3>{{ module_def.name }}</h3>
+    <button @click="help">help</button>
+    <fileinfo-ui 
+      v-for="(field, index) in fileinfos"
+      :key="base_key + field.id"
+      ref="fileinfos"
+      :active="active_fileinfo == index"
       :field="field"
       :value="local_config[field.id]"
-      :num_datasets_in="num_datasets_in"
-      :add_interactors="add_interactors"
-      class="item-component"
-      @change="changed">
-    </component>
-  </div>
-  <div class="control-buttons" style="position:absolute;bottom:10px;">
-    <button class="accept config" @click="accept_clicked">{{(auto_accept.value) ? "replot" : "accept"}}</button>
-    <button class="clear config" @click="clear">clear</button>
+      @activate="activate_fileinfo(index)"
+      >
+
+    </fileinfo-ui>
+    <div 
+      v-for="(field, index) in fields"
+      :class="['fields', field.datatype]"
+      oldkey="JSON.stringify(field)+(module.config || {})[field.id]"
+      :key="base_key + field.id"
+      ref="fields"
+      >
+      <component 
+        v-bind:is="field.datatype + '-ui'"
+        :field="field"
+        :value="local_config[field.id]"
+        :num_datasets_in="num_datasets_in"
+        :add_interactors="add_interactors"
+        class="item-component"
+        @change="changed">
+      </component>
+    </div>
+    <div class="control-buttons" style="position:absolute;bottom:10px;">
+      <button class="accept config" @click="accept_clicked">{{(auto_accept.value) ? "replot" : "accept"}}</button>
+      <button class="clear config" @click="clear">clear</button>
+    </div>
   </div>
 </div>
 `
@@ -44,6 +46,7 @@ export const FieldsPanel = {
   name: "fields-panel",
   components: Components,
   data: () => ({
+    visible: true,
     timestamp: 0, // last clicked
     module: {},
     local_config: {},

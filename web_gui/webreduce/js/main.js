@@ -20,6 +20,7 @@ var active_reduction = {
   "template": {}
 }
 app.current_instrument = "ncnr.refl";
+app.stored_layout_sizes = null;
 
 var statusline_log = function (message) {
   var statusline = document.getElementById("statusline");
@@ -141,6 +142,21 @@ window.onload = async function () {
     minSize: 0
   });
   app.layout = middle_layout;
+  app.hide_fields = function() {
+    // idempotent
+    if (this.stored_layout_sizes == null) {
+      fieldUI.instance.visible = false;
+      this.stored_layout_sizes = this.layout.getSizes();
+      this.layout.collapse(2);
+    }
+  }
+  app.show_fields = function() {
+    if (this.stored_layout_sizes) {
+      this.layout.setSizes(this.stored_layout_sizes);
+      this.stored_layout_sizes = null;
+      fieldUI.instance.visible = true;
+    }
+  }
   //$("#menu").menu({width: '200px;', position: {my: "left top", at: "left+15 bottom"}});
 
   var layout = Split(["#middle_content", "#bottom_panel"], {
