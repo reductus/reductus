@@ -38,7 +38,7 @@ export {
     monotonicFunctionInteractor,
     scaleInteractor,
     rectangleSelectPoints
-}  from 'https://cdn.jsdelivr.net/gh/usnistgov/d3-science@0.2.4/src/index.js';
+}  from 'https://cdn.jsdelivr.net/gh/usnistgov/d3-science@0.2.7/src/index.js';
 
 export {default as Split} from "https://dev.jspm.io/split.js@1.5.11";
 export {default as sha1} from "https://dev.jspm.io/sha1@1.1.1";
