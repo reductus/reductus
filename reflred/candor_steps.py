@@ -75,6 +75,7 @@ def candor(
 
     | 2020-02-05 Paul Kienzle
     | 2020-03-12 Paul Kienzle Add slit 1 dependence for DC rate
+    | 2020-08-27 Brian Maranville loader gets attenuator information
     """
     from .load import url_load_list
     from .candor import load_entries
@@ -337,6 +338,79 @@ def dark_current(data, dc_rate=0., s1_slope=0.):
         data = copy(data)
         data.detector = copy(data.detector)
         data.detector.counts = data.detector.counts - dc[:, None, None]
+    return data
+
+@module("candor")
+def attenuation(data, transmission=None, transmission_err=None, target_value=None):  
+    r"""
+    Correct for wavelength-dependent attenuation from built-in attenuators
+
+    Attenuation is specified per attenuator and detector,
+    Attenuation_err should have the same shape, and is the width of the uncertainty for
+    each transmission (1-sigma)
+
+    If user-defined values are supplied, they will overwite the values in the data
+    If no user-defined values are given, the values from the datafile will be used.
+
+    **Inputs**
+
+    data (candordata) : data to correct
+
+    transmission (float[]?) : transmission vs. detector number (num_atten x num_detectors)
+
+    transmission_err (float[]?) : 1-sigma width of uncertainty distribution of transmission
+
+    target_value {Attenuator setting} (float[]?) : Attenuator setting, per point.  (npts)
+        E.g. 1 if attenuator.key = 1 in NICE
+
+    **Returns**
+
+    corrected (candordata) : corrected data
+
+    | 2020-08-24 Brian Maranville
+    """
+
+    from .candor import NUM_CHANNELS
+    if transmission is not None:
+        data.attenuator.transmission = np.reshape(np.array(transmission), (-1, NUM_CHANNELS))
+    if transmission_err is not None:
+        data.attenuator.transmission_err = np.reshape(np.array(transmission_err), (-1, NUM_CHANNELS))
+    if target_value is not None:
+        data.attenuator.target_value = np.array(target_value)
+    
+    num_attenuators = data.attenuator.transmission.shape[0]
+
+    for ai in range(1, num_attenuators+1):
+        av = data.attenuator.target_value
+        matching = (av == ai)
+        if not np.any(matching):
+            continue
+        
+        trans = data.attenuator.transmission[ai-1][None, :, None]
+        trans_err = data.attenuator.transmission_err
+        att = 1.0 / (trans)
+        if trans_err is None or len(trans_err) < (ai-1):
+            datt = np.zeros_like(att)
+        else:
+            datt = (trans_err[ai-1][None,:,None]) * att**2
+        
+        if data._v is not None:
+            v = data._v[matching]
+            if data._dv is not None:
+                dv = data._dv[matching]
+            else:
+                dv = np.zeros_like(v)
+            new_dv = np.sqrt(dv**2 * att**2 + datt**2 * v**2)
+            data._dv[matching] = new_dv
+            data._v[matching] *= att
+
+        else:
+            v = data.detector.counts[matching]
+            var_v = data.detector.counts_variance[matching]
+            new_var = var_v * att**2 + datt**2 * v**2
+            data.detector.counts_variance[matching] = new_var
+            data.detector.counts[matching] *= att
+
     return data
 
 @module("candor")

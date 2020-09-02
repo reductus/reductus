@@ -5,7 +5,7 @@ import numpy as np
 
 from dataflow.lib.exporters import exports_json
 
-from .refldata import ReflData, Intent
+from .refldata import ReflData, Intent, Group, set_fields
 from .nexusref import load_nexus_entries, nexus_common, get_pol
 from .nexusref import data_as, str_data
 from .nexusref import TRAJECTORY_INTENTS
@@ -46,6 +46,28 @@ def detector_efficiency():
         _EFFICIENCY = np.vstack((eff, eff)).T
     return _EFFICIENCY
 
+@set_fields
+class Attenuator(Group):
+    """
+    Define built-in attenuators
+    This is used by the attenuation correction.
+    
+    The wavelength-dependent transmission is defined by a fitted
+    polynomial for each attenuator, along with a 
+    covariance matrix for uncertainty propagation.
+
+    transmission (n x m)
+        transmission vs. wavelength
+        length n is the number of defined attenuators, m is number of detectors
+    transmission_err (n x m)
+        1-sigma width of uncertainty distribution for transmission matrix
+    target_value (npts)
+        attenuator setting, for each data point (in [0, n])
+    """
+    transmission = None # n x m matrices
+    transmission_err = None # m x m matrices
+    target_value = None # attenuators in the beam; setting is per point, matching length of counts
+
 class Candor(ReflData):
     """
     Candor data entry.
@@ -54,13 +76,15 @@ class Candor(ReflData):
     """
     format = "NeXus"
     probe = "neutron"
+    _groups = ReflData._groups + (("attenuator", Attenuator),)
+    attenuator = None
 
     def __init__(self, entry, entryname, filename):
         super().__init__()
+        self.attenuator = Attenuator()
         nexus_common(self, entry, entryname, filename)
         self.geometry = 'vertical'
         self.align_intensity = "slit1.x"
-
 
     def load(self, entry):
         #print(entry['instrument'].values())
@@ -90,7 +114,7 @@ class Candor(ReflData):
 
         # Counts
         # Load counts early so we can tell whether channels are axis 1 or 2
-        counts = data_as(das, 'multiDetector/counts', '', dtype='d')
+        counts = data_as(entry, 'multiDetector/counts', '', dtype='d')
         if counts is None: # CRUFT: NICE Ticket #00113618 - Renamed detector from area to multi
             counts = data_as(das, 'areaDetector/counts', '', dtype='d')
         if counts is None or counts.size == 0:
@@ -210,6 +234,11 @@ class Candor(ReflData):
         self.detector.angle_x = data_as(das, 'detectorTableMotor/softPosition', 'degree', rep=n)
         self.detector.angle_x_target = data_as(das, 'detectorTableMotor/desiredSoftPosition', 'degree', rep=n)
         self.detector.angle_x_offset = data_as(das, 'detectorTable/rowAngularOffsets', '')[0]
+
+        # Attenuators
+        self.attenuator.transmission = data_as(entry, 'instrument/attenuator/transmission', '', dtype="float")
+        self.attenuator.transmission_err = data_as(entry, 'instrument/attenuator/transmission_err', '', dtype="float")
+        self.attenuator.target_value = data_as(das, 'attenuator/key', '', rep=n)
 
         #print("shapes", self.detector.counts.shape, self.detector.wavelength.shape, self.detector.efficiency.shape)
         #print("shapes", self.sample.angle_x.shape, self.detector.angle_x.shape, self.detector.angle_x_offset.shape)
