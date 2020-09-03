@@ -40,7 +40,7 @@ class MagikHorizontal(NCNRNeXusRefl):
             s.x_target = np.ones_like(s.y) * np.inf
 
         for k, s in enumerate([self.slit1, self.slit2, self.slit3]):
-            x = 'CVertSlit%d/aperture'%(k+1)
+            x = 'CVertSlit%d/opening'%(k+1)
             if x in das:
                 s.x = data_as(das, x, '', rep=n)
                 s.x_target = s.x
