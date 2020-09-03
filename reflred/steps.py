@@ -1635,6 +1635,7 @@ def magik_horizontal(filelist=None,
 
     | 2020-07-21 Brian Maranville
     | 2020-07-23 Brian Maranville Added a flag to the loader, to control divide_intensity align_by
+    | 2020-09-03 Brian Maranville Vertical slit readout changed
     """
     from .load import url_load_list
     from .magik_horizontal import load_entries
