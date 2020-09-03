@@ -81,20 +81,46 @@ install and use that instead of localhost, e.g. ::
 
 *In my case it was http://192.168.99.100:8000/web_gui/web_reduction_filebrowser.html*
 
-Method 3: Clone github repo and build, run directly in console
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Clone the repo, then install (might be a good idea to make a virtualenv first),
-e.g.
+
+Method 3: Run from repo (development)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Clone the repo, then install in "develop" mode (might be a good idea to make
+a virtualenv first)::
+
+    python setup.py develop
+    web_gui/run.py
+
+Browse to the URL indicated (probably http://localhost:8002/).
+
+Change the server as needed then restart. The debug mode flag (-d) may make
+the restart unnecessary in some cases. Use headless (-x) to avoid starting
+a new browser tab each time. The development server is only accessible from
+localhost unless the "external" option is used (--external).
+
+To debug external javascript packages (e.g., treejs or d3-science), you
+will need to clone the repo and link it into web_gui/webreduce/js, then
+update web_gui/webreduce/js/libraries.js to point to the local version rather
+than the version on the web.
+
+
+Method 4: Run from repo (production)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+After testing your fixes you can check that they work in the production server.
+
+Install node.js and build javascript packages. This step is outlined
+in .github/workflows/client_build.yml. If you have changed an external
+javascript package you will need to update
+web_gui/webreduce/js/libraries_production.js with the path to the
+development version, much like you did for the development server.
 
 ::
 
-    python setup.py install
-
-Maybe need to install the web client::
-
-    cd web_gui/reduce
-    wget https://github.com/reductus/reductus/releases/download/sid/dist.zip
-    unzip dist.zip
+    cd web_gui/webreduce
+    npm install
+    rm -rf dist
+    npm run build_index --if-present
+    cd ../..
 
 Then start the server with::
 
@@ -102,23 +128,3 @@ Then start the server with::
     python server_flask.py 8002
 
 and visit the page http://localhost:8002/static/index.html
-
-Method 4: Run from repo
-~~~~~~~~~~~~~~~~~~~~~~~
-Clone the repo.
-
-Install node.js and build javascript packages. This step are outlined
-in .github/workflows/client_build.yml.
-
-::
-
-    cd web_gui/webreduce
-    npm install -g parcel-bundler
-    rm -rf dist
-    npm run build --if-present
-    cd ../..
-
-Then start the server. There is no compiled code, so no need to install,
-but you do need to put the repo on the python path::
-
-    PYTHONPATH=. web_gui/run.py
