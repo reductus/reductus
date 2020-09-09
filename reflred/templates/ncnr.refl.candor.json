@@ -58,7 +58,7 @@
       "module": "ncnr.refl.candor_join",
       "title": "Join",
       "config": {
-        "Q_tolerance": 0.0
+        "Q_tolerance": 0
       },
       "x": 190,
       "y": 5
@@ -67,7 +67,7 @@
       "module": "ncnr.refl.candor_join",
       "title": "Join",
       "config": {
-        "Q_tolerance": 0.0
+        "Q_tolerance": 0
       },
       "x": 190,
       "y": 35
@@ -76,34 +76,10 @@
       "module": "ncnr.refl.candor_join",
       "title": "Join",
       "config": {
-        "Q_tolerance": 0.0
+        "Q_tolerance": 0
       },
       "x": 190,
       "y": 65
-    },
-    {
-      "module": "ncnr.refl.candor_rebin",
-      "title": "Rebin",
-      "x": 530,
-      "y": 65
-    },
-    {
-      "module": "ncnr.refl.candor_rebin",
-      "title": "Rebin",
-      "x": 530,
-      "y": 35,
-      "config": {
-        "qstep": 0.002
-      }
-    },
-    {
-      "module": "ncnr.refl.candor_rebin",
-      "title": "Rebin",
-      "x": 530,
-      "y": 5,
-      "config": {
-        "qstep": 0.002
-      }
     },
     {
       "module": "ncnr.refl.candor_divide",
@@ -126,8 +102,17 @@
     {
       "module": "ncnr.refl.subtract_background",
       "title": "Subtract Background",
-      "x": 700,
+      "x": 535,
       "y": 5
+    },
+    {
+      "module": "ncnr.refl.candor_rebin",
+      "title": "Candor Rebin",
+      "x": 755,
+      "y": 5,
+      "config": {
+        "qstep": 0.002
+      }
     }
   ],
   "wires": [
@@ -177,7 +162,7 @@
         "output"
       ],
       "target": [
-        11,
+        8,
         "data"
       ]
     },
@@ -187,7 +172,7 @@
         "output"
       ],
       "target": [
-        12,
+        9,
         "data"
       ]
     },
@@ -197,77 +182,47 @@
         "output"
       ],
       "target": [
-        13,
-        "data"
-      ]
-    },
-    {
-      "source": [
-        1,
-        "output"
-      ],
-      "target": [
-        11,
-        "base"
-      ]
-    },
-    {
-      "source": [
-        1,
-        "output"
-      ],
-      "target": [
-        12,
-        "base"
-      ]
-    },
-    {
-      "source": [
-        1,
-        "output"
-      ],
-      "target": [
-        13,
-        "base"
-      ]
-    },
-    {
-      "source": [
-        11,
-        "output"
-      ],
-      "target": [
         10,
         "data"
       ]
     },
     {
       "source": [
-        12,
-        "output"
-      ],
-      "target": [
-        9,
-        "data"
-      ]
-    },
-    {
-      "source": [
-        13,
+        1,
         "output"
       ],
       "target": [
         8,
-        "data"
+        "base"
       ]
     },
     {
       "source": [
-        10,
+        1,
         "output"
       ],
       "target": [
-        14,
+        9,
+        "base"
+      ]
+    },
+    {
+      "source": [
+        1,
+        "output"
+      ],
+      "target": [
+        10,
+        "base"
+      ]
+    },
+    {
+      "source": [
+        8,
+        "output"
+      ],
+      "target": [
+        11,
         "data"
       ]
     },
@@ -277,18 +232,28 @@
         "output"
       ],
       "target": [
-        14,
+        11,
         "backp"
       ]
     },
     {
       "source": [
-        8,
+        10,
         "output"
       ],
       "target": [
-        14,
+        11,
         "backm"
+      ]
+    },
+    {
+      "source": [
+        11,
+        "output"
+      ],
+      "target": [
+        12,
+        "data"
       ]
     }
   ]
