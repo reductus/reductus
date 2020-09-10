@@ -102,6 +102,7 @@ export function show_plots_2d(plotdata, plot_controls, target, old_plot) {
     }
 
     plot_controls.updateShow([
+      "plotnumber",
       "axes/z",
       "settings/grid",
       "colormap"
