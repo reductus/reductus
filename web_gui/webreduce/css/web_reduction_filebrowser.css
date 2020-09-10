@@ -201,7 +201,7 @@ div.reductus-plot-panel {
 }
 
 #plot_title {
-  min-height: 1em;
+  min-height: 20px;
 }
 #plot_controls {
   min-height: 1em;
