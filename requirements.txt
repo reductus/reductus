@@ -16,3 +16,4 @@ typing
 simplejson
 pytest
 lz4
+importlib_resources
