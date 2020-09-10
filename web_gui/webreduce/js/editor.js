@@ -221,7 +221,6 @@ function module_clicked_single() {
   let params_to_calc = terminals_to_calculate.map(function(terminal_id) {
     return {template: active_template, config: {}, node: i, terminal: terminal_id, return_type: "plottable"}
   })
-  console.log('calculating output', params_to_calc);
   editor.calculate(params_to_calc, recalc_mtimes)
     .then(function(results) {
     var inputs_map = {};
