@@ -76,6 +76,7 @@ def candor(
     | 2020-02-05 Paul Kienzle
     | 2020-03-12 Paul Kienzle Add slit 1 dependence for DC rate
     | 2020-08-27 Brian Maranville loader gets attenuator information
+    | 2020-09-11 Brian Maranville loader updated with new motor names
     """
     from .load import url_load_list
     from .candor import load_entries
