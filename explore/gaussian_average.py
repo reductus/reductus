@@ -92,11 +92,11 @@ def run_sim_by_monitor():
     # run an MC simulation for error propagation through weighted average
     y, dy = sim(X, varX, W, varW, n=10000000)
 
-    print "========== by monitor, rate:", detector_rate/monitor_rate
-    print "X, dX", X, np.sqrt(varX)
-    print "Yhat", Yhat, np.sqrt(varYhat)
-    print "Yhat MC", y, dy
-    print "target", np.mean(Y), np.std(Y)
+    print("========== by monitor, rate:", detector_rate/monitor_rate)
+    print("X, dX", X, np.sqrt(varX))
+    print("Yhat", Yhat, np.sqrt(varYhat))
+    print("Yhat MC", y, dy)
+    print("target", np.mean(Y), np.std(Y))
 
 
 def run_sim_by_time():
@@ -123,11 +123,11 @@ def run_sim_by_time():
     y, dy = sim(X, varX, W, varW, n=10000000)
 
 
-    print "========== by time, rate:", detector_rate
-    print "X, dX", X, np.sqrt(varX)
-    print "Yhat", Yhat, np.sqrt(varYhat)
-    print "Yhat MC", y, dy
-    print "target", np.mean(Y), np.std(Y)
+    print("========== by time, rate:", detector_rate)
+    print("X, dX", X, np.sqrt(varX))
+    print("Yhat", Yhat, np.sqrt(varYhat))
+    print("Yhat MC", y, dy)
+    print("target", np.mean(Y), np.std(Y))
 
 if __name__ == "__main__":
     run_sim_by_monitor()
