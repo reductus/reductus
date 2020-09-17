@@ -409,15 +409,14 @@ def wpolyplot(poly, with_pi=False, with_ci=True):
     import pylab
     x, y, dy = poly.data
     pylab.errorbar(x, y, yerr=dy, fmt='gx')
-    pylab.hold(True)
     px = np.linspace(x.min(), x.max(), 400)
     py, pdy = poly.pi(px)
     cy, cdy = poly.ci(px)
     pylab.plot(px, py, 'g-')
     if with_pi:
-        pylab.plot(px, py + pdy, 'g-.', px, py - pdy, 'g-.', hold=True)
+        pylab.plot(px, py + pdy, 'g-.', px, py - pdy, 'g-.')
     if with_ci:
-        pylab.plot(px, cy + cdy, 'r-.', px, cy - cdy, 'r-.', hold=True)
+        pylab.plot(px, cy + cdy, 'r-.', px, cy - cdy, 'r-.')
 
 
 def smooth(x, xp, yp, dyp=None, degree=2, span=5):
