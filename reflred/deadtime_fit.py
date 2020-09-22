@@ -772,7 +772,7 @@ def _show_droop(rate, wo, wt, attenuator):
     pylab.errorbar(rate, wt[0]/(rate/attenuator), yerr=wt[1]/(rate/attenuator),
                    fmt='g.', label='attenuated')
     pylab.errorbar(rate, wo[0]/rate, yerr=wo[1]/rate,
-                   fmt='b.', label='unattenuated', hold=True)
+                   fmt='b.', label='unattenuated')
 
     pylab.xscale('log')
     pylab.xlabel('incident rate (counts/second)')
