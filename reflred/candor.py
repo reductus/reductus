@@ -371,8 +371,10 @@ class Candor(ReflData):
         #    y, ylabel = self.slit1.x, "S1 (mm)"
         #elif Intent.isspec(self.intent):
         #    y, ylabel = self.sample.angle_x, "Detector Angle (degrees)"
-        if self.sample.angle_x.max() - self.sample.angle_x.min() > 0.01:
-            y, ylabel = self.sample.angle_x, "Detector Angle (degrees)"
+        if self.detector.angle_x.max() - self.detector.angle_x.min() > 0.01:
+            y, ylabel = self.detector.angle_x, "Detector Angle (degrees)"
+        elif self.sample.angle_x.max() - self.sample.angle_x.min() > 0.01:
+            y, ylabel = self.sample.angle_x, "Sample Angle (degrees)"
         elif self.slit1.x.max() - self.slit1.x.min() > 0.01:
             y, ylabel = self.slit1.x, "S1 (mm)"
         else:
