@@ -508,7 +508,7 @@ def stitch_intensity(data, tol=0.001):
 
 
 @module("candor")
-def candor_rebin(data, qmin=None, qmax=None, qstep=0.003, qstep_max=None, average='poisson'):
+def candor_rebin(data, qmin=None, qmax=None, qstep=0.003, qstep_max=None, average='gauss'):
     r"""
     Join the intensity measurements into a single entry.
 
