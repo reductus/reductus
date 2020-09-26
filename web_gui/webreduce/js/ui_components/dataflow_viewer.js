@@ -1,5 +1,10 @@
 let dataflow_template = `
-<svg class="dataflow">
+<svg 
+  class="dataflow" 
+  @mousemove="mousemove" 
+  @mouseup="mouseup"
+  @mousedown="mousedown"
+  >
   <defs>
     <filter id="glow" filterUnits="objectBoundingBox" x="-50%" y="-50%" width="200%" height="200%">
       <feOffset result="offOut" in="SourceGraphic" dx="0" dy="0" />
@@ -34,20 +39,22 @@ let dataflow_template = `
       :module_data="module_data"
       :selected="selected"
       :options="options"
+      @set-eventdata="set_eventdata"
+      @clicked="clicked"
       v-on="$listeners"
     >
     </module>
-    <path
-      v-if="options.wire_background"
-      v-for="wire_data in template_data.wires"
-      :d="pathstring(wire_data)"
-      class="wire-background">
-    </path>
-    <path
-      v-for="wire_data in template_data.wires"
-      :d="pathstring(wire_data)"
-      class="wire">
-    </path>
+    <template v-for="wire_data in template_data.wires">
+      <path
+        v-if="options.wire_background"
+        :d="pathstring(wire_data)"
+        class="wire-background">
+      </path>
+      <path
+        :d="pathstring(wire_data)"
+        class="wire">
+      </path>
+    </template>
   </g>
 </svg>
 `;
@@ -62,47 +69,49 @@ let dataflow_template = `
           :height="options.terminal.height"
           x="0"
           y="0"
-          @click="$emit('module-clicked', module_index, module_def.inputs[0])">
+          @mousedown="$emit('set-eventdata', {target_type:'module', module_index, module_data, module_def, terminal_def: module_def.inputs[0] || {}, ctrlKey: $event.ctrlKey, shiftKey: $event.shiftKey})"
+        >
         </rect>
     </g>
-    <g v-for="(def,index) in module_def.inputs" 
+    <g v-for="(terminal_def,index) in module_def.inputs" 
       class="terminals inputs"
-      :class="{selected: (selected.terminals.findIndex(([ii, id]) => (ii == module_index && id == def.id)) > -1)}"
-      :ref="def.id"
+      :class="{selected: (selected.terminals.findIndex(([ii, id]) => (ii == module_index && id == terminal_def.id)) > -1)}"
+      :ref="terminal_def.id"
       :transform="'translate(-' + options.terminal.width + ',' + (index * options.terminal.height) + ')'"
       >
 
-      <text class="input label" x="5" y="5" dy="1em">{{def.label.toLowerCase()}}</text>
+      <text class="input label" x="5" y="5" dy="1em">{{terminal_def.label.toLowerCase()}}</text>
       <rect 
         class="terminal input" 
         :width="options.terminal.width"
         :height="options.terminal.height"
-        :terminal_id="def.id.toLowerCase()"
+        :terminal_id="terminal_def.id.toLowerCase()"
         :style="{fill: 'url(#input_hatch)'}"
-        @click="$emit('terminal-clicked', module_index, def.id.toLowerCase(), $event.ctrlKey, $event.shiftKey)"
+        @mousedown="$emit('set-eventdata', {target_type:'terminal', module_index, module_data, module_def, terminal_def, ctrlKey: $event.ctrlKey, shiftKey: $event.shiftKey})"
         >
-        <title>{{def.label.toLowerCase()}}</title>
+        <title>{{terminal_def.label.toLowerCase()}}</title>
       </rect>
       <polygon class="terminal input state" points="0,0 20,15 0,30"></polygon>
     </g>
     
-    <g v-for="(def,index) in module_def.outputs"
-      :key="module_index.toFixed() + ':' + def.id"
+    <g v-for="(terminal_def,index) in module_def.outputs"
+      :key="module_index.toFixed() + ':' + terminal_def.id"
       class="terminals outputs"
-      :class="{selected: (selected.terminals.findIndex(([ii, id]) => (ii == module_index && id == def.id)) > -1)}"
-      :ref="def.id"
+      :class="{selected: (selected.terminals.findIndex(([ii, id]) => (ii == module_index && id == terminal_def.id)) > -1)}"
+      :ref="terminal_def.id"
       :transform="'translate(' + display_width + ',' + (index * options.terminal.height) + ')'">
-      <text class="output label" x="5" y="5">{{def.label.toLowerCase()}}</text>
+      <text class="output label" x="5" y="5">{{terminal_def.label.toLowerCase()}}</text>
       <rect 
         class="terminal output" 
         :width="options.terminal.width" 
         :height="options.terminal.height" 
-        :terminal_id="def.id.toLowerCase()"
-        @click="$emit('terminal-clicked', module_index, def.id.toLowerCase(), $event.ctrlKey, $event.shiftKey)"
+        :terminal_id="terminal_def.id.toLowerCase()"
+        :style="{fill: 'url(#output_hatch)'}"
+        @mousedown="$emit('set-eventdata', {target_type:'terminal', module_index, module_data, module_def, terminal_def, ctrlKey: $event.ctrlKey, shiftKey: $event.shiftKey})"
         >
-          <title>{{def.label.toLowerCase()}}</title>
+          <title>{{terminal_def.label.toLowerCase()}}</title>
       </rect>
-      <polygon class="terminal input state" points="0,0 20,15 0,30"></polygon>
+      <polygon class="terminal output state" points="0,0 20,15 0,30"></polygon>
     </g>      
   </g>
 `;
@@ -123,7 +132,18 @@ export const DataflowViewer = {
   components: { "module": Module },
   props: ["instrument_def", "template_data", "selected"],
   data: () => ({
+    drag: {
+      active: false,
+      buttons: null,
+      data: null
+    },
+    mouse_start: {x: null, y: null},
+    mouse_delta: {x: 0, y: 0},
     options: {
+      move: {
+        x_step: 5,
+        y_step: 5
+      },
       autosize_modules: false,
       padding: 5,
       default_text_width: 85,
@@ -135,17 +155,33 @@ export const DataflowViewer = {
     }
   }),
   methods: {
-    module_select(index, first_input) {
-      this.selected.modules.splice(0, this.selected.modules.length, index);
-      if (first_input != null) {
-        this.selected.terminals.splice(0, this.selected.terminals.length, [index, first_input.id]);
+    module_select(module_index, first_input, ctrlKey, shiftKey) {
+      if (ctrlKey || shiftKey) {
+        // selecting modules
+        this.selected.terminals.splice(0);
+        
+        let item_index = this.selected.modules.indexOf(module_index);
+        if (item_index > -1) {
+          this.selected.modules.splice(item_index, 1);
+        }
+        else {
+          this.selected.modules.push(module_index);
+        }
       }
       else {
-        this.selected.terminals.splice(0);
+        this.selected.modules.splice(0, this.selected.modules.length, module_index);
+        if (first_input != null) {
+          this.selected.terminals.splice(0, this.selected.terminals.length, [module_index, first_input.id]);
+        }
+        else {
+          this.selected.terminals.splice(0);
+        }
       }
     },
-    terminal_select(index, terminal_id, ctrlKey, shiftKey) {
+    terminal_select(index, terminal_def, ctrlKey, shiftKey) {
+      let terminal_id = terminal_def.id;
       if (ctrlKey || shiftKey) {
+        // selecting terminals
         this.selected.modules.splice(0);
         let item_index = this.selected.terminals.findIndex(([ii, id]) => (ii == index && id == terminal_id));
         if (item_index > -1) {
@@ -180,6 +216,90 @@ export const DataflowViewer = {
       }
 
       return makeConnector(s, t);
+    },
+    set_eventdata: function(data) {
+      this.drag.data = data;
+      if (this.selected.modules.includes(data.module_index)) {
+        
+      }
+    },
+    clicked_old: function(type, module_id, module_data, module_def, terminal_def, ctrlKey, shiftKey) {
+      
+      if (type == "module") {
+        this.module_select(module_id, terminal_def);
+      }
+      else if (type == "terminal") {
+        this.terminal_select(module_id, terminal_def, ctrlKey, shiftKey);
+      }
+    },
+    clicked: function(data) {
+        if (data.target_type == "module") {
+        this.module_select(data.module_index, data.terminal_def, data.ctrlKey, data.shiftKey);
+      }
+      else if (data.target_type == "terminal") {
+        this.terminal_select(data.module_index, data.terminal_def, data.ctrlKey, data.shiftKey);
+      }
+    },
+    mousedown: function(ev) {
+      let d = this.drag;
+      if (d.started == true) {
+        // then we're already dragging.  Ignore other mouse buttons.
+        return
+      }
+      d.module_start_positions = this.template_data.modules.map((m) => ({x: m.x, y: m.y}));
+      if (d.data && d.data.target_type == 'module') {
+        let smodules = this.selected.modules;
+        d.to_move = (smodules.includes(d.data.module_index)) ? smodules : [d.data.module_index];
+      }
+      else {
+        d.to_move = [];
+      }
+      console.log(d.module_start_positions, d.to_move);
+      d.started = true;
+      d.start_x = ev.x;
+      d.start_y = ev.y;
+      d.delta_x = 0;
+      d.delta_y = 0;
+      d.buttons = ev.buttons;
+      //console.log(JSON.stringify(d));
+    },
+    mouseup: function(ev) {
+      let d = this.drag;
+      if (ev.buttons != 0) {
+        // if some reprobate has pushed and release a different button
+        // during a drag...
+        return
+      }
+      if (!d.active) {
+        this.clicked(d.data);
+      }
+      d.start_x = null;
+      d.start_y = null;
+      d.data = null;
+      d.started = false;
+      d.active = false;
+    },
+    mousemove: function(ev) {
+      let d = this.drag;
+      if (d.started) {
+        // drag stuff
+        let dx = this.options.move.x_step;
+        let dy = this.options.move.y_step;
+        let new_delta_x = dx * Math.round((ev.x - d.start_x) / dx);
+        let new_delta_y = dy * Math.round((ev.y - d.start_y) / dy);
+        if (new_delta_x != d.delta_x || new_delta_y != d.delta_y) {
+          d.active = true;
+          d.delta_x = new_delta_x;
+          d.delta_y = new_delta_y;
+          d.to_move.forEach((module_index) => {
+            let sp = d.module_start_positions[module_index];
+            let m = this.template_data.modules[module_index];
+            m.x = sp.x + new_delta_x;
+            m.y = sp.y + new_delta_y;
+          });
+          this.$emit('dragged', d.data);
+        }
+      }
     }
   },
   template: dataflow_template
