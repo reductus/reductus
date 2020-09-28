@@ -161,17 +161,25 @@ window.onload = async function () {
 
   var layout = Split(["#middle_content", "#bottom_panel"], {
     sizes: [95, 5],
-    elementStyle: (dimension, size, gutterSize) => ({
-      'flex-basis': `calc(${size}% - ${gutterSize}px)`,
-    }),
-    gutterStyle: (dimension, gutterSize) => ({
-      'flex-basis': `${gutterSize}px`,
-    }),
+    // elementStyle: (dimension, size, gutterSize) => ({
+    //   'flex-basis': `calc(${size}% - ${gutterSize}px)`,
+    // }),
+    // gutterStyle: (dimension, gutterSize) => ({
+    //   'flex-basis': `${gutterSize}px`,
+    // }),
     direction: 'vertical'
   })
   app.vertical_layout = layout;
 
-  editor.create_instance("bottom_panel");
+  app.resize_bottom = function(bbox, border=10) {
+    let full_height = app.vertical_layout.parent.offsetHeight;
+    let box_height = bbox.y + bbox.height + border;
+    let bpercent = box_height / full_height * 100.0;
+    let tpercent = 100.0 - bpercent;
+    app.vertical_layout.setSizes([tpercent, bpercent])
+  }
+
+  await editor.create_instance("template_editor");
   app_header.create_instance("app_header");
   app_header.instance.$on("toggle-menu", () => {
     vueMenu.instance.showNavigation = !vueMenu.instance.showNavigation
