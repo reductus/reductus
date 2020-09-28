@@ -1,6 +1,6 @@
 let dataflow_template = `
 <svg 
-  class="dataflow" 
+  class="dataflow editor" 
   @mousemove="mousemove" 
   @mouseup="mouseup"
   @mousedown="mousedown"
@@ -29,12 +29,12 @@ let dataflow_template = `
       />
     </pattern>
   </defs>
-  <g class="dataflow-template">
+  <g class="dataflow-template" ref="template">
     <module 
       v-for="(module_data, index) in template_data.modules" 
       ref="modules" 
       :module_index="index"
-      :module_def="instrument_def.find((m) => (m.id == module_data.module))"
+      :module_def="module_defs[module_data.module]"
       :transform="'translate('+ module_data.x + ',' + module_data.y + ')'" 
       :module_data="module_data"
       :selected="selected"
@@ -59,7 +59,7 @@ let dataflow_template = `
 </svg>
 `;
 
-  let module_template =`
+let module_template = `
   <g class="module" style="cursor: move;">
     <g class="title" :class="{selected: selected.modules.includes(module_index)}">
         <text ref="title_text" class="title text" x="5" y="5" dy="1em">{{module_data.title}}</text>
@@ -130,15 +130,17 @@ const Module = {
 export const DataflowViewer = {
   name: "dataflow-viewer",
   components: { "module": Module },
-  props: ["instrument_def", "template_data", "selected"],
+  props: ["instrument_def", "template_data"],
   data: () => ({
+    selected: {
+      modules: [],
+      terminals: []
+    },
     drag: {
       active: false,
       buttons: null,
       data: null
     },
-    mouse_start: {x: null, y: null},
-    mouse_delta: {x: 0, y: 0},
     options: {
       move: {
         x_step: 5,
@@ -154,12 +156,19 @@ export const DataflowViewer = {
       }
     }
   }),
+  computed: {
+    module_defs: function () {
+      return Object.fromEntries((this.instrument_def.modules || []).map(m => (
+        [m.id, m]
+      )));
+    }
+  },
   methods: {
     module_select(module_index, first_input, ctrlKey, shiftKey) {
       if (ctrlKey || shiftKey) {
         // selecting modules
         this.selected.terminals.splice(0);
-        
+
         let item_index = this.selected.modules.indexOf(module_index);
         if (item_index > -1) {
           this.selected.modules.splice(item_index, 1);
@@ -201,8 +210,8 @@ export const DataflowViewer = {
       let target = wire_data.target;
       let source_module = this.template_data.modules[source[0]];
       let target_module = this.template_data.modules[target[0]];
-      let source_def = this.instrument_def.find((s) => (s.id == source_module.module));
-      let target_def = this.instrument_def.find((s) => (s.id == target_module.module));
+      let source_def = this.module_defs[source_module.module];
+      let target_def = this.module_defs[target_module.module];
       let source_terminal_index = source_def.outputs.findIndex((t) => (t.id == source[1]));
       let target_terminal_index = target_def.inputs.findIndex((t) => (t.id == target[1]));
 
@@ -217,36 +226,31 @@ export const DataflowViewer = {
 
       return makeConnector(s, t);
     },
-    set_eventdata: function(data) {
+    set_eventdata: function (data) {
       this.drag.data = data;
       if (this.selected.modules.includes(data.module_index)) {
-        
+
       }
     },
-    clicked_old: function(type, module_id, module_data, module_def, terminal_def, ctrlKey, shiftKey) {
-      
-      if (type == "module") {
-        this.module_select(module_id, terminal_def);
+    clicked: function (data) {
+      if (!data) {
+        return
       }
-      else if (type == "terminal") {
-        this.terminal_select(module_id, terminal_def, ctrlKey, shiftKey);
-      }
-    },
-    clicked: function(data) {
-        if (data.target_type == "module") {
+      if (data.target_type == "module") {
         this.module_select(data.module_index, data.terminal_def, data.ctrlKey, data.shiftKey);
       }
       else if (data.target_type == "terminal") {
         this.terminal_select(data.module_index, data.terminal_def, data.ctrlKey, data.shiftKey);
       }
+      this.on_select();
     },
-    mousedown: function(ev) {
+    mousedown: function (ev) {
       let d = this.drag;
       if (d.started == true) {
         // then we're already dragging.  Ignore other mouse buttons.
         return
       }
-      d.module_start_positions = this.template_data.modules.map((m) => ({x: m.x, y: m.y}));
+      d.module_start_positions = this.template_data.modules.map((m) => ({ x: m.x, y: m.y }));
       if (d.data && d.data.target_type == 'module') {
         let smodules = this.selected.modules;
         d.to_move = (smodules.includes(d.data.module_index)) ? smodules : [d.data.module_index];
@@ -254,7 +258,6 @@ export const DataflowViewer = {
       else {
         d.to_move = [];
       }
-      console.log(d.module_start_positions, d.to_move);
       d.started = true;
       d.start_x = ev.x;
       d.start_y = ev.y;
@@ -263,7 +266,7 @@ export const DataflowViewer = {
       d.buttons = ev.buttons;
       //console.log(JSON.stringify(d));
     },
-    mouseup: function(ev) {
+    mouseup: function (ev) {
       let d = this.drag;
       if (ev.buttons != 0) {
         // if some reprobate has pushed and release a different button
@@ -279,7 +282,7 @@ export const DataflowViewer = {
       d.started = false;
       d.active = false;
     },
-    mousemove: function(ev) {
+    mousemove: function (ev) {
       let d = this.drag;
       if (d.started) {
         // drag stuff
@@ -300,7 +303,11 @@ export const DataflowViewer = {
           this.$emit('dragged', d.data);
         }
       }
-    }
+    },
+    get_bbox() {
+      return this.$refs.template.getBBox();
+    },
+    on_select: function () { }
   },
   template: dataflow_template
 }
