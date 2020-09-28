@@ -263,6 +263,12 @@ svg.editor path.wire {
     stroke: red;
 }
 
+svg.editor path.wire-background {
+  fill: none;
+  stroke-width: 7px;
+  stroke: white;
+}
+
 svg.editor path.exposed-wire, svg.editor rect.exposed {
   display: none;
 }
@@ -482,7 +488,6 @@ div#west_panel {
 }
 
 div#bottom_panel {
-  min-height: 200px;
   display: flex;
   flex-direction: column;
 }
