@@ -242,12 +242,19 @@ svg.editor g.module rect.title {
   fill-opacity: 0;
 }
 
-
 svg.editor rect.terminal.output {
+  fill: url(#output_hatch);
+}
+
+svg.editor g.module g.satisfied rect.terminal.output {
     fill: #88FFFF;
 }
 
 svg.editor rect.terminal.input {
+    fill: url(#input_hatch);
+}
+
+svg.editor g.module g.satisfied rect.terminal.input {
     fill: #88FF88;
 }
 
@@ -282,7 +289,7 @@ svg.editor path.exposed-wire, svg.editor rect.exposed {
   }
 }
     
-svg.editor path.wire.filled {
+svg.editor path.wire.satisfied {
     /*stroke-linecap: round;*/
     stroke-dasharray: none;
     /*animation: offset 1s linear forwards infinite;*/

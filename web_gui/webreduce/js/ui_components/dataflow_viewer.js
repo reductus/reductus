@@ -31,27 +31,31 @@ let dataflow_template = `
   </defs>
   <g class="dataflow-template" ref="template">
     <module 
-      v-for="(module_data, index) in template_data.modules" 
+      v-for="(module_data, index) in template_data.modules"
+      :key="JSON.stringify(module_data.config)"
       ref="modules" 
       :module_index="index"
       :module_def="module_defs[module_data.module]"
       :transform="'translate('+ module_data.x + ',' + module_data.y + ')'" 
       :module_data="module_data"
       :selected="selected"
+      :satisfied="satisfied"
       :options="options"
       @set-eventdata="set_eventdata"
       @clicked="clicked"
       v-on="$listeners"
     >
     </module>
-    <template v-for="wire_data in template_data.wires">
+    <template v-for="(wire_data, wire_index) in template_data.wires">
       <path
         v-if="options.wire_background"
         :d="pathstring(wire_data)"
+        :class="{satisfied: satisfied.wires.includes(wire_index)}"
         class="wire-background">
       </path>
       <path
         :d="pathstring(wire_data)"
+        :class="{satisfied: satisfied.wires.includes(wire_index)}"
         class="wire">
       </path>
     </template>
@@ -73,9 +77,11 @@ let module_template = `
         >
         </rect>
     </g>
-    <g v-for="(terminal_def,index) in module_def.inputs" 
+    <g v-for="(terminal_def,index) in module_def.inputs"
+      :key="module_index.toFixed() + ':' + terminal_def.id"
       class="terminals inputs"
-      :class="{selected: (selected.terminals.findIndex(([ii, id]) => (ii == module_index && id == terminal_def.id)) > -1)}"
+      :class="{selected: (selected.terminals.findIndex(([ii, id]) => (ii == module_index && id == terminal_def.id)) > -1),
+               satisfied: satisfied.terminals.findIndex(([ii, id]) => (ii == module_index && id == terminal_def.id)) > -1}"
       :ref="terminal_def.id"
       :transform="'translate(-' + options.terminal.width + ',' + (index * options.terminal.height) + ')'"
       >
@@ -86,7 +92,6 @@ let module_template = `
         :width="options.terminal.width"
         :height="options.terminal.height"
         :terminal_id="terminal_def.id.toLowerCase()"
-        :style="{fill: 'url(#input_hatch)'}"
         @mousedown="$emit('set-eventdata', {target_type:'terminal', module_index, module_data, module_def, terminal_def, ctrlKey: $event.ctrlKey, shiftKey: $event.shiftKey})"
         >
         <title>{{terminal_def.label.toLowerCase()}}</title>
@@ -97,7 +102,8 @@ let module_template = `
     <g v-for="(terminal_def,index) in module_def.outputs"
       :key="module_index.toFixed() + ':' + terminal_def.id"
       class="terminals outputs"
-      :class="{selected: (selected.terminals.findIndex(([ii, id]) => (ii == module_index && id == terminal_def.id)) > -1)}"
+      :class="{selected: (selected.terminals.findIndex(([ii, id]) => (ii == module_index && id == terminal_def.id)) > -1),
+               satisfied: satisfied.terminals.findIndex(([ii, id]) => (ii == module_index && id == terminal_def.id)) > -1}"
       :ref="terminal_def.id"
       :transform="'translate(' + display_width + ',' + (index * options.terminal.height) + ')'">
       <text class="output label" x="5" y="5">{{terminal_def.label.toLowerCase()}}</text>
@@ -106,7 +112,6 @@ let module_template = `
         :width="options.terminal.width" 
         :height="options.terminal.height" 
         :terminal_id="terminal_def.id.toLowerCase()"
-        :style="{fill: 'url(#output_hatch)'}"
         @mousedown="$emit('set-eventdata', {target_type:'terminal', module_index, module_data, module_def, terminal_def, ctrlKey: $event.ctrlKey, shiftKey: $event.shiftKey})"
         >
           <title>{{terminal_def.label.toLowerCase()}}</title>
@@ -118,7 +123,7 @@ let module_template = `
 
 const Module = {
   name: "module",
-  props: ["module_def", "module_data", "module_index", "options", "selected"],
+  props: ["module_def", "module_data", "module_index", "options", "selected", "satisfied"],
   computed: {
     display_width: function () {
       return (this.module_data.text_width != null) ? this.module_data.text_width : this.options.default_text_width;
@@ -135,6 +140,11 @@ export const DataflowViewer = {
     selected: {
       modules: [],
       terminals: []
+    },
+    satisfied: {
+      modules: [],
+      terminals: [],
+      wires: []
     },
     drag: {
       active: false,
@@ -164,6 +174,9 @@ export const DataflowViewer = {
     }
   },
   methods: {
+    isSatisfiedWire(index) {
+      return this.satisfied.wires.includes(index);
+    },
     module_select(module_index, first_input, ctrlKey, shiftKey) {
       if (ctrlKey || shiftKey) {
         // selecting modules

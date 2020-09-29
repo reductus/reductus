@@ -718,8 +718,16 @@ editor.export_data = function() {
 
 
 editor.update_completions = function() {
-  var satisfactions = dependencies.mark_satisfied(this._active_template, this._module_defs);
-  var wires = this._active_template.wires;
+  var satisfactions = dependencies.mark_satisfied(this.instance.template_data, this.instance.module_defs);
+  editor.instance.satisfied.wires = Array.from(satisfactions.wires_satisfied.values());
+  editor.instance.satisfied.modules = Array.from(satisfactions.modules_satisfied.values());
+  let sterminals = [];
+  editor.instance.template_data.wires
+    .filter((w,i) => satisfactions.wires_satisfied.has(i))
+    .forEach((w,i) => {
+      sterminals.push(w.source, w.target)
+  });
+  editor.instance.satisfied.terminals = sterminals;
   /*var svg = this._instance.svg();
   svg.selectAll("path.wire").classed("filled", function(d,i) { return satisfactions.wires_satisfied.has(i); });
   svg.selectAll("g.module").each(function(d,i) {
