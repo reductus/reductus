@@ -1,66 +1,70 @@
 let dataflow_template = `
-<svg 
-  class="dataflow editor" 
+<div 
+  class="dataflow editor container"
   @mousemove="mousemove" 
   @mouseup="mouseup"
   @mousedown="mousedown"
+  @contextmenu.prevent=""
   >
-  <defs>
-    <filter id="glow" filterUnits="objectBoundingBox" x="-50%" y="-50%" width="200%" height="200%">
-      <feOffset result="offOut" in="SourceGraphic" dx="0" dy="0" />
-      <feColorMatrix in="offOut" result="matrixOut" type="matrix"
-        values="0 0 0 0 0 \
-                1 1 1 1 0 \
-                0 0 0 0 0 \
-                0 0 0 1 0" />
-      <feGaussianBlur in="matrixOut" result="blurOut" stdDeviation="10" />
-      <feBlend in="SourceGraphic" in2="blurOut" mode="normal" />
-    </filter>
-    <pattern id="output_hatch" patternUnits="userSpaceOnUse" width=10 height=10 >
-      <path 
-        d="M-1,1 l2,-2 M0,10 l10,-10 M9,11 l2,-2"
-        style="stroke:#88FFFF;stroke-opacity:1;stroke-width:3;"
-      />
-    </pattern>
-    <pattern id="input_hatch" patternUnits="userSpaceOnUse" width=10 height=10 >
-      <path 
-        d="M-1,1 l2,-2 M0,10 l10,-10 M9,11 l2,-2"
-        style="stroke:#88FF88;stroke-opacity:1;stroke-width:3;"
-      />
-    </pattern>
-  </defs>
-  <g class="dataflow-template" ref="template">
-    <module 
-      v-for="(module_data, index) in template_data.modules"
-      :key="JSON.stringify(module_data.config)"
-      ref="modules" 
-      :module_index="index"
-      :module_def="module_defs[module_data.module]"
-      :transform="'translate('+ module_data.x + ',' + module_data.y + ')'" 
-      :module_data="module_data"
-      :selected="selected"
-      :satisfied="satisfied"
-      :options="options"
-      @set-eventdata="set_eventdata"
-      @clicked="clicked"
-      v-on="$listeners"
-    >
-    </module>
-    <template v-for="(wire_data, wire_index) in template_data.wires">
-      <path
-        v-if="options.wire_background"
-        :d="pathstring(wire_data)"
-        :class="{satisfied: satisfied.wires.includes(wire_index)}"
-        class="wire-background">
-      </path>
-      <path
-        :d="pathstring(wire_data)"
-        :class="{satisfied: satisfied.wires.includes(wire_index)}"
-        class="wire">
-      </path>
-    </template>
-  </g>
-</svg>
+  
+  <svg class="dataflow editor">
+    <defs>
+      <filter id="glow" filterUnits="objectBoundingBox" x="-50%" y="-50%" width="200%" height="200%">
+        <feOffset result="offOut" in="SourceGraphic" dx="0" dy="0" />
+        <feColorMatrix in="offOut" result="matrixOut" type="matrix"
+          values="0 0 0 0 0 \
+                  1 1 1 1 0 \
+                  0 0 0 0 0 \
+                  0 0 0 1 0" />
+        <feGaussianBlur in="matrixOut" result="blurOut" stdDeviation="10" />
+        <feBlend in="SourceGraphic" in2="blurOut" mode="normal" />
+      </filter>
+      <pattern id="output_hatch" patternUnits="userSpaceOnUse" width=10 height=10 >
+        <path 
+          d="M-1,1 l2,-2 M0,10 l10,-10 M9,11 l2,-2"
+          style="stroke:#88FFFF;stroke-opacity:1;stroke-width:3;"
+        />
+      </pattern>
+      <pattern id="input_hatch" patternUnits="userSpaceOnUse" width=10 height=10 >
+        <path 
+          d="M-1,1 l2,-2 M0,10 l10,-10 M9,11 l2,-2"
+          style="stroke:#88FF88;stroke-opacity:1;stroke-width:3;"
+        />
+      </pattern>
+    </defs>
+    <g class="dataflow-template" ref="template">
+      <module 
+        v-for="(module_data, index) in template_data.modules"
+        :key="JSON.stringify(module_data.config)"
+        ref="modules" 
+        :module_index="index"
+        :module_def="module_defs[module_data.module]"
+        :transform="'translate('+ module_data.x + ',' + module_data.y + ')'" 
+        :module_data="module_data"
+        :selected="selected"
+        :satisfied="satisfied"
+        :options="options"
+        @set-eventdata="set_eventdata"
+        @clicked="clicked"
+        v-on="$listeners"
+      >
+      </module>
+      <template v-for="(wire_data, wire_index) in template_data.wires">
+        <path
+          v-if="options.wire_background"
+          :d="pathstring(wire_data)"
+          :class="{satisfied: satisfied.wires.includes(wire_index)}"
+          class="wire-background">
+        </path>
+        <path
+          :d="pathstring(wire_data)"
+          :class="{satisfied: satisfied.wires.includes(wire_index)}"
+          class="wire">
+        </path>
+      </template>
+    </g>
+  </svg>
+</div>
 `;
 
 let module_template = `
@@ -103,7 +107,7 @@ let module_template = `
       :key="module_index.toFixed() + ':' + terminal_def.id"
       class="terminals outputs"
       :class="{selected: (selected.terminals.findIndex(([ii, id]) => (ii == module_index && id == terminal_def.id)) > -1),
-               satisfied: satisfied.terminals.findIndex(([ii, id]) => (ii == module_index && id == terminal_def.id)) > -1}"
+               satisfied: satisfied.modules.includes(module_index)}"
       :ref="terminal_def.id"
       :transform="'translate(' + display_width + ',' + (index * options.terminal.height) + ')'">
       <text class="output label" x="5" y="5">{{terminal_def.label.toLowerCase()}}</text>
@@ -251,6 +255,12 @@ export const DataflowViewer = {
       }
       this.on_select();
     },
+    contextmenu: function(d, x, y) {
+      this.$emit('contextmenu', d.data, x, y);
+      this.menu.x = x;
+      this.menu.y = y;
+      this.menu.visible = true;
+    },
     mousedown: function (ev) {
       let d = this.drag;
       if (d.started == true) {
@@ -281,7 +291,12 @@ export const DataflowViewer = {
         return
       }
       if (!d.active) {
-        this.clicked(d.data);
+        if (d.buttons == 1) {
+          this.clicked(d.data);
+        }
+        else if (d.buttons == 2) {
+          this.contextmenu(d, ev.offsetX, ev.offsetY);
+        }
       }
       d.start_x = null;
       d.start_y = null;
@@ -291,7 +306,7 @@ export const DataflowViewer = {
     },
     mousemove: function (ev) {
       let d = this.drag;
-      if (d.started) {
+      if (d.started && d.buttons == 1) {
         // drag stuff
         let dx = this.options.move.x_step;
         let dy = this.options.move.y_step;

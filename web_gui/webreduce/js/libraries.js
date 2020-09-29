@@ -13,6 +13,10 @@ export {default as Tree} from 'https://cdn.jsdelivr.net/gh/bmaranville/treejs@la
 import { default as Vue } from 'https://cdn.jsdelivr.net/npm/vue@2.6.11/dist/vue.esm.browser.js';
 import { default as VueMaterial } from 'https://cdn.skypack.dev/vue-material@latest';
 Vue.use(VueMaterial);
+//import { default as VueSimpleContextMenu } from 'https://cdn.skypack.dev/vue-simple-context-menu@^3.1.10';
+//Vue.use(VueSimpleContextMenu);
+import { default as VueCustomContextMenu } from 'https://cdn.skypack.dev/vue-custom-context-menu@^3.0.2';
+Vue.use(VueCustomContextMenu);
 export { default as vuedraggable } from 'https://cdn.skypack.dev/vuedraggable@^2.23.2';
 export { Vue }
 
