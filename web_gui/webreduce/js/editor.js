@@ -191,18 +191,25 @@ editor.get_full = function() {
 }
 
 function module_clicked() {
-  filebrowser.instance.selected_stashes.splice(0);
-  if (editor.instance.selected.terminals.length > 1) {
-    module_clicked_multiple();
+  let nterms = editor.instance.selected.terminals.length;
+  if (nterms > 0) {
+    filebrowser.instance.selected_stashes.splice(0);
+    if (nterms > 1) {
+      module_clicked_multiple();
+    }
+    else {
+      module_clicked_single();
+    }
   }
-  else {
-    module_clicked_single();
+  else if(editor.instance.selected.modules.length > 1) {
+    app.hide_fields();
+    filebrowser.instance.blocked = true;
   }
 }
 
 editor.module_clicked = module_clicked;
 
-function compare_in_template(to_compare, template) {
+async function compare_in_template(to_compare, template) {
   var template = template || editor._active_template;
   let recalc_mtimes = app.settings.check_mtimes.value;
   let params_to_calc = to_compare.map(([node, terminal]) => ({
@@ -212,10 +219,8 @@ function compare_in_template(to_compare, template) {
         terminal,
         return_type: "plottable"
   }));
-  return editor.calculate(params_to_calc, recalc_mtimes)
-    .then(function(results) {
-      editor.show_plots(results);
-    });
+  let results = await editor.calculate(params_to_calc, recalc_mtimes);
+  editor.show_plots(results);
 }
 
 editor.show_plots = async function(results) {

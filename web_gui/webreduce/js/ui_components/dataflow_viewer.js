@@ -174,9 +174,6 @@ export const DataflowViewer = {
     }
   },
   methods: {
-    isSatisfiedWire(index) {
-      return this.satisfied.wires.includes(index);
-    },
     module_select(module_index, first_input, ctrlKey, shiftKey) {
       if (ctrlKey || shiftKey) {
         // selecting modules
@@ -241,9 +238,6 @@ export const DataflowViewer = {
     },
     set_eventdata: function (data) {
       this.drag.data = data;
-      if (this.selected.modules.includes(data.module_index)) {
-
-      }
     },
     clicked: function (data) {
       if (!data) {
