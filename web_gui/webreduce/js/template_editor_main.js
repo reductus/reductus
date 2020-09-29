@@ -7,7 +7,6 @@ window.onload = async function() {
   await server_api.__init__();
 
   let e = new dataflowEditor(null, d3); //Class2.editorFactory();
-  console.log(d3);
   e._outer = []; // contexts for embedded templates;
   e._clipboard = null;
   d3.select("#editor_div").call(e);
@@ -373,6 +372,47 @@ window.onload = async function() {
             e.update();
             e.svg().selectAll("g.module").filter(function(d,i) { return i >= start_module_index }).classed("highlight", true);
             contextMenuShowing=false;
+        });
+      }
+      else {
+        // should only get here if the target is the editor itself, with an empty clipboard:
+        // show menu to add a new module.
+        d3.event.preventDefault();
+        contextMenuShowing = true;
+        
+        let window_x = d3.event.x;
+        let window_y = d3.event.y;
+        let [x,y] = d3.mouse(e.svg().node());
+        // Build the popup            
+        popup = d3.select("body")
+          .append("div")
+          .attr("class", "popup")
+          .style("left", window_x + "px")
+          .style("top", window_y + "px")
+        
+        popup.append("div").text("Add new module:");
+        
+        let module_select = popup.append("select");
+        let module_defs = e.module_defs();
+        // list of name, id pairs:
+        let module_options = ([["Add new module:", ""]]).concat(
+          Object.values(module_defs)
+            .filter((module) => (module.visible))
+            .map((module) => [module.name, module.id])
+        );
+        module_select.selectAll("option").data(module_options)
+          .enter().append('option')
+          .attr("value", function(d) {return d[1]}) // function(d) {return module_defs[d].module})
+          .attr("title", function(d) {return d[0]})
+          .text(function(d) {return d[0]})  
+        
+        module_select.on("change", function() {
+          popup.remove();          
+          contextMenuShowing=false;
+          let module = this.value;
+          let title = module_defs[module].name;
+          e.svg().datum().modules.push({module, title, x, y});
+          e.update();
         });
       }
     }

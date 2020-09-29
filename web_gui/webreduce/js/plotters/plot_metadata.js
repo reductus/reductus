@@ -1,7 +1,7 @@
 import { Vue } from '../libraries.js';
 
 let template = `
-<div class="metadata-table" style="overflow-x:scroll;">
+<div class="metadata-table">
   <table class="metadata">
     <thead>
       <tr>

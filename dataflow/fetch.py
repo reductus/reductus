@@ -105,7 +105,8 @@ def url_get(fileinfo, mtime_check=True):
                 t_repo = datetime.datetime.fromtimestamp(int(os.stat(path).st_mtime), pytz.utc)
             else:
                 req = SESSION.get(full_url)
-                url_mtime = req.headers['last-modified']
+                req.raise_for_status()
+                url_mtime = req.headers.get('last-modified', None)
                 url_time_struct = time.strptime(url_mtime, '%a, %d %b %Y %H:%M:%S %Z')
                 t_repo = datetime.datetime(*url_time_struct[:6], tzinfo=pytz.utc)
 
@@ -119,7 +120,7 @@ def url_get(fileinfo, mtime_check=True):
                 elif t_request < t_repo:
                     print("request mtime = %s, repo mtime = %s"%(t_request, t_repo))
                     raise ValueError("Requested mtime is older than repository mtime for %r"%path)
-            
+
             if isLocal:
                 with open(path, 'rb') as localfile:
                     ret = localfile.read()

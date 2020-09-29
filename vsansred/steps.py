@@ -439,7 +439,7 @@ def He3_transmission(he3data, trans_panel="auto"):
         # assume that He3 OUT is measured before He3 IN
         mapping_trans = mappings[tstartstr]["Transmissions"]
         t_key = (m_det_dis_desired, f_det_dis_desired, num_attenuators)
-        if d.metadata.get("he3_back.inbeam", 0) > 0:
+        if _s(d.metadata.get("he3_back.direction", "UNPOLARIZED")) != "UNPOLARIZED":
             p = previous_transmission
             #print('previous transmission: ', p)
             #print(p.get("CellTimeIdentifier", None), tstart,

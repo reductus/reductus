@@ -76,6 +76,7 @@ def candor(
     | 2020-02-05 Paul Kienzle
     | 2020-03-12 Paul Kienzle Add slit 1 dependence for DC rate
     | 2020-08-27 Brian Maranville loader gets attenuator information
+    | 2020-09-11 Brian Maranville loader updated with new motor names
     """
     from .load import url_load_list
     from .candor import load_entries
@@ -507,7 +508,7 @@ def stitch_intensity(data, tol=0.001):
 
 
 @module("candor")
-def candor_rebin(data, qmin=None, qmax=None, qstep=0.003, qstep_max=None, average='poisson'):
+def candor_rebin(data, qmin=None, qmax=None, qstep=0.003, qstep_max=None, average='gauss'):
     r"""
     Join the intensity measurements into a single entry.
 
@@ -541,6 +542,7 @@ def candor_rebin(data, qmin=None, qmax=None, qstep=0.003, qstep_max=None, averag
 
     | 2020-03-04 Paul Kienzle
     | 2020-08-03 David Hoogerheide adding progressive q step coarsening
+    | 2020-09-24 Brian Maranville changed default averaging
     """
     from .candor import rebin, nobin
 

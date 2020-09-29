@@ -114,7 +114,7 @@ class Candor(ReflData):
 
         # Counts
         # Load counts early so we can tell whether channels are axis 1 or 2
-        counts = data_as(entry, 'multiDetector/counts', '', dtype='d')
+        counts = data_as(das, 'multiDetector/counts', '', dtype='d')
         if counts is None: # CRUFT: NICE Ticket #00113618 - Renamed detector from area to multi
             counts = data_as(das, 'areaDetector/counts', '', dtype='d')
         if counts is None or counts.size == 0:
@@ -229,10 +229,20 @@ class Candor(ReflData):
         # TODO: sample broadening?
 
         # Angles
-        self.sample.angle_x = data_as(das, 'sampleAngleMotor/softPosition', 'degree', rep=n)
-        self.sample.angle_x_target = data_as(das, 'sampleAngleMotor/desiredSoftPosition', 'degree', rep=n)
-        self.detector.angle_x = data_as(das, 'detectorTableMotor/softPosition', 'degree', rep=n)
-        self.detector.angle_x_target = data_as(das, 'detectorTableMotor/desiredSoftPosition', 'degree', rep=n)
+        self.sample.angle_x = data_as(das, 'sampleAngle/softPosition', 'degree', rep=n)
+        self.sample.angle_x_target = data_as(das, 'sampleAngle/desiredSoftPosition', 'degree', rep=n)
+        # CRUFT: renamed sampleAngleMotor to sampleAngle
+        if self.sample.angle_x is None:
+            self.sample.angle_x = data_as(das, 'sampleAngleMotor/softPosition', 'degree', rep=n)
+        if self.sample.angle_x_target is None:
+            self.sample.angle_x_target = data_as(das, 'sampleAngleMotor/desiredSoftPosition', 'degree', rep=n)
+        self.detector.angle_x = data_as(das, 'detectorArmAngle/softPosition', 'degree', rep=n)
+        self.detector.angle_x_target = data_as(das, 'detectorArmAngle/desiredSoftPosition', 'degree', rep=n)
+        # CRUFT: renamed detectorTableMotor to detectorArmAngle
+        if self.detector.angle_x is None:
+            self.detector.angle_x = data_as(das, 'detectorTableMotor/softPosition', 'degree', rep=n)
+        if self.detector.angle_x_target is None:
+            self.detector.angle_x_target = data_as(das, 'detectorTableMotor/desiredSoftPosition', 'degree', rep=n)
         self.detector.angle_x_offset = data_as(das, 'detectorTable/rowAngularOffsets', '')[0]
 
         # Attenuators
@@ -361,8 +371,10 @@ class Candor(ReflData):
         #    y, ylabel = self.slit1.x, "S1 (mm)"
         #elif Intent.isspec(self.intent):
         #    y, ylabel = self.sample.angle_x, "Detector Angle (degrees)"
-        if self.sample.angle_x.max() - self.sample.angle_x.min() > 0.01:
-            y, ylabel = self.sample.angle_x, "Detector Angle (degrees)"
+        if self.detector.angle_x.max() - self.detector.angle_x.min() > 0.01:
+            y, ylabel = self.detector.angle_x, "Detector Angle (degrees)"
+        elif self.sample.angle_x.max() - self.sample.angle_x.min() > 0.01:
+            y, ylabel = self.sample.angle_x, "Sample Angle (degrees)"
         elif self.slit1.x.max() - self.slit1.x.min() > 0.01:
             y, ylabel = self.slit1.x, "S1 (mm)"
         else:

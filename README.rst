@@ -125,6 +125,6 @@ development version, much like you did for the development server.
 Then start the server with::
 
     cd web_gui
-    python server_flask.py 8002
+    python run.py
 
-and visit the page http://localhost:8002/static/index.html
+and visit the page http://localhost:8002/webreduce/dist/index.html

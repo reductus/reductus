@@ -614,7 +614,7 @@ def simulate_measurement(rate, target_counts, attenuator, tau_NP, tau_P,
     return (counts[0], time[0]), (counts[1], time[1])
 
 
-def run_sim(tau_NP=0, tau_P=0, attenuator=10, mode='mixed', plot=True):
+def run_sim(tau_NP=0, tau_P=0, attenuator=10, mode='mixed', plot=True, tmax=None):
     """
     Run a simulated dead time estimation measurement and dead time recovery.
 
@@ -624,10 +624,15 @@ def run_sim(tau_NP=0, tau_P=0, attenuator=10, mode='mixed', plot=True):
     """
 
     # set rate, target counts and cutoff time
-    tmax = -np.log10(DEADTIME_SCALE*(tau_NP+tau_P)/2)+0.5
-    tmin = tmax-3.5
+    if tmax is None:
+        tmax = np.ceil(-np.log10(DEADTIME_SCALE*(tau_NP+tau_P)/2)+0.49)
+    else:
+        tmax = np.log10(tmax)
+    tmin = tmax-4
     #tmin, tmax = np.log10(5000.), np.log10(35000.)
-    rate = np.logspace(tmin, tmax, 10)
+    rate = np.logspace(tmin, tmax, 9)
+    rate_index = slice(0, None, 2)  # since 2 per decade
+    rates_printed = rate[rate_index]+0
     rate[0], rate[-1] = rate[0]-1, rate[-1]+1
 
     target_counts, cutoff_time = int(rate[-1]*0.2), 5*60
@@ -683,6 +688,8 @@ def run_sim(tau_NP=0, tau_P=0, attenuator=10, mode='mixed', plot=True):
     #print("  drate/rate", rate_f[1]/rate_f[0])
     #print("  rate residuals", (rate - rate_f[0])/rate_f[1])
     #print("  scale", " ".join('{:S}'.format(v) for v in scale))
+    pairs = zip(rates_printed, scale[rate_index])
+    print("  effect", " ".join('%d=%.1f%%'%(int(r), 100*(v.n-1)) for r, v in pairs))
     print("  scale", " ".join('%.2f'%v.n for v in scale))
     rel_err = (rate-uval(corrected))/rate
     print("  error (r-r')/r:",
@@ -765,7 +772,7 @@ def _show_droop(rate, wo, wt, attenuator):
     pylab.errorbar(rate, wt[0]/(rate/attenuator), yerr=wt[1]/(rate/attenuator),
                    fmt='g.', label='attenuated')
     pylab.errorbar(rate, wo[0]/rate, yerr=wo[1]/rate,
-                   fmt='b.', label='unattenuated', hold=True)
+                   fmt='b.', label='unattenuated')
 
     pylab.xscale('log')
     pylab.xlabel('incident rate (counts/second)')
