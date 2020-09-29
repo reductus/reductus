@@ -6,7 +6,6 @@ import {dependencies} from './deps.js';
 import {instruments} from './instruments/index.js';
 // now a global...
 import {zip} from './libraries.js';
-import {d3} from './libraries.js';
 import { Vue } from './libraries.js';
 import {extend, dataflowEditor} from './libraries.js';
 import {PouchDB} from './libraries.js';
@@ -23,8 +22,6 @@ import { DataflowViewer } from './ui_components/dataflow_viewer.js';
 
 
 editor.instruments = instruments;
-
-editor.dispatch = d3.dispatch("accept", "field_update");
 
 editor.guid = function() {
   var uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
@@ -104,10 +101,8 @@ editor.create_instance = function(target_id) {
 }
 
 function module_clicked_multiple() {
-  var editor_select = d3.select("#" + editor._target_id);
-  var active_template = editor._active_template;
   app.hide_fields();
-  compare_in_template(editor.instance.selected.terminals, active_template);
+  compare_in_template(editor.instance.selected.terminals, editor.instance.template_data);
 }
 
 editor.advance_to_output = function() {
@@ -196,7 +191,8 @@ editor.get_full = function() {
 }
 
 function module_clicked() {
-  if (editor.instance.selected.modules.length > 1) {
+  filebrowser.instance.selected_stashes.splice(0);
+  if (editor.instance.selected.terminals.length > 1) {
     module_clicked_multiple();
   }
   else {
@@ -205,73 +201,6 @@ function module_clicked() {
 }
 
 editor.module_clicked = module_clicked;
-
-editor.handle_module_clicked = function(d,i,current_group,clicked_elem) {
-  // d module data, i is module index, elem is registered to catch event
-  //
-  // Flow: 
-  //  - if the module title is clicked, show configuration and 
-  //    data from the first input terminal.
-  //  - if input terminal is clicked, show that data and configuration
-  //  - if output terminal is clicked, show that data and configuration
-  
-  
-  var multiple_select = (d3.event && (d3.event.shiftKey || d3.event.ctrlKey));
-  var data_to_show;
-  
-  // clear all the stashed items, since we are plotting from the template again
-  d3.selectAll("#stashedlist input.compare").property("checked", false);
-  
-  if (multiple_select) {
-    var active_node = i,
-        active_terminal = d3.select(clicked_elem).attr("terminal_id");
-    if (!d3.select(clicked_elem).classed("terminal")) {
-      console.log("can't select multiple module configs, just inputs and outputs");
-      return
-    }
-    var parent = d3.select(clicked_elem.parentNode);
-    parent.classed("selected", !(parent.classed("selected")));
-    editor_select.selectAll("g.module, g.module g.title").classed("selected", false);
-    module_clicked_multiple();   
-  }
-
-  else {
-    editor_select.selectAll(".module .selected").classed("selected", false);
-    d3.select(clicked_elem.parentNode).classed("selected", true);
-    
-    var active_template = editor._active_template;
-    var active_module = active_template.modules[i];
-    var module_def = editor._module_defs[active_module.module];
-    var fields = module_def.fields || [];
-    if (fields.filter(function(d) {return d.datatype == 'fileinfo'}).length == 0) {
-        // var nav = $("#datasources");
-        // nav.find("div.block-overlay").show();
-    }
-    
-    if (d3.select(clicked_elem).classed("title")) {
-      // then it's the module title clicked - 
-      // select the first input terminal to show data from (if any)
-      data_to_show = (module_def.inputs[0] || {}).id;  // second part undefined if no inputs
-      // also highlight the first input terminal, if it's there:
-      d3.select(elem).selectAll("g")
-        .filter(function(d) { return d.id == data_to_show })
-        .classed("selected", true);
-    }
-    else {
-      // it's a terminal - show the data in it with the configuration
-      //var side = d3.select(clicked_elem).classed("input") ? "input" : "output";
-      data_to_show = d3.select(clicked_elem).attr("terminal_id");
-      // also mark title of module as selected:
-      d3.select(elem).select("g.title").classed("selected", true);
-    }
-    
-    
-    editor._active_node = i;
-    editor._active_terminal = data_to_show;
-
-    module_clicked();
-  }
-}
 
 function compare_in_template(to_compare, template) {
   var template = template || editor._active_template;
@@ -728,24 +657,6 @@ editor.update_completions = function() {
       sterminals.push(w.source, w.target)
   });
   editor.instance.satisfied.terminals = sterminals;
-  /*var svg = this._instance.svg();
-  svg.selectAll("path.wire").classed("filled", function(d,i) { return satisfactions.wires_satisfied.has(i); });
-  svg.selectAll("g.module").each(function(d,i) {
-    d3.select(this).selectAll("rect.terminal.output").style("fill", (satisfactions.modules_satisfied.has(i)) ? null : "url(#output_hatch)");
-  })
-  svg.selectAll("rect.terminal.input").style("fill", "url(#input_hatch)");
-  svg.selectAll("rect.terminal.input").each(function(d,i) {
-    var term = d3.select(this);
-    var id = term.attr("terminal_id");
-    var node = d3.select(this.parentNode.parentNode).attr("index");
-    wires.forEach(function(w,i) { 
-      var mine = (w.target[0] == node && w.target[1] == id);
-      if (mine && satisfactions.wires_satisfied.has(i)) {
-        term.style("fill", null);
-      }
-    });
-  });
-  */
 }
 
 editor.load_instrument = async function(instrument_id) {
