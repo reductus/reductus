@@ -210,7 +210,7 @@ function module_clicked() {
 editor.module_clicked = module_clicked;
 
 async function compare_in_template(to_compare, template) {
-  var template = template || editor._active_template;
+  var template = template || editor.instance.template_data;
   let recalc_mtimes = app.settings.check_mtimes.value;
   let params_to_calc = to_compare.map(([node, terminal]) => ({
         template,
@@ -259,7 +259,7 @@ editor.stash_data = function(suggested_name) {
     alert("localStorage not supported in your browser");
     return;
   }
-  if (editor._active_terminal == null) {
+  if (editor.instance.selected.terminals.length != 1) {
     alert("please select one input or output terminal to stash"); 
     return 
   }
@@ -276,12 +276,12 @@ editor.stash_data = function(suggested_name) {
     if (!overwrite) {return}
   }
   
-  var w = editor,
-    node = w._active_node,
-    terminal = w._active_terminal,
-    template = w._active_template,
-    instrument_id = w._instrument_id;
-  var template_copy = extend(true, {}, template);
+  let selected = editor.instance.selected;
+  let node = selected.modules[0];
+  let terminal = selected.terminals[0];
+  let template = editor.instance.template_data;
+  let instrument_id = editor._instrument_id;
+  let template_copy = extend(true, {}, template);
   var subroutine = {};
   subroutine.module = "user.stashed"
   subroutine.title = stashname;
