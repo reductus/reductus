@@ -248,6 +248,10 @@ svg.editor g.module rect.title {
   fill-opacity: 0;
 }
 
+svg.editor text.title {
+    pointer-events: none;
+}
+
 svg.editor rect.terminal.output {
   fill: url(#output_hatch);
 }
@@ -268,7 +272,6 @@ svg.editor polygon.terminal.state {
     display: none;
 }
     
-    
 svg.editor path.wire {
     fill: none;
     stroke-dasharray: 2,2;
@@ -280,6 +283,14 @@ svg.editor path.wire-background {
   fill: none;
   stroke-width: 7px;
   stroke: white;
+}
+
+svg.editor path.wire-new {
+    fill: none;
+    stroke-width: 5px;
+    stroke: black;
+    stroke-opacity: 0.5;
+    pointer-events: none;
 }
 
 svg.editor path.exposed-wire, svg.editor rect.exposed {

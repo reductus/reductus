@@ -1,8 +1,8 @@
+import { extend } from '../libraries.js';
+
 let dataflow_template = `
 <div 
   class="dataflow editor container"
-  @mousemove="mousemove" 
-  @mouseup.capture.stop="mouseup"
   @mousedown="mousedown"
   @contextmenu.prevent=""
   >
@@ -15,12 +15,15 @@ let dataflow_template = `
     <md-button style="visibility:hidden"></md-button>
 
     <md-menu-content>
-      <div v-if="menu.startdata == null">
-        <div>Add module here</div>
+      <md-menu-item v-if="menu.startdata == null">
           <select name="add_module" id="add_module" @change="add_module">
+            <option value="" disabled="true" selected="true">Add module:</option>
             <option v-for="module in instrument_def.modules" :value="module.id">{{module.name}}</option>
           </select>
-      </div>
+      </md-menu-item>
+      <md-menu-item v-if="menu.startdata == null && menu.clipboard != null">
+        <md-button @click="paste_module();menu.visible=false;" class="md-raised md-primary">Paste</md-button>
+      </md-menu-item>
       <md-menu-item v-if="false && menu.startdata == null">
         <md-field>
           <label for="add_module">Add Module Here</label>
@@ -30,13 +33,17 @@ let dataflow_template = `
         </md-field>
       </md-menu-item>
       <md-menu-item v-if="menu.startdata != null && menu.startdata.target_type=='module'">
-        <md-button class="md-raised md-primary">Copy</md-button>
+        <md-button  @click="copy_module(menu.startdata.module_index);menu.visible=false;" class="md-raised md-primary">Copy</md-button>
       </md-menu-item>
       <md-menu-item v-if="menu.startdata != null && menu.startdata.target_type=='module'">
-        <md-button @click="remove_module(menu.startdata.module_index);menu.visible=false;" class="md-accent">Delete</md-button>
+        <md-button @click="remove_module(menu.startdata.module_index);menu.visible=false;" class="md-accent md-raised">Delete</md-button>
+      </md-menu-item>
+      <md-menu-item v-if="menu.startdata != null && menu.startdata.target_type=='wire'">
+        <md-button @click="remove_wire(menu.startdata.wire_index);menu.visible=false;" class="md-accent md-raised">Delete wire</md-button>
       </md-menu-item>
     </md-menu-content>
   </md-menu>
+
   <svg class="dataflow editor" ref="svg">
     <defs>
       <filter id="glow" filterUnits="objectBoundingBox" x="-50%" y="-50%" width="200%" height="200%">
@@ -50,12 +57,14 @@ let dataflow_template = `
         <feBlend in="SourceGraphic" in2="blurOut" mode="normal" />
       </filter>
       <pattern id="output_hatch" patternUnits="userSpaceOnUse" width=10 height=10 >
+        <rect width="10" height="10" x="0" y="0" fill="#FFFFFF" />
         <path 
           d="M-1,1 l2,-2 M0,10 l10,-10 M9,11 l2,-2"
           style="stroke:#88FFFF;stroke-opacity:1;stroke-width:3;"
         />
       </pattern>
       <pattern id="input_hatch" patternUnits="userSpaceOnUse" width=10 height=10 >
+        <rect width="10" height="10" x="0" y="0" fill="#FFFFFF" />
         <path 
           d="M-1,1 l2,-2 M0,10 l10,-10 M9,11 l2,-2"
           style="stroke:#88FF88;stroke-opacity:1;stroke-width:3;"
@@ -72,6 +81,7 @@ let dataflow_template = `
         :transform="'translate('+ module_data.x + ',' + module_data.y + ')'" 
         :module_data="module_data"
         :selected="selected"
+        :moving="drag.modules.includes(index)"
         :satisfied="satisfied"
         :options="options"
         @startdata="set_startdata"
@@ -85,14 +95,25 @@ let dataflow_template = `
           v-if="options.wire_background"
           :d="pathstring(wire_data)"
           :class="{satisfied: satisfied.wires.includes(wire_index)}"
-          class="wire-background">
+          class="wire-background"
+          @mousedown="set_startdata({target_type:'wire', wire_index})"
+          >
         </path>
         <path
           :d="pathstring(wire_data)"
           :class="{satisfied: satisfied.wires.includes(wire_index)}"
-          class="wire">
+          class="wire"
+          @mousedown="set_startdata({target_type:'wire', wire_index})"
+          >
         </path>
       </template>
+      <path
+        v-if="drag.new_wire"
+        :d="pathstring(drag.new_wire)"
+        class="wire-new"
+        oldstyle="stroke:#000000;stroke-opacity:0.3;pointer-events:none"
+        >
+      </path>
     </g>
   </svg>
 </div>
@@ -100,7 +121,7 @@ let dataflow_template = `
 
 let module_template = `
   <g class="module" style="cursor: move;">
-    <g class="title" :class="{selected: selected.modules.includes(module_index)}">
+    <g class="title" :class="{selected: selected.modules.includes(module_index), moving}">
         <text ref="title_text" class="title text" x="5" y="5" dy="1em">{{module_data.title}}</text>
         <rect 
           class="title border"
@@ -149,7 +170,7 @@ let module_template = `
         :height="options.terminal.height" 
         :terminal_id="terminal_def.id.toLowerCase()"
         @mousedown="$emit('startdata', {target_type:'output-terminal', module_index, module_data, module_def, terminal_def, ctrlKey: $event.ctrlKey, shiftKey: $event.shiftKey})"
-        @mouseup="$emit('enddata', {target_type:'input-terminal', module_index, module_data, module_def, terminal_def, ctrlKey: $event.ctrlKey, shiftKey: $event.shiftKey})"
+        @mouseup="$emit('enddata', {target_type:'output-terminal', module_index, module_data, module_def, terminal_def, ctrlKey: $event.ctrlKey, shiftKey: $event.shiftKey})"
         >
           <title>{{terminal_def.label.toLowerCase()}}</title>
       </rect>
@@ -160,7 +181,7 @@ let module_template = `
 
 const Module = {
   name: "module",
-  props: ["module_def", "module_data", "module_index", "options", "selected", "satisfied"],
+  props: ["module_def", "module_data", "module_index", "options", "selected", "satisfied", "moving"],
   computed: {
     display_width: function () {
       return (this.module_data.text_width != null) ? this.module_data.text_width : this.options.default_text_width;
@@ -193,10 +214,13 @@ export const DataflowViewer = {
       wires: []
     },
     drag: {
+      modules: [],
       svgPoint: null,
       active: false,
       buttons: null,
-      startdata: null
+      startdata: null,
+      enddata: null,
+      new_wire: null
     },
     options: {
       move: {
@@ -330,6 +354,9 @@ export const DataflowViewer = {
       });
       this.menu.visible = false;
     },
+    remove_wire(index) {
+      this.template_data.wires.splice(index, 1);
+    },
     remove_module(index) {
       let indices = [index];
       if (this.selected.modules.includes(index)) {
@@ -343,12 +370,8 @@ export const DataflowViewer = {
         this.template_data.modules.splice(mi, 1);
         old_order.splice(mi, 1);
       }
-      console.log(indices, old_order);
-      //console.log(JSON.stringify(this.template_data.wires, null, 2));
       for (let wi = wires.length-1;  wi >= 0; wi--) {
         let w = wires[wi];
-        let s = w.source[0];
-        let t = w.target[0];
         let new_source = old_order.indexOf(w.source[0]);
         let new_target = old_order.indexOf(w.target[0]);
         if (new_source < 0 || new_target < 0) {
@@ -362,7 +385,46 @@ export const DataflowViewer = {
       //console.log(JSON.stringify(this.template_data.wires, null, 2));
 
     },
+    copy_module(index) {
+      let indices = [index];
+      if (this.selected.modules.includes(index)) {
+        indices = [...this.selected.modules];
+      }
+      // find all wires that are within the copied group,
+      // and duplicate their contents
+      let wires = this.template_data.wires
+        .filter((w) => (indices.includes(w.source[0]) && indices.includes(w.target[0])))
+        .map((w) => (extend(true, {}, w)));
+
+      wires.forEach((w,i) => {
+        let new_source = indices.indexOf(w.source[0]);
+        let new_target = indices.indexOf(w.target[0]);
+        w.source[0] = new_source;
+        w.target[0] = new_target;
+      })
+      
+      let modules = indices.map((mi) => (extend(true, {}, this.template_data.modules[mi])));
+      let reference_point = {x: this.menu.x, y: this.menu.y};
+      this.menu.clipboard = {modules, wires, reference_point};
+    },
+    paste_module() {
+      let {modules, wires, reference_point} = this.menu.clipboard;
+      let relative_x = this.menu.x - reference_point.x;
+      let relative_y = this.menu.y - reference_point.y;
+      let new_modules = modules.map((m) => (extend(true, {}, m)));
+      let new_wires = wires.map((w) => (extend(true, {}, w)));
+      let module_offset = this.template_data.modules.length;
+      new_modules.forEach((m) => {m.x += relative_x; m.y += relative_y});
+      new_wires.forEach((w) => { w.source[0] += module_offset; w.target[0] += module_offset; });
+      this.template_data.modules.splice(module_offset, 0, ...new_modules);
+      this.template_data.wires.splice(this.template_data.wires.length, 0, ...new_wires);
+      let new_selection = new_modules.map((m,i) => (i + module_offset));
+      this.selected.modules.splice(0, this.selected.modules.length, ...new_selection);
+      this.selected.terminals.splice(0);
+    },
     mousedown: function (ev) {
+      document.addEventListener('mouseup', this.mouseup);
+      document.addEventListener('mousemove', this.mousemove);
       let d = this.drag;
       if (d.started == true) {
         // then we're already dragging.  Ignore other mouse buttons.
@@ -386,10 +448,12 @@ export const DataflowViewer = {
       d.delta_x = 0;
       d.delta_y = 0;
       d.buttons = ev.buttons;
+      d.new_wire = null;
       //console.log(JSON.stringify(d));
     },
     mouseup: function (ev) {
-      console.log('mouseup', ev);
+      document.removeEventListener('mouseup', this.mouseup);
+      document.removeEventListener('mousemove', this.mousemove);
       let d = this.drag;
       if (ev.buttons != 0) {
         // if some reprobate has pushed and release a different button
@@ -405,18 +469,48 @@ export const DataflowViewer = {
           this.contextmenu(d, x, y);
         }
       }
-      if (d.wire_end != null) {
-        // then we're dragging a wire...
-        let wire = this.template_data.wires[this.template_data.wires.length - 1];
-        if (wire.source.x != null && wire.source.y != null) {
+      if (d.new_wire != null) {
+        // then we're dragging a wire... the last one
+        let wires = this.template_data.wires;
+        let wire = d.new_wire;
+        let compatible = true;
+        if (wire.loose_end == wire.source && d.enddata && d.enddata.target_type == 'output-terminal') {
+          wire.source = [d.enddata.module_index, d.enddata.terminal_def.id];
+        }
+        else if (wire.loose_end == wire.target && d.enddata && d.enddata.target_type == 'input-terminal') {
+          wire.target = [d.enddata.module_index, d.enddata.terminal_def.id];
+        }
+        else {
+          // incompatible landing spot
+          compatible = false;
+          console.warn("can't wire to here...");
+        }
+        let is_duplicate = this.template_data.wires.findIndex((w) => (
+          w.source[0] == wire.source[0] &&
+          w.source[1] == wire.source[1] &&
+          w.target[0] == wire.target[0] &&
+          w.target[1] == wire.target[1]
+        )) > -1;
+        let is_self = (wire.target[0] == wire.source[0]);
+        if (is_duplicate) {
+          console.warn("duplicate wire: not adding")
+        }
+        if (is_self) {
+          console.warn("wire source and target are the same module: not adding");
+        }
+        // if all is well, add the wire!
+        if (compatible && !is_duplicate && !is_self) {
+          wires.push({source: wire.source, target: wire.target});
         }
       }
+
       d.start_x = null;
       d.start_y = null;
       d.startdata = null;
+      d.enddata = null;
       d.started = false;
       d.active = false;
-      d.wire_end = null;
+      d.new_wire = null;
     },
     mousemove: function (ev) {
       let d = this.drag;
@@ -431,7 +525,10 @@ export const DataflowViewer = {
           d.active = true;
           d.delta_x = new_delta_x;
           d.delta_y = new_delta_y;
-          if (d.startdata.target_type == 'module') {
+          if (d.startdata == null) {
+
+          }
+          else if (d.startdata.target_type == 'module') {
             d.to_move.forEach((module_index) => {
               let sp = d.module_start_positions[module_index];
               let m = this.template_data.modules[module_index];
@@ -442,22 +539,22 @@ export const DataflowViewer = {
           }
           else if (/terminal$/.test(d.startdata.target_type)) {
             // start wiring
-            if (d.wire_end == null) {
-              d.wire_end = {x: svgCoords.x, y: svgCoords.y};
-              let new_wire = {};
+            if (d.new_wire == null) {
+              let loose_end = {x: svgCoords.x, y: svgCoords.y};
+              let new_wire = {loose_end};
+              d.new_wire = new_wire;
               if (/^output/.test(d.startdata.target_type)) {
                 new_wire.source = [d.startdata.module_index, d.startdata.terminal_def.id];
-                new_wire.target = d.wire_end;
+                new_wire.target = loose_end;
               }
               else {
                 new_wire.target = [d.startdata.module_index, d.startdata.terminal_def.id];
-                new_wire.source = d.wire_end;
+                new_wire.source = loose_end;
               }
-              this.template_data.wires.push(new_wire)
             }
             else {
-              d.wire_end.x = svgCoords.x;
-              d.wire_end.y = svgCoords.y;
+              d.new_wire.loose_end.x = svgCoords.x;
+              d.new_wire.loose_end.y = svgCoords.y;
             }
           }
         }
