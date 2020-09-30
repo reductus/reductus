@@ -116,6 +116,27 @@ let dataflow_template = `
       </path>
     </g>
   </svg>
+  <md-dialog id="help" :md-active.sync="menu.help_visible" style="max-width:768px;">
+    <md-dialog-title>Using the Template Panel</md-dialog-title>
+      <md-tabs md-dynamic-height>
+        <md-tab md-label="Editing">
+          <p>Left-click and drag a module to move it</p>
+          <p>Right-click a module or wire and you will have the option to delete or copy</p>
+          <p>Shift-left-click to highlight multiple modules, 
+          then you can left-click and drag them together, 
+          or right-click to copy or delete them all at once</p>
+          <p>Right-click on an empty spot in the template to add a new module or paste a copied module or group of modules</p>
+          <p>Left-click and then drag on a terminal (input or output) to create a new wire.  
+          Stop over the opposite type of terminal to finish the connection</p>
+        </md-tab>
+        <md-tab md-label="Operating">
+          <p>Left-click on a module to select and show/edit its parameters (first input terminal also autoselected)</p>
+          <p>Select module with datafile fields (fileinfo) to show filebrowser</p>
+          <p>Left-click on a terminal to plot its data (module is autoselected)</p>
+          <p>Shift-left-click on multiple terminals to compare data (if compatible for plotting)</p>
+        </md-tab>
+      </md-tabs>
+  </md-dialog>
 </div>
 `;
 
@@ -197,6 +218,7 @@ export const DataflowViewer = {
   data: () => ({
     menu: {
       visible: false,
+      help_visible: false,
       x: 0,
       y: 0,
       data: null,

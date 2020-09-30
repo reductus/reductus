@@ -221,7 +221,7 @@ window.onload = async function () {
       var empty_template = { modules: [], wires: [] };
       editor.edit_template(empty_template)
     },
-    edit_template() { editor.edit_template() },
+    edit_template() { editor.instance.menu.help_visible = true },
     download_template() {
       let filename = prompt("Save template as:", "template.json");
       if (filename != null) {

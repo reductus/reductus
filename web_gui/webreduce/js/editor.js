@@ -598,21 +598,26 @@ editor.export_targets = [
 ];
 
 editor.export_data = function() {
-  var w = editor;
-  if (w._active_terminal == null) { alert("no input or output selected to export"); }
-  let active_modulename = w._active_template.modules[w._active_node].module;
-  let active_module_def = editor._instrument_def.modules.find(function(m) { return m.id == active_modulename })
-  let active_input_output = active_module_def.inputs
-    .concat(active_module_def.outputs)
-    .find(function(o) { return o.id == w._active_terminal});
+  let {modules, terminals} = this.instance.selected;
+
+  if (terminals.length == 0) { alert("no input or output selected to export"); return }
+  if (terminals.length > 1) { alert("more than one input or output selected to export"); return }
+  let [node, terminal] = terminals[0];
+  let template = this.instance.template_data;
+  let module = this.instance.template_data.modules[node];
+  let module_def = this.instance.module_defs[module.module];
+
+  let active_input_output = module_def.inputs
+    .concat(module_def.outputs)
+    .find(function(o) { return o.id == terminal});
   let export_datatype = active_input_output.datatype;
 
-  var export_types = editor._instrument_def.datatypes.find(function(d) { return d.id == export_datatype}).export_types;
+  let export_types = this.instance.instrument_def.datatypes.find(function(d) { return d.id == export_datatype }).export_types;
   var params = {
-    template: w._active_template,
+    template,
     config: {},
-    node: w._active_node,
-    terminal: w._active_terminal,
+    node,
+    terminal,
     return_type: "export",
     //export_type: export_type,
     concatenate: true
