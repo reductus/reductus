@@ -2,12 +2,42 @@ let dataflow_template = `
 <div 
   class="dataflow editor container"
   @mousemove="mousemove" 
-  @mouseup="mouseup"
+  @mouseup.capture.stop="mouseup"
   @mousedown="mousedown"
   @contextmenu.prevent=""
   >
-  
-  <svg class="dataflow editor">
+  <md-menu md-size="auto"
+    :md-active.sync="menu.visible"
+    :style="{height: 0}"
+    :md-offset-x="menu.x"
+    :md-offset-y="menu.y"
+    md-direction="bottom-start">
+    <md-button style="visibility:hidden"></md-button>
+
+    <md-menu-content>
+      <div v-if="menu.startdata == null">
+        <div>Add module here</div>
+          <select name="add_module" id="add_module" @change="add_module">
+            <option v-for="module in instrument_def.modules" :value="module.id">{{module.name}}</option>
+          </select>
+      </div>
+      <md-menu-item v-if="false && menu.startdata == null">
+        <md-field>
+          <label for="add_module">Add Module Here</label>
+          <md-select name="add_module" id="add_module" @md-selected="add_module">
+            <md-option v-for="module in instrument_def.modules" :value="module.id">{{module.name}}</md-option>
+          </md-select>
+        </md-field>
+      </md-menu-item>
+      <md-menu-item v-if="menu.startdata != null && menu.startdata.target_type=='module'">
+        <md-button class="md-raised md-primary">Copy</md-button>
+      </md-menu-item>
+      <md-menu-item v-if="menu.startdata != null && menu.startdata.target_type=='module'">
+        <md-button @click="remove_module(menu.startdata.module_index);menu.visible=false;" class="md-accent">Delete</md-button>
+      </md-menu-item>
+    </md-menu-content>
+  </md-menu>
+  <svg class="dataflow editor" ref="svg">
     <defs>
       <filter id="glow" filterUnits="objectBoundingBox" x="-50%" y="-50%" width="200%" height="200%">
         <feOffset result="offOut" in="SourceGraphic" dx="0" dy="0" />
@@ -44,7 +74,8 @@ let dataflow_template = `
         :selected="selected"
         :satisfied="satisfied"
         :options="options"
-        @set-eventdata="set_eventdata"
+        @startdata="set_startdata"
+        @enddata="set_enddata"
         @clicked="clicked"
         v-on="$listeners"
       >
@@ -77,7 +108,7 @@ let module_template = `
           :height="options.terminal.height"
           x="0"
           y="0"
-          @mousedown="$emit('set-eventdata', {target_type:'module', module_index, module_data, module_def, terminal_def: module_def.inputs[0] || {}, ctrlKey: $event.ctrlKey, shiftKey: $event.shiftKey})"
+          @mousedown="$emit('startdata', {target_type:'module', module_index, module_data, module_def, terminal_def: module_def.inputs[0] || {}, ctrlKey: $event.ctrlKey, shiftKey: $event.shiftKey})"
         >
         </rect>
     </g>
@@ -96,7 +127,8 @@ let module_template = `
         :width="options.terminal.width"
         :height="options.terminal.height"
         :terminal_id="terminal_def.id.toLowerCase()"
-        @mousedown="$emit('set-eventdata', {target_type:'terminal', module_index, module_data, module_def, terminal_def, ctrlKey: $event.ctrlKey, shiftKey: $event.shiftKey})"
+        @mousedown="$emit('startdata', {target_type:'input-terminal', module_index, module_data, module_def, terminal_def, ctrlKey: $event.ctrlKey, shiftKey: $event.shiftKey})"
+        @mouseup="$emit('enddata', {target_type:'input-terminal', module_index, module_data, module_def, terminal_def, ctrlKey: $event.ctrlKey, shiftKey: $event.shiftKey})"
         >
         <title>{{terminal_def.label.toLowerCase()}}</title>
       </rect>
@@ -116,7 +148,8 @@ let module_template = `
         :width="options.terminal.width" 
         :height="options.terminal.height" 
         :terminal_id="terminal_def.id.toLowerCase()"
-        @mousedown="$emit('set-eventdata', {target_type:'terminal', module_index, module_data, module_def, terminal_def, ctrlKey: $event.ctrlKey, shiftKey: $event.shiftKey})"
+        @mousedown="$emit('startdata', {target_type:'output-terminal', module_index, module_data, module_def, terminal_def, ctrlKey: $event.ctrlKey, shiftKey: $event.shiftKey})"
+        @mouseup="$emit('enddata', {target_type:'input-terminal', module_index, module_data, module_def, terminal_def, ctrlKey: $event.ctrlKey, shiftKey: $event.shiftKey})"
         >
           <title>{{terminal_def.label.toLowerCase()}}</title>
       </rect>
@@ -141,6 +174,15 @@ export const DataflowViewer = {
   components: { "module": Module },
   props: ["instrument_def", "template_data"],
   data: () => ({
+    menu: {
+      visible: false,
+      x: 0,
+      y: 0,
+      data: null,
+      module_to_add: null,
+      modules_to_delete: [],
+      wires_to_delete: []
+    },
     selected: {
       modules: [],
       terminals: []
@@ -151,9 +193,10 @@ export const DataflowViewer = {
       wires: []
     },
     drag: {
+      svgPoint: null,
       active: false,
       buttons: null,
-      data: null
+      startdata: null
     },
     options: {
       move: {
@@ -222,26 +265,41 @@ export const DataflowViewer = {
     pathstring: function (wire_data) {
       let source = wire_data.source;
       let target = wire_data.target;
-      let source_module = this.template_data.modules[source[0]];
-      let target_module = this.template_data.modules[target[0]];
-      let source_def = this.module_defs[source_module.module];
-      let target_def = this.module_defs[target_module.module];
-      let source_terminal_index = source_def.outputs.findIndex((t) => (t.id == source[1]));
-      let target_terminal_index = target_def.inputs.findIndex((t) => (t.id == target[1]));
 
-      let s = {
-        x: source_module.x + (source_module.text_width || this.options.default_text_width) + this.options.terminal.width,
-        y: source_module.y + (this.options.terminal.height * (source_terminal_index + 0.5))
+      let s;
+      if (source.x == null && source.y == null) {
+        let source_module = this.template_data.modules[source[0]];
+        let source_def = this.module_defs[source_module.module];
+        let source_terminal_index = source_def.outputs.findIndex((t) => (t.id == source[1]));
+        s = {
+          x: source_module.x + (source_module.text_width || this.options.default_text_width) + this.options.terminal.width,
+          y: source_module.y + (this.options.terminal.height * (source_terminal_index + 0.5))
+        }
       }
-      let t = {
-        x: target_module.x - this.options.terminal.width,
-        y: target_module.y + (this.options.terminal.height * (target_terminal_index + 0.5))
+      else {
+        s = source;
       }
-
+      
+      let t;
+      if (target.x == null && target.y == null) {
+        let target_module = this.template_data.modules[target[0]];
+        let target_def = this.module_defs[target_module.module];
+        let target_terminal_index = target_def.inputs.findIndex((t) => (t.id == target[1]));
+        t = {
+          x: target_module.x - this.options.terminal.width,
+          y: target_module.y + (this.options.terminal.height * (target_terminal_index + 0.5))
+        }
+      }
+      else {
+        t = target;
+      }
       return makeConnector(s, t);
     },
-    set_eventdata: function (data) {
-      this.drag.data = data;
+    set_startdata: function (data) {
+      this.drag.startdata = data;
+    },
+    set_enddata: function (data) {
+      this.drag.enddata = data;
     },
     clicked: function (data) {
       if (!data) {
@@ -250,16 +308,59 @@ export const DataflowViewer = {
       if (data.target_type == "module") {
         this.module_select(data.module_index, data.terminal_def, data.ctrlKey, data.shiftKey);
       }
-      else if (data.target_type == "terminal") {
+      else if (/terminal$/.test(data.target_type)) {
         this.terminal_select(data.module_index, data.terminal_def, data.ctrlKey, data.shiftKey);
       }
       this.on_select();
     },
     contextmenu: function(d, x, y) {
-      this.$emit('contextmenu', d.data, x, y);
+      this.$emit('contextmenu', d.startdata, x, y);
+      this.menu.startdata = d.startdata,
       this.menu.x = x;
       this.menu.y = y;
       this.menu.visible = true;
+    },
+    add_module: function(ev) {
+      let to_add = ev.target.value;
+      this.template_data.modules.push({
+        module: to_add,
+        title: this.module_defs[to_add].name,
+        x: this.menu.x,
+        y: this.menu.y
+      });
+      this.menu.visible = false;
+    },
+    remove_module(index) {
+      let indices = [index];
+      if (this.selected.modules.includes(index)) {
+        indices = [...this.selected.modules];
+        this.selected.modules.splice(0);
+      }
+      let wires = this.template_data.wires;
+      indices.sort().reverse();
+      let old_order = this.template_data.modules.map((m,i) => (i));
+      for (let mi of indices) {
+        this.template_data.modules.splice(mi, 1);
+        old_order.splice(mi, 1);
+      }
+      console.log(indices, old_order);
+      //console.log(JSON.stringify(this.template_data.wires, null, 2));
+      for (let wi = wires.length-1;  wi >= 0; wi--) {
+        let w = wires[wi];
+        let s = w.source[0];
+        let t = w.target[0];
+        let new_source = old_order.indexOf(w.source[0]);
+        let new_target = old_order.indexOf(w.target[0]);
+        if (new_source < 0 || new_target < 0) {
+          wires.splice(wi, 1);
+        }
+        else {
+          w.source[0] = new_source;
+          w.target[0] = new_target;
+        }
+      }
+      //console.log(JSON.stringify(this.template_data.wires, null, 2));
+
     },
     mousedown: function (ev) {
       let d = this.drag;
@@ -268,14 +369,18 @@ export const DataflowViewer = {
         return
       }
       d.module_start_positions = this.template_data.modules.map((m) => ({ x: m.x, y: m.y }));
-      if (d.data && d.data.target_type == 'module') {
+      if (d.startdata && d.startdata.target_type == 'module') {
         let smodules = this.selected.modules;
-        d.to_move = (smodules.includes(d.data.module_index)) ? smodules : [d.data.module_index];
+        d.to_move = (smodules.includes(d.startdata.module_index)) ? smodules : [d.startdata.module_index];
       }
       else {
         d.to_move = [];
       }
+      if (d.startdata && /terminal$/.test(d.startdata.target_type)) {
+        // make a new wire!
+      }
       d.started = true;
+      d.start_ev = ev;
       d.start_x = ev.x;
       d.start_y = ev.y;
       d.delta_x = 0;
@@ -284,6 +389,7 @@ export const DataflowViewer = {
       //console.log(JSON.stringify(d));
     },
     mouseup: function (ev) {
+      console.log('mouseup', ev);
       let d = this.drag;
       if (ev.buttons != 0) {
         // if some reprobate has pushed and release a different button
@@ -292,17 +398,25 @@ export const DataflowViewer = {
       }
       if (!d.active) {
         if (d.buttons == 1) {
-          this.clicked(d.data);
+          this.clicked(d.startdata);
         }
         else if (d.buttons == 2) {
-          this.contextmenu(d, ev.offsetX, ev.offsetY);
+          let {x,y} = this.getSVGCoords(ev);
+          this.contextmenu(d, x, y);
+        }
+      }
+      if (d.wire_end != null) {
+        // then we're dragging a wire...
+        let wire = this.template_data.wires[this.template_data.wires.length - 1];
+        if (wire.source.x != null && wire.source.y != null) {
         }
       }
       d.start_x = null;
       d.start_y = null;
-      d.data = null;
+      d.startdata = null;
       d.started = false;
       d.active = false;
+      d.wire_end = null;
     },
     mousemove: function (ev) {
       let d = this.drag;
@@ -312,24 +426,55 @@ export const DataflowViewer = {
         let dy = this.options.move.y_step;
         let new_delta_x = dx * Math.round((ev.x - d.start_x) / dx);
         let new_delta_y = dy * Math.round((ev.y - d.start_y) / dy);
+        let svgCoords = this.getSVGCoords(ev);
         if (new_delta_x != d.delta_x || new_delta_y != d.delta_y) {
           d.active = true;
           d.delta_x = new_delta_x;
           d.delta_y = new_delta_y;
-          d.to_move.forEach((module_index) => {
-            let sp = d.module_start_positions[module_index];
-            let m = this.template_data.modules[module_index];
-            m.x = sp.x + new_delta_x;
-            m.y = sp.y + new_delta_y;
-          });
-          this.$emit('dragged', d.data);
+          if (d.startdata.target_type == 'module') {
+            d.to_move.forEach((module_index) => {
+              let sp = d.module_start_positions[module_index];
+              let m = this.template_data.modules[module_index];
+              m.x = sp.x + new_delta_x;
+              m.y = sp.y + new_delta_y;
+            });
+            this.$emit('dragged', d.startdata);
+          }
+          else if (/terminal$/.test(d.startdata.target_type)) {
+            // start wiring
+            if (d.wire_end == null) {
+              d.wire_end = {x: svgCoords.x, y: svgCoords.y};
+              let new_wire = {};
+              if (/^output/.test(d.startdata.target_type)) {
+                new_wire.source = [d.startdata.module_index, d.startdata.terminal_def.id];
+                new_wire.target = d.wire_end;
+              }
+              else {
+                new_wire.target = [d.startdata.module_index, d.startdata.terminal_def.id];
+                new_wire.source = d.wire_end;
+              }
+              this.template_data.wires.push(new_wire)
+            }
+            else {
+              d.wire_end.x = svgCoords.x;
+              d.wire_end.y = svgCoords.y;
+            }
+          }
         }
       }
+    },
+    getSVGCoords: function(ev) {
+      this.drag.svgPoint.x = ev.clientX;
+      this.drag.svgPoint.y = ev.clientY;
+      return this.drag.svgPoint.matrixTransform(this.$refs.svg.getScreenCTM().inverse());
     },
     get_bbox() {
       return this.$refs.template.getBBox();
     },
     on_select: function () { }
+  },
+  mounted: function() {
+    this.drag.svgPoint = this.$refs.svg.createSVGPoint();
   },
   template: dataflow_template
 }
