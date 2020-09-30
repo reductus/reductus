@@ -276,9 +276,7 @@ editor.stash_data = function(suggested_name) {
     if (!overwrite) {return}
   }
   
-  let selected = editor.instance.selected;
-  let node = selected.modules[0];
-  let terminal = selected.terminals[0];
+  let [node, terminal] = editor.instance.selected.terminals[0];
   let template = editor.instance.template_data;
   let instrument_id = editor._instrument_id;
   let template_copy = extend(true, {}, template);
@@ -773,7 +771,7 @@ editor.load_template = async function(template_def, selected_module, selected_te
     // choose the module directly by default
     // but if a terminal is specified, use that as target instead.
     if (selected_terminal != null) {
-      st.splice(0, st.length, selected_terminal);
+      st.splice(0, st.length, [selected_module, selected_terminal]);
     }
 
     await editor.update_completions();
