@@ -316,6 +316,12 @@ svg.editor path.wire.satisfied {
 svg.editor g.module g.selected rect {
     stroke-width: 5px;
 }
+
+svg.editor g.module g.moving rect.title {
+    fill: lightskyblue;
+    fill-opacity: 0.5;
+    cursor: move;
+}
     
     
 svg.editor polygon.terminal.state.calculated {

@@ -247,18 +247,18 @@ export const DataflowViewer = {
   methods: {
     module_select(module_index, first_input, ctrlKey, shiftKey) {
       if (ctrlKey || shiftKey) {
-        // selecting modules
-        this.selected.terminals.splice(0);
-
-        let item_index = this.selected.modules.indexOf(module_index);
+        // selecting modules for moving
+        let item_index = this.drag.modules.indexOf(module_index);
         if (item_index > -1) {
-          this.selected.modules.splice(item_index, 1);
+          this.drag.modules.splice(item_index, 1);
         }
         else {
-          this.selected.modules.push(module_index);
+          this.drag.modules.push(module_index);
         }
       }
       else {
+        // selecting modules
+        this.drag.modules.splice(0);
         this.selected.modules.splice(0, this.selected.modules.length, module_index);
         if (first_input != null) {
           this.selected.terminals.splice(0, this.selected.terminals.length, [module_index, first_input.id]);
@@ -266,12 +266,14 @@ export const DataflowViewer = {
         else {
           this.selected.terminals.splice(0);
         }
+        this.on_select();
       }
     },
     terminal_select(index, terminal_def, ctrlKey, shiftKey) {
+      this.drag.modules.splice(0);
       let terminal_id = terminal_def.id;
       if (ctrlKey || shiftKey) {
-        // selecting terminals
+        // selecting terminals for multi-plot
         this.selected.modules.splice(0);
         let item_index = this.selected.terminals.findIndex(([ii, id]) => (ii == index && id == terminal_id));
         if (item_index > -1) {
@@ -285,6 +287,7 @@ export const DataflowViewer = {
         this.selected.terminals.splice(0, this.selected.terminals.length, [index, terminal_id]);
         this.selected.modules.splice(0, this.selected.modules.length, index);
       }
+      this.on_select();
     },
     pathstring: function (wire_data) {
       let source = wire_data.source;
@@ -327,6 +330,7 @@ export const DataflowViewer = {
     },
     clicked: function (data) {
       if (!data) {
+        this.drag.modules.splice(0);
         return
       }
       if (data.target_type == "module") {
@@ -335,7 +339,6 @@ export const DataflowViewer = {
       else if (/terminal$/.test(data.target_type)) {
         this.terminal_select(data.module_index, data.terminal_def, data.ctrlKey, data.shiftKey);
       }
-      this.on_select();
     },
     contextmenu: function(d, x, y) {
       this.$emit('contextmenu', d.startdata, x, y);
@@ -359,9 +362,9 @@ export const DataflowViewer = {
     },
     remove_module(index) {
       let indices = [index];
-      if (this.selected.modules.includes(index)) {
-        indices = [...this.selected.modules];
-        this.selected.modules.splice(0);
+      if (this.drag.modules.includes(index)) {
+        indices = [...this.drag.modules];
+        this.drag.modules.splice(0);
       }
       let wires = this.template_data.wires;
       indices.sort().reverse();
@@ -382,13 +385,36 @@ export const DataflowViewer = {
           w.target[0] = new_target;
         }
       }
+      
+      let sm = this.selected.modules;
+      for (let si = sm.length - 1; si >=0; si--) {
+        let new_selected = old_order.indexOf(sm[si]);
+        if (new_selected < 0) {
+          sm.splice(si, 1);
+        }
+        else {
+          sm.splice(si, 1, new_selected)
+        }
+      }
+      
+      let st = this.selected.terminals;
+      for (let si = st.length - 1; si >=0; si--) {
+        let new_selected = old_order.indexOf(st[si][0]);
+        if (new_selected < 0) {
+          st.splice(si, 1);
+        }
+        else {
+          st[si][0] = new_selected;
+        }
+      }
+      
       //console.log(JSON.stringify(this.template_data.wires, null, 2));
 
     },
     copy_module(index) {
       let indices = [index];
-      if (this.selected.modules.includes(index)) {
-        indices = [...this.selected.modules];
+      if (this.drag.modules.includes(index)) {
+        indices = [...this.drag.modules];
       }
       // find all wires that are within the copied group,
       // and duplicate their contents
@@ -419,8 +445,7 @@ export const DataflowViewer = {
       this.template_data.modules.splice(module_offset, 0, ...new_modules);
       this.template_data.wires.splice(this.template_data.wires.length, 0, ...new_wires);
       let new_selection = new_modules.map((m,i) => (i + module_offset));
-      this.selected.modules.splice(0, this.selected.modules.length, ...new_selection);
-      this.selected.terminals.splice(0);
+      this.drag.modules.splice(0, this.drag.modules.length, ...new_selection);
     },
     mousedown: function (ev) {
       document.addEventListener('mouseup', this.mouseup);
@@ -432,8 +457,8 @@ export const DataflowViewer = {
       }
       d.module_start_positions = this.template_data.modules.map((m) => ({ x: m.x, y: m.y }));
       if (d.startdata && d.startdata.target_type == 'module') {
-        let smodules = this.selected.modules;
-        d.to_move = (smodules.includes(d.startdata.module_index)) ? smodules : [d.startdata.module_index];
+        let dmodules = this.drag.modules;
+        d.to_move = (dmodules.includes(d.startdata.module_index)) ? dmodules : [d.startdata.module_index];
       }
       else {
         d.to_move = [];
