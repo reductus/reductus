@@ -27,6 +27,9 @@ let template = `
                     </md-chip>
                     <span v-if="(subindex < category.length-1)">{{settings.subcategory_separator}}</span>
                   </template>
+                  <md-button @click="addSub(index)" class="md-icon-button md-dense">
+                    <md-icon class="md-primary">add</md-icon>
+                  </md-button>
                 </div>
                 <div>
                   <md-button @click="remove(index)" class="md-layout-item md-icon-button md-dense md-accent">
@@ -37,6 +40,9 @@ let template = `
             </md-card>
           </template>
         </draggable>
+        <md-button @click="addCategory" class="md-layout-item md-icon-button md-dense md-raised md-primary">
+          <md-icon>add</md-icon>
+        </md-button>
         <md-field>
           <label>subcategory separator</label>
           <md-input outlined v-model="settings.subcategory_separator" :style="{width: 5}" />
@@ -133,7 +139,8 @@ export const categoriesEditor = {
     dialog: {
       default: false
     },
-    categories: Array
+    categories: Array,
+    default_categories: Array
   },
   methods: {
     removeSub(index, subindex) {
@@ -147,6 +154,16 @@ export const categoriesEditor = {
       console.log('editSub', index, subindex);
       this.pick_category.current_target = {index, subindex};
       this.pick_category.open = true;
+    },
+    addSub(index) {
+      let category = this.local_categories[index];
+      category.push([]);
+      this.pick_category.current_target = {index, subindex: (category.length - 1)}
+      this.pick_category.open = true;
+    },
+    addCategory() {
+      let index = (this.local_categories.push([]) - 1);
+      this.addSub(index);
     },
     close() {
       this.$emit('close');
@@ -175,7 +192,11 @@ export const categoriesEditor = {
       subcategory.splice(0, subcategory.length, ...new_sub)
       this.pick_category.open = false;
     },
-    reload_defaults() {}
+    reload_defaults() {
+      let default_categories = extend(true, [], this.default_categories);
+      console.log(default_categories);
+      this.local_categories.splice(0, this.local_categories.length, ...default_categories);
+    }
   },
   data: function() {
     return {

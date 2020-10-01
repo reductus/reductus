@@ -832,6 +832,7 @@ editor.switch_instrument = async function(instrument_id, load_default=true) {
     let categories = editor.instruments[instrument_id].categories;
     let old_categories = vueMenu.instance.categories;
     old_categories.splice(0, old_categories.length, ...categories);
+    vueMenu.instance.default_categories = extend(true, [], categories);
     vueMenu.instance.predefined_templates = Object.keys(instrument_def.templates || {});
     vueMenu.instance.current_instrument = instrument_id;
     let template_names = Object.keys(instrument_def.templates);
