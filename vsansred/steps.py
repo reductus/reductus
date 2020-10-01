@@ -114,7 +114,6 @@ def _LoadVSANS(filelist=None, check_timestamps=True):
 
     return data
 
-@cache
 @module
 def LoadVSANS(filelist=None, check_timestamps=True):
     """

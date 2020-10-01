@@ -29,7 +29,7 @@ let template = `
                   </template>
                 </div>
                 <div>
-                  <md-button class="md-layout-item md-icon-button md-dense md-accent">
+                  <md-button @click="remove(index)" class="md-layout-item md-icon-button md-dense md-accent">
                     <md-icon>cancel</md-icon>
                   </md-button>
                 </div>
@@ -139,6 +139,9 @@ export const categoriesEditor = {
     removeSub(index, subindex) {
       console.log('removeSub', index, subindex);
       this.local_categories[index].splice(subindex, 1);
+    },
+    remove(index) {
+      this.local_categories.splice(index, 1);
     },
     editSub(index, subindex) {
       console.log('editSub', index, subindex);
