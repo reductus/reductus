@@ -75,7 +75,10 @@ def SortDataAutomatic(datafiles,
                 for s in _stringpart[1:]:
                     regex = r'({}' + regex + r')?'
                 substr = regex.format(*list(_stringpart))
-                Sample_Name = re.compile(r"{dt}\s*K[,]?".format(dt=substr)).sub('', Sample_Name)  
+                Sample_Name = re.compile(r"{dt}\s*K[,]?".format(dt=substr)).sub('', Sample_Name)
+                Temp_String = _stringpart
+            else:
+                Temp_String = 'na'
             Voltage = m['adam.voltage']
             if Voltage is not None:
                 record_adam4021 = 1
@@ -85,10 +88,13 @@ def SortDataAutomatic(datafiles,
                     regex = r'({}' + regex + r')?'
                 substr = regex.format(*list(_stringpart))
                 Sample_Name = re.compile(r"{dv}\s*V[,]?".format(dv=substr)).sub('', Sample_Name)
+                Voltage_String = _stringpart
+            else:
+                Voltage_String = 'na'
             
             Sample_Name = re.compile(r"\s").sub('', Sample_Name)
             Sample_Base = Sample_Name
-            Sample_Name = "{:s}_{:.4f}_V_{:.4f}_K".format(Sample_Name, Voltage, Desired_Temp)
+            Sample_Name = "{:s}_{:s}_V_{:s}_K".format(Sample_Name, Voltage_String, Temp_String)
 
             Purpose = m['analysis.filepurpose'].decode() #SCATT, TRANS, HE3
             Intent = m['analysis.intent'].decode() #Sample, Empty, Blocked Beam, Open Beam
