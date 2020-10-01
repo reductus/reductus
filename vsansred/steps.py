@@ -114,8 +114,9 @@ def _LoadVSANS(filelist=None, check_timestamps=True):
 
     return data
 
+@cache
 @module
-def LoadVSANS(filelist=None, check_timestamps=True):
+def LoadVSANS(filelist=None, check_timestamps=True, load_data=True):
     """
     loads a data file into a VSansData obj and returns that. (uses cached values)
 
@@ -125,11 +126,14 @@ def LoadVSANS(filelist=None, check_timestamps=True):
     
     check_timestamps (bool): verify that timestamps on file match request
 
+    load_data (bool): include the data in the load
+
     **Returns**
 
     output (raw[]): all the entries loaded.
 
-    2018-10-30 Brian Maranville
+    | 2018-10-30 Brian Maranville
+    | 2020-09-30 Brian Maranville adding option to not load data
     """
 
     from dataflow.calc import process_template
@@ -149,7 +153,7 @@ def LoadVSANS(filelist=None, check_timestamps=True):
     template = Template(**template_def)
     output = []
     for fi in filelist:
-        config = {"0": {"filelist": [fi], "check_timestamps": check_timestamps}}
+        config = {"0": {"filelist": [fi], "check_timestamps": check_timestamps, "load_data": load_data}}
         nodenum = 0
         terminal_id = "output"
         retval = process_template(template, config, target=(nodenum, terminal_id))
@@ -377,14 +381,18 @@ def He3_transmission(he3data, trans_panel="auto"):
 
     transmissions (v1d[]): 1d transmissions per cell
 
+    atomic_pols (v1d[]): 1d atomic polarizations per cell
+
     mappings (params[]): cell parameters
 
     | 2018-05-01 Brian Maranville
     | 2020-07-30 Brian Maranville update cell name
+    | 2020-10-01 Brian Maranville add atomic_pol
 
     """
     from .vsansdata import short_detectors, Parameters, VSans1dData,  _toDictItem
     import dateutil.parser
+    import datetime
     from collections import OrderedDict
 
     he3data.sort(key=lambda d:  d.metadata.get("run.instrumentScanID", None))
@@ -410,12 +418,14 @@ def He3_transmission(he3data, trans_panel="auto"):
 
     mappings = OrderedDict()
     previous_transmission = {}
+    previous_scan_id = 0
     for d in he3data:
-        tstart = d.metadata.get("he3_back.starttime", None)
-        if tstart is None:
-            tstart = 0
-        tstart = int(tstart) # coerce strings
-        tstartstr = "{ts:d}".format(ts=tstart)
+        scan_id = d.metadata.get("run.instrumentScanID", 0)
+        cellstart = d.metadata.get("he3_back.starttime", None)
+        if cellstart is None:
+            cellstart = 0
+        cellstart = int(cellstart) # coerce strings
+        cellstartstr = "{ts:d}".format(ts=cellstart)
         tend = dateutil.parser.parse(d.metadata.get("end_time", "1969")).timestamp()
         count_time =  d.metadata['run.rtime']
         monitor_counts = d.metadata['run.moncnt']
@@ -424,28 +434,34 @@ def He3_transmission(he3data, trans_panel="auto"):
         m_det_dis_desired = d.metadata.get("m_det.dis_des", 0)
         f_det_dis_desired = d.metadata.get("f_det.dis_des", 0)
         num_attenuators = d.metadata.get("run.atten", 0)
-        middle_timestamp = (tend - (count_time * 1000.0 / 2.0)) # in milliseconds
+        middle_timestamp = (tend - (count_time / 2.0)) # in seconds
         opacity = d.metadata.get("he3_back.opacity", 0.0)
         wavelength = d.metadata.get("resolution.lmda")
-        mappings.setdefault(tstartstr, {
-            "Insert_time": tstart,
+        Te = d.metadata.get("he3_back.te", 1.0)
+        Mu = opacity*wavelength
+        mappings.setdefault(cellstartstr, {
+            "Insert_time": cellstart,
+            "Insert_datetime": datetime.datetime.fromtimestamp(cellstart/1000).ctime(),
             "Cell_name": _s(d.metadata.get("he3_back.name", "unknown")),
-            "Te": d.metadata.get("he3_back.te", 1.0),
-            "Mu": opacity*wavelength,
+            "Te": Te,
+            "Mu": Mu,
+            "P0": None,
+            "Gamma": None,
             "Transmissions": []
         })
 
         # assume that He3 OUT is measured before He3 IN
-        mapping_trans = mappings[tstartstr]["Transmissions"]
+        mapping_trans = mappings[cellstartstr]["Transmissions"]
         t_key = (m_det_dis_desired, f_det_dis_desired, num_attenuators)
-        if _s(d.metadata.get("he3_back.direction", "UNPOLARIZED")) != "UNPOLARIZED":
+        direction = _s(d.metadata.get("he3_back.direction", "UNPOLARIZED"))
+        if direction != "UNPOLARIZED" and (scan_id - previous_scan_id) == 1:
             p = previous_transmission
             #print('previous transmission: ', p)
             #print(p.get("CellTimeIdentifier", None), tstart,
             #        p.get("m_det_dis_desired", None),  m_det_dis_desired, 
             #        p.get("f_det_dis_desired", None), f_det_dis_desired,
             #        p.get("num_attenuators", None),  num_attenuators)
-            if p.get("CellTimeIdentifier", None) == tstart and \
+            if p.get("CellTimeIdentifier", None) == cellstart and \
                     p.get("m_det_dis_desired", None) == m_det_dis_desired and \
                     p.get("f_det_dis_desired", None) == f_det_dis_desired and \
                     p.get("num_attenuators", None) == num_attenuators:
@@ -468,10 +484,11 @@ def He3_transmission(he3data, trans_panel="auto"):
                 HE3_transmission_OUT = (p["HE3_OUT_counts"] - BlockBeamRate*p["HE3_OUT_count_time"])/p["HE3_OUT_mon"]
                 HE3_transmission = HE3_transmission_IN / HE3_transmission_OUT
                 p['transmission'] = HE3_transmission
+                p['atomic_pol'] = np.arccosh(HE3_transmission / (Te * np.exp(-Mu))) / Mu
                 mapping_trans.append(deepcopy(p))
         else:
             previous_transmission = {
-                "CellTimeIdentifier": tstart,
+                "CellTimeIdentifier": cellstart,
                 "HE3_OUT_file": filename,
                 "HE3_OUT_counts": detector_counts,
                 "HE3_OUT_count_time": count_time,
@@ -480,26 +497,42 @@ def He3_transmission(he3data, trans_panel="auto"):
                 "f_det_dis_desired": f_det_dis_desired,
                 "num_attenuators": num_attenuators
             }
+            previous_scan_id = scan_id
         # catch back-to-back 
 
     bb_out = _toDictItem(list(BlockedBeams.values()))
     trans_1d = []
+    atomic_pol_1d = []
     for m in mappings.values():
         transmissions = []
+        atomic_pols = []
         timestamps = []
         for c in m["Transmissions"]:
             t = c['transmission']
+            ap = c['atomic_pol']
             if t > 0:
                 transmissions.append(t)
+                atomic_pols.append(ap)
                 timestamps.append(c['HE3_IN_timestamp'])
         x = np.array(timestamps)
+        x0 = m['Insert_time']/1000.0
+        xa = (x-x0)/(3600)
         dx = np.zeros_like(x)
         v = np.array(transmissions)
         dv = np.zeros_like(v)
+        va = np.array(atomic_pols)
+        dva = np.zeros_like(va)
+        if (len(timestamps) > 1):
+            ginv, logP = np.polyfit(xa, np.log(va), 1)
+            m['P0'] = np.exp(logP)
+            m['Gamma'] = -1/ginv
+        else:
+            m['P0'] = va[0]
         ordering = np.argsort(x)
-        trans_1d.append(VSans1dData(x[ordering], v[ordering], dx=dx, dv=dv, xlabel="timestamp", vlabel="Transmission", metadata={"title": _s(m["Cell_name"])}))
+        trans_1d.append(VSans1dData(x[ordering] - x0, v[ordering], dx=dx, dv=dv, xlabel="timestamp (s)", vlabel="Transmission", metadata={"title": _s(m["Cell_name"])}))
+        atomic_pol_1d.append(VSans1dData(xa[ordering], va[ordering], dx=dx, dv=dva, xlabel="timestamp (h)", vlabel="Atomic Polarization", metadata={"title": _s(m["Cell_name"])}))
 
-    return he3data, trans_1d, [Parameters({"cells": mappings, "blocked_beams": bb_out})]
+    return he3data, trans_1d, atomic_pol_1d, [Parameters({"cells": mappings, "blocked_beams": bb_out})]
 
 def get_transmission_sum(detectors, panel_name="auto"):
     from .vsansdata import short_detectors
