@@ -627,6 +627,7 @@ def calculate_XY(raw_data, solid_angle_correction=True):
     | 2018-04-28 Brian Maranville
     | 2019-09-19 Added monitor normalization
     | 2019-09-22 Separated monitor and dOmega norm
+    | 2020-10-02 Brian Maranville ignore back detector when data missing
     """
     from .vsansdata import VSansDataRealSpace, short_detectors
     from collections import OrderedDict
