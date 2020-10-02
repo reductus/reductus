@@ -214,8 +214,12 @@ const Module = {
 export const DataflowViewer = {
   name: "dataflow-viewer",
   components: { "module": Module },
-  props: ["instrument_def", "template_data"],
+  props: ["instrument_def"],
   data: () => ({
+    template_data: {
+      modules: [],
+      wires: []
+    },
     menu: {
       visible: false,
       help_visible: false,

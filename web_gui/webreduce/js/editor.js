@@ -88,10 +88,7 @@ editor.create_instance = function(target_id) {
   const DataflowViewerClass = Vue.extend(DataflowViewer);
   this.instance_container = target.parentElement;
   this.instance = new DataflowViewerClass({
-    propsData: {
-      template_data: {modules: [], wires: []},
-      instrument_def: {}
-    },
+    propsData: {instrument_def: {}},
     methods: {
       on_select: editor.module_clicked
     }
