@@ -198,27 +198,25 @@ export const categoriesEditor = {
       this.local_categories.splice(0, this.local_categories.length, ...default_categories);
     }
   },
-  data: function() {
-    return {
-      disabled: false,
-      dialog_open: true,
-      pick_category: {
-        open: false,
-        current_target: {index: null, subindex: null},
-        current_id: ""
-      },
-      // TODO:
-      // probably don't need another local copy of categories,
-      // since the one in the parent is also local (not the canonical version)
-      // could just share the array.
-      local_categories: default_categories,
-      category_keys: category_keys,
-      category_tree: category_tree,
-      settings: {
-        subcategory_separator: ':'
-      }
+  data: () => ({
+    disabled: false,
+    dialog_open: true,
+    pick_category: {
+      open: false,
+      current_target: {index: null, subindex: null},
+      current_id: ""
+    },
+    // TODO:
+    // probably don't need another local copy of categories,
+    // since the one in the parent is also local (not the canonical version)
+    // could just share the array.
+    local_categories: default_categories,
+    category_keys: category_keys,
+    category_tree: category_tree,
+    settings: {
+      subcategory_separator: ':'
     }
-  },
+  }),
   watch: {
     category_keys: function(old, newVal) {
       let newChildren = annotate(newVal);
