@@ -212,7 +212,9 @@ function module_clicked_single() {
   let fileinfos = (module_def.fields || []).filter(f => (f.datatype == 'fileinfo'));
   filebrowser.instance.blocked = (fileinfos.length < 1);
   
-  var terminals_to_calculate = module_def.inputs.map(function(inp) {return inp.id});
+  var terminals_to_calculate = module_def.inputs
+    .filter(function(inp) {return /\.params$/.test(inp.datatype)})
+    .map(function(inp) {return inp.id});
   var fields_in = {};
   if (data_to_show != null && terminals_to_calculate.indexOf(data_to_show) < 0) {
     terminals_to_calculate.push(data_to_show);
