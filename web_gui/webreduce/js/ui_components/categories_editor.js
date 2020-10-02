@@ -27,9 +27,12 @@ let template = `
                     </md-chip>
                     <span v-if="(subindex < category.length-1)">{{settings.subcategory_separator}}</span>
                   </template>
+                  <md-button @click="addSub(index)" class="md-icon-button md-dense">
+                    <md-icon class="md-primary">add</md-icon>
+                  </md-button>
                 </div>
                 <div>
-                  <md-button class="md-layout-item md-icon-button md-dense md-accent">
+                  <md-button @click="remove(index)" class="md-layout-item md-icon-button md-dense md-accent">
                     <md-icon>cancel</md-icon>
                   </md-button>
                 </div>
@@ -37,6 +40,9 @@ let template = `
             </md-card>
           </template>
         </draggable>
+        <md-button @click="addCategory" class="md-layout-item md-icon-button md-dense md-raised md-primary">
+          <md-icon>add</md-icon>
+        </md-button>
         <md-field>
           <label>subcategory separator</label>
           <md-input outlined v-model="settings.subcategory_separator" :style="{width: 5}" />
@@ -133,17 +139,32 @@ export const categoriesEditor = {
     dialog: {
       default: false
     },
-    categories: Array
+    categories: Array,
+    default_categories: Array,
+    category_keys: Array
   },
   methods: {
     removeSub(index, subindex) {
       console.log('removeSub', index, subindex);
       this.local_categories[index].splice(subindex, 1);
     },
+    remove(index) {
+      this.local_categories.splice(index, 1);
+    },
     editSub(index, subindex) {
       console.log('editSub', index, subindex);
       this.pick_category.current_target = {index, subindex};
       this.pick_category.open = true;
+    },
+    addSub(index) {
+      let category = this.local_categories[index];
+      category.push([]);
+      this.pick_category.current_target = {index, subindex: (category.length - 1)}
+      this.pick_category.open = true;
+    },
+    addCategory() {
+      let index = (this.local_categories.push([]) - 1);
+      this.addSub(index);
     },
     close() {
       this.$emit('close');
@@ -172,29 +193,30 @@ export const categoriesEditor = {
       subcategory.splice(0, subcategory.length, ...new_sub)
       this.pick_category.open = false;
     },
-    reload_defaults() {}
-  },
-  data: function() {
-    return {
-      disabled: false,
-      dialog_open: true,
-      pick_category: {
-        open: false,
-        current_target: {index: null, subindex: null},
-        current_id: ""
-      },
-      // TODO:
-      // probably don't need another local copy of categories,
-      // since the one in the parent is also local (not the canonical version)
-      // could just share the array.
-      local_categories: default_categories,
-      category_keys: category_keys,
-      category_tree: category_tree,
-      settings: {
-        subcategory_separator: ':'
-      }
+    reload_defaults() {
+      let default_categories = extend(true, [], this.default_categories);
+      console.log(default_categories);
+      this.local_categories.splice(0, this.local_categories.length, ...default_categories);
     }
   },
+  data: () => ({
+    disabled: false,
+    dialog_open: true,
+    pick_category: {
+      open: false,
+      current_target: {index: null, subindex: null},
+      current_id: ""
+    },
+    // TODO:
+    // probably don't need another local copy of categories,
+    // since the one in the parent is also local (not the canonical version)
+    // could just share the array.
+    local_categories: default_categories,
+    category_tree: category_tree,
+    settings: {
+      subcategory_separator: ':'
+    }
+  }),
   watch: {
     category_keys: function(old, newVal) {
       let newChildren = annotate(newVal);

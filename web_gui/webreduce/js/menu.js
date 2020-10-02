@@ -163,7 +163,10 @@ let template = `
   <categories-editor 
     :dialog="showCategoriesEditor" 
     :categories="categories"
+    :default_categories="default_categories"
+    :category_keys="category_keys"
     @close="showCategoriesEditor=false"
+
     @apply="set_categories">
   </categories-editor>
   
@@ -180,6 +183,8 @@ export const VueMenu = {
     instruments: ["ncnr.refl", "ncnr.sans", "ncnr.vsans"],
     datasources: ["ncnr", "charlotte"],
     categories: [],
+    default_categories: [],
+    category_keys: [],
     select_datasource: "ncnr",
     showNavigation: false,
     showSettingsHelp: false,

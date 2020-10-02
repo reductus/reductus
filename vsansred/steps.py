@@ -92,7 +92,8 @@ def _LoadVSANS(filelist=None, check_timestamps=True):
 
     output (raw[]): all the entries loaded.
 
-    2018-04-29 Brian Maranville
+    | 2018-04-29 Brian Maranville
+    | 2020-10-01 Brian Maranville adding fileinfo to metadata
     """
     from dataflow.fetch import url_get
     from .loader import readVSANSNexuz
@@ -104,19 +105,22 @@ def _LoadVSANS(filelist=None, check_timestamps=True):
         name = basename(path)
         fid = BytesIO(url_get(fileinfo, mtime_check=check_timestamps))
         entries = readVSANSNexuz(name, fid)
-        if fileinfo['path'].endswith("DIV.h5"):
-            print('div file...')
-            for entry in entries:
+        for entry in entries:
+            if fileinfo['path'].endswith("DIV.h5"):
+                print('div file...')
                 entry.metadata['analysis.filepurpose'] = "Sensitivity"
                 entry.metadata['analysis.intent'] = "DIV"
                 entry.metadata['sample.description'] = entry.metadata['run.filename']
+            fi = fileinfo.copy()
+            fi['entries'] = [entry.metadata['entry']]
+            entry.metadata['fileinfo'] = fi
         data.extend(entries)
 
     return data
 
-@cache
+@nocache
 @module
-def LoadVSANS(filelist=None, check_timestamps=True):
+def LoadVSANS(filelist=None, check_timestamps=True, load_data=True):
     """
     loads a data file into a VSansData obj and returns that. (uses cached values)
 
@@ -126,11 +130,14 @@ def LoadVSANS(filelist=None, check_timestamps=True):
     
     check_timestamps (bool): verify that timestamps on file match request
 
+    load_data (bool): include the data in the load
+
     **Returns**
 
     output (raw[]): all the entries loaded.
 
-    2018-10-30 Brian Maranville
+    | 2018-10-30 Brian Maranville
+    | 2020-09-30 Brian Maranville adding option to not load data
     """
 
     from dataflow.calc import process_template
@@ -150,7 +157,7 @@ def LoadVSANS(filelist=None, check_timestamps=True):
     template = Template(**template_def)
     output = []
     for fi in filelist:
-        config = {"0": {"filelist": [fi], "check_timestamps": check_timestamps}}
+        config = {"0": {"filelist": [fi], "check_timestamps": check_timestamps, "load_data": load_data}}
         nodenum = 0
         terminal_id = "output"
         retval = process_template(template, config, target=(nodenum, terminal_id))
@@ -223,7 +230,7 @@ def LoadVSANSHe3(filelist=None, check_timestamps=True):
     return data
 
 
-@cache
+@nocache
 @module
 def LoadVSANSHe3Parallel(filelist=None, check_timestamps=True):
     """
@@ -269,7 +276,7 @@ def LoadVSANSHe3Parallel(filelist=None, check_timestamps=True):
 
     return output
 
-@cache
+@nocache
 @module
 def LoadVSANSDIV(filelist=None, check_timestamps=True):
     """
@@ -378,14 +385,18 @@ def He3_transmission(he3data, trans_panel="auto"):
 
     transmissions (v1d[]): 1d transmissions per cell
 
+    atomic_pols (v1d[]): 1d atomic polarizations per cell
+
     mappings (params[]): cell parameters
 
     | 2018-05-01 Brian Maranville
     | 2020-07-30 Brian Maranville update cell name
+    | 2020-10-01 Brian Maranville add atomic_pol
 
     """
     from .vsansdata import short_detectors, Parameters, VSans1dData,  _toDictItem
     import dateutil.parser
+    import datetime
     from collections import OrderedDict
 
     he3data.sort(key=lambda d:  d.metadata.get("run.instrumentScanID", None))
@@ -411,12 +422,14 @@ def He3_transmission(he3data, trans_panel="auto"):
 
     mappings = OrderedDict()
     previous_transmission = {}
+    previous_scan_id = 0
     for d in he3data:
-        tstart = d.metadata.get("he3_back.starttime", None)
-        if tstart is None:
-            tstart = 0
-        tstart = int(tstart) # coerce strings
-        tstartstr = "{ts:d}".format(ts=tstart)
+        scan_id = d.metadata.get("run.instrumentScanID", 0)
+        cellstart = d.metadata.get("he3_back.starttime", None)
+        if cellstart is None:
+            cellstart = 0
+        cellstart = int(cellstart) # coerce strings
+        cellstartstr = "{ts:d}".format(ts=cellstart)
         tend = dateutil.parser.parse(d.metadata.get("end_time", "1969")).timestamp()
         count_time =  d.metadata['run.rtime']
         monitor_counts = d.metadata['run.moncnt']
@@ -425,28 +438,34 @@ def He3_transmission(he3data, trans_panel="auto"):
         m_det_dis_desired = d.metadata.get("m_det.dis_des", 0)
         f_det_dis_desired = d.metadata.get("f_det.dis_des", 0)
         num_attenuators = d.metadata.get("run.atten", 0)
-        middle_timestamp = (tend - (count_time * 1000.0 / 2.0)) # in milliseconds
+        middle_timestamp = (tend - (count_time / 2.0)) # in seconds
         opacity = d.metadata.get("he3_back.opacity", 0.0)
         wavelength = d.metadata.get("resolution.lmda")
-        mappings.setdefault(tstartstr, {
-            "Insert_time": tstart,
+        Te = d.metadata.get("he3_back.te", 1.0)
+        Mu = opacity*wavelength
+        mappings.setdefault(cellstartstr, {
+            "Insert_time": cellstart,
+            "Insert_datetime": datetime.datetime.fromtimestamp(cellstart/1000).ctime(),
             "Cell_name": _s(d.metadata.get("he3_back.name", "unknown")),
-            "Te": d.metadata.get("he3_back.te", 1.0),
-            "Mu": opacity*wavelength,
+            "Te": Te,
+            "Mu": Mu,
+            "P0": None,
+            "Gamma": None,
             "Transmissions": []
         })
 
         # assume that He3 OUT is measured before He3 IN
-        mapping_trans = mappings[tstartstr]["Transmissions"]
+        mapping_trans = mappings[cellstartstr]["Transmissions"]
         t_key = (m_det_dis_desired, f_det_dis_desired, num_attenuators)
-        if _s(d.metadata.get("he3_back.direction", "UNPOLARIZED")) != "UNPOLARIZED":
+        direction = _s(d.metadata.get("he3_back.direction", "UNPOLARIZED"))
+        if direction != "UNPOLARIZED" and (scan_id - previous_scan_id) == 1:
             p = previous_transmission
             #print('previous transmission: ', p)
             #print(p.get("CellTimeIdentifier", None), tstart,
             #        p.get("m_det_dis_desired", None),  m_det_dis_desired, 
             #        p.get("f_det_dis_desired", None), f_det_dis_desired,
             #        p.get("num_attenuators", None),  num_attenuators)
-            if p.get("CellTimeIdentifier", None) == tstart and \
+            if p.get("CellTimeIdentifier", None) == cellstart and \
                     p.get("m_det_dis_desired", None) == m_det_dis_desired and \
                     p.get("f_det_dis_desired", None) == f_det_dis_desired and \
                     p.get("num_attenuators", None) == num_attenuators:
@@ -469,10 +488,11 @@ def He3_transmission(he3data, trans_panel="auto"):
                 HE3_transmission_OUT = (p["HE3_OUT_counts"] - BlockBeamRate*p["HE3_OUT_count_time"])/p["HE3_OUT_mon"]
                 HE3_transmission = HE3_transmission_IN / HE3_transmission_OUT
                 p['transmission'] = HE3_transmission
+                p['atomic_pol'] = np.arccosh(HE3_transmission / (Te * np.exp(-Mu))) / Mu
                 mapping_trans.append(deepcopy(p))
         else:
             previous_transmission = {
-                "CellTimeIdentifier": tstart,
+                "CellTimeIdentifier": cellstart,
                 "HE3_OUT_file": filename,
                 "HE3_OUT_counts": detector_counts,
                 "HE3_OUT_count_time": count_time,
@@ -481,26 +501,42 @@ def He3_transmission(he3data, trans_panel="auto"):
                 "f_det_dis_desired": f_det_dis_desired,
                 "num_attenuators": num_attenuators
             }
+            previous_scan_id = scan_id
         # catch back-to-back 
 
     bb_out = _toDictItem(list(BlockedBeams.values()))
     trans_1d = []
+    atomic_pol_1d = []
     for m in mappings.values():
         transmissions = []
+        atomic_pols = []
         timestamps = []
         for c in m["Transmissions"]:
             t = c['transmission']
+            ap = c['atomic_pol']
             if t > 0:
                 transmissions.append(t)
+                atomic_pols.append(ap)
                 timestamps.append(c['HE3_IN_timestamp'])
         x = np.array(timestamps)
+        x0 = m['Insert_time']/1000.0
+        xa = (x-x0)/(3600)
         dx = np.zeros_like(x)
         v = np.array(transmissions)
         dv = np.zeros_like(v)
+        va = np.array(atomic_pols)
+        dva = np.zeros_like(va)
+        if (len(timestamps) > 1):
+            ginv, logP = np.polyfit(xa, np.log(va), 1)
+            m['P0'] = np.exp(logP)
+            m['Gamma'] = -1/ginv
+        else:
+            m['P0'] = va[0]
         ordering = np.argsort(x)
-        trans_1d.append(VSans1dData(x[ordering], v[ordering], dx=dx, dv=dv, xlabel="timestamp", vlabel="Transmission", metadata={"title": _s(m["Cell_name"])}))
+        trans_1d.append(VSans1dData(x[ordering] - x0, v[ordering], dx=dx, dv=dv, xlabel="timestamp (s)", vlabel="Transmission", metadata={"title": _s(m["Cell_name"])}))
+        atomic_pol_1d.append(VSans1dData(xa[ordering], va[ordering], dx=dx, dv=dva, xlabel="timestamp (h)", vlabel="Atomic Polarization", metadata={"title": _s(m["Cell_name"])}))
 
-    return he3data, trans_1d, [Parameters({"cells": mappings, "blocked_beams": bb_out})]
+    return he3data, trans_1d, atomic_pol_1d, [Parameters({"cells": mappings, "blocked_beams": bb_out})]
 
 def get_transmission_sum(detectors, panel_name="auto"):
     from .vsansdata import short_detectors
@@ -508,18 +544,16 @@ def get_transmission_sum(detectors, panel_name="auto"):
     if panel_name == 'auto':
         for sn in short_detectors:
             detname = "detector_{sn}".format(sn=sn)
-            if not 'data' in detectors[detname]:
-                counts = 0
-            else:
+            if 'data' in detectors[detname]:
                 counts = detectors[detname]['data']['value'].sum()
-            if counts > total_counts:
-                total_counts = counts
+                if counts > total_counts:
+                    total_counts = counts
     else:
         detname = "detector_{sn}".format(sn=panel_name)
         total_counts = detectors[detname]['data']['value'].sum()
     return total_counts
 
-@cache
+@nocache
 @module
 def patch(data, patches=None):
     """
@@ -527,13 +561,13 @@ def patch(data, patches=None):
 
     **Inputs**
 
-    data (raw[]): datafiles with metadata to patch
+    data (raw): datafiles with metadata to patch
 
     patches (patch_metadata[]:run.filename): patches to be applied, with run.filename used as unique key
 
     **Returns**
 
-    patched (raw[]): datafiles with patched metadata
+    patched (raw): datafiles with patched metadata
 
     2019-07-26 Brian Maranville
     """
@@ -574,7 +608,7 @@ def sort_sample(raw_data):
 
     return blocked_beam
 
-@cache
+@nocache
 @module
 def calculate_XY(raw_data, solid_angle_correction=True):
     """
@@ -582,145 +616,143 @@ def calculate_XY(raw_data, solid_angle_correction=True):
 
     **Inputs**
 
-    raw_data (raw[]): raw datafiles
+    raw_data (raw): raw datafiles
 
     solid_angle_correction (bool): Divide by solid angle
 
     **Returns**
 
-    realspace_data (realspace[]): datafiles with realspace information
+    realspace_data (realspace): datafiles with realspace information
 
     | 2018-04-28 Brian Maranville
     | 2019-09-19 Added monitor normalization
     | 2019-09-22 Separated monitor and dOmega norm
+    | 2020-10-02 Brian Maranville ignore back detector when data missing
     """
     from .vsansdata import VSansDataRealSpace, short_detectors
     from collections import OrderedDict
 
-    output = []
-    for r in raw_data:
-        metadata = deepcopy(r.metadata)
-        monitor_counts = metadata['run.moncnt']
-        new_detectors = OrderedDict()
-        for sn in short_detectors:
-            detname = 'detector_{short_name}'.format(short_name=sn)
-            det = deepcopy(r.detectors[detname])
+    metadata = deepcopy(raw_data.metadata)
+    monitor_counts = metadata['run.moncnt']
+    new_detectors = OrderedDict()
+    for sn in short_detectors:
+        detname = 'detector_{short_name}'.format(short_name=sn)
+        det = deepcopy(raw_data.detectors[detname])
 
-            dimX = int(det['pixel_num_x']['value'][0])
-            dimY = int(det['pixel_num_y']['value'][0])
-            z_offset = det.get('setback', {"value": [0.0]})['value'][0]
-            z = det['distance']['value'][0] + z_offset
+        dimX = int(det['pixel_num_x']['value'][0])
+        dimY = int(det['pixel_num_y']['value'][0])
+        z_offset = det.get('setback', {"value": [0.0]})['value'][0]
+        z = det['distance']['value'][0] + z_offset
 
-            if sn == "B":
-                # special handling for back detector
-                total = det['integrated_count']['value'][0]
-                if total < 1:
-                    # don't load the back detector if it has no counts (turned off)
-                    continue
-                beam_center_x_pixels = det['beam_center_x']['value'][0] # in pixels
-                beam_center_y_pixels = det['beam_center_y']['value'][0]
+        if sn == "B":
+            # special handling for back detector
+            total = det['integrated_count']['value'][0] if 'integrated_count' in det else 0
+            if total < 1:
+                # don't load the back detector if it has no counts (turned off)
+                continue
+            beam_center_x_pixels = det['beam_center_x']['value'][0] # in pixels
+            beam_center_y_pixels = det['beam_center_y']['value'][0]
 
-                cal_x = det['cal_x']['value'] # in cm
-                cal_y = det['cal_y']['value']
+            cal_x = det['cal_x']['value'] # in cm
+            cal_y = det['cal_y']['value']
 
-                x_pixel_size = cal_x[0] # cm
-                y_pixel_size = cal_y[0] # cm
+            x_pixel_size = cal_x[0] # cm
+            y_pixel_size = cal_y[0] # cm
 
-                beam_center_x = x_pixel_size * beam_center_x_pixels
-                beam_center_y = y_pixel_size * beam_center_y_pixels
+            beam_center_x = x_pixel_size * beam_center_x_pixels
+            beam_center_y = y_pixel_size * beam_center_y_pixels
 
-                # lateral_offset = det['lateral_offset']['value'][0] # # already cm
-                realDistX =  0.5 * x_pixel_size
-                realDistY =  0.5 * y_pixel_size
+            # lateral_offset = det['lateral_offset']['value'][0] # # already cm
+            realDistX =  0.5 * x_pixel_size
+            realDistY =  0.5 * y_pixel_size
 
-                data = det['data']['value']
-                if 'linear_data_error' in det and 'value' in det['linear_data_error']:
-                    data_variance = np.sqrt(det['linear_data_error']['value'])
-                else:
-                    data_variance = data
-                udata = Uncertainty(data, data_variance)
+            data = det['data']['value']
+            if 'linear_data_error' in det and 'value' in det['linear_data_error']:
+                data_variance = np.sqrt(det['linear_data_error']['value'])
+            else:
+                data_variance = data
+            udata = Uncertainty(data, data_variance)
+
+        else:
+            
+            orientation = det['tube_orientation']['value'][0].decode().upper()
+            coeffs = det['spatial_calibration']['value']
+            lateral_offset = 0
+            vertical_offset = 0
+            beam_center_x = det['beam_center_x']['value'][0]
+            beam_center_y = det['beam_center_y']['value'][0]
+            panel_gap = det['panel_gap']['value'][0]/10.0 # mm to cm
+            if (orientation == "VERTICAL"):
+                x_pixel_size = det['x_pixel_size']['value'][0] / 10.0 # mm to cm
+                y_pixel_size = coeffs[1][0] / 10.0 # mm to cm 
+                lateral_offset = det['lateral_offset']['value'][0] # # already cm
 
             else:
+                x_pixel_size = coeffs[1][0] / 10.0
+                y_pixel_size = det['y_pixel_size']['value'][0] / 10.0 # mm to cm
+                vertical_offset = det['vertical_offset']['value'][0] # already cm
+
+            #solid_angle_correction = z*z / 1e6
+            data = det['data']['value']
+            if 'linear_data_error' in det and 'value' in det['linear_data_error']:
+                data_variance = np.sqrt(det['linear_data_error']['value'])
+            else:
+                data_variance = data
+            udata = Uncertainty(data, data_variance)
+            position_key = sn[-1]
+            if position_key == 'T':
+                # FROM IGOR: (q,p = 0 for lower-left pixel) 
+                # if(cmpstr("T",detStr[1]) == 0)
+                #   data_realDistY[][] = tube_width*(q+1/2) + offset + gap/2		
+                #   data_realDistX[][] = coefW[0][q] + coefW[1][q]*p + coefW[2][q]*p*p
+                realDistX =  coeffs[0][0]/10.0 # to cm
+                realDistY =  0.5 * y_pixel_size + vertical_offset + panel_gap/2.0
+            
+            elif position_key == 'B':
+                # FROM IGOR: (q,p = 0 for lower-left pixel) 
+                # if(cmpstr("B",detStr[1]) == 0)
+                #   data_realDistY[][] = offset - (dimY - q - 1/2)*tube_width - gap/2
+                #   data_realDistX[][] = coefW[0][q] + coefW[1][q]*p + coefW[2][q]*p*p
+                realDistX =  coeffs[0][0]/10.0
+                realDistY =  vertical_offset - (dimY - 0.5)*y_pixel_size - panel_gap/2.0
                 
-                orientation = det['tube_orientation']['value'][0].decode().upper()
-                coeffs = det['spatial_calibration']['value']
-                lateral_offset = 0
-                vertical_offset = 0
-                beam_center_x = det['beam_center_x']['value'][0]
-                beam_center_y = det['beam_center_y']['value'][0]
-                panel_gap = det['panel_gap']['value'][0]/10.0 # mm to cm
-                if (orientation == "VERTICAL"):
-                    x_pixel_size = det['x_pixel_size']['value'][0] / 10.0 # mm to cm
-                    y_pixel_size = coeffs[1][0] / 10.0 # mm to cm 
-                    lateral_offset = det['lateral_offset']['value'][0] # # already cm
-
-                else:
-                    x_pixel_size = coeffs[1][0] / 10.0
-                    y_pixel_size = det['y_pixel_size']['value'][0] / 10.0 # mm to cm
-                    vertical_offset = det['vertical_offset']['value'][0] # already cm
-
-                #solid_angle_correction = z*z / 1e6
-                data = det['data']['value']
-                if 'linear_data_error' in det and 'value' in det['linear_data_error']:
-                    data_variance = np.sqrt(det['linear_data_error']['value'])
-                else:
-                    data_variance = data
-                udata = Uncertainty(data, data_variance)
-                position_key = sn[-1]
-                if position_key == 'T':
-                    # FROM IGOR: (q,p = 0 for lower-left pixel) 
-                    # if(cmpstr("T",detStr[1]) == 0)
-                    #   data_realDistY[][] = tube_width*(q+1/2) + offset + gap/2		
-                    #   data_realDistX[][] = coefW[0][q] + coefW[1][q]*p + coefW[2][q]*p*p
-                    realDistX =  coeffs[0][0]/10.0 # to cm
-                    realDistY =  0.5 * y_pixel_size + vertical_offset + panel_gap/2.0
+            elif position_key == 'L':
+                # FROM IGOR: (q,p = 0 for lower-left pixel) 
+                # if(cmpstr("L",detStr[1]) == 0)
+                #   data_realDistY[][] = coefW[0][p] + coefW[1][p]*q + coefW[2][p]*q*q
+                #   data_realDistX[][] = offset - (dimX - p - 1/2)*tube_width - gap/2
+                realDistX =  lateral_offset - (dimX - 0.5)*x_pixel_size - panel_gap/2.0
+                realDistY =  coeffs[0][0]/10.0
                 
-                elif position_key == 'B':
-                    # FROM IGOR: (q,p = 0 for lower-left pixel) 
-                    # if(cmpstr("B",detStr[1]) == 0)
-                    #   data_realDistY[][] = offset - (dimY - q - 1/2)*tube_width - gap/2
-                    #   data_realDistX[][] = coefW[0][q] + coefW[1][q]*p + coefW[2][q]*p*p
-                    realDistX =  coeffs[0][0]/10.0
-                    realDistY =  vertical_offset - (dimY - 0.5)*y_pixel_size - panel_gap/2.0
-                    
-                elif position_key == 'L':
-                    # FROM IGOR: (q,p = 0 for lower-left pixel) 
-                    # if(cmpstr("L",detStr[1]) == 0)
-                    #   data_realDistY[][] = coefW[0][p] + coefW[1][p]*q + coefW[2][p]*q*q
-                    #   data_realDistX[][] = offset - (dimX - p - 1/2)*tube_width - gap/2
-                    realDistX =  lateral_offset - (dimX - 0.5)*x_pixel_size - panel_gap/2.0
-                    realDistY =  coeffs[0][0]/10.0
-                    
-                elif position_key == 'R':
-                    # FROM IGOR: (q,p = 0 for lower-left pixel) 
-                    #   data_realDistY[][] = coefW[0][p] + coefW[1][p]*q + coefW[2][p]*q*q
-                    #   data_realDistX[][] = tube_width*(p+1/2) + offset + gap/2
-                    realDistX =  x_pixel_size*(0.5) + lateral_offset + panel_gap/2.0
-                    realDistY =  coeffs[0][0]/10.0
+            elif position_key == 'R':
+                # FROM IGOR: (q,p = 0 for lower-left pixel) 
+                #   data_realDistY[][] = coefW[0][p] + coefW[1][p]*q + coefW[2][p]*q*q
+                #   data_realDistX[][] = tube_width*(p+1/2) + offset + gap/2
+                realDistX =  x_pixel_size*(0.5) + lateral_offset + panel_gap/2.0
+                realDistY =  coeffs[0][0]/10.0
 
-            #x_pos = size_x/2.0 # place panel with lower-right corner at center of view
-            #y_pos = size_y/2.0 # 
-            x0_pos = realDistX - beam_center_x # then move it the 'real' distance away from the origin,
-            y0_pos = realDistY - beam_center_y # which is the beam center
+        #x_pos = size_x/2.0 # place panel with lower-right corner at center of view
+        #y_pos = size_y/2.0 # 
+        x0_pos = realDistX - beam_center_x # then move it the 'real' distance away from the origin,
+        y0_pos = realDistY - beam_center_y # which is the beam center
 
-            #metadata['det_' + short_name + '_x0_pos'] = x0_pos
-            #metadata['det_' + short_name + '_y0_pos'] = y0_pos
-            X,Y = np.indices((dimX, dimY))
-            X = X * x_pixel_size + x0_pos
-            Y = Y * y_pixel_size + y0_pos
-            det['data'] = udata
-            det['X'] = X
-            det['dX'] = x_pixel_size
-            det['Y'] = Y
-            det['dY'] = y_pixel_size
-            det['Z'] = z
-            det['dOmega'] = x_pixel_size * y_pixel_size / z**2
-            if solid_angle_correction:
-                det['data'] /= det['dOmega']
+        #metadata['det_' + short_name + '_x0_pos'] = x0_pos
+        #metadata['det_' + short_name + '_y0_pos'] = y0_pos
+        X,Y = np.indices((dimX, dimY))
+        X = X * x_pixel_size + x0_pos
+        Y = Y * y_pixel_size + y0_pos
+        det['data'] = udata
+        det['X'] = X
+        det['dX'] = x_pixel_size
+        det['Y'] = Y
+        det['dY'] = y_pixel_size
+        det['Z'] = z
+        det['dOmega'] = x_pixel_size * y_pixel_size / z**2
+        if solid_angle_correction:
+            det['data'] /= det['dOmega']
 
-            new_detectors[detname] = det
-        output.append(VSansDataRealSpace(metadata=metadata, detectors=new_detectors))
-
+        new_detectors[detname] = det
+    output = VSansDataRealSpace(metadata=metadata, detectors=new_detectors)
     return output
 
 @cache
@@ -841,56 +873,53 @@ def correct_detector_sensitivity(data, sensitivity, exclude_back_detector=True):
     return new_data
 
 
-@cache
+@nocache
 @module   
 def calculate_Q(realspace_data):
     """
     Calculates Q values (Qx, Qy) from realspace coordinates and wavelength
      **Inputs**
 
-    realspace_data (realspace[]): datafiles in realspace X,Y coordinates
+    realspace_data (realspace): datafiles in realspace X,Y coordinates
 
     **Returns**
 
-    QxQy_data (qspace[]): datafiles with Q information
+    QxQy_data (qspace): datafiles with Q information
 
     2018-04-27 Brian Maranville
     """
     from .vsansdata import VSansDataQSpace, short_detectors
     from collections import OrderedDict
 
-    output = []
-    for rd in realspace_data:
-        metadata = deepcopy(rd.metadata)
-        wavelength = metadata['resolution.lmda']
-        delta_wavelength = metadata['resolution.dlmda']
-        new_detectors = OrderedDict()
-        #print(r.detectors)
-        for sn in short_detectors:
-            detname = 'detector_{short_name}'.format(short_name=sn)
-            if not detname in rd.detectors:
-                continue
-            det = deepcopy(rd.detectors[detname])
-            X = det['X']
-            Y = det['Y']
-            z = det['Z']
-            r = np.sqrt(X**2+Y**2)
-            theta = np.arctan2(r, z)/2 #remember to convert L2 to cm from meters
-            q = (4*np.pi/wavelength)*np.sin(theta)
-            phi = np.arctan2(Y, X)
-            # need to add qz... and qx and qy are really e.g. q*cos(theta)*sin(alpha)...
-            # qz = q * sin(theta)
-            qx = q * np.cos(theta) * np.cos(phi)
-            qy = q * np.cos(theta) * np.sin(phi)
-            qz = q * np.sin(theta)
-            det['Qx'] = qx
-            det['Qy'] = qy
-            det['Qz'] = qz
-            det['Q'] = q
-            new_detectors[detname] = det
+    metadata = deepcopy(realspace_data.metadata)
+    wavelength = metadata['resolution.lmda']
+    delta_wavelength = metadata['resolution.dlmda']
+    new_detectors = OrderedDict()
+    #print(r.detectors)
+    for sn in short_detectors:
+        detname = 'detector_{short_name}'.format(short_name=sn)
+        if not detname in realspace_data.detectors:
+            continue
+        det = deepcopy(realspace_data.detectors[detname])
+        X = det['X']
+        Y = det['Y']
+        z = det['Z']
+        r = np.sqrt(X**2+Y**2)
+        theta = np.arctan2(r, z)/2 #remember to convert L2 to cm from meters
+        q = (4*np.pi/wavelength)*np.sin(theta)
+        phi = np.arctan2(Y, X)
+        # need to add qz... and qx and qy are really e.g. q*cos(theta)*sin(alpha)...
+        # qz = q * sin(theta)
+        qx = q * np.cos(theta) * np.cos(phi)
+        qy = q * np.cos(theta) * np.sin(phi)
+        qz = q * np.sin(theta)
+        det['Qx'] = qx
+        det['Qy'] = qy
+        det['Qz'] = qz
+        det['Q'] = q
+        new_detectors[detname] = det
 
-        output.append(VSansDataQSpace(metadata=metadata, detectors=new_detectors))
-
+    output = VSansDataQSpace(metadata=metadata, detectors=new_detectors)
     return output
 
 

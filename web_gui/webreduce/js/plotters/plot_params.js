@@ -38,7 +38,7 @@ export function show_plots_params(plotdata, plot_controls, target, old_plot) {
     let treedata = JSON_to_tree('#', d);
     var tree = new Tree(this, {
       data: [treedata],
-      //closeDepth: -1,
+      closeDepth: 2,
       itemClickToggle: 'closed'
     });
   });
@@ -57,7 +57,7 @@ function JSON_to_tree(name, value, id = 0) {
   if (value == null) {
     return {
       id: id++,
-      text: label + `<span class="json_null">null</span>`
+      text: label + `<span class="json_null json_item">null</span>`
     }
   }
   else if (Array.isArray(value)) {
@@ -65,12 +65,12 @@ function JSON_to_tree(name, value, id = 0) {
       id: id++,
     }
     if (value.length > 0) {
-      let value_el = `<span class="json_array">Array(${value.length})</span>`
+      let value_el = `<span class="json_array json_item">Array(${value.length})</span>`
       return_obj.text = label + value_el;
       return_obj.children = value.map(function (v, n) { return JSON_to_tree(n, v, id) });
     }
     else {
-      return_obj.text = label + `<span class="json_array"> []</span>`;
+      return_obj.text = label + `<span class="json_array json_item"> []</span>`;
     }
     return return_obj;
   }
@@ -84,20 +84,20 @@ function JSON_to_tree(name, value, id = 0) {
       return_obj.children = entries.map(function (nv) { return JSON_to_tree(nv[0], nv[1], id) });
     }
     else {
-      return_obj.text = label + `<span class="json_array"> {}</span>`;
+      return_obj.text = label + `<span class="json_array json_item"> {}</span>`;
     }
     return return_obj;
   }
   else if (typeof (value) == "number") {
     return {
       id: id++,
-      text: label + `<span class="json_number">${value}</span>`
+      text: label + `<span class="json_number json_item">${value}</span>`
     }
   }
   else if (typeof (value) == "string") {
     return {
       id: id++,
-      text: label + `<span class="json_string">${value}</span>`
+      text: label + `<span class="json_string json_item">${value}</span>`
     }
   }
 }

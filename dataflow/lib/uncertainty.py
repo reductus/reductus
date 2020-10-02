@@ -445,6 +445,8 @@ class Uncertainty(object):
         return _U(*err1d.log(self.x, self.variance))
     def exp(self):
         return _U(*err1d.exp(self.x, self.variance))
+    def sqrt(self):
+        return _U(*err1d.sqrt(self.x, self.variance))
     def sin(self):
         return _U(*err1d.sin(self.x, self.variance))
     def cos(self):
@@ -468,6 +470,7 @@ mean = np.mean
 #average = np.average   ## np.average(x) does not call x.average()
 log = np.log
 exp = np.exp
+sqrt = np.sqrt
 sin = np.sin
 cos = np.cos
 tan = np.tan
@@ -519,6 +522,32 @@ def smooth(x, xp, fp, degree=2, span=5):
         # TODO: smooth with extrapolate, but interp will not.
         return interp(x, xp, fp)
 
+def polyfit(x, y, deg, rcond=None, full=False, w=None, cov=False):
+    """
+    Like numpy.polyfit, but uses uncertainty as the default weight and returns
+    coeffients with uncertainty.
+
+    Does not support *full=True*.
+    """
+    if full:
+        raise NotImplementedError("full=True not supported")
+
+    xvar = getattr(x, 'variance', None)
+    if xvar is not None:
+        if (xvar != 0.).any():
+            raise NotImplementedError("Errors in variables not yet supported")
+        xval = x.x
+    else:
+        xval = x
+    yval, yerr = y.x, y.dx
+
+    if w is None:
+        w = 1/yerr
+
+    p, V = np.polyfit(xval, yval, deg, rcond=rcond, full=False, w=w, cov=True)
+    pvar = np.diagonal(V, axis1=0, axis2=1)
+    coeff = _U(p, pvar)
+    return (coeff, V) if cov else coeff
 
 def test():
     a = Uncertainty(5, 3)
@@ -641,6 +670,14 @@ def test():
     z = interp([2.5, 3., 3.5], xp, fp)
     assert np.linalg.norm(z.x - [2, 3, 2]) < 2e-15
     assert np.linalg.norm(z.variance - [0.05, 0.04, 0.05]) < 2e-15
+
+    # Make sure polyfit is called with uncertainties
+    xp = np.array([1., 2., 3., 4.])
+    fp = Uncertainty(np.array([1., 3., 3., 3.]), np.array([0.04, 0.16, 0.04, 0.16]))
+    p, C = polyfit(xp, fp, 1, cov=True)
+    np_p, np_C = np.polyfit(xp, fp.x, 1, w=1/fp.dx, cov=True)
+    assert np.linalg.norm(p.x - np_p) < 2e-15
+    assert np.linalg.norm(p.variance - np.diagonal(np_C)) < 2e-15
 
 if __name__ == "__main__":
     test()

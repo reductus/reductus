@@ -90,6 +90,7 @@ he3_metadata_lookup = OrderedDict([
     ("he3_back.te", "DAS_logs/backPolarization/glassTransmission"),
     ("he3_back.direction", "DAS_logs/backPolarization/direction"),
     ("run.instrumentScanID", "DAS_logs/trajectory/instrumentScanID"),
+    ("run.instFileNum", "DAS_logs/trajectoryData/instFileNum"),
     ("run.rtime", "control/count_time"),
     ("run.moncnt", "control/monitor_counts"),
     ("run.atten", "instrument/attenuator/num_atten_dropped"),
@@ -148,10 +149,12 @@ def data_as(field, units):
         value = converter(field.value, units)
         return value
 
-def load_detector(dobj):
+def load_detector(dobj, load_data=True):
     # load detector information from a NeXuS group
     detector = OrderedDict()
     for k in dobj:
+        if not load_data and k == 'data':
+            continue
         subobj = dobj[k]
         detector[k] = OrderedDict(value=subobj[()], attrs=OrderedDict(_toDictItem(subobj.attrs)))
         if hasattr(subobj, 'shape'):
@@ -182,7 +185,7 @@ def load_metadata(entry, multiplicity=1, i=1, metadata_lookup=metadata_lookup, u
             metadata[mkey] = field
     return metadata
 
-def readVSANSNexuz(input_file, file_obj=None, metadata_lookup=metadata_lookup):
+def readVSANSNexuz(input_file, file_obj=None, metadata_lookup=metadata_lookup, load_data=True):
     """
     Load all entries from the NeXus file into sans data sets.
     """
@@ -204,7 +207,7 @@ def readVSANSNexuz(input_file, file_obj=None, metadata_lookup=metadata_lookup):
             metadata = load_metadata(entry, multiplicity, i, metadata_lookup=metadata_lookup, unit_specifiers=unit_specifiers)
             #print(metadata)
             detector_keys = [n for n in entry['instrument'] if n.startswith('detector_')]
-            detectors = dict([(k, load_detector(entry['instrument'][k])) for k in detector_keys])
+            detectors = dict([(k, load_detector(entry['instrument'][k], load_data=load_data)) for k in detector_keys])
             metadata['entry'] = entryname
             if metadata.get('sample.labl', None) is not None and metadata.get('run.configuration', None) is not None:
                 metadata['sample.description'] = _s(metadata["sample.labl"]).replace(_s(metadata["run.configuration"]), "")

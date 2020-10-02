@@ -21,6 +21,10 @@ from __future__ import division  # Get true division
 
 import numpy as np
 
+# TODO: use numba for faster vector processing
+# Most operations can be done in-place with one pass through the data saving
+# both time and memory while being simpler to code.
+
 def mean(X, varX, biased=True, axis=None, dtype=None, out=(None, None), keepdims=False):
     # type: (np.ndarray, np.ndarray, bool) -> (float, float)
     r"""
@@ -184,6 +188,16 @@ def add(X, varX, Y, varY):
     varZ = varX + varY
     return Z, varZ
 
+def sqrt(X, varX):
+    """Square root with error propagation"""
+    # Direct algorithm
+    #   Z = X**n = sqrt(X)
+    #   varZ = n*n * varX/X**2 * Z**2 = varX/(4*X)
+    # Indirect algorithm to minimize intermediates
+    Z = np.sqrt(X)
+    varZ = varX/X
+    varZ /= 4
+    return Z, varZ
 
 def exp(X, varX):
     """Exponentiation with error propagation"""
@@ -407,6 +421,7 @@ def test_against_uncertainties_package():
 
     _check_unary(exp, umath.exp(ux))
     _check_unary(log, umath.log(ux))
+    _check_unary(sqrt, umath.sqrt(ux))
     _check_unary(sin, umath.sin(ux))
     _check_unary(cos, umath.cos(ux))
     _check_unary(tan, umath.tan(ux))
