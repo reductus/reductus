@@ -47,7 +47,11 @@ class RawVSANSData(object):
 
     def get_plottable(self):
         #return {"entry": "entry", "type": "params", "params": _toDictItem(self.metadata)}
-        return {"entry": "entry", "type": "metadata", "values": _toDictItem(self.metadata, convert_bytes=True)}
+        to_exclude = ["fileinfo"]
+        metadata = self.metadata.copy()
+        for key in to_exclude:
+            metadata.pop(key, None)
+        return {"entry": "entry", "type": "metadata", "values": _toDictItem(metadata, convert_bytes=True)}
 
     def get_metadata(self):
         return _toDictItem(self.metadata, convert_bytes=True)
