@@ -540,12 +540,10 @@ def get_transmission_sum(detectors, panel_name="auto"):
     if panel_name == 'auto':
         for sn in short_detectors:
             detname = "detector_{sn}".format(sn=sn)
-            if not 'data' in detectors[detname]:
-                counts = 0
-            else:
+            if 'data' in detectors[detname]:
                 counts = detectors[detname]['data']['value'].sum()
-            if counts > total_counts:
-                total_counts = counts
+                if counts > total_counts:
+                    total_counts = counts
     else:
         detname = "detector_{sn}".format(sn=panel_name)
         total_counts = detectors[detname]['data']['value'].sum()
