@@ -92,7 +92,8 @@ def _LoadVSANS(filelist=None, check_timestamps=True):
 
     output (raw[]): all the entries loaded.
 
-    2018-04-29 Brian Maranville
+    | 2018-04-29 Brian Maranville
+    | 2020-10-01 Brian Maranville adding fileinfo to metadata
     """
     from dataflow.fetch import url_get
     from .loader import readVSANSNexuz
@@ -104,12 +105,15 @@ def _LoadVSANS(filelist=None, check_timestamps=True):
         name = basename(path)
         fid = BytesIO(url_get(fileinfo, mtime_check=check_timestamps))
         entries = readVSANSNexuz(name, fid)
-        if fileinfo['path'].endswith("DIV.h5"):
-            print('div file...')
-            for entry in entries:
+        for entry in entries:
+            if fileinfo['path'].endswith("DIV.h5"):
+                print('div file...')
                 entry.metadata['analysis.filepurpose'] = "Sensitivity"
                 entry.metadata['analysis.intent'] = "DIV"
                 entry.metadata['sample.description'] = entry.metadata['run.filename']
+            fi = fileinfo.copy()
+            fi['entries'] = [entry.metadata['entry']]
+            entry.metadata['fileinfo'] = fi
         data.extend(entries)
 
     return data
@@ -643,7 +647,7 @@ def calculate_XY(raw_data, solid_angle_correction=True):
 
             if sn == "B":
                 # special handling for back detector
-                total = det['integrated_count']['value'][0]
+                total = det['integrated_count']['value'][0] if 'integrated_count' in det else 0
                 if total < 1:
                     # don't load the back detector if it has no counts (turned off)
                     continue
