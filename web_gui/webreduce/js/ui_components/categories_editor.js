@@ -140,7 +140,8 @@ export const categoriesEditor = {
       default: false
     },
     categories: Array,
-    default_categories: Array
+    default_categories: Array,
+    category_keys: Array
   },
   methods: {
     removeSub(index, subindex) {
@@ -211,7 +212,6 @@ export const categoriesEditor = {
     // since the one in the parent is also local (not the canonical version)
     // could just share the array.
     local_categories: default_categories,
-    category_keys: category_keys,
     category_tree: category_tree,
     settings: {
       subcategory_separator: ':'

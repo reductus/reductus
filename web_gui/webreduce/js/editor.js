@@ -958,5 +958,9 @@ editor.load_metadata = async function(files_metadata, datasource, path) {
   });
   
   editor._datafiles = results;
+  try {
+    vueMenu.instance.category_keys = get_all_keys(results[0]["values"][0])
+  }
+  catch(e) {}
   return file_objs;
 }

@@ -164,6 +164,7 @@ let template = `
     :dialog="showCategoriesEditor" 
     :categories="categories"
     :default_categories="default_categories"
+    :category_keys="category_keys"
     @close="showCategoriesEditor=false"
 
     @apply="set_categories">
@@ -183,6 +184,7 @@ export const VueMenu = {
     datasources: ["ncnr", "charlotte"],
     categories: [],
     default_categories: [],
+    category_keys: [],
     select_datasource: "ncnr",
     showNavigation: false,
     showSettingsHelp: false,
