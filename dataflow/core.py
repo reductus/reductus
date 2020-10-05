@@ -309,10 +309,17 @@ class Module(object):
     def visible(self):
         return not hasattr(self.action, 'visible') or self.action.visible
 
+    @property
+    def parallel(self):
+        # note that the value of this should be false, or a string value 
+        # if it is a string, it is the name of the input 
+        # over which the operation can be parallelized.
+        return not hasattr(self.action, 'parallel') or self.action.parallel
+
     def __getstate__(self):
         # Don't pickle the function reference
-        keys = ['version', 'id', 'name', 'description', 'icon',
-                'fields', 'inputs', 'outputs', 'action_id', 'visible']
+        keys = ['version', 'id', 'name', 'description', 'icon', 'fields',
+                'inputs', 'outputs', 'action_id', 'visible', 'parallel']
         return dict([(k, getattr(self, k)) for k in keys])
 
     def __setstate__(self, state):
