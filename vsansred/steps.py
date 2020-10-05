@@ -75,6 +75,16 @@ def hidden(action):
     action.visible = False
     return action
 
+def parallel(input_id):
+    """
+    Decorator which indicates method can be parallelized over given input name
+    """
+    def decorate(action):
+        action.parallel = input_id
+        return action
+        
+    return decorate
+
 @cache
 @module
 @hidden
@@ -118,7 +128,8 @@ def _LoadVSANS(filelist=None, check_timestamps=True):
 
     return data
 
-@nocache
+@cache
+@parallel("filelist")
 @module
 def LoadVSANS(filelist=None, check_timestamps=True, load_data=True):
     """
