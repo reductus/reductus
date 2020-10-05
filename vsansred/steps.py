@@ -82,7 +82,7 @@ def parallel(input_id):
     def decorate(action):
         action.parallel = input_id
         return action
-        
+
     return decorate
 
 @cache
@@ -564,7 +564,8 @@ def get_transmission_sum(detectors, panel_name="auto"):
         total_counts = detectors[detname]['data']['value'].sum()
     return total_counts
 
-@nocache
+@cache
+@parallel("data")
 @module
 def patch(data, patches=None):
     """
@@ -619,7 +620,8 @@ def sort_sample(raw_data):
 
     return blocked_beam
 
-@nocache
+@cache
+@parallel("raw_data")
 @module
 def calculate_XY(raw_data, solid_angle_correction=True):
     """
@@ -884,7 +886,8 @@ def correct_detector_sensitivity(data, sensitivity, exclude_back_detector=True):
     return new_data
 
 
-@nocache
+@cache
+@parallel("realspace_data")
 @module   
 def calculate_Q(realspace_data):
     """

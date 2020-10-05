@@ -173,6 +173,7 @@ window.onload = async function () {
 
   editor.create_instance("bottom_panel");
   app_header.create_instance("app_header");
+  window.app_header = app_header;
   app_header.instance.$on("toggle-menu", () => {
     vueMenu.instance.showNavigation = !vueMenu.instance.showNavigation
   });

@@ -199,7 +199,80 @@ editor.advance_to_output = function() {
   module_clicked_single();
 }
 
-function module_clicked_single() {
+function get_parallel(template, module_index) {
+  // determine if a module's outputs can be calculated in parallel
+  
+  // first, check if the module in question is marked as parallelizable:
+  let module = template.modules[module_index];
+  let module_def = editor._module_defs[module.module];
+  if (!module_def.parallel) {
+    return false
+  }
+  else {
+    let parallel_field = module_def.fields.find((f) => (f.id == module_def.parallel));
+    let parallel_input = module_def.inputs.find((i) => (i.id == module_def.parallel));
+    // if the module is parallel for a field (usually a fileinfo), then return that!
+    if (parallel_field) {
+      return [module_index, parallel_field.id];
+    }
+    else if (parallel_input) {
+      let parallel_source_wires = template.wires.filter((w) => (
+        w.target[0] == module_index && w.target[1] == parallel_input.id
+      ))
+      if (parallel_source_wires.length == 1) {
+        let source_module = parallel_source_wires[0].source[0];
+        return get_parallel(template, source_module);
+      }
+      else if (parallel_source_wires.length > 1) {
+        console.warn("multiple wires to parallelizable input - it will not be parallelized:", module_def.name, module_index, parallel_input);
+        return false
+      }
+      else {
+        // no sources wired in
+        console.warn("no wires to parallelizable input - it will not be parallelized:", module_def.name, module_index, parallel_input);
+        return false
+      }
+
+    }
+    else {
+      console.warn("module marked as parallelizable but no matching fields or inputs to:", parallel, module_def, module_index);
+      return false 
+    }
+  }
+}
+
+function parallelize(calc_params_list) {
+  // for a list of arguments to editor.calculate, convert to an array of parallel calculations if possible
+  return calc_params_list.map((calc_params) => {
+    let {template, node} = calc_params;
+    let parallelizable = get_parallel(template, node);
+    if (!parallelizable) {
+      return [calc_params]
+    }
+    else {
+      let [module_index, terminal_id] = parallelizable;
+      let module = template.modules[module_index];
+      let module_def = editor._module_defs[module.module];
+      let field_default = module_def.fields.find((f) => (f.id == terminal_id)).default;
+      let a = module.config[terminal_id];
+      if (!a) {
+        return [calc_params];
+      }
+      else {
+        let parallelized = a.map((v) => {
+          // do some shallow copies along the relevant object path
+          let params_copy = extend(true, {}, calc_params);
+          params_copy.template.modules[module_index].config[terminal_id] = [v];
+          return params_copy;
+        });
+        console.log(parallelized);
+        return parallelized;
+      }
+    }
+  })
+}
+
+async function module_clicked_single() {
   app.show_fields();
   var active_template = editor._active_template;
   var editor_select = d3.select("#" + editor._target_id);
@@ -220,40 +293,40 @@ function module_clicked_single() {
     terminals_to_calculate.push(data_to_show);
   }
   let recalc_mtimes = app.settings.check_mtimes.value;
-  let params_to_calc = terminals_to_calculate.map(function(terminal_id) {
-    return {template: active_template, config: {}, node: i, terminal: terminal_id, return_type: "plottable"}
-  })
-  editor.calculate(params_to_calc, recalc_mtimes)
-    .then(function(results) {
-    var inputs_map = {};
-    var id;
-    results.forEach(function(r, ii) {
-      id = terminals_to_calculate[ii];
-      inputs_map[id] = r;
-    })
-    return inputs_map
-  }).then(async function(im) {
-    var datasets_in = im[data_to_show];
-    var field_inputs = module_def.inputs
-      .filter(function(d) {return /\.params$/.test(d.datatype)})
-      .map(function(d) {return im[d.id]});
-    field_inputs.forEach(function(d) {
-      d.values.forEach(function(v) {
-        extend(true, fields_in, v.params);
-      });
+  let inputs_map = {};
+  for (let term_id of terminals_to_calculate) {
+    let calc_params = {template: active_template, config: {}, node: i, terminal: term_id, return_type: "plottable"}
+    //let parallelized = parallelize([calc_params]);
+    let results = await editor.calculate([calc_params]);
+    /*
+    let reduced_results = results.reduce((accumulator, current) => { 
+      current.values = accumulator.values.concat(current.values); 
+      return current 
+    }, {values: []});
+    */
+    inputs_map[term_id] = results;
+  }
+
+  let datasets_in = inputs_map[data_to_show];
+  let field_inputs = module_def.inputs
+    .filter(function(d) {return /\.params$/.test(d.datatype)})
+    .map(function(d) {return inputs_map[d.id]});
+  field_inputs.forEach(function(d) {
+    d.values.forEach(function(v) {
+      extend(true, fields_in, v.params);
     });
-    await editor.show_plots([datasets_in]);
-    fieldUI.instance.num_datasets_in = ((datasets_in || {}).values || []).length;
-    fieldUI.instance.module = active_module;
-    fieldUI.instance.reset_local_config();
-
-    fieldUI.instance.module_id = i;
-    fieldUI.instance.terminal_id = data_to_show;
-    fieldUI.instance.module_def = module_def;
-    fieldUI.instance.timestamp = Date.now();
-
-    fieldUI.instance.auto_accept = app.settings.auto_accept;
   });
+  await editor.show_plots([datasets_in]);
+  fieldUI.instance.num_datasets_in = ((datasets_in || {}).values || []).length;
+  fieldUI.instance.module = active_module;
+  fieldUI.instance.reset_local_config();
+
+  fieldUI.instance.module_id = i;
+  fieldUI.instance.terminal_id = data_to_show;
+  fieldUI.instance.module_def = module_def;
+  fieldUI.instance.timestamp = Date.now();
+
+  fieldUI.instance.auto_accept = app.settings.auto_accept;
 }
 
 editor.module_clicked_single = module_clicked_single;
@@ -610,7 +683,7 @@ async function calculate_one(params, caching) {
   return r
 }
 
-editor.calculate = async function(params, recalc_mtimes, noblock, result_callback) {
+editor.calculate = async function(params, recalc_mtimes, noblock, result_callback, parallel=true) {
   //var recalc_mtimes = $("#auto_reload_mtimes").prop("checked");
   // call result_callback on each result individually (this function will return all results
   // if you want to act on the aggregate after)
@@ -636,21 +709,26 @@ editor.calculate = async function(params, recalc_mtimes, noblock, result_callbac
     if (recalc_mtimes) {
       await Promise.race([cancel_promise, app.update_file_mtimes()]);
     }
-    if (params instanceof Array) {
-      app_header.instance.calculation_progress.total = params.length;
-      for (let i=0; i<params.length; i++) {
-        let p = params[i];
+    params = (parallel) ? parallelize(params) : params.map((p) => ([p]));
+    app_header.instance.calculation_progress.total = params.flat().length;
+    for (let ppi=0, i=0; i<params.length; i++) {
+      let p = params[i];
+      let subresults = [];
+      for (let pp of p) {
+        console.log(pp, p, p.length, ppi);
         if (!editor._calculation_cancelled) {
-          let result = await Promise.race([cancel_promise, calculate_one(p, caching)]);
-          if (result_callback) { await result_callback(r, p, i); }
-          app_header.instance.calculation_progress.done = i+1;
-          results.push(result);
+          let result = await Promise.race([cancel_promise, calculate_one(pp, caching)]).catch((e) => {console.log('local caught:', e)})
+          if (result_callback) { await result_callback(result, p, i); }
+          subresults.push(result);
+          app_header.instance.calculation_progress.done = ++ppi;
         }
       }
+      results.push(subresults.reduce((accumulator, current) => { 
+        current.values = accumulator.values.concat(current.values); 
+        return current 
+      }, {values: []}));
     }
-    else {
-      results = await Promise.race([cancel_promise, calculate_one(params, caching)]);
-    }
+    
   } catch(err) {
 
   } finally {
@@ -776,8 +854,8 @@ editor.export_data = function() {
       var recalc_mtimes = app.settings.check_mtimes.value;
       params.export_type = export_type;
       params.concatenate = concatenate;
-      let exported = await editor.calculate(params, recalc_mtimes, true);
-      let suggested_name = (exported.values[0] || {}).filename || "myfile.refl";
+      let exported = await editor.calculate([params], recalc_mtimes, true);
+      let suggested_name = (exported[0].values[0] || {}).filename || "myfile.refl";
       let additional_export_targets = w.instruments[w._instrument_id].export_targets || [];
       let export_targets = w.export_targets.concat(additional_export_targets);
       export_dialog.instance.export_targets = export_targets;
@@ -947,8 +1025,8 @@ editor.load_metadata = async function(files_metadata, datasource, path) {
     }
   });
 
-  let loader_template = instrument.load_file(load_params, file_objs, false, 'metadata');
-  let results = await editor.calculate(loader_template, false, false);
+  let loader_templates = instrument.load_file(load_params, file_objs, false, 'metadata');
+  let results = await editor.calculate(loader_templates, false, false);
   results.forEach(function(result, i) {
     var lp = load_params[i];
     if (result && result.values) {

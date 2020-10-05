@@ -314,7 +314,7 @@ class Module(object):
         # note that the value of this should be false, or a string value 
         # if it is a string, it is the name of the input 
         # over which the operation can be parallelized.
-        return not hasattr(self.action, 'parallel') or self.action.parallel
+        return getattr(self.action, 'parallel', False)
 
     def __getstate__(self):
         # Don't pickle the function reference
