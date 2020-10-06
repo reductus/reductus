@@ -265,7 +265,6 @@ function parallelize(calc_params_list) {
           params_copy.template.modules[module_index].config[terminal_id] = [v];
           return params_copy;
         });
-        console.log(parallelized);
         return parallelized;
       }
     }
@@ -715,11 +714,12 @@ editor.calculate = async function(params, recalc_mtimes, noblock, result_callbac
       let p = params[i];
       let subresults = [];
       for (let pp of p) {
-        console.log(pp, p, p.length, ppi);
         if (!editor._calculation_cancelled) {
-          let result = await Promise.race([cancel_promise, calculate_one(pp, caching)]).catch((e) => {console.log('local caught:', e)})
-          if (result_callback) { await result_callback(result, p, i); }
-          subresults.push(result);
+          let result = await Promise.race([cancel_promise, calculate_one(pp, caching)])
+          if (result_callback) { await result_callback(result, pp, i); }
+          if (result) {
+            subresults.push(result);
+          }
           app_header.instance.calculation_progress.done = ++ppi;
         }
       }

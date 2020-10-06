@@ -5,6 +5,7 @@ import sys
 import numpy as np
 
 from dataflow.lib.uncertainty import Uncertainty
+from dataflow.automod import parallel
 
 # Action names
 __all__ = [] # type: List[str]
@@ -74,16 +75,6 @@ def hidden(action):
     """
     action.visible = False
     return action
-
-def parallel(input_id):
-    """
-    Decorator which indicates method can be parallelized over given input name
-    """
-    def decorate(action):
-        action.parallel = input_id
-        return action
-
-    return decorate
 
 @cache
 @module

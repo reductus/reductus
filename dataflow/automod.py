@@ -81,6 +81,16 @@ def module(tag=""):
         return fn
     return wrapper
 
+def parallel(input_id):
+    """
+    Decorator which indicates method can be parallelized over given input name
+    """
+    def decorate(action):
+        action.parallel = input_id
+        return action
+
+    return decorate
+
 # From unutbu and Glenn Maynard
 # https://stackoverflow.com/questions/13503079/how-to-create-a-copy-of-a-python-function/13503277#13503277
 # https://stackoverflow.com/a/6528148/190597
