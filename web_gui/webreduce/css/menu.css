@@ -57,3 +57,25 @@
     padding-top: 0;
     padding-bottom: 0;
 }
+
+.md-list .md-list-item-content {
+    min-height: 40px;
+    max-height: 52px;
+    padding-top: 0;
+    padding-bottom: 0;
+}
+
+.md-select-menu, .md-select-menu * {
+  -webkit-transition: none !important;
+  -moz-transition: none !important;
+  -o-transition: none !important;
+  transition: none !important;
+}
+
+.md-field {
+    margin-bottom: 0;
+}
+
+.md-list-item-expand {
+    background-color: whitesmoke;
+}
