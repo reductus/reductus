@@ -148,7 +148,7 @@ def select_channel(data, channel_select=None):
 
     data (candordata): Input data with 1 or more banks
 
-    channel_select {Select channel(s)} (int[]*) : Choose channels to output (default is all)
+    channel_select {Select channel(s)} (int[]) : Choose channels to output (default is all)
 
     **Returns**
 
@@ -182,7 +182,7 @@ def select_points(data, point_select=None):
 
     data (candordata): Input data with 1 or more banks
 
-    point_select {Select points(s)} (int[]*) : Choose points to output (default is all)
+    point_select {Select points(s)} (int[]) : Choose points to output (default is all)
 
     **Returns**
 
@@ -222,6 +222,67 @@ def select_points(data, point_select=None):
         data.detector.angle_x_target = data.detector.angle_x_target[point_select]
     
     return data
+
+
+@module("candor")
+def candor_select_xy(data, x_range=[None, None], y_range=[None, None]):
+    r"""
+    Select range of data from scan of Candor.
+
+    **Inputs**
+
+    data (candordata): Input data
+
+    x_range (range?:x): x-region to keep from the data
+
+    y_range (range?:y): y-region to keep from the data
+
+    **Returns**
+
+    output (candordata): Data with trimmed x and y values
+
+    | 2020-10-14 Brian Maranville
+    """
+
+    if x_range is None and y_range is None:
+        return data
+    if x_range is None:
+        x_range = [None, None]
+    if y_range is None:
+        y_range = [None, None]
+
+    x_min, x_max = x_range
+    y_min, y_max = y_range
+
+    # y-axis is "points" axis, x-axis is "channels"
+    (x, xlabel), (y, ylabel) = data.get_axes()
+    x = x.flatten()
+    y = y.flatten()
+
+    x_select_min = x_min is None or x >= x_min
+    x_select_max = x_max is None or x <= x_max
+    x_select = np.logical_and(x_select_min, x_select_max)
+    y_select_min = y_min is None or y >= y_min
+    y_select_max = y_max is None or y <= y_max
+    y_select = np.logical_and(y_select_min, y_select_max)
+    #print('y', y, y_min, y_max, y_select, y.shape)
+    #print('x', x, x_min, x_max, x_select, x.shape)
+
+    if np.all(x_select):
+        xdata = data # no limits on x
+    else:
+        channel_select = np.arange(x.shape[0], dtype="int")[x_select]
+        #print('channel select:', channel_select)
+        xdata = select_channel(data, channel_select)
+
+    if np.all(y_select):
+        xy_data = xdata
+    else:
+        point_select = np.arange(y.shape[0], dtype="int")[y_select]
+        #print('point select:', point_select)
+        xy_data = select_points(xdata, point_select)
+
+    return xy_data
 
 
 @module("candor")

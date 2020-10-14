@@ -60,7 +60,7 @@ export const RangeUi = {
   },
   methods: {
     changed(updateInteractors = true) {
-      this.local_value.forEach((x,i) => { this.$set(this.local_value, i, (isNaN(+x)) ? null : +x) });
+      this.local_value.forEach((x,i) => { this.$set(this.local_value, i, (isNaN(+x) || x == null) ? null : +x) });
       this.$emit('change', this.field.id, this.local_value);
       if (updateInteractors) {
         this.interactors.forEach(I => {
@@ -78,8 +78,8 @@ export const RangeUi = {
       let buffer = 10;
       let xrange = x.range();
       let yrange = y.range();
-      let xdomain = [x.invert(xrange[0] + buffer), x.invert(xrange[1] - buffer)]
-      let ydomain = [y.invert(yrange[0] + buffer), y.invert(yrange[1] - buffer)]
+      let xdomain = [x.invert(xrange[0] - buffer), x.invert(xrange[1] + buffer)].sort()
+      let ydomain = [y.invert(yrange[0] + buffer), y.invert(yrange[1] - buffer)].sort()
       let interactor = interactorConnectors[this.axis_str](this, xdomain, ydomain);
       interactor.dispatch.on("end", () => { this.changed(false) })
       chart.interactors(interactor);
