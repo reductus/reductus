@@ -604,6 +604,7 @@ def candor_rebin(data, qmin=None, qmax=None, qstep=0.003, qstep_max=None, averag
     | 2020-03-04 Paul Kienzle
     | 2020-08-03 David Hoogerheide adding progressive q step coarsening
     | 2020-09-24 Brian Maranville changed default averaging
+    | 2020-10-14 Paul Kienzle fixed uncertainty for time normalized data
     """
     from .candor import rebin, nobin
 

@@ -640,7 +640,7 @@ def _rebin_bank(data, bank, q_edges, average):
         combined_monitors += empty_q  # protect against division by zero
         bar_y = combined_counts/combined_monitors
         if norm == "time":
-            bar_dy = bar_y * np.sqrt(1./combined_monitors)
+            bar_dy = np.sqrt(bar_y / combined_monitors)
         else:
             bar_dy = 1./combined_monitors * np.sqrt(1. + 1./combined_monitors)
             idx = (bar_y != 0)

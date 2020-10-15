@@ -875,6 +875,7 @@ def join(data, Q_tolerance=0.5, dQ_tolerance=0.002, order='file',
     | 2017-05-05 Paul Kienzle: consistent sort order for outputs
     | 2017-07-03 Brian Maranville: rearrange to group by Ti, Td before dT, dQ
     | 2018-05-14 Brian Maranville: group by Qx first for all rocking curves
+    | 2020-10-14 Paul Kienzle fixed uncertainty for time normalized data
     """
     from .joindata import sort_files, join_datasets
     from .util import group_by_key
