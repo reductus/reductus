@@ -9,15 +9,15 @@ let template = `
         <md-button class="md-icon-button" @click="$emit('toggle-menu')">
           <md-icon title="MENU">menu</md-icon>
         </md-button>
-        <span class="md-title"><img src="icons/reductus_logo.svg" style="height:2em;"/>Reductus</span>
+        <span class="md-title"><img src="img/reductus_logo.svg" style="height:2em;"/>Reductus</span>
         <md-button class="md-primary md-small" href="https://doi.org/10.1107/S1600576718011974">[cite]</md-button>
       </div>
       <div class="md-toolbar-section-end">
         <a href="https://www.nist.gov/ncnr" target="_blank">
-          <img src="icons/NCNR_nonlogo.png" alt="NCNR logo" title="NIST Center for Neutron Research" style="height:2em;padding-right:1.5em;">
+          <img src="img/NCNR_nonlogo.png" alt="NCNR logo" title="NIST Center for Neutron Research" style="height:2em;padding-right:1.5em;">
         </a>
         <a href="https://www.nist.gov" target="_blank">
-              <img src="icons/nist-logo.svg" alt="NIST logo" title="National Institute of Standards and Technology" style="height:2em;">
+              <img src="img/nist-logo.svg" alt="NIST logo" title="National Institute of Standards and Technology" style="height:2em;">
         </a>
       </div>
     </div>  

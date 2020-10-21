@@ -8,10 +8,10 @@
   ],
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "parcel build js/main.js js/template_editor_main.js --public-url=\"./\"; cp -r icons/ dist/",
-    "build_index_sed": "parcel build index.html --public-url=\"./\"; sed -i 's/type=\"module\" //g' dist/index.html; cp -r icons/ dist/;",
-    "build_index": "parcel build index.html template_editor_live.html --public-url='./'; cp -r icons/ dist/;",
-    "build_main": "parcel build index.js --public-url=\"./\"; cp -r index.html icons/ dist/;"
+    "build": "parcel build js/main.js js/template_editor_main.js --public-url=\"./\"; cp -r img/ dist/",
+    "build_index_sed": "parcel build index.html --public-url=\"./\"; sed -i 's/type=\"module\" //g' dist/index.html; cp -r img/ dist/;",
+    "build_index": "parcel build index.html template_editor_live.html --public-url='./'; cp -r img/ dist/;",
+    "build_main": "parcel build index.js --public-url=\"./\"; cp -r index.html img/ dist/;"
   },
   "alias": {
     "*js/libraries.js": "./js/libraries_production.js",
