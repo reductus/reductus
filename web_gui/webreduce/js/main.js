@@ -234,6 +234,11 @@ window.onload = async function () {
       let instrument_id = editor._instrument_id;
       let template_copy = extend(true, {}, editor._instrument_def.templates[template_id]);
       editor.load_template(template_copy, null, null, instrument_id);
+      // Remember this choice, to be used on next instrument switch:
+      try {
+        var lookup_id = "webreduce.instruments." + instrument_id + ".last_used_template";
+        localStorage.setItem(lookup_id, template_id);
+      } catch (e) {}
     },
     // data functions
     stash_data() { editor.stash_data() },
