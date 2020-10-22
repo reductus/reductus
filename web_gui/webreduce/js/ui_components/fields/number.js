@@ -59,7 +59,7 @@ export const IntUi = {
           cv = null
         }
         else {
-          let v = (this.multiple || this.field.length != 1) ? JSON.parse(newValue) : newValue;
+          let v = (this.field.multiple || this.field.length != 1) ? JSON.parse(newValue) : newValue;
           cv = this.coerceAll(v);
         }
         this.$emit("change", this.field.id, cv);
