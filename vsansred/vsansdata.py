@@ -76,6 +76,8 @@ def _toDictItem(obj, convert_bytes=False):
         obj = float(obj)
     elif isinstance(obj, np.ndarray):
         obj = obj.tolist()
+    elif isinstance(obj, Uncertainty):
+        obj = _toDictItem({'x': obj.x, 'variance': obj.variance})
     elif isinstance(obj, datetime.datetime):
         obj = [obj.year, obj.month, obj.day, obj.hour, obj.minute, obj.second]
     elif isinstance(obj, list):
@@ -93,6 +95,8 @@ class VSansData(object):
        q, qx, qy, theta all get updated with values throughout the reduction process
        Tsam and Temp are just used for storage across modules (in wireit)
     """
+    properties = ['metadata', 'detectors']
+
     def __init__(self, metadata=None, detectors=None):
         self.metadata = metadata if metadata is not None else {}
         self.detectors = detectors if detectors is not None else {}
@@ -186,6 +190,10 @@ class VSansData(object):
         metadata = {}
         metadata.update(_toDictItem(self.metadata, convert_bytes=True))
         return metadata
+
+    def todict(self):
+        props = dict([(p, getattr(self, p, None)) for p in self.properties])
+        return _toDictItem(props)
 
 
 class VSansDataRealSpace(VSansData):
@@ -340,7 +348,7 @@ class VSans1dData(object):
         self.metadata = metadata if metadata is not None else {}
         self.fit_function = fit_function
 
-    def to_dict(self):
+    def todict(self):
         props = dict([(p, getattr(self, p, None)) for p in self.properties])
         return _toDictItem(props)
 
@@ -402,7 +410,7 @@ class Sans1dData(object):
         self.metadata = metadata if metadata is not None else {}
         self.fit_function = fit_function
 
-    def to_dict(self):
+    def todict(self):
         props = dict([(p, getattr(self, p, None)) for p in self.properties])
         return _toDictItem(props)
 
