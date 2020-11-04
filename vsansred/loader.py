@@ -160,7 +160,7 @@ def load_detector(dobj, load_data=True):
         if hasattr(subobj, 'shape'):
             detector[k]['attrs']['shape'] = subobj.shape
         if hasattr(subobj, 'dtype'):
-            detector[k]['attrs']['dtype'] = subobj.dtype
+            detector[k]['attrs']['dtype'] = subobj.dtype.name
     return detector
 
 def load_metadata(entry, multiplicity=1, i=1, metadata_lookup=metadata_lookup, unit_specifiers=unit_specifiers):
