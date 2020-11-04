@@ -190,7 +190,7 @@ function add_sector_interactor(vm, xrange, yrange) {
     set angle_offset(x) { vm.$set(value, 2, x * 180.0 / Math.PI) },
     set angle_range(x) { vm.$set(value, 3, x * 180.0 / Math.PI) }
   }
-  return new angleSliceInteractor.default(opts);
+  return new angleSliceInteractor(opts);
 }
 
 function add_sector_centered_interactor(vm, xrange, yrange) {
@@ -210,7 +210,7 @@ function add_sector_centered_interactor(vm, xrange, yrange) {
     set angle_offset(x) { vm.$set(value, 0, x * 180.0 / Math.PI) },
     set angle_range(x) { vm.$set(value, 1, x * 180.0 / Math.PI) }
   }
-  return new angleSliceInteractor.default(opts);
+  return new angleSliceInteractor(opts);
 }
 
 function isEmpty(value, index) {
