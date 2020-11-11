@@ -243,7 +243,8 @@ class Candor(ReflData):
             self.detector.angle_x = data_as(das, 'detectorTableMotor/softPosition', 'degree', rep=n)
         if self.detector.angle_x_target is None:
             self.detector.angle_x_target = data_as(das, 'detectorTableMotor/desiredSoftPosition', 'degree', rep=n)
-        self.detector.angle_x_offset = data_as(das, 'detectorTable/rowAngularOffsets', '')[0]
+        # PAK 2020-11-11: detectorTable/rowAngularOffsets changed orientation; flatten so we don't care
+        self.detector.angle_x_offset = data_as(das, 'detectorTable/rowAngularOffsets', 'degree').flatten()
 
         # Attenuators
         self.attenuator.transmission = data_as(entry, 'instrument/attenuator/transmission', '', dtype="float")
