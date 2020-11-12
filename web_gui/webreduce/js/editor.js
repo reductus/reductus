@@ -704,7 +704,7 @@ var export_handlers = {
         // hoisting is required... 
         var message = event.data;
         if (message.connection_id == connection_id) {
-          window.removeEventListener("message", arguments.callee);
+          window.removeEventListener("message", connection_callback);
           if (message.ready) {
             webapp.postMessage({method: data.method, args: [exported], connection_id: connection_id}, "*");
           }
@@ -783,7 +783,7 @@ editor.export_data = function() {
       export_dialog.instance.export_targets = export_targets;
       export_dialog.instance.retrieved(suggested_name);
       export_dialog.instance.$once("export-route", function(filename, target) {
-        export_handlers[target.type](exported, filename, target.data || {});
+        export_handlers[target.type](exported, filename, target || {});
       })
     });
   }
