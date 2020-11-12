@@ -34,7 +34,7 @@ DETECTOR_DISTANCE = 3496.0
 MONO_WAVELENGTH = 4.75
 MONO_WAVELENGTH_DISPERSION = 0.01
 
-# CRUFT: these will be in the
+# CRUFT: these will be in the datafile eventually
 _EFFICIENCY = None
 def detector_efficiency():
     from pathlib import Path
@@ -182,10 +182,17 @@ class Candor(ReflData):
             x_target = 'slitAperture%d/desiredSoftPosition'%(k+1)
             slit.x = data_as(das, x, 'mm', rep=n)
             slit.x_target = data_as(das, x_target, 'mm', rep=n)
-            #y = 'vertSlitAperture%d/softPosition'%(k+1)
-            #y_target = 'vertSlitAperture%d/desiredSoftPosition'%(k+1)
-            #slit.y = data_as(das, y, 'mm', rep=n)
-            #slit.y_target = data_as(das, y_target, 'mm', rep=n)
+        # There is one vertical slit, and it is defined by slit2AVertical
+        # This is a virtual device which gives the center and opening, but
+        # not the target center and opening. Instead, use the Top/Bottom motors
+        # to get the desired and actual, and ignore slit2AVertical. This assumes
+        # the slits are centered.
+        self.slit2.y = (
+            data_as(das, 'slit2AVerticalTop/softPosition', 'mm', rep=n)
+            - data_as(das, 'slit2AVerticalBottom/softPosition', 'mm', rep=n))
+        self.slit2.y_target = (
+            data_as(das, 'slit2AVerticalTop/desiredSoftPosition', 'mm', rep=n)
+            - data_as(das, 'slit2AVerticalBottom/desiredSoftPosition', 'mm', rep=n))
         # CRUFT: old files don't have the detector mask mapped
         # TODO: don't throw away datasets where the key is not defined:
         #       instead figure out an effective aperture size from motors or
@@ -210,13 +217,21 @@ class Candor(ReflData):
         if efficiency is None:
             efficiency = np.repeat(1.0, wavelength.shape)
 
-        # TODO: check the orientation on detectorTable nodes.
-        # For now they appear to be in "channels_at_end" order even if the
-        # detector counts are in "banks_at_end" order.
-        wavelength = wavelength.reshape(NUM_CHANNELS, -1)
-        wavelength_spread = wavelength_spread.reshape(NUM_CHANNELS, -1)
-        divergence = divergence.reshape(NUM_CHANNELS, -1)
-        efficiency = efficiency.reshape(NUM_CHANNELS, -1)
+        # PAK 2020-11-12: detectorTable now uses [54,2] rather than [108], so
+        # reshape is no longer necessary. Check for [2,54] and transpose to
+        # protect against future change. For older data, use reshape with
+        # wavelengths in "channels_at_end" order (even though the detector
+        # counts are in "banks_at_end" order).
+        if len(wavelength.shape) == 1:
+            wavelength = wavelength.reshape(NUM_CHANNELS, -1)
+            wavelength_spread = wavelength_spread.reshape(NUM_CHANNELS, -1)
+            divergence = divergence.reshape(NUM_CHANNELS, -1)
+            efficiency = efficiency.reshape(NUM_CHANNELS, -1)
+        elif wavelength.shape[0] != NUM_CHANNELS:
+            wavelength = wavelength.T
+            wavelength_spread = wavelength_spread.T
+            divergence = divergence.T
+            efficiency = efficiency.T
 
         wavelength_resolution = wavelength_spread # FWHM2sigma(wavelength * wavelength_spread)
         if (efficiency == 1.0).all():
@@ -243,7 +258,8 @@ class Candor(ReflData):
             self.detector.angle_x = data_as(das, 'detectorTableMotor/softPosition', 'degree', rep=n)
         if self.detector.angle_x_target is None:
             self.detector.angle_x_target = data_as(das, 'detectorTableMotor/desiredSoftPosition', 'degree', rep=n)
-        self.detector.angle_x_offset = data_as(das, 'detectorTable/rowAngularOffsets', '')[0]
+        # PAK 2020-11-11: detectorTable/rowAngularOffsets changed orientation; flatten so we don't care
+        self.detector.angle_x_offset = data_as(das, 'detectorTable/rowAngularOffsets', 'degree').flatten()
 
         # Attenuators
         self.attenuator.transmission = data_as(entry, 'instrument/attenuator/transmission', '', dtype="float")
