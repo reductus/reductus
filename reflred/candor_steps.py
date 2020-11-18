@@ -19,6 +19,7 @@ def candor(
         detector_correction=False,
         monitor_correction=False,
         spectral_correction=False,
+        attenuator_correction=True,
         Qz_basis='target',
         intent='auto',
         sample_width=None,
@@ -53,6 +54,10 @@ def candor(
     : If True, scale counts by the detector efficiency calibration given
     in the file (see Spectral Efficiency).
 
+    attenuator_correction {Apply attenuator corrections} (bool)
+    : if True, scale the counts by the attenuator transmission coefficients given
+    in the file, for the attenuator that was active for the data point.
+
     Qz_basis (opt:target|sample|detector|actual)
     : How to calculate Qz from instrument angles.
 
@@ -77,6 +82,7 @@ def candor(
     | 2020-03-12 Paul Kienzle Add slit 1 dependence for DC rate
     | 2020-08-27 Brian Maranville loader gets attenuator information
     | 2020-09-11 Brian Maranville loader updated with new motor names
+    | 2020-11-18 Brian Maranville adding attenuator correction
     """
     from .load import url_load_list
     from .candor import load_entries
@@ -103,6 +109,8 @@ def candor(
             data = steps.monitor_dead_time(data, None)
         if spectral_correction:
             data = spectral_efficiency(data)
+        if attenuator_correction:
+            data = attenuation(data)
         data = steps.normalize(data, base=base)
         datasets.append(data)
 
