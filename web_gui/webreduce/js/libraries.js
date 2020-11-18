@@ -13,12 +13,17 @@ export {default as Tree} from 'https://cdn.jsdelivr.net/gh/bmaranville/treejs@la
 import { default as Vue } from 'https://cdn.jsdelivr.net/npm/vue@2.6.11/dist/vue.esm.browser.js';
 import { default as VueMaterial } from 'https://cdn.skypack.dev/vue-material@latest';
 Vue.use(VueMaterial);
+// vuedraggable is available as a single-file esm source, Vue.Draggable/src/vuedraggable.js
+// which depends only on Sortable, which can be found at 
+// https://github.com/SortableJS/sortablejs/blob/master/modular/sortable.complete.esm.js
 export { default as vuedraggable } from 'https://cdn.skypack.dev/vuedraggable@^2.23.2';
 export { Vue }
 
 import * as messagepack from "https://unpkg.com/messagepack@1.1.11/dist/messagepack.es.js";
 //import { default as messagepack } from "https://dev.jspm.io/npm:messagepack@1.1";
 export { messagepack };
+// PouchDB can be replaced with idb from https://github.com/jakearchibald/idb 
+// since we are not using the sync features of pouch
 import { default as PouchDB } from "https://dev.jspm.io/npm:pouchdb-browser@7";
 export { PouchDB };
 export {
