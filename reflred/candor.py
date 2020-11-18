@@ -264,7 +264,7 @@ class Candor(ReflData):
         # Attenuators
         self.attenuator.transmission = data_as(entry, 'instrument/attenuator/transmission', '', dtype="float")
         self.attenuator.transmission_err = data_as(entry, 'instrument/attenuator/transmission_err', '', dtype="float")
-        self.attenuator.target_value = data_as(das, 'attenuator/key', '', rep=n)
+        self.attenuator.target_value = data_as(das, 'counter/actualAttenuatorsDropped', '', rep=n)
 
         #print("shapes", self.detector.counts.shape, self.detector.wavelength.shape, self.detector.efficiency.shape)
         #print("shapes", self.sample.angle_x.shape, self.detector.angle_x.shape, self.detector.angle_x_offset.shape)
