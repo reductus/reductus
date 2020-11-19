@@ -7,6 +7,7 @@
         "base": "auto",
         "monitor_correction": true,
         "spectral_correction": true,
+        "attenuator_correction": true,
         "intent": "intensity"
       },
       "x": 35,
@@ -25,6 +26,7 @@
         "base": "auto",
         "monitor_correction": true,
         "spectral_correction": true,
+        "attenuator_correction": true,
         "intent": "specular"
       },
       "x": 35,
@@ -37,6 +39,7 @@
         "base": "auto",
         "monitor_correction": true,
         "spectral_correction": true,
+        "attenuator_correction": true,
         "intent": "background+"
       },
       "x": 35,
@@ -49,6 +52,7 @@
         "base": "auto",
         "monitor_correction": true,
         "spectral_correction": true,
+        "attenuator_correction": true,
         "intent": "background-"
       },
       "x": 35,

@@ -19,7 +19,7 @@ def candor(
         detector_correction=False,
         monitor_correction=False,
         spectral_correction=False,
-        attenuator_correction=True,
+        attenuator_correction=False,
         Qz_basis='target',
         intent='auto',
         sample_width=None,
