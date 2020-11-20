@@ -648,6 +648,10 @@ candor_background = copy_module(
     steps.subtract_background, "candor_background",
     "refldata", "candordata", tag="candor")
 
+candor_align = copy_module(
+    steps.interpolate_background, "candor_align",
+    "refldata", "candordata", tag="candor")
+
 candor_divide = copy_module(
     steps.divide_intensity, "candor_divide",
     "refldata", "candordata", tag="candor")

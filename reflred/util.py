@@ -299,9 +299,9 @@ def poisson_average(y, dy, norm='monitor'):
 
     Clearly with two inputs $y$, $\Delta y$ we cannot uniquely recover
     the four parameters $A$, $\Delta A$, $M$, $N$, and Poisson averaging
-    will not work properly.  In these cases, a monitor weighted gaussian
-    average is better for error propagation.  Monitor weighted averaging
-    works well for everything except data with many zero counts.
+    will not be strictly correct, though Monte Carlo experiments show that
+    it is good enough for most cases. Error-weighted Gaussian averaging fails
+    when the counts are approximately less than 100.
     """
     if norm not in ("monitor", "time", "gauss", "none"):
         raise ValueError("expected norm to be time, monitor or none")

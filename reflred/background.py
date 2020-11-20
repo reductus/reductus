@@ -16,6 +16,7 @@ def apply_specular_mask(data):
     dtheta = 0.1*data.angular_resolution
     not_spec = (abs(theta_f - theta_i) >= dtheta)
     data.mask = not_spec | (True if data.mask is None else data.mask)
+    return data
 
 
 def apply_background_subtraction(data, backp, backm):
@@ -23,27 +24,55 @@ def apply_background_subtraction(data, backp, backm):
                for bkg in (backp, backm)), "can't mix time and monitor normalized data"
     I, varI = subtract_background(data, backp, backm)
     data.v, data.dv = I, np.sqrt(varI)
+    return data
 
+def apply_interpolation(data, base, align='auto'):
+    # type: (ReflData, ReflData) -> None
+    """
+    Interpolates background measurements to align with the specular.  If a
+    different interpolation is required, then do so before subtract_background
+    so that interp does nothing herein.
+    """
+    #print "%s - (%s+%s)/2"%(spec.name, (backp.name if backp else "none"), (backm.name if backm else "none"))
+    if align == 'auto':
+        align = data.Qz_basis
+    x = get_sample_angle(base, align)
+    xp = get_sample_angle(data, align)
+    vp = U(data.v, data.dv**2)
+    v = interp(x, xp, vp)
+    data.v, data.dv = v.x, np.sqrt(v.variance)
+    # TODO: do we care that this throws away the offset information?
+    data.sample.angle_x = x
+    data.detector.angle_x = 2*x
+    data.sample.angle_x_target = x
+    data.detector.angle_x_target = 2*x
+    # TODO: protect against funky changes in resolution when interpolating
+    data.angular_resolution = base.angular_resolution
+    # Remember the chosen alignment strategy for when we do future operations,
+    # such as binning or subtraction.
+    data.Qz_basis = align
+    return data
 
-def set_background_alignment(back, offset):
+def set_background_alignment(data, offset):
     """
     Guess whether background is offset from sample angle or from detector angle.
     """
     if offset is None or offset == 'auto':
         # for auto, if Qz_target is set by the trajectory then use it
-        if back.Qz_target is not None and not np.isnan(back.Qz_target).any():
-            back.Qz_basis = 'target'
+        if data.Qz_target is not None and not np.isnan(data.Qz_target).any():
+            data.Qz_basis = 'target'
             return
-        offset = guess_background_offset(back)
+        offset = guess_background_offset(data)
 
-    #A, B, L = back.sample.angle_x, back.detector.angle_x, back.detector.wavelength
+    #A, B, L = data.sample.angle_x, data.detector.angle_x, data.detector.wavelength
     #if offset == 'sample':
-        #back.Qz_target = 4*np.pi/L * np.sin(np.radians(A))
+    #   data.Qz_target = 4*np.pi/L * np.sin(np.radians(A))
     #elif offset == 'detector':
-        #back.Qz_target = 4*np.pi/L * np.sin(np.radians(B)/2)
+    #   data.Qz_target = 4*np.pi/L * np.sin(np.radians(B)/2)
     #else:
-        #raise KeyError('unknown offset: must be sample|detector')
-    back.Qz_basis = offset
+    #   raise KeyError('unknown offset: must be sample|detector')
+    data.Qz_basis = offset
+    return data
 
 
 # TODO: should only subtract items with the same angular resolution
@@ -90,17 +119,24 @@ def _ordinate(data):
     """
     if data.Qz.ndim == 1:
         return data.Qz
-    # This is similar to code in Refldata.Qz ...
-    if data.Qz_basis == 'actual':
-        return data.sample.angle_x
-    if data.Qz_basis == 'target':
-        return data.sample.angle_x_target
-    if data.Qz_basis == 'detector':
-        return data.detector.angle_x/2
-    if data.Qz_basis == 'sample':
-        return data.sample.angle_x
-    raise KeyError("Qz basis must be one of [actual, detector, sample, target]")
+    return get_sample_angle(data, data.Qz_basis)
 
+def get_sample_angle(data, align):
+    # This is similar to code in Refldata.Qz ...
+    if align == 'detector':
+        return data.detector.angle_x/2
+    if align == 'sample':
+        return data.sample.angle_x
+    if align == 'detector_target':
+        return data.detector.angle_x_target/2
+    if align == 'sample_target':
+        return data.sample.angle_x_target
+    # for specular data, actual and target use both sample and detector angle.
+    if align == 'actual':
+        return data.sample.angle_x
+    if align == 'target':
+        return data.sample.angle_x_target
+    raise KeyError("qz basis must be one of [actual, target, detector, sample, detector_target, sample_target]")
 
 def guess_background_offset(back):
     """

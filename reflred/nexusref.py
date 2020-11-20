@@ -370,7 +370,9 @@ class NCNRNeXusRefl(ReflData):
             # NaN if not defined
             tilt_target = 0.
             #tilt_target = data_as(das, 'sampleTilt/desiredSoftPosition', 'degree', rep=n)
-            theta_target = data_as(das, 'q/desiredThetaInident', 'degree', rep=n)
+            # Note: q/desiredThetaIncident is not available on any instruments
+            # so the following always returns None.
+            theta_target = data_as(das, 'q/desiredThetaIncident', 'degree', rep=n)
             if theta_target is not None:
                 self.sample.angle_x_target = theta_target + tilt_target
                 self.detector.angle_x_target = 2*theta_target

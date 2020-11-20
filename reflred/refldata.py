@@ -940,10 +940,16 @@ class ReflData(Group):
             if self.Qz_target is not None:
                 return self.Qz_target
             return calc_Qz(self.Ti_target, self.Td_target, Li, Ld)
+        # For background, can use detector angle or sample angle.
+        # Note: sample angle won't work with CANDOR
         if self.Qz_basis == 'detector':
             return calc_Qz(self.Td/2, self.Td, Li, Ld)
         if self.Qz_basis == 'sample':
             return calc_Qz(self.Ti, 2*self.Ti, Li, Ld)
+        if self.Qz_basis == 'detector_target':
+            return calc_Qz(self.Td_target/2, self.Td_target, Li, Ld)
+        if self.Qz_basis == 'sample_target':
+            return calc_Qz(self.Ti_target, 2*self.Ti_target, Li, Ld)
         raise KeyError("Qz basis must be one of [actual, detector, sample, target]")
 
     @property

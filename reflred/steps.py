@@ -893,22 +893,24 @@ def join(data, Q_tolerance=0.5, dQ_tolerance=0.002, order='file',
     return output
 
 #@module
-def align_background(data, offset='auto'):
+def align_background(data, align='auto'):
     """
     Determine the Qz value associated with the background measurement.
 
-    The *offset* flag determines which background points are matched
+    The *align* flag determines which background points are matched
     to the sample points.  It can be 'sample' if background is
     measured using an offset from the sample angle, or 'detector'
-    if it is offset from detector angle.   If *offset* is 'auto', then
-    we guess whether it is a offset from sample or detector.
+    if it is offset from detector angle.   If *align* is 'auto', then
+    use 'Qz_target' to align the background scan.
 
-    For 'auto' alignment, we can only distinguish relative and constant offsets,
-    not  whether it is offset from sample or detector, so we must rely on
-    convention. If the offset is constant for each angle, then it is assumed
-    to be a sample offset.  If the offset is proportional to the angle (and
-    therefore offset/angle is constant), then it is assumed to be a detector
-    offset. If neither condition is met, it is assumed to be a sample offset.
+    For 'auto' alignment without Qz_target set, we can only distinguish
+    relative and constant offsets, and cannot determine which of sample
+    and detector is offset from the specular condition, so we must rely
+    on convention. If the offset is constant for each angle, then it is
+    assumed to be a sample offset. If the the offset is proportional to
+    the angle (and therefore offset divided by angle is constant), then
+    it is assumed to be a detector offset. If neither condition is met,
+    it is assumed to be a sample offset.
 
     The 'auto' test is robust: 90% of the points should be within 5% of the
     median value of the vector for the offset to be considered a constant.
@@ -917,19 +919,18 @@ def align_background(data, offset='auto'):
 
     data (refldata) : background data with unknown $q$
 
-    offset (opt:auto|sample|detector) : angle which determines $q_z$
+    align (opt:auto|sample|detector) : angle which determines $q_z$
 
     **Returns**
 
     output (refldata) : background with known $q$
 
     2015-12-17 Paul Kienzle
+    2020-10-16 Paul Kienzle rename 'offset' to 'align'
     """
-    if offset is None:
-        offset = 'auto'
     from .background import set_background_alignment
     #data = copy(data)
-    set_background_alignment(data, offset)
+    set_background_alignment(data, align)
     return data
 
 
@@ -938,20 +939,21 @@ def subtract_background(data, backp, backm, align="none"):
     """
     Subtract the background datasets from the specular dataset.
 
-    The background+ and background- signals are removed from the list of
-    data sets, averaged, interpolated, and subtracted from the specular.
-    If there is no specular, then the backgrounds are simply removed and
-    there is no further action.  If there are no backgrounds, then the
-    specular is sent through unchanged.  Slit scans and rocking curves
-    are not affected.
-
-    This correction only operates on a list of datasets.  A single dataset
-    which contains both specular and background, such as a PSD measurement,
-    must first be filtered through a correction to separate the specular
-    and background into a pair of datasets.
+    The specular, background+ and background- signals should already be
+    joined into single datasets. For each, the background is interpolated
+    onto the specular Q values, extending above and below with the final
+    background measurement. If there are no backgrounds, then data is
+    sent through unchanged.
 
     Background subtraction is applied independently to the different
     polarization cross sections.
+
+    The *align* flag determines which background points are matched
+    to the sample points. It can be 'sample' if background is
+    measured using an offset from the sample angle, or 'detector'
+    if it is offset from detector angle. If it is 'none' then use
+    the 'Qz_basis' value set in the loader. The 'auto' option uses
+    'Qz_target' if it exists, or tries to guess from the measured angles.
 
     **Inputs**
 
@@ -972,16 +974,59 @@ def subtract_background(data, backp, backm, align="none"):
     """
     from .background import apply_background_subtraction
 
-    data = copy(data)
+    # TODO: This changes backp and backm. Do we need a copy first?
     if backp is not None:
         if align != "none":
-            align_background(backp, offset=align)
+            align_background(backp, align=align)
     if backm is not None:
         if align != "none":
-            align_background(backm, offset=align)
+            align_background(backm, align=align)
+
     #print "%s - (%s+%s)/2"%(data.name, (backp.name if backp else "none"), (backm.name if backm else "none"))
+    data = copy(data)
     apply_background_subtraction(data, backp, backm)
     return data
+
+@module
+def interpolate_background(data, backp, backm, align='auto'):
+    """
+    Interpolate background data onto specular angles.
+
+    The *align* flag determines which background points are matched
+    to the specular points. The 'auto' option uses the Qz_basis set
+    in the file loader, otherwise align the sample angle or the detector
+    angle. This sets Qz_basis to align so that a subsequent subtraction
+    operation will use the same interpolation.
+
+    Masking of background or specular should occur before interpolation
+    or after subtraction.
+
+    **Inputs**
+
+    data (refldata) : specular data
+
+    backp {Background+} (refldata?) : plus-offset background data
+
+    backm {Background-} (refldata?) : minus-offset background data
+
+    align (opt:auto|sample|detector|sample_target|detector_target)
+    : angle which determines $q_z$
+
+    **Returns**
+
+    output (refldata) : unchanged specular
+
+    outp (refldata) : interpolated plus-offset background data
+
+    outm (refldata) : interpolated minus-offset background data
+
+    2020-11-20 Paul Kienzle new module
+    """
+    from .background import apply_interpolation
+
+    apply_interpolation(data=backp, base=data, align=align)
+    apply_interpolation(data=backm, base=data, align=align)
+    return data, backp, backm
 
 @module
 def fit_background_field(back, fit_scale=True, scale=1.0, epsD0=0.01, epssi=1.109e-4, LS3=380, LS4=1269, LSD=1675, HD=150, maxF=76.2, Qcutoff=0.05):
@@ -1191,11 +1236,16 @@ def abinitio_footprint(data, Io=1., width=None, offset=0.):
     from different theta, lambda combinations, then footprint will no
     longer be available.
 
+    Footprint is computed using sample angle. If background is measured using
+    sample angle offset, then footprint should be applied before background
+    subtraction. For detector angle offset the correction is the same for
+    specular and background, so it can be applied before or after subtraction.
+
     **Inputs**
 
     data (refldata) : uncorrected measurement
 
-    Io (float:): scale factorto account for vertical beam spill
+    Io (float:): scale factor to account for vertical beam spill.
 
     width (float:mm) : sample width along the beam.  If not provided, use the
     value stored in the file.
