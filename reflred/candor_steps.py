@@ -83,6 +83,7 @@ def candor(
     | 2020-08-27 Brian Maranville loader gets attenuator information
     | 2020-09-11 Brian Maranville loader updated with new motor names
     | 2020-11-18 Brian Maranville adding attenuator correction
+    | 2020-11-20 Paul Kienzle support files with old detector table layout
     """
     from .load import url_load_list
     from .candor import load_entries
