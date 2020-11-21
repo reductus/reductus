@@ -222,7 +222,7 @@ class Candor(ReflData):
         # protect against future change. For older data, use reshape with
         # wavelengths in "channels_at_end" order (even though the detector
         # counts are in "banks_at_end" order).
-        if len(wavelength.shape) == 1:
+        if all(dim != NUM_CHANNELS for dim in wavelength.shape):
             wavelength = wavelength.reshape(NUM_CHANNELS, -1)
             wavelength_spread = wavelength_spread.reshape(NUM_CHANNELS, -1)
             divergence = divergence.reshape(NUM_CHANNELS, -1)
