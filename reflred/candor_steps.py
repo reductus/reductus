@@ -131,20 +131,20 @@ def select_bank(data, bank_select=None):
 
     output (candordata): Data with indices not listed in bank_select removed.
 
-    | 2020-07-07 Brian Maranville 
+    | 2020-07-07 Brian Maranville
     """
 
     if bank_select is not None:
         data = copy(data)
-        data.detector.counts = data.detector.counts[:,:,[bank_select]]
+        data.detector.counts = data.detector.counts[:, :, [bank_select]]
         data.detector.counts_variance = data.detector.counts.copy()
         data.detector.dims = data.detector.counts.shape
 
-        data.detector.efficiency = data.detector.efficiency[:,:,[bank_select]]
+        data.detector.efficiency = data.detector.efficiency[:, :, [bank_select]]
         data.detector.angle_x_offset = data.detector.angle_x_offset[[bank_select]]
-        data.detector.wavelength = data.detector.wavelength[:,:,[bank_select]]
-        data.detector.wavelength_resolution = data.detector.wavelength_resolution[:,:,[bank_select]]
-    
+        data.detector.wavelength = data.detector.wavelength[:, :, [bank_select]]
+        data.detector.wavelength_resolution = data.detector.wavelength_resolution[:, :, [bank_select]]
+
     return data
 
 @module("candor")
@@ -162,23 +162,23 @@ def select_channel(data, channel_select=None):
 
     output (candordata): Data with indices not listed in channel_select removed.
 
-    | 2020-07-12 Brian Maranville 
+    | 2020-07-12 Brian Maranville
     """
 
     if channel_select is not None:
         data = copy(data)
-        data.detector = copy(data.detector)										   
-        data.detector.counts = data.detector.counts[:,channel_select,:]
-        data.detector.counts_variance = data.detector.counts_variance[:,channel_select,:]
+        data.detector = copy(data.detector)
+        data.detector.counts = data.detector.counts[:, channel_select, :]
+        data.detector.counts_variance = data.detector.counts_variance[:, channel_select, :]
         data.detector.dims = data.detector.counts.shape
 
-        data.detector.efficiency = data.detector.efficiency[:,channel_select,:]
-        data.detector.wavelength = data.detector.wavelength[:,channel_select,:]
-        data.detector.wavelength_resolution = data.detector.wavelength_resolution[:,channel_select,:]
+        data.detector.efficiency = data.detector.efficiency[:, channel_select, :]
+        data.detector.wavelength = data.detector.wavelength[:, channel_select, :]
+        data.detector.wavelength_resolution = data.detector.wavelength_resolution[:, channel_select, :]
         if data._v is not None:
-            data._v = data._v[:,channel_select,:]
+            data._v = data._v[:, channel_select, :]
         if data._dv is not None:
-            data._dv = data._dv[:,channel_select,:]
+            data._dv = data._dv[:, channel_select, :]
     return data
 
 @module("candor")
@@ -196,7 +196,7 @@ def select_points(data, point_select=None):
 
     output (candordata): Data with point indices not listed in point_select removed.
 
-    | 2020-07-03 Brian Maranville 
+    | 2020-07-03 Brian Maranville
     """
 
     if point_select is not None:
@@ -228,7 +228,7 @@ def select_points(data, point_select=None):
         data.sample.angle_x_target = data.sample.angle_x_target[point_select]
         data.detector.angle_x = data.detector.angle_x[point_select]
         data.detector.angle_x_target = data.detector.angle_x_target[point_select]
-    
+
     return data
 
 
@@ -344,7 +344,7 @@ def recalibrate_wavelength(data, wavelengths=(), wavelength_resolutions=()):
     data (candordata) : data to scale
 
     wavelengths (float[]?) : override wavelengths from data file
-    
+
     wavelength_resolutions (float[]?) : override wavelength spreads (sigma) from data file
 
     **Returns**
@@ -411,7 +411,7 @@ def dark_current(data, dc_rate=0., s1_slope=0.):
     return data
 
 @module("candor")
-def attenuation(data, transmission=None, transmission_err=None, target_value=None):  
+def attenuation(data, transmission=None, transmission_err=None, target_value=None):
     r"""
     Correct for wavelength-dependent attenuation from built-in attenuators
 
@@ -447,7 +447,7 @@ def attenuation(data, transmission=None, transmission_err=None, target_value=Non
         data.attenuator.transmission_err = np.reshape(np.array(transmission_err), (-1, NUM_CHANNELS))
     if target_value is not None:
         data.attenuator.target_value = np.array(target_value)
-    
+
     num_attenuators = data.attenuator.transmission.shape[0]
 
     for ai in range(1, num_attenuators+1):
@@ -455,7 +455,7 @@ def attenuation(data, transmission=None, transmission_err=None, target_value=Non
         matching = (av == ai)
         if not np.any(matching):
             continue
-        
+
         trans = data.attenuator.transmission[ai-1][None, :, None]
         trans_err = data.attenuator.transmission_err
         att = 1.0 / (trans)
@@ -463,7 +463,7 @@ def attenuation(data, transmission=None, transmission_err=None, target_value=Non
             datt = np.zeros_like(att)
         else:
             datt = (trans_err[ai-1][None,:,None]) * att**2
-        
+
         if data._v is not None:
             v = data._v[matching]
             if data._dv is not None:
