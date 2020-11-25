@@ -196,6 +196,7 @@ window.onload = async function () {
     // there's only one action from plotter... export:
     editor.export_data();
   })
+  app.plot_instance = plotter.instance;
   fieldUI.create_instance("fieldsdiv");
   const fieldUI_actions = {
     accept_button() { editor.advance_to_output() },
