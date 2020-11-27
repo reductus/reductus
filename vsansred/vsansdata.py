@@ -261,7 +261,7 @@ class VSansDataQSpace(VSansData):
         # Check whether closing h5_item frees fid, or whether it is kept
         # around indefinitely leading to a memory leak.
         fid = BytesIO()
-        h5_item = h5py.File(fid)
+        h5_item = h5py.File(fid, 'w')
 
         entry_name = self.metadata.get("entry", "entry")
         nxentry = h5_item.create_group(entry_name)
