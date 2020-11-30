@@ -409,7 +409,7 @@ class Uncertainty(object):
                             dtype=dtype, out=new_out, keepdims=keepdims)
         return _U(M, varM) if out is None else new_out
 
-    def cumsum(self, axis=None, dtype=None, out=None, keepdims=False):
+    def cumsum(self, axis=None, dtype=None, out=None):
         r"""
         Return the cumulative sum of an uncertain dataset.
 
@@ -420,7 +420,7 @@ class Uncertainty(object):
         else:
             new_out = (None, None)
         M, varM = err1d.cumsum(self.x, self.variance, axis=axis,
-                               dtype=dtype, out=new_out, keepdims=keepdims)
+                               dtype=dtype, out=new_out)
         return _U(M, varM) if out is None else new_out
 
     def std(self, *args, **kw):
