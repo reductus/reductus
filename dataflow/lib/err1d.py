@@ -68,7 +68,7 @@ def sum(X, varX, axis=None, dtype=None, out=(None, None), keepdims=False):
     return M, varM
 
 
-def cumsum(X, varX, axis=None, dtype=None, out=(None, None), keepdims=False):
+def cumsum(X, varX, axis=None, dtype=None, out=(None, None)):
     # type: (np.ndarray, np.ndarray, ...) -> (float, float)
     r"""
     Return the cumulative sum and variance of a dataset.
@@ -76,8 +76,8 @@ def cumsum(X, varX, axis=None, dtype=None, out=(None, None), keepdims=False):
     Follows the numpy cumsum interface, except a pair of output arrays is
     required if you want to reuse an output.
     """
-    M = np.cumsum(X, axis=axis, dtype=dtype, out=out[0], keepdims=keepdims)
-    varM = np.cumsum(varX, axis=axis, dtype=dtype, out=out[1], keepdims=keepdims)
+    M = np.cumsum(X, axis=axis, dtype=dtype, out=out[0])
+    varM = np.cumsum(varX, axis=axis, dtype=dtype, out=out[1])
     return M, varM
 
 
