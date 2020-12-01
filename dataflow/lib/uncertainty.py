@@ -193,6 +193,9 @@ class Uncertainty(object):
     def view(self, *args, **kw):
         return _U(self.x.view(*args, **kw),
                   self.variance.view(*args, **kw))
+    def flatten(self, *args, **kw):
+        return _U(self.x.flatten(*args, **kw),
+                  self.variance.flatten(*args, **kw))
 
     # Make standard deviation available
     def _getdx(self):
