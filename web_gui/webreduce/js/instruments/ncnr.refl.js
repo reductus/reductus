@@ -1,5 +1,5 @@
 import {extend} from '../libraries.js';
-import { add_viewer_link } from './decorators.js';
+import { add_viewer_link, add_sample_description } from './decorators.js';
 const instrument = {};
 export default instrument;
 
@@ -112,7 +112,7 @@ function add_range_indicators(node_list, leaf_list, node_parents, file_objs) {
   }
 }
 
-instrument.decorators = [add_range_indicators, add_viewer_link];//, add_sample_description];
+instrument.decorators = [add_range_indicators, add_viewer_link, add_sample_description];
 instrument.export_targets = [
   { 
     "id": "unpolarized_reflcalc",
