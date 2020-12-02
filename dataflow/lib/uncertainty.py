@@ -43,13 +43,31 @@ def _U(x, variance):
     """
     Create an uncertainty object without type-checking.
     """
+    #print("creating", x, variance)
     self = Uncertainty.__new__(Uncertainty)
     self._x = x
     self._variance = variance
     return self
 
 # TODO: rename to Measurement and add support for units?
-# TODO: C implementation of *, /, **?
+# TODO: C or numba implementation of *, /, **?
+# TODO: use __array_function__ for sum, mean, etc.
+
+_UNARY_DISPATCH = {
+    np.log: err1d.log,
+    np.exp: err1d.exp,
+    np.sqrt: err1d.sqrt,
+    np.sin: err1d.sin,
+    np.cos: err1d.cos,
+    np.tan: err1d.tan,
+    np.arcsin: err1d.arcsin,
+    np.arccos: err1d.arccos,
+    np.arctan: err1d.arctan,
+}
+_BINARY_DISPATCH = {
+    np.arctan2: err1d.arctan2
+}
+
 class Uncertainty(object):
     __slots__ = ('_x', '_variance')
     __array_priority__ = 20.   # force array*uncertainty to use our __rmul__
@@ -68,6 +86,20 @@ class Uncertainty(object):
             variance = np.zeros_like(self.x)
         # Assign variance, possibly coercing its type.
         self.variance = variance
+
+    def __array_ufunc__(self, ufunc, method, *args, **kwargs):
+        #print(f"ufunc self:{self} ufunc:{ufunc}, method:{method}, args:{args}, {kwargs}")
+        if method != "__call__":
+            return NotImplemented
+        f = _UNARY_DISPATCH.get(ufunc, None)
+        if f is not None:
+            a, = args
+            return _U(*f(a.x, a.variance))
+        f = _BINARY_DISPATCH.get(ufunc, None)
+        if f is not None:
+            a, b = args
+            return _U(*f(a.x, a.variance, b.x, b.variance))
+        return NotImplemented
 
     def __copy__(self):
         return _U(copy(self.x), copy(self.variance))
@@ -193,6 +225,9 @@ class Uncertainty(object):
     def view(self, *args, **kw):
         return _U(self.x.view(*args, **kw),
                   self.variance.view(*args, **kw))
+    def flatten(self, *args, **kw):
+        return _U(self.x.flatten(*args, **kw),
+                  self.variance.flatten(*args, **kw))
 
     # Make standard deviation available
     def _getdx(self):
@@ -380,20 +415,23 @@ class Uncertainty(object):
     # This process will not work if __array__ is defined.
     #def __array__(self): return NotImplemented
 
-    def mean(self, axis=None, dtype=None, out=(None,None), keepdims=False, biased=True):
+    def mean(self, axis=None, dtype=None, out=None, keepdims=False, biased=False):
         r"""
         Compute the uncertainty-weighted average of the dataset.
 
-        If varX is estimated from the data, then use *biased=True* so that the
-        estimated variance is scaled by the normalized $\chi^2$.  See the
+        Use *v.mean(biased=True)* when the variance in the individual points
+        is estimated from the data. The result is scaled by the normalized
+        $\chi^2$ to correct the bias.[1] Use *v.mean(biased=False)* for the
+        variance-weighted average without the $\chi^2$ correction.
         wikipedia page for the weighted arithmetic mean for details.
 
-        See numpy.mean for details on the remaining parameters.
+        [1] https://en.wikipedia.org/wiki/Weighted_arithmetic_mean#Variance_weights
         """
-        #if out != (None,None):
-        #    out = out.x, out.variance
-        M, varM = err1d.mean(self.x, self.variance, biased=biased, axis=axis, out=out, dtype=dtype, keepdims=keepdims)
-        return _U(M, varM)
+        out_pair = None if out is None else (out.x, out.variance)
+        M, varM = err1d.mean(
+            self.x, self.variance, biased=biased,
+            axis=axis, dtype=dtype, out=out_pair, keepdims=keepdims)
+        return _U(M, varM) if out is None else out
 
     def sum(self, axis=None, dtype=None, out=None, keepdims=False):
         r"""
@@ -401,27 +439,21 @@ class Uncertainty(object):
 
         See numpy.sum for details on the interface.
         """
-        if out is not None:
-            new_out = out.x, out.variance
-        else:
-            new_out = (None, None)
+        out_pair = None if out is None else (out.x, out.variance)
         M, varM = err1d.sum(self.x, self.variance, axis=axis,
-                            dtype=dtype, out=new_out, keepdims=keepdims)
-        return _U(M, varM) if out is None else new_out
+                            dtype=dtype, out=out_pair, keepdims=keepdims)
+        return _U(M, varM) if out is None else out
 
-    def cumsum(self, axis=None, dtype=None, out=None, keepdims=False):
+    def cumsum(self, axis=None, dtype=None, out=None):
         r"""
         Return the cumulative sum of an uncertain dataset.
 
         See numpy.cumsum for details on the interface.
         """
-        if out is not None:
-            new_out = out.x, out.variance
-        else:
-            new_out = (None, None)
+        out_pair = None if out is None else (out.x, out.variance)
         M, varM = err1d.cumsum(self.x, self.variance, axis=axis,
-                               dtype=dtype, out=new_out, keepdims=keepdims)
-        return _U(M, varM) if out is None else new_out
+                               dtype=dtype, out=out_pair)
+        return _U(M, varM) if out is None else out
 
     def std(self, *args, **kw):
         raise TypeError("Use mean() to compute the mean and variance of uncertainty items")
@@ -429,38 +461,25 @@ class Uncertainty(object):
     def var(self, *args, **kw):
         raise TypeError("Use mean() to compute the mean and variance of uncertainty items")
 
-    def average(self, axis=None, weights=None):
+    def average(self, axis=None, weights=None, returned=False):
         r"""
         Return the weighted average of a data set.
 
         Note that mean(A) is the same as average(A, weights=1)
         """
-        # TODO: give difference between mean and average
-        M, varM = err1d.average(self.x, self.variance, w, w.variance, axis=axis)
+        # TODO: explain difference between mean and average
+        w, wvar = (
+            (weights.x, weights.variance) if isinstance(weights, Uncertainty)
+            else (1, 0) if weights is None
+            else (weights, 0))
+        M, varM = err1d.average(self.x, self.variance, w, wvar, axis=axis)
         return _U(M, varM)
 
     # TODO: comparisons returning p-value?
-
-    def log(self):
-        return _U(*err1d.log(self.x, self.variance))
-    def exp(self):
-        return _U(*err1d.exp(self.x, self.variance))
-    def sqrt(self):
-        return _U(*err1d.sqrt(self.x, self.variance))
-    def sin(self):
-        return _U(*err1d.sin(self.x, self.variance))
-    def cos(self):
-        return _U(*err1d.cos(self.x, self.variance))
-    def tan(self):
-        return _U(*err1d.tan(self.x, self.variance))
-    def arcsin(self):
-        return _U(*err1d.arcsin(self.x, self.variance))
-    def arccos(self):
-        return _U(*err1d.arccos(self.x, self.variance))
-    def arctan(self):
-        return _U(*err1d.arctan(self.x, self.variance))
-    def arctan2(self, other):
-        return _U(*err1d.arctan2(self.x, self.variance, other.x, other.variance))
+    def __eq__(self, other):
+        if not isinstance(other, Uncertainty):
+            return False
+        return (self._x == other._x) & (self._variance == other._variance)
 
 # numpy.method(x) calls x.method() if x has a method attribute, so just use
 # the names from the numpy namespace.
@@ -479,9 +498,13 @@ arccos = np.arccos
 arctan = np.arctan
 arctan2 = np.arctan2
 
-def average(x, axis=None, weights=None):
+def average(x, axis=None, weights=None, returned=False):
     r"""
     Return the weighted average of a data set.
+
+    This uses $\sum w_k x_k / \sum w_k$ with gaussian uncertainty propagation
+    with $\Delta w_k$ and $\Delta x_k$. Use $w_k = 1 \pm 0$ for a simple
+    gaussian average.
     """
     return x.average(axis=axis, weights=weights)
 
@@ -552,8 +575,9 @@ def polyfit(x, y, deg, rcond=None, full=False, w=None, cov=False):
 def test():
     a = Uncertainty(5, 3)
     b = Uncertainty(4, 2)
+    v = Uncertainty([5, 4], [3, 2])
 
-    # Scalar operations
+    # Uscalar op scalar
     z = a+4
     assert z.x == 5+4 and z.variance == 3
     z = a-4
@@ -562,6 +586,16 @@ def test():
     assert z.x == 5*4 and z.variance == 3*4**2
     z = a/4
     assert z.x == 5./4 and z.variance == 3./4**2
+
+    # Uvector op scalar
+    z = v+4
+    assert (z == Uncertainty([5+4, 4+4], [3, 2])).all()
+    z = v-4
+    assert (z == Uncertainty([5-4, 4-4], [3, 2])).all()
+    z = v*4
+    assert (z == Uncertainty([5*4, 4*4], [3*4**2, 2*4**2])).all()
+    z = v/4
+    assert (z == Uncertainty([5/4, 4/4], [3./4**2, 2./4**2])).all()
 
     # Reverse scalar operations
     z = 4+a
@@ -678,6 +712,47 @@ def test():
     np_p, np_C = np.polyfit(xp, fp.x, 1, w=1/fp.dx, cov=True)
     assert np.linalg.norm(p.x - np_p) < 2e-15
     assert np.linalg.norm(p.variance - np.diagonal(np_C)) < 2e-15
+
+    # Test numpy ufunc redirection
+    assert np.log(a) == _U(*err1d.log(a.x, a.variance))
+    assert np.exp(a) == _U(*err1d.exp(a.x, a.variance))
+    assert np.sqrt(a) == _U(*err1d.sqrt(a.x, a.variance))
+    assert np.sin(a) == _U(*err1d.sin(a.x, a.variance))
+    assert np.cos(a) == _U(*err1d.cos(a.x, a.variance))
+    assert np.tan(a) == _U(*err1d.tan(a.x, a.variance))
+    # arcsin/arccos require values in [-1, 1]
+    assert np.arcsin(a/6) == _U(*err1d.arcsin(a.x/6, a.variance/36))
+    assert np.arccos(a/6) == _U(*err1d.arccos(a.x/6, a.variance/36))
+    assert np.arctan(a) == _U(*err1d.arctan(a.x, a.variance))
+    assert np.arctan2(a, b) == _U(*err1d.arctan2(a.x, a.variance, b.x, b.variance))
+
+    # Test array forms
+    assert (np.log(v) == _U(*err1d.log(v.x, v.variance))).all()
+    assert (np.exp(v) == _U(*err1d.exp(v.x, v.variance))).all()
+    assert (np.sqrt(v) == _U(*err1d.sqrt(v.x, v.variance))).all()
+    assert (np.sin(v) == _U(*err1d.sin(v.x, v.variance))).all()
+    assert (np.cos(v) == _U(*err1d.cos(v.x, v.variance))).all()
+    assert (np.tan(v) == _U(*err1d.tan(v.x, v.variance))).all()
+    # arcsin/arccos require values in [-1, 1]
+    assert (np.arcsin(v/6) == _U(*err1d.arcsin(v.x/6, v.variance/36))).all()
+    assert (np.arccos(v/6) == _U(*err1d.arccos(v.x/6, v.variance/36))).all()
+    assert (np.arctan(v) == _U(*err1d.arctan(v.x, v.variance))).all()
+    assert (np.arctan2(v, v) == _U(*err1d.arctan2(v.x, v.variance, v.x, v.variance))).all()
+
+    # Check vector operations
+    s = a+b
+    assert np.sum(v) == s
+    assert (np.cumsum(v) == _U([a.x, s.x], [a.variance, s.variance])).all()
+    # Check in-place cumsum
+    c = v.copy()
+    np.cumsum(c, out=c)
+    assert (np.cumsum(v) == c).all()
+    # Mean and average uses err1d
+    assert np.mean(v) == _U(*err1d.mean(v.x, v.variance, biased=False))
+    assert v.mean(biased=True) == _U(*err1d.mean(v.x, v.variance, biased=True))
+    assert v.mean(biased=False) == _U(*err1d.mean(v.x, v.variance, biased=False))
+    assert average(v) == _U(*err1d.average(v.x, v.variance, 1, 0))
+    assert average(v, weights=2) == _U(*err1d.average(v.x, v.variance, 2, 0))
 
 if __name__ == "__main__":
     test()
