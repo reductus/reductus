@@ -52,6 +52,7 @@ def _U(x, variance):
 # TODO: rename to Measurement and add support for units?
 # TODO: C or numba implementation of *, /, **?
 # TODO: use __array_function__ for sum, mean, etc.
+# TODO: use __array_ufunc__ for all ops rather __mul__, etc.
 
 _UNARY_DISPATCH = {
     np.log: err1d.log,
@@ -63,9 +64,20 @@ _UNARY_DISPATCH = {
     np.arcsin: err1d.arcsin,
     np.arccos: err1d.arccos,
     np.arctan: err1d.arctan,
+    np.negative: lambda a: (-a.x, a.variance),
+    np.positive: lambda a: (a.x, a.variance),
+    np.absolute: lambda a: (abs(a.x), a.variance),
 }
 _BINARY_DISPATCH = {
-    np.arctan2: err1d.arctan2
+    np.arctan2: err1d.arctan2,
+    np.add: err1d.add,
+    np.subtract: err1d.sub,
+    np.multiply: err1d.mul,
+    np.true_divide: err1d.div,
+    np.divide: err1d.div,
+    np.power: err1d.mul,
+    np.multiply: err1d.mul,
+    np.multiply: err1d.mul,
 }
 
 class Uncertainty(object):
@@ -95,11 +107,14 @@ class Uncertainty(object):
         if f is not None:
             a, = args
             return _U(*f(a.x, a.variance))
+        #print(f"ufunc {ufunc}")
         f = _BINARY_DISPATCH.get(ufunc, None)
         if f is not None:
             a, b = args
-            return _U(*f(a.x, a.variance, b.x, b.variance))
-        return NotImplemented
+            ax, av = (a.x, a.variance) if isinstance(a, Uncertainty) else (a, 0)
+            bx, bv = (b.x, b.variance) if isinstance(b, Uncertainty) else (b, 0)
+            return _U(*f(ax, av, bx, bv))
+        return NotImplemented 
 
     def __copy__(self):
         return _U(copy(self.x), copy(self.variance))
@@ -359,12 +374,18 @@ class Uncertainty(object):
         #return str(self.x)+" +/- "+str(numpy.sqrt(self.variance))
         if np.isscalar(self.x):
             return format_uncertainty(self.x, self.dx)
-        else:
-            content = ", ".join(format_uncertainty(v, dv)
-                                for v, dv in zip(self.x, self.dx))
-            return "".join(("[", content, "]"))
+        # TODO: don't need to format the entire matrix when printing summary
+        formatted = [format_uncertainty(v, dv)
+                     for v, dv in zip(self.x.flat, self.dx.flat)]
+        with np.printoptions(formatter={'str_kind': lambda s: s}):
+            return str(np.array(formatted).reshape(self.x.shape))
     def __repr__(self):
-        return "Uncertainty(%s,%s)"%(str(self.x), str(self.variance))
+        result = "Uncertainty(%s,%s)"%(repr(self.x), repr(self.variance))
+        return result.replace(' ', '').replace('\n', '').replace('array', '')
+
+    #def __format__(self, *args, **kw):
+    #    print("calling format with", args, kw)
+    #    return str(self)
 
     # Not implemented
     def __matmul__(self, other): return NotImplemented
@@ -753,6 +774,19 @@ def test():
     assert v.mean(biased=False) == _U(*err1d.mean(v.x, v.variance, biased=False))
     assert average(v) == _U(*err1d.average(v.x, v.variance, 1, 0))
     assert average(v, weights=2) == _U(*err1d.average(v.x, v.variance, 2, 0))
+
+    # rmul with array - Uarray
+    A = Uncertainty([[5, 4], [3, 2]], [[1, 1], [1, 1]])
+    B = np.array([3, 4])
+    C = B[None, :] * A
+    assert C[1, 1] == B[1]*A[1, 1]
+    C = A * B[None, :]
+    assert C[1, 1] == B[1]*A[1, 1]
+    C = A * A
+    assert C[1, 1] == A[1, 1]*A[1, 1]
+
+    # Don't care about the format at the moment, but make sure that arrays print
+    str(A)
 
 if __name__ == "__main__":
     test()
