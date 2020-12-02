@@ -600,7 +600,7 @@ def candor_rebin(data, qmin=None, qmax=None, qstep=0.003, qstep_max=None, averag
 
     qmax (float) : End of q range, or empty to infer from data
 
-    qstep (float) : q step size at qmin, or 0 for no rebinning
+    qstep (float) : q step size at qmin, 0 for no rebinning, or an integer N > 1 to use N q points per bin
 
     qstep_max (float) : maximum q step size at qmax, or empty to use qstep over entire q range
 
@@ -614,6 +614,8 @@ def candor_rebin(data, qmin=None, qmax=None, qstep=0.003, qstep_max=None, averag
     | 2020-08-03 David Hoogerheide adding progressive q step coarsening
     | 2020-09-24 Brian Maranville changed default averaging
     | 2020-10-14 Paul Kienzle fixed uncertainty for time normalized data
+    | 2020-12-02 David Hoogerheide added exponential function to progressive q step coarsening
+    | 2020-12-02 David Hoogerheide added functionality to set Q bin size by number of points per bin
     """
     from .candor import rebin, nobin
 
@@ -624,11 +626,27 @@ def candor_rebin(data, qmin=None, qmax=None, qstep=0.003, qstep_max=None, averag
             qmin = data.Qz.min()
         if qmax is None:
             qmax = data.Qz.max()
-        if qstep_max is None:
+        if (qstep_max is None) | (qstep_max == qstep):
             q = np.arange(qmin, qmax, qstep)
         else:
-            dq = np.linspace(qstep,qstep_max, int(np.ceil(2*(qmax-qmin)/(qstep_max+qstep))))
-            q = (qmin-qstep) + np.cumsum(dq)
+            # solve for N and qexp given qstep and qstep_max
+            from scipy.optimize import fsolve
+
+            dQ = abs(qmax - qmin)
+            N = fsolve(lambda Nvar : dQ/qstep_max * np.log(dQ/qstep) - Nvar * np.log(Nvar), dQ/(0.5*(qstep_max + qstep)))[0]
+            qexp = -np.log(qstep/dQ)/np.log(N)
+            print('Number of bins: %i\nExponent: %0.3f' % (N, qexp))
+            #print('Min step size: %f' % ((qmax-qmin)*float(N)**(-qexp)))
+            #print('Max step size: %f' % ((qmax-qmin)*(1-(1-1./float(N))**qexp)))
+            normq = np.linspace(0, 1, int(np.round(N)))**qexp
+            q = qmin + normq*dQ
+            #print(normq, q)
+
+        # algorithm for dynamic binning (N data points per bin)
+        if qstep > 1:
+            N = int(np.floor(qstep))
+            qsort = np.sort(data.Qz[(data.Qz > qmin) & (data.Qz < qmax)])
+            q = qsort[range(N//2, len(qsort), N)]
         data = rebin(data, q, average)
 
     return data
