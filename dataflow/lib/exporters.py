@@ -97,7 +97,7 @@ def hdf(datasets, export_method=None, template_data=None, concatenate=False):
     if concatenate and exports:
         filename = _build_filename(exports[0], ext=".hdf5", index=None)
         fid = io.BytesIO()
-        container = h5py.File(fid)
+        container = h5py.File(fid, 'w')
         _set_nexus_attrs(container, filename)
         container.attrs["template_def"] = header_string
         for export in exports:
