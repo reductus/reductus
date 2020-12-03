@@ -600,7 +600,7 @@ def candor_rebin(data, qmin=None, qmax=None, qstep=0.003, qstep_max=None, averag
 
     qmax (float) : End of q range, or empty to infer from data
 
-    qstep (float) : q step size at qmin, 0 for no rebinning, or an integer N > 1 to use N q points per bin
+    qstep (float) : q step size at qmin, 0 for no rebinning, or a number N > 1 to use N q points per bin
 
     qstep_max (float) : maximum q step size at qmax, or empty to use qstep over entire q range
 
@@ -615,7 +615,7 @@ def candor_rebin(data, qmin=None, qmax=None, qstep=0.003, qstep_max=None, averag
     | 2020-09-24 Brian Maranville changed default averaging
     | 2020-10-14 Paul Kienzle fixed uncertainty for time normalized data
     | 2020-12-02 David Hoogerheide added exponential function to progressive q step coarsening
-    | 2020-12-02 David Hoogerheide added functionality to set Q bin size by number of points per bin
+    | 2020-12-02 David Hoogerheide added functionality to set Q bin size by number of points per bin for qstep > 1
     """
     from .candor import rebin, nobin
 
