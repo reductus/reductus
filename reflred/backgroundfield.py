@@ -112,8 +112,8 @@ def fit_background_field(back, epsD0, epssi, fit_scale, scale_value=1.0, LS3=380
     Qz_target = list()
 
     # Check for slit distances, otherwise use values from data file
-    LS3 = back[0].slit3.distance if not np.isinf(back[0].slit3.distance) else LS3
-    LS4 = back[0].slit4.distance if not np.isinf(back[0].slit4.distance) else LS4
+    LS3 = back[0].slit3.distance if back[0].slit3.distance is not None else LS3
+    LS4 = back[0].slit4.distance if back[0].slit4.distance is not None else LS4
     L4D = LSD - LS4
 
     # Extract relevant quantities from inputs
