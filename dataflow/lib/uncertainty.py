@@ -583,6 +583,7 @@ def polyfit(x, y, deg, rcond=None, full=False, w=None, cov=False):
         xval = x.x
     else:
         xval = x
+    # WARNING: numpy docs say use 1/sigma for weight, not 1/sigma^2
     yval, yerr = y.x, y.dx
 
     if w is None:
