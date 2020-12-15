@@ -222,8 +222,10 @@ def select_points(data, point_select=None):
             data.angular_resolution = data.angular_resolution[point_select]
 
         for slit in (data.slit1, data.slit2, data.slit3, data.slit4):
-            slit.x = slit.x[point_select]
-            slit.x_target = slit.x_target[point_select]
+            for attrname in ["x", "x_target", "y", "y_target"]:
+                attr = getattr(slit, attrname, None)
+                if attr is not None:
+                    setattr(slit, attrname, attr[point_select])
 
         data.sample.angle_x = data.sample.angle_x[point_select]
         data.sample.angle_x_target = data.sample.angle_x_target[point_select]
