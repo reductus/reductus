@@ -38,6 +38,9 @@ let dataflow_template = `
       <md-menu-item v-if="menu.startdata != null && menu.startdata.target_type=='module'">
         <md-button @click="remove_module(menu.startdata.module_index);menu.visible=false;" class="md-accent md-raised">Delete</md-button>
       </md-menu-item>
+      <md-menu-item v-if="menu.startdata != null && menu.startdata.target_type=='module'">
+        <md-button @click="rename_module(menu.startdata.module_index);menu.visible=false;" class="md-raised">Rename</md-button>
+      </md-menu-item>
       <md-menu-item v-if="menu.startdata != null && menu.startdata.target_type=='wire'">
         <md-button @click="remove_wire(menu.startdata.wire_index);menu.visible=false;" class="md-accent md-raised">Delete wire</md-button>
       </md-menu-item>
@@ -203,9 +206,15 @@ let module_template = `
 const Module = {
   name: "module",
   props: ["module_def", "module_data", "module_index", "options", "selected", "satisfied", "moving"],
+  methods: {
+    set_display_width: function () {
+      let bbox = this.$refs.title_text.getBBox();
+      this.$set(this.module_data, 'text_width', Math.round(bbox.width) + 10)
+    }
+  },
   computed: {
     display_width: function () {
-      return (this.module_data.text_width != null) ? this.module_data.text_width : this.options.default_text_width;
+      return Math.max(this.module_data.text_width ?? 0, this.options.default_text_width);
     }
   },
   template: module_template
@@ -325,14 +334,14 @@ export const DataflowViewer = {
         let source_def = this.module_defs[source_module.module];
         let source_terminal_index = source_def.outputs.findIndex((t) => (t.id == source[1]));
         s = {
-          x: source_module.x + (source_module.text_width || this.options.default_text_width) + this.options.terminal.width,
+          x: source_module.x + Math.max(source_module.text_width ?? 0, this.options.default_text_width) + this.options.terminal.width,
           y: source_module.y + (this.options.terminal.height * (source_terminal_index + 0.5))
         }
       }
       else {
         s = source;
       }
-      
+
       let t;
       if (target.x == null && target.y == null) {
         let target_module = this.template_data.modules[target[0]];
@@ -366,14 +375,14 @@ export const DataflowViewer = {
         this.terminal_select(data.module_index, data.terminal_def, data.ctrlKey, data.shiftKey);
       }
     },
-    contextmenu: function(d, x, y) {
+    contextmenu: function (d, x, y) {
       this.$emit('contextmenu', d.startdata, x, y);
-      this.menu.startdata = d.startdata,
+      this.menu.startdata = d.startdata;
       this.menu.x = x;
       this.menu.y = y;
       this.menu.visible = true;
     },
-    add_module: function(ev) {
+    add_module: function (ev) {
       let to_add = ev.target.value;
       this.template_data.modules.push({
         module: to_add,
@@ -394,12 +403,12 @@ export const DataflowViewer = {
       }
       let wires = this.template_data.wires;
       indices.sort().reverse();
-      let old_order = this.template_data.modules.map((m,i) => (i));
+      let old_order = this.template_data.modules.map((m, i) => (i));
       for (let mi of indices) {
         this.template_data.modules.splice(mi, 1);
         old_order.splice(mi, 1);
       }
-      for (let wi = wires.length-1;  wi >= 0; wi--) {
+      for (let wi = wires.length - 1; wi >= 0; wi--) {
         let w = wires[wi];
         let new_source = old_order.indexOf(w.source[0]);
         let new_target = old_order.indexOf(w.target[0]);
@@ -411,9 +420,9 @@ export const DataflowViewer = {
           w.target[0] = new_target;
         }
       }
-      
+
       let sm = this.selected.modules;
-      for (let si = sm.length - 1; si >=0; si--) {
+      for (let si = sm.length - 1; si >= 0; si--) {
         let new_selected = old_order.indexOf(sm[si]);
         if (new_selected < 0) {
           sm.splice(si, 1);
@@ -422,9 +431,9 @@ export const DataflowViewer = {
           sm.splice(si, 1, new_selected)
         }
       }
-      
+
       let st = this.selected.terminals;
-      for (let si = st.length - 1; si >=0; si--) {
+      for (let si = st.length - 1; si >= 0; si--) {
         let new_selected = old_order.indexOf(st[si][0]);
         if (new_selected < 0) {
           st.splice(si, 1);
@@ -433,7 +442,7 @@ export const DataflowViewer = {
           st[si][0] = new_selected;
         }
       }
-      
+
       //console.log(JSON.stringify(this.template_data.wires, null, 2));
 
     },
@@ -448,29 +457,37 @@ export const DataflowViewer = {
         .filter((w) => (indices.includes(w.source[0]) && indices.includes(w.target[0])))
         .map((w) => (extend(true, {}, w)));
 
-      wires.forEach((w,i) => {
+      wires.forEach((w, i) => {
         let new_source = indices.indexOf(w.source[0]);
         let new_target = indices.indexOf(w.target[0]);
         w.source[0] = new_source;
         w.target[0] = new_target;
       })
-      
+
       let modules = indices.map((mi) => (extend(true, {}, this.template_data.modules[mi])));
-      let reference_point = {x: this.menu.x, y: this.menu.y};
-      this.menu.clipboard = {modules, wires, reference_point};
+      let reference_point = { x: this.menu.x, y: this.menu.y };
+      this.menu.clipboard = { modules, wires, reference_point };
+    },
+    rename_module(index) {
+      let module = this.template_data.modules[index];
+      let new_title = prompt("Enter new name:", module.title);
+      if (new_title != null) {
+        module.title = new_title;
+      }
+      this.$nextTick(() => this.$refs.modules[index].set_display_width());
     },
     paste_module() {
-      let {modules, wires, reference_point} = this.menu.clipboard;
+      let { modules, wires, reference_point } = this.menu.clipboard;
       let relative_x = this.menu.x - reference_point.x;
       let relative_y = this.menu.y - reference_point.y;
       let new_modules = modules.map((m) => (extend(true, {}, m)));
       let new_wires = wires.map((w) => (extend(true, {}, w)));
       let module_offset = this.template_data.modules.length;
-      new_modules.forEach((m) => {m.x += relative_x; m.y += relative_y});
+      new_modules.forEach((m) => { m.x += relative_x; m.y += relative_y });
       new_wires.forEach((w) => { w.source[0] += module_offset; w.target[0] += module_offset; });
       this.template_data.modules.splice(module_offset, 0, ...new_modules);
       this.template_data.wires.splice(this.template_data.wires.length, 0, ...new_wires);
-      let new_selection = new_modules.map((m,i) => (i + module_offset));
+      let new_selection = new_modules.map((m, i) => (i + module_offset));
       this.drag.modules.splice(0, this.drag.modules.length, ...new_selection);
     },
     mousedown: function (ev) {
@@ -516,7 +533,7 @@ export const DataflowViewer = {
           this.clicked(d.startdata);
         }
         else if (d.buttons == 2) {
-          let {x,y} = this.getSVGCoords(ev);
+          let { x, y } = this.getSVGCoords(ev);
           this.contextmenu(d, x, y);
         }
       }
@@ -551,7 +568,7 @@ export const DataflowViewer = {
         }
         // if all is well, add the wire!
         if (compatible && !is_duplicate && !is_self) {
-          wires.push({source: wire.source, target: wire.target});
+          wires.push({ source: wire.source, target: wire.target });
         }
       }
 
@@ -591,8 +608,8 @@ export const DataflowViewer = {
           else if (/terminal$/.test(d.startdata.target_type)) {
             // start wiring
             if (d.new_wire == null) {
-              let loose_end = {x: svgCoords.x, y: svgCoords.y};
-              let new_wire = {loose_end};
+              let loose_end = { x: svgCoords.x, y: svgCoords.y };
+              let new_wire = { loose_end };
               d.new_wire = new_wire;
               if (/^output/.test(d.startdata.target_type)) {
                 new_wire.source = [d.startdata.module_index, d.startdata.terminal_def.id];
@@ -611,7 +628,7 @@ export const DataflowViewer = {
         }
       }
     },
-    getSVGCoords: function(ev) {
+    getSVGCoords: function (ev) {
       this.drag.svgPoint.x = ev.clientX;
       this.drag.svgPoint.y = ev.clientY;
       return this.drag.svgPoint.matrixTransform(this.$refs.svg.getScreenCTM().inverse());
@@ -619,10 +636,16 @@ export const DataflowViewer = {
     get_bbox() {
       return this.$refs.template.getBBox();
     },
-    on_select: function () { }
+    on_select: function () { },
+    fit_module_text: function () {
+      this.$refs.modules.forEach((m) => {
+        m.set_display_width();
+      })
+    }
   },
-  mounted: function() {
+  mounted: function () {
     this.drag.svgPoint = this.$refs.svg.createSVGPoint();
+    this.fit_module_text();
   },
   template: dataflow_template
 }

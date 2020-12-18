@@ -753,6 +753,7 @@ editor.load_template = async function(template_def, selected_module, selected_te
   }
     
   we.instance.template_data = template_def;
+  we.instance.$nextTick(() => we.instance.fit_module_text());
   
   var autoselected = template_def.modules.findIndex(function(m) {
     var has_fileinfo = editor._module_defs[m.module].fields
