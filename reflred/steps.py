@@ -1596,6 +1596,7 @@ def super_load(filelist=None,
     | 2018-08-29 Paul Kienzle ignore sampleTilt field for NG7
     | 2018-12-10 Brian Maranville get_plottable routines moved to python data container from js
     | 2020-01-21 Brian Maranville updated loader to handle hdf-nexus
+    | 2020-12-18 Brian Maranville adding source_power column to monitor
     """
     from .load import url_load_list
     #from .intent import apply_intent
