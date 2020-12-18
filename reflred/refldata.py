@@ -591,7 +591,8 @@ class Monitor(Group):
     columns = {
         "counts": {"units": "counts", "variance": "counts_variance"},
         "roi_counts": {"units": "counts", "variance": "roi_variance"},
-        "count_time": {"units": "seconds"}
+        "count_time": {"units": "seconds"},
+        "source_power": {"units": source_power_units, "variance": "source_power_variance"}
     }
     deadtime = None
     deadtime_error = None
