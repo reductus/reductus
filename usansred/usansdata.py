@@ -164,7 +164,7 @@ class USansCorData(object):
         from io import BytesIO
 
         fid = BytesIO()
-        h5_item = h5py.File(fid)
+        h5_item = h5py.File(fid, 'w')
         string_dt = h5py.string_dtype(encoding='utf-8')
 
         metadata = self.metadata[0]

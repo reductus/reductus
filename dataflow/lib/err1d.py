@@ -25,7 +25,7 @@ import numpy as np
 # Most operations can be done in-place with one pass through the data saving
 # both time and memory while being simpler to code.
 
-def mean(X, varX, biased=True, axis=None, dtype=None, out=(None, None), keepdims=False):
+def mean(X, varX, biased=True, axis=None, dtype=None, out=None, keepdims=False):
     # type: (np.ndarray, np.ndarray, bool) -> (float, float)
     r"""
     Return the mean and variance of a dataset.
@@ -34,28 +34,25 @@ def mean(X, varX, biased=True, axis=None, dtype=None, out=(None, None), keepdims
     estimated variance is scaled by the normalized $\chi^2$.  See the
     wikipedia page for the weighted arithmetic mean for details.
     """
+    # Use preallocated output (e.g., within an array slice) if provided
+    Mout, varMout = (None, None) if out is None else out
     total_weight = np.sum(1./varX, axis=axis, dtype=dtype, keepdims=keepdims)
-    M = np.sum(X/varX, axis=axis, dtype=dtype, keepdims=keepdims)/total_weight
-    varM = 1./total_weight
+    M = np.sum(X/varX, axis=axis, dtype=dtype, out=Mout, keepdims=keepdims)
+    if varMout is None:
+        varM = 1./total_weight
+    else:
+        varM = varMout
+        varM.fill(1.)
+        varM /= total_weight
     if biased:
         # Scale by normalized chisq if variance calculation is biased
         chisq = np.sum((X-M)**2/varX, axis=axis, dtype=dtype, keepdims=keepdims)
         dof = np.prod(X.shape)/np.prod(chisq.shape) - 1
         varM *= chisq/dof
-
-    # Special handling for the case when out is specified, for example, if out
-    # is a view on a slice within another array.  The pseudo-swap replaces
-    # M, varM with Mout, varMout if that returned array matches the requested
-    # output arrays if explicit output arrays are requested.
-    Mout, varMout = out
-    if Mout is not None:
-        Mout[:], M = M, Mout
-    if varMout is not None:
-        varMout[:], varM = varM, varMout
     return M, varM
 
 
-def sum(X, varX, axis=None, dtype=None, out=(None, None), keepdims=False):
+def sum(X, varX, axis=None, dtype=None, out=None, keepdims=False):
     # type: (np.ndarray, np.ndarray, ...) -> (float, float)
     r"""
     Return the sum and variance of a dataset.
@@ -63,12 +60,13 @@ def sum(X, varX, axis=None, dtype=None, out=(None, None), keepdims=False):
     Follows the numpy sum interface, except a pair of output arrays is required
     if you want to reuse an output.
     """
-    M = np.sum(X, axis=axis, dtype=dtype, out=out[0], keepdims=keepdims)
-    varM = np.sum(varX, axis=axis, dtype=dtype, out=out[1], keepdims=keepdims)
+    Mout, varMout = (None, None) if out is None else out
+    M = np.sum(X, axis=axis, dtype=dtype, out=Mout, keepdims=keepdims)
+    varM = np.sum(varX, axis=axis, dtype=dtype, out=varMout, keepdims=keepdims)
     return M, varM
 
 
-def cumsum(X, varX, axis=None, dtype=None, out=(None, None), keepdims=False):
+def cumsum(X, varX, axis=None, dtype=None, out=None):
     # type: (np.ndarray, np.ndarray, ...) -> (float, float)
     r"""
     Return the cumulative sum and variance of a dataset.
@@ -76,8 +74,9 @@ def cumsum(X, varX, axis=None, dtype=None, out=(None, None), keepdims=False):
     Follows the numpy cumsum interface, except a pair of output arrays is
     required if you want to reuse an output.
     """
-    M = np.cumsum(X, axis=axis, dtype=dtype, out=out[0], keepdims=keepdims)
-    varM = np.cumsum(varX, axis=axis, dtype=dtype, out=out[1], keepdims=keepdims)
+    Mout, varMout = (None, None) if out is None else out
+    M = np.cumsum(X, axis=axis, dtype=dtype, out=Mout)
+    varM = np.cumsum(varX, axis=axis, dtype=dtype, out=varMout)
     return M, varM
 
 
@@ -86,13 +85,20 @@ def average(X, varX, W, varW, axis=None):
     r"""
     Return the weighted average of a dataset, with uncertainty in the weights.
 
-    Note that :func:`mean` is the average weighted by *1/varX*, with a
-    possible bias correction based on $\chi^2$.
+    This is usual weighted average formula with gaussian uncertainty
+    propagation. Use W=1, varW=0 for the simple gaussian average.
+
+    Results checked against Monte Carlo simulation in explore/gaussian_average.py
     """
-    # TODO: why is mean weighted by 1/variance instead of 1?
-    # Note: code checked vs. monte carlo simulation in explore.gaussian_average
+    # TODO: make this work for nD arrays when axis somewhere in the middle.
+    # This requires keepdims for Swx, Sw, and then remove dim at the end
     Swx = np.sum(X*W, axis=axis)
-    Sw = np.sum(W, axis=axis)
+    # Note: only need to check for W as scalar. The X in the expression of
+    # varM will automatically promote all other scalars to vectors as needed.
+    if np.isscalar(W):
+        Sw = W*(np.prod(X.shape) if axis is None else X.shape[axis])
+    else:
+        Sw = np.sum(W, axis=axis)
     M = Swx/Sw
     varM = np.sum((W/Sw)**2*varX + ((X*Sw - Swx)/Sw**2)**2*varW, axis=axis)
     return M, varM
@@ -429,3 +435,25 @@ def test_against_uncertainties_package():
     _check_unary(arccos, umath.acos(ux))
     _check_unary(arctan, umath.atan(ux))
     _check_binary(arctan2, umath.atan2(ux, uy))
+
+def test_average():
+    def _compare(result, u):
+        Z, varZ = result
+        U, varU = u
+        assert abs(Z-U)/U < 1e-13 and (varZ-varU)/varU < 1e-13, \
+            "expected (%g,%g) got (%g,%g)"%(U, varU, Z, varZ)
+    x = np.array([1, 2, 3])
+    xvar = np.array([0.2, 0.1, 0.05])
+    xvar_const = np.array([0.2, 0.2, 0.2])
+    w = np.array([1, 1, 1])
+    wvar = np.array([0, 0, 0])
+    s, svar = sum(x, xvar)
+    # Test simple gaussian average gives the correct result
+    _compare(average(x, xvar, 1, 0), (s/3, svar/9))
+    # Test that program accepts scalar and vector inputs
+    _compare(average(x, xvar_const[0], 1, 0), average(x, xvar_const, w, wvar))
+
+if __name__ == "__main__":
+    test()
+    test_against_uncertainties_package()
+    test_average()

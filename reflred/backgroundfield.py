@@ -37,15 +37,10 @@ def background_reservoir(ai, epsD, af, epssi, Fd, scale):
     """
     Calculates background from a reservoir surrounded by Si
     """
-
     with np.errstate(divide='ignore'):
-
-
         A = np.exp(-epsD * (1. / np.sin(ai) + 1. / np.sin(af)))
-
         res = (1 - A) / (1. + np.sin(ai) / np.sin(af))
-
-#        si = epssi * (Fd * np.sin(af) / np.sin(ai + af)) * (0.5 + 0.5 * A)
+        #si = epssi * (Fd * np.sin(af) / np.sin(ai + af)) * (0.5 + 0.5 * A)
         si = epssi * Fd / np.cos(ai) * (0.5 + 0.5 * A)
 
     # first term is the background value; the second contains intermediates used
@@ -117,15 +112,15 @@ def fit_background_field(back, epsD0, epssi, fit_scale, scale_value=1.0, LS3=380
     Qz_target = list()
 
     # Check for slit distances, otherwise use values from data file
-    LS3 = back[0].slit3.distance if not np.isinf(back[0].slit3.distance) else LS3
-    LS4 = back[0].slit4.distance if not np.isinf(back[0].slit4.distance) else LS4
+    LS3 = back[0].slit3.distance if back[0].slit3.distance is not None else LS3
+    LS4 = back[0].slit4.distance if back[0].slit4.distance is not None else LS4
     L4D = LSD - LS4
 
     # Extract relevant quantities from inputs
     for b in back:
-
         ai.append(b.sample.angle_x)
-        Qz_target.append(b.Qz_target if not np.all(np.isnan(b.Qz_target)) else 4*np.pi/b.detector.wavelength*np.sin(np.radians(b.sample.angle_x)))
+        Qz_target.append(b.Qz_target if not np.all(np.isnan(b.Qz_target))
+                         else 4*np.pi/b.detector.wavelength*np.sin(np.radians(b.sample.angle_x)))
         af.append(b.detector.angle_x - b.sample.angle_x)
         s3.append(b.slit3.x)
         s4.append(b.slit4.x if not np.all(np.isinf(b.slit4.x)) else 25. * np.ones(b.v.shape))
@@ -145,12 +140,7 @@ def fit_background_field(back, epsD0, epssi, fit_scale, scale_value=1.0, LS3=380
     dv = np.concatenate(dv)[crit]
 
     # Calculate the detector footprints and use maximum value relative to sample size maxF
-    Fd = detector_footprint(af,
-                            s3,
-                            s4,
-                            LS3,
-                            LS4 - LS3)
-
+    Fd = detector_footprint(af, s3, s4, LS3, LS4 - LS3)
     Fd = np.min((Fd, maxF*np.ones(Fd.shape)), axis=0)
 
     # Calculate the detector solid angle
@@ -158,29 +148,31 @@ def fit_background_field(back, epsD0, epssi, fit_scale, scale_value=1.0, LS3=380
 
     # Define fit function and Jacobian
     def minfunc(pars):
-
         scale, epsD = pars
-        return (background_reservoir(ai,
-                                    epsD,
-                                    af,
-                                    epssi,
-                                    Fd,
-                                    scale)[0] * SA - v)/dv
+        res = background_reservoir(ai, epsD, af, epssi, Fd, scale)
+        return (res[0] * SA - v)/dv
 
     def jacfunc(pars):
-
         scale, epsD = pars
-        return (background_reservoir_jac(ai, epsD, af, epssi, Fd, scale)*np.tile(SA/dv, (len(pars), 1))).T
+        J = background_reservoir_jac(ai, epsD, af, epssi, Fd, scale)
+        return (J*np.tile(SA/dv, (len(pars), 1))).T
 
     # Condition the fit if the scale factor is not included in the fit, then perform the fit
     if not fit_scale:
-        pout, pcov = so.leastsq(lambda epsD: minfunc([scale_value, epsD]), epsD0, Dfun=lambda epsD: jacfunc([1.0, epsD])[:,1], full_output=True, ftol=1e-15,
-                                xtol=1e-15)[:2]
+        pout, pcov = so.leastsq(
+            lambda epsD: minfunc([scale_value, epsD]),
+            epsD0,
+            Dfun=lambda epsD: jacfunc([1.0, epsD])[:,1],
+            full_output=True, ftol=1e-15, xtol=1e-15)[:2]
         lenpout = len(pout)
         pout = np.array([scale_value, pout[0]])
-        pcov = np.array([[0.0, 0.0],[0.0, pcov[0][0]]])
+        pcov = np.array([[0.0, 0.0], [0.0, pcov[0][0]]])
     else:
-        pout, pcov = so.leastsq(minfunc, np.array([scale_value, epsD0]), Dfun=jacfunc, full_output=True, ftol=1e-15, xtol=1e-15)[:2]
+        pout, pcov = so.leastsq(
+            minfunc,
+            np.array([scale_value, epsD0]),
+            Dfun=jacfunc,
+            full_output=True, ftol=1e-15, xtol=1e-15)[:2]
         lenpout = len(pout)
 
     # Calculate fitting error (not used) and chi-squared (only reported)
@@ -190,7 +182,8 @@ def fit_background_field(back, epsD0, epssi, fit_scale, scale_value=1.0, LS3=380
     if 0:
         import matplotlib.pyplot as plt
         plt.errorbar(np.arange(len(v)), v, dv, fmt='o')
-        plt.plot(np.arange(len(v)), background_reservoir(ai, pout[1], af, epssi, Fd, pout[0])[0] * SA)
+        res = background_reservoir(ai, pout[1], af, epssi, Fd, pout[0])
+        plt.plot(np.arange(len(v)), res[0] * SA)
         plt.show()
 
     # Create fit data structure

@@ -591,7 +591,8 @@ class Monitor(Group):
     columns = {
         "counts": {"units": "counts", "variance": "counts_variance"},
         "roi_counts": {"units": "counts", "variance": "roi_variance"},
-        "count_time": {"units": "seconds"}
+        "count_time": {"units": "seconds"},
+        "source_power": {"units": source_power_units, "variance": "source_power_variance"}
     }
     deadtime = None
     deadtime_error = None
@@ -940,10 +941,16 @@ class ReflData(Group):
             if self.Qz_target is not None:
                 return self.Qz_target
             return calc_Qz(self.Ti_target, self.Td_target, Li, Ld)
+        # For background, can use detector angle or sample angle.
+        # Note: sample angle won't work with CANDOR
         if self.Qz_basis == 'detector':
             return calc_Qz(self.Td/2, self.Td, Li, Ld)
         if self.Qz_basis == 'sample':
             return calc_Qz(self.Ti, 2*self.Ti, Li, Ld)
+        if self.Qz_basis == 'detector_target':
+            return calc_Qz(self.Td_target/2, self.Td_target, Li, Ld)
+        if self.Qz_basis == 'sample_target':
+            return calc_Qz(self.Ti_target, 2*self.Ti_target, Li, Ld)
         raise KeyError("Qz basis must be one of [actual, detector, sample, target]")
 
     @property
@@ -1022,6 +1029,7 @@ class ReflData(Group):
         for prop in ['_v', '_dv', 'angular_resolution', 'Qz_target']:
             v = getattr(self, prop, None)
             if check_array(v):
+                # TODO: use numpy.delete(v, indices) instead
                 masked_v = v[make_mask(v, mask_indices)]
                 setattr(self, prop, masked_v)
                 self.points = len(masked_v)
@@ -1046,11 +1054,13 @@ class ReflData(Group):
                 dv_name = sub_cols[col].get('variance', None)
                 if dv_name is not None:
                     dv = getattr(subcls, dv_name, None)
-                    if check_array(dv): setattr(subcls, dv_name, dv[make_mask(dv, mask_indices)])
+                    if check_array(dv):
+                        setattr(subcls, dv_name, dv[make_mask(dv, mask_indices)])
                 rv_name = sub_cols[col].get('resolution', None)
                 if rv_name is not None:
                     rv = getattr(subcls, rv_name, None)
-                    if check_array(rv): setattr(subcls, rv_name, rv[make_mask(rv, mask_indices)])
+                    if check_array(rv):
+                        setattr(subcls, rv_name, rv[make_mask(rv, mask_indices)])
 
     def __init__(self, **kw):
         for attr, cls in self._groups:
@@ -1207,7 +1217,7 @@ class ReflData(Group):
         from io import BytesIO
 
         fid = BytesIO()
-        h5_item = h5py.File(fid)
+        h5_item = h5py.File(fid, 'w')
         string_dt = h5py.string_dtype(encoding='utf-8')
 
         #entry_name = metadata.get("entry", "entry")

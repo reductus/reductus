@@ -34,11 +34,11 @@ export const IntUi = {
   computed: {
     defaultInnerValue() {
       let d = this.field.default;
-      if (this.field.length == 1) { return null }
-      else { return Array.from(new Array(this.field.length)).map(x => d) }
+      if (this.field.length > 1) { return Array.from(new Array(this.field.length)).map(x => d) }
+      else { return d }
     },
     defaultOuterValue() {
-      if (this.field.multiple) {
+      if (this.field.length == 0) {
         return Array.from(new Array(this.num_datasets_in)).map(x => this.defaultInnerValue);
       }
       else { return this.defaultInnerValue }
@@ -59,7 +59,7 @@ export const IntUi = {
           cv = null
         }
         else {
-          let v = (this.multiple || this.field.length != 1) ? JSON.parse(newValue) : newValue;
+          let v = (this.field.multiple || this.field.length != 1) ? JSON.parse(newValue) : newValue;
           cv = this.coerceAll(v);
         }
         this.$emit("change", this.field.id, cv);

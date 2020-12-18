@@ -15,14 +15,20 @@ import { default as VueMaterial } from 'https://cdn.skypack.dev/vue-material@lat
 Vue.use(VueMaterial);
 //import { default as VueSimpleContextMenu } from 'https://cdn.skypack.dev/vue-simple-context-menu@^3.1.10';
 //Vue.use(VueSimpleContextMenu);
-import { default as VueCustomContextMenu } from 'https://cdn.skypack.dev/vue-custom-context-menu@^3.0.2';
-Vue.use(VueCustomContextMenu);
+//import { default as VueCustomContextMenu } from 'https://cdn.skypack.dev/vue-custom-context-menu@^3.0.2';
+//Vue.use(VueCustomContextMenu);
+
+// vuedraggable is available as a single-file esm source, Vue.Draggable/src/vuedraggable.js
+// which depends only on Sortable, which can be found at 
+// https://github.com/SortableJS/sortablejs/blob/master/modular/sortable.complete.esm.js
 export { default as vuedraggable } from 'https://cdn.skypack.dev/vuedraggable@^2.23.2';
 export { Vue }
 
 import * as messagepack from "https://unpkg.com/messagepack@1.1.11/dist/messagepack.es.js";
 //import { default as messagepack } from "https://dev.jspm.io/npm:messagepack@1.1";
 export { messagepack };
+// PouchDB can be replaced with idb from https://github.com/jakearchibald/idb 
+// since we are not using the sync features of pouch
 import { default as PouchDB } from "https://dev.jspm.io/npm:pouchdb-browser@7";
 export { PouchDB };
 export {
@@ -42,7 +48,8 @@ export {
     monotonicFunctionInteractor,
     scaleInteractor,
     rectangleSelectPoints
-}  from 'https://cdn.jsdelivr.net/gh/usnistgov/d3-science@0.2.7/src/index.js';
+}  from 'https://cdn.jsdelivr.net/gh/usnistgov/d3-science@0.2.14/src/index.js';
+//}  from './d3-science/src/index.js';
 
 export {default as Split} from "https://dev.jspm.io/split.js@1.5.11";
 export {default as sha1} from "https://dev.jspm.io/sha1@1.1.1";

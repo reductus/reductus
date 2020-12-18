@@ -1,11 +1,12 @@
 #!/usr/bin/env python
 from warnings import warn
+from copy import copy
 
 import numpy as np
 
 from dataflow.lib.exporters import exports_json
 
-from .refldata import ReflData, Intent, Group, set_fields
+from .refldata import ReflData, Intent, Group, Detector, set_fields
 from .nexusref import load_nexus_entries, nexus_common, get_pol
 from .nexusref import data_as, str_data
 from .nexusref import TRAJECTORY_INTENTS
@@ -34,7 +35,7 @@ DETECTOR_DISTANCE = 3496.0
 MONO_WAVELENGTH = 4.75
 MONO_WAVELENGTH_DISPERSION = 0.01
 
-# CRUFT: these will be in the
+# CRUFT: these will be in the datafile eventually
 _EFFICIENCY = None
 def detector_efficiency():
     from pathlib import Path
@@ -182,10 +183,17 @@ class Candor(ReflData):
             x_target = 'slitAperture%d/desiredSoftPosition'%(k+1)
             slit.x = data_as(das, x, 'mm', rep=n)
             slit.x_target = data_as(das, x_target, 'mm', rep=n)
-            #y = 'vertSlitAperture%d/softPosition'%(k+1)
-            #y_target = 'vertSlitAperture%d/desiredSoftPosition'%(k+1)
-            #slit.y = data_as(das, y, 'mm', rep=n)
-            #slit.y_target = data_as(das, y_target, 'mm', rep=n)
+        # There is one vertical slit, and it is defined by slit2AVertical
+        # This is a virtual device which gives the center and opening, but
+        # not the target center and opening. Instead, use the Top/Bottom motors
+        # to get the desired and actual, and ignore slit2AVertical. This assumes
+        # the slits are centered.
+        self.slit2.y = (
+            data_as(das, 'slit2AVerticalTop/softPosition', 'mm', rep=n)
+            - data_as(das, 'slit2AVerticalBottom/softPosition', 'mm', rep=n))
+        self.slit2.y_target = (
+            data_as(das, 'slit2AVerticalTop/desiredSoftPosition', 'mm', rep=n)
+            - data_as(das, 'slit2AVerticalBottom/desiredSoftPosition', 'mm', rep=n))
         # CRUFT: old files don't have the detector mask mapped
         # TODO: don't throw away datasets where the key is not defined:
         #       instead figure out an effective aperture size from motors or
@@ -210,13 +218,21 @@ class Candor(ReflData):
         if efficiency is None:
             efficiency = np.repeat(1.0, wavelength.shape)
 
-        # TODO: check the orientation on detectorTable nodes.
-        # For now they appear to be in "channels_at_end" order even if the
-        # detector counts are in "banks_at_end" order.
-        wavelength = wavelength.reshape(NUM_CHANNELS, -1)
-        wavelength_spread = wavelength_spread.reshape(NUM_CHANNELS, -1)
-        divergence = divergence.reshape(NUM_CHANNELS, -1)
-        efficiency = efficiency.reshape(NUM_CHANNELS, -1)
+        # PAK 2020-11-12: detectorTable now uses [54,2] rather than [108], so
+        # reshape is no longer necessary. Check for [2,54] and transpose to
+        # protect against future change. For older data, use reshape with
+        # wavelengths in "channels_at_end" order (even though the detector
+        # counts are in "banks_at_end" order).
+        if all(dim != NUM_CHANNELS for dim in wavelength.shape):
+            wavelength = wavelength.reshape(NUM_CHANNELS, -1)
+            wavelength_spread = wavelength_spread.reshape(NUM_CHANNELS, -1)
+            divergence = divergence.reshape(NUM_CHANNELS, -1)
+            efficiency = efficiency.reshape(NUM_CHANNELS, -1)
+        elif wavelength.shape[0] != NUM_CHANNELS:
+            wavelength = wavelength.T
+            wavelength_spread = wavelength_spread.T
+            divergence = divergence.T
+            efficiency = efficiency.T
 
         wavelength_resolution = wavelength_spread # FWHM2sigma(wavelength * wavelength_spread)
         if (efficiency == 1.0).all():
@@ -243,12 +259,13 @@ class Candor(ReflData):
             self.detector.angle_x = data_as(das, 'detectorTableMotor/softPosition', 'degree', rep=n)
         if self.detector.angle_x_target is None:
             self.detector.angle_x_target = data_as(das, 'detectorTableMotor/desiredSoftPosition', 'degree', rep=n)
-        self.detector.angle_x_offset = data_as(das, 'detectorTable/rowAngularOffsets', '')[0]
+        # PAK 2020-11-11: detectorTable/rowAngularOffsets changed orientation; flatten so we don't care
+        self.detector.angle_x_offset = data_as(das, 'detectorTable/rowAngularOffsets', 'degree').flatten()
 
         # Attenuators
         self.attenuator.transmission = data_as(entry, 'instrument/attenuator/transmission', '', dtype="float")
         self.attenuator.transmission_err = data_as(entry, 'instrument/attenuator/transmission_err', '', dtype="float")
-        self.attenuator.target_value = data_as(das, 'attenuator/key', '', rep=n)
+        self.attenuator.target_value = data_as(das, 'counter/actualAttenuatorsDropped', '', rep=n)
 
         #print("shapes", self.detector.counts.shape, self.detector.wavelength.shape, self.detector.efficiency.shape)
         #print("shapes", self.sample.angle_x.shape, self.detector.angle_x.shape, self.detector.angle_x_offset.shape)
@@ -451,7 +468,6 @@ class Candor(ReflData):
 class QData(ReflData):
     def __init__(self, data, q, dq, v, dv, ti=None, dt=None, ld=None, dl=None):
         super().__init__()
-        self.sample = data.sample
         self.probe = data.probe
         self.path = data.path
         self.uri = data.uri
@@ -467,35 +483,28 @@ class QData(ReflData):
         self.scan_value = []
         self.scan_units = []
         self.scan_label = []
-        self._q = q
-        self._dq = dq
-        self._incident_angle = ti
+        # Put angles and resolution in the appropriate places in the refldata
+        # data structure.
+        self.sample = copy(data.sample)
+        self.sample.angle_x = ti
+        self.sample.angle_x_target = ti
         self.angular_resolution = dt
-        self._wavelength = ld
-        self._wavelength_spread = dl
-
-    @property
-    def Qz(self):
-        return self._q
-
-    @property
-    def Qx(self):
-        return np.zeros_like(self._q)
+        self.detector = Detector()
+        self.detector.wavelength = ld
+        self.detector.wavelength_resolution = dl
+        self.detector.angle_x = 2*ti
+        self.detector.angle_x_target = 2*ti
+        # Since dq is not computed directly from dt and dl, we need to store
+        # it specially. Need to override apply_mask to fix up dq.
+        self._dq = dq
 
     @property
     def dQ(self):
         return self._dq
 
-    @property
-    def Ti(self):
-        return self._incident_angle
-    @property
-    def Ld(self):
-        return self._wavelength
-    @property
-    def dL(self):
-        return self._wavelength_spread
-
+    def apply_mask(self, mask_indices):
+        self._dq = np.delete(self._dq, mask_indices)
+        ReflData.apply_mask(self, mask_indices)
 
 def nobin(data):
     """
@@ -611,8 +620,12 @@ def _rebin_bank(data, bank, q_edges, average):
     bin_index = np.searchsorted(q_edges, q)
 
     # Some bins may not have any points contributing, such as those before
-    # and after, or those in the middle if the q-step is too fine.
+    # and after, or those in the middle if the q-step is too fine. These
+    # will be excluded from the final result.
     points_per_bin = np.bincount(bin_index, minlength=nbins)
+    # Note: we add empty_q to the divisor in a number of places to protect
+    # against divide by zero in those bins. Since we are excluding these at
+    # the end, this removes the spurious warnings without changing results.
     empty_q = (points_per_bin == 0)
     # The following is cribbed from util.poisson_average, replacing
     # np.sum with np.bincount.
@@ -622,6 +635,7 @@ def _rebin_bank(data, bank, q_edges, average):
         dy = dy + (dy == 0) # protect against zero uncertainty
         Swx = np.bincount(bin_index, weights=y/dy**2, minlength=nbins)
         Sw = np.bincount(bin_index, weights=dy**-2, minlength=nbins)
+        Sw += empty_q  # Protect against division by zero
         bar_y = Swx / Sw
         bar_dy = 1/np.sqrt(Sw)
     elif norm == "none":
@@ -637,10 +651,10 @@ def _rebin_bank(data, bank, q_edges, average):
         counts = y*monitors
         combined_monitors = np.bincount(bin_index, weights=monitors, minlength=nbins)
         combined_counts = np.bincount(bin_index, weights=counts, minlength=nbins)
-        combined_monitors += empty_q  # protect against division by zero
+        combined_monitors += empty_q  # Protect against division by zero
         bar_y = combined_counts/combined_monitors
         if norm == "time":
-            bar_dy = bar_y * np.sqrt(1./combined_monitors)
+            bar_dy = np.sqrt(bar_y / combined_monitors)
         else:
             bar_dy = 1./combined_monitors * np.sqrt(1. + 1./combined_monitors)
             idx = (bar_y != 0)
@@ -651,7 +665,8 @@ def _rebin_bank(data, bank, q_edges, average):
     w = np.ones_like(y)  # Weights must be positive; use equal weights for now
     #w = y # use intensity weighting when finding q centers
     sum_w = np.bincount(bin_index, weights=w, minlength=nbins)
-    sum_w += (sum_w == 0)  # protect against divide by zero
+    #assert ((sum_w == 0) == empty_q).all()
+    sum_w += empty_q  # protect against divide by zero
     sum_q = np.bincount(bin_index, weights=q*w, minlength=nbins)
     bar_q = sum_q / sum_w
     # Combined dq according to mixture distribution.
@@ -664,6 +679,8 @@ def _rebin_bank(data, bank, q_edges, average):
 
     # Combine wavelengths
     sum_Linv = np.bincount(bin_index, weights=w/L, minlength=nbins)
+    #assert ((sum_Linv == 0) == empty_q).all()
+    sum_Linv += empty_q  # protect against divide by zero
     bar_Linv = sum_w/sum_Linv  # Not the first moment of L
     sum_L = np.bincount(bin_index, weights=w*L, minlength=nbins)
     sum_dLsq = np.bincount(bin_index, weights=w*(dL**2+L**2), minlength=nbins)

@@ -1122,6 +1122,53 @@ def calculate_angles(rd):
 
 @cache
 @module
+def sector_cut(qspace_data, sector=[0.0, 90.0], mirror=True):
+    """
+    Calculate an additional shadow mask for defining a sector cut
+
+    **Inputs**
+
+        qspace_data (qspace): input datafile in q-space coordinates
+
+        sector (range:sector_centered): angle and opening of sector cut (degrees)
+
+        mirror (bool): extend sector cut on both sides of origin
+    
+    **Returns**
+
+        sector_masked (qspace): datafile with mask updated with angular sector cut
+    
+    | 2020-11-02 Brian Maranville
+    """
+    angle_offset, opening = sector
+    if angle_offset is None:
+        angle_offset = 0.0
+    if opening is None:
+        opening = 90.0
+
+    x_offset = np.cos(np.radians(angle_offset))
+    y_offset = np.sin(np.radians(angle_offset))
+    cos_theta_min = np.cos(np.radians(opening/2.0))
+
+    for detname in qspace_data.detectors:
+        det = qspace_data.detectors[detname]
+        # theta is the distance in angle from the offset_vector to the datapoints
+        Q_normsq = det['Qx']**2 + det['Qy']**2
+        nonzero = Q_normsq > 0
+        Q_normsq[Q_normsq == 0] = 1.0
+        cos_theta = (det['Qx'] * x_offset + det['Qy'] * y_offset) / np.sqrt(Q_normsq)
+        shadow_mask = det.get('shadow_mask', np.ones_like(det['data'].x, dtype=np.bool))
+        sector_mask = np.zeros_like(det['data'].x, dtype=np.bool)
+        sector_mask[np.logical_and(nonzero, cos_theta >= cos_theta_min)] = True
+        if mirror:
+            sector_mask[np.logical_and(nonzero, cos_theta <= -cos_theta_min)] = True
+
+        det['shadow_mask'] = np.logical_and(shadow_mask, sector_mask)
+    
+    return qspace_data
+
+@cache
+@module
 def top_bottom_shadow(realspace_data, width=3, inplace=True):
     """
     Calculate the overlap shadow from upstream panels on VSANS detectors

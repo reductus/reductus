@@ -19,6 +19,7 @@ def candor(
         detector_correction=False,
         monitor_correction=False,
         spectral_correction=False,
+        attenuator_correction=False,
         Qz_basis='target',
         intent='auto',
         sample_width=None,
@@ -53,6 +54,10 @@ def candor(
     : If True, scale counts by the detector efficiency calibration given
     in the file (see Spectral Efficiency).
 
+    attenuator_correction {Apply attenuator corrections} (bool)
+    : if True, scale the counts by the attenuator transmission coefficients given
+    in the file, for the attenuator that was active for the data point.
+
     Qz_basis (opt:target|sample|detector|actual)
     : How to calculate Qz from instrument angles.
 
@@ -77,6 +82,8 @@ def candor(
     | 2020-03-12 Paul Kienzle Add slit 1 dependence for DC rate
     | 2020-08-27 Brian Maranville loader gets attenuator information
     | 2020-09-11 Brian Maranville loader updated with new motor names
+    | 2020-11-18 Brian Maranville adding attenuator correction
+    | 2020-11-20 Paul Kienzle support files with old detector table layout
     """
     from .load import url_load_list
     from .candor import load_entries
@@ -103,6 +110,8 @@ def candor(
             data = steps.monitor_dead_time(data, None)
         if spectral_correction:
             data = spectral_efficiency(data)
+        if attenuator_correction:
+            data = attenuation(data)
         data = steps.normalize(data, base=base)
         datasets.append(data)
 
@@ -123,20 +132,20 @@ def select_bank(data, bank_select=None):
 
     output (candordata): Data with indices not listed in bank_select removed.
 
-    | 2020-07-07 Brian Maranville 
+    | 2020-07-07 Brian Maranville
     """
 
     if bank_select is not None:
         data = copy(data)
-        data.detector.counts = data.detector.counts[:,:,[bank_select]]
+        data.detector.counts = data.detector.counts[:, :, [bank_select]]
         data.detector.counts_variance = data.detector.counts.copy()
         data.detector.dims = data.detector.counts.shape
 
-        data.detector.efficiency = data.detector.efficiency[:,:,[bank_select]]
+        data.detector.efficiency = data.detector.efficiency[:, :, [bank_select]]
         data.detector.angle_x_offset = data.detector.angle_x_offset[[bank_select]]
-        data.detector.wavelength = data.detector.wavelength[:,:,[bank_select]]
-        data.detector.wavelength_resolution = data.detector.wavelength_resolution[:,:,[bank_select]]
-    
+        data.detector.wavelength = data.detector.wavelength[:, :, [bank_select]]
+        data.detector.wavelength_resolution = data.detector.wavelength_resolution[:, :, [bank_select]]
+
     return data
 
 @module("candor")
@@ -148,29 +157,29 @@ def select_channel(data, channel_select=None):
 
     data (candordata): Input data with 1 or more banks
 
-    channel_select {Select channel(s)} (int[]*) : Choose channels to output (default is all)
+    channel_select {Select channel(s)} (int[]) : Choose channels to output (default is all)
 
     **Returns**
 
     output (candordata): Data with indices not listed in channel_select removed.
 
-    | 2020-07-12 Brian Maranville 
+    | 2020-07-12 Brian Maranville
     """
 
     if channel_select is not None:
         data = copy(data)
-        data.detector = copy(data.detector)										   
-        data.detector.counts = data.detector.counts[:,channel_select,:]
-        data.detector.counts_variance = data.detector.counts_variance[:,channel_select,:]
+        data.detector = copy(data.detector)
+        data.detector.counts = data.detector.counts[:, channel_select, :]
+        data.detector.counts_variance = data.detector.counts_variance[:, channel_select, :]
         data.detector.dims = data.detector.counts.shape
 
-        data.detector.efficiency = data.detector.efficiency[:,channel_select,:]
-        data.detector.wavelength = data.detector.wavelength[:,channel_select,:]
-        data.detector.wavelength_resolution = data.detector.wavelength_resolution[:,channel_select,:]
+        data.detector.efficiency = data.detector.efficiency[:, channel_select, :]
+        data.detector.wavelength = data.detector.wavelength[:, channel_select, :]
+        data.detector.wavelength_resolution = data.detector.wavelength_resolution[:, channel_select, :]
         if data._v is not None:
-            data._v = data._v[:,channel_select,:]
+            data._v = data._v[:, channel_select, :]
         if data._dv is not None:
-            data._dv = data._dv[:,channel_select,:]
+            data._dv = data._dv[:, channel_select, :]
     return data
 
 @module("candor")
@@ -182,13 +191,13 @@ def select_points(data, point_select=None):
 
     data (candordata): Input data with 1 or more banks
 
-    point_select {Select points(s)} (int[]*) : Choose points to output (default is all)
+    point_select {Select points(s)} (int[]) : Choose points to output (default is all)
 
     **Returns**
 
     output (candordata): Data with point indices not listed in point_select removed.
 
-    | 2020-07-03 Brian Maranville 
+    | 2020-07-03 Brian Maranville
     """
 
     if point_select is not None:
@@ -213,15 +222,78 @@ def select_points(data, point_select=None):
             data.angular_resolution = data.angular_resolution[point_select]
 
         for slit in (data.slit1, data.slit2, data.slit3, data.slit4):
-            slit.x = slit.x[point_select]
-            slit.x_target = slit.x_target[point_select]
+            for attrname in ["x", "x_target", "y", "y_target"]:
+                attr = getattr(slit, attrname, None)
+                if attr is not None:
+                    setattr(slit, attrname, attr[point_select])
 
         data.sample.angle_x = data.sample.angle_x[point_select]
         data.sample.angle_x_target = data.sample.angle_x_target[point_select]
         data.detector.angle_x = data.detector.angle_x[point_select]
         data.detector.angle_x_target = data.detector.angle_x_target[point_select]
-    
+
     return data
+
+
+@module("candor")
+def candor_select_xy(data, x_range=[None, None], y_range=[None, None]):
+    r"""
+    Select range of data from scan of Candor.
+
+    **Inputs**
+
+    data (candordata): Input data
+
+    x_range (range?:x): x-region to keep from the data
+
+    y_range (range?:y): y-region to keep from the data
+
+    **Returns**
+
+    output (candordata): Data with trimmed x and y values
+
+    | 2020-10-14 Brian Maranville
+    """
+
+    if x_range is None and y_range is None:
+        return data
+    if x_range is None:
+        x_range = [None, None]
+    if y_range is None:
+        y_range = [None, None]
+
+    x_min, x_max = x_range
+    y_min, y_max = y_range
+
+    # y-axis is "points" axis, x-axis is "channels"
+    (x, xlabel), (y, ylabel) = data.get_axes()
+    x = x.flatten()
+    y = y.flatten()
+
+    x_select_min = x_min is None or x >= x_min
+    x_select_max = x_max is None or x <= x_max
+    x_select = np.logical_and(x_select_min, x_select_max)
+    y_select_min = y_min is None or y >= y_min
+    y_select_max = y_max is None or y <= y_max
+    y_select = np.logical_and(y_select_min, y_select_max)
+    #print('y', y, y_min, y_max, y_select, y.shape)
+    #print('x', x, x_min, x_max, x_select, x.shape)
+
+    if np.all(x_select):
+        xdata = data # no limits on x
+    else:
+        channel_select = np.arange(x.shape[0], dtype="int")[x_select]
+        #print('channel select:', channel_select)
+        xdata = select_channel(data, channel_select)
+
+    if np.all(y_select):
+        xy_data = xdata
+    else:
+        point_select = np.arange(y.shape[0], dtype="int")[y_select]
+        #print('point select:', point_select)
+        xy_data = select_points(xdata, point_select)
+
+    return xy_data
 
 
 @module("candor")
@@ -275,7 +347,7 @@ def recalibrate_wavelength(data, wavelengths=(), wavelength_resolutions=()):
     data (candordata) : data to scale
 
     wavelengths (float[]?) : override wavelengths from data file
-    
+
     wavelength_resolutions (float[]?) : override wavelength spreads (sigma) from data file
 
     **Returns**
@@ -342,7 +414,7 @@ def dark_current(data, dc_rate=0., s1_slope=0.):
     return data
 
 @module("candor")
-def attenuation(data, transmission=None, transmission_err=None, target_value=None):  
+def attenuation(data, transmission=None, transmission_err=None, target_value=None):
     r"""
     Correct for wavelength-dependent attenuation from built-in attenuators
 
@@ -378,7 +450,7 @@ def attenuation(data, transmission=None, transmission_err=None, target_value=Non
         data.attenuator.transmission_err = np.reshape(np.array(transmission_err), (-1, NUM_CHANNELS))
     if target_value is not None:
         data.attenuator.target_value = np.array(target_value)
-    
+
     num_attenuators = data.attenuator.transmission.shape[0]
 
     for ai in range(1, num_attenuators+1):
@@ -386,7 +458,7 @@ def attenuation(data, transmission=None, transmission_err=None, target_value=Non
         matching = (av == ai)
         if not np.any(matching):
             continue
-        
+
         trans = data.attenuator.transmission[ai-1][None, :, None]
         trans_err = data.attenuator.transmission_err
         att = 1.0 / (trans)
@@ -394,7 +466,7 @@ def attenuation(data, transmission=None, transmission_err=None, target_value=Non
             datt = np.zeros_like(att)
         else:
             datt = (trans_err[ai-1][None,:,None]) * att**2
-        
+
         if data._v is not None:
             v = data._v[matching]
             if data._dv is not None:
@@ -543,6 +615,7 @@ def candor_rebin(data, qmin=None, qmax=None, qstep=0.003, qstep_max=None, averag
     | 2020-03-04 Paul Kienzle
     | 2020-08-03 David Hoogerheide adding progressive q step coarsening
     | 2020-09-24 Brian Maranville changed default averaging
+    | 2020-10-14 Paul Kienzle fixed uncertainty for time normalized data
     """
     from .candor import rebin, nobin
 
@@ -576,6 +649,10 @@ candor_normalize = copy_module(
 
 candor_background = copy_module(
     steps.subtract_background, "candor_background",
+    "refldata", "candordata", tag="candor")
+
+candor_align = copy_module(
+    steps.interpolate_background, "candor_align",
     "refldata", "candordata", tag="candor")
 
 candor_divide = copy_module(

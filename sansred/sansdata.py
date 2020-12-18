@@ -339,7 +339,7 @@ class SansIQData(object):
         import h5py
 
         fid = BytesIO()
-        h5_item = h5py.File(fid)
+        h5_item = h5py.File(fid, 'w')
 
         entry_name = self.metadata.get("entry", "entry")
         nxentry = h5_item.create_group(entry_name)

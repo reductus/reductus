@@ -3,15 +3,15 @@ import { categoriesEditor } from './ui_components/categories_editor.js';
 
 let template = `
 <div class="page-container md-layout-column">
-
+  
   <md-drawer :md-active.sync="showNavigation" md-swipeable>
     <md-toolbar class="md-transparent" md-elevation="0">
-      <span class="md-title"><img src="icons/reductus_logo.svg" style="height:2em;"/>Reductus</span>
+      <span class="md-title"><img src="img/reductus_logo.svg" style="height:2em;"/>Reductus</span>
     </md-toolbar>
 
     <md-list>
       <md-list-item md-expand md-expanded>
-        <md-icon md-src="icons/mediation-black-18dp.svg"></md-icon>
+        <md-icon md-src="img/mediation-black-18dp.svg"></md-icon>
         <span class="md-list-item-text md-title">Template</span>
         <md-list slot="md-expand">
           <md-list-item @click="action('new_template')" class="md-inset">
@@ -26,13 +26,8 @@ let template = `
             <span class="md-list-item-text">Download</span>
             <md-icon class="md-primary">get_app</md-icon>      
           </md-list-item>
-          <md-list-item class="md-inset">
-            <md-field>
-              <label>Upload Template</label>
-              <md-file 
-                v-model="template_to_upload" 
-                @change="upload"/>
-            </md-field>
+          <md-list-item @click="trigger_upload" class="md-inset">
+            <span class="md-list-item-text">Upload Template</span>
             <md-icon class="md-primary">publish</md-icon>      
           </md-list-item>
           <md-list-item class="md-inset md-double-line">
@@ -55,7 +50,7 @@ let template = `
       </md-list-item>
       
       <md-list-item md-expand md-expanded>
-        <md-icon md-src="icons/source-black-18dp.svg"></md-icon>
+        <md-icon md-src="img/source-black-18dp.svg"></md-icon>
         <span class="md-list-item-text md-title">Data</span>
         <md-list slot="md-expand">
           <md-list-item @click="action('stash_data')" class="md-inset">
@@ -70,13 +65,8 @@ let template = `
             <span class="md-list-item-text">Export</span>
             <md-icon class="md-primary">cloud_download</md-icon>      
           </md-list-item>
-          <md-list-item class="md-inset">
-            <md-field>
-              <label>Reload Exported</label>
-              <md-file single
-                v-model="template_to_upload" 
-                @change="upload"/>
-            </md-field>
+          <md-list-item @click="trigger_upload" class="md-inset">
+            <span class="md-list-item-text">Reload Exported</span>
             <md-icon class="md-primary">publish</md-icon>      
           </md-list-item>
           <md-list-item @click="action('clear_cache')" class="md-inset">
@@ -116,7 +106,7 @@ let template = `
       </md-list-item>
 
       <md-list-item md-expand>
-        <md-icon md-src="icons/biotech-black-18dp.svg"></md-icon>
+        <md-icon md-src="img/biotech-black-18dp.svg"></md-icon>
         <div class="md-list-item-text">Instrument: <span class="md-title">{{current_instrument}}</span></div>
         <md-list slot="md-expand">
           <md-list-item class="md-inset" v-for="instrument in instruments">
@@ -169,6 +159,16 @@ let template = `
 
     @apply="set_categories">
   </categories-editor>
+
+  <input 
+    ref="upload_template" 
+    type="file" 
+    multiple="false" 
+    id="upload_template" 
+    name="upload_template" 
+    style="display:none;"
+    @change="upload"
+  />
   
 </div >
 `;
@@ -217,6 +217,9 @@ export const VueMenu = {
       this.action('upload_file', ev.target.files[0]);
       await(this.$nextTick());
       this.template_to_upload = null;
+    },
+    trigger_upload() {
+      this.$refs.upload_template.click();
     }
   },
   watch: {

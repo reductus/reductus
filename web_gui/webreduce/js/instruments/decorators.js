@@ -61,8 +61,12 @@ export function add_sample_description(node_list, leaf_list, node_parents, file_
     var entry = file_obj.values.filter(function (f) { return f.entry == fileinfo.entryname });
     if (entry && entry[0]) {
       var e = entry[0];
-      if ('sample.description' in e) {
-        leaf.attributes.title = e['sample.description'];
+      if ('sample' in e && 'description' in e.sample) {
+        leaf.attributes.title = e.sample.description;
+        if (leaf.id in node_parents) {
+          let parent = node_parents[leaf.id];
+          parent.attributes.title = e.sample.description;
+        }
       }
     }
   }

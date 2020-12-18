@@ -60,7 +60,7 @@ export const RangeUi = {
   },
   methods: {
     changed(updateInteractors = true) {
-      this.local_value.forEach((x,i) => { this.$set(this.local_value, i, (isNaN(+x)) ? null : +x) });
+      this.local_value.forEach((x,i) => { this.$set(this.local_value, i, (isNaN(+x) || x == null) ? null : +x) });
       this.$emit('change', this.field.id, this.local_value);
       if (updateInteractors) {
         this.interactors.forEach(I => {
@@ -78,8 +78,8 @@ export const RangeUi = {
       let buffer = 10;
       let xrange = x.range();
       let yrange = y.range();
-      let xdomain = [x.invert(xrange[0] + buffer), x.invert(xrange[1] - buffer)]
-      let ydomain = [y.invert(yrange[0] + buffer), y.invert(yrange[1] - buffer)]
+      let xdomain = [x.invert(xrange[0] - buffer), x.invert(xrange[1] + buffer)].sort()
+      let ydomain = [y.invert(yrange[0] + buffer), y.invert(yrange[1] - buffer)].sort()
       let interactor = interactorConnectors[this.axis_str](this, xdomain, ydomain);
       interactor.dispatch.on("end", () => { this.changed(false) })
       chart.interactors(interactor);
@@ -190,7 +190,7 @@ function add_sector_interactor(vm, xrange, yrange) {
     set angle_offset(x) { vm.$set(value, 2, x * 180.0 / Math.PI) },
     set angle_range(x) { vm.$set(value, 3, x * 180.0 / Math.PI) }
   }
-  return new angleSliceInteractor.default(opts);
+  return new angleSliceInteractor(opts, null, null, d3);
 }
 
 function add_sector_centered_interactor(vm, xrange, yrange) {
@@ -210,7 +210,7 @@ function add_sector_centered_interactor(vm, xrange, yrange) {
     set angle_offset(x) { vm.$set(value, 0, x * 180.0 / Math.PI) },
     set angle_range(x) { vm.$set(value, 1, x * 180.0 / Math.PI) }
   }
-  return new angleSliceInteractor.default(opts);
+  return new angleSliceInteractor(opts, null, null, d3);
 }
 
 function isEmpty(value, index) {

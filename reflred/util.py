@@ -200,7 +200,8 @@ def poisson_average(y, dy, norm='monitor'):
 
     Use *norm='monitor'* When counting against monitor (the default) or
     *norm='time'* when counting against time.  Use *norm='none'* if *y, dy*
-    is unnormalized, and the poisson sum should be returned.
+    is unnormalized, and the poisson sum should be returned. Use *norm='gauss'*
+    for the simple weighted gaussian average.
 
     The count rate is expressed as the number of counts in an interval $N$
     divided by the interval $M$.  The rate for the combined interval should
@@ -298,11 +299,11 @@ def poisson_average(y, dy, norm='monitor'):
 
     Clearly with two inputs $y$, $\Delta y$ we cannot uniquely recover
     the four parameters $A$, $\Delta A$, $M$, $N$, and Poisson averaging
-    will not work properly.  In these cases, a monitor weighted average
-    is better for error propagation.  Monitor weighted averaging
-    works well for everything except data with many zero counts.
+    will not be strictly correct, though Monte Carlo experiments show that
+    it is good enough for most cases. Error-weighted Gaussian averaging fails
+    when the counts are approximately less than 100.
     """
-    if norm not in ("monitor", "time", "none"):
+    if norm not in ("monitor", "time", "gauss", "none"):
         raise ValueError("expected norm to be time, monitor or none")
 
     # Check whether we are combining rates or counts.  If it is counts,
@@ -318,6 +319,12 @@ def poisson_average(y, dy, norm='monitor'):
         return bar_y, bar_dy
 
     dy = dy + (dy == 0)  # Protect against zero counts in division
+    if norm == "gauss":
+        Swx = np.sum(y/dy**2, axis=0)
+        Sw = np.sum(dy**-2, axis=0)
+        bar_y = Swx / Sw
+        bar_dy = 1/np.sqrt(Sw)
+        return bar_y, bar_dy
 
     # Recover monitor and counts
     monitors = y*(y+1)/dy**2 if norm == "monitor" else y/dy**2 # if "time"
@@ -329,7 +336,7 @@ def poisson_average(y, dy, norm='monitor'):
     combined_counts = np.sum(counts, axis=0)
     bar_y = combined_counts/combined_monitors
     if norm == "time":
-        bar_dy = bar_y * np.sqrt(1./combined_monitors)
+        bar_dy = np.sqrt(bar_y/combined_monitors)
     elif np.isscalar(bar_y):
         if bar_y == 0:
             # When bar_y is zero then 1/N is undefined and so sqrt(1/N + 1/M) fails.

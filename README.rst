@@ -90,6 +90,10 @@ a virtualenv first)::
     python setup.py develop
     web_gui/run.py
 
+or without install (and with headless flag)::
+
+    PYTHONPATH=. python -m web_gui.run -x
+
 Browse to the URL indicated (probably http://localhost:8002/).
 
 Change the server as needed then restart. The debug mode flag (-d) may make
@@ -102,6 +106,13 @@ will need to clone the repo and link it into web_gui/webreduce/js, then
 update web_gui/webreduce/js/libraries.js to point to the local version rather
 than the version on the web.
 
+Update times on the browser may be very slow, particularly when accessing
+the NCNR data source. To speed things up, copy `configurations/default.py`
+to `configurations/config.py` and modify it to use `"force_IPV4": True`.
+You can also set "auto-reload newer files" to false (unchecked) in the
+web client.  It is not a sticky setting at the moment, so it gets reset
+to checked every time you reload the client page. You can set the default
+as `check_mtimes: false` in `web_gui/webreduce/js/menu.js`.
 
 Method 4: Run from repo (production)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
