@@ -862,7 +862,7 @@ def join(data, Q_tolerance=0.5, dQ_tolerance=0.002, order='file',
     order (opt:file|time|theta|slit|none) : order determines which file is the
     base file, supplying the metadata for the joined set
 
-    group_by (str) : key by which the files are grouped prior to join
+    group_by (opt:polarization|probe|entry|filenumber|instrument|intent|sample.name|sample.description) : key by which the files are grouped prior to join
 
     tolerance(float?:1-sigma<0,inf>) : **deprecated** value for Qtol and dQtol;
     ignored if the value is None or not specified.
