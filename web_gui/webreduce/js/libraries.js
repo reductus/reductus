@@ -16,7 +16,7 @@ Vue.use(VueMaterial);
 // vuedraggable is available as a single-file esm source, Vue.Draggable/src/vuedraggable.js
 // which depends only on Sortable, which can be found at 
 // https://github.com/SortableJS/sortablejs/blob/master/modular/sortable.complete.esm.js
-export { default as vuedraggable } from 'https://cdn.skypack.dev/vuedraggable@^2.23.2';
+export { default as vuedraggable } from 'https://dev.jspm.io/npm:vuedraggable@2.23.2/src/vuedraggable.js';
 export { Vue }
 
 import * as messagepack from "https://unpkg.com/messagepack@1.1.11/dist/messagepack.es.js";
