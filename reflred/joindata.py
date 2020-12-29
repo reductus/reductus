@@ -49,7 +49,7 @@ def sort_files(datasets, key):
 
 
 def join_datasets(group, Qtol, dQtol, by_Q=False):
-    # type: (List[ReflData], float, float) -> ReflData
+    # type: (List[ReflData], float, float, bool) -> ReflData
     """
     Create a new dataset which joins the results of all datasets in the group.
 
@@ -116,7 +116,7 @@ def join_datasets(group, Qtol, dQtol, by_Q=False):
 
 
 def build_dataset(group, columns, norm):
-    # type: (List[ReflData], StackedColumns) -> ReflData
+    # type: (List[ReflData], StackedColumns, str) -> ReflData
     """
     Build a new dataset from a set of columns.
 
@@ -198,6 +198,11 @@ def build_dataset(group, columns, norm):
     data.monitor.count_time = t
     data.monitor.counts = m
     data.monitor.counts_variance = dmsq
+    data.monitor.roi_counts = columns['roi']
+    data.monitor.roi_variance = columns['roi']
+    data.monitor.source_power = columns['source_power']
+    data.monitor.source_power_variance = columns['source_power_variance']
+
 
     # Assign a value to detector counts. We need this if we norm after join.
     if norm == "none":
@@ -279,6 +284,9 @@ def get_fields(group):
         Ld=[data.detector.wavelength for data in group],
         dL=[data.detector.wavelength_resolution for data in group],
         monitor=[data.monitor.counts for data in group],
+        roi=[data.monitor.roi_counts for data in group],
+        source_power=[data.monitor.source_power for data in group],
+        source_power_variance=[data.monitor.source_power_variance for data in group],
         time=[data.monitor.count_time for data in group],
         Ti_target=[data.sample.angle_x_target for data in group],
         Td_target=[data.detector.angle_x_target for data in group],

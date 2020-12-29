@@ -591,7 +591,8 @@ class Monitor(Group):
     columns = {
         "counts": {"units": "counts", "variance": "counts_variance"},
         "roi_counts": {"units": "counts", "variance": "roi_variance"},
-        "count_time": {"units": "seconds"}
+        "count_time": {"units": "seconds"},
+        "source_power": {"units": source_power_units, "variance": "source_power_variance"}
     }
     deadtime = None
     deadtime_error = None
@@ -1028,6 +1029,7 @@ class ReflData(Group):
         for prop in ['_v', '_dv', 'angular_resolution', 'Qz_target']:
             v = getattr(self, prop, None)
             if check_array(v):
+                # TODO: use numpy.delete(v, indices) instead
                 masked_v = v[make_mask(v, mask_indices)]
                 setattr(self, prop, masked_v)
                 self.points = len(masked_v)
@@ -1052,11 +1054,13 @@ class ReflData(Group):
                 dv_name = sub_cols[col].get('variance', None)
                 if dv_name is not None:
                     dv = getattr(subcls, dv_name, None)
-                    if check_array(dv): setattr(subcls, dv_name, dv[make_mask(dv, mask_indices)])
+                    if check_array(dv):
+                        setattr(subcls, dv_name, dv[make_mask(dv, mask_indices)])
                 rv_name = sub_cols[col].get('resolution', None)
                 if rv_name is not None:
                     rv = getattr(subcls, rv_name, None)
-                    if check_array(rv): setattr(subcls, rv_name, rv[make_mask(rv, mask_indices)])
+                    if check_array(rv):
+                        setattr(subcls, rv_name, rv[make_mask(rv, mask_indices)])
 
     def __init__(self, **kw):
         for attr, cls in self._groups:

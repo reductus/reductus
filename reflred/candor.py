@@ -1,11 +1,12 @@
 #!/usr/bin/env python
 from warnings import warn
+from copy import copy
 
 import numpy as np
 
 from dataflow.lib.exporters import exports_json
 
-from .refldata import ReflData, Intent, Group, set_fields
+from .refldata import ReflData, Intent, Group, Detector, set_fields
 from .nexusref import load_nexus_entries, nexus_common, get_pol
 from .nexusref import data_as, str_data
 from .nexusref import TRAJECTORY_INTENTS
@@ -467,7 +468,6 @@ class Candor(ReflData):
 class QData(ReflData):
     def __init__(self, data, q, dq, v, dv, ti=None, dt=None, ld=None, dl=None):
         super().__init__()
-        self.sample = data.sample
         self.probe = data.probe
         self.path = data.path
         self.uri = data.uri
@@ -483,35 +483,28 @@ class QData(ReflData):
         self.scan_value = []
         self.scan_units = []
         self.scan_label = []
-        self._q = q
-        self._dq = dq
-        self._incident_angle = ti
+        # Put angles and resolution in the appropriate places in the refldata
+        # data structure.
+        self.sample = copy(data.sample)
+        self.sample.angle_x = ti
+        self.sample.angle_x_target = ti
         self.angular_resolution = dt
-        self._wavelength = ld
-        self._wavelength_spread = dl
-
-    @property
-    def Qz(self):
-        return self._q
-
-    @property
-    def Qx(self):
-        return np.zeros_like(self._q)
+        self.detector = Detector()
+        self.detector.wavelength = ld
+        self.detector.wavelength_resolution = dl
+        self.detector.angle_x = 2*ti
+        self.detector.angle_x_target = 2*ti
+        # Since dq is not computed directly from dt and dl, we need to store
+        # it specially. Need to override apply_mask to fix up dq.
+        self._dq = dq
 
     @property
     def dQ(self):
         return self._dq
 
-    @property
-    def Ti(self):
-        return self._incident_angle
-    @property
-    def Ld(self):
-        return self._wavelength
-    @property
-    def dL(self):
-        return self._wavelength_spread
-
+    def apply_mask(self, mask_indices):
+        self._dq = np.delete(self._dq, mask_indices)
+        ReflData.apply_mask(self, mask_indices)
 
 def nobin(data):
     """
@@ -627,8 +620,12 @@ def _rebin_bank(data, bank, q_edges, average):
     bin_index = np.searchsorted(q_edges, q)
 
     # Some bins may not have any points contributing, such as those before
-    # and after, or those in the middle if the q-step is too fine.
+    # and after, or those in the middle if the q-step is too fine. These
+    # will be excluded from the final result.
     points_per_bin = np.bincount(bin_index, minlength=nbins)
+    # Note: we add empty_q to the divisor in a number of places to protect
+    # against divide by zero in those bins. Since we are excluding these at
+    # the end, this removes the spurious warnings without changing results.
     empty_q = (points_per_bin == 0)
     # The following is cribbed from util.poisson_average, replacing
     # np.sum with np.bincount.
@@ -638,6 +635,7 @@ def _rebin_bank(data, bank, q_edges, average):
         dy = dy + (dy == 0) # protect against zero uncertainty
         Swx = np.bincount(bin_index, weights=y/dy**2, minlength=nbins)
         Sw = np.bincount(bin_index, weights=dy**-2, minlength=nbins)
+        Sw += empty_q  # Protect against division by zero
         bar_y = Swx / Sw
         bar_dy = 1/np.sqrt(Sw)
     elif norm == "none":
@@ -653,7 +651,7 @@ def _rebin_bank(data, bank, q_edges, average):
         counts = y*monitors
         combined_monitors = np.bincount(bin_index, weights=monitors, minlength=nbins)
         combined_counts = np.bincount(bin_index, weights=counts, minlength=nbins)
-        combined_monitors += empty_q  # protect against division by zero
+        combined_monitors += empty_q  # Protect against division by zero
         bar_y = combined_counts/combined_monitors
         if norm == "time":
             bar_dy = np.sqrt(bar_y / combined_monitors)
@@ -667,7 +665,8 @@ def _rebin_bank(data, bank, q_edges, average):
     w = np.ones_like(y)  # Weights must be positive; use equal weights for now
     #w = y # use intensity weighting when finding q centers
     sum_w = np.bincount(bin_index, weights=w, minlength=nbins)
-    sum_w += (sum_w == 0)  # protect against divide by zero
+    #assert ((sum_w == 0) == empty_q).all()
+    sum_w += empty_q  # protect against divide by zero
     sum_q = np.bincount(bin_index, weights=q*w, minlength=nbins)
     bar_q = sum_q / sum_w
     # Combined dq according to mixture distribution.
@@ -680,6 +679,8 @@ def _rebin_bank(data, bank, q_edges, average):
 
     # Combine wavelengths
     sum_Linv = np.bincount(bin_index, weights=w/L, minlength=nbins)
+    #assert ((sum_Linv == 0) == empty_q).all()
+    sum_Linv += empty_q  # protect against divide by zero
     bar_Linv = sum_w/sum_Linv  # Not the first moment of L
     sum_L = np.bincount(bin_index, weights=w*L, minlength=nbins)
     sum_dLsq = np.bincount(bin_index, weights=w*(dL**2+L**2), minlength=nbins)

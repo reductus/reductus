@@ -862,7 +862,7 @@ def join(data, Q_tolerance=0.5, dQ_tolerance=0.002, order='file',
     order (opt:file|time|theta|slit|none) : order determines which file is the
     base file, supplying the metadata for the joined set
 
-    group_by (str) : key by which the files are grouped prior to join
+    group_by (opt:polarization|probe|entry|filenumber|instrument|intent|sample.name|sample.description) : key by which the files are grouped prior to join
 
     tolerance(float?:1-sigma<0,inf>) : **deprecated** value for Qtol and dQtol;
     ignored if the value is None or not specified.
@@ -876,6 +876,7 @@ def join(data, Q_tolerance=0.5, dQ_tolerance=0.002, order='file',
     | 2017-07-03 Brian Maranville: rearrange to group by Ti, Td before dT, dQ
     | 2018-05-14 Brian Maranville: group by Qx first for all rocking curves
     | 2020-10-14 Paul Kienzle fixed uncertainty for time normalized data
+    | 2020-12-15 Brian Maranville added roi_counts and source_power to columns
     """
     from .joindata import sort_files, join_datasets
     from .util import group_by_key
@@ -1595,6 +1596,7 @@ def super_load(filelist=None,
     | 2018-08-29 Paul Kienzle ignore sampleTilt field for NG7
     | 2018-12-10 Brian Maranville get_plottable routines moved to python data container from js
     | 2020-01-21 Brian Maranville updated loader to handle hdf-nexus
+    | 2020-12-18 Brian Maranville adding source_power column to monitor
     """
     from .load import url_load_list
     #from .intent import apply_intent
