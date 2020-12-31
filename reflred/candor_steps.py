@@ -580,7 +580,7 @@ def stitch_intensity(data, tol=0.001):
 
 
 @module("candor")
-def candor_rebin(data, qmin=None, qmax=None, qstep=0.003, qstep_max=None, average='gauss'):
+def candor_rebin(data, qmin=None, qmax=None, qstep=0.003, qexponent=0.0, average='gauss'):
     r"""
     Join the intensity measurements into a single entry.
 
@@ -602,9 +602,11 @@ def candor_rebin(data, qmin=None, qmax=None, qstep=0.003, qstep_max=None, averag
 
     qmax (float) : End of q range, or empty to infer from data
 
-    qstep (float) : q step size at qmin, 0 for no rebinning, or a number N > 1 to use N q points per bin
+    qstep (float) : q step size at q = 0, 0 for no rebinning
 
-    qstep_max (float) : maximum q step size at qmax, or empty to use qstep over entire q range
+    qexponent (float) : exponent such that dQ/Q^qexponent is constant.
+        Acceptable range [0, 1). Typical values are 0 (for constant bin size)
+        or 0.2 to 0.3 (for progressive binning).
 
     average (opt:poisson|gauss) : combine bins using poisson or gaussian distribution
 
@@ -616,8 +618,7 @@ def candor_rebin(data, qmin=None, qmax=None, qstep=0.003, qstep_max=None, averag
     | 2020-08-03 David Hoogerheide adding progressive q step coarsening
     | 2020-09-24 Brian Maranville changed default averaging
     | 2020-10-14 Paul Kienzle fixed uncertainty for time normalized data
-    | 2020-12-02 David Hoogerheide added exponential function to progressive q step coarsening
-    | 2020-12-02 David Hoogerheide added functionality to set Q bin size by number of points per bin for qstep > 1
+    | 2020-12-29 David Hoogerheide added exponential function to progressive q step coarsening
     """
     from .candor import rebin, nobin
 
@@ -628,27 +629,25 @@ def candor_rebin(data, qmin=None, qmax=None, qstep=0.003, qstep_max=None, averag
             qmin = data.Qz.min()
         if qmax is None:
             qmax = data.Qz.max()
-        if (qstep_max is None) | (qstep_max == qstep):
-            q = np.arange(qmin, qmax, qstep)
-        else:
-            # solve for N and qexp given qstep and qstep_max
-            from scipy.optimize import fsolve
 
-            dQ = abs(qmax - qmin)
-            N = fsolve(lambda Nvar : dQ/qstep_max * np.log(dQ/qstep) - Nvar * np.log(Nvar), dQ/(0.5*(qstep_max + qstep)))[0]
-            qexp = -np.log(qstep/dQ)/np.log(N)
-            print('Number of bins: %i\nExponent: %0.3f' % (N, qexp))
-            #print('Min step size: %f' % ((qmax-qmin)*float(N)**(-qexp)))
-            #print('Max step size: %f' % ((qmax-qmin)*(1-(1-1./float(N))**qexp)))
-            normq = np.linspace(0, 1, int(np.round(N)))**qexp
-            q = qmin + normq*dQ
-            #print(normq, q)
+        # Given qstep at qmin = 0 and qexponent, calculate remaining q bins
+        qmin_bin = 0.0
+        qmax_bin = 3.0 # can't have a higher Q than this on CANDOR
+        alpha = -1.0/(qexponent - 1.0)
+        N = (qstep/(qmax_bin-qmin_bin))**(-1./alpha)
+        #print('Number of bins: %i\nExponent: %0.3f' % (N, alpha))
+        #print('Min step size: %f' % ((qmax_bin-qmin_bin)*float(N)**(-alpha)))
+        #print('Max step size: %f' % ((qmax_bin-qmin_bin)*(1-(1-1./float(N))**alpha)))
+        q = (qmax_bin - qmin_bin)*np.linspace(0, 1, int(np.round(N)))**alpha
 
-        # algorithm for dynamic binning (N data points per bin)
-        if qstep > 1:
-            N = int(np.floor(qstep))
-            qsort = np.sort(data.Qz[(data.Qz > qmin) & (data.Qz < qmax)])
-            q = qsort[range(N//2, len(qsort), N)]
+        # Deal with the case that there are some negative q bins (could of course
+        # just always use symmetric case but that might be slower)
+        if (qmin < 0) & (qmax <= 0): # if all q values are negative
+            q = -q[::-1]
+        elif (qmin < 0): # and thus qmax > 0
+            # create symmetric q bins
+            q = np.insert(q, 0, -q[1:][::-1])
+
         data = rebin(data, q, average)
 
     return data
