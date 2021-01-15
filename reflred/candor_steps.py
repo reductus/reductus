@@ -224,7 +224,7 @@ def select_points(data, point_select=None):
         for slit in (data.slit1, data.slit2, data.slit3, data.slit4):
             for attrname in ["x", "x_target", "y", "y_target"]:
                 attr = getattr(slit, attrname, None)
-                if attr is not None:
+                if attr is not None and isinstance(attr, np.ndarray):
                     setattr(slit, attrname, attr[point_select])
 
         data.sample.angle_x = data.sample.angle_x[point_select]
