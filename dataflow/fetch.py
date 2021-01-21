@@ -110,16 +110,14 @@ def url_get(fileinfo, mtime_check=True):
                 url_time_struct = time.strptime(url_mtime, '%a, %d %b %Y %H:%M:%S %Z')
                 t_repo = datetime.datetime(*url_time_struct[:6], tzinfo=pytz.utc)
 
-            if mtime_check:
+            # Check timestamp if requested and if timestamp is provided
+            if mtime_check and mtime is not None:
                 t_request = datetime.datetime.fromtimestamp(mtime, pytz.utc)
-                if mtime is None:
-                    raise ValueError("timestamp checking enabled but no timestamp provided")
-                elif t_request > t_repo:
+                if t_request != t_repo:
                     print("request mtime = %s, repo mtime = %s"%(t_request, t_repo))
-                    raise ValueError("Requested mtime is newer than repository mtime for %r"%path)
-                elif t_request < t_repo:
-                    print("request mtime = %s, repo mtime = %s"%(t_request, t_repo))
-                    raise ValueError("Requested mtime is older than repository mtime for %r"%path)
+                    compare = "older" if t_request < t_repo else "newer"
+                    raise ValueError("Requested mtime is %s than repository mtime for %r"
+                                     % (compare, path))
 
             if isLocal:
                 with open(path, 'rb') as localfile:
