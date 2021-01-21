@@ -215,6 +215,7 @@ export const VueMenu = {
     },
     async upload(ev) {
       this.action('upload_file', ev.target.files[0]);
+      ev.target.value = "";
       await(this.$nextTick());
       this.template_to_upload = null;
     },
