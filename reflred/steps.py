@@ -79,8 +79,8 @@ def fit_dead_time(data, source='detector', mode='auto'):
     """
     from .deadtime import fit_dead_time
 
-    data = fit_dead_time(data, source=source, mode=mode)
-    return data
+    dead_time = fit_dead_time(data, source=source, mode=mode)
+    return dead_time
 
 
 
@@ -162,13 +162,13 @@ def detector_dead_time(data, dead_time, nonparalyzing=0.0, paralyzing=0.0):
     """
     from .deadtime import apply_detector_dead_time
 
-    # TODO: why is copy suppressed?
-    #data = copy(data)
-    #data.detector = copy(data.detector)
+    data = copy(data)
     if nonparalyzing != 0.0 or paralyzing != 0.0:
+        data.detector = copy(data.detector)
         apply_detector_dead_time(data, tau_NP=nonparalyzing,
                                  tau_P=paralyzing)
     elif dead_time is not None:
+        data.detector = copy(data.detector)
         apply_detector_dead_time(data, tau_NP=dead_time.tau_NP,
                                  tau_P=dead_time.tau_P)
     elif data.detector.deadtime is not None and not np.all(np.isnan(data.detector.deadtime)):
@@ -176,6 +176,7 @@ def detector_dead_time(data, dead_time, nonparalyzing=0.0, paralyzing=0.0):
             tau_NP, tau_P = data.detector.deadtime
         except Exception:
             tau_NP, tau_P = data.detector.deadtime, 0.0
+        data.detector = copy(data.detector)
         apply_detector_dead_time(data, tau_NP=tau_NP, tau_P=tau_P)
     else:
         raise ValueError("no valid deadtime provided in file or parameter")
@@ -362,8 +363,8 @@ def divergence_fb(data, sample_width=None):
     2020-05-05 Paul Kienzle
     """
     from .angles import apply_divergence_front_back
-    data = copy(data)
     if data.angular_resolution is None:
+        data = copy(data)
         apply_divergence_front_back(data, sample_width)
     return data
 
@@ -395,9 +396,8 @@ def divergence(data, sample_width=None, sample_broadening=0):
     2020-05-05 Paul Kienzle
     """
     from .angles import apply_divergence_simple, apply_sample_broadening
-    # TODO: why is copy suppressed
-    #data = copy(data)
     if data.angular_resolution is None:
+        data = copy(data)
         apply_divergence_simple(data, sample_width)
         apply_sample_broadening(data, sample_broadening)
     return data
@@ -497,7 +497,7 @@ def mark_intent(data, intent='auto'):
     2016-03-20 Paul Kienzle
     """
     from .intent import apply_intent
-    #data = copy(data)
+    data = copy(data)
     apply_intent(data, intent)
     return data
 
@@ -564,7 +564,7 @@ def extract_xs(data, xs="++"):
     | 2016-05-05 Brian Maranville
     | 2020-03-24 Brian Maranville: added half-pol cross-sections
     """
-    data = copy(data)
+    # Note: no need to copy data since it is not being modified
     if xs == 'unpolarized':
         xs = ''
     output = [d for d in data if d.polarization == xs]
@@ -930,7 +930,7 @@ def align_background(data, align='auto'):
     2020-10-16 Paul Kienzle rename 'offset' to 'align'
     """
     from .background import set_background_alignment
-    #data = copy(data)
+    data = copy(data)
     set_background_alignment(data, align)
     return data
 
@@ -975,12 +975,13 @@ def subtract_background(data, backp, backm, align="none"):
     """
     from .background import apply_background_subtraction
 
-    # TODO: This changes backp and backm. Do we need a copy first?
-    if backp is not None:
-        if align != "none":
+    # Note: This changes backp and backm, so copy first.
+    if align != "none":
+        if backp is not None:
+            backp = copy(backp)
             align_background(backp, align=align)
-    if backm is not None:
-        if align != "none":
+        if backm is not None:
+            backm = copy(backm)
             align_background(backm, align=align)
 
     #print "%s - (%s+%s)/2"%(data.name, (backp.name if backp else "none"), (backm.name if backm else "none"))
@@ -1025,8 +1026,16 @@ def interpolate_background(data, backp, backm, align='auto'):
     """
     from .background import apply_interpolation
 
-    apply_interpolation(data=backp, base=data, align=align)
-    apply_interpolation(data=backm, base=data, align=align)
+    if backp is not None:
+        backp = copy(backp)
+        backp.sample = copy(backp.sample)
+        backp.detector = copy(backp.detector)
+        apply_interpolation(data=backp, base=data, align=align)
+    if backm is not None:
+        backm = copy(backp)
+        backm.sample = copy(backp.sample)
+        backm.detector = copy(backp.detector)
+        apply_interpolation(data=backm, base=data, align=align)
     return data, backp, backm
 
 @module
@@ -1330,7 +1339,6 @@ def correct_footprint(data, fitted_footprint, correction_range=[None, None],
     from .footprint import apply_fitted_footprint, FootprintData
     if correction_range is None:
         correction_range = [None, None]
-    data = copy(data)
     # always use manually-provided error on slope and intercept (not fitted)
     dp = np.array([slope_error, intercept_error])
     if fitted_footprint is None:
@@ -1344,6 +1352,7 @@ def correct_footprint(data, fitted_footprint, correction_range=[None, None],
     # in all cases, overwrite the error in fitted_footprint with specified
     # values:
     fitted_footprint.dp = dp
+    data = copy(data)
     apply_fitted_footprint(data, fitted_footprint, correction_range)
     return data
 

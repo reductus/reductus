@@ -64,7 +64,7 @@ def process_template(template, config, target=(None, None)):
         input_terminals = module.inputs
         module.outputs = module.outputs
 
-        # Build the inputs; if the returning an input terminal, put it in the
+        # Build the inputs; if returning an input terminal, put it in the
         # results set.   This is extra work for the case where the results
         # have already been computed, but it simplifies the code for the
         # case where the return target is an input terminal.

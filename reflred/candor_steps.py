@@ -444,6 +444,10 @@ def attenuation(data, transmission=None, transmission_err=None, target_value=Non
     """
 
     from .candor import NUM_CHANNELS
+    data = copy(data)
+    data.attenuator = copy(data.attenuator)
+    data.detector = copy(data.detector)
+
     if transmission is not None:
         data.attenuator.transmission = np.reshape(np.array(transmission), (-1, NUM_CHANNELS))
     if transmission_err is not None:

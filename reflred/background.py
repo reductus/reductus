@@ -32,6 +32,8 @@ def apply_interpolation(data, base, align='auto'):
     Interpolates background measurements to align with the specular.  If a
     different interpolation is required, then do so before subtract_background
     so that interp does nothing herein.
+
+    Note: modifies data, data.sample and data.detector
     """
     #print "%s - (%s+%s)/2"%(spec.name, (backp.name if backp else "none"), (backm.name if backm else "none"))
     if align == 'auto':
