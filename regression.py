@@ -266,7 +266,7 @@ def main():
     if len(sys.argv) < 2:
         print("usage: python regression.py (datafile|template.json)")
         sys.exit(1)
-    if sys.argv[1].endswith('.json'):
+    if sys.argv[1].endswith('.json') or sys.argv[1].endswith('.json.txt'):
         # Don't know if this is a template or an export...
         play_file(sys.argv[1])
     else:

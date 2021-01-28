@@ -59,13 +59,16 @@ def join_datasets(group, Qtol, dQtol, by_Q=False):
     #print "joining files in",group[0].path,group[0].name,group[0].entry
     # Make sure all datasets are normalized by the same factor.
     normbase = group[0].normbase
-    assert all(data.normbase == normbase for data in group), "can't mix time and monitor normalized data"
+    assert all(data.normbase == normbase for data in group), \
+        "can't mix time and monitor normalized data"
 
     # Gather the columns
     fields = get_fields(group)
     env = get_env(group)
     fields.update(env)
     columns = stack_columns(group, fields)
+
+    # TODO: why is there a mask that hasn't been applied?
     columns = apply_mask(group, columns)
     columns = set_QdQ(columns)
 
@@ -111,6 +114,7 @@ def join_datasets(group, Qtol, dQtol, by_Q=False):
     columns = sort_columns(columns, keys)
 
     data = build_dataset(group, columns, normbase)
+
     #print "joined",data.intent
     return data
 
@@ -159,9 +163,10 @@ def build_dataset(group, columns, norm):
     #data.description
     data.date = min(d.date for d in group)  # set date to earliest date
     data.duration = sum(d.duration for d in group)  # cumulative duration
-    data.polarization = (head.polarization
-                         if all(d.polarization == head.polarization for d in group)
-                         else '')
+    data.polarization = (
+        head.polarization
+        if all(d.polarization == head.polarization for d in group)
+        else '')
     #data.normbase
     data.warnings = []  # initialize per-file history
     #data.vlabel
@@ -261,6 +266,9 @@ def build_dataset(group, columns, norm):
             # TODO: could maybe join the environment logs
             # ----- this would require setting them all to a common start time
 
+    if 'dQ' in columns:
+        data.dQ = columns['dQ']
+
     return data
 
 
@@ -295,6 +303,9 @@ def get_fields(group):
         v=[data.v for data in group],
         dv=[data.dv for data in group],
     )
+    # HACK: binned QData has _dq field that won't match the computed dQ
+    if any(hasattr(data, '_dq') for data in group):
+        columns['dQ'] = [data.dQ for data in group]
     # TODO: cleaner way of handling multi-channel detectors
     if columns['v'][0].ndim > 1:
         # For candor analysis (and anything else with an nD detector), pick
@@ -351,7 +362,7 @@ def get_env(group):
 def stack_columns(group, columns):
     # type: (List[ReflData], Columns) -> StackedColumns
     """
-    Join individual datasets into only long vector for each field in columns.
+    Join individual datasets into one long vector for each field in columns.
     """
     columns = dict((field, [_scalar_to_vector(part, data, field)
                             for part, data in zip(values, group)])
@@ -399,15 +410,16 @@ def apply_mask(group, columns):
 def set_QdQ(columns):
     # type: (StackedColumns) -> StackedColumns
     """
-    Generate Q and dQ fields from angles and geometry
+    Generate Q and dQ fields from angles and geometry.
     """
-    Ti, Td, dT = columns['Ti'], columns['Td'], columns['dT']
-    Ld, dL = columns['Ld'], columns['dL']
-    #print("set_QdQ", [v.shape for v in (Ti, Td, dT, Ld, dL)])
+    # TODO: should use Qz_basis for choosing Ti vs Ti_target, etc.
+    Ti, Td, Ld = columns['Ti'], columns['Td'], columns['Ld']
     Qx, Qz = TiTdL2Qxz(Ti, Td, Ld)
+    columns['Qx'], columns['Qz'] = Qx, Qz
     # TODO: is dQx == dQz ?
-    dQ = dTdL2dQ(Td-Ti, dT, Ld, dL)
-    columns['Qx'], columns['Qz'], columns['dQ'] = Qx, Qz, dQ
+    if not hasattr(columns, 'dQ'):
+        dT, dL = columns['dT'], columns['dL']
+        columns['dQ'] = dTdL2dQ(Td-Ti, dT, Ld, dL)
     return columns
 
 
@@ -590,26 +602,60 @@ def merge_points(index_sets, columns, normbase):
             results['dv'].append(dv)
             results['time'].append(np.sum(columns['time'][group]))
             results['monitor'].append(np.sum(columns['monitor'][group]))
-            # TODO: dQ should increase when points are mixed (see MERGE below)
             w = weight[group]
             for key, value in columns.items():
-                if key not in ['v', 'dv', 'time', 'monitor']:
+                if key in ('Ti', 'Li', 'Qz', 'T', 'L'):
+                    # When mixing angle, wavelength and Q use a gaussian
+                    # mixture model to compute the associated resolution
+                    # for dT, dL and dQ. This allows you to compute a
+                    # realistic resolution width when the resolution from the
+                    # individual points are not centered around the same value.
+                    # This is an issue when binning Q values: the width of the
+                    # resulting distribution needs to be at least as wide as
+                    # the range of Q values in the bin.
+                    #
+                    # We use incident wavelength and incident angle for the
+                    # wavelength and angle distribution.
+                    # TODO: Remove T and L since they are no longer used.
+                    #
+                    # Note: the mapping between field and resolution,
+                    # {Ti: dT, Li: dL, Qz: dQ}, can conveniently be captured
+                    # using 'd' plus the first letter of the field.
+                    variance_key = 'd' + key[:1]
+                    variance = columns[variance_key]
+                    x, dx = _merge_variance(value[group], variance[group], w)
+                    results[key].append(x)
+                    results[variance_key].append(dx)
+                elif key in ['v', 'dv', 'time', 'monitor', 'dT', 'dL', 'dQ']:
+                    # v, dv, time and monitor are handled outside the loop.
+                    # dT, dL and dQ are handled in the above variance merge.
+                    pass
+                else:
                     results[key].append(np.average(value[group], weights=w, axis=0))
 
     # Turn lists into arrays
     results = dict((k, np.array(v)) for k, v in results.items())
     return results
 
-# MERGE variance
-#
-# There is a simple expression for the moments of a mixture of distributions:
-#     T = (sum wk . T) / (sum wk)
-#     dT^2 = (sum wk . (dTk^2 + Tk^2)) / (sum wk) - T^2
-# See: https://en.wikipedia.org/wiki/Mixture_density#Moments
-#
-# This formula should be applied to angular distribution since that is
-# the quantity being mixed when combining measurements at slightly
-# different angles.
+def _merge_variance(x, dx, w):
+    """
+    Merge points x with variance dx and weight w.
+
+    Use this simple expression for the moments of a mixture of distributions::
+
+        T = (sum wk . Tk) / (sum wk)
+        dT^2 = (sum wk . (dTk^2 + Tk^2)) / (sum wk) - T^2
+
+    See: https://en.wikipedia.org/wiki/Mixture_density#Moments
+
+    This formula should be applied to angular distribution since that is
+    the quantity being mixed when combining measurements at slightly
+    different angles.
+    """
+    wsum = np.sum(w, axis=0)
+    x_bar = np.sum(w*x, axis=0) / wsum
+    varx_bar = np.sum(w*(dx**2 + x**2), axis=0) / wsum - x_bar**2
+    return x_bar, np.sqrt(varx_bar)
 
 def sort_columns(columns, keys):
     # type: (StackedColumns, Sequence[str]) -> StackedColumns

@@ -465,46 +465,38 @@ class Candor(ReflData):
     def to_column_text(self):
         pass
 
-class QData(ReflData):
-    def __init__(self, data, q, dq, v, dv, ti=None, dt=None, ld=None, dl=None):
-        super().__init__()
-        self.probe = data.probe
-        self.path = data.path
-        self.uri = data.uri
-        self.name = data.name
-        self.entry = data.entry
-        self.description = data.description
-        self.polarization = data.polarization
-        self.normbase = data.normbase
-        self.v = v
-        self.dv = dv
-        self.intent = Intent.spec
-        self.points = len(q)
-        self.scan_value = []
-        self.scan_units = []
-        self.scan_label = []
-        # Put angles and resolution in the appropriate places in the refldata
-        # data structure.
-        self.sample = copy(data.sample)
-        self.sample.angle_x = ti
-        self.sample.angle_x_target = ti
-        self.angular_resolution = dt
-        self.detector = Detector()
-        self.detector.wavelength = ld
-        self.detector.wavelength_resolution = dl
-        self.detector.angle_x = 2*ti
-        self.detector.angle_x_target = 2*ti
-        # Since dq is not computed directly from dt and dl, we need to store
-        # it specially. Need to override apply_mask to fix up dq.
-        self._dq = dq
-
-    @property
-    def dQ(self):
-        return self._dq
-
-    def apply_mask(self, mask_indices):
-        self._dq = np.delete(self._dq, mask_indices)
-        ReflData.apply_mask(self, mask_indices)
+def QData(data, q, dq, v, dv, ti=None, dt=None, ld=None, dl=None):
+    self = ReflData()
+    self.probe = data.probe
+    self.path = data.path
+    self.uri = data.uri
+    self.name = data.name
+    self.entry = data.entry
+    self.description = data.description
+    self.polarization = data.polarization
+    self.normbase = data.normbase
+    self.v = v
+    self.dv = dv
+    self.intent = data.intent
+    self.points = len(q)
+    self.scan_value = []
+    self.scan_units = []
+    self.scan_label = []
+    # Put angles and resolution in the appropriate places in the refldata
+    # data structure.
+    self.sample = copy(data.sample)
+    self.sample.angle_x = ti
+    self.sample.angle_x_target = ti
+    self.angular_resolution = dt
+    self.detector = Detector()
+    self.detector.wavelength = ld
+    self.detector.wavelength_resolution = dl
+    self.detector.angle_x = 2*ti
+    self.detector.angle_x_target = 2*ti
+    # Since dq is not computed directly from dt and dl, we need to store
+    # it specially. Need to override apply_mask to fix up dq.
+    self.dQ = dq
+    return self
 
 def nobin(data):
     """
