@@ -68,9 +68,8 @@ def join_datasets(group, Qtol, dQtol, by_Q=False):
     fields.update(env)
     columns = stack_columns(group, fields)
 
-    # TODO: why is there a mask that hasn't been applied?
+    # TODO: why are there masks that haven't been applied?
     columns = apply_mask(group, columns)
-    columns = set_QdQ(columns)
 
     # Group points together, either by target angles, by actual angles or by Q
     # TODO: maybe include target Q
@@ -266,7 +265,7 @@ def build_dataset(group, columns, norm):
             # TODO: could maybe join the environment logs
             # ----- this would require setting them all to a common start time
 
-    if 'dQ' in columns:
+    if columns['v'][0].ndim == 1:
         data.dQ = columns['dQ']
 
     return data
@@ -299,13 +298,12 @@ def get_fields(group):
         Ti_target=[data.sample.angle_x_target for data in group],
         Td_target=[data.detector.angle_x_target for data in group],
         Qz_target=[data.Qz_target for data in group],
+        dQ=[data.dQ for data in group],
         # using v,dv since poisson average wants rates
         v=[data.v for data in group],
         dv=[data.dv for data in group],
     )
-    # HACK: binned QData has _dq field that won't match the computed dQ
-    if any(hasattr(data, '_dq') for data in group):
-        columns['dQ'] = [data.dQ for data in group]
+
     # TODO: cleaner way of handling multi-channel detectors
     if columns['v'][0].ndim > 1:
         # For candor analysis (and anything else with an nD detector), pick
@@ -319,16 +317,23 @@ def get_fields(group):
         # dT with a scalar for the purposes of grouping frames.
         columns['angular_resolution'] = columns['dT']
 
-        # Make dT a scalar. Use S1 rather than dT since candor does not yet
-        # compute divergence properly.  Otherwise use the first channel of dT.
-        columns['dT'] = columns['s1']
+        # Make dT a scalar.
+        ## Use the first channel of dT.
         #columns['dT'] = [v.flat[0] for v in columns['dT']]
+        # Use S1 rather than dT since candor does not yet compute
+        # divergence properly.
+        columns['dT'] = [
+            (s1+s2)/2 for s1, s2 in zip(columns['s1'], columns['s2'])]
 
         # Pick the first channel of L, dL.  Not picking a column since they are
         # constant across all frames, and since the column stacker automatically
         # extends a scalar to a vector with one entry per frame.
         columns['Ld'] = [v.flat[0] for v in columns['Ld']]
         columns['dL'] = [v.flat[0] for v in columns['dL']]
+        del columns['dQ'] # Make sure dQ is set by reset_QdQ
+
+    # Set Qx, Qz, dQ from motor positions
+    set_QdQ(columns)
 
     return columns
 
@@ -414,13 +419,16 @@ def set_QdQ(columns):
     """
     # TODO: should use Qz_basis for choosing Ti vs Ti_target, etc.
     Ti, Td, Ld = columns['Ti'], columns['Td'], columns['Ld']
-    Qx, Qz = TiTdL2Qxz(Ti, Td, Ld)
+    dT, dL = columns['dT'], columns['dL']
+    parts = []
+    for k in range(len(Ti)):
+        Qx_k, Qz_k = TiTdL2Qxz(Ti[k], Td[k], Ld[k])
+        dQ_k = dTdL2dQ(Td[k]-Ti[k], dT[k], Ld[k], dL[k])
+        parts.append((Qx_k, Qz_k, dQ_k))
+    Qx, Qz, dQ = zip(*parts)
     columns['Qx'], columns['Qz'] = Qx, Qz
-    # TODO: is dQx == dQz ?
-    if not hasattr(columns, 'dQ'):
-        dT, dL = columns['dT'], columns['dL']
-        columns['dQ'] = dTdL2dQ(Td-Ti, dT, Ld, dL)
-    return columns
+    if 'dQ' not in columns:
+        columns['dQ'] = dQ
 
 
 def get_target_values(group):

@@ -678,13 +678,13 @@ def _rebin_bank(data, bank, q_edges, average):
     sum_L = np.bincount(bin_index, weights=w*L, minlength=nbins)
     bar_L = sum_L / sum_w
     sum_dLsq = np.bincount(bin_index, weights=w*(dL**2 + L**2), minlength=nbins)
-    bar_dL = np.sqrt(sum_dLsq/sum_w - sum_L**2)
+    bar_dL = np.sqrt(sum_dLsq/sum_w - bar_L**2)
 
     # Combine angles
     sum_T = np.bincount(bin_index, weights=w*T, minlength=nbins)
     bar_T = sum_T / sum_w
     sum_dT = np.bincount(bin_index, weights=w*(dT**2 + T**2), minlength=nbins)
-    bar_dT = np.sqrt(sum_dT/sum_w - sum_T**2)
+    bar_dT = np.sqrt(sum_dT/sum_w - bar_T**2)
 
     # Need to drop catch-all bins before and after q edges.
     # Also need to drop q bins which don't contain any values.
