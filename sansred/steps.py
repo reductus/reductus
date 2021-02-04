@@ -17,7 +17,7 @@ import numpy as np
 from dataflow.lib.uncertainty import Uncertainty
 from dataflow.lib import uncertainty
 
-from .sansdata import RawSANSData, SansData, Sans1dData, SansIQData, Parameters, _s
+from .sansdata import RawSANSData, SansData, Sans1dData, SansIQData, Parameters
 from .sans_vaxformat import readNCNRSensitivity
 
 from vsansred.steps import _s, _b

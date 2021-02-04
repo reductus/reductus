@@ -267,8 +267,9 @@ editor.get_full = function() {
     terminal: this._active_terminal,
     return_type: "full"
   }
-  this.calculate(params_to_calc, true).then(function(result) {
+  return this.calculate(params_to_calc, true).then(function(result) {
     console.log(result);
+    return result;
   })
 }
 
