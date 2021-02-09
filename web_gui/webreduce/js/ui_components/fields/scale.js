@@ -9,7 +9,8 @@ let template = `
       :id="field.id"
       :placeholder="field.default"
       :rows="dimensioned_value.length+2"
-      v-model="display_value"
+      :value="display_value"
+      @change="display_value=$event.target.value"
     ></textarea>
   </label>
 </div>
@@ -35,8 +36,11 @@ export const ScaleUi = {
           //.replace(/\s*\]$/, '');
       },
       set(newValue) {
-        let v = JSON.parse(newValue).map(x => (+x));
-        this.$emit("change", this.field.id, v);
+        try {
+          let v = JSON.parse(newValue).map(x => (+x));
+          this.$emit("change", this.field.id, v);
+        }
+        catch(e) {}
       }
     }
   },
@@ -59,6 +63,13 @@ export const ScaleUi = {
       scaler.dispatch.on("end", () => {
         this.$emit("change", this.field.id, opts.scales);
       });
+      // TODO: the update function is not implemented in the interactor,
+      // so there's currently no way to push changes back to it.
+      // ***
+      //this.$watch('value', function(newVal, oldVal) {
+      //  scaler.state.scales.splice(0, scaler.state.scales.length, ...newVal);
+      //  chart.update();
+      //});
       chart.interactors(scaler);
       chart.update();
       chart.do_autoscale();
