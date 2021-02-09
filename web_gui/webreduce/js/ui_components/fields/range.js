@@ -77,9 +77,11 @@ export const RangeUi = {
       let y = chart.y();
       let buffer = 10;
       let xrange = x.range();
+      let xdir = Math.sign(xrange[1] - xrange[0]);
       let yrange = y.range();
-      let xdomain = [x.invert(xrange[0] - buffer), x.invert(xrange[1] + buffer)].sort()
-      let ydomain = [y.invert(yrange[0] + buffer), y.invert(yrange[1] - buffer)].sort()
+      let ydir = Math.sign(yrange[1] - yrange[0]);
+      let xdomain = [x.invert(xrange[0] + buffer * xdir), x.invert(xrange[1] - buffer * xdir)].sort()
+      let ydomain = [y.invert(yrange[0] + buffer * ydir), y.invert(yrange[1] - buffer * ydir)].sort()
       let interactor = interactorConnectors[this.axis_str](this, xdomain, ydomain);
       interactor.dispatch.on("end", () => { this.changed(false) })
       chart.interactors(interactor);
