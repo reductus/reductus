@@ -3,7 +3,7 @@
 # filter bots:
 # zgrep -h -i -vE "googlebot|bingbot|msnbot|slurp|mediapartners-google" /var/log/apache2/access.log* | awk '{ print $1 } '| sort | uniq | wc -l
 
-for i in `zgrep -h -i -vE "googlebot|bingbot|msnbot|slurp|mediapartners-google" /var/log/apache2/access.log* | awk '{ print $1 } '| sort | uniq `
+for i in `zgrep -h -i -vE "googlebot|bingbot|msnbot|slurp|mediapartners-google|yandex" /var/log/apache2/access.log* | awk '{ print $1 } '| sort | uniq `
 do
     geoiplookup $i | head -1 | cut -d' ' -f 5-
 done > 'countrynamelist.txt'
