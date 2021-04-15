@@ -60,5 +60,5 @@ jobs:
         token: ${{ secrets.GITHUB_TOKEN }}
         release: unstable
         tag: sid
-        files: unstable/reductus-latest-source.zip
+        files: reductus-latest-source.zip
 
