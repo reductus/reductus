@@ -30,6 +30,7 @@ jobs:
         echo $GITHUB_SHA > dataflow/git_revision
         python setup.py sdist --formats=zip
         cp dist/*.zip unstable/reductus-latest-source.zip
+        ls -l unstable/
 
     # See the following for how to upload to a release
     #  https://eugene-babichenko.github.io/blog/2020/05/09/github-actions-cross-platform-auto-releases/
@@ -48,6 +49,10 @@ jobs:
       uses: actions/download-artifact@v2
       with:
         name: artifacts
+
+    - name: show files
+      run: |
+        ls * -l
 
     - name: Update unstable release
       uses: johnwbyrd/update-release@v1.0.0
