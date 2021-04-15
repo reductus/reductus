@@ -68,7 +68,7 @@ def store_revision():
 
     See :mod:`rev` for details.
     """
-    commit = git_rev(repo_path())
+    commit = revision_info()
     if commit is None:
         commit = "unknown"
     path = Path(__file__).absolute().parent / RESOURCE_NAME
