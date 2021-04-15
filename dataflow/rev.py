@@ -68,7 +68,7 @@ def store_revision():
 
     See :mod:`rev` for details.
     """
-    commit = git_rev(repo_path())
+    commit = str(git_rev(repo_path()))
     path = Path(__file__).absolute().parent / RESOURCE_NAME
     with path.open("w") as fd:
         fd.write(commit + "\n")
