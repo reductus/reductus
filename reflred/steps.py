@@ -58,47 +58,54 @@ def ncnr_load(filelist=None, check_timestamps=True):
     return datasets
 
 @module
-def subtract_dark_counts(data, slope_with_slit1=0.0, intercept_with_slit1=0.0):
-    """
-    Subtract dark count rate based on a linear fit of dark count to slit1 opening.
+def dark_current(data, dc_rate=0., s1_slope=0.):
+    r"""
+    Correct for the dark current, which is the average number of
+    spurious counts per minute of measurement on each detector channel.
+
+    Note: could instead use this module to estimate the dark current and
+    output a background signal which can then be plotted or fed into a
+    background subtraction tool.  Or maybe just produce a dark current
+    plottable as an extra output.
 
     **Inputs**
 
-    data (refldata[]): data sets to correct for dark counts
+    data (refldata[]) : data to scale
 
-    slope_with_slit1(float): slope of dark count rate with slit1. Units of 1/(mm s).
+    dc_rate {Dark counts per minute} (float)
+    : Number of dark counts to subtract from each detector channel per
+    minute of counting time.
 
-    intercept_with_slit1(float): dark count rate with slit1 closed. Units of 1/s.
+    s1_slope {DC vs. slit 1 in counts/(minute . mm)} (float)
+    : Dark current may increase with slit 1 opening as "dc_rate + s1_slope*S1"
 
     **Returns**
 
-    output (refldata[]): dark count corrected data.
-    
-    2021-06-11 David Hoogerheide
+    output (refldata[]): Dark current subtracted data.
+
+    | 2020-03-04 Paul Kienzle
+    | 2020-03-12 Paul Kienzle Add slit 1 dependence for DC rate
+    | 2021-06-11 David Hoogerheide generalize to refldata, prevent either adding counts or oversubtracting
     """
-
+    # TODO: no uncertainty propagation
+    # TODO: generalize to detector shapes beyond candor (2021-06-11 now works for both magik and candor)
+    # TODO: datatype hierarchy: accepts any kind of refldata
     data = copy(data)
-    newdata = list()
-    if (slope_with_slit1 !=0) | (intercept_with_slit1 !=0):     # if statement should be unnecessary
-        for d in data:
-            # calculate dark count rate, but do not allow to go negative
-            # o Note that dark count rate actually follows something like (A * detectorAngle + B) * slit1 + C * detectorAngle + D.
-            # o For a typical scan slit1 and detectorAngle change together and this can be approximated in the region of interest as a line
-            darkcountrate = np.polyval([slope_with_slit1, intercept_with_slit1], d.slit1.x)
-            darkcountrate[darkcountrate < 0] = 0.0
-
-            # subtract dark counts. Again, do not allow detector counts to go below zero.
-            # TODO: recalculate error bars based on dark count subtracted counts
-            # TODO: Combine with candor "dark current" module
-            d.detector.counts -= d.monitor.count_time * darkcountrate
+    datasets = list()
+    for d in data:
+        if dc_rate != 0. or s1_slope != 0.:
+            rate = dc_rate + s1_slope*d.slit1.x
+            dc = d.monitor.count_time*(rate/60.)
+            dc[dc < 0] = 0
+            ndetectordims = np.ndim(d.detector.counts)
+            #print(ndetectordims, d.detector.counts.shape, dc.shape, np.expand_dims(dc, tuple(range(1, ndetectordims))).shape)
+            dc = np.expand_dims(dc, tuple(range(1, ndetectordims)))
+            d.detector.counts = d.detector.counts - dc
             d.detector.counts[d.detector.counts < 0] = 0.0
-            d = normalize(d, base=d.normbase)       # recalculates d.v with new detector counts
-            newdata.append(d)
-    else:
-        newdata = data
-
-    return newdata
-
+            if d.normbase is not None:              # only renormalize if apply_norm has already populated d.normbase, i.e. if it's a standalone module
+                d = normalize(d, d.normbase)
+        datasets.append(d)
+    return datasets
 
 @module
 def fit_dead_time(data, source='detector', mode='auto'):
