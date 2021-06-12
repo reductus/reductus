@@ -84,6 +84,7 @@ def candor(
     | 2020-09-11 Brian Maranville loader updated with new motor names
     | 2020-11-18 Brian Maranville adding attenuator correction
     | 2020-11-20 Paul Kienzle support files with old detector table layout
+    | 2021-06-11 David Hoogerheide compatibility with new DC rate module
     """
     from .load import url_load_list
     from .candor import load_entries
@@ -103,7 +104,7 @@ def candor(
         if auto_divergence:
             data = steps.divergence_fb(data, sample_width)
         if dc_rate != 0. or dc_slope != 0.:
-            data = dark_current(data, dc_rate, dc_slope)
+            data = dark_current([data], dc_rate, dc_slope)[0]       # now requires a list of datasets; could move it out of the for loop
         if detector_correction:
             data = steps.detector_dead_time(data, None)
         if monitor_correction:
@@ -386,7 +387,7 @@ def dark_current(data, dc_rate=0., s1_slope=0.):
 
     **Inputs**
 
-    data (candordata) : data to scale
+    data (refldata[]) : data to scale
 
     dc_rate {Dark counts per minute} (float)
     : Number of dark counts to subtract from each detector channel per
@@ -397,21 +398,31 @@ def dark_current(data, dc_rate=0., s1_slope=0.):
 
     **Returns**
 
-    output (candordata): Dark current subtracted data.
+    output (refldata[]): Dark current subtracted data.
 
     | 2020-03-04 Paul Kienzle
     | 2020-03-12 Paul Kienzle Add slit 1 dependence for DC rate
+    | 2021-06-11 David Hoogerheide generalize to refldata, prevent either adding counts or oversubtracting
     """
     # TODO: no uncertainty propagation
-    # TODO: generalize to detector shapes beyond candor
+    # TODO: generalize to detector shapes beyond candor (2021-06-11 now works for both magik and candor)
     # TODO: datatype hierarchy: accepts any kind of refldata
-    if dc_rate != 0. or s1_slope != 0.:
-        rate = dc_rate + s1_slope*data.slit1.x
-        dc = data.monitor.count_time*(rate/60.)
-        data = copy(data)
-        data.detector = copy(data.detector)
-        data.detector.counts = data.detector.counts - dc[:, None, None]
-    return data
+    data = copy(data)
+    datasets = list()
+    for d in data:
+        if dc_rate != 0. or s1_slope != 0.:
+            rate = dc_rate + s1_slope*d.slit1.x
+            dc = d.monitor.count_time*(rate/60.)
+            dc[dc < 0] = 0
+            ndetectordims = np.ndim(d.detector.counts)
+            #print(ndetectordims, d.detector.counts.shape, dc.shape, np.expand_dims(dc, tuple(range(1, ndetectordims))).shape)
+            dc = np.expand_dims(dc, tuple(range(1, ndetectordims)))
+            d.detector.counts = d.detector.counts - dc
+            d.detector.counts[d.detector.counts < 0] = 0.0
+            if d.normbase is not None:              # only renormalize if apply_norm has already populated d.normbase, i.e. if it's a standalone module
+                d = steps.normalize(d, d.normbase)
+        datasets.append(d)
+    return datasets
 
 @module("candor")
 def attenuation(data, transmission=None, transmission_err=None, target_value=None):
