@@ -58,6 +58,49 @@ def ncnr_load(filelist=None, check_timestamps=True):
     return datasets
 
 @module
+def subtract_dark_counts(data, slope_with_slit1=0.0, intercept_with_slit1=0.0):
+    """
+    Subtract dark count rate based on a linear fit of dark count to slit1 opening.
+
+    **Inputs**
+
+    data (refldata[]): data sets to correct for dark counts
+
+    slope_with_slit1(float): slope of dark count rate with slit1. Units of 1/(mm s).
+
+    intercept_with_slit1(float): dark count rate with slit1 closed. Units of 1/s.
+
+    **Returns**
+
+    output (refldata[]): dark count corrected data.
+    
+    2021-06-11 David Hoogerheide
+    """
+
+    data = copy(data)
+    newdata = list()
+    if (slope_with_slit1 !=0) | (intercept_with_slit1 !=0):     # if statement should be unnecessary
+        for d in data:
+            # calculate dark count rate, but do not allow to go negative
+            # o Note that dark count rate actually follows something like (A * detectorAngle + B) * slit1 + C * detectorAngle + D.
+            # o For a typical scan slit1 and detectorAngle change together and this can be approximated in the region of interest as a line
+            darkcountrate = np.polyval([slope_with_slit1, intercept_with_slit1], d.slit1.x)
+            darkcountrate[darkcountrate < 0] = 0.0
+
+            # subtract dark counts. Again, do not allow detector counts to go below zero.
+            # TODO: recalculate error bars based on dark count subtracted counts
+            # TODO: Combine with candor "dark current" module
+            d.detector.counts -= d.monitor.count_time * darkcountrate
+            d.detector.counts[d.detector.counts < 0] = 0.0
+            d = normalize(d, base=d.normbase)       # recalculates d.v with new detector counts
+            newdata.append(d)
+    else:
+        newdata = data
+
+    return newdata
+
+
+@module
 def fit_dead_time(data, source='detector', mode='auto'):
     """
     Fit detector dead time constants (paralyzing and non-paralyzing) from
