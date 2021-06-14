@@ -83,29 +83,53 @@ def dark_current(data, dc_rate=0., s1_slope=0.):
 
     output (refldata[]): Dark current subtracted data.
 
+    darkcurrent (refldata[]): Dark current that was subtracted.
+
     | 2020-03-04 Paul Kienzle
     | 2020-03-12 Paul Kienzle Add slit 1 dependence for DC rate
     | 2021-06-11 David Hoogerheide generalize to refldata, prevent either adding counts or oversubtracting
+    | 2021-06-13 David Hoogerheide add dark current output
     """
     # TODO: no uncertainty propagation
     # TODO: generalize to detector shapes beyond candor (2021-06-11 now works for both magik and candor)
     # TODO: datatype hierarchy: accepts any kind of refldata
-    data = copy(data)
+    # TODO: allow more complex functional dependence on slit1. For example,
+    #       in an experiment where slit1 increases the dark count rate, and opening slit3/slit4 increases
+    #       the acceptance of the detector (no longer exactly dark current of course), the rate depends
+    #       quadratically on slit1. Backward compatibility should be straightforward here: the candor loader just
+    #       needs to generate the appropriate polynomial to send into this function.
+
     datasets = list()
+    dcs = list()
     for d in data:
-        if dc_rate != 0. or s1_slope != 0.:
-            rate = dc_rate + s1_slope*d.slit1.x
-            dc = d.monitor.count_time*(rate/60.)
-            dc[dc < 0] = 0
-            ndetectordims = np.ndim(d.detector.counts)
-            #print(ndetectordims, d.detector.counts.shape, dc.shape, np.expand_dims(dc, tuple(range(1, ndetectordims))).shape)
-            dc = np.expand_dims(dc, tuple(range(1, ndetectordims)))
-            d.detector.counts = d.detector.counts - dc
-            d.detector.counts[d.detector.counts < 0] = 0.0
-            if d.normbase is not None:              # only renormalize if apply_norm has already populated d.normbase, i.e. if it's a standalone module
-                d = normalize(d, d.normbase)
+        dcdata = copy(d)                    # hackish way to get dark current counts
+        dcdata.detector = copy(d.detector)
+
+        # calculate rate at each point
+        rate = dc_rate + s1_slope*dcdata.slit1.x
+        dc = dcdata.monitor.count_time*(rate/60.)
+        dc[dc < 0] = 0.0                            # do not allow addition of dark counts from negative rates
+
+        # condition dark counts to the correct dimensionality
+        ndetectordims = np.ndim(d.detector.counts)
+        #print(ndetectordims, d.detector.counts.shape, dc.shape, np.expand_dims(dc, tuple(range(1, ndetectordims))).shape)
+        dc = np.expand_dims(dc, tuple(range(1, ndetectordims)))
+        dcdata.detector.counts = np.ones_like(dcdata.detector.counts) * dc  # should preserve dimensionality correctly
+
+        d.detector.counts = d.detector.counts - dc
+        d.detector.counts[d.detector.counts < 0] = 0.0
+        #print(dc, d.detector.counts, dcdata.detector.counts)
+        
+        # only renormalize if apply_norm has already populated d.normbase, i.e. if it's a standalone module
+        if d.normbase is not None:
+            d = normalize(d, d.normbase)
+            dcdata = normalize(dcdata, dcdata.normbase)
+
+        # create outputs
         datasets.append(d)
-    return datasets
+        dcs.append(dcdata)
+
+    return datasets, dcs
 
 @module
 def fit_dead_time(data, source='detector', mode='auto'):

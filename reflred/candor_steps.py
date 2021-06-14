@@ -104,7 +104,7 @@ def candor(
         if auto_divergence:
             data = steps.divergence_fb(data, sample_width)
         if dc_rate != 0. or dc_slope != 0.:
-            data = steps.dark_current([data], dc_rate, dc_slope)[0]       # now requires a list of datasets; could move it out of the for loop
+            data = steps.dark_current([data], dc_rate, dc_slope)[0][0]       # now requires and returns a list of datasets; could move it out of the for loop
         if detector_correction:
             data = steps.detector_dead_time(data, None)
         if monitor_correction:
