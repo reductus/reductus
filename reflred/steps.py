@@ -58,67 +58,75 @@ def ncnr_load(filelist=None, check_timestamps=True):
     return datasets
 
 @module
-def dark_current(data, dc_rate=0., s1_slope=0.):
+def dark_current(data, poly_coeff=[0], poly_cov=None):
     r"""
     Correct for the dark current, which is the average number of
     spurious counts per minute of measurement on each detector channel.
-
-    Note: could instead use this module to estimate the dark current and
-    output a background signal which can then be plotted or fed into a
-    background subtraction tool.  Or maybe just produce a dark current
-    plottable as an extra output.
 
     **Inputs**
 
     data (refldata[]) : data to scale
 
-    dc_rate {Dark counts per minute} (float)
-    : Number of dark counts to subtract from each detector channel per
-    minute of counting time.
+    poly_coeff {Polynomial coefficients of dark current vs slit1} (float[])
+    : Polynomial coefficients (highest order to lowest) representing the dark current as a function of slit 1 opening. Units in counts/(minute . mm ^ N), for the coefficient of (slit1 ^ N). Default is [0].
 
-    s1_slope {DC vs. slit 1 in counts/(minute . mm)} (float)
-    : Dark current may increase with slit 1 opening as "dc_rate + s1_slope*S1"
+    poly_cov {Polynomial covariance matrix} (float[])
+    : Flattened covariance matrix for polynomial coefficients if error propagation is desired. For an order N polynomial, must have size N^2. If left blank, no error propagation will occur.
 
     **Returns**
 
     output (refldata[]): Dark current subtracted data.
 
-    darkcurrent (refldata[]): Dark current that was subtracted.
+    darkcurrent (refldata[]): Dark current that was subtracted (for plotting)
 
     | 2020-03-04 Paul Kienzle
     | 2020-03-12 Paul Kienzle Add slit 1 dependence for DC rate
     | 2021-06-11 David Hoogerheide generalize to refldata, prevent either adding counts or oversubtracting
     | 2021-06-13 David Hoogerheide add dark current output
+    | 2021-06-14 David Hoogerheide change to polynomial input and add error propagation
     """
-    # TODO: no uncertainty propagation
-    # TODO: generalize to detector shapes beyond candor (2021-06-11 now works for both magik and candor)
+
     # TODO: datatype hierarchy: accepts any kind of refldata
-    # TODO: allow more complex functional dependence on slit1. For example,
-    #       in an experiment where slit1 increases the dark count rate, and opening slit3/slit4 increases
-    #       the acceptance of the detector (no longer exactly dark current of course), the rate depends
-    #       quadratically on slit1. Backward compatibility should be straightforward here: the candor loader just
-    #       needs to generate the appropriate polynomial to send into this function.
+
+    from dataflow.lib.uncertainty import Uncertainty as U
 
     datasets = list()
     dcs = list()
+
+    order = len(poly_coeff)
+
     for d in data:
         dcdata = copy(d)                    # hackish way to get dark current counts
         dcdata.detector = copy(d.detector)
 
-        # calculate rate at each point
-        rate = dc_rate + s1_slope*dcdata.slit1.x
+        # calculate rate and Jacobian at each point
+        rate = np.polyval(poly_coeff, dcdata.slit1.x)
+
+        # error propagation
+        rate_var = np.zeros_like(rate)
+        if poly_cov is not None:
+            poly_cov = np.array(poly_cov).reshape((order, order))
+            for i, s1 in enumerate(dcdata.slit1.x):
+                J = np.array([s1**float(i) for i in range(0, order)[::-1]])
+                rate_var[i] = np.dot(J.T, np.dot(poly_cov, J))
         dc = dcdata.monitor.count_time*(rate/60.)
         dc[dc < 0] = 0.0                            # do not allow addition of dark counts from negative rates
+        dc_var = rate_var * (dcdata.monitor.count_time/60.)**2
 
         # condition dark counts to the correct dimensionality
         ndetectordims = np.ndim(d.detector.counts)
-        #print(ndetectordims, d.detector.counts.shape, dc.shape, np.expand_dims(dc, tuple(range(1, ndetectordims))).shape)
         dc = np.expand_dims(dc, tuple(range(1, ndetectordims)))
+        dc_var = np.expand_dims(dc_var, tuple(range(1, ndetectordims)))
         dcdata.detector.counts = np.ones_like(dcdata.detector.counts) * dc  # should preserve dimensionality correctly
+        dcdata.detector.counts_variance = np.ones_like(dcdata.detector.counts_variance) * dc_var  # should preserve dimensionality correctly
 
-        d.detector.counts = d.detector.counts - dc
+        detcounts = U(d.detector.counts, d.detector.counts_variance)
+        darkcounts = U(dcdata.detector.counts, dcdata.detector.counts_variance)
+
+        detdarkdiff = detcounts - darkcounts
+
+        d.detector.counts, d.detector.counts_variance = detdarkdiff.x, detdarkdiff.variance
         d.detector.counts[d.detector.counts < 0] = 0.0
-        #print(dc, d.detector.counts, dcdata.detector.counts)
         
         # only renormalize if apply_norm has already populated d.normbase, i.e. if it's a standalone module
         if d.normbase is not None:
