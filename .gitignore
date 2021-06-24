@@ -9,6 +9,9 @@ __pycache__
 /doc/reflred/
 /doc/ospecred/
 /doc/sansred/
+/doc/usansred/
+/doc/vsansred/
+/doc/web_gui/
 /reflred/src/_rebin.cc
 /reflred.egg-info/
 /web_gui/config.py

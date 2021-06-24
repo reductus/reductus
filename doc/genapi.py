@@ -72,7 +72,9 @@ def dataflow():
         ('cache', 'redis/memory cache manager'),
         ('calc', 'template calculator'),
         ('core', 'instrument definition'),
+        ('data', 'module interchange formats'),
         ('deps', 'graph dependeny resolution'),
+        #('doi_resolve', ??),
         ('fakeredis', 'memory-based cache manager with redis interface'),
         ('fetch', 'fetch data from remote data source, with caching'),
         ('rst2html', 'convert restructured text document to html'),
@@ -83,6 +85,8 @@ def dataflow():
         ('lib.hzf_readonly_stripped', 'zip NeXus reader'),
         ('lib.iso8601', 'timestamp parsing and printing'),
         ('lib.rebin', 'rebinning support'),
+        ('lib.seed', 'random number generator context manager'),
+        ('lib.strings', 'unicode to byte conversion'),
         ('lib.uncertainty', '1-D uncertainty type'),
         ('lib.unit', 'NeXus file units support'),
         ('lib.wsolve', 'linear regression with uncertainty'),
@@ -95,19 +99,25 @@ def reflred():
     """Generate modules for the reflred package"""
     modules = [
         ('steps', 'reflectometry reduction steps'),
+        ('dataflow', 'reflectometery instrument definition'),
+        ('candor_steps', 'reflectometry reduction steps for CANDOR'),
         ('angles', 'angle corrections'),
         ('background', 'background alignment and subtraction'),
         ('bruker', 'Bruker X-ray data format loader'),
+        ('candor', 'CANDOR data format loader'),
         ('deadtime_fit', 'dead time estimation routines'),
         ('deadtime', 'dead time corrections'),
         ('footprint', 'footprint correction'),
         ('intent', 'intent marking'),
         ('joindata', 'data joining'),
         ('load', 'data loader'),
+        ('magik_horizontal', 'load horizontal reflectometry data for Magik'),
         ('nexusref', 'load reflectometry data from NeXus format'),
+        ('ng7psd', 'load NG7 PSD data'),
         ('polarization', 'polarization correction'),
         ('refldata', 'reflectometry data structure'),
         ('resolution', 'reflectometry resolution calculations'),
+        ('rigaku', 'Rigaku X-ray data format loader'),
         ('scale', 'data scaling'),
         ('smoothslits', 'slit scan smoothing'),
         ('util', 'data correction helper functions'),
@@ -137,12 +147,14 @@ def ospecred():
     """Generate modules for the off-specular package"""
     modules = [
         ('magik_filters_func', 'Off-specular reduction steps'),
+        ('dataflow', 'off-specular instrument definition'),
         ('FilterableMetaArray', 'dataflow interchange format'),
         ('MetaArray', 'nd array with metadata'),
-        ('asterix_filters', 'annotate exceptions'),
+        ('asterix_filters', 'Asterix reduction operations'),
         ('asterix_loaders', 'data loaders for Asterix instrument'),
         ('filters', 'dataflow reduction steps'),
         ('he3analyzer', 'He3 analysis corrections'),
+        ('magik_filters', 'Magik reduction operations'),
         ('magik_loaders', 'load NeXus data for Magik instrument'),
         ('xray_loaders', 'load UXD data from Bruker X-ray reflectometer'),
     ]
@@ -154,13 +166,52 @@ def sansred():
     """Generate modules for the SANS package"""
     modules = [
         ('steps', 'SANS reduction steps'),
+        ('dataflow', 'SANS instrument definition'),
         ('attenuation_constants', 'calibration values for SANS attenuators'),
+        #('cylindrical_coordiante_transform', 'cylindrical coordinates'),
+        ('cylindrical', 'cylindrical coordinates'),
         ('draw_annulus_aa', 'anti-aliased annulus mask'),
-        ('loader', 'SANS data loader'),
+        ('loader', 'SANS Nexus data loader'),
         ('sansdata', 'SANS data format'),
+        ('sans_vaxformat', 'NIST VAX format for SANS')
+        #('sansformat', 'loader for NIST VAX format for SANS'),
     ]
     package = 'sansred'
     package_name = 'SANS Reduction'
+    genfiles(package, package_name, modules, dir=package)
+
+def usansred():
+    """Generate modules for the USANS package"""
+    modules = [
+        ('steps', 'USANS reduction steps'),
+        ('dataflow', 'USANS instrument definition'),
+        ('loader', 'USANS Nexus data loader'),
+        ('usansdata', 'USANS data format'),
+    ]
+    package = 'usansred'
+    package_name = 'USANS Reduction'
+    genfiles(package, package_name, modules, dir=package)
+
+def vsansred():
+    """Generate modules for the VSANS package"""
+    modules = [
+        ('steps', 'VSANS reduction steps'),
+        ('dataflow', 'VSANS instrument definition'),
+        ('categorize', 'VSANS data sorter'),
+        ('loader', 'VSANS Nexus data loader'),
+        ('vsansdata', 'VSANS data format'),
+    ]
+    package = 'vsansred'
+    package_name = 'VSANS Reduction'
+    genfiles(package, package_name, modules, dir=package)
+
+def web_gui():
+    """Generate modules for the web gui package"""
+    modules = [
+        ('api', 'GUI callback api'),
+    ]
+    package = 'web_gui'
+    package_name = 'reduction server'
     genfiles(package, package_name, modules, dir=package)
 
 def main():
@@ -168,6 +219,10 @@ def main():
     reflred()
     ospecred()
     sansred()
+    usansred()
+    vsansred()
+    web_gui()
+
 
 if __name__ == "__main__":
     main()
