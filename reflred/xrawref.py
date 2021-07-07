@@ -102,15 +102,13 @@ class BrukerRefl(refldata.ReflData):
         # measurements give a similar value (~ 0.033 degrees FWHM)
         nominal_resolution = 0.03
         if entry['scan_mode'] == 1: # continuous
-            # TODO: record distribution shape (uniform or gaussian)
-            sweep_resolution = sigma2FWHM(entry['increment_1']/np.sqrt(12.))
             # If sweep resolution >> slit resolution then uniform otherwise
-            # keep the default value of 'normal'. Guessing a cutoff of 2x
+            # keep the default value of 'normal'. Guessing a cutoff of 3x
             # where tails no longer matter, but didn't check.
-            if sweep_resolution >= 2*nominal_resolution:
+            sweep_width = entry['increment_1']
+            if sweep_width >= 3*FWHM2sigma(nominal_resolution):
                 self.resolution_shape = 'uniform'
-            nominal_resolution += sweep_resolution
-            self.resolution_shape = 'uniform' if is_uniform else 'normal'
+            nominal_resolution += sigma2FWHM(sweep_width/np.sqrt(12.))
         self.angular_resolution = FWHM2sigma(nominal_resolution)
         self.slit1.distance = -275.5
         self.slit2.distance = -192.7
@@ -240,13 +238,13 @@ class RigakuRefl(refldata.ReflData):
         # Resolution info (returned as 1-sigma from rigaku reader)
         nominal_resolution = data['angular_divergence']
         if data['scan_mode'] != 'STEP': # continuous
-            sweep_resolution = data['x_resolution']/np.sqrt(12.)
             # If sweep resolution >> slit resolution then uniform otherwise
-            # keep the default value of 'normal'. Guessing a cutoff of 2x
+            # keep the default value of 'normal'. Guessing a cutoff of 3x
             # where tails no longer matter, but didn't check.
-            if sweep_resolution >= 2*nominal_resolution:
+            sweep_width = data['x_resolution']
+            if sweep_width >= 3*nominal_resolution:
                 self.resolution_shape = 'uniform'
-            nominal_resolution += sweep_resolution
+            nominal_resolution += sweep_width/np.sqrt(12.0)
         self.angular_resolution = nominal_resolution
         self.resolution_shape = 'uniform' if is_uniform else 'normal'
         self.slit1.distance = data['slit1_distance']
