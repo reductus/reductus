@@ -84,6 +84,7 @@ def candor(
     | 2020-09-11 Brian Maranville loader updated with new motor names
     | 2020-11-18 Brian Maranville adding attenuator correction
     | 2020-11-20 Paul Kienzle support files with old detector table layout
+    | 2021-06-11 David Hoogerheide compatibility with new DC rate module
     """
     from .load import url_load_list
     from .candor import load_entries
@@ -103,7 +104,7 @@ def candor(
         if auto_divergence:
             data = steps.divergence_fb(data, sample_width)
         if dc_rate != 0. or dc_slope != 0.:
-            data = dark_current(data, dc_rate, dc_slope)
+            data = steps.dark_current([data], poly_coeff=[dc_slope, dc_rate])[0][0]       # now requires and returns a list of datasets; could move it out of the for loop
         if detector_correction:
             data = steps.detector_dead_time(data, None)
         if monitor_correction:
@@ -371,46 +372,6 @@ def recalibrate_wavelength(data, wavelengths=(), wavelength_resolutions=()):
     data.detector = copy(data.detector)
     data.detector.wavelength = wavelengths
     data.detector.wavelength_resolution = wavelength_resolutions
-    return data
-
-@module("candor")
-def dark_current(data, dc_rate=0., s1_slope=0.):
-    r"""
-    Correct for the dark current, which is the average number of
-    spurious counts per minute of measurement on each detector channel.
-
-    Note: could instead use this module to estimate the dark current and
-    output a background signal which can then be plotted or fed into a
-    background subtraction tool.  Or maybe just produce a dark current
-    plottable as an extra output.
-
-    **Inputs**
-
-    data (candordata) : data to scale
-
-    dc_rate {Dark counts per minute} (float)
-    : Number of dark counts to subtract from each detector channel per
-    minute of counting time.
-
-    s1_slope {DC vs. slit 1 in counts/(minute . mm)} (float)
-    : Dark current may increase with slit 1 opening as "dc_rate + s1_slope*S1"
-
-    **Returns**
-
-    output (candordata): Dark current subtracted data.
-
-    | 2020-03-04 Paul Kienzle
-    | 2020-03-12 Paul Kienzle Add slit 1 dependence for DC rate
-    """
-    # TODO: no uncertainty propagation
-    # TODO: generalize to detector shapes beyond candor
-    # TODO: datatype hierarchy: accepts any kind of refldata
-    if dc_rate != 0. or s1_slope != 0.:
-        rate = dc_rate + s1_slope*data.slit1.x
-        dc = data.monitor.count_time*(rate/60.)
-        data = copy(data)
-        data.detector = copy(data.detector)
-        data.detector.counts = data.detector.counts - dc[:, None, None]
     return data
 
 @module("candor")

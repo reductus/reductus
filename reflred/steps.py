@@ -58,6 +58,88 @@ def ncnr_load(filelist=None, check_timestamps=True):
     return datasets
 
 @module
+def dark_current(data, poly_coeff=[0], poly_cov=None):
+    r"""
+    Correct for the dark current, which is the average number of
+    spurious counts per minute of measurement on each detector channel.
+
+    **Inputs**
+
+    data (refldata[]) : data to scale
+
+    poly_coeff {Polynomial coefficients of dark current vs slit1} (float[])
+    : Polynomial coefficients (highest order to lowest) representing the dark current as a function of slit 1 opening. Units in counts/(minute . mm ^ N), for the coefficient of (slit1 ^ N). Default is [0].
+
+    poly_cov {Polynomial covariance matrix} (float[])
+    : Flattened covariance matrix for polynomial coefficients if error propagation is desired. For an order N polynomial, must have size N^2. If left blank, no error propagation will occur.
+
+    **Returns**
+
+    output (refldata[]): Dark current subtracted data.
+
+    darkcurrent (refldata[]): Dark current that was subtracted (for plotting)
+
+    | 2020-03-04 Paul Kienzle
+    | 2020-03-12 Paul Kienzle Add slit 1 dependence for DC rate
+    | 2021-06-11 David Hoogerheide generalize to refldata, prevent either adding counts or oversubtracting
+    | 2021-06-13 David Hoogerheide add dark current output
+    | 2021-06-14 David Hoogerheide change to polynomial input and add error propagation
+    """
+
+    # TODO: datatype hierarchy: accepts any kind of refldata
+
+    from dataflow.lib.uncertainty import Uncertainty as U
+
+    datasets = list()
+    dcs = list()
+
+    order = len(poly_coeff)
+
+    for d in data:
+        dcdata = copy(d)                    # hackish way to get dark current counts
+        dcdata.detector = copy(d.detector)
+
+        # calculate rate and Jacobian at each point
+        rate = np.polyval(poly_coeff, dcdata.slit1.x)
+
+        # error propagation
+        rate_var = np.zeros_like(rate)
+        if poly_cov is not None:
+            poly_cov = np.array(poly_cov).reshape((order, order))
+            for i, s1 in enumerate(dcdata.slit1.x):
+                J = np.array([s1**float(i) for i in range(0, order)[::-1]])
+                rate_var[i] = np.dot(J.T, np.dot(poly_cov, J))
+        dc = dcdata.monitor.count_time*(rate/60.)
+        dc[dc < 0] = 0.0                            # do not allow addition of dark counts from negative rates
+        dc_var = rate_var * (dcdata.monitor.count_time/60.)**2
+
+        # condition dark counts to the correct dimensionality
+        ndetectordims = np.ndim(d.detector.counts)
+        dc = np.expand_dims(dc, tuple(range(1, ndetectordims)))
+        dc_var = np.expand_dims(dc_var, tuple(range(1, ndetectordims)))
+        dcdata.detector.counts = np.ones_like(dcdata.detector.counts) * dc  # should preserve dimensionality correctly
+        dcdata.detector.counts_variance = np.ones_like(dcdata.detector.counts_variance) * dc_var  # should preserve dimensionality correctly
+
+        detcounts = U(d.detector.counts, d.detector.counts_variance)
+        darkcounts = U(dcdata.detector.counts, dcdata.detector.counts_variance)
+
+        detdarkdiff = detcounts - darkcounts
+
+        d.detector.counts, d.detector.counts_variance = detdarkdiff.x, detdarkdiff.variance
+        d.detector.counts[d.detector.counts < 0] = 0.0
+        
+        # only renormalize if apply_norm has already populated d.normbase, i.e. if it's a standalone module
+        if d.normbase is not None:
+            d = normalize(d, d.normbase)
+            dcdata = normalize(dcdata, dcdata.normbase)
+
+        # create outputs
+        datasets.append(d)
+        dcs.append(dcdata)
+
+    return datasets, dcs
+
+@module
 def fit_dead_time(data, source='detector', mode='auto'):
     """
     Fit detector dead time constants (paralyzing and non-paralyzing) from
