@@ -47,7 +47,9 @@ class MagikHorizontal(NCNRNeXusRefl):
 
         tilt = data_as(das, 'horizontalGeom/angleZero', '', rep=n)
         angle = data_as(das, 'horizontalGeom/angle', '', rep=n)
-        self.sample.angle_x = angle - tilt
+        self.sample.angle_x = angle
+        if (self.intent.startswith('rock')):
+            self.sample.angle_x -= tilt
         self.sample.angle_x_target = self.sample.angle_x
         if 'horizontalGeomBackSlit/angleMultiplier' in das:
             # then we have a back slit that defines scattering angle
