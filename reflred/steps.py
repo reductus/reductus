@@ -975,6 +975,66 @@ def join(data, Q_tolerance=0.5, dQ_tolerance=0.002, order='file',
         output.append(result)
     return output
 
+@module
+def average_cross_sections(data, average_sf=False, average_nsf=False):
+    """
+    Average (combine) cross-sections, usually to improve statistics when cross-sections
+    are expected to be indistinguishable in the model (e.g. spin-flip when no chirality)
+    Typically this is done after load and before "join"
+
+    All inputs are passed to the output, and in addition:
+
+    When *average_sf* is enabled, all input datasets with polarization "-+" will be copied and
+    added to the output with polarization = "+-", and vice-versa for "+-" inputs.
+
+    When *average_nsf* is enabled, all input datasets with polarization "++" will be copied and
+    added to the output with polarization = "--", and similarly "--" inputs sent to "++"
+
+    **Inputs**
+
+    data (refldata[]) : datasets to average
+
+    average_sf {Average Spin-Flip?} (bool) : Perform averaging on spin-flip cross-sections,
+    i.e. "+-" and "-+"
+
+    average_nsf {Average Non-Spin-Flip?} (bool) : Perform averaging on spin-flip cross-sections,
+    i.e. "++" and "--" or "+" and "-"
+
+    **Returns**
+
+    output (refldata[]) : relabeled and copied datasets (around twice as many as in the input)
+
+    2021-11-17 Brian Maranville
+    """
+    output = copy(data)
+    mappings = {
+        "sf": {
+            "+-": "-+",
+            "-+": "+-"
+        },
+        "nsf": {
+            "++": "--",
+            "--": "++",
+            "+": "-",
+            "-": "+"
+        }
+    }
+    def duplicate_and_remap_items(xs_type):
+        mapping = mappings[xs_type]
+        items = [d for d in data if d.polarization in mapping]
+        for item in items:
+            new_item = copy(item)
+            new_item.polarization = mapping[item.polarization]
+            output.append(new_item)
+
+    if average_sf:
+        duplicate_and_remap_items("sf")
+
+    if average_nsf:
+        duplicate_and_remap_items("nsf")
+
+    return output
+
 #@module
 def align_background(data, align='auto'):
     """
