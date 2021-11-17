@@ -994,10 +994,10 @@ def mix_cross_sections(data, mix_sf=False, mix_nsf=False):
 
     data (refldata[]) : datasets in
 
-    average_sf {Mix Spin-Flip?} (bool) : Perform mixing on spin-flip cross-sections,
+    mix_sf {Mix Spin-Flip?} (bool) : Perform mixing on spin-flip cross-sections,
     i.e. "+-" and "-+"
 
-    average_nsf {Mix Non-Spin-Flip?} (bool) : Perform mixing on spin-flip cross-sections,
+    mix_nsf {Mix Non-Spin-Flip?} (bool) : Perform mixing on spin-flip cross-sections,
     i.e. "++" and "--" or "+" and "-"
 
     **Returns**
