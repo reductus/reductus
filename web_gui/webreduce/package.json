@@ -34,6 +34,7 @@
   "homepage": "https://github.com/reductus/reductus#readme",
   "type": "module",
   "devDependencies": {
+    "@parcel/transformer-sass": "^2.0.1",
     "cssnano": "^4.1.10",
     "parcel": "^2.0.1",
     "sass": "^1.26.10"
