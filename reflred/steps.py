@@ -976,28 +976,28 @@ def join(data, Q_tolerance=0.5, dQ_tolerance=0.002, order='file',
     return output
 
 @module
-def average_cross_sections(data, average_sf=False, average_nsf=False):
+def mix_cross_sections(data, mix_sf=False, mix_nsf=False):
     """
-    Average (combine) cross-sections, usually to improve statistics when cross-sections
+    Mix (combine) cross-sections, usually to improve statistics when cross-sections
     are expected to be indistinguishable in the model (e.g. spin-flip when no chirality)
     Typically this is done after load and before "join"
 
     All inputs are passed to the output, and in addition:
 
-    When *average_sf* is enabled, all input datasets with polarization "-+" will be copied and
+    When *mix_sf* is enabled, all input datasets with polarization "-+" will be copied and
     added to the output with polarization = "+-", and vice-versa for "+-" inputs.
 
-    When *average_nsf* is enabled, all input datasets with polarization "++" will be copied and
+    When *mix_nsf* is enabled, all input datasets with polarization "++" will be copied and
     added to the output with polarization = "--", and similarly "--" inputs sent to "++"
 
     **Inputs**
 
-    data (refldata[]) : datasets to average
+    data (refldata[]) : datasets in
 
-    average_sf {Average Spin-Flip?} (bool) : Perform averaging on spin-flip cross-sections,
+    average_sf {Mix Spin-Flip?} (bool) : Perform mixing on spin-flip cross-sections,
     i.e. "+-" and "-+"
 
-    average_nsf {Average Non-Spin-Flip?} (bool) : Perform averaging on spin-flip cross-sections,
+    average_nsf {Mix Non-Spin-Flip?} (bool) : Perform mixing on spin-flip cross-sections,
     i.e. "++" and "--" or "+" and "-"
 
     **Returns**
@@ -1027,10 +1027,10 @@ def average_cross_sections(data, average_sf=False, average_nsf=False):
             new_item.polarization = mapping[item.polarization]
             output.append(new_item)
 
-    if average_sf:
+    if mix_sf:
         duplicate_and_remap_items("sf")
 
-    if average_nsf:
+    if mix_nsf:
         duplicate_and_remap_items("nsf")
 
     return output
