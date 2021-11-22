@@ -24,8 +24,8 @@ import * as messagepack from "https://unpkg.com/messagepack@1.1.11/dist/messagep
 export { messagepack };
 // PouchDB can be replaced with idb from https://github.com/jakearchibald/idb 
 // since we are not using the sync features of pouch
-import { default as PouchDB } from "https://dev.jspm.io/npm:pouchdb-browser@7";
-export { PouchDB };
+import * as idb from 'https://unpkg.com/idb?module';
+export { idb };
 export {
     xyChart,
     heatChart,

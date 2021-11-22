@@ -14,8 +14,8 @@ export { default as vuedraggable } from 'vuedraggable';
 export { d3 } from './d3-custom.js';
 import * as messagepack from 'messagepack';
 export { messagepack };
-import PouchDB from 'pouchdb-browser';
-export { PouchDB };
+import * as idb from 'idb';
+export { idb };
 export {
   xyChart,
   heatChart,
