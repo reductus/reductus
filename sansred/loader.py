@@ -89,9 +89,9 @@ def process_sourceAperture(field, units):
     def handler(v):
         return np.float(v.split()[0])
     handle_values = np.vectorize(handler)
-    value = handle_values(field.value)
+    value = handle_values(field[()])
     units_from = ""
-    v0 = field.value[0].split()
+    v0 = field[0].split()
     if len(v0) > 1:
         units_from = v0[1]
     if type(units_from) == bytes:
@@ -110,7 +110,7 @@ def data_as(field, units):
         if type(units_in) == bytes:
             units_in = units_in.decode('utf-8')
         converter = unit.Converter(units_in)
-        value = converter(field.value, units)
+        value = converter(field[()], units)
         return value
 
 def readSANSNexuz(input_file, file_obj=None, metadata_lookup=metadata_lookup):
@@ -141,7 +141,7 @@ def readSANSNexuz_old(input_file, file_obj=None):
     datasets = []
     file = h5_open_zip(input_file, file_obj)
     for entryname, entry in file.items():
-        areaDetector = entry['data/areaDetector'].value
+        areaDetector = entry['data/areaDetector'][()]
         shape = areaDetector.shape
         if len(shape) < 2 or len(shape) > 3:
             raise ValueError("areaDetector data must have dimension 2 or 3")
@@ -159,7 +159,7 @@ def readSANSNexuz_old(input_file, file_obj=None):
                     if mkey in unit_specifiers:
                         field = data_as(field, unit_specifiers[mkey])
                     else:
-                        field = field.value
+                        field = field[()]
                     if field.dtype.kind == 'f':
                         field = field.astype("float")
                     elif field.dtype.kind == 'i':

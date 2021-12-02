@@ -19,10 +19,10 @@ def hdf_to_dict(hdf_obj, convert_i1_tostr=True):
     for key in hdf_obj:
         val = hdf_obj[key]
         if type(val) == h5py.highlevel.Dataset:
-            if (val.value.dtype == 'int8') and (convert_i1_tostr == True):
-                value = val.value.tostring()
+            if (val[()].dtype == 'int8') and (convert_i1_tostr == True):
+                value = val[()].tostring()
             else:
-                value = val.value
+                value = val[()]
             out_dict[key] = value
         else:
             out_dict[key] = hdf_to_dict(val)
@@ -82,7 +82,7 @@ def LoadMAGIKPSD(filename, path="", friendly_name="", collapse_y=True, auto_PolS
     #    return
     for entryname, entry in file_obj.items():
         active_slice = slice(None, DETECTOR_ACTIVE[0], DETECTOR_ACTIVE[1])
-        counts_value = entry['DAS_logs']['areaDetector']['counts'].value[:, 1:DETECTOR_ACTIVE[0]+1, :DETECTOR_ACTIVE[1]]
+        counts_value = entry['DAS_logs']['areaDetector']['counts'][:, 1:DETECTOR_ACTIVE[0]+1, :DETECTOR_ACTIVE[1]]
         dims = counts_value.shape
         print(dims)
         ndims = len(dims)
@@ -114,7 +114,7 @@ def LoadMAGIKPSD(filename, path="", friendly_name="", collapse_y=True, auto_PolS
         if ndims == 2: # one of the dimensions has been collapsed.
             info = []
             info.append({"name": "xpixel", "units": "pixels", "values": arange(xpixels) }) # reverse order
-            info.append({"name": "theta", "units": "degrees", "values": entry['DAS_logs']['sampleAngle']['softPosition'].value })
+            info.append({"name": "theta", "units": "degrees", "values": entry['DAS_logs']['sampleAngle']['softPosition'][()] })
             info.extend([
                     {"name": "Measurements", "cols": [
                             {"name": "counts"},
@@ -122,11 +122,11 @@ def LoadMAGIKPSD(filename, path="", friendly_name="", collapse_y=True, auto_PolS
                             {"name": "monitor"},
                             {"name": "count_time"}]},
                     {"PolState": PolState, "filename": filename, "start_datetime": dateutil.parser.parse(file_obj.attrs.get('file_time')), "friendly_name": friendly_name,
-                     "CreationStory":creation_story, "path":path, "det_angle":entry['DAS_logs']['detectorAngle']['softPosition'].value}]
+                     "CreationStory":creation_story, "path":path, "det_angle":entry['DAS_logs']['detectorAngle']['softPosition'][()]}]
                 )
             data_array = zeros((xpixels, ypixels, 4))
-            mon =  entry['DAS_logs']['counter']['liveMonitor'].value
-            count_time = entry['DAS_logs']['counter']['liveTime'].value
+            mon =  entry['DAS_logs']['counter']['liveMonitor'][()]
+            count_time = entry['DAS_logs']['counter']['liveTime'][()]
             if ndims == 2:
                 mon.shape = (1,) + mon.shape # broadcast the monitor over the other dimension
                 count_time.shape = (1,) + count_time.shape
@@ -146,7 +146,7 @@ def LoadMAGIKPSD(filename, path="", friendly_name="", collapse_y=True, auto_PolS
             if collapse_y == True:
                 info = []
                 info.append({"name": "xpixel", "units": "pixels", "values": arange(xpixels) }) # reverse order
-                info.append({"name": "theta", "units": "degrees", "values": entry['DAS_logs']['sampleAngle']['softPosition'].value })
+                info.append({"name": "theta", "units": "degrees", "values": entry['DAS_logs']['sampleAngle']['softPosition'][()] })
                 info.extend([
                         {"name": "Measurements", "cols": [
                                 {"name": "counts"},
@@ -154,11 +154,11 @@ def LoadMAGIKPSD(filename, path="", friendly_name="", collapse_y=True, auto_PolS
                                 {"name": "monitor"},
                                 {"name": "count_time"}]},
                         {"PolState": PolState, "filename": filename, "start_datetime": dateutil.parser.parse(file_obj.attrs.get('file_time')), "friendly_name": friendly_name,
-                         "CreationStory":creation_story, "path":path, "det_angle":entry['DAS_logs']['detectorAngle']['softPosition'].value}]
+                         "CreationStory":creation_story, "path":path, "det_angle":entry['DAS_logs']['detectorAngle']['softPosition'][()]}]
                     )
                 data_array = zeros((xpixels, frames, 4))
-                mon =  entry['DAS_logs']['counter']['liveMonitor'].value
-                count_time = entry['DAS_logs']['counter']['liveTime'].value
+                mon =  entry['DAS_logs']['counter']['liveMonitor'][()]
+                count_time = entry['DAS_logs']['counter']['liveTime'][()]
                 if ndims == 3:
                     mon.shape = (1,) + mon.shape # broadcast the monitor over the other dimension
                     count_time.shape = (1,) + count_time.shape
@@ -176,15 +176,15 @@ def LoadMAGIKPSD(filename, path="", friendly_name="", collapse_y=True, auto_PolS
             else: # make separate frames
                 infos = []
                 data = []
-                samp_angle =  entry['DAS_logs']['sampleAngle']['softPosition'].value
+                samp_angle =  entry['DAS_logs']['sampleAngle']['softPosition'][()]
                 if samp_angle.shape[0] == 1:
                     samp_angle = numpy.ones((frames,)) * samp_angle
-                det_angle = entry['DAS_logs']['detectorAngle']['softPosition'].value
+                det_angle = entry['DAS_logs']['detectorAngle']['softPosition'][()]
                 if det_angle.shape[0] == 1:
                     det_angle = numpy.ones((frames,)) * det_angle
                 for i in range(frames):
-                    samp_angle =  entry['DAS_logs']['sampleAngle']['softPosition'].value[i]
-                    det_angle = entry['DAS_logs']['detectorAngle']['softPosition'].value[i]
+                    samp_angle =  entry['DAS_logs']['sampleAngle']['softPosition'][i]
+                    det_angle = entry['DAS_logs']['detectorAngle']['softPosition'][i]
                     info = []
                     info.append({"name": "xpixel", "units": "pixels", "values": range(xpixels) })
                     info.append({"name": "ypixel", "units": "pixels", "values": range(ypixels) })
@@ -194,12 +194,12 @@ def LoadMAGIKPSD(filename, path="", friendly_name="", collapse_y=True, auto_PolS
                                 {"name": "pixels"},
                                 {"name": "monitor"},
                                 {"name": "count_time"}]},
-                        {"PolState": PolState, "filename": filename, "start_datetime": entry['start_time'].value, "friendly_name": friendly_name,
+                        {"PolState": PolState, "filename": filename, "start_datetime": entry['start_time'][()], "friendly_name": friendly_name,
                          "CreationStory":creation_story, "path":path, "samp_angle": samp_angle, "det_angle": det_angle}]
                     )
                     data_array = zeros((xpixels, ypixels, 4))
-                    mon =  entry['DAS_logs']['counter']['liveMonitor'].value[i]
-                    count_time = entry['DAS_logs']['counter']['liveTime'].value[i]
+                    mon =  entry['DAS_logs']['counter']['liveMonitor'][i]
+                    count_time = entry['DAS_logs']['counter']['liveTime'][i]
                     counts = counts_value[i]
                     if flip == True: counts = flipud(counts)
                     data_array[..., 0] = counts
