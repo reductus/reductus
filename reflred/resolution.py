@@ -271,7 +271,7 @@ def binedges(L):
 
 def divergence(slits=None, distance=None, T=None,
                sample_width=np.inf, use_sample=True):
-    # type: (Tuple[np.ndarray, np.ndarray], Tuple[float, float], np.ndarray, float, float) -> np.ndarray
+    # type: (Sequence[Union[float, np.ndarray], ...], Sequence[float, ...], Optional[np.ndarray], float, bool) -> np.ndarray
     r"""
     Calculate divergence due to slit and sample geometry.
 
@@ -285,9 +285,8 @@ def divergence(slits=None, distance=None, T=None,
         *sample_width*      : float | mm
             w, width of the sample
         *use_sample* : bool
-            True if sample profile should be treated as a slit.  If false,
-            then incident angle, sample width and sample broadening are not
-            used.
+            True if sample footprint should be treated as a slit.  If False,
+            then incident angle T and sample width are not used.
 
     :Returns:
         *dT*  : float OR [float] | |deg| 1-\ $\sigma$
@@ -341,7 +340,7 @@ def divergence(slits=None, distance=None, T=None,
     angles through all the slits. Any slits that are not centered on the
     beam path can introduce a skew in this distribution.
 
-    The present algorithm computes the symmetric trapezoidal distribution
+    The algorithm computes the symmetric trapezoidal distribution
     for each pair of slits along the beam path and uses the minimum divergence
     as the divergence of the complete beam.  Monte Carlo simulations show that
     this method underestimates the divergence by up to 30% when slit 1 is
@@ -350,6 +349,8 @@ def divergence(slits=None, distance=None, T=None,
     can slit 3.
 
     **TODO**: fix S1 >> S2 condition
+
+    **TODO**: sample footprint not used even when *use_sample* is True
     """
     # Extend all arrays to look like T (for use in candor data)
     slits = [util.extend(s, T) for s in slits]
@@ -368,6 +369,12 @@ def divergence(slits=None, distance=None, T=None,
         return np.sqrt((w**2 + t**2)/6)
     n = len(slits)
     sigma = [_divergence(i, j) for i in range(n) for j in range(i+1, n)]
+    ## With four slit pairs plus sample, show whether the sample footprint
+    ## is the limiting factor in the divergence. The structure of the
+    ## divergence list sigma is as follows:
+    ##  [S1:S2 S1:S3 S1:S4 S1:foot S2:S3 S2:S4 S2:foot S3:S4 S3:foot S4:foot]
+    #print(f"sample dT = {min(sigma[k].min() for k in (3, 6, 8, 9))},"
+    #      f" slit dT = {min(sigma[k].min() for k in (0, 1, 2, 4, 5, 7))}")
 
     # Find the minimum delta-theta across all pairs
     # Sample slit is one per angle, so some divergence values will be vectors

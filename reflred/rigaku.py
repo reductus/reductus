@@ -99,7 +99,14 @@ else:
 
 # Time format in Rigaku .ras files is "mm/dd/yy HH:MM:SS"
 TIME_FORMAT = "%m/%d/%y %H:%M:%S"
+NEW_TIME_FORMAT = "%m/%d/%Y %H:%M:%S"
 FWHM = np.sqrt(np.log(256))
+
+def parse_time(timestr):
+    try:
+        return strptime(timestr, TIME_FORMAT)
+    except ValueError:
+        return strptime(timestr, NEW_TIME_FORMAT)
 
 # Copied from anno_exc so that rigaku.py is stand-alone
 def annotate_exception(msg, exc=None):
@@ -194,10 +201,10 @@ def _split_sections(lines):
         raise ValueError("not a Rigaku XRD RAS file")
 
     last_index = len(lines) - 1
-    while last_index > 0 and lines[last_index] == b"":
+    while last_index > 0 and lines[last_index] != b"*RAS_DATA_END":
+        if lines[last_index] != b"":
+           warnings.warn("Non-empty line found after *RAS_DATA_END: '%s' at line %d"%(lines[last_index], last_index))
         last_index -= 1
-    if lines[last_index] != b"*RAS_DATA_END":
-        raise ValueError("Rigaku file does not end with *RAS_DATA_END")
 
     sections = []
     end_target = None
@@ -305,16 +312,16 @@ def _interpret(header, values):
     R['x_label'] = header['MEAS_SCAN_AXIS_X']
     R['x_unit'] = header['MEAS_SCAN_UNIT_X']
     R['x_resolution'] = header['MEAS_SCAN_RESOLUTION_X']
-    R['y_label'] = header['DISP_TITLE_Y']
     R['y_unit'] = header['MEAS_SCAN_UNIT_Y']
+    R['y_label'] = header.get('DISP_TITLE_Y', 'y')
 
     R['count_time'] = header['MEAS_SCAN_SPEED']
     R['count_time_unit'] = header['MEAS_SCAN_SPEED_UNIT']
 
     R['sample'] = header['FILE_SAMPLE']
     R['comment'] = header['FILE_COMMENT']
-    R['start_time'] = strptime(header['MEAS_SCAN_START_TIME'], TIME_FORMAT)
-    R['end_time'] = strptime(header['MEAS_SCAN_END_TIME'], TIME_FORMAT)
+    R['start_time'] = parse_time(header['MEAS_SCAN_START_TIME'])
+    R['end_time'] = parse_time(header['MEAS_SCAN_END_TIME'])
     R['axis'] = _interpret_axes(header)
     R['scan_axis'] = header['MEAS_SCAN_AXIS_X_INTERNAL']
     R['scan_mode'] = header['MEAS_SCAN_MODE']
@@ -350,16 +357,19 @@ def _interpret(header, values):
     return R
 
 def _interpret_axes(header):
-    axis = {}
+    # set a default attenuator, in case one is not defined in header:
+    axis = {
+        "Attenuator": ("Attenuator", "", 1.0, 0.0)
+    }
     idx = 0
     while 'MEAS_COND_AXIS_NAME-%d'%idx in header:
         # Axis properties as string values direct from the header
         label = header['MEAS_COND_AXIS_NAME-%d'%idx]
         unit = header['MEAS_COND_AXIS_UNIT-%d'%idx]
         name = header['MEAS_COND_AXIS_NAME_INTERNAL-%d'%idx]
-        magicno = header['MEAS_COND_AXIS_NAME_MAGICNO-%d'%idx]
+        #magicno = header['MEAS_COND_AXIS_NAME_MAGICNO-%d'%idx]
         offset = header['MEAS_COND_AXIS_OFFSET-%d'%idx]
-        position = header['MEAS_COND_AXIS_POSITION-%d'%idx]
+        position = header.get('MEAS_COND_AXIS_POSITION-%d'%idx, float('nan'))
 
         # Convert position to float if possible.  Note that there are
         # non-float values for positions, such as "1/10000" for attenuators

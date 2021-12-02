@@ -5,6 +5,8 @@ PROVISION_DIR=$REDUCTUS_HOME/provisioning/ubuntu-xenial
 
 sudo apt update
 sudo apt install -y apache2 apache2-dev libapache2-mod-proxy-uwsgi gcc g++ g++-5 python3-dev uwsgi-plugin-python3 git
+# These are needed for building python from source:
+#sudo apt install -y zlib1g zlib1g-dev libssl-dev libffi-dev libsqlite3-dev
 wget https://bootstrap.pypa.io/get-pip.py
 python3 get-pip.py --user
 

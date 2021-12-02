@@ -279,29 +279,44 @@ def poisson_average(y, dy, norm='monitor'):
         M_i &=& y_i / \Delta y_i^2 \\
         N_i &=& y_i M_i \\
         \bar y &=& \sum N_i / \sum M_i \\
-        \Delta \bar y &=& \bar y \sqrt{1/\sum_{N_i}}
+        \Delta \bar y &=& \bar y \sqrt{1/\sum N_i}
         \end{eqnarray}
 
-    Our expression does not account for detector efficiency, attenuators
-    and dead-time correction. In practice we have an additional scaling
-    value $A \pm \Delta A$ for each point, giving
+    This algorithm is robust against scale factors, such as detector
+    efficiency, attenuators and dead-time correction. Assume the underlying
+    rate $r$ for the averaged points is identical (otherwise why are you mixing
+    them?) with an independent scale factor $C_i$ applied to each point. Then
 
     .. math::
-       :nowrap:
+        :nowrap:
 
         \begin{eqnarray}
-        y &=& A N/M \\
-        \left(\frac{\Delta y}{y}\right)^2
-            &=& \left(\frac{\Delta A}{A}\right)^2
-              + \left(\frac{\Delta N}{N}\right)^2
-              + \left(\frac{\Delta M}{M}\right)^2
-        \end{eqnarray}
+        y_i' &=& C_i N_i/M_i \\
+        \Delta y_i' &=& C_i \sqrt{N_i}/M_i \\
+        M_i' &=& y_i' / \Delta y_i^2' = M_i/C_i \\
+        N_i' &=& y_i' M_i' = N_i
+        \end{equnarray}
 
-    Clearly with two inputs $y$, $\Delta y$ we cannot uniquely recover
-    the four parameters $A$, $\Delta A$, $M$, $N$, and Poisson averaging
-    will not be strictly correct, though Monte Carlo experiments show that
-    it is good enough for most cases. Error-weighted Gaussian averaging fails
-    when the counts are approximately less than 100.
+    and
+
+    .. math::
+        :nowrap:
+
+        \begin{eqnarray}
+        r  &\approx& C_i N_i / M_i \Rightarrow M_i/C_i \approx N_i/r \\
+        M^{+} &=& \sum M_i' \approx \sum N_i / r \\
+        N^{+} &=& \sum N_i' = \sum N_i \\
+        \bar y' &=& N^{+} / M^{+} \approx r \\
+        \Delta \bar y' = \sqrt{\bar y' / M^{+}} = \sqrt{N^{+}} / M^{+} \approx r / \sqrt{\sum N_i}
+
+    That is, $\bar y', \Delta \bar y'$ will be computed from the scaled data,
+    again with uncertainty proportional to $\sqrt{N}$.
+
+    Monte Carlo experiments confirm that this holds in practice, giving
+    reasonable values for the signal when subtracting mixed background from
+    mixed signal+background, even when signal rate and background rate vary
+    amongst the points measured. This is not true for Gaussian averaging, which
+    fails when the counts are approximately less than 100.
     """
     if norm not in ("monitor", "time", "gauss", "none"):
         raise ValueError("expected norm to be time, monitor or none")
@@ -365,6 +380,72 @@ def gaussian_average(y, dy, w, dw=0):
     bar_y, bar_y_var = err1d.average(y, dy**2, w, dw**2)
     return bar_y, np.sqrt(bar_y_var)
 
+def demo_sub():
+    """
+    Check subtraction with mixed background and mixed scale.
+
+    The assumption that $r$ is fixed does not hold when binning $Q$ for
+    Candor. Both the signal (due to varying resolution) and the background
+    due to measurement geometry, detector properties, etc. vary from point
+    to point, and so the simplification that $M^{+} \approx \sum N_i / r$
+    no longer holds.
+
+    Instead we want the resulting signal to be the weighted average of the
+    different signals when mixing signal+background and subtracting the
+    mixed background.
+    """
+    from numpy import mean, std, sqrt
+    from numpy.random import poisson
+
+    NP = 5e-6  # 5 us non-paralyzing dead time
+    def deadtime(r):
+        return 1/(1 + r*NP)
+
+    def _sim_one(spec, back, slit, spec_time, back_time):
+        s = (spec+back)*slit
+        b = back*slit
+        S = poisson(s*deadtime(s)*spec_time)
+        B = poisson(b*deadtime(b)*back_time)
+        Sscale = spec_time*slit*deadtime(s)
+        Bscale = back_time*slit*deadtime(b)
+        # Be sure to account for uncertainty on zero counts.
+        Sr, dSr = S/Sscale, np.sqrt(S+(S==0))/Sscale
+        Br, dBr = B/Bscale, np.sqrt(B+(B==0))/Bscale
+        Sm, dSm = poisson_average(Sr, dSr, norm='time')
+        Bm, dBm = poisson_average(Br, dBr, norm='time')
+        sub = Sm - Bm
+        dsub = np.sqrt(dSm**2 + dBm**2)
+        #print(s, S, Sscale, Sr, Sm)
+        #print(b, B, Bscale, Br, Bm)
+        #print(sub, dsub)
+        return sub, dsub
+
+    def _sim(spec, back, slit, t=100, n=10000):
+        spec_time, back_time = np.full_like(spec, t), np.full_like(spec, t)
+        target = np.sum(spec*slit)/np.sum(slit)
+        out = [_sim_one(spec, back, slit, spec_time, back_time)
+               for _ in range(n)]
+        out = np.asarray(out)
+        print("target %.4g r %.4g +/- %.2g, dr %.2g"
+              % (target, mean(out[:, 0]), std(out[:, 0]), sqrt(mean(out[:, 1]**2))))
+
+    k = 40
+    spec = np.random.rand(k)*1e-7 + 1e-6
+    back = np.random.rand(k)*1e-6
+    slit = np.linspace(1e6, 4e6, k)
+
+    if 0:
+        spec = np.array([1e-6, 1.1e-6, 0.9e-6])  # a little variation due to resolution
+        back = np.array([1e-8, 1e-6, 1e-7]) # high variation to see what happens
+        slit = np.array([1e6, 2e6, 3e6]) # a lot of variation due to spectrum
+
+    point_time = 3
+    #print("for spec", spec, "back", back)
+    _sim(spec, back, slit, n=1000, t=point_time)
+    print("back /10")
+    _sim(spec, back/100, slit, n=1000, t=point_time)
+    print("back x100")
+    _sim(spec, back*100, slit, n=1000, t=point_time)
 
 def demo_error_prop(title, rate, monitors, attenuators=None,
                     norm='monitor'):
@@ -475,17 +556,19 @@ def demo_error_prop(title, rate, monitors, attenuators=None,
         show("Separate", y2_ave, "no monitor uncertainty")
         show("Gaussian", y2_g, "no monitor uncertainty")
 
-
 if __name__ == "__main__":
-    demo_error_prop("mixed monitor", 10.0, [2000, 2000, 4000])
-    demo_error_prop("mixed monitor", 1.0, [2000, 2000, 4000])
-    demo_error_prop("mixed monitor", 0.035, [2000, 2000, 4000])
-    demo_error_prop("mixed monitor", 0.0035, [2000, 2000, 4000])
-    #demo_error_prop("mixed monitor", 0.00035, [2000, 2000, 4000])
-    demo_error_prop("same monitor", 10.0, [2000]*700)
-    demo_error_prop("same monitor", 1.0, [2000]*700)
-    demo_error_prop("same monitor", 0.035, [2000]*700)
-    demo_error_prop("same monitor", 0.0035, [2000]*700)
-    demo_error_prop("same monitor", 0.00035, [2000]*700)
-    demo_error_prop("attenuators", 10.0, [2000, 2000, 4000], [(1, 0), (12, 0.2), (12, 0.2)])
-    demo_error_prop("attenuators", 10.0, [2000, 4000], [(12, 0.2), (122, 0.2)])
+    if 0:
+        demo_error_prop("mixed monitor", 10.0, [2000, 2000, 4000])
+        demo_error_prop("mixed monitor", 1.0, [2000, 2000, 4000])
+        demo_error_prop("mixed monitor", 0.035, [2000, 2000, 4000])
+        demo_error_prop("mixed monitor", 0.0035, [2000, 2000, 4000])
+        #demo_error_prop("mixed monitor", 0.00035, [2000, 2000, 4000])
+        demo_error_prop("same monitor", 10.0, [2000]*700)
+        demo_error_prop("same monitor", 1.0, [2000]*700)
+        demo_error_prop("same monitor", 0.035, [2000]*700)
+        demo_error_prop("same monitor", 0.0035, [2000]*700)
+        demo_error_prop("same monitor", 0.00035, [2000]*700)
+        demo_error_prop("attenuators", 10.0, [2000, 2000, 4000], [(1, 0), (12, 0.2), (12, 0.2)])
+        demo_error_prop("attenuators", 10.0, [2000, 4000], [(12, 0.2), (122, 0.2)])
+    else:
+        demo_sub()

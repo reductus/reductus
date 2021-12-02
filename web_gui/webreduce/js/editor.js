@@ -8,7 +8,7 @@ import {instruments} from './instruments/index.js';
 import {zip} from './libraries.js';
 import { Vue } from './libraries.js';
 import {extend, dataflowEditor} from './libraries.js';
-import {PouchDB} from './libraries.js';
+import { Cache } from './idb_cache.js';
 import {sha1} from './libraries.js';
 import {template_editor_url} from './libraries.js';
 import {filebrowser} from './filebrowser.js';
@@ -20,6 +20,7 @@ import { export_dialog } from './ui_components/export_dialog.js';
 import { app_header } from './app_header.js';
 import { DataflowViewer } from './ui_components/dataflow_viewer.js';
 
+const MAX_CACHE_AGE = 90; // days
 
 editor.instruments = instruments;
 
@@ -49,14 +50,17 @@ class inMemoryCache {
       }
     });
   }
-  put(key, value) {
+  set(key, value) {
     return this.storage.set(key, value);
   }
 };
 
-editor.make_cache = function() {
+
+
+editor.make_cache = async function() {
   try {
-    this._cache = new PouchDB("calculations", {size: 100});
+    this._cache = new Cache();
+    this._cache.remove_older(Date.now() - MAX_CACHE_AGE * 24 * 60 * 60 * 1000);
   } catch (e) {
     if (e.name === "SecurityError") {
       var warning = "Could not store website data - falling back to in-memory storage (may cause memory issues.)";
@@ -70,15 +74,14 @@ editor.make_cache = function() {
 }
 editor.make_cache();
 
+// TODO: remove when everyone has updated
+// REMOVE OLD DEPRECATED POUCHDB
+window.indexedDB.deleteDatabase("_pouch_calculations");
+
 editor.clear_cache = async function() {
   app_header.instance.show_snackbar("clearing cache...", 4000);
-  await this._cache.destroy();
-  try {
-    this.make_cache();
-    app_header.instance.show_snackbar("cache cleared", 4000);
-  } catch (e) {
-    alert(e + "could not destroy cache")
-  }
+  await this._cache.clear();
+  app_header.instance.show_snackbar("cache cleared", 4000);
 }
 
 editor.create_instance = function(target_id) {
@@ -184,8 +187,9 @@ editor.get_full = function() {
     terminal,
     return_type: "full"
   }));
-  this.calculate(params_to_calc, true).then(function(result) {
+  return this.calculate(params_to_calc, true).then(function(result) {
     console.log(result);
+    return result;
   })
 }
 
@@ -442,7 +446,7 @@ async function calculate_one(params, caching) {
               created_at: Date.now(),
               value: result 
             }
-            editor._cache.put(doc);
+            editor._cache.set(sig, doc);
             return result
           })
           .catch(function(e) {

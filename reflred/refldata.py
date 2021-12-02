@@ -957,7 +957,7 @@ class ReflData(Group):
     def Qx(self):
         # Note: specular reflectivity assumes elastic scattering
         Li = Ld = self.Ld
-        if self.Qz_basis == 'actual':
+        if Intent.isrock(self.intent) or self.Qz_basis == 'actual':
             return calc_Qx(self.Ti, self.Td, Li, Ld)
         if self.Qz_basis == 'target':
             return np.zeros_like(self.Td)

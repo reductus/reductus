@@ -58,6 +58,88 @@ def ncnr_load(filelist=None, check_timestamps=True):
     return datasets
 
 @module
+def dark_current(data, poly_coeff=[0], poly_cov=None):
+    r"""
+    Correct for the dark current, which is the average number of
+    spurious counts per minute of measurement on each detector channel.
+
+    **Inputs**
+
+    data (refldata[]) : data to scale
+
+    poly_coeff {Polynomial coefficients of dark current vs slit1} (float[])
+    : Polynomial coefficients (highest order to lowest) representing the dark current as a function of slit 1 opening. Units in counts/(minute . mm ^ N), for the coefficient of (slit1 ^ N). Default is [0].
+
+    poly_cov {Polynomial covariance matrix} (float[])
+    : Flattened covariance matrix for polynomial coefficients if error propagation is desired. For an order N polynomial, must have size N^2. If left blank, no error propagation will occur.
+
+    **Returns**
+
+    output (refldata[]): Dark current subtracted data.
+
+    darkcurrent (refldata[]): Dark current that was subtracted (for plotting)
+
+    | 2020-03-04 Paul Kienzle
+    | 2020-03-12 Paul Kienzle Add slit 1 dependence for DC rate
+    | 2021-06-11 David Hoogerheide generalize to refldata, prevent either adding counts or oversubtracting
+    | 2021-06-13 David Hoogerheide add dark current output
+    | 2021-06-14 David Hoogerheide change to polynomial input and add error propagation
+    """
+
+    # TODO: datatype hierarchy: accepts any kind of refldata
+
+    from dataflow.lib.uncertainty import Uncertainty as U
+
+    datasets = list()
+    dcs = list()
+
+    order = len(poly_coeff)
+
+    for d in data:
+        dcdata = copy(d)                    # hackish way to get dark current counts
+        dcdata.detector = copy(d.detector)
+
+        # calculate rate and Jacobian at each point
+        rate = np.polyval(poly_coeff, dcdata.slit1.x)
+
+        # error propagation
+        rate_var = np.zeros_like(rate)
+        if poly_cov is not None:
+            poly_cov = np.array(poly_cov).reshape((order, order))
+            for i, s1 in enumerate(dcdata.slit1.x):
+                J = np.array([s1**float(i) for i in range(0, order)[::-1]])
+                rate_var[i] = np.dot(J.T, np.dot(poly_cov, J))
+        dc = dcdata.monitor.count_time*(rate/60.)
+        dc[dc < 0] = 0.0                            # do not allow addition of dark counts from negative rates
+        dc_var = rate_var * (dcdata.monitor.count_time/60.)**2
+
+        # condition dark counts to the correct dimensionality
+        ndetectordims = np.ndim(d.detector.counts)
+        dc = np.expand_dims(dc, tuple(range(1, ndetectordims)))
+        dc_var = np.expand_dims(dc_var, tuple(range(1, ndetectordims)))
+        dcdata.detector.counts = np.ones_like(dcdata.detector.counts) * dc  # should preserve dimensionality correctly
+        dcdata.detector.counts_variance = np.ones_like(dcdata.detector.counts_variance) * dc_var  # should preserve dimensionality correctly
+
+        detcounts = U(d.detector.counts, d.detector.counts_variance)
+        darkcounts = U(dcdata.detector.counts, dcdata.detector.counts_variance)
+
+        detdarkdiff = detcounts - darkcounts
+
+        d.detector.counts, d.detector.counts_variance = detdarkdiff.x, detdarkdiff.variance
+        d.detector.counts[d.detector.counts < 0] = 0.0
+        
+        # only renormalize if apply_norm has already populated d.normbase, i.e. if it's a standalone module
+        if d.normbase is not None:
+            d = normalize(d, d.normbase)
+            dcdata = normalize(dcdata, dcdata.normbase)
+
+        # create outputs
+        datasets.append(d)
+        dcs.append(dcdata)
+
+    return datasets, dcs
+
+@module
 def fit_dead_time(data, source='detector', mode='auto'):
     """
     Fit detector dead time constants (paralyzing and non-paralyzing) from
@@ -79,8 +161,8 @@ def fit_dead_time(data, source='detector', mode='auto'):
     """
     from .deadtime import fit_dead_time
 
-    data = fit_dead_time(data, source=source, mode=mode)
-    return data
+    dead_time = fit_dead_time(data, source=source, mode=mode)
+    return dead_time
 
 
 
@@ -162,13 +244,13 @@ def detector_dead_time(data, dead_time, nonparalyzing=0.0, paralyzing=0.0):
     """
     from .deadtime import apply_detector_dead_time
 
-    # TODO: why is copy suppressed?
-    #data = copy(data)
-    #data.detector = copy(data.detector)
+    data = copy(data)
     if nonparalyzing != 0.0 or paralyzing != 0.0:
+        data.detector = copy(data.detector)
         apply_detector_dead_time(data, tau_NP=nonparalyzing,
                                  tau_P=paralyzing)
     elif dead_time is not None:
+        data.detector = copy(data.detector)
         apply_detector_dead_time(data, tau_NP=dead_time.tau_NP,
                                  tau_P=dead_time.tau_P)
     elif data.detector.deadtime is not None and not np.all(np.isnan(data.detector.deadtime)):
@@ -176,6 +258,7 @@ def detector_dead_time(data, dead_time, nonparalyzing=0.0, paralyzing=0.0):
             tau_NP, tau_P = data.detector.deadtime
         except Exception:
             tau_NP, tau_P = data.detector.deadtime, 0.0
+        data.detector = copy(data.detector)
         apply_detector_dead_time(data, tau_NP=tau_NP, tau_P=tau_P)
     else:
         raise ValueError("no valid deadtime provided in file or parameter")
@@ -362,8 +445,8 @@ def divergence_fb(data, sample_width=None):
     2020-05-05 Paul Kienzle
     """
     from .angles import apply_divergence_front_back
-    data = copy(data)
     if data.angular_resolution is None:
+        data = copy(data)
         apply_divergence_front_back(data, sample_width)
     return data
 
@@ -395,9 +478,8 @@ def divergence(data, sample_width=None, sample_broadening=0):
     2020-05-05 Paul Kienzle
     """
     from .angles import apply_divergence_simple, apply_sample_broadening
-    # TODO: why is copy suppressed
-    #data = copy(data)
     if data.angular_resolution is None:
+        data = copy(data)
         apply_divergence_simple(data, sample_width)
         apply_sample_broadening(data, sample_broadening)
     return data
@@ -497,7 +579,7 @@ def mark_intent(data, intent='auto'):
     2016-03-20 Paul Kienzle
     """
     from .intent import apply_intent
-    #data = copy(data)
+    data = copy(data)
     apply_intent(data, intent)
     return data
 
@@ -564,7 +646,7 @@ def extract_xs(data, xs="++"):
     | 2016-05-05 Brian Maranville
     | 2020-03-24 Brian Maranville: added half-pol cross-sections
     """
-    data = copy(data)
+    # Note: no need to copy data since it is not being modified
     if xs == 'unpolarized':
         xs = ''
     output = [d for d in data if d.polarization == xs]
@@ -893,6 +975,66 @@ def join(data, Q_tolerance=0.5, dQ_tolerance=0.002, order='file',
         output.append(result)
     return output
 
+@module
+def mix_cross_sections(data, mix_sf=False, mix_nsf=False):
+    """
+    Mix (combine) cross-sections, usually to improve statistics when cross-sections
+    are expected to be indistinguishable in the model (e.g. spin-flip when no chirality)
+    Typically this is done after load and before "join"
+
+    All inputs are passed to the output, and in addition:
+
+    When *mix_sf* is enabled, all input datasets with polarization "-+" will be copied and
+    added to the output with polarization = "+-", and vice-versa for "+-" inputs.
+
+    When *mix_nsf* is enabled, all input datasets with polarization "++" will be copied and
+    added to the output with polarization = "--", and similarly "--" inputs sent to "++"
+
+    **Inputs**
+
+    data (refldata[]) : datasets in
+
+    mix_sf {Mix Spin-Flip?} (bool) : Perform mixing on spin-flip cross-sections,
+    i.e. "+-" and "-+"
+
+    mix_nsf {Mix Non-Spin-Flip?} (bool) : Perform mixing on spin-flip cross-sections,
+    i.e. "++" and "--" or "+" and "-"
+
+    **Returns**
+
+    output (refldata[]) : relabeled and copied datasets (around twice as many as in the input)
+
+    2021-11-17 Brian Maranville
+    """
+    output = copy(data)
+    mappings = {
+        "sf": {
+            "+-": "-+",
+            "-+": "+-"
+        },
+        "nsf": {
+            "++": "--",
+            "--": "++",
+            "+": "-",
+            "-": "+"
+        }
+    }
+    def duplicate_and_remap_items(xs_type):
+        mapping = mappings[xs_type]
+        items = [d for d in data if d.polarization in mapping]
+        for item in items:
+            new_item = copy(item)
+            new_item.polarization = mapping[item.polarization]
+            output.append(new_item)
+
+    if mix_sf:
+        duplicate_and_remap_items("sf")
+
+    if mix_nsf:
+        duplicate_and_remap_items("nsf")
+
+    return output
+
 #@module
 def align_background(data, align='auto'):
     """
@@ -930,7 +1072,7 @@ def align_background(data, align='auto'):
     2020-10-16 Paul Kienzle rename 'offset' to 'align'
     """
     from .background import set_background_alignment
-    #data = copy(data)
+    data = copy(data)
     set_background_alignment(data, align)
     return data
 
@@ -975,12 +1117,13 @@ def subtract_background(data, backp, backm, align="none"):
     """
     from .background import apply_background_subtraction
 
-    # TODO: This changes backp and backm. Do we need a copy first?
-    if backp is not None:
-        if align != "none":
+    # Note: This changes backp and backm, so copy first.
+    if align != "none":
+        if backp is not None:
+            backp = copy(backp)
             align_background(backp, align=align)
-    if backm is not None:
-        if align != "none":
+        if backm is not None:
+            backm = copy(backm)
             align_background(backm, align=align)
 
     #print "%s - (%s+%s)/2"%(data.name, (backp.name if backp else "none"), (backm.name if backm else "none"))
@@ -1025,8 +1168,16 @@ def interpolate_background(data, backp, backm, align='auto'):
     """
     from .background import apply_interpolation
 
-    apply_interpolation(data=backp, base=data, align=align)
-    apply_interpolation(data=backm, base=data, align=align)
+    if backp is not None:
+        backp = copy(backp)
+        backp.sample = copy(backp.sample)
+        backp.detector = copy(backp.detector)
+        apply_interpolation(data=backp, base=data, align=align)
+    if backm is not None:
+        backm = copy(backp)
+        backm.sample = copy(backp.sample)
+        backm.detector = copy(backp.detector)
+        apply_interpolation(data=backm, base=data, align=align)
     return data, backp, backm
 
 @module
@@ -1330,7 +1481,6 @@ def correct_footprint(data, fitted_footprint, correction_range=[None, None],
     from .footprint import apply_fitted_footprint, FootprintData
     if correction_range is None:
         correction_range = [None, None]
-    data = copy(data)
     # always use manually-provided error on slope and intercept (not fitted)
     dp = np.array([slope_error, intercept_error])
     if fitted_footprint is None:
@@ -1344,6 +1494,7 @@ def correct_footprint(data, fitted_footprint, correction_range=[None, None],
     # in all cases, overwrite the error in fitted_footprint with specified
     # values:
     fitted_footprint.dp = dp
+    data = copy(data)
     apply_fitted_footprint(data, fitted_footprint, correction_range)
     return data
 
@@ -1689,6 +1840,7 @@ def magik_horizontal(filelist=None,
     | 2020-07-21 Brian Maranville
     | 2020-07-23 Brian Maranville Added a flag to the loader, to control divide_intensity align_by
     | 2020-09-03 Brian Maranville Vertical slit readout changed
+    | 2021-09-20 Brian Maranville use horizontalGeom.angle for sample.angle_x (ignore tilt except in ROCK)
     """
     from .load import url_load_list
     from .magik_horizontal import load_entries

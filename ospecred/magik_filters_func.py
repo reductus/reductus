@@ -452,7 +452,7 @@ def thetaTwothetaToQxQz(data, output_grid, wavelength=5.0, qxmin=-0.003, qxmax=0
     2016-04-01 Brian Maranville
     """
     print("output grid: ", output_grid)
-    if output_grid == None:
+    if output_grid is None:
         info = [{"name": "qx", "units": "inv. Angstroms", "values": linspace(qxmin, qxmax, qxbins) },
             {"name": "qz", "units": "inv. Angstroms", "values": linspace(qzmin, qzmax, qzbins) },]
         old_info = data.infoCopy()
@@ -743,7 +743,7 @@ def combine(datasets, grid, operation="union"):
     2017-05-01 Brian Maranville
     """
 
-    if grid == None:
+    if grid is None:
         grid = autogrid(datasets, operation=operation)
     for dataset in datasets:
         grid = add_to_grid(dataset, grid)
