@@ -738,11 +738,10 @@ editor.edit_template = async function(template_def, instrument_id) {
 }
 
 editor.load_template = async function(template_def, selected_module, selected_terminal, instrument_id) {
-  var we = this;
-  var instrument_id = instrument_id || we._instrument_id;
+  var instrument_id = instrument_id || this._instrument_id;
   await editor.switch_instrument(instrument_id, false);
   editor._active_template = template_def;
-  //var r = we.switch_instrument(instrument_id, false).then(function() {
+  //var r = this.switch_instrument(instrument_id, false).then(function() {
       
   let template_sourcepaths = filebrowser.getAllTemplateSourcePaths(template_def);
   let browser_sourcepaths = filebrowser.getAllBrowserSourcePaths();
@@ -756,33 +755,30 @@ editor.load_template = async function(template_def, selected_module, selected_te
     }
   }
     
-  we.instance.template_data = template_def;
-  we.instance.$nextTick(() => we.instance.fit_module_text());
+  this.instance.template_data = template_def;
+  this.instance.$nextTick(() => this.instance.fit_module_text());
   
-  var autoselected = template_def.modules.findIndex(function(m) {
-    var has_fileinfo = editor._module_defs[m.module].fields
-      .findIndex(function(f) {return f.datatype == 'fileinfo'}) > -1
-    return has_fileinfo;
-  });
-  
-  if (selected_module != null) {
-    autoselected = selected_module;
+  let autoselected = selected_module;
+  let autoselected_term = selected_terminal || {};
+  if (autoselected == null) {
+    autoselected = template_def.modules.findIndex(function(m) {
+        var has_fileinfo = editor._module_defs[m.module].fields
+          .findIndex(function(f) {return f.datatype == 'fileinfo'}) > -1
+        return has_fileinfo;
+      });
   }
   
   if (autoselected > -1) {
-    let sm = we.instance.selected.modules;
-    let st = we.instance.selected.terminals;
+    let sm = this.instance.selected.modules;
+    let st = this.instance.selected.terminals;
     sm.splice(0, sm.length, autoselected);
     // choose the module directly by default
     // but if a terminal is specified, use that as target instead.
-    if (selected_terminal != null) {
-      st.splice(0, st.length, [selected_module, selected_terminal]);
-    }
-
+    st.splice(0, st.length, [selected_module, selected_terminal]);
     await editor.update_completions();
   }
-  we.instance.on_select();
-  app.resize_bottom(we.instance.get_bbox());
+  this.instance.on_select();
+  app.resize_bottom(this.instance.get_bbox());
   app.autoselected = autoselected;  
 }
 
