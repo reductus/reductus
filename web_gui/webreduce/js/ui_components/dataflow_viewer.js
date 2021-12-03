@@ -293,6 +293,7 @@ export const DataflowViewer = {
       }
       else {
         // selecting modules
+        console.log(module_index, first_input);
         this.drag.modules.splice(0);
         this.selected.modules.splice(0, this.selected.modules.length, module_index);
         if (first_input != null) {
@@ -645,7 +646,6 @@ export const DataflowViewer = {
   },
   mounted: function () {
     this.drag.svgPoint = this.$refs.svg.createSVGPoint();
-    this.fit_module_text();
   },
   template: dataflow_template
 }
