@@ -700,6 +700,44 @@ def infer_intent(data):
 
     return intent
 
+def exports_ORSO_text(name="column"):
+    def inner_function(f):
+        f.exporter = ORSO_text
+        f.export_name = name
+        return f
+    return inner_function
+
+def ORSO_text(datasets, export_method=None, template_data=None, concatenate=False):
+    from io import StringIO
+    from orsopy import fileio
+    from dataflow.lib.exporters import _build_filename
+    exports = [getattr(d, export_method)() for d in datasets]
+    # exports should contain items of class OrsoDataset
+    outputs = []
+    if concatenate and exports:
+        parts = [export['value'] for export in exports]
+        for part in parts:
+            part.info.reduction.software.name = "reductus"
+            part.info.reduction.software.template_data = template_data['template_data']
+        with StringIO() as output_buffer:
+            fileio.save_orso(parts, output_buffer, data_separator="\n\n")
+            output_buffer.seek(0)
+            export_string = output_buffer.read()
+        filename = _build_filename(exports[0], ext=".ort")
+        outputs.append({"filename": filename, "value": export_string})
+    else:
+        for i, export in enumerate(exports):
+            part = export['value']
+            part.info.reduction.software.name = "reductus"
+            part.info.reduction.software.template_data = template_data['template_data']
+            with StringIO() as output_buffer:
+                fileio.save_orso([part], output_buffer, data_separator="\n\n")
+                output_buffer.seek(0)
+                export_string = output_buffer.read()
+            filename = _build_filename(export, ext=".ort", index=i)
+            outputs.append({"filename": filename, "value": export_string})
+    return outputs
+
 
 @set_fields
 class ReflData(Group):
@@ -1159,6 +1197,68 @@ class ReflData(Group):
     def save(self, filename):
         with open(filename, 'w') as fid:
             fid.write(self.to_column_text()["value"])
+
+    @exports_ORSO_text("ORSO")
+    def to_ORSO_text(self):
+        from orsopy import fileio
+        info = fileio.Orso.empty()
+        info.data_set = f"{self.name}:{self.entry}"
+        info.columns = [
+            fileio.Column("Qz", "1/angstrom"),
+            fileio.Column("R"),
+            fileio.Column("sR"),
+            fileio.Column("sQz", "1/angstrom"),
+        ]
+        data_arrays = [
+            self.x,
+            self.v,
+            self.dv,
+            self.dx
+        ]
+
+        instrument_settings = info.data_source.measurement.instrument_settings
+        polarization_lookups = {
+            "++": "pp",
+            "--": "mm",
+            "-+": "mp",
+            "+-": "pm",
+            "+": "p",
+            "-": "m"
+        }
+        instrument_settings.polarization = polarization_lookups.get(self.polarization, "unpolarized")
+        if self.Ld is not None:
+            if len(self.Ld) > 1:
+                info.columns.append(fileio.Column("wavelength", "angstrom"))
+                data_arrays.append(np.resize(self.Ld, self.points))
+            else:
+                instrument_settings.wavelength = self.Ld
+        if self.dL is not None:
+            if len(self.dL) > 1:
+                info.columns.append(fileio.Column("wavelength_resolution", "angstrom"))
+                data_arrays.append(np.resize(self.dL, self.points))
+            else:
+                instrument_settings.wavelength_resolution = self.dL
+        if self.Ti is not None:
+            if len(self.Ti) > 1:
+                info.columns.append(fileio.Column("angle", "degrees"))
+                data_arrays.append(np.resize(self.Ti, self.points))
+            else:
+                instrument_settings.angle = self.Ti
+        if self.angular_resolution is not None:
+            if len(self.angular_resolution) > 1:
+                info.columns.append(fileio.Column("angular_resolution", "degrees"))
+                data_arrays.append(np.resize(self.angular_resolution, self.points))
+            else:
+                instrument_settings.angular_resolution = self.angular_resolution
+
+        data = np.vstack(data_arrays).T
+        ds = fileio.OrsoDataset(info, data)
+        return {
+            "name": self.name,
+            "entry": self.entry,
+            "file_suffix": ".ort",
+            "value": ds,
+        }
 
     # TODO: split refldata in to ReflBase and PointRefl so PSD doesn't inherit column format
     @exports_text("column")
