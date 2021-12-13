@@ -1217,6 +1217,9 @@ class ReflData(Group):
         ]
 
         instrument_settings = info.data_source.measurement.instrument_settings
+        info.data_source.experiment.instrument = str(_s(self.instrument))
+        info.data_source.experiment.probe = _s(self.probe)
+
         polarization_lookups = {
             "++": "pp",
             "--": "mm",
@@ -1226,30 +1229,30 @@ class ReflData(Group):
             "-": "m"
         }
         instrument_settings.polarization = polarization_lookups.get(self.polarization, "unpolarized")
-        if self.Ld is not None:
-            if len(self.Ld) > 1:
-                info.columns.append(fileio.Column("wavelength", "angstrom"))
-                data_arrays.append(np.resize(self.Ld, self.points))
-            else:
-                instrument_settings.wavelength = self.Ld
-        if self.dL is not None:
-            if len(self.dL) > 1:
-                info.columns.append(fileio.Column("wavelength_resolution", "angstrom"))
-                data_arrays.append(np.resize(self.dL, self.points))
-            else:
-                instrument_settings.wavelength_resolution = self.dL
-        if self.Ti is not None:
-            if len(self.Ti) > 1:
-                info.columns.append(fileio.Column("angle", "degrees"))
-                data_arrays.append(np.resize(self.Ti, self.points))
-            else:
-                instrument_settings.angle = self.Ti
-        if self.angular_resolution is not None:
-            if len(self.angular_resolution) > 1:
-                info.columns.append(fileio.Column("angular_resolution", "degrees"))
-                data_arrays.append(np.resize(self.angular_resolution, self.points))
-            else:
-                instrument_settings.angular_resolution = self.angular_resolution
+
+        def pack(ORSO_name, local_name, units=None):
+            if getattr(self, local_name, None) is not None:
+                item = getattr(self, local_name)
+                if hasattr(item, '__len__'):
+                    # if all values are the same, collapse to first element
+                    if (len(item) > 1 and np.allclose(item, item[0])) or len(item) == 1:
+                        item = item[0]
+                if np.isscalar(item):
+                    val = fileio.base.Value(magnitude=float(item), units=units)
+                    setattr(instrument_settings, ORSO_name, val)
+                elif hasattr(item, '__len__') and len(item) > 1:
+                    info.columns.append(fileio.Column(name=ORSO_name, units=units))
+                    data_arrays.append(np.resize(item, self.points))
+                    val = fileio.base.ValueRange(min=float(min(item)), max=float(max(item)), units=units)
+                    setattr(instrument_settings, ORSO_name, val)
+
+        for ORSO_name, local_name, units in [
+            ("wavelength", "Ld", "angstrom"),
+            ("wavelength_resolution", "dL", "angstrom"),
+            ("incident_angle", "Ti", "degrees"),
+            ("angular_resolution", "angular_resolution", "degrees")
+        ]:
+            pack(ORSO_name, local_name, units)
 
         data = np.vstack(data_arrays).T
         ds = fileio.OrsoDataset(info, data)
