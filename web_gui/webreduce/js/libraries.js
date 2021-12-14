@@ -4,9 +4,29 @@ zip.Deflater = Deflater;
 export { zip };
 
 export { default as Tree } from '@widgetjs/tree/src/index.js';
-import { default as Vue } from 'vue/dist/vue.esm.js';
-import { default as VueMaterial } from 'vue-material';
-Vue.use(VueMaterial);
+import Vue from 'vue/dist/vue.esm.js';
+import { 
+    MdButton, 
+    MdContent, 
+    MdTabs, 
+    MdMenu, 
+    MdApp, 
+    MdDialog, 
+    MdSnackbar, 
+    MdList 
+} from 'vue-material/dist/components/index.js';
+import * as vm from 'vue-material/dist/components/index.js';
+Vue.use(MdButton);
+Vue.use(MdContent);
+Vue.use(MdTabs);
+Vue.use(MdMenu);
+Vue.use(MdApp);
+Vue.use(MdDialog);
+Vue.use(MdSnackbar);
+Vue.use(MdList);
+Vue.use(vm.MdDrawer);
+Vue.use(vm.MdIcon);
+window.Vue = Vue;
 export { Vue };
 export { default as vuedraggable } from 'vuedraggable';
 
