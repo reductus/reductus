@@ -283,7 +283,7 @@ class NCNRNeXusRefl(ReflData):
     See :class:`ReflData` for details.
     """
     format = "NeXus"
-    probe = "neutron"
+    probe = "neutrons"
 
     def __init__(self, entry, entryname, filename):
         super(NCNRNeXusRefl, self).__init__()

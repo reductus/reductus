@@ -89,7 +89,7 @@ class BrukerRefl(refldata.ReflData):
 
     def _set_metadata(self, entry):
         #print(entry['instrument'].values())
-        self.probe = 'xray'
+        self.probe = "x-rays"
 
         # parse date into datetime object
         month, day, year = [int(v) for v in entry['date'].split('/')]
@@ -209,7 +209,7 @@ class RigakuRefl(refldata.ReflData):
 
     def _set_metadata(self, entry):
         #print(entry['instrument'].values())
-        self.probe = 'xray'
+        self.probe = "x-rays"
 
         # parse date into datetime object
         self.date = datetime.datetime.fromtimestamp(time.mktime(entry['start_time']))
