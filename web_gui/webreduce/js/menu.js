@@ -16,19 +16,19 @@ let template = `
         <md-list slot="md-expand">
           <md-list-item @click="action('new_template')" class="md-inset">
             <span class="md-list-item-text">New</span>
-            <md-icon class="md-primary">add</md-icon>      
+            <md-icon class="mdi mdi-plus md-primary"></md-icon>
           </md-list-item>
           <md-list-item @click="action('edit_template')" class="md-inset">
             <span class="md-list-item-text">Edit</span>
-            <md-icon class="md-primary">edit</md-icon>      
+            <md-icon class="mdi mdi-pencil md-primary"></md-icon>
           </md-list-item>
           <md-list-item @click="action('download_template')" class="md-inset">
             <span class="md-list-item-text">Download</span>
-            <md-icon class="md-primary">get_app</md-icon>      
+            <md-icon class="mdi mdi-download md-primary"></md-icon>
           </md-list-item>
           <md-list-item @click="trigger_upload" class="md-inset">
             <span class="md-list-item-text">Upload Template</span>
-            <md-icon class="md-primary">publish</md-icon>      
+            <md-icon class="mdi mdi-upload md-primary"></md-icon>
           </md-list-item>
           <md-list-item class="md-inset md-double-line">
             <md-field>
@@ -55,23 +55,23 @@ let template = `
         <md-list slot="md-expand">
           <md-list-item @click="action('stash_data')" class="md-inset">
             <span class="md-list-item-text">Stash Data</span>
-            <md-icon class="md-primary">input</md-icon>
+            <md-icon class="mdi mdi-arrow-right-bold-box-outline md-primary"></md-icon>
           </md-list-item>
           <md-list-item @click="showCategoriesEditor = true; showNavigation = false" class="md-inset">
             <span class="md-list-item-text">Edit Categories</span>
-            <md-icon class="md-primary">list</md-icon>      
+            <md-icon class="mdi mdi-format-list-bulleted md-primary"></md-icon>
           </md-list-item>
           <md-list-item @click="action('export_data')" class="md-inset">
             <span class="md-list-item-text">Export</span>
-            <md-icon class="md-primary">cloud_download</md-icon>      
+            <md-icon class="mdi mdi-cloud-download md-primary"></md-icon>
           </md-list-item>
           <md-list-item @click="trigger_upload" class="md-inset">
             <span class="md-list-item-text">Reload Exported</span>
-            <md-icon class="md-primary">publish</md-icon>      
+            <md-icon class="mdi mdi-upload md-primary"></md-icon>
           </md-list-item>
           <md-list-item @click="action('clear_cache')" class="md-inset">
             <span class="md-list-item-text">Clear Cache</span>
-            <md-icon class="md-primary">remove_circle</md-icon>      
+            <md-icon class="mdi mdi-delete-circle md-primary"></md-icon>
           </md-list-item>
           <md-list-item class="md-inset">
             <md-field>
@@ -92,14 +92,14 @@ let template = `
       </md-list-item>
 
       <md-list-item md-expand>
-        <md-icon>settings</md-icon>
+        <md-icon class="mdi mdi-cog"></md-icon>
         <span class="md-list-item-text md-title">Settings</span>
         <md-list slot="md-expand">
           <md-list-item v-for="(setting, setting_name) in settings" class="md-inset">
             <md-checkbox v-model="setting.value" class="md-primary" />
             <span class="md-list-item-text">{{setting.label}}</span>
             <md-button class="md-icon-button" @click.stop="settingsHelpActiveTab=setting_name; showSettingsHelp = true">
-              <md-icon class="md-primary">info</md-icon>
+              <md-icon class="mdi mdi-information-outline md-primary"></md-icon>
             </md-button>
           </md-list-item>
         </md-list>
