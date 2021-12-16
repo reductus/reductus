@@ -20,6 +20,7 @@ Vue.use(vm.MdList);
 Vue.use(vm.MdDrawer);
 Vue.use(vm.MdIcon);
 Vue.use(vm.MdField);
+Vue.use(vm.MdProgressBar);
 window.Vue = Vue;
 export { Vue };
 export { default as vuedraggable } from 'vuedraggable/src/vuedraggable.js';
