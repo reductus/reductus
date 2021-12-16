@@ -8,15 +8,7 @@
   ],
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "parcel build js/main.js js/template_editor_main.js --public-url=\"./\"; cp -r img/ dist/",
-    "build_index_sed": "parcel build index.html --public-url=\"./\"; sed -i 's/type=\"module\" //g' dist/index.html; cp -r img/ dist/;",
-    "build_index": "parcel build index.html template_editor_live.html --public-url='./'; cp -r img/ dist/;",
-    "build_main": "parcel build index.js --public-url=\"./\"; cp -r index.html img/ dist/;"
-  },
-  "alias": {
-    "*js/libraries.js": "./js/libraries_production.js",
-    "*css/index.css": "./css/index_prod.css",
-    "vue": "./node_modules/vue/dist/vue.common.js"
+    "build": "./esbuild.js"
   },
   "repository": {
     "type": "git",
@@ -34,7 +26,8 @@
   "homepage": "https://github.com/reductus/reductus#readme",
   "type": "module",
   "devDependencies": {
-    "esbuild": "^0.14.5"
+    "esbuild": "^0.13.15",
+    "esbuild-plugin-alias": "^0.2.1"
   },
   "dependencies": {
     "@widgetjs/tree": "github:bmaranville/treejs#master",
@@ -43,6 +36,7 @@
     "idb": "^7.0.0",
     "material-design-icons": "^3.0.1",
     "messagepack": "^1.1.11",
+    "roboto-fontface": "^0.10.0",
     "sha1": "^1.1.1",
     "split.js": "^1.5.11",
     "vue": "^2.6.11",
