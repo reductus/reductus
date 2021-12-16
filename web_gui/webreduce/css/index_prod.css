@@ -1,4 +1,5 @@
-@import "material-design-icons/iconfont/material-icons.css";
+/* @import "material-design-icons/iconfont/material-icons.css"; */
+@import "@mdi/font/css/materialdesignicons.min.css";
 @import "vue-material/dist/vue-material.min.css";
 @import "vue-material/dist/theme/default.css";
 /* @import "roboto-fontface/css/roboto/roboto-fontface.css"; */
