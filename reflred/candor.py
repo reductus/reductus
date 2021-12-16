@@ -76,7 +76,7 @@ class Candor(ReflData):
     See :class:`refldata.ReflData` for details.
     """
     format = "NeXus"
-    probe = "neutron"
+    probe = "neutrons"
     _groups = ReflData._groups + (("attenuator", Attenuator),)
     attenuator = None
 
