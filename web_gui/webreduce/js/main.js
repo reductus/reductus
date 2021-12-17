@@ -127,7 +127,7 @@ window.onload = async function () {
   app.download = create_downloader();
   window.editor = editor;
   //zip.workerScriptsPath = "js/";
-  zip.useWebWorkers = false;
+  //zip.useWebWorkers = false;
   await server_api.__init__();
   server_api.exception_handler = api_exception_handler;
   app.server_api = server_api;
