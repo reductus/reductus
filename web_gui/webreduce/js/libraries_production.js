@@ -1,6 +1,4 @@
-import { zip, Inflater, Deflater } from 'zip.js/WebContent/index.js';
-zip.Inflater = Inflater;
-zip.Deflater = Deflater;
+import * as zip from '@zip.js/zip.js/dist/zip.js';
 export { zip };
 
 export { default as Tree } from '@widgetjs/tree/src/index.js';
@@ -20,7 +18,7 @@ Vue.use(vm.MdList);
 Vue.use(vm.MdDrawer);
 Vue.use(vm.MdIcon);
 Vue.use(vm.MdField);
-Vue.use(vm.MdProgressBar);
+Vue.use(vm.MdProgress);
 window.Vue = Vue;
 export { Vue };
 export { default as vuedraggable } from 'vuedraggable/src/vuedraggable.js';
