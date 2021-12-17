@@ -1,5 +1,6 @@
-import * as zip from '@zip.js/zip.js/dist/zip.js';
+import * as zip from '@zip.js/zip.js/lib/zip-full.js';
 export { zip };
+window.zip = zip;
 
 export { default as Tree } from '@widgetjs/tree/src/index.js';
 import Vue from 'vue/dist/vue.esm.js';
@@ -19,6 +20,9 @@ Vue.use(vm.MdDrawer);
 Vue.use(vm.MdIcon);
 Vue.use(vm.MdField);
 Vue.use(vm.MdProgress);
+Vue.use(vm.MdSteppers);
+Vue.use(vm.MdDivider);
+Vue.use(vm.MdRadio);
 window.Vue = Vue;
 export { Vue };
 export { default as vuedraggable } from 'vuedraggable/src/vuedraggable.js';
