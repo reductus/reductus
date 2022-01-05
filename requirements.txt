@@ -8,7 +8,7 @@ numdifftools
 uncertainties
 pillow
 docutils
-msgpack-python
+msgpack
 diskcache
 flask
 werkzeug

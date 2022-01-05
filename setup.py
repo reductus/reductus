@@ -46,12 +46,13 @@ dist = setup(
         'console_scripts': ['reductus=web_gui.run:main'],
     },
     install_requires=[
-        'scipy', 'numpy', 'h5py', 'uncertainties', 'docutils',
-        'wheel', 'pytz', 'msgpack-python', 'flask', 'flask-cors', 'requests',
-        'importlib_resources'
+        'scipy', 'numpy', 'uncertainties', 'docutils',
+        'pytz', 'importlib_resources'
         ],
     extras_require={
+        'server': ['msgpack-python', 'flask', 'flask-cors', 'requests'],
         'masked_curve_fit': ['numdifftools'],
+        'nexus_files': ['h5py']
         },
     tests_require=['pytest'],
     )
