@@ -42,7 +42,7 @@ jobs:
       run: |
         python -m pip install wheel
         python setup.py bdist_wheel
-        echo "PYTHON_WHL=$(ls dist/*.whl)" >> $GITHUB_ENV
+        echo "PYTHON_WHL=$(ls dist)" >> $GITHUB_ENV
     - name: Archive client artifact
       uses: actions/upload-artifact@v2
       with:
@@ -52,7 +52,7 @@ jobs:
       uses: actions/upload-artifact@v2
       with:
         name: ${{ env.PYTHON_WHL }}
-        path: ${{ env.PYTHON_WHL }}
+        path: dist
     - name: Update release
       if: ${{ github.ref_name == 'main' }}
       uses: johnwbyrd/update-release@v1.0.0
@@ -62,4 +62,4 @@ jobs:
         tag: sid
         files: |
           web_gui/webreduce/dist.zip 
-          ${{ env.PYTHON_WHL }}
+          dist/${{ env.PYTHON_WHL }}
