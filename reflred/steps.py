@@ -1197,8 +1197,8 @@ def subtract_background_fitted(data, backp, backm, align="none", fit_range=(None
     #print "%s - (%s+%s)/2"%(data.name, (backp.name if backp else "none"), (backm.name if backm else "none"))
     orig_data = deepcopy(data)
     data = copy(data)
-    backp = copy(backp)
-    backm = copy(backm)
+    backp = deepcopy(backp)
+    backm = deepcopy(backm)
 
     if fit_range is None:
         fit_range=(None, None)
@@ -1216,24 +1216,6 @@ def subtract_background_fitted(data, backp, backm, align="none", fit_range=(None
     backp_slice = get_slice(fit_range, backp) if backp is not None else None
     backm_slice = get_slice(fit_range, backm) if backm is not None else None
     spec_slice = get_slice(fit_range, data)
-    # print('backp slice:', backp_slice, backp.x.shape)
-    # print('backm slice:', backm_slice)
-    # print('spec slice:', spec_slice, data.x.shape)
-
-    # combine backgrounds before fit:
-    # bkg_x = []
-    # bkg_v = []
-    # bkg_dv = []
-    # for bkg in (backp, backm):
-    #     if bkg is not None:
-    #         bkg_x = np.hstack([bkg_x, bkg.x])
-    #         bkg_v = np.hstack([bkg_v, bkg.v])
-    #         bkg_dv = np.hstack([bkg_dv, bkg.dv])
-
-    # bkg_order = np.argsort(bkg_x)
-    # bkg_x = bkg_x[bkg_order]
-    # bkg_v = bkg_v[bkg_order]
-    # bkg_dv = bkg_dv[bkg_order]
 
     def ExpSlope(x, A1, B, C, D):
         return A1*np.exp(-(x)/B) + C*x + D
@@ -1246,7 +1228,7 @@ def subtract_background_fitted(data, backp, backm, align="none", fit_range=(None
             np.ones_like(x)
         ])
 
-    FitResult = namedtuple("FitResult", ["popt", "pcov", "v_fit_fn", "dv_fit_fn", "reduced_chisq"])
+    FitResult = namedtuple("FitResult", ["popt", "pcov", "v_fit_fn", "var_fit_fn", "reduced_chisq"])
     
     def fit_bkg(bkg, bkg_slice):
         x = bkg.x[bkg_slice].flatten()
@@ -1272,16 +1254,17 @@ def subtract_background_fitted(data, backp, backm, align="none", fit_range=(None
                     pcov[3, 3]
             return np.sqrt(dv_out)
         
-        def dv_fit_fn(x_in):
+        def var_fit_fn(x_in):
+            """variance in v"""
             derivs = ExpSlopeDerivs(x_in,*popt).T
-            dv_fit = (np.matmul(derivs,pcov) * derivs).sum(axis=1)
-            return np.sqrt(dv_fit)
+            var_fit = (np.matmul(derivs,pcov) * derivs).sum(axis=1)
+            return np.abs(var_fit)
 
-        chisq = ((v_fit_fn(x) - v)**2 / dv).sum()
-        reduced_chisq = chisq / (len(x) - len(pcov))
+        chisq = ((v_fit_fn(x) - v)**2 / dv**2).sum()
+        reduced_chisq = chisq / (len(x) - len(popt))
 
 
-        return FitResult(popt, pcov, v_fit_fn, dv_fit_fn, reduced_chisq)
+        return FitResult(popt, pcov, v_fit_fn, var_fit_fn, reduced_chisq)
     
     backp_fit = fit_bkg(backp, backp_slice) if backp is not None else None
     backm_fit = fit_bkg(backm, backm_slice) if backm is not None else None
@@ -1290,16 +1273,17 @@ def subtract_background_fitted(data, backp, backm, align="none", fit_range=(None
     apply_background_subtraction(data, backp, backm)
 
     # restore the data in the fit region
-    print('diff:', np.sum(data.v - orig_data.v))
+    #print('diff:', np.sum(data.v - orig_data.v))
     data.v[spec_slice] = orig_data.v[spec_slice]
     data.dv[spec_slice] = orig_data.dv[spec_slice]
 
     # then overwrite the subtraction in the fit range:
     spec_v = U(data.v[spec_slice], (data.dv**2)[spec_slice])
     spec_x = data.x[spec_slice]
-
-    backp_v = U(backp_fit.v_fit_fn(spec_x), backp_fit.dv_fit_fn(spec_x)) if backp_fit else None
-    backm_v = U(backm_fit.v_fit_fn(spec_x), backm_fit.dv_fit_fn(spec_x)) if backm_fit else None
+    # print('spec_v variance:', spec_v.variance)
+    # print('backp fit variance:', backp_fit.var_fit_fn(spec_x))
+    backp_v = U(backp_fit.v_fit_fn(spec_x), backp_fit.var_fit_fn(spec_x)) if backp_fit else None
+    backm_v = U(backm_fit.v_fit_fn(spec_x), backm_fit.var_fit_fn(spec_x)) if backm_fit else None
 
     if backp_fit and backm_fit:
         spec_v -= (backp_v + backm_v)/2
@@ -1309,12 +1293,14 @@ def subtract_background_fitted(data, backp, backm, align="none", fit_range=(None
         spec_v -= backm_v
     else:
         pass  # no background to subtract
+
     data.v[spec_slice] = spec_v.x
-    data.dv[spec_slice] = spec_v.variance
+    data.dv[spec_slice] = np.sqrt(spec_v.variance)
+    # print('spec_v variance again:', spec_v.variance)
 
     if backp is not None:
         backp.v[backp_slice] = backp_fit.v_fit_fn(backp.x[backp_slice])
-        backp.dv[backp_slice] = backp_fit.dv_fit_fn(backp.x[backp_slice])
+        backp.dv[backp_slice] = np.sqrt(backp_fit.var_fit_fn(backp.x[backp_slice]))
         backp_params = dict(zip(["A","B","C","D"], backp_fit.popt))
         backp_params["chisq"] = backp_fit.reduced_chisq
     else:
@@ -1322,7 +1308,7 @@ def subtract_background_fitted(data, backp, backm, align="none", fit_range=(None
 
     if backm is not None:
         backm.v[backm_slice] = backm_fit.v_fit_fn(backm.x[backm_slice])
-        backm.dv[backm_slice] = backm_fit.dv_fit_fn(backm.x[backm_slice])
+        backm.dv[backm_slice] = np.sqrt(backm_fit.var_fit_fn(backm.x[backm_slice]))
         backm_params = dict(zip(["A","B","C","D"], backm_fit.popt))
         backm_params["chisq"] = backm_fit.reduced_chisq
     else:
