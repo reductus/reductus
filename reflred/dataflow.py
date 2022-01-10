@@ -13,6 +13,7 @@ from .polarization import PolarizationData
 from .deadtime import DeadTimeData
 from .footprint import FootprintData
 from .backgroundfield import BackgroundFieldData
+from .background import BackgroundSmoothFitParams
 
 INSTRUMENT = "ncnr.refl"
 
@@ -113,6 +114,7 @@ def define_instrument():
     footprint = df.DataType(INSTRUMENT+".footprint.params", FootprintData)
     flux = df.DataType(INSTRUMENT+".flux.params", FluxData)
     backgroundfield = df.DataType(INSTRUMENT + ".backgroundfield.params", BackgroundFieldData)
+    backgroundsmooth = df.DataType(INSTRUMENT + ".backgroundsmooth.params", BackgroundSmoothFitParams)
     plottable = df.DataType(INSTRUMENT+".plot", Plottable)
 
     #import json
@@ -131,7 +133,7 @@ def define_instrument():
         menu=[('steps', modules)],
         datatypes=[
             refldata, poldata, psddata, candordata, deadtime, footprint,
-            flux, backgroundfield, plottable,
+            flux, backgroundfield, backgroundsmooth, plottable,
             ],
         template_defs=df.load_templates(templates),
         )

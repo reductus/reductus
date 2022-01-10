@@ -1,7 +1,9 @@
 # This program is public domain
 import os
 import numpy as np
-from copy import copy
+from copy import copy, deepcopy
+
+from numpy.core.fromnumeric import searchsorted
 
 from dataflow.automod import cache, nocache, module
 
@@ -1132,6 +1134,204 @@ def subtract_background(data, backp, backm, align="none"):
     return data
 
 @module
+def subtract_background_fitted(data, backp, backm, align="none", fit_range=(None, None)):
+    """
+    Subtract the background datasets from the specular dataset.
+
+    The specular, background+ and background- signals should already be
+    joined into single datasets. For each, the background is interpolated
+    onto the specular Q values, extending above and below with the final
+    background measurement. If there are no backgrounds, then data is
+    sent through unchanged.
+
+    Background subtraction is applied independently to the different
+    polarization cross sections.
+
+    The *align* flag determines which background points are matched
+    to the sample points. It can be 'sample' if background is
+    measured using an offset from the sample angle, or 'detector'
+    if it is offset from detector angle. If it is 'none' then use
+    the 'Qz_basis' value set in the loader. The 'auto' option uses
+    'Qz_target' if it exists, or tries to guess from the measured angles.
+
+    **Inputs**
+
+    data (refldata) : specular data
+
+    backp {Background+} (refldata?) : plus-offset background data
+
+    backm {Background-} (refldata?) : minus-offset background data
+
+    align (opt:none|sample|detector|auto) : apply align_background to
+    background inputs with offset='auto'
+
+    fit_range (range?:x): x-region over which to fit backgrounds
+
+    **Returns**
+
+    output (refldata) : background subtracted specular data
+
+    backp_fit {Background+} (refldata) : fitted plus-offset background data
+
+    backm_fit {Background-} (refldata) : fitted minus-offset background data
+
+    fit_params {Fit Parameters} (ncnr.refl.backgroundsmooth.params) : output of fit
+
+    2022-01-10 Brian Maranville
+    """
+    from collections import namedtuple
+    from scipy import optimize
+
+    from .background import apply_background_subtraction, BackgroundSmoothFitParams
+    from dataflow.lib.uncertainty import Uncertainty as U
+
+    # Note: This changes backp and backm, so copy first.
+    if align != "none":
+        if backp is not None:
+            backp = copy(backp)
+            align_background(backp, align=align)
+        if backm is not None:
+            backm = copy(backm)
+            align_background(backm, align=align)
+
+    #print "%s - (%s+%s)/2"%(data.name, (backp.name if backp else "none"), (backm.name if backm else "none"))
+    orig_data = deepcopy(data)
+    data = copy(data)
+    backp = copy(backp)
+    backm = copy(backm)
+
+    if fit_range is None:
+        fit_range=(None, None)
+
+    # do the fit, in the fit range:
+    # find slice indices:
+    def get_slice(fit_range, dataset):
+        left_index, right_index = fit_range
+        if left_index is not None:
+            left_index = np.searchsorted(dataset.x, left_index, side='left')
+        if right_index is not None:
+            right_index = np.searchsorted(dataset.x, right_index, side='right')
+        return slice(left_index, right_index)
+    
+    backp_slice = get_slice(fit_range, backp) if backp is not None else None
+    backm_slice = get_slice(fit_range, backm) if backm is not None else None
+    spec_slice = get_slice(fit_range, data)
+    # print('backp slice:', backp_slice, backp.x.shape)
+    # print('backm slice:', backm_slice)
+    # print('spec slice:', spec_slice, data.x.shape)
+
+    # combine backgrounds before fit:
+    # bkg_x = []
+    # bkg_v = []
+    # bkg_dv = []
+    # for bkg in (backp, backm):
+    #     if bkg is not None:
+    #         bkg_x = np.hstack([bkg_x, bkg.x])
+    #         bkg_v = np.hstack([bkg_v, bkg.v])
+    #         bkg_dv = np.hstack([bkg_dv, bkg.dv])
+
+    # bkg_order = np.argsort(bkg_x)
+    # bkg_x = bkg_x[bkg_order]
+    # bkg_v = bkg_v[bkg_order]
+    # bkg_dv = bkg_dv[bkg_order]
+
+    def ExpSlope(x, A1, B, C, D):
+        return A1*np.exp(-(x)/B) + C*x + D
+    
+    def ExpSlopeDerivs(x, A1, B, C, D): #derivs w.r.t A1, B, C, D
+        return np.vstack([
+            np.exp(-x/B),
+            A1*np.exp(-x/B)*x/B**2,
+            x,
+            np.ones_like(x)
+        ])
+
+    FitResult = namedtuple("FitResult", ["popt", "pcov", "v_fit_fn", "dv_fit_fn", "reduced_chisq"])
+    
+    def fit_bkg(bkg, bkg_slice):
+        x = bkg.x[bkg_slice].flatten()
+        v = bkg.v[bkg_slice].flatten()
+        dv = bkg.dv[bkg_slice].flatten()
+        print(x.shape, v.shape, dv.shape, bkg_slice, bkg.x.shape)
+        popt, pcov = optimize.curve_fit(ExpSlope, x, v, p0 = [0.5, 0.2, -1E-3, 1e-4], sigma = dv, maxfev=1000000)
+
+        # v_fit = ExpSlope(x, *popt)
+        
+        def v_fit_fn(x_in):
+            return ExpSlope(x_in, *popt)
+
+        def dv_fit_fn_AG(x_in):
+            dv_out = (np.exp(-x_in/popt[1])*(pcov[0, 0]*np.exp(-x_in/popt[1])) +
+                    pcov[0, 1]*(2*popt[0]*x_in/(popt[1]**2))*np.exp(-x_in/popt[1]) +
+                    pcov[0, 2]*2*x_in +
+                    pcov[0, 3]*2) + \
+                    ((popt[0]*x_in/(popt[1]**2))*np.exp(-x_in/popt[1])) * \
+                    ((pcov[1, 1]*(popt[0]*x_in/(popt[1]**2))*np.exp(-x_in/popt[1])) +
+                    (pcov[1, 2]*2*x_in + pcov[1, 3]*2)) + \
+                    x_in*(pcov[2, 2]*x_in + pcov[2, 3]*2) + \
+                    pcov[3, 3]
+            return np.sqrt(dv_out)
+        
+        def dv_fit_fn(x_in):
+            derivs = ExpSlopeDerivs(x_in,*popt).T
+            dv_fit = (np.matmul(derivs,pcov) * derivs).sum(axis=1)
+            return np.sqrt(dv_fit)
+
+        chisq = ((v_fit_fn(x) - v)**2 / dv).sum()
+        reduced_chisq = chisq / (len(x) - len(pcov))
+
+
+        return FitResult(popt, pcov, v_fit_fn, dv_fit_fn, reduced_chisq)
+    
+    backp_fit = fit_bkg(backp, backp_slice) if backp is not None else None
+    backm_fit = fit_bkg(backm, backm_slice) if backm is not None else None
+
+    # subtract point-by-point (interpolated)
+    apply_background_subtraction(data, backp, backm)
+
+    # restore the data in the fit region
+    print('diff:', np.sum(data.v - orig_data.v))
+    data.v[spec_slice] = orig_data.v[spec_slice]
+    data.dv[spec_slice] = orig_data.dv[spec_slice]
+
+    # then overwrite the subtraction in the fit range:
+    spec_v = U(data.v[spec_slice], (data.dv**2)[spec_slice])
+    spec_x = data.x[spec_slice]
+
+    backp_v = U(backp_fit.v_fit_fn(spec_x), backp_fit.dv_fit_fn(spec_x)) if backp_fit else None
+    backm_v = U(backm_fit.v_fit_fn(spec_x), backm_fit.dv_fit_fn(spec_x)) if backm_fit else None
+
+    if backp_fit and backm_fit:
+        spec_v -= (backp_v + backm_v)/2
+    elif backp:
+        spec_v -= backp_v
+    elif backm:
+        spec_v -= backm_v
+    else:
+        pass  # no background to subtract
+    data.v[spec_slice] = spec_v.x
+    data.dv[spec_slice] = spec_v.variance
+
+    if backp is not None:
+        backp.v[backp_slice] = backp_fit.v_fit_fn(backp.x[backp_slice])
+        backp.dv[backp_slice] = backp_fit.dv_fit_fn(backp.x[backp_slice])
+        backp_params = dict(zip(["A","B","C","D"], backp_fit.popt))
+        backp_params["chisq"] = backp_fit.reduced_chisq
+    else:
+        backp_params = None
+
+    if backm is not None:
+        backm.v[backm_slice] = backm_fit.v_fit_fn(backm.x[backm_slice])
+        backm.dv[backm_slice] = backm_fit.dv_fit_fn(backm.x[backm_slice])
+        backm_params = dict(zip(["A","B","C","D"], backm_fit.popt))
+        backm_params["chisq"] = backm_fit.reduced_chisq
+    else:
+        backm_params = None
+
+    fitparams = BackgroundSmoothFitParams(backp_params, backm_params)
+    return data, backp, backm, fitparams
+
+@module
 def interpolate_background(data, backp, backm, align='auto'):
     """
     Interpolate background data onto specular angles.
@@ -1306,6 +1506,32 @@ def subtract_background_field(data, bfparams, epsD=None, epsD_var=None, scale=No
     apply_background_field_subtraction(data, epsD, bfparams.epssi, bfparams.LS3, bfparams.LS4, bfparams.L4D, bfparams.HD, bfparams.maxF, scale, pcov)
 
     return data
+
+@module
+def smoothed_fit(data, fit_range=[None, None], fitted_spacing=None):
+    """
+    Fit a function to the data over a range of input values
+    (useful for smoothing noisy data without much structure, e.g. backgrounds)
+
+    **Inputs**
+
+    data (refldata) : data in
+
+    fit_range (range?:x): x-region over which to fit
+
+    fitted_spacing (float?) : dx for linearly-spaced output data in the fitted region.
+    If not specified, will use the x-values from the input.
+
+    **Returns**
+
+    output (refldata) : (smoothed) data out
+    """
+
+    data = copy(data)
+    if fit_range is None:
+        fit_range=[None, None]
+    return data
+
 
 @module
 def divide_intensity(data, base):

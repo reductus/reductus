@@ -5,8 +5,10 @@ Background subtraction
 from __future__ import division
 
 import numpy as np
+from numpy.random.mtrand import chisquare
 
 from dataflow.lib.uncertainty import Uncertainty as U, interp
+from dataflow.data import todict
 
 from .refldata import ReflData
 
@@ -177,6 +179,17 @@ def guess_background_offset(back):
     else:
         return 'sample'
 
+class BackgroundSmoothFitParams:
+    def __init__(self, backp_params, backm_params):
+        self.backp_params = todict(backp_params),
+        self.backm_params = todict(backm_params)
+    def get_metadata(self):
+        return {
+            "backp": self.backp_params,
+            "backm": self.backm_params
+        }
+    def get_plottable(self):
+        return {"params": self.get_metadata(), "type": "params"}
 
 def _check_mostly_constant(v):
     # normalize
