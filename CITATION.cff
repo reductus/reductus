@@ -1,0 +1,56 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+- family-names: "Maranville"
+  given-names: "Brian Benjamin"
+  orcid: "https://orcid.org/0000-0002-6105-8789"
+- family-names: "Ratcliff"
+  given-names: "William"
+  name-suffix: "II"
+  orcid: "https://orcid.org/0000-0001-8956-3851"
+- family-names: "Kienzle"
+  given-names: "Paul"
+  orcid: "https://orcid.org/0000-0002-7893-0318"
+title: "reductus"
+version: 1.0.0
+preferred-citation:
+  type: article
+  authors:
+  - family-names: "Maranville"
+    given-names: "Brian Benjamin"
+    orcid: "https://orcid.org/0000-0002-6105-8789"
+  - family-names: "Ratcliff"
+    given-names: "William"
+    name-suffix: "II"
+    orcid: "https://orcid.org/0000-0001-8956-3851"
+  - family-names: "Kienzle"
+    given-names: "Paul"
+    orcid: "https://orcid.org/0000-0002-7893-0318"
+  doi: "10.1107/S1600576718011974"
+  journal: "Journal of Applied Crystallography"
+  month: 10
+  start: 1500 # First page number
+  end: 1506 # Last page number
+  title: "reductus: a stateless Python data reduction service with a browser front end"
+  issue: 5
+  volume: 51
+  year: 2018
+  keywords:
+    - neutron reflectometry
+    - X-ray reflectometry
+    - data reduction
+    - computer programs
+  abstract: |
+    The online data reduction service reductus transforms measurements in experimental science 
+    from laboratory coordinates into physically meaningful quantities with accurate estimation 
+    of uncertainties from instrumental settings and properties. This reduction process is 
+    based on a few well known transformations, but flexibility in the application of the transforms 
+    and algorithms supports flexibility in experiment design, enabling a broader range of 
+    measurements than a rigid reduction scheme for data. The user interface allows easy 
+    construction of arbitrary pipelines from well known data transforms using a visual data 
+    flow diagram. Source data are drawn from a networked, open data repository. The Python back 
+    end uses intelligent caching to store intermediate results of calculations for a highly 
+    responsive user experience. The reference implementation allows immediate reduction of 
+    measurements as they are recorded for the three neutron reflectometry instruments at the 
+    NIST Center for Neutron Research, without the need for visiting scientists to install 
+    additional software on their own computers.
