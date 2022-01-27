@@ -22,6 +22,7 @@ python3 setup.py develop --user
 
 # apache setup
 sudo a2enmod headers proxy_balancer proxy_uwsgi lbmethod_byrequests
+sudo systemctl enable apache2.service
 # add mod_proxy_protocol
 # sudo apt install -y apache2-dev
 
@@ -70,8 +71,9 @@ sudo aideinit
 sudo sed -i -e 's/rotate [0-9]\+/rotate 31/g' /etc/logrotate.d/apache2
 
 # set up cron job to start uwsgi servers on reboot
-echo -e "@reboot cd $REDUCTUS_HOME/web_gui && $REDUCTUS_HOME/web_gui/start_flask_many_py3.sh 8001 5" > $HOME/crontab.txt
-crontab $HOME/crontab.txt
+sudo echo -e "\n@reboot         ubuntu  cd ${REDUCTUS_HOME}/web_gui && ${REDUCTUS_HOME}/web_gui/start_flask_many_py3.sh 8001 5" >> /etc/crontab
+#echo -e "@reboot cd $REDUCTUS_HOME/web_gui && $REDUCTUS_HOME/web_gui/start_flask_many_py3.sh 8001 5" > $HOME/crontab.txt
+#crontab $HOME/crontab.txt
 
 # set up the secondary, static IP:
 # it is important to copy the netmask and broadcast from the DHCP-assigned interface
