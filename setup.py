@@ -50,7 +50,7 @@ dist = setup(
         'pytz', 'importlib_resources'
         ],
     extras_require={
-        'server': ['msgpack-python', 'flask', 'flask-cors', 'requests'],
+        'server': ['msgpack', 'flask', 'flask-cors', 'requests'],
         'masked_curve_fit': ['numdifftools'],
         'nexus_files': ['h5py']
         },
