@@ -1,0 +1,1595 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xsd:schema targetNamespace="http://www.xrdml.com/XRDMeasurement/1.2" xmlns:xrd="http://www.xrdml.com/XRDMeasurement/1.2" xmlns:xsd="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified" xml:lang="en">
+	<xsd:annotation>
+		<xsd:documentation>Authors: Xander Fransen, Herman Rozendaal</xsd:documentation>
+	</xsd:annotation>
+	<xsd:annotation>
+		<xsd:documentation>Version: 1.2</xsd:documentation>
+	</xsd:annotation>
+	<xsd:annotation>
+		<xsd:documentation>Date: 07/06/2005</xsd:documentation>
+	</xsd:annotation>
+	<xsd:annotation>
+		<xsd:documentation>Xander Fransen - 07/06/2005: added Elliptic to crystalType, shape enumeration.</xsd:documentation>
+	</xsd:annotation>
+	<xsd:annotation>
+		<xsd:documentation>Xander Fransen - 01/06/2004: added elements name and preparedBy to SampleType.</xsd:documentation>
+	</xsd:annotation>
+	<xsd:annotation>
+		<xsd:documentation>Xander Fransen - 27/06/2003: upperLevel now optional.</xsd:documentation>
+	</xsd:annotation>
+	<xsd:element name="xrdMeasurements">
+		<xsd:annotation>
+			<xsd:documentation>Root element for XRD data collected from an experiment on 1 sample.</xsd:documentation>
+			<xsd:documentation>If the file contains more than one measurement, then the attribute "measurementBinding" must be filled. </xsd:documentation>
+			<xsd:documentation>The status of the data in the file is stored in attribute "status". If the status differs from "Completed" the status of each measurement and the status of each scan within the measurements can give additional information.</xsd:documentation>
+			<xsd:documentation>If a file contains more than one measurement the attribute "measurementType" must be the same for all measurements. </xsd:documentation>
+		</xsd:annotation>
+		<xsd:complexType>
+			<xsd:sequence>
+				<xsd:element name="comment" type="xrd:commentType" minOccurs="0"/>
+				<xsd:element name="sample" minOccurs="0">
+					<xsd:complexType>
+						<xsd:complexContent>
+							<xsd:extension base="xrd:sampleType"/>
+						</xsd:complexContent>
+					</xsd:complexType>
+				</xsd:element>
+				<xsd:element name="xrdMeasurement" maxOccurs="unbounded">
+					<xsd:annotation>
+						<xsd:documentation>The actual measurement(s).</xsd:documentation>
+						<xsd:documentation>If the file contains more than one measurement then the attribute "measurementBinding" of "xrdMeasurements" must be filled.</xsd:documentation>
+						<xsd:documentation>If a measurement consists of more than one scan (area measurement, stress measurement, texture measurement), then the attribute "measurementStepAxis" must be filled.</xsd:documentation>
+						<xsd:documentation>The information in element "measurementStepAxisCenter" must correspond to the "measurementStepAxis" attribute.</xsd:documentation>
+						<xsd:documentation>If a measurement contains more than one scan, then the scan axis must be the same for all scans.</xsd:documentation>
+					</xsd:annotation>
+					<xsd:complexType>
+						<xsd:sequence>
+							<xsd:element name="comment" type="xrd:commentType" minOccurs="0"/>
+							<xsd:element name="usedWavelength" minOccurs="0">
+								<xsd:annotation>
+									<xsd:documentation>The wavelengths of the radiation used.</xsd:documentation>
+								</xsd:annotation>
+								<xsd:complexType>
+									<xsd:sequence>
+										<xsd:element name="kAlpha1" type="xrd:angstromType">
+											<xsd:annotation>
+												<xsd:documentation>K-Alpha1 wavelength.</xsd:documentation>
+											</xsd:annotation>
+										</xsd:element>
+										<xsd:element name="kAlpha2" type="xrd:angstromType">
+											<xsd:annotation>
+												<xsd:documentation>K-Alpha2 wavelength.</xsd:documentation>
+											</xsd:annotation>
+										</xsd:element>
+										<xsd:element name="kBeta" type="xrd:angstromType">
+											<xsd:annotation>
+												<xsd:documentation>K-Beta wavelength.</xsd:documentation>
+											</xsd:annotation>
+										</xsd:element>
+										<xsd:element name="ratioKAlpha2KAlpha1" type="xrd:nonNegativeDoubleType">
+											<xsd:annotation>
+												<xsd:documentation>K-Alpha2 / K-Alpha1 intensity ratio.</xsd:documentation>
+												<xsd:documentation>Ratio between the intensities of the K-Alpha2 and the K-Alpha1 components of the used spectrum.</xsd:documentation>
+											</xsd:annotation>
+										</xsd:element>
+									</xsd:sequence>
+									<xsd:attribute name="intended" use="required">
+										<xsd:annotation>
+											<xsd:documentation>The intended wavelength type. For a measurement without a monochromator this usually is K-Alpha radiation. For a measurement with a monochromator it might be K-Alpha1. Other values are possible, but not very likely.</xsd:documentation>
+										</xsd:annotation>
+										<xsd:simpleType>
+											<xsd:restriction base="xsd:string">
+												<xsd:enumeration value="K-Alpha"/>
+												<xsd:enumeration value="K-Alpha 1"/>
+												<xsd:enumeration value="K-Alpha 2"/>
+												<xsd:enumeration value="K-Beta"/>
+											</xsd:restriction>
+										</xsd:simpleType>
+									</xsd:attribute>
+								</xsd:complexType>
+							</xsd:element>
+							<xsd:element name="incidentBeamPath" minOccurs="0">
+								<xsd:complexType>
+									<xsd:sequence>
+										<xsd:element name="radius" type="xrd:radiusType" minOccurs="0">
+											<xsd:annotation>
+												<xsd:documentation>Incident beam path radius.</xsd:documentation>
+												<xsd:documentation>Distance from the focus of the tube to the center of the goniometer (omega axis).</xsd:documentation>
+											</xsd:annotation>
+										</xsd:element>
+										<xsd:element name="xRayTube" minOccurs="0">
+											<xsd:complexType>
+												<xsd:complexContent>
+													<xsd:extension base="xrd:xRayTubeType"/>
+												</xsd:complexContent>
+											</xsd:complexType>
+										</xsd:element>
+										<xsd:element name="xRayMirror" type="xrd:xRayMirrorType" minOccurs="0"/>
+										<xsd:element name="monochromator" type="xrd:monochromatorType" minOccurs="0"/>
+										<xsd:element name="capillaryOptics" type="xrd:capillaryOpticsType" minOccurs="0"/>
+										<xsd:element name="filter" type="xrd:filterType" minOccurs="0"/>
+										<xsd:element name="sollerSlit" type="xrd:sollerSlitType" minOccurs="0"/>
+										<xsd:element name="mask" type="xrd:maskType" minOccurs="0"/>
+										<xsd:element name="antiScatterSlit" type="xrd:antiScatterSlitType" minOccurs="0">
+											<xsd:annotation>
+												<xsd:documentation>Abstract class, use a child class in the XRDML file.</xsd:documentation>
+											</xsd:annotation>
+										</xsd:element>
+										<xsd:element name="divergenceSlit" type="xrd:divergenceSlitType" minOccurs="0">
+											<xsd:annotation>
+												<xsd:documentation>Abstract class, use a child class in the XRDML file.</xsd:documentation>
+											</xsd:annotation>
+										</xsd:element>
+										<xsd:element name="beamAttenuator" type="xrd:beamAttenuatorType" minOccurs="0">
+											<xsd:annotation>
+												<xsd:documentation>Use this class or a child class in the XRDML file.</xsd:documentation>
+											</xsd:annotation>
+										</xsd:element>
+									</xsd:sequence>
+								</xsd:complexType>
+							</xsd:element>
+							<xsd:element name="beamKnife" type="xrd:beamKnifeType" minOccurs="0"/>
+							<xsd:element name="sampleMovement" type="xrd:sampleMovementType" minOccurs="0"/>
+							<xsd:element name="sampleOffset" minOccurs="0">
+								<xsd:annotation>
+									<xsd:documentation>Sample offsets.</xsd:documentation>
+									<xsd:documentation>The sample offsets are used to align the sample. The values of the sample offsets are not used in the analysis of the measured data.</xsd:documentation>
+								</xsd:annotation>
+								<xsd:complexType>
+									<xsd:sequence>
+										<xsd:element name="position" type="xrd:positionType" maxOccurs="unbounded"/>
+									</xsd:sequence>
+								</xsd:complexType>
+							</xsd:element>
+							<xsd:element name="diffractedBeamPath" minOccurs="0">
+								<xsd:complexType>
+									<xsd:sequence>
+										<xsd:element name="radius" type="xrd:radiusType" minOccurs="0">
+											<xsd:annotation>
+												<xsd:documentation>Diffracted beam path radius.</xsd:documentation>
+												<xsd:documentation>Distance from the detector (receiving slit) to the sample surface (Omega axis).</xsd:documentation>
+											</xsd:annotation>
+										</xsd:element>
+										<xsd:element name="mask" type="xrd:maskType" minOccurs="0"/>
+										<xsd:element name="antiScatterSlit" type="xrd:antiScatterSlitType" minOccurs="0">
+											<xsd:annotation>
+												<xsd:documentation>Abstract class, use a child class in the XRDML file.</xsd:documentation>
+											</xsd:annotation>
+										</xsd:element>
+										<xsd:element name="sollerSlit" type="xrd:sollerSlitType" minOccurs="0"/>
+										<xsd:element name="parallelPlateCollimator" type="xrd:parallelPlateCollimatorType" minOccurs="0"/>
+										<xsd:element name="xRayMirror" type="xrd:xRayMirrorType" minOccurs="0"/>
+										<xsd:element name="monochromator" type="xrd:monochromatorType" minOccurs="0"/>
+										<xsd:element name="filter" type="xrd:filterType" minOccurs="0"/>
+										<xsd:element name="beamAttenuator" type="xrd:beamAttenuatorType" minOccurs="0">
+											<xsd:annotation>
+												<xsd:documentation>Use this class or a child class in the XRDML file.</xsd:documentation>
+											</xsd:annotation>
+										</xsd:element>
+										<xsd:element name="receivingSlit" type="xrd:receivingSlitType" minOccurs="0"/>
+										<xsd:element name="detector" type="xrd:detectorType" minOccurs="0">
+											<xsd:annotation>
+												<xsd:documentation>Use this class or a child class in the XRDML file.</xsd:documentation>
+											</xsd:annotation>
+										</xsd:element>
+									</xsd:sequence>
+								</xsd:complexType>
+							</xsd:element>
+							<xsd:element name="measurementStepAxisCenter" minOccurs="0">
+								<xsd:annotation>
+									<xsd:documentation>The intended center of the step axis.</xsd:documentation>
+									<xsd:documentation>For a relative measurement with more than one scan (for example: an area measurement) the intended center of the step axis is stored. The actual center can be different. If a program requires the actual center of an area measurement it must be derived from the positions reported for the individual scans.</xsd:documentation>
+									<xsd:documentation>The positions must correspond to the attribute "measurementStepAxis" of element "xrdMeasurement".</xsd:documentation>
+								</xsd:annotation>
+								<xsd:complexType>
+									<xsd:sequence>
+										<xsd:element name="position" type="xrd:positionType" maxOccurs="unbounded">
+											<xsd:annotation>
+												<xsd:documentation>Intended center position.</xsd:documentation>
+											</xsd:annotation>
+										</xsd:element>
+									</xsd:sequence>
+								</xsd:complexType>
+							</xsd:element>
+							<xsd:element name="scan" maxOccurs="unbounded">
+								<xsd:annotation>
+									<xsd:documentation>The scan(s) composing the measurement.</xsd:documentation>
+									<xsd:documentation>The "appendNumber" equals zero for the initial measurement.</xsd:documentation>
+								</xsd:annotation>
+								<xsd:complexType>
+									<xsd:sequence>
+										<xsd:element name="header" maxOccurs="unbounded">
+											<xsd:annotation>
+												<xsd:documentation>General information.</xsd:documentation>
+												<xsd:documentation>A new scan header is created each time data points are added to the scan ("to extend" a scan).</xsd:documentation>
+											</xsd:annotation>
+											<xsd:complexType>
+												<xsd:sequence>
+													<xsd:element name="comment" type="xrd:commentType" minOccurs="0"/>
+													<xsd:element name="startTimeStamp" type="xsd:dateTime">
+														<xsd:annotation>
+															<xsd:documentation>Start date and time.</xsd:documentation>
+														</xsd:annotation>
+													</xsd:element>
+													<xsd:element name="endTimeStamp" type="xsd:dateTime" minOccurs="0">
+														<xsd:annotation>
+															<xsd:documentation>End date and time.</xsd:documentation>
+														</xsd:annotation>
+													</xsd:element>
+													<xsd:element name="author" type="xrd:authorType" minOccurs="0"/>
+													<xsd:element name="source" type="xrd:sourceType"/>
+													<xsd:element name="extend" minOccurs="0">
+														<xsd:annotation>
+															<xsd:documentation>Information about additional data points.</xsd:documentation>
+															<xsd:documentation>Information about data points measured after the original measurement. The element "side" indicates if the points were added after or before the until that moment existing data points of the scan. The element "position" indicates the starting point of the new data points. The positions of starting point must correspond with the positions of the existing scan.</xsd:documentation>
+														</xsd:annotation>
+														<xsd:complexType>
+															<xsd:sequence>
+																<xsd:element name="side">
+																	<xsd:simpleType>
+																		<xsd:restriction base="xsd:string">
+																			<xsd:enumeration value="High position"/>
+																			<xsd:enumeration value="Low position"/>
+																		</xsd:restriction>
+																	</xsd:simpleType>
+																</xsd:element>
+																<xsd:element name="position" type="xrd:positionType" maxOccurs="unbounded"/>
+															</xsd:sequence>
+														</xsd:complexType>
+													</xsd:element>
+												</xsd:sequence>
+											</xsd:complexType>
+										</xsd:element>
+										<xsd:element name="scanAxisCenter" minOccurs="0">
+											<xsd:annotation>
+												<xsd:documentation>Intended center of a relative scan.</xsd:documentation>
+												<xsd:documentation>The position(s) of the scan axis center must correspond to the attribute "scanAxis" of element "scan".</xsd:documentation>
+												<xsd:documentation>If a scan is not completed the actual center differs from the intended center.</xsd:documentation>
+											</xsd:annotation>
+											<xsd:complexType>
+												<xsd:sequence>
+													<xsd:element name="position" type="xrd:positionType" maxOccurs="unbounded"/>
+												</xsd:sequence>
+											</xsd:complexType>
+										</xsd:element>
+										<xsd:element name="reflection" minOccurs="0">
+											<xsd:annotation>
+												<xsd:documentation>Measured reflection.</xsd:documentation>
+												<xsd:documentation>A reflection is completely described by the Miller indices (hkl), the unit cell and the material. For some analyses (e.g. pole figures) the material and unit cell are less important.</xsd:documentation>
+											</xsd:annotation>
+											<xsd:complexType>
+												<xsd:sequence>
+													<xsd:element name="material" type="xsd:string" minOccurs="0"/>
+													<xsd:element name="hkl" type="xrd:hklType"/>
+													<xsd:element name="unitCell" type="xrd:unitCellType" minOccurs="0"/>
+												</xsd:sequence>
+											</xsd:complexType>
+										</xsd:element>
+										<xsd:element name="dataPoints">
+											<xsd:annotation>
+												<xsd:documentation>Each data point consists of</xsd:documentation>
+												<xsd:documentation>- One or more positions</xsd:documentation>
+												<xsd:documentation>- The counting time</xsd:documentation>
+												<xsd:documentation>- The intensity (number of counts) collected during the counting time.</xsd:documentation>
+												<xsd:documentation>If a position, the counting time or the attenuation factor is the same for all data points the value is stored only once else it is stored for each data point separately.</xsd:documentation>
+												<xsd:documentation>If the step size is constant only the start position and end position are stored. The step size must be calculated from these values and the number of points (Step size = ["endPosition" - "startPosition"]/[No. of points-1]). The number of data points equals the number of values in the element "intensities".</xsd:documentation>
+												<xsd:documentation>The number of values must be the same for all child elements.</xsd:documentation>
+												<xsd:documentation>If a beam attenuator was used then the reported intensities consist of the measured intensity multiplied by the beam attenuation factor. This means that the reported intensities can be used in most analyses. However, if the counting statistics must be processed then the reported intensities must be divided by the beam attenuation factor before the standard deviation can be calculated.</xsd:documentation>
+											</xsd:annotation>
+											<xsd:complexType>
+												<xsd:sequence>
+													<xsd:sequence>
+														<xsd:annotation>
+															<xsd:documentation>Position on the different diffractometer axes.</xsd:documentation>
+															<xsd:documentation>For all known movable axes on the diffractometer a "positions" element should be present.</xsd:documentation>
+															<xsd:documentation>If the position is the same for all data points it is stored in "commonPosition".</xsd:documentation>
+															<xsd:documentation>If the step size is constant, the "startPosition" and "endPosition" are stored. The step size is not stored. It must be derived from the number of points, the start position and the end position.</xsd:documentation>
+															<xsd:documentation>If the step size is not constant then the position is stored for each data point in "listPositions".</xsd:documentation>
+														</xsd:annotation>
+														<xsd:element name="positions" maxOccurs="unbounded">
+															<xsd:annotation>
+																<xsd:documentation>Refer to "dataPoints" for details</xsd:documentation>
+															</xsd:annotation>
+															<xsd:complexType>
+																<xsd:choice>
+																	<xsd:element name="commonPosition" type="xsd:double"/>
+																	<xsd:sequence>
+																		<xsd:element name="startPosition" type="xsd:double"/>
+																		<xsd:element name="endPosition" type="xsd:double"/>
+																	</xsd:sequence>
+																	<xsd:element name="listPositions" type="xrd:doublesListType"/>
+																</xsd:choice>
+																<xsd:attribute name="axis" type="xrd:axisType" use="required"/>
+																<xsd:attribute name="unit" type="xrd:positionUnitType" use="required"/>
+															</xsd:complexType>
+														</xsd:element>
+													</xsd:sequence>
+													<xsd:choice minOccurs="0">
+														<xsd:annotation>
+															<xsd:documentation>Beam attenuation factors.</xsd:documentation>
+															<xsd:documentation>If the attenuation factor is the same for all data points it is stored in "commonBeamAttenuationFactor".</xsd:documentation>
+															<xsd:documentation>If the factor is not the same for all data points the factor for each point is stored in "beamAttenuationFactors".</xsd:documentation>
+														</xsd:annotation>
+														<xsd:element name="commonBeamAttenuationFactor" type="xsd:double"/>
+														<xsd:element name="beamAttenuationFactors" type="xrd:doublesListType"/>
+													</xsd:choice>
+													<xsd:choice>
+														<xsd:annotation>
+															<xsd:documentation>Counting times.</xsd:documentation>
+															<xsd:documentation>If the counting time is the same for all data points it is stored in "commonCountingTime".</xsd:documentation>
+															<xsd:documentation>If the counting time is not the same for all data points the counting time for each point is stored in "countingTimes".</xsd:documentation>
+														</xsd:annotation>
+														<xsd:element name="commonCountingTime">
+															<xsd:complexType>
+																<xsd:simpleContent>
+																	<xsd:extension base="xsd:double">
+																		<xsd:attribute name="unit" type="xsd:string" fixed="seconds"/>
+																	</xsd:extension>
+																</xsd:simpleContent>
+															</xsd:complexType>
+														</xsd:element>
+														<xsd:element name="countingTimes">
+															<xsd:complexType>
+																<xsd:simpleContent>
+																	<xsd:extension base="xrd:doublesListType">
+																		<xsd:attribute name="unit" type="xsd:string" fixed="seconds"/>
+																	</xsd:extension>
+																</xsd:simpleContent>
+															</xsd:complexType>
+														</xsd:element>
+													</xsd:choice>
+													<xsd:element name="intensities">
+														<xsd:annotation>
+															<xsd:documentation>Measured intensities multiplied by the corresponding beam attenuation factor.</xsd:documentation>
+														</xsd:annotation>
+														<xsd:complexType>
+															<xsd:simpleContent>
+																<xsd:extension base="xrd:doublesListType">
+																	<xsd:attribute name="unit" type="xsd:string" fixed="counts"/>
+																</xsd:extension>
+															</xsd:simpleContent>
+														</xsd:complexType>
+													</xsd:element>
+												</xsd:sequence>
+											</xsd:complexType>
+										</xsd:element>
+										<xsd:element name="nonAmbientPoints" minOccurs="0" maxOccurs="unbounded">
+											<xsd:annotation>
+												<xsd:documentation>Non-ambient values measured during the scan.</xsd:documentation>
+												<xsd:documentation>There is no direct link between the measured intensities and the measured non-ambient values. You must use the elements "startTimeStamp" and "endTimeStamp" or the element "startTimeStamp" and the counting time to determine the non-ambient value for each data point.</xsd:documentation>
+												<xsd:documentation>The non-ambient values are stored in the doubleLists "measurementTimes" and "nonAmbientValues". The length of those lists must be the same.</xsd:documentation>
+											</xsd:annotation>
+											<xsd:complexType>
+												<xsd:complexContent>
+													<xsd:extension base="xrd:nonAmbientPointsType">
+														<xsd:attribute name="type" type="xrd:nonAmbientType" use="required"/>
+														<xsd:attribute name="unit" type="xrd:nonAmbientUnit" use="required"/>
+													</xsd:extension>
+												</xsd:complexContent>
+											</xsd:complexType>
+										</xsd:element>
+									</xsd:sequence>
+									<xsd:attribute name="status" type="xrd:statusType" use="required">
+										<xsd:annotation>
+											<xsd:documentation>Status of the scan.</xsd:documentation>
+											<xsd:documentation>Refer to "statusType" for details.</xsd:documentation>
+										</xsd:annotation>
+									</xsd:attribute>
+									<xsd:attribute name="appendNumber" type="xsd:short" use="required">
+										<xsd:annotation>
+											<xsd:documentation>The "appendNumber" is used to indicate if all scans in a measurement have been measured in one session. The "appendNumber" increases for each new session (each time one or more scans are added) ("to append" to a measurement).</xsd:documentation>
+											<xsd:documentation>The appendNumber equals zero for the initial measurement.</xsd:documentation>
+										</xsd:annotation>
+									</xsd:attribute>
+									<xsd:attribute name="scanAxis" type="xrd:scanAxisType" use="required">
+										<xsd:annotation>
+											<xsd:documentation>Refer to "scanAxisType" for details.</xsd:documentation>
+											<xsd:documentation>If the measurement contains more than one scan, the scan axis must be the same for all scans.</xsd:documentation>
+										</xsd:annotation>
+									</xsd:attribute>
+									<xsd:attribute name="mode" use="required">
+										<xsd:annotation>
+											<xsd:documentation>The mode of the scan.</xsd:documentation>
+											<xsd:documentation>Continuous: In a continuous scan, the diffractometer runs from start to end position at a constant speed. The detector is read and reset after constant integration intervals The readout point is assumed to be at the center of the interval. This means the actually covered range starts half an integration interval before the first readout point and ends half an interval after the last readout point.</xsd:documentation>
+											<xsd:documentation>Pre-set counts: Step scan. For each data point the intensity is measured until a pre-set number of counts is collected or until the maximum counting time is reached (what ever comes first). The diffractometer is not scanning while collecting counts.</xsd:documentation>
+											<xsd:documentation>Pre-set time: Step scan. The counting time is the same for all data points. The diffractometer is not scanning while collecting counts.</xsd:documentation>
+										</xsd:annotation>
+										<xsd:simpleType>
+											<xsd:restriction base="xsd:string">
+												<xsd:enumeration value="Continuous"/>
+												<xsd:enumeration value="Pre-set counts"/>
+												<xsd:enumeration value="Pre-set time"/>
+											</xsd:restriction>
+										</xsd:simpleType>
+									</xsd:attribute>
+								</xsd:complexType>
+							</xsd:element>
+						</xsd:sequence>
+						<xsd:attribute name="status" type="xrd:statusType" use="required"/>
+						<xsd:attribute name="measurementType" use="required">
+							<xsd:simpleType>
+								<xsd:restriction base="xsd:string">
+									<xsd:enumeration value="Area measurement"/>
+									<xsd:enumeration value="Monitor measurement"/>
+									<xsd:enumeration value="Repeated scan"/>
+									<xsd:enumeration value="Scan"/>
+									<xsd:enumeration value="Stationary measurement"/>
+									<xsd:enumeration value="Stress measurement"/>
+									<xsd:enumeration value="Texture background measurement"/>
+									<xsd:enumeration value="Texture defocusing measurement"/>
+									<xsd:enumeration value="Texture pole figure"/>
+								</xsd:restriction>
+							</xsd:simpleType>
+						</xsd:attribute>
+						<xsd:attribute name="measurementStepAxis" type="xrd:scanAxisType" use="optional"/>
+					</xsd:complexType>
+				</xsd:element>
+			</xsd:sequence>
+			<xsd:attribute name="status" type="xrd:statusType" use="required">
+				<xsd:annotation>
+					<xsd:documentation>Status of the data within the "xrdMeasurements" element. Refer to "statusType" for details.</xsd:documentation>
+				</xsd:annotation>
+			</xsd:attribute>
+			<xsd:attribute name="measurementBinding" use="optional">
+				<xsd:annotation>
+					<xsd:documentation>This attribute indicates the property (e.g. xy map), which binds the measurements in one file.</xsd:documentation>
+					<xsd:documentation>If attribute "measurementBinding" is present, then multiple "xrdMeasurement" elements must be present.</xsd:documentation>
+				</xsd:annotation>
+				<xsd:simpleType>
+					<xsd:restriction base="xsd:string">
+						<xsd:enumeration value="Non-ambient measurements"/>
+						<xsd:enumeration value="XY mapping"/>
+					</xsd:restriction>
+				</xsd:simpleType>
+			</xsd:attribute>
+		</xsd:complexType>
+	</xsd:element>
+	<xsd:element name="nonAmbientData">
+		<xsd:annotation>
+			<xsd:documentation>Data about a non-ambient experiment.</xsd:documentation>
+			<xsd:documentation>If more than one non-ambient parameter (e.g. humidity and temperature) is measured, then for each parameter a separate "nonAmbientProfile" element is generated.</xsd:documentation>
+			<xsd:documentation>If during the non-ambient experiment an XRD measurement was executed  the non-ambient data points measured during the XRD measurement are also stored in the file with the XRD measurement. The non-ambient data file and the XRD data file don't contain a reference to each other.</xsd:documentation>
+		</xsd:annotation>
+		<xsd:complexType>
+			<xsd:sequence>
+				<xsd:element name="author" type="xrd:authorType" minOccurs="0">
+					<xsd:annotation>
+						<xsd:documentation>Operator who started the experiment.</xsd:documentation>
+					</xsd:annotation>
+				</xsd:element>
+				<xsd:element name="source" type="xrd:sourceType">
+					<xsd:annotation>
+						<xsd:documentation>Software used to generate the non-ambient data.</xsd:documentation>
+					</xsd:annotation>
+				</xsd:element>
+				<xsd:element name="sample" type="xrd:sampleType" minOccurs="0">
+					<xsd:annotation>
+						<xsd:documentation>Sample description.</xsd:documentation>
+					</xsd:annotation>
+				</xsd:element>
+				<xsd:element name="comment" type="xrd:commentType" minOccurs="0">
+					<xsd:annotation>
+						<xsd:documentation>Free text.</xsd:documentation>
+					</xsd:annotation>
+				</xsd:element>
+				<xsd:element name="nonAmbientProfile" maxOccurs="unbounded">
+					<xsd:annotation>
+						<xsd:documentation>Programmed profile and measured profile(s).</xsd:documentation>
+					</xsd:annotation>
+					<xsd:complexType>
+						<xsd:sequence>
+							<xsd:element name="programmedProfile">
+								<xsd:annotation>
+									<xsd:documentation>The programmed (intended) non-ambient profile.</xsd:documentation>
+									<xsd:documentation>The non-ambient profile is in the doubleLists "programmedTimes" and "programmedValues". The length of the lists must be the same.</xsd:documentation>
+									<xsd:documentation>The "initializationTime" and "finializationTime" elements are the times available to go to the start condition before the first cycle and to go back to ambient conditions after the last cycle. The number of actual cycles is not stored.</xsd:documentation>
+								</xsd:annotation>
+								<xsd:complexType>
+									<xsd:sequence>
+										<xsd:element name="initializationTime" minOccurs="0">
+											<xsd:annotation>
+												<xsd:documentation>The time to go from the start condition (e.g. the room temperature) to the initial non-ambient (e.g. temperature) setting.</xsd:documentation>
+											</xsd:annotation>
+											<xsd:complexType>
+												<xsd:simpleContent>
+													<xsd:extension base="xsd:double">
+														<xsd:attribute name="unit" type="xsd:string" fixed="seconds"/>
+													</xsd:extension>
+												</xsd:simpleContent>
+											</xsd:complexType>
+										</xsd:element>
+										<xsd:element name="programmedTimes">
+											<xsd:annotation>
+												<xsd:documentation>Times when specific programmed values must be reached relative to the start of the cycle.</xsd:documentation>
+												<xsd:documentation>The accompanying non-ambient settings are stored in "programmedValues".</xsd:documentation>
+											</xsd:annotation>
+											<xsd:complexType>
+												<xsd:simpleContent>
+													<xsd:extension base="xrd:doublesListType">
+														<xsd:attribute name="unit" type="xsd:string" fixed="seconds"/>
+													</xsd:extension>
+												</xsd:simpleContent>
+											</xsd:complexType>
+										</xsd:element>
+										<xsd:element name="programmedValues" type="xrd:doublesListType">
+											<xsd:annotation>
+												<xsd:documentation>Programmed settings.</xsd:documentation>
+												<xsd:documentation>The accompanying times when the programmed values must be reached are stored in "programmedTimes".</xsd:documentation>
+											</xsd:annotation>
+										</xsd:element>
+										<xsd:element name="finalizationTime" minOccurs="0">
+											<xsd:annotation>
+												<xsd:documentation>The time to go from the last programmed non-ambient setting to the ambient value (e.g. room temperature). Used after the last step of the programmed profile.</xsd:documentation>
+											</xsd:annotation>
+											<xsd:complexType>
+												<xsd:simpleContent>
+													<xsd:extension base="xsd:double">
+														<xsd:attribute name="unit" type="xsd:string" fixed="seconds"/>
+													</xsd:extension>
+												</xsd:simpleContent>
+											</xsd:complexType>
+										</xsd:element>
+									</xsd:sequence>
+								</xsd:complexType>
+							</xsd:element>
+							<xsd:element name="startTimeStamp" type="xsd:dateTime">
+								<xsd:annotation>
+									<xsd:documentation>Start date and time.</xsd:documentation>
+								</xsd:annotation>
+							</xsd:element>
+							<xsd:element name="initializationPoints" type="xrd:nonAmbientPointsType" minOccurs="0">
+								<xsd:annotation>
+									<xsd:documentation>Points measured before the first cycle.</xsd:documentation>
+									<xsd:documentation>Non-ambient data points measured while going from the conditions at the start of the measurement to the first programmed point.</xsd:documentation>
+									<xsd:documentation>The initialization points are stored in 2 doubleLists. The length of the lists must be the same.</xsd:documentation>
+								</xsd:annotation>
+							</xsd:element>
+							<xsd:element name="nonAmbientPoints" maxOccurs="unbounded">
+								<xsd:annotation>
+									<xsd:documentation>Measured non-ambient data points per cycle.</xsd:documentation>
+									<xsd:documentation>The measured non-ambient data points are stores in two doubleLists. The lengths of the lists must be the same.</xsd:documentation>
+								</xsd:annotation>
+								<xsd:complexType>
+									<xsd:complexContent>
+										<xsd:extension base="xrd:nonAmbientPointsType"/>
+									</xsd:complexContent>
+								</xsd:complexType>
+							</xsd:element>
+							<xsd:element name="finalizationPoints" type="xrd:nonAmbientPointsType" minOccurs="0">
+								<xsd:annotation>
+									<xsd:documentation>Points measured after the last cycle.</xsd:documentation>
+									<xsd:documentation>Non-ambient data points measured while going back from the last programmed point to ambient conditions (e.g. room temperature).</xsd:documentation>
+									<xsd:documentation>The finalization points are stored in 2 doubleLists. The length of the lists must be the same.</xsd:documentation>
+								</xsd:annotation>
+							</xsd:element>
+						</xsd:sequence>
+						<xsd:attribute name="type" type="xrd:nonAmbientType" use="required"/>
+						<xsd:attribute name="unit" type="xrd:nonAmbientUnit" use="required"/>
+					</xsd:complexType>
+				</xsd:element>
+			</xsd:sequence>
+			<xsd:attribute name="status" type="xrd:statusType" use="required"/>
+		</xsd:complexType>
+	</xsd:element>
+	<xsd:complexType name="angleType">
+		<xsd:annotation>
+			<xsd:documentation>Type used to store angles.</xsd:documentation>
+		</xsd:annotation>
+		<xsd:simpleContent>
+			<xsd:extension base="xrd:positiveDoubleType">
+				<xsd:attribute name="unit" type="xsd:string" fixed="deg"/>
+			</xsd:extension>
+		</xsd:simpleContent>
+	</xsd:complexType>
+	<xsd:complexType name="angstromType">
+		<xsd:simpleContent>
+			<xsd:extension base="xrd:positiveDoubleType">
+				<xsd:attribute name="unit" type="xsd:string" fixed="Angstrom"/>
+			</xsd:extension>
+		</xsd:simpleContent>
+	</xsd:complexType>
+	<xsd:complexType name="antiScatterSlitType" abstract="true">
+		<xsd:annotation>
+			<xsd:documentation>Base type used to store information about an anti-scatter slit.</xsd:documentation>
+			<xsd:documentation>Abstract class, use a child class in the XRDML file.</xsd:documentation>
+		</xsd:annotation>
+		<xsd:complexContent>
+			<xsd:extension base="xrd:componentType"/>
+		</xsd:complexContent>
+	</xsd:complexType>
+	<xsd:complexType name="automaticAntiScatterSlitType">
+		<xsd:annotation>
+			<xsd:documentation>Type to store information about an automatic anti-scatter slit.</xsd:documentation>
+		</xsd:annotation>
+		<xsd:complexContent>
+			<xsd:extension base="xrd:antiScatterSlitType">
+				<xsd:sequence>
+					<xsd:element name="observedLength" type="xrd:lengthType"/>
+					<xsd:element name="offset" type="xrd:offsetType"/>
+				</xsd:sequence>
+			</xsd:extension>
+		</xsd:complexContent>
+	</xsd:complexType>
+	<xsd:complexType name="fixedAntiScatterSlitType" abstract="false">
+		<xsd:annotation>
+			<xsd:documentation>Type to store information about a fixed anti-scatter slit.</xsd:documentation>
+		</xsd:annotation>
+		<xsd:complexContent>
+			<xsd:extension base="xrd:antiScatterSlitType">
+				<xsd:choice>
+					<xsd:element name="height" type="xrd:lengthType"/>
+					<xsd:element name="angle" type="xrd:angleType">
+						<xsd:annotation>
+							<xsd:documentation>Full opening angle.</xsd:documentation>
+						</xsd:annotation>
+					</xsd:element>
+				</xsd:choice>
+			</xsd:extension>
+		</xsd:complexContent>
+	</xsd:complexType>
+	<xsd:complexType name="authorType">
+		<xsd:annotation>
+			<xsd:documentation>Person who created an element in an XRDML file.</xsd:documentation>
+			<xsd:documentation>Examples: - The operator who executed a measurement resulting in a scan. - The operator who converted old data into the XRDML file.</xsd:documentation>
+		</xsd:annotation>
+		<xsd:sequence>
+			<xsd:element name="name" type="xsd:string"/>
+		</xsd:sequence>
+	</xsd:complexType>
+	<xsd:simpleType name="axisType">
+		<xsd:annotation>
+			<xsd:documentation>This type enumerates the physical axes in a diffraction system.</xsd:documentation>
+		</xsd:annotation>
+		<xsd:restriction base="xsd:string">
+			<xsd:enumeration value="2Theta"/>
+			<xsd:enumeration value="Omega"/>
+			<xsd:enumeration value="Phi"/>
+			<xsd:enumeration value="Psi"/>
+			<xsd:enumeration value="X"/>
+			<xsd:enumeration value="Y"/>
+			<xsd:enumeration value="Z"/>
+		</xsd:restriction>
+	</xsd:simpleType>
+	<xsd:complexType name="beamAttenuatorType" abstract="false">
+		<xsd:annotation>
+			<xsd:documentation>Type to store information about a beam attenuator.</xsd:documentation>
+			<xsd:documentation>Use this class or a child class in the XRDML file.</xsd:documentation>
+		</xsd:annotation>
+		<xsd:complexContent>
+			<xsd:extension base="xrd:componentType">
+				<xsd:sequence>
+					<xsd:element name="factor" type="xrd:positiveDoubleType"/>
+					<xsd:element name="material" type="xsd:string" minOccurs="0"/>
+				</xsd:sequence>
+			</xsd:extension>
+		</xsd:complexContent>
+	</xsd:complexType>
+	<xsd:complexType name="intensitySwitchedBeamAttenuatorType">
+		<xsd:annotation>
+			<xsd:documentation>Type to store information about a beam attenuator that switches at specific intensity levels.</xsd:documentation>
+		</xsd:annotation>
+		<xsd:complexContent>
+			<xsd:extension base="xrd:beamAttenuatorType">
+				<xsd:sequence>
+					<xsd:annotation>
+						<xsd:documentation>The value of "activateLevel" must be greater than the value of "deactivateLevel".</xsd:documentation>
+					</xsd:annotation>
+					<xsd:element name="activateLevel">
+						<xsd:complexType>
+							<xsd:simpleContent>
+								<xsd:extension base="xsd:positiveInteger">
+									<xsd:attribute name="unit" type="xsd:string" fixed="counts per second"/>
+								</xsd:extension>
+							</xsd:simpleContent>
+						</xsd:complexType>
+					</xsd:element>
+					<xsd:element name="deactivateLevel">
+						<xsd:complexType>
+							<xsd:simpleContent>
+								<xsd:extension base="xsd:positiveInteger">
+									<xsd:attribute name="unit" type="xsd:string" fixed="counts per second"/>
+								</xsd:extension>
+							</xsd:simpleContent>
+						</xsd:complexType>
+					</xsd:element>
+				</xsd:sequence>
+			</xsd:extension>
+		</xsd:complexContent>
+	</xsd:complexType>
+	<xsd:complexType name="positionSwitchedBeamAttenuatorType">
+		<xsd:annotation>
+			<xsd:documentation>Type used to store information about a beam attenuator that switches at specific angles.</xsd:documentation>
+		</xsd:annotation>
+		<xsd:complexContent>
+			<xsd:extension base="xrd:beamAttenuatorType">
+				<xsd:sequence>
+					<xsd:element name="switchAxis" type="xrd:axisType"/>
+					<xsd:element name="switchPositions" maxOccurs="unbounded">
+						<xsd:complexType>
+							<xsd:sequence>
+								<xsd:element name="inPosition" type="xsd:double"/>
+								<xsd:element name="outPosition" type="xsd:double"/>
+							</xsd:sequence>
+							<xsd:attribute name="unit" type="xrd:positionUnitType" use="required"/>
+						</xsd:complexType>
+					</xsd:element>
+				</xsd:sequence>
+			</xsd:extension>
+		</xsd:complexContent>
+	</xsd:complexType>
+	<xsd:complexType name="beamKnifeType">
+		<xsd:annotation>
+			<xsd:documentation>Type used to store beam knife information.</xsd:documentation>
+		</xsd:annotation>
+		<xsd:complexContent>
+			<xsd:extension base="xrd:componentType"/>
+		</xsd:complexContent>
+	</xsd:complexType>
+	<xsd:complexType name="capillaryOpticsType">
+		<xsd:annotation>
+			<xsd:documentation>Type used to store capillary optics information.</xsd:documentation>
+		</xsd:annotation>
+		<xsd:complexContent>
+			<xsd:extension base="xrd:componentType">
+				<xsd:sequence>
+					<xsd:element name="length">
+						<xsd:complexType>
+							<xsd:simpleContent>
+								<xsd:extension base="xrd:positiveDoubleType">
+									<xsd:attribute name="unit" type="xsd:string" fixed="mm"/>
+								</xsd:extension>
+							</xsd:simpleContent>
+						</xsd:complexType>
+					</xsd:element>
+					<xsd:element name="diameter">
+						<xsd:complexType>
+							<xsd:simpleContent>
+								<xsd:extension base="xrd:positiveDoubleType">
+									<xsd:attribute name="unit" type="xsd:string" fixed="mm"/>
+								</xsd:extension>
+							</xsd:simpleContent>
+						</xsd:complexType>
+					</xsd:element>
+				</xsd:sequence>
+			</xsd:extension>
+		</xsd:complexContent>
+	</xsd:complexType>
+	<xsd:complexType name="commentType">
+		<xsd:annotation>
+			<xsd:documentation>Free text.</xsd:documentation>
+		</xsd:annotation>
+		<xsd:sequence>
+			<xsd:element name="entry" type="xsd:string" maxOccurs="unbounded">
+				<xsd:annotation>
+					<xsd:documentation>Atomic comment item.</xsd:documentation>
+					<xsd:documentation>E.g. a list item, paragraph.</xsd:documentation>
+				</xsd:annotation>
+			</xsd:element>
+		</xsd:sequence>
+	</xsd:complexType>
+	<xsd:complexType name="componentType">
+		<xsd:annotation>
+			<xsd:documentation>Base element for components of a diffractometer.</xsd:documentation>
+			<xsd:documentation>A component is uniquely identified by its ID.</xsd:documentation>
+			<xsd:documentation>The "name" is intended for use in reports. The "name" element can be different for different programs or for different versions (e.g. English version, German version) of a program.</xsd:documentation>
+		</xsd:annotation>
+		<xsd:sequence>
+			<xsd:element name="distanceToSample" type="xrd:lengthType" minOccurs="0">
+				<xsd:annotation>
+					<xsd:documentation>Distance from component to sample surface (Omega axis).</xsd:documentation>
+				</xsd:annotation>
+			</xsd:element>
+		</xsd:sequence>
+		<xsd:attribute name="id" type="xsd:string" use="optional">
+			<xsd:annotation>
+				<xsd:documentation>String uniquely identifying the component.</xsd:documentation>
+			</xsd:annotation>
+		</xsd:attribute>
+		<xsd:attribute name="name" type="xsd:string" use="optional">
+			<xsd:annotation>
+				<xsd:documentation>Name or short description.</xsd:documentation>
+			</xsd:annotation>
+		</xsd:attribute>
+	</xsd:complexType>
+	<xsd:complexType name="crystalType">
+		<xsd:simpleContent>
+			<xsd:extension base="xsd:string">
+				<xsd:attribute name="type" use="required">
+					<xsd:simpleType>
+						<xsd:restriction base="xsd:string">
+							<xsd:enumeration value="Asymmetric"/>
+							<xsd:enumeration value="Graded"/>
+							<xsd:enumeration value="Symmetric"/>
+						</xsd:restriction>
+					</xsd:simpleType>
+				</xsd:attribute>
+				<xsd:attribute name="shape" use="required">
+					<xsd:simpleType>
+						<xsd:restriction base="xsd:string">
+							<xsd:enumeration value="Curved"/>
+							<xsd:enumeration value="Flat"/>
+							<xsd:enumeration value="Parabolic"/>
+							<xsd:enumeration value="Elliptic"/>
+						</xsd:restriction>
+					</xsd:simpleType>
+				</xsd:attribute>
+			</xsd:extension>
+		</xsd:simpleContent>
+	</xsd:complexType>
+	<xsd:complexType name="detectorType" abstract="true">
+		<xsd:annotation>
+			<xsd:documentation>Base type for detectors.</xsd:documentation>
+			<xsd:documentation>Use this class or a child class in a XRDML file.</xsd:documentation>
+		</xsd:annotation>
+		<xsd:complexContent>
+			<xsd:extension base="xrd:componentType">
+				<xsd:sequence>
+					<xsd:element name="phd" minOccurs="0">
+						<xsd:annotation>
+							<xsd:documentation>Pulse height distribution</xsd:documentation>
+							<xsd:documentation>The value of "upperLevel" must be greater than the value of "lowerLevel".</xsd:documentation>
+						</xsd:annotation>
+						<xsd:complexType>
+							<xsd:sequence>
+								<xsd:element name="lowerLevel">
+									<xsd:complexType>
+										<xsd:simpleContent>
+											<xsd:extension base="xrd:percentageType">
+												<xsd:attribute name="unit" type="xsd:string" fixed="%"/>
+											</xsd:extension>
+										</xsd:simpleContent>
+									</xsd:complexType>
+								</xsd:element>
+								<xsd:element name="upperLevel" minOccurs="0">
+									<xsd:complexType>
+										<xsd:simpleContent>
+											<xsd:extension base="xrd:percentageType">
+												<xsd:attribute name="unit" type="xsd:string" fixed="%"/>
+											</xsd:extension>
+										</xsd:simpleContent>
+									</xsd:complexType>
+								</xsd:element>
+							</xsd:sequence>
+						</xsd:complexType>
+					</xsd:element>
+				</xsd:sequence>
+			</xsd:extension>
+		</xsd:complexContent>
+	</xsd:complexType>
+	<xsd:complexType name="linearDetectorType">
+		<xsd:annotation>
+			<xsd:documentation>Type to store information about a linear or position sensitive detector (PSD).</xsd:documentation>
+		</xsd:annotation>
+		<xsd:complexContent>
+			<xsd:extension base="xrd:detectorType">
+				<xsd:sequence>
+					<xsd:element name="mode" type="xrd:detectorModeType">
+						<xsd:annotation>
+							<xsd:documentation>Mode of use.</xsd:documentation>
+						</xsd:annotation>
+					</xsd:element>
+					<xsd:element name="activeChannels" type="xsd:positiveInteger">
+						<xsd:annotation>
+							<xsd:documentation>Number of active channels.</xsd:documentation>
+						</xsd:annotation>
+					</xsd:element>
+					<xsd:element name="pitch">
+						<xsd:annotation>
+							<xsd:documentation>Distance between 2 channels.</xsd:documentation>
+						</xsd:annotation>
+						<xsd:complexType>
+							<xsd:simpleContent>
+								<xsd:extension base="xrd:positiveDoubleType">
+									<xsd:attribute name="unit" type="xsd:string" fixed="mm"/>
+								</xsd:extension>
+							</xsd:simpleContent>
+						</xsd:complexType>
+					</xsd:element>
+				</xsd:sequence>
+			</xsd:extension>
+		</xsd:complexContent>
+	</xsd:complexType>
+	<xsd:complexType name="pointDetectorType">
+		<xsd:annotation>
+			<xsd:documentation>Type used to store information about a "point detector", for example a proportional detector.</xsd:documentation>
+		</xsd:annotation>
+		<xsd:complexContent>
+			<xsd:extension base="xrd:detectorType"/>
+		</xsd:complexContent>
+	</xsd:complexType>
+	<xsd:complexType name="rtmsDetectorType">
+		<xsd:annotation>
+			<xsd:documentation>Type to store information about a detector based on the RTMS technology.</xsd:documentation>
+		</xsd:annotation>
+		<xsd:complexContent>
+			<xsd:extension base="xrd:detectorType">
+				<xsd:sequence>
+					<xsd:element name="mode" type="xrd:detectorModeType">
+						<xsd:annotation>
+							<xsd:documentation>Mode of use.</xsd:documentation>
+						</xsd:annotation>
+					</xsd:element>
+					<xsd:element name="activeLength">
+						<xsd:complexType>
+							<xsd:simpleContent>
+								<xsd:extension base="xrd:positiveDoubleType">
+									<xsd:attribute name="unit" type="xrd:positionUnitType" use="required"/>
+								</xsd:extension>
+							</xsd:simpleContent>
+						</xsd:complexType>
+					</xsd:element>
+				</xsd:sequence>
+			</xsd:extension>
+		</xsd:complexContent>
+	</xsd:complexType>
+	<xsd:simpleType name="detectorModeType">
+		<xsd:annotation>
+			<xsd:documentation>Enumerates the modes of use of the RTMS detector and linear detectors.</xsd:documentation>
+		</xsd:annotation>
+		<xsd:restriction base="xsd:string">
+			<xsd:enumeration value="Receiving slit"/>
+			<xsd:enumeration value="Scanning"/>
+			<xsd:enumeration value="Static"/>
+		</xsd:restriction>
+	</xsd:simpleType>
+	<xsd:complexType name="divergenceSlitType" abstract="true">
+		<xsd:annotation>
+			<xsd:documentation>Base type for a divergence slit.</xsd:documentation>
+			<xsd:documentation>Abstract class, use a child class in the XRDML file.</xsd:documentation>
+		</xsd:annotation>
+		<xsd:complexContent>
+			<xsd:extension base="xrd:componentType"/>
+		</xsd:complexContent>
+	</xsd:complexType>
+	<xsd:complexType name="automaticDivergenceSlitType">
+		<xsd:annotation>
+			<xsd:documentation>Type used to store information about an automatic divergence slit.</xsd:documentation>
+		</xsd:annotation>
+		<xsd:complexContent>
+			<xsd:extension base="xrd:divergenceSlitType">
+				<xsd:sequence>
+					<xsd:element name="irradiatedLength" type="xrd:lengthType"/>
+					<xsd:element name="offset" type="xrd:offsetType"/>
+				</xsd:sequence>
+			</xsd:extension>
+		</xsd:complexContent>
+	</xsd:complexType>
+	<xsd:complexType name="fixedDivergenceSlitType">
+		<xsd:complexContent>
+			<xsd:extension base="xrd:divergenceSlitType">
+				<xsd:choice>
+					<xsd:element name="height" type="xrd:lengthType"/>
+					<xsd:element name="angle" type="xrd:angleType">
+						<xsd:annotation>
+							<xsd:documentation>Full opening angle.</xsd:documentation>
+						</xsd:annotation>
+					</xsd:element>
+				</xsd:choice>
+			</xsd:extension>
+		</xsd:complexContent>
+	</xsd:complexType>
+	<xsd:simpleType name="doublesListType">
+		<xsd:annotation>
+			<xsd:documentation>Type used to store a series of (double precision) reals.</xsd:documentation>
+			<xsd:documentation>For example: The intensities in a scan.</xsd:documentation>
+		</xsd:annotation>
+		<xsd:list itemType="xsd:double"/>
+	</xsd:simpleType>
+	<xsd:simpleType name="elementSymbolType">
+		<xsd:annotation>
+			<xsd:documentation>Enumerates the chemical elements.</xsd:documentation>
+		</xsd:annotation>
+		<xsd:restriction base="xsd:string">
+			<xsd:enumeration value="H"/>
+			<xsd:enumeration value="He"/>
+			<xsd:enumeration value="Li"/>
+			<xsd:enumeration value="Be"/>
+			<xsd:enumeration value="B"/>
+			<xsd:enumeration value="C"/>
+			<xsd:enumeration value="N"/>
+			<xsd:enumeration value="O"/>
+			<xsd:enumeration value="F"/>
+			<xsd:enumeration value="Ne"/>
+			<xsd:enumeration value="Na"/>
+			<xsd:enumeration value="Mg"/>
+			<xsd:enumeration value="Al"/>
+			<xsd:enumeration value="Si"/>
+			<xsd:enumeration value="P"/>
+			<xsd:enumeration value="S"/>
+			<xsd:enumeration value="Cl"/>
+			<xsd:enumeration value="Ar"/>
+			<xsd:enumeration value="K"/>
+			<xsd:enumeration value="Ca"/>
+			<xsd:enumeration value="Sc"/>
+			<xsd:enumeration value="Ti"/>
+			<xsd:enumeration value="V"/>
+			<xsd:enumeration value="Cr"/>
+			<xsd:enumeration value="Mn"/>
+			<xsd:enumeration value="Fe"/>
+			<xsd:enumeration value="Co"/>
+			<xsd:enumeration value="Ni"/>
+			<xsd:enumeration value="Cu"/>
+			<xsd:enumeration value="Zn"/>
+			<xsd:enumeration value="Ga"/>
+			<xsd:enumeration value="Ge"/>
+			<xsd:enumeration value="As"/>
+			<xsd:enumeration value="Se"/>
+			<xsd:enumeration value="Br"/>
+			<xsd:enumeration value="Kr"/>
+			<xsd:enumeration value="Rb"/>
+			<xsd:enumeration value="Sr"/>
+			<xsd:enumeration value="Y"/>
+			<xsd:enumeration value="Zr"/>
+			<xsd:enumeration value="Nb"/>
+			<xsd:enumeration value="Mo"/>
+			<xsd:enumeration value="Tc"/>
+			<xsd:enumeration value="Ru"/>
+			<xsd:enumeration value="Rh"/>
+			<xsd:enumeration value="Pd"/>
+			<xsd:enumeration value="Ag"/>
+			<xsd:enumeration value="Cd"/>
+			<xsd:enumeration value="In"/>
+			<xsd:enumeration value="Sn"/>
+			<xsd:enumeration value="Sb"/>
+			<xsd:enumeration value="Te"/>
+			<xsd:enumeration value="I"/>
+			<xsd:enumeration value="Xe"/>
+			<xsd:enumeration value="Cs"/>
+			<xsd:enumeration value="Ba"/>
+			<xsd:enumeration value="La"/>
+			<xsd:enumeration value="Ce"/>
+			<xsd:enumeration value="Pr"/>
+			<xsd:enumeration value="Nd"/>
+			<xsd:enumeration value="Pm"/>
+			<xsd:enumeration value="Sm"/>
+			<xsd:enumeration value="Eu"/>
+			<xsd:enumeration value="Gd"/>
+			<xsd:enumeration value="Tb"/>
+			<xsd:enumeration value="Dy"/>
+			<xsd:enumeration value="Ho"/>
+			<xsd:enumeration value="Er"/>
+			<xsd:enumeration value="Tm"/>
+			<xsd:enumeration value="Yb"/>
+			<xsd:enumeration value="Lu"/>
+			<xsd:enumeration value="Hf"/>
+			<xsd:enumeration value="Ta"/>
+			<xsd:enumeration value="W"/>
+			<xsd:enumeration value="Re"/>
+			<xsd:enumeration value="Os"/>
+			<xsd:enumeration value="Ir"/>
+			<xsd:enumeration value="Pt"/>
+			<xsd:enumeration value="Au"/>
+			<xsd:enumeration value="Hg"/>
+			<xsd:enumeration value="Tl"/>
+			<xsd:enumeration value="Pb"/>
+			<xsd:enumeration value="Bi"/>
+			<xsd:enumeration value="Po"/>
+			<xsd:enumeration value="At"/>
+			<xsd:enumeration value="Rn"/>
+			<xsd:enumeration value="Fr"/>
+			<xsd:enumeration value="Ra"/>
+			<xsd:enumeration value="Ac"/>
+			<xsd:enumeration value="Th"/>
+			<xsd:enumeration value="Pa"/>
+			<xsd:enumeration value="U"/>
+			<xsd:enumeration value="Np"/>
+			<xsd:enumeration value="Pu"/>
+			<xsd:enumeration value="Am"/>
+			<xsd:enumeration value="Cm"/>
+			<xsd:enumeration value="Bk"/>
+			<xsd:enumeration value="Cf"/>
+			<xsd:enumeration value="Es"/>
+			<xsd:enumeration value="Fm"/>
+			<xsd:enumeration value="Md"/>
+			<xsd:enumeration value="No"/>
+			<xsd:enumeration value="Lr"/>
+		</xsd:restriction>
+	</xsd:simpleType>
+	<xsd:complexType name="filterType">
+		<xsd:annotation>
+			<xsd:documentation>Type used to store information about a filter.</xsd:documentation>
+		</xsd:annotation>
+		<xsd:complexContent>
+			<xsd:extension base="xrd:componentType">
+				<xsd:sequence>
+					<xsd:element name="material" type="xsd:string"/>
+					<xsd:element name="thickness" minOccurs="0">
+						<xsd:complexType>
+							<xsd:simpleContent>
+								<xsd:extension base="xrd:positiveDoubleType">
+									<xsd:attribute name="unit" type="xsd:string" fixed="mm"/>
+								</xsd:extension>
+							</xsd:simpleContent>
+						</xsd:complexType>
+					</xsd:element>
+				</xsd:sequence>
+			</xsd:extension>
+		</xsd:complexContent>
+	</xsd:complexType>
+	<xsd:complexType name="hklType">
+		<xsd:sequence>
+			<xsd:element name="h" type="xsd:integer"/>
+			<xsd:element name="k" type="xsd:integer"/>
+			<xsd:element name="l" type="xsd:integer"/>
+		</xsd:sequence>
+	</xsd:complexType>
+	<xsd:complexType name="lengthType">
+		<xsd:simpleContent>
+			<xsd:extension base="xrd:positiveDoubleType">
+				<xsd:attribute name="unit" type="xsd:string" fixed="mm"/>
+			</xsd:extension>
+		</xsd:simpleContent>
+	</xsd:complexType>
+	<xsd:complexType name="maskType">
+		<xsd:complexContent>
+			<xsd:extension base="xrd:componentType">
+				<xsd:sequence>
+					<xsd:element name="width" type="xrd:lengthType"/>
+				</xsd:sequence>
+			</xsd:extension>
+		</xsd:complexContent>
+	</xsd:complexType>
+	<xsd:complexType name="monochromatorType">
+		<xsd:complexContent>
+			<xsd:extension base="xrd:componentType">
+				<xsd:sequence>
+					<xsd:element name="crystal" type="xrd:crystalType"/>
+					<xsd:element name="numberOfReflections" type="xsd:positiveInteger" minOccurs="0"/>
+					<xsd:element name="hkl" type="xrd:hklType" minOccurs="0"/>
+				</xsd:sequence>
+				<xsd:attribute name="hybrid" type="xsd:boolean" use="required"/>
+			</xsd:extension>
+		</xsd:complexContent>
+	</xsd:complexType>
+	<xsd:complexType name="nonAmbientPointsType">
+		<xsd:annotation>
+			<xsd:documentation>Collection of non-ambient points.</xsd:documentation>
+			<xsd:documentation>Each non-ambient point consist of a value and the time the value was measured. The times and non-ambient values are stores in 2 doubleLists. The length of the lists must be the same.</xsd:documentation>
+			<xsd:documentation>If during a period of time the non-ambient value doesn't change only the first and last point of that period are stored.</xsd:documentation>
+		</xsd:annotation>
+		<xsd:sequence>
+			<xsd:element name="measurementTimes">
+				<xsd:annotation>
+					<xsd:documentation>Times related to preceding time elements in element tree, the "root" time is always the nearest preceding startTimeStamp</xsd:documentation>
+				</xsd:annotation>
+				<xsd:complexType>
+					<xsd:simpleContent>
+						<xsd:extension base="xrd:doublesListType">
+							<xsd:attribute name="unit" type="xsd:string" fixed="seconds"/>
+							<xsd:attribute name="deltaTime" type="xsd:double" use="optional">
+								<xsd:annotation>
+									<xsd:documentation>Sampling rate.</xsd:documentation>
+									<xsd:documentation>The time between two measured non-ambient values. If during some period of time a value doesn't change only the first and last point of that period are stored.</xsd:documentation>
+								</xsd:annotation>
+							</xsd:attribute>
+						</xsd:extension>
+					</xsd:simpleContent>
+				</xsd:complexType>
+			</xsd:element>
+			<xsd:element name="nonAmbientValues">
+				<xsd:complexType>
+					<xsd:simpleContent>
+						<xsd:extension base="xrd:doublesListType"/>
+					</xsd:simpleContent>
+				</xsd:complexType>
+			</xsd:element>
+		</xsd:sequence>
+	</xsd:complexType>
+	<xsd:simpleType name="nonAmbientType">
+		<xsd:annotation>
+			<xsd:documentation>Enumerates the supported non-ambient types.</xsd:documentation>
+		</xsd:annotation>
+		<xsd:restriction base="xsd:string">
+			<xsd:enumeration value="Humidity"/>
+			<xsd:enumeration value="Temperature"/>
+		</xsd:restriction>
+	</xsd:simpleType>
+	<xsd:simpleType name="nonAmbientUnit">
+		<xsd:annotation>
+			<xsd:documentation>Enumerates the supported units for non-ambient values.</xsd:documentation>
+			<xsd:documentation>For temperatures K is used. For humidity % is used.</xsd:documentation>
+		</xsd:annotation>
+		<xsd:restriction base="xsd:string">
+			<xsd:enumeration value="K"/>
+			<xsd:enumeration value="%"/>
+		</xsd:restriction>
+	</xsd:simpleType>
+	<xsd:simpleType name="nonNegativeDoubleType">
+		<xsd:annotation>
+			<xsd:documentation>Real >= 0.</xsd:documentation>
+		</xsd:annotation>
+		<xsd:restriction base="xsd:double">
+			<xsd:minInclusive value="0"/>
+		</xsd:restriction>
+	</xsd:simpleType>
+	<xsd:complexType name="offsetType">
+		<xsd:simpleContent>
+			<xsd:extension base="xsd:double">
+				<xsd:attribute name="unit" type="xsd:string" fixed="mm"/>
+			</xsd:extension>
+		</xsd:simpleContent>
+	</xsd:complexType>
+	<xsd:complexType name="parallelPlateCollimatorType">
+		<xsd:annotation>
+			<xsd:documentation>Parallel plate collimator information.</xsd:documentation>
+		</xsd:annotation>
+		<xsd:complexContent>
+			<xsd:extension base="xrd:componentType">
+				<xsd:sequence>
+					<xsd:element name="opening">
+						<xsd:annotation>
+							<xsd:documentation>Half opening angle.</xsd:documentation>
+						</xsd:annotation>
+						<xsd:complexType>
+							<xsd:simpleContent>
+								<xsd:extension base="xrd:positiveDoubleType">
+									<xsd:attribute name="unit" type="xsd:string" fixed="deg"/>
+								</xsd:extension>
+							</xsd:simpleContent>
+						</xsd:complexType>
+					</xsd:element>
+				</xsd:sequence>
+			</xsd:extension>
+		</xsd:complexContent>
+	</xsd:complexType>
+	<xsd:simpleType name="percentageType">
+		<xsd:restriction base="xsd:double">
+			<xsd:minInclusive value="0"/>
+			<xsd:maxInclusive value="100"/>
+		</xsd:restriction>
+	</xsd:simpleType>
+	<xsd:complexType name="positionType">
+		<xsd:annotation>
+			<xsd:documentation>Type used to store a position.</xsd:documentation>
+		</xsd:annotation>
+		<xsd:simpleContent>
+			<xsd:extension base="xsd:double">
+				<xsd:attribute name="axis" type="xrd:axisType" use="required"/>
+				<xsd:attribute name="unit" type="xrd:positionUnitType" use="required"/>
+			</xsd:extension>
+		</xsd:simpleContent>
+	</xsd:complexType>
+	<xsd:simpleType name="positionUnitType">
+		<xsd:annotation>
+			<xsd:documentation>Enumerates the units used for positions.</xsd:documentation>
+			<xsd:documentation>The possible values are mm (for example for the X axis) and degrees (for example for the 2Theta, Omega or Psi axes).</xsd:documentation>
+		</xsd:annotation>
+		<xsd:restriction base="xsd:string">
+			<xsd:enumeration value="mm"/>
+			<xsd:enumeration value="deg"/>
+		</xsd:restriction>
+	</xsd:simpleType>
+	<xsd:simpleType name="positiveDoubleType">
+		<xsd:annotation>
+			<xsd:documentation>Real number > 0.0.</xsd:documentation>
+		</xsd:annotation>
+		<xsd:restriction base="xsd:double">
+			<xsd:minExclusive value="0"/>
+		</xsd:restriction>
+	</xsd:simpleType>
+	<xsd:complexType name="radiusType">
+		<xsd:annotation>
+			<xsd:documentation>Radius of the incident or diffracted beam path.</xsd:documentation>
+			<xsd:documentation>The radius of the incident beam path equals the distance from the anode to the sample surface (Omega axis).</xsd:documentation>
+			<xsd:documentation>The radius of the diffracted beam path equals the distance from the sample surface (Omega axis) to the receiving slit or the detector.</xsd:documentation>
+		</xsd:annotation>
+		<xsd:simpleContent>
+			<xsd:extension base="xrd:positiveDoubleType">
+				<xsd:attribute name="unit" type="xsd:string" fixed="mm"/>
+			</xsd:extension>
+		</xsd:simpleContent>
+	</xsd:complexType>
+	<xsd:complexType name="receivingSlitType">
+		<xsd:complexContent>
+			<xsd:extension base="xrd:componentType">
+				<xsd:sequence>
+					<xsd:element name="height" type="xrd:lengthType">
+						<xsd:annotation>
+							<xsd:documentation>Opening in the diffraction plane.</xsd:documentation>
+						</xsd:annotation>
+					</xsd:element>
+				</xsd:sequence>
+			</xsd:extension>
+		</xsd:complexContent>
+	</xsd:complexType>
+	<xsd:complexType name="sampleType">
+		<xsd:annotation>
+			<xsd:documentation>Sample description.</xsd:documentation>
+			<xsd:documentation>The required attribute "type" indicates if the sample is used as a standard or if the measurement is intended for further analysis of the sample.</xsd:documentation>
+		</xsd:annotation>
+		<xsd:sequence>
+			<xsd:element name="id" type="xsd:string">
+				<xsd:annotation>
+					<xsd:documentation>Sample identification.</xsd:documentation>
+				</xsd:annotation>
+			</xsd:element>
+			<xsd:element name="name" type="xsd:string" minOccurs="0">
+				<xsd:annotation>
+					<xsd:documentation>Sample name.</xsd:documentation>
+				</xsd:annotation>
+			</xsd:element>
+			<xsd:element name="preparedBy" type="xsd:string" minOccurs="0">
+				<xsd:annotation>
+					<xsd:documentation>Sample prepared by</xsd:documentation>
+				</xsd:annotation>
+			</xsd:element>
+		</xsd:sequence>
+		<xsd:attribute name="type" use="required">
+			<xsd:simpleType>
+				<xsd:restriction base="xsd:string">
+					<xsd:enumeration value="Standard"/>
+					<xsd:enumeration value="To be analyzed"/>
+				</xsd:restriction>
+			</xsd:simpleType>
+		</xsd:attribute>
+	</xsd:complexType>
+	<xsd:complexType name="sampleMovementType" abstract="true">
+		<xsd:annotation>
+			<xsd:documentation>Base element for sample movements.</xsd:documentation>
+			<xsd:documentation>Always use one of the derived types.</xsd:documentation>
+		</xsd:annotation>
+	</xsd:complexType>
+	<xsd:complexType name="oscillatingSampleMovementType">
+		<xsd:annotation>
+			<xsd:documentation>Information about the sample oscillation.</xsd:documentation>
+		</xsd:annotation>
+		<xsd:complexContent>
+			<xsd:extension base="xrd:sampleMovementType">
+				<xsd:sequence>
+					<xsd:element name="axis">
+						<xsd:simpleType>
+							<xsd:restriction base="xsd:string">
+								<xsd:enumeration value="Linear">
+									<xsd:annotation>
+										<xsd:documentation>Although the sample is spinning, the oscillation remains perpendicular to the diffraction plane. </xsd:documentation>
+									</xsd:annotation>
+								</xsd:enumeration>
+								<xsd:enumeration value="X"/>
+								<xsd:enumeration value="Y"/>
+							</xsd:restriction>
+						</xsd:simpleType>
+					</xsd:element>
+					<xsd:element name="range">
+						<xsd:complexType>
+							<xsd:simpleContent>
+								<xsd:extension base="xrd:positiveDoubleType">
+									<xsd:attribute name="unit" type="xsd:string" fixed="mm"/>
+								</xsd:extension>
+							</xsd:simpleContent>
+						</xsd:complexType>
+					</xsd:element>
+				</xsd:sequence>
+			</xsd:extension>
+		</xsd:complexContent>
+	</xsd:complexType>
+	<xsd:complexType name="spinningSampleMovementType">
+		<xsd:annotation>
+			<xsd:documentation>Spinner revolution time.</xsd:documentation>
+		</xsd:annotation>
+		<xsd:complexContent>
+			<xsd:extension base="xrd:sampleMovementType">
+				<xsd:sequence>
+					<xsd:element name="spinnerRevolutionTime">
+						<xsd:annotation>
+							<xsd:documentation>Seconds per revolution.</xsd:documentation>
+						</xsd:annotation>
+						<xsd:complexType>
+							<xsd:simpleContent>
+								<xsd:extension base="xsd:double">
+									<xsd:attribute name="unit" type="xsd:string" fixed="seconds"/>
+								</xsd:extension>
+							</xsd:simpleContent>
+						</xsd:complexType>
+					</xsd:element>
+				</xsd:sequence>
+			</xsd:extension>
+		</xsd:complexContent>
+	</xsd:complexType>
+	<xsd:simpleType name="scanAxisType">
+		<xsd:annotation>
+			<xsd:documentation>Enumerates the scan axes possible in an XRD measurement.</xsd:documentation>
+			<xsd:documentation>Note that some scan axes use more than one physical axis.</xsd:documentation>
+			<xsd:documentation>2Theta: A scan in 2Theta only, omega and other axes remain in a fixed position.</xsd:documentation>
+			<xsd:documentation>2Theta-Omega: A scan in Omega and 2Theta where the begin, end, range and step size refer to the 2Theta axis and Omega follows with half the speed or step size. If an offset is present between Omega and 2Theta/2 this offset value remains constant during the scan. The offset is always calculated as (Omega-2Theta/2) All other axes remain in a fixed position.</xsd:documentation>
+			<xsd:documentation>Gonio: This is a 2Theta/Omega scan where Omega is always half the value of 2Theta. Note: the offset between Omega and 2Theta/2 equals zero.</xsd:documentation>
+			<xsd:documentation>Omega: A scan in Omega only, 2Theta and other axes remain in a fixed position.</xsd:documentation>
+			<xsd:documentation>Omega-2Theta: A scan in Omega and 2Theta where the begin, end, range and step size refer to the Omega axis and 2Theta follows with twice the speed or step size. If an offset is present between Omega and 2Theta/2 this offset value remains constant during the scan. The offset is always calculated as (omega-2Theta/2). All other axes remain in a fixed position.</xsd:documentation>
+			<xsd:documentation>Phi: A scan in Phi only. All other axes remain in a fixed position.</xsd:documentation>
+			<xsd:documentation>Psi: A scan in Psi only. All other axes remain in a fixed position.</xsd:documentation>
+			<xsd:documentation>Reciprocal space: A straight line in reciprocal space, also called a Q-scan. The steps of the goniometer axes (Omega and 2Theta) are chosen to achieve a constant step size in reciprocal lattice units (rlu). NOTE: The positions in 2Theta and Omega (not the Q values) are stored in the XRDML file.</xsd:documentation>
+			<xsd:documentation>X, Y, Z: A scan in X, Y, or Z only. All other axes remain in a fixed position.</xsd:documentation>
+		</xsd:annotation>
+		<xsd:restriction base="xsd:string">
+			<xsd:enumeration value="2Theta"/>
+			<xsd:enumeration value="2Theta-Omega"/>
+			<xsd:enumeration value="Gonio"/>
+			<xsd:enumeration value="Omega"/>
+			<xsd:enumeration value="Omega-2Theta"/>
+			<xsd:enumeration value="Phi"/>
+			<xsd:enumeration value="Psi"/>
+			<xsd:enumeration value="Reciprocal Space"/>
+			<xsd:enumeration value="X"/>
+			<xsd:enumeration value="Y"/>
+			<xsd:enumeration value="Z"/>
+		</xsd:restriction>
+	</xsd:simpleType>
+	<xsd:complexType name="sollerSlitType">
+		<xsd:complexContent>
+			<xsd:extension base="xrd:componentType">
+				<xsd:sequence>
+					<xsd:element name="opening">
+						<xsd:annotation>
+							<xsd:documentation>Half opening angle.</xsd:documentation>
+						</xsd:annotation>
+						<xsd:complexType>
+							<xsd:simpleContent>
+								<xsd:extension base="xrd:positiveDoubleType">
+									<xsd:attribute name="unit" type="xsd:string" fixed="rad"/>
+								</xsd:extension>
+							</xsd:simpleContent>
+						</xsd:complexType>
+					</xsd:element>
+				</xsd:sequence>
+			</xsd:extension>
+		</xsd:complexContent>
+	</xsd:complexType>
+	<xsd:complexType name="sourceType">
+		<xsd:annotation>
+			<xsd:documentation>Software (and instrument) used to generate the data element.</xsd:documentation>
+			<xsd:documentation>The software (inclusive version) that generated an element in an XRDML file. Optionally the instrument control software (embedded software) and its version. Optionally a unique identification of the instrument used.</xsd:documentation>
+		</xsd:annotation>
+		<xsd:sequence>
+			<xsd:element name="applicationSoftware">
+				<xsd:annotation>
+					<xsd:documentation>Name and version of the application software.</xsd:documentation>
+					<xsd:documentation>The name of the program used to generate the data (for example: X'Pert Data Collector).</xsd:documentation>
+				</xsd:annotation>
+				<xsd:complexType>
+					<xsd:simpleContent>
+						<xsd:extension base="xsd:string">
+							<xsd:attribute name="version" type="xsd:string" use="required"/>
+						</xsd:extension>
+					</xsd:simpleContent>
+				</xsd:complexType>
+			</xsd:element>
+			<xsd:element name="instrumentControlSoftware" minOccurs="0">
+				<xsd:annotation>
+					<xsd:documentation>Name and version of the instrument control software.</xsd:documentation>
+					<xsd:documentation>If the data is the result of an actual measurement, the name and version of the instrument control software (embedded software of the instrument used) can be stored in this element.</xsd:documentation>
+				</xsd:annotation>
+				<xsd:complexType>
+					<xsd:simpleContent>
+						<xsd:extension base="xsd:string">
+							<xsd:attribute name="version" type="xsd:string" use="required"/>
+						</xsd:extension>
+					</xsd:simpleContent>
+				</xsd:complexType>
+			</xsd:element>
+			<xsd:element name="instrumentID" type="xsd:string" minOccurs="0">
+				<xsd:annotation>
+					<xsd:documentation>String uniquely identifying the instrument used.</xsd:documentation>
+				</xsd:annotation>
+			</xsd:element>
+		</xsd:sequence>
+	</xsd:complexType>
+	<xsd:simpleType name="statusType">
+		<xsd:annotation>
+			<xsd:documentation>Indicates the status of the data in a file or the status of the data in a section of the file.</xsd:documentation>
+			<xsd:documentation>Completed: The data has been measured as indicated in the measurement program.</xsd:documentation>
+			<xsd:documentation>Aborted: The measurement was not completed, because the operator aborted the measurement.</xsd:documentation>
+			<xsd:documentation>Not finished: The measurement was not completed. If during a measurement intermediate results are stored the status in the file must be set to "Not finished". In consequence errors (e.g. power failure) result in files with status "Not finished".</xsd:documentation>
+		</xsd:annotation>
+		<xsd:restriction base="xsd:string">
+			<xsd:enumeration value="Aborted">
+				<xsd:annotation>
+					<xsd:documentation>Data collection of item aborted by user.</xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+			<xsd:enumeration value="Completed">
+				<xsd:annotation>
+					<xsd:documentation>Data collection of item completed normally.</xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+			<xsd:enumeration value="Not finished">
+				<xsd:annotation>
+					<xsd:documentation>Data collection of item did not finish normally.</xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+		</xsd:restriction>
+	</xsd:simpleType>
+	<xsd:complexType name="unitCellType">
+		<xsd:annotation>
+			<xsd:documentation>Parameters describing a unit cell.</xsd:documentation>
+		</xsd:annotation>
+		<xsd:sequence>
+			<xsd:element name="alpha" type="xrd:angleType"/>
+			<xsd:element name="beta" type="xrd:angleType"/>
+			<xsd:element name="gamma" type="xrd:angleType"/>
+			<xsd:element name="a" type="xrd:angstromType"/>
+			<xsd:element name="b" type="xrd:angstromType"/>
+			<xsd:element name="c" type="xrd:angstromType"/>
+		</xsd:sequence>
+	</xsd:complexType>
+	<xsd:complexType name="xRayMirrorType">
+		<xsd:complexContent>
+			<xsd:extension base="xrd:componentType">
+				<xsd:sequence>
+					<xsd:element name="crystal" type="xrd:crystalType"/>
+					<xsd:element name="acceptanceAngle" type="xrd:angleType"/>
+					<xsd:element name="length" type="xrd:lengthType"/>
+				</xsd:sequence>
+				<xsd:attribute name="hybrid" type="xsd:boolean" use="required"/>
+			</xsd:extension>
+		</xsd:complexContent>
+	</xsd:complexType>
+	<xsd:complexType name="xRayTubeType">
+		<xsd:annotation>
+			<xsd:documentation>Type used to store X-ray tube information.</xsd:documentation>
+		</xsd:annotation>
+		<xsd:complexContent>
+			<xsd:extension base="xrd:componentType">
+				<xsd:sequence>
+					<xsd:element name="tension" minOccurs="0">
+						<xsd:annotation>
+							<xsd:documentation>Tension used to generate the X-rays.</xsd:documentation>
+						</xsd:annotation>
+						<xsd:complexType>
+							<xsd:simpleContent>
+								<xsd:extension base="xsd:positiveInteger">
+									<xsd:attribute name="unit" type="xsd:string" fixed="kV"/>
+								</xsd:extension>
+							</xsd:simpleContent>
+						</xsd:complexType>
+					</xsd:element>
+					<xsd:element name="current" minOccurs="0">
+						<xsd:annotation>
+							<xsd:documentation>Current used to generate the X-rays.</xsd:documentation>
+						</xsd:annotation>
+						<xsd:complexType>
+							<xsd:simpleContent>
+								<xsd:extension base="xsd:positiveInteger">
+									<xsd:attribute name="unit" type="xsd:string" fixed="mA"/>
+								</xsd:extension>
+							</xsd:simpleContent>
+						</xsd:complexType>
+					</xsd:element>
+					<xsd:element name="anodeMaterial" type="xrd:elementSymbolType">
+						<xsd:annotation>
+							<xsd:documentation>Material of the anode.</xsd:documentation>
+							<xsd:documentation>If the "usedWavelength" element is not present default values for the used radiation can be derived from the anode material.</xsd:documentation>
+						</xsd:annotation>
+					</xsd:element>
+					<xsd:element name="focus" minOccurs="0">
+						<xsd:annotation>
+							<xsd:documentation>Dimensions of the focus.</xsd:documentation>
+						</xsd:annotation>
+						<xsd:complexType>
+							<xsd:sequence>
+								<xsd:element name="length" type="xrd:lengthType"/>
+								<xsd:element name="width" type="xrd:lengthType"/>
+								<xsd:element name="takeOffAngle" minOccurs="0">
+									<xsd:complexType>
+										<xsd:simpleContent>
+											<xsd:extension base="xsd:double">
+												<xsd:attribute name="unit" type="xsd:string" fixed="deg"/>
+											</xsd:extension>
+										</xsd:simpleContent>
+									</xsd:complexType>
+								</xsd:element>
+							</xsd:sequence>
+							<xsd:attribute name="type" use="required">
+								<xsd:simpleType>
+									<xsd:restriction base="xsd:string">
+										<xsd:enumeration value="Line"/>
+										<xsd:enumeration value="Point"/>
+									</xsd:restriction>
+								</xsd:simpleType>
+							</xsd:attribute>
+						</xsd:complexType>
+					</xsd:element>
+				</xsd:sequence>
+			</xsd:extension>
+		</xsd:complexContent>
+	</xsd:complexType>
+</xsd:schema>
