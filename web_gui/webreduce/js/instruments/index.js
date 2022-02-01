@@ -7,6 +7,7 @@ import sans from './ncnr.sans.js';
 import tas from './ncnr.tas.js';
 import vsans from './ncnr.vsans.js';
 import usans from './ncnr.usans.js';
+import xrr from './xrr.js';
 
 instruments['ncnr.dcs'] = dcs;
 instruments['ncnr.ospec'] = ospec;
@@ -15,3 +16,4 @@ instruments['ncnr.sans'] = sans;
 instruments['ncnr.tas'] = tas;
 instruments['ncnr.vsans'] = vsans;
 instruments['ncnr.usans'] = usans;
+instruments['xrr'] = xrr;
