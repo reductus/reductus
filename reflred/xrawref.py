@@ -19,6 +19,7 @@ from dataflow.lib import iso8601
 
 from . import bruker
 from . import rigaku
+from . import xrdml
 from . import refldata
 from .resolution import FWHM2sigma
 
@@ -30,6 +31,8 @@ def load_entries(filename, file_obj=None, entries=None):
     #logging.info("loading X-ray file " + filename)
     if filename.endswith('.ras'):
         return load_rigaku_entries(filename, file_obj)
+    elif filename.endswith('.xrdml'):
+        return load_xrdml_entries(filename, file_obj)
     else:
         return load_bruker_entries(filename, file_obj)
 
@@ -58,6 +61,19 @@ def load_rigaku_entries(filename, file_obj=None):
     joined_data = rigaku.join(datasets)
 
     entries = [RigakuRefl(joined_data, filename)]
+    return entries
+
+def load_xrdml_entries(filename, file_obj=None):
+    """
+    Load the entries from an XRDML file.
+    """
+    if file_obj is None:
+        xrdml_file = xrdml.load(filename)
+    else:
+        xrdml_file = xrdml.load(file_obj)
+
+    entries = [XRDMLRefl(entry, entryid, filename)
+               for entryid, entry in enumerate(xrdml_file)]
     return entries
 
 
@@ -288,6 +304,104 @@ class RigakuRefl(refldata.ReflData):
         self.detector.angle_x_target = self.detector.angle_x
         self.Qz_target = np.NaN
 
+
+class XRDMLRefl(refldata.ReflData):
+    """
+    Malvern Panalytical (.xrdml) raw reflectometry file.
+
+    See :class:`refldata.ReflData` for details.
+    """
+    format = "XRDMLRaw"
+
+    def __init__(self, xrdml_file, entryid, filename):
+        super(XRDMLRefl, self).__init__()
+        self.entry = "E"+str(entryid+1)  # 1-origin entry number for each entry
+        self.path = os.path.abspath(filename)
+        self.name = os.path.basename(filename).split('.')[0]
+        self.filenumber = self.name # since we don't have a real filenumber
+        #import pprint; pprint.pprint(entry)
+        self._set_metadata(xrdml_file)
+        self._set_data(xrdml_file)
+
+    def _set_metadata(self, entry):
+        #print(entry['instrument'].values())
+        self.probe = "x-rays"
+
+        # parse date into datetime object
+        self.date = datetime.datetime.fromisoformat(entry["startTimeStamp"])
+
+        self.description = entry['comment']
+        self.instrument = 'Malvern Panalytical'
+        # 1-sigma angular resolution (degrees) reported by Bruker.  Our own
+        # measurements give a similar value (~ 0.033 degrees FWHM)
+        #nominal_resolution = 0.03
+        self.angular_resolution = None
+        self.slit1.distance = -entry['incidentRadius']
+        self.slit1.x = entry['sourceLineWidth']
+        self.slit2.distance = -entry['divergenceSlitDistance']
+        self.slit2.x = entry['divergenceSlitHeight']
+        self.slit3.distance = entry['diffractedRadius']
+        self.slit3.x = entry['receivingSlitHeight']
+
+        self.slit1.y = self.slit2.y = 20.0 # Note: back slits unused in reduction
+
+        ratio = entry['ratioKAlpha2KAlpha1']
+        self.detector.wavelength = (entry['kAlpha1'] + ratio * entry['kAlpha2']) / (1.0 + ratio)
+        # Var(Z)=p(1)σ_1^2+ p(2)σ_2^2+p(1)p(2)(μ1−μ2)2
+        # from table II in https://journals.aps.org/pra/pdf/10.1103/PhysRevA.37.2404
+        # width_kAlpha1 = FWHM2sigma(0.000461)
+        # width_kAlpha2 = FWHM2sigma(0.00061)
+        # probability of kAlpha2:
+        p = ratio / (1 + ratio)
+        # self.detector.wavelength_resolution = np.sqrt((1-p) * width_kAlpha1**2 + p * width_kAlpha2**2 + (1-p) * p * (entry['kAlpha1'] - entry['kAlpha2'])**2)
+        # the width of the line seems to make no significant contribution...
+        self.detector.wavelength_resolution = np.sqrt((1-p) * p * (entry['kAlpha1'] - entry['kAlpha2'])**2)
+
+        #print("res:", self.angular_resolution, self.detector.wavelength_resolution, self.detector.wavelength)
+        self.detector.deadtime = np.array([0.0]) # sorta true.
+        self.detector.deadtime_error = np.array([0.0]) # also kinda true.
+
+        self.sample.name = entry['sample_id']
+        self.sample.description = entry['sample_name']
+        self.monitor.base = 'TIME'
+        self.monitor.time_step = 0.001  # assume 1 ms accuracy on reported clock
+        self.monitor.deadtime = 0.0
+        self.polarization = "unpolarized"
+
+    def _set_data(self, data):
+        #for k,v in sorted(data.items()): print(k, v)
+        intents = {
+            'Phi': 'rock sample',
+            'Omega': 'rock sample',
+            '2Theta': 'rock detector',
+        }
+
+        scanAxis = data['scanAxis']
+        self.intent = intents.get(scanAxis, 'specular')
+
+        attenuation = data['attenuation']
+        counts = data['counts']
+        self.detector.counts = counts * attenuation
+        self.detector.counts_variance = counts * attenuation**2
+        self.detector.dims = self.detector.counts.shape
+        n = self.detector.dims[0]
+        self.points = n
+        self.monitor.counts = np.zeros_like(self.detector.counts)
+        self.monitor.counts_variance = np.zeros_like(self.detector.counts)
+        self.monitor.count_time = np.ones_like(self.detector.counts) * data['count_time']
+        if scanAxis == 'Phi':
+            self.sample.angle_x = data['Phi']
+            self.detector.angle_x = -data['Phi']
+        else:
+            self.sample.angle_x = data['Omega']
+            self.detector.angle_x = data['2Theta']
+
+        self.sample.angle_x_target = self.sample.angle_x
+        self.detector.angle_x_target = self.detector.angle_x
+        self.scan_value = [self.sample.angle_x, self.detector.angle_x]
+        self.scan_units = ['degrees', 'degrees']
+        self.scan_label = ['theta', 'two_theta']
+        self.Qz_target = np.NaN
 
 def demo():
     import sys

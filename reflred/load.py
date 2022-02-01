@@ -19,7 +19,7 @@ def url_load(fileinfo, check_timestamps=True, loader=None):
     if loader is not None:
         return load_from_string(filename, content, entries=entries,
                                 loader=loader)
-    elif filename.endswith('.raw') or filename.endswith('.ras'):
+    elif filename.endswith('.raw') or filename.endswith('.ras') or filename.endswith('.xrdml'):
         from . import xrawref
         return load_from_string(filename, content, entries=entries,
                                 loader=xrawref.load_entries)
