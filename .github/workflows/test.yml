@@ -1,0 +1,36 @@
+name: Test
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+  
+jobs:
+  pytest:
+    runs-on: ${{ matrix.config.os }}
+    strategy:
+      matrix:
+        config:
+          - { os: ubuntu-latest, py: 3.7 }
+          - { os: windows-latest, py: 3.7 }
+
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Python ${{ matrix.config.py }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.config.py }}
+
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install wheel setuptools
+        python -m pip install pytest
+        python setup.py build
+        mkdir release
+    - name: Run tests
+      run: |
+        pytest -v
