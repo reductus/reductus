@@ -196,7 +196,7 @@ def apply(fp, R):
     return corrected_y, corrected_dy
 
 
-def _abinitio_footprint(slit1, slit2, theta, width, offset=0.):
+def _abinitio_footprint(slit1, slit2, theta, width, offset=0., source_divergence=None):
     """
     Ab-initio footprint calculation from slits, angles and sample size.
 
@@ -212,6 +212,10 @@ def _abinitio_footprint(slit1, slit2, theta, width, offset=0.):
     *width* is the width of the sample. *offset* is a shift in the center of
     rotation of the sample away from the beam center.  These are in the same
     units as the slits (mm).
+
+    *source_divergence* is the angular divergence of the source, in degrees
+    (e.g. from a parabolic mirror between the true source and the beamline)
+    The beam is assumed to have uniform intensity for the entire width.
     """
     # TODO: implement footprint for circular samples
     # TODO: implement vertical footprint if slit y is not inf
@@ -228,15 +232,29 @@ def _abinitio_footprint(slit1, slit2, theta, width, offset=0.):
     p_near = (-width / 2 + offset) * sin(theta)
     p_far = (+width / 2 + offset) * sin(theta)
 
-    # beam profile is a trapezoid, 0 where a neutron entering at -s1/2 just
-    # misses s2/2, and 1 where a neutron entering at s1/2 just misses s2/2.
-    # With tiny front slits, the projection h2 may land on the other side
-    # of the beam center.  In this case the overall instensity is lower, but
-    # the trapezoid happens to have the same shape, with the flat region
-    # extending from -abs(w2) to abs(w2).  Since we only care about intensity
-    # relative to the beam for footprint correction, the scale factor cancels.
-    w1 = abs(d1/(d1-d2))*(s1x + s2x) / 2 - s1x / 2
-    w2 = abs(-abs(d1/(d1-d2)) * (s1x - s2x) / 2 + s1x / 2)
+    # source divergence sets a limit on all angles in the problem:
+    source_divergence = 180.0 if source_divergence is None else abs(source_divergence)
+    source_max_slope = np.tan(np.radians(source_divergence/2))
+
+    # slope between opposite edges of slits 1 and 2:
+    # (i.e. bottom of slit 1, top of slit 2) - always positive
+    outer_slope = (s2x + s1x) / abs(d1 - d2) / 2
+    outer_slope = min(outer_slope, source_max_slope)
+
+    # slope between similar edges of slits 1 and 2 
+    # (both tops) - will be positive if s1x < s2x
+    inner_slope = (s2x - s1x) / abs(d1 - d2) / 2
+    # constrain the slope so that it is never larger than the source div.
+    # (-source_max_slope <= inner_slope <= source_max_slope)
+    inner_slope = max(-source_max_slope, min(inner_slope, source_max_slope))
+
+    # Beam profile is a trapezoid, with control points defined by where
+    # the inner_slope and outer_slope intersect the sample position, subject
+    # to the constraint that they must pass below both the top slit 1 and 
+    # slit 2 edges. The lower projected value will be the constraining one...
+    w1 = abs(min(s1x/2 + outer_slope * d1, s2x/2 + outer_slope * d2))
+    w2 = abs(min(s1x/2 + inner_slope * d1, s2x/2 + inner_slope * d2))
+    
     w_intensity = w1 + w2
     #if use_y:
     #    h1 = abs(d1/(d1-d2))*(s1y+s2y)/2 - s1y/2
