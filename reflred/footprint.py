@@ -253,15 +253,22 @@ def _abinitio_footprint(slit1, slit2, theta, width, offset=0., source_divergence
     # constrain the slope so that it is never larger than the source div.
     # (-source_max_slope <= inner_slope <= source_max_slope)
     inner_slope = np.maximum(-source_max_slope, np.minimum(inner_slope, source_max_slope))
+    print('inner slope: ', inner_slope)
+
 
     # Beam profile is a trapezoid, with control points defined by where
     # the inner_slope and outer_slope intersect the sample position, subject
     # to the constraint that they must pass below both the top slit 1 and 
     # slit 2 edges. The lower projected value will be the constraining one...
-    w1 = np.abs(np.minimum(s1x/2 + np.abs(outer_slope * d1), s2x/2 + np.abs(outer_slope * d2)))
-    w2 = np.abs(np.minimum(s1x/2 + np.abs(inner_slope * d1), s2x/2 + np.abs(inner_slope * d2)))
+    w1 = np.abs(np.minimum(s1x/2 + outer_slope * np.abs(d1), s2x/2 + outer_slope * np.abs(d2)))
+    print('w1 choices: ', -s1x/2 + outer_slope * np.abs(d1), s2x/2 + outer_slope * np.abs(d2))
+    w2 = np.abs(np.minimum(s1x/2 + inner_slope * np.abs(d1), s2x/2 + inner_slope * np.abs(d2)))
+    print('w2 choices: ', s1x/2 + inner_slope * np.abs(d1), s2x/2 + inner_slope * np.abs(d2))
     print('w1: ', w1)
+    print('old w1: ', abs(d1/(d1-d2))*(s1x + s2x) / 2 - s1x / 2)
     print('w2: ', w2)
+    print('old w2: ', abs(-abs(d1/(d1-d2)) * (s1x - s2x) / 2 + s1x / 2))
+
     
     w_intensity = w1 + w2
     #if use_y:
