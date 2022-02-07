@@ -241,21 +241,14 @@ def _abinitio_footprint(slit1, slit2, theta, width, offset=0., source_divergence
 
     # source divergence sets a limit on all angles in the problem:
     source_divergence = 180.0 if source_divergence is None else abs(source_divergence)
-    print('source_divergence: ', source_divergence)
     source_max_slope = np.tan(np.radians(source_divergence/2))
-    print('source_max_slope: ', source_max_slope)
-    print('s1: ', s1x, d1, s1x.dtype, d1.dtype)
-    print('s2: ', s2x, d2, s2x.dtype, d2.dtype)
 
     # slope between opposite edges of slits 1 and 2:
     # (i.e. bottom of slit 1, top of slit 2) - always positive
     outer_slope = (s2x + s1x) / np.abs(d1 - d2) / 2
     outer_angle = np.arctan2((s2x + s1x)/2, np.abs(d1-d2))
-    print('outer slope: ', outer_slope)
-    print('outer angle: ', outer_angle)
 
     outer_slope = np.minimum(outer_slope, source_max_slope)
-    print('outer slope: ', outer_slope)
 
     # slope between similar edges of slits 1 and 2 
     # (both tops) - will be positive if s1x < s2x
@@ -263,7 +256,6 @@ def _abinitio_footprint(slit1, slit2, theta, width, offset=0., source_divergence
     # constrain the slope so that it is never larger than the source div.
     # (-source_max_slope <= inner_slope <= source_max_slope)
     inner_slope = np.maximum(-source_max_slope, np.minimum(inner_slope, source_max_slope))
-    print('inner slope: ', inner_slope)
 
 
     # Beam profile is a trapezoid, with control points defined by where
@@ -271,15 +263,7 @@ def _abinitio_footprint(slit1, slit2, theta, width, offset=0., source_divergence
     # to the constraint that they must pass below both the top slit 1 and 
     # slit 2 edges. The lower projected value will be the constraining one...
     w1 = np.abs(np.minimum(s1x/2 + outer_slope * np.abs(d1), s2x/2 + outer_slope * np.abs(d2)))
-    print('w1 choices: ', (outer_slope * np.abs(d1)) - s1x/2, np.tan(outer_angle) * np.abs(d1) - s1x/2, s2x/2 + outer_slope * np.abs(d2))
     w2 = np.abs(np.minimum(s1x/2 + inner_slope * np.abs(d1), s2x/2 + inner_slope * np.abs(d2)))
-    print('w2 choices: ', s1x/2 + inner_slope * np.abs(d1), s2x/2 + inner_slope * np.abs(d2))
-    print('w1: ', w1)
-    print('old w1: ', abs(d1/(d1-d2))*(s1x + s2x) / 2 - s1x / 2)
-    print('w1 diffs: ', (outer_slope * abs(d1)), abs(d1/(d1-d2))*(s1x + s2x)/2)
-    print('w2: ', w2)
-    print('old w2: ', abs(-abs(d1/(d1-d2)) * (s1x - s2x) / 2 + s1x / 2))
-
     
     w_intensity = w1 + w2
     #if use_y:
