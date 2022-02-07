@@ -223,6 +223,13 @@ def _abinitio_footprint(slit1, slit2, theta, width, offset=0., source_divergence
     d1, s1x, s1y = slit1
     d2, s2x, s2y = slit2
 
+    # for some reason, distances are stored in nexus files with float32 precision,
+    # causing roundoff errors in this calculation
+    if hasattr(d1, 'astype'):
+        d1 = d1.astype(np.float64)
+    if hasattr(d2, 'astype'):
+        d2 = d2.astype(np.float64)
+
     # use radians internally
     theta = radians(theta)
 
@@ -237,13 +244,16 @@ def _abinitio_footprint(slit1, slit2, theta, width, offset=0., source_divergence
     print('source_divergence: ', source_divergence)
     source_max_slope = np.tan(np.radians(source_divergence/2))
     print('source_max_slope: ', source_max_slope)
-    print('s1: ', s1x, d1)
-    print('s2: ', s2x, d2)
+    print('s1: ', s1x, d1, s1x.dtype, d1.dtype)
+    print('s2: ', s2x, d2, s2x.dtype, d2.dtype)
 
     # slope between opposite edges of slits 1 and 2:
     # (i.e. bottom of slit 1, top of slit 2) - always positive
     outer_slope = (s2x + s1x) / np.abs(d1 - d2) / 2
+    outer_angle = np.arctan2((s2x + s1x)/2, np.abs(d1-d2))
     print('outer slope: ', outer_slope)
+    print('outer angle: ', outer_angle)
+
     outer_slope = np.minimum(outer_slope, source_max_slope)
     print('outer slope: ', outer_slope)
 
@@ -261,11 +271,12 @@ def _abinitio_footprint(slit1, slit2, theta, width, offset=0., source_divergence
     # to the constraint that they must pass below both the top slit 1 and 
     # slit 2 edges. The lower projected value will be the constraining one...
     w1 = np.abs(np.minimum(s1x/2 + outer_slope * np.abs(d1), s2x/2 + outer_slope * np.abs(d2)))
-    print('w1 choices: ', -s1x/2 + outer_slope * np.abs(d1), s2x/2 + outer_slope * np.abs(d2))
+    print('w1 choices: ', (outer_slope * np.abs(d1)) - s1x/2, np.tan(outer_angle) * np.abs(d1) - s1x/2, s2x/2 + outer_slope * np.abs(d2))
     w2 = np.abs(np.minimum(s1x/2 + inner_slope * np.abs(d1), s2x/2 + inner_slope * np.abs(d2)))
     print('w2 choices: ', s1x/2 + inner_slope * np.abs(d1), s2x/2 + inner_slope * np.abs(d2))
     print('w1: ', w1)
     print('old w1: ', abs(d1/(d1-d2))*(s1x + s2x) / 2 - s1x / 2)
+    print('w1 diffs: ', (outer_slope * abs(d1)), abs(d1/(d1-d2))*(s1x + s2x)/2)
     print('w2: ', w2)
     print('old w2: ', abs(-abs(d1/(d1-d2)) * (s1x - s2x) / 2 + s1x / 2))
 
