@@ -213,9 +213,10 @@ def _abinitio_footprint(slit1, slit2, theta, width, offset=0., source_divergence
     rotation of the sample away from the beam center.  These are in the same
     units as the slits (mm).
 
-    *source_divergence* is the angular divergence of the source, in degrees
-    (e.g. from a parabolic mirror between the true source and the beamline)
-    The beam is assumed to have uniform intensity for the entire width.
+    *source_divergence* is the angular divergence of the source (1-sigma)
+    in degrees (e.g. from a parabolic mirror between the true source 
+    and the beamline).  The beam is assumed to have uniform intensity 
+    for the entire width.
     """
     # TODO: implement footprint for circular samples
     # TODO: implement vertical footprint if slit y is not inf
@@ -224,7 +225,8 @@ def _abinitio_footprint(slit1, slit2, theta, width, offset=0., source_divergence
     d2, s2x, s2y = slit2
 
     # for some reason, distances are stored in nexus files with float32 precision,
-    # causing roundoff errors in this calculation
+    # causing noticeable roundoff differences between different orders of operation
+    # (which affects the reproducibility tests, when the algorithm is altered.)
     if hasattr(d1, 'astype'):
         d1 = d1.astype(np.float64)
     if hasattr(d2, 'astype'):
