@@ -5,7 +5,8 @@ let template = `
   <label>
     {{field.label}}
     <input
-      :type="(field.multiple || field.length != 1) ? 'text' : 'number'"
+      :type="(isMultiple) ? 'text' : 'number'"
+      :style="(isMultiple) ? '' : 'width:10em;'"
       :id="field.id"
       :placeholder="(defaultOuterValue == null) ? '' : JSON.stringify(defaultOuterValue)"
       :value="display_value"
@@ -32,6 +33,9 @@ export const IntUi = {
     }
   },
   computed: {
+    isMultiple() {
+      return (this.field.multiple || this.field.length != 1)
+    },
     defaultInnerValue() {
       let d = this.field.default;
       if (this.field.length > 1) { return Array.from(new Array(this.field.length)).map(x => d) }
