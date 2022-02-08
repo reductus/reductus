@@ -5,7 +5,6 @@ Annulus mask
 Create an antialiased annulus mask using PIL image commands.
 """
 
-from PIL import Image, ImageDraw
 import numpy
 
 def annular_mask_antialiased_pillow(shape, center, inner_radius, outer_radius,
@@ -24,6 +23,7 @@ def annular_mask_antialiased_pillow(shape, center, inner_radius, outer_radius,
     * *oversampling*: int (the mask is drawn on a canvas this many times bigger
       than the final size, then resampled down to give smoother edges)
     """
+    from PIL import Image, ImageDraw
     # Create a 32-bit float image
     intermediate_shape = (shape[0]*int(oversampling), shape[1]*int(oversampling))
     im = Image.new('F', intermediate_shape, color=background_value)
@@ -68,6 +68,7 @@ def annular_mask_antialiased_pillow(shape, center, inner_radius, outer_radius,
 
 def rectangular_mask_antialiased_pillow(shape, rectangle_xy, background_value=0.0, mask_value=1.0, oversampling=8):
     # Create a 32-bit float image
+    from PIL import Image, ImageDraw
     intermediate_shape = (shape[0]*int(oversampling), shape[1]*int(oversampling))
     im = Image.new('F', intermediate_shape, color=background_value)
 

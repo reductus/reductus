@@ -229,6 +229,7 @@ def _abinitio_footprint(slit1, slit2, theta, width, offset=0., source_divergence
     # for some reason, distances are stored in nexus files with float32 precision,
     # causing noticeable roundoff differences between different orders of operation
     # (which affects the reproducibility tests, when the algorithm is altered.)
+
     if hasattr(d1, 'astype'):
         d1 = d1.astype(np.float64)
     if hasattr(d2, 'astype'):
