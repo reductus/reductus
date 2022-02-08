@@ -104,17 +104,19 @@ def apply_measured_footprint(data, measured_footprint):
     _apply_footprint(data, footprint)
 
 
-def apply_abinitio_footprint(data, Io, width, offset):
+def apply_abinitio_footprint(data, Io, width, offset, source_divergence=None):
     slit1 = (data.slit1.distance, data.slit1.x, data.slit1.y)
     slit2 = (data.slit2.distance, data.slit2.x, data.slit2.y)
     theta = data.sample.angle_x
+    if source_divergence is None:
+        source_divergence = data.source_divergence
     if width is None:
         width = data.sample.width
     if offset is None:
         offset = 0.
     if Io is None:
         Io = 1.
-    y = Io * _abinitio_footprint(slit1, slit2, theta, width, offset)
+    y = Io * _abinitio_footprint(slit1, slit2, theta, width, offset, source_divergence=source_divergence)
     footprint = U(y, 0.0*y)
     _apply_footprint(data, footprint)
 
@@ -213,7 +215,7 @@ def _abinitio_footprint(slit1, slit2, theta, width, offset=0., source_divergence
     rotation of the sample away from the beam center.  These are in the same
     units as the slits (mm).
 
-    *source_divergence* is the angular divergence of the source (1-sigma)
+    *source_divergence* is the angular divergence of the source (full-width)
     in degrees (e.g. from a parabolic mirror between the true source 
     and the beamline).  The beam is assumed to have uniform intensity 
     for the entire width.
@@ -248,7 +250,6 @@ def _abinitio_footprint(slit1, slit2, theta, width, offset=0., source_divergence
     # slope between opposite edges of slits 1 and 2:
     # (i.e. bottom of slit 1, top of slit 2) - always positive
     outer_slope = (s2x + s1x) / np.abs(d1 - d2) / 2
-    outer_angle = np.arctan2((s2x + s1x)/2, np.abs(d1-d2))
 
     outer_slope = np.minimum(outer_slope, source_max_slope)
 

@@ -1,5 +1,5 @@
 import numpy as np
-from .resolution import divergence, divergence_simple
+from .resolution import divergence, divergence_simple, FWHM2sigma
 
 def apply_theta_offset(data, offset):
     data.sample.angle_x += offset
@@ -37,6 +37,8 @@ def apply_divergence_simple(data, sample_width):
     dtheta = divergence_simple(slits=slits, distance=distance, T=theta,
                                sample_width=sample_width, use_sample=use_sample)
     #print("divergence", theta.shape, dtheta.shape)
+    if data.source_divergence is not None:
+        dtheta = np.minimum(dtheta, FWHM2sigma(data.source_divergence/2))
     data.angular_resolution = dtheta
 
 def apply_sample_broadening(data, sample_broadening):
