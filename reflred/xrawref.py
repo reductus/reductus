@@ -384,6 +384,7 @@ class XRDMLRefl(refldata.ReflData):
         self.detector.counts = counts * attenuation
         self.detector.counts_variance = counts * attenuation**2
         self.detector.dims = self.detector.counts.shape
+        self.attenuation = attenuation
         n = self.detector.dims[0]
         self.points = n
         self.monitor.counts = np.zeros_like(self.detector.counts)
