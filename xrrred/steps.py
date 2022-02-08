@@ -1,4 +1,4 @@
-from reflred.steps import ncnr_load, subtract_background, divide_intensity, rescale, mask_points, join, divergence, normalize
+from reflred.steps import ncnr_load, subtract_background, divide_intensity, rescale, mask_points, join, divergence, normalize, abinitio_footprint
 
 from dataflow.automod import module
 
