@@ -796,6 +796,9 @@ class ReflData(Group):
     mask = None
     #: Computed 1-sigma angular resolution in degrees
     angular_resolution = None  # type: np.ndarray
+    #: Source divergence (for systems with e.g. mirror optics)
+    #: as a full-width in degrees
+    source_divergence = None
     #: Hint for axis to use for aligning data with intensity scans:
     align_intensity = 'angular_resolution'
     #: For background scans, the choice of Qz for the
