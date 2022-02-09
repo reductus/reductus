@@ -235,6 +235,9 @@ class RigakuRefl(refldata.ReflData):
         self.polarization = "unpolarized"
 
     def _set_data(self, data):
+        # Nominal 'normal' resolution unless the instrument or scan mode
+        # indicate otherwise
+        resolution_shape = 'normal'
         # Resolution info (returned as 1-sigma from rigaku reader)
         nominal_resolution = data['angular_divergence']
         if data['scan_mode'] != 'STEP': # continuous
@@ -243,10 +246,10 @@ class RigakuRefl(refldata.ReflData):
             # where tails no longer matter, but didn't check.
             sweep_width = data['x_resolution']
             if sweep_width >= 3*nominal_resolution:
-                self.resolution_shape = 'uniform'
+                resolution_shape = 'uniform'
             nominal_resolution += sweep_width/np.sqrt(12.0)
+        self.resolution_shape = resolution_shape
         self.angular_resolution = nominal_resolution
-        self.resolution_shape = 'uniform' if is_uniform else 'normal'
         self.slit1.distance = data['slit1_distance']
         self.slit2.distance = data['slit2_distance']
         self.slit3.distance = data['slit3_distance']
