@@ -26,6 +26,7 @@ dist = setup(
     author_email='paul.kienzle@nist.gov',
     url='https://github.com/reductus/reductus',
     description='Data reduction for neutron scattering',
+    long_description_content_type="text/x-rst",
     long_description=open('README.rst').read(),
     classifiers=[
         'Development Status :: 5 - Production/Stable',
