@@ -21,14 +21,14 @@ packages = find_packages(exclude=['reflbin'])
 #sys.dont_write_bytecode = False
 dist = setup(
     name='reductus',
-    version='0.1b2',
+    version='0.9.0',
     author='Paul Kienzle',
     author_email='paul.kienzle@nist.gov',
     url='https://github.com/reductus/reductus',
     description='Data reduction for neutron scattering',
     long_description=open('README.rst').read(),
     classifiers=[
-        'Development Status :: 4 - Beta',
+        'Development Status :: 5 - Production/Stable',
         'Environment :: Console',
         'Intended Audience :: Science/Research',
         'License :: Public Domain',
