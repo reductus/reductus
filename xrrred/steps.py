@@ -8,7 +8,10 @@ def load(filelist=None,
         intent='auto',
         Qz_basis='actual',
         sample_width=None,
-        incident_divergence=None,
+        slit1_distance=None,
+        slit1_aperture=None,
+        slit2_distance=None,
+        slit2_aperture=None
         ):
     r"""
     Load a list of X-ray Reflectivity files.
@@ -43,10 +46,21 @@ def load(filelist=None,
     calculating the effective resolution when the sample is smaller
     than the beam.  Leave blank to use value from data file.
 
-    incident_divergence {incident beam divergence (deg)} (float?)
-    : If the incident beam divergence is a known constant, enter it here,
-    and it will be used instead of trying to calculate divergence from the
-    optics defined in the data file.
+    slit1_distance {override slit1 distance} (float?)
+    : if specified, will override the value found in the file for
+    the distance from the sample to slit 1
+
+    slit1_aperture {override slit1 aperture} (float?)
+    : if specified, will override the value found in the file for
+    the opening of slit 1 in mm
+
+    slit2_distance {override slit2 distance} (float?)
+    : if specified, will override the value found in the file for
+    the distance from the sample to slit 2
+
+    slit2_aperture {override slit2 aperture} (float?)
+    : if specified, will override the value found in the file for
+    the opening of slit 2 in mm
 
     **Returns**
 
@@ -58,17 +72,25 @@ def load(filelist=None,
     from reflred import xrawref
     
     # TODO: sample_width is ignored if datafile defines angular_divergence
-    auto_divergence = (incident_divergence is None)
+    auto_divergence = True
 
     datasets = []
     for data in url_load_list(filelist, loader=xrawref.load_entries):
         data.Qz_basis = Qz_basis
         if intent not in [None, 'auto']:
             data.intent = intent
+        if slit1_distance is not None:
+            data.slit1.distance = slit1_distance
+        if slit1_aperture is not None:
+            data.slit1.x = data.slit1.x_target = slit1_aperture
+        if slit2_distance is not None:
+            data.slit2.distance = slit2_distance
+        if slit2_aperture is not None:
+            data.slit2.x = data.slit2.x_target = slit2_aperture
+        if source_divergence is not None:
+            data.source_divergence = source_divergence
         if auto_divergence:
             data = divergence(data, sample_width)
-        else:
-            data.angular_resolution = incident_divergence
         
         data = normalize(data, base='time')
         #print "data loaded and normalized"
