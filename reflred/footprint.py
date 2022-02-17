@@ -219,6 +219,13 @@ def _abinitio_footprint(slit1, slit2, theta, width, offset=0.):
     d1, s1x, s1y = slit1
     d2, s2x, s2y = slit2
 
+    # for some reason, distances are stored in nexus files with float32 precision,
+    # causing roundoff errors in this calculation
+    if hasattr(d1, 'astype'):
+        d1 = d1.astype(np.float64)
+    if hasattr(d2, 'astype'):
+        d2 = d2.astype(np.float64)
+
     # use radians internally
     theta = radians(theta)
 
