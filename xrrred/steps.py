@@ -6,7 +6,7 @@ from dataflow.automod import module
 @module
 def load(filelist=None,
         intent='auto',
-        Qz_basis='actual',
+        Qz_basis='detector',
         sample_width=None,
         slit1_distance=None,
         slit1_aperture=None,
@@ -18,17 +18,15 @@ def load(filelist=None,
 
     *Qz_basis* uses one of the following values:
 
-        **actual**
-            calculates Qx and Qz as (x,z)-components of
-            $(\vec k_{\text{out}} - \vec k_\text{in})$ in sample coordinates,
         **detector**
             ignores the sample angle and calculates Qz
             as $(4\pi/\lambda \sin(\theta_\text{detector}/2))$,
         **sample**
             ignores the detector angle and calculates Qz
             as $(4\pi/\lambda \sin(\theta_\text{sample}))$
-        **target**
-            uses the user-supplied Qz_target values
+        **actual**
+            calculates Qx and Qz as (x,z)-components of
+            $(\vec k_{\text{out}} - \vec k_\text{in})$ in sample coordinates,
 
     **Inputs**
 
@@ -38,7 +36,7 @@ def load(filelist=None,
     : Measurement intent (specular, background+, background-, slit, rock),
     auto or infer.  If intent is 'scan', then use the first scanned variable.
 
-    Qz_basis (opt:actual|detector|sample|target)
+    Qz_basis (opt:detector|sample|actual)
     : How to calculate Qz from instrument angles.
 
     sample_width {Sample width (mm)} (float?)
