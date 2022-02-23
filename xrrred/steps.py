@@ -87,8 +87,6 @@ def load(filelist=None,
             data.slit2.distance = slit2_distance
         if slit2_aperture is not None:
             data.slit2.x = data.slit2.x_target = slit2_aperture
-        if source_divergence is not None:
-            data.source_divergence = source_divergence
         if auto_divergence:
             data = divergence(data, sample_width)
         
