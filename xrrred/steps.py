@@ -71,12 +71,19 @@ def load(filelist=None,
     
     # TODO: sample_width is ignored if datafile defines angular_divergence
     auto_divergence = True
+    enforce_specular = True
 
     datasets = []
     for data in url_load_list(filelist, loader=xrawref.load_entries):
         data.Qz_basis = Qz_basis
         if intent not in [None, 'auto']:
             data.intent = intent
+        if data.intent == 'specular' and enforce_specular:
+            print('enforcing specular', data.Qz_basis == 'detector')
+            if data.Qz_basis == 'detector':
+                data.sample.angle_x = data.sample.angle_x_target = data.detector.angle_x / 2.0
+            elif data.Qz_basis == 'sample':
+                data.detector.angle_x = data.detector.angle_x_target = data.sample.angle_x * 2.0
         if slit1_distance is not None:
             data.slit1.distance = slit1_distance
         if slit1_aperture is not None:
