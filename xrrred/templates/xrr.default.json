@@ -1,0 +1,53 @@
+{
+  "modules": [
+    {
+      "module": "xrr.load",
+      "title": "Load",
+      "x": 100,
+      "y": 100,
+      "config": {
+        "filelist": [],
+        "intent": "specular",
+        "Qz_basis": "detector"
+      }
+    },
+    {
+      "module": "xrr.mask_points",
+      "title": "Mask Points",
+      "x": 255,
+      "y": 100
+    },
+    {
+      "module": "xrr.abinitio_footprint",
+      "title": "Abinitio Footprint",
+      "x": 435,
+      "y": 100,
+      "config": {
+        "width": 25,
+        "offset": 0
+      }
+    }
+  ],
+  "wires": [
+    {
+      "source": [
+        0,
+        "output"
+      ],
+      "target": [
+        1,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        1,
+        "output"
+      ],
+      "target": [
+        2,
+        "data"
+      ]
+    }
+  ]
+}
