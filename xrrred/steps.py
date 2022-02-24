@@ -79,7 +79,6 @@ def load(filelist=None,
         if intent not in [None, 'auto']:
             data.intent = intent
         if data.intent == 'specular' and enforce_specular:
-            print('enforcing specular', data.Qz_basis == 'detector')
             if data.Qz_basis == 'detector':
                 data.sample.angle_x = data.sample.angle_x_target = data.detector.angle_x / 2.0
             elif data.Qz_basis == 'sample':
