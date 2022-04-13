@@ -18,6 +18,19 @@ if os.system('"{sys.executable}" dataflow/rev.py'.format(sys=sys)) != 0:
 
 packages = find_packages(exclude=['reflbin'])
 
+# PIP dependencies
+install_requires = [
+    'scipy', 'numpy', 'uncertainties', 'docutils',
+    'pytz', 'importlib_resources'
+    ]
+extras_require = {
+    'server': ['msgpack', 'flask', 'flask-cors', 'requests'],
+    'masked_curve_fit': ['numdifftools'],
+    'nexus_files': ['h5py']
+    }
+extras_require['all'] = sum(extras_require.values(), [])
+tests_require = ['pytest']
+
 #sys.dont_write_bytecode = False
 dist = setup(
     name='reductus',
@@ -50,12 +63,9 @@ dist = setup(
         'scipy', 'numpy', 'uncertainties', 'docutils',
         'pytz', 'importlib_resources'
         ],
-    extras_require={
-        'server': ['msgpack', 'flask', 'flask-cors', 'requests'],
-        'masked_curve_fit': ['numdifftools'],
-        'nexus_files': ['h5py']
-        },
-    tests_require=['pytest'],
+    install_requires=install_requires,
+    extras_require=extras_require,
+    tests_require=test_require,
     )
 
 # End of file
