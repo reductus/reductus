@@ -52,7 +52,7 @@ Then start the server with::
 
 For the very latest development version use the following::
 
-    pip install "git+https://github.com/reductus/reductus.git#egg=reductus[server]"
+    pip install "git+https://github.com/reductus/reductus.git#egg=reductus[all]"
 
 Method 2: Docker Compose
 ~~~~~~~~~~~~~~~~~~~~~~~~
