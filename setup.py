@@ -18,7 +18,7 @@ if os.system('"{sys.executable}" dataflow/rev.py'.format(sys=sys)) != 0:
 
 packages = find_packages(exclude=['reflbin'])
 
-# PIP dependencies
+# pip dependencies
 install_requires = [
     'scipy', 'numpy', 'uncertainties', 'docutils',
     'pytz', 'importlib_resources'
@@ -59,13 +59,9 @@ dist = setup(
     entry_points = {
         'console_scripts': ['reductus=web_gui.run:main'],
     },
-    install_requires=[
-        'scipy', 'numpy', 'uncertainties', 'docutils',
-        'pytz', 'importlib_resources'
-        ],
     install_requires=install_requires,
     extras_require=extras_require,
-    tests_require=test_require,
+    tests_require=tests_require,
     )
 
 # End of file
