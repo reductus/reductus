@@ -56,9 +56,8 @@ def create_app(config=None):
                 content = {'exception': 
                     'no valid Accept return type provided. \
                     (leave unspecified or use one of application/json or application/msgpack)'}
-                response.headers['Content-Type'] = 'application/msgpack'
-                response = make_response(json.dumps(content))
-                response = make_response()
+                return_type = "application/json"
+                packed = json.dumps(content)
             else:
                 content = mfunc(*args, **real_kwargs)
                 if return_type == "application/msgpack":
