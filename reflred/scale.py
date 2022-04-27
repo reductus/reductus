@@ -79,7 +79,7 @@ def apply_norm(data, base='auto'):
         M = data.monitor.count_time
         M[M == 0] = data.monitor.time_step/2.  # protect against zero count time
         # Uniform distribution has variance of interval width/12
-        varM = data.monitor.time_step/12.
+        varM = (data.monitor.time_step**2)/12.
         units = 'second'
     elif base == 'roi':
         M = data.monitor.roi_counts
