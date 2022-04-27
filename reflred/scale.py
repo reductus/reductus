@@ -78,7 +78,7 @@ def apply_norm(data, base='auto'):
         #assert (data.monitor.count_time > 0).all(), "count time is zero; can't normalize by time"
         M = data.monitor.count_time
         M[M == 0] = data.monitor.time_step/2.  # protect against zero count time
-        # Uniform distribution has variance of interval width/12
+        # Uniform distribution has variance of (interval_width**2)/12
         varM = (data.monitor.time_step**2)/12.
         units = 'second'
     elif base == 'roi':
