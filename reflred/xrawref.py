@@ -20,7 +20,7 @@ from dataflow.lib import iso8601
 from . import bruker
 from . import rigaku
 from . import refldata
-from .resolution import FWHM2sigma, sigma2FWHM
+from .resolution import FWHM2sigma
 
 
 def load_entries(filename, file_obj=None, entries=None):
