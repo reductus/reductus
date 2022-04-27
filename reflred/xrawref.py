@@ -100,16 +100,16 @@ class BrukerRefl(refldata.ReflData):
         self.instrument = 'BrukerXray'
         # 1-sigma angular resolution (degrees) reported by Bruker.  Our own
         # measurements give a similar value (~ 0.033 degrees FWHM)
-        nominal_resolution = 0.03
+        nominal_resolution = FWHM2sigma(0.03)
         if entry['scan_mode'] == 1: # continuous
             # If sweep resolution >> slit resolution then uniform otherwise
             # keep the default value of 'normal'. Guessing a cutoff of 3x
             # where tails no longer matter, but didn't check.
             sweep_width = entry['increment_1']
-            if sweep_width >= 3*FWHM2sigma(nominal_resolution):
+            if sweep_width >= 3*nominal_resolution:
                 self.resolution_shape = 'uniform'
-            nominal_resolution += sigma2FWHM(sweep_width/np.sqrt(12.))
-        self.angular_resolution = FWHM2sigma(nominal_resolution)
+            nominal_resolution = np.sqrt(nominal_resolution**2 + sweep_width**2/12)
+        self.angular_resolution = nominal_resolution
         self.slit1.distance = -275.5
         self.slit2.distance = -192.7
         self.slit3.distance = +175.0
@@ -247,7 +247,7 @@ class RigakuRefl(refldata.ReflData):
             sweep_width = data['x_resolution']
             if sweep_width >= 3*nominal_resolution:
                 resolution_shape = 'uniform'
-            nominal_resolution += sweep_width/np.sqrt(12.0)
+            nominal_resolution = np.sqrt(nominal_resolution**2 + sweep_width**2/12)
         self.resolution_shape = resolution_shape
         self.angular_resolution = nominal_resolution
         self.slit1.distance = data['slit1_distance']
