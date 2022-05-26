@@ -403,7 +403,7 @@ def _interpret_axes(header):
             if "/" in position:
                 numerator, denominator = position.split('/')
                 position = float(numerator)/float(denominator)
-            elif position in ("", "-", "None"):
+            elif position in ("", "-", "None", "Open"):
                 position = 1.0
             # Maybe test for zero, or maybe not.  It is possible that the
             # attenuation factor is set to zero when there is a beam stop
