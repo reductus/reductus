@@ -287,17 +287,20 @@ def _trapezoid_sum_right(p, w1, w2):
     """
     Find the integral from p to inf of the trapezoid defined by w1 and w2.
     """
-    slope = 1.0/(w1-w2)
+    slope = 1.0/(w1-w2) if not w1 == w2 else None
+    SUM = 0
     a = np.maximum(p, -w1) + w1
     b = np.maximum(p, -w2) + w1
-    A = 0.5*slope*(b**2-a**2)*(b > a)
+    if slope is not None:
+        SUM += 0.5*slope*(b**2-a**2)*(b > a)
     a = np.maximum(p, -w2) + w2
     b = np.maximum(p, w2) + w2
-    A += (b-a)*(b > a)
+    SUM += (b-a)*(b > a)
     a = w1 - np.maximum(p, w1)
     b = w1 - np.maximum(p, w2)
-    A += 0.5*slope*(b**2-a**2)*(b > a)
-    return A
+    if slope is not None:
+        SUM += 0.5*slope*(b**2-a**2)*(b > a)
+    return SUM
 
 
 def spill(slit, Qz, wavelength, detector_distance, detector_width, thickness,
