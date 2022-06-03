@@ -261,12 +261,20 @@ svg.editor g.module g.satisfied rect.terminal.output {
     fill: #88FFFF;
 }
 
+svg.editor g.module g.wireable rect.terminal.output:hover {
+    fill: yellow;
+}
+
 svg.editor rect.terminal.input {
     fill: url(#input_hatch);
 }
 
 svg.editor g.module g.satisfied rect.terminal.input {
     fill: #88FF88;
+}
+
+svg.editor g.module g.wireable rect.terminal.input:hover {
+    fill: yellow;
 }
 
 svg.editor polygon.terminal.state {
@@ -278,12 +286,14 @@ svg.editor path.wire {
     stroke-dasharray: 2,2;
     stroke-width: 5px;
     stroke: red;
+    cursor:context-menu;
 }
 
 svg.editor path.wire-background {
   fill: none;
-  stroke-width: 7px;
+  stroke-width: 8px;
   stroke: white;
+  cursor:context-menu;
 }
 
 svg.editor path.wire-new {
