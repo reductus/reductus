@@ -93,7 +93,8 @@ editor.create_instance = function(target_id) {
   this.instance = new DataflowViewerClass({
     propsData: {instrument_def: {}},
     methods: {
-      on_select: editor.module_clicked
+      on_select: editor.module_clicked,
+      on_change: editor.update_completions,
     }
   }).$mount(target);
   // TODO: make fields respond to "enter" key by advancing to next
@@ -646,7 +647,7 @@ editor.export_data = function() {
 
 
 editor.update_completions = function() {
-  var satisfactions = dependencies.mark_satisfied(this.instance.template_data, this.instance.module_defs);
+  var satisfactions = dependencies.mark_satisfied(editor.instance.template_data, editor.instance.module_defs);
   editor.instance.satisfied.wires = Array.from(satisfactions.wires_satisfied.values());
   editor.instance.satisfied.modules = Array.from(satisfactions.modules_satisfied.values());
   let sterminals = [];
