@@ -1133,9 +1133,9 @@ class ReflData(Group):
         # TODO: Delay loading bulk of the data until file is selected.
 
         # Limit metadata to scalars and small arrays
-        data = self.todict(maxsize=1000)
+        data = self.todict(maxsize=100000)
         # If data['x'] is not a vector or if it was too big, then override
-        if self.x.ndim > 1 or len(data['x']) == 0 or self.x.ndim > 1:
+        if self.x.ndim > 1 or len(data['x']) == 0:
             if Intent.isslit(self.intent):
                 data['x'] = self.slit1.x.tolist()
             else:

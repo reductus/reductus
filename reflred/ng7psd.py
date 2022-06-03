@@ -37,7 +37,7 @@ class NG7PSD(PSDData):
     See :class:`refldata.ReflData` for details.
     """
     format = "NeXus"
-    probe = "neutron"
+    probe = "neutrons"
 
     def __init__(self, entry, entryname, filename):
         super(NG7PSD, self).__init__()

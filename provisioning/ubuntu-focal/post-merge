@@ -1,0 +1,10 @@
+#!/bin/sh
+#cp -r web_gui/static/* /var/www/html/reductus
+
+rm -rf /var/www/html/reductus/*
+rm -f dist.zip
+
+wget https://github.com/reductus/reductus/releases/download/sid/dist.zip
+unzip dist.zip -d /var/www/html/reductus/
+
+echo "copied to web"

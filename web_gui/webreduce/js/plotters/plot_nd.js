@@ -2,13 +2,12 @@ import { d3, extend, xyChart } from '../libraries.js';
 import { app } from '../main.js'
 
 export async function show_plots_nd(plotdata, plot_controls, target, old_plot) {
-  var plotdata = merge_nd_plotdata(plotdata);
+  plotdata = merge_nd_plotdata(plotdata);
   var options = {
     series: [],
     legend: { show: true, left: 150 },
     axes: { xaxis: { label: "x-axis" }, yaxis: { label: "y-axis" } }
   };
-  var cols = plotdata.columns || [];
   extend(true, options, plotdata.options);
 
   var colnames = Object.keys(plotdata.columns).sort();

@@ -76,7 +76,7 @@ class Candor(ReflData):
     See :class:`refldata.ReflData` for details.
     """
     format = "NeXus"
-    probe = "neutron"
+    probe = "neutrons"
     _groups = ReflData._groups + (("attenuator", Attenuator),)
     attenuator = None
 
@@ -617,7 +617,7 @@ def _rebin_bank(data, bank, q_edges, average):
 
     # Sort q values into bins
     nbins = len(q_edges) - 1
-    bin_index = np.searchsorted(q_edges, q)
+    bin_index = np.searchsorted(q_edges, q) - 1
 
     # Some bins may not have any points contributing, such as those before
     # and after, or those in the middle if the q-step is too fine. These

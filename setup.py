@@ -18,17 +18,31 @@ if os.system('"{sys.executable}" dataflow/rev.py'.format(sys=sys)) != 0:
 
 packages = find_packages(exclude=['reflbin'])
 
+# pip dependencies
+install_requires = [
+    'scipy', 'numpy', 'uncertainties', 'docutils',
+    'pytz', 'importlib_resources'
+    ]
+extras_require = {
+    'server': ['msgpack', 'flask', 'flask-cors', 'requests'],
+    'masked_curve_fit': ['numdifftools'],
+    'nexus_files': ['h5py']
+    }
+extras_require['all'] = sum(extras_require.values(), [])
+tests_require = ['pytest']
+
 #sys.dont_write_bytecode = False
 dist = setup(
     name='reductus',
-    version='0.1b2',
+    version='0.9.0',
     author='Paul Kienzle',
     author_email='paul.kienzle@nist.gov',
     url='https://github.com/reductus/reductus',
     description='Data reduction for neutron scattering',
+    long_description_content_type="text/x-rst",
     long_description=open('README.rst').read(),
     classifiers=[
-        'Development Status :: 4 - Beta',
+        'Development Status :: 5 - Production/Stable',
         'Environment :: Console',
         'Intended Audience :: Science/Research',
         'License :: Public Domain',
@@ -45,15 +59,9 @@ dist = setup(
     entry_points = {
         'console_scripts': ['reductus=web_gui.run:main'],
     },
-    install_requires=[
-        'scipy', 'numpy', 'h5py', 'uncertainties', 'docutils',
-        'wheel', 'pytz', 'msgpack-python', 'flask', 'flask-cors', 'requests',
-        'importlib_resources'
-        ],
-    extras_require={
-        'masked_curve_fit': ['numdifftools'],
-        },
-    tests_require=['pytest'],
+    install_requires=install_requires,
+    extras_require=extras_require,
+    tests_require=tests_require,
     )
 
 # End of file

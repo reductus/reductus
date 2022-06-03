@@ -1,0 +1,82 @@
+#!/bin/bash
+
+REDUCTUS_HOME=$HOME/reductus
+PROVISION_DIR=$REDUCTUS_HOME/provisioning/ubuntu-focal
+
+sudo apt update
+sudo apt install -y apache2 apache2-dev libapache2-mod-proxy-uwsgi python3-dev python3-pip uwsgi-plugin-python3 git
+
+# add user to www-data and change ownership of /var/www/html
+sudo usermod -a -G www-data ubuntu
+sudo chown www-data:www-data /var/www/html
+sudo chmod g+w /var/www/html
+
+# get the application code...
+#git clone https://github.com/reflectometry/reductus $REDUCTUS_HOME
+cp $PROVISION_DIR/post-merge $REDUCTUS_HOME/.git/hooks/post-merge
+chmod u+x $REDUCTUS_HOME/.git/hooks/post-merge
+cd $REDUCTUS_HOME
+pip3 install --user -r requirements.txt
+python3 setup.py develop --user
+.git/hooks/post-merge
+
+# apache setup
+sudo a2enmod headers proxy_balancer proxy_uwsgi lbmethod_byrequests
+sudo systemctl enable apache2.service
+# add mod_proxy_protocol
+# sudo apt install -y apache2-dev
+
+# sudo find /var/www/html -type d -exec chmod 755 {} \;
+# only need this if ansible has set this to permissions 750:
+#sudo chmod a+x /var/spool/cron;
+
+# copy the config.py from server...
+cp $PROVISION_DIR/config.py $REDUCTUS_HOME/configurations/config.py
+
+# set up vhosts file...
+sudo cp $PROVISION_DIR/apache_vhosts /etc/apache2/sites-available/reductus_server.conf
+#sudo cp $PROVISION_DIR/apache_vhosts_ssl /etc/apache2/sites-available/reductus_server_ssl.conf
+# copy SSL keys (MANUAL FOR NOW!)
+# sudo mkdir /etc/apache2/ssl
+# sudo chmod 700 /etc/apache2/ssl
+# manually copy /etc/apache2/ssl/*.crt and *.key to the new host, and
+# sudo chmod 600 /etc/apache2/ssl/*
+sudo a2dissite 000-default
+#sudo a2enmod ssl
+#sudo a2ensite reductus_server_ssl
+sudo a2ensite reductus_server
+
+# start the workers
+cd $REDUCTUS_HOME/web_gui && $REDUCTUS_HOME/web_gui/start_flask_many_py3.sh 8001 5
+
+# start the website
+sudo service apache2 reload
+
+# use iptables directly if ansible script causes ufw to not work
+sudo iptables -A INPUT -p tcp --dport 80 -m conntrack --ctstate NEW,ESTABLISHED -j ACCEPT
+sudo iptables -A INPUT -p tcp --dport 443 -m conntrack --ctstate NEW,ESTABLISHED -j ACCEPT
+sudo netfilter-persistent save
+
+# use ufw if available/working
+#sudo systemctl enable ufw
+#sudo ufw allow http
+#sudo ufw reload
+
+sudo aideinit
+# need to add these to root crontab?
+# 0 1 * * * nice -19 /usr/bin/aide --config=/etc/aide/aide.conf -C| mail you@domain -saide\ domain
+# 0 2 * * 0  nice -19 /usr/bin/aide --config=/etc/aide/aide.conf --init;mv -f /var/lib/aide.db.new /var/lib/aide/aide.db
+
+# set up apache2 to keep log files longer
+sudo sed -i -e 's/rotate [0-9]\+/rotate 31/g' /etc/logrotate.d/apache2
+
+# set up cron job to start uwsgi servers on reboot
+sudo echo -e "\n@reboot         ubuntu  cd ${REDUCTUS_HOME}/web_gui && ${REDUCTUS_HOME}/web_gui/start_flask_many_py3.sh 8001 5" >> /etc/crontab
+#echo -e "@reboot cd $REDUCTUS_HOME/web_gui && $REDUCTUS_HOME/web_gui/start_flask_many_py3.sh 8001 5" > $HOME/crontab.txt
+#crontab $HOME/crontab.txt
+
+# set up the secondary, static IP:
+# it is important to copy the netmask and broadcast from the DHCP-assigned interface
+sudo echo -e "\nauto eth0:1\niface eth0:1 inet static\naddress 10.200.159.69\nnetmask 255.255.255.240\nbroadcast 10.200.159.79" >> /etc/network/interfaces.d/50-cloud-init.cfg
+sudo systemctl restart networking
+

@@ -1,10 +1,11 @@
-@import "npm:material-design-icons/iconfont/material-icons.css";
-@import "npm:vue-material/dist/vue-material.min.css";
-@import "npm:vue-material/dist/theme/default.css";
-@import "npm:roboto-fontface/css/roboto/sass/roboto-fontface-regular.scss";
+/* @import "material-design-icons/iconfont/material-icons.css"; */
+@import "@mdi/font/css/materialdesignicons.min.css";
+@import "vue-material/dist/vue-material.min.css";
+@import "vue-material/dist/theme/default.css";
+/* @import "roboto-fontface/css/roboto/roboto-fontface.css"; */
 /* @import 'material-icons/iconfont/material-icons.scss'; */
 
-@import "npm:@widgetjs/tree/src/index.css";
+@import "@widgetjs/tree/src/index.css";
 /* @import "./treejs.css"; */
 /* @import "jquery-ui-dist/jquery-ui.min.css"; */
 @import "./web_reduction_filebrowser.css";

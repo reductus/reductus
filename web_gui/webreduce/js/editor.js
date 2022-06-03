@@ -522,37 +522,25 @@ editor.calculate = async function(params, recalc_mtimes, noblock, result_callbac
 
 var export_handlers = {
     
-  download: function(result, filename) {
+  download: async function(result, filename) {
     if (result.values.length == 1) {
       app.download(result.values[0].value, filename);
     }
     else {
-      var filect = 0;
       let subnames = new Set();
       let subcounter = 0;
-      var write_next = function(writer, exports) {
-        if (filect < exports.length) {
-          var to_export = exports[filect++];
-          let test_subname = to_export.filename || "default_filename";
-          var subname = test_subname;
-          while (subnames.has(subname)) {
-            subname = test_subname + "_" + (subcounter++).toFixed();
-          }
-          subnames.add(subname);
-          var reader = new zip.TextReader(to_export.value);
-          writer.add(subname, reader, function() { write_next(writer, exports); });
+      const zipWriter = new zip.ZipWriter(new zip.BlobWriter("application/zip"));
+      for (let item of result.values) {
+        let test_subname = item.filename || "default_filename";
+        let subname = test_subname;
+        while (subnames.has(subname)) {
+          subname = `${test_subname}_${subcounter++}`;
         }
-        else { 
-          writer.close(function(blob) {
-            app.download(blob, filename + ".zip");
-          });
-        }
+        subnames.add(subname);
+        await zipWriter.add(subname, new zip.TextReader(item.value));
       }
-      return zip.createWriter(new zip.BlobWriter("application/zip"), function(writer) {
-          write_next(writer, result.values);
-        }, function(error) {
-          console.log(error);
-        });
+      let blob = await zipWriter.close();
+      app.download(blob, `${filename}.zip`);
     }
   },
     

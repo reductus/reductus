@@ -39,17 +39,20 @@ with the local datastore enabled in config)
 Installation and use
 --------------------
 
-Method 1: pypi install
+Method 1: pip install
 ~~~~~~~~~~~~~~~~~~~~~~
 
 ::
 
-    pip install reductus
+    pip install "reductus[all]"
 
 Then start the server with::
 
     reductus
 
+For the very latest development version use the following::
+
+    pip install "git+https://github.com/reductus/reductus.git#egg=reductus[all]"
 
 Method 2: Docker Compose
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -79,7 +82,7 @@ install and use that instead of localhost, e.g. ::
 
     docker-machine ip default
 
-*In my case it was http://192.168.99.100:8000/web_gui/web_reduction_filebrowser.html*
+*In my case it was http://192.168.99.100:8000/webreduce/index.html*
 
 
 Method 3: Run from repo (development)

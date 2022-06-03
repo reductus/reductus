@@ -2,9 +2,7 @@ import 'https://unpkg.com/d3@5.16.0/dist/d3.min.js';
 let d3 = window.d3;
 export {d3};
 
-import {zip, Inflater, Deflater} from 'https://cdn.jsdelivr.net/gh/bmaranville/zip.js@0.0.3/WebContent/index.js';
-zip.Inflater = Inflater;
-zip.Deflater = Deflater;
+import * as zip from 'https://cdn.jsdelivr.net/npm/@zip.js/zip.js@2.3.19/lib/zip-full.js';
 export {zip};
 
 export {default as Tree} from 'https://cdn.jsdelivr.net/gh/bmaranville/treejs@latest/src/index.js';
