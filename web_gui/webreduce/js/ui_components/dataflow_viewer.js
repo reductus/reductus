@@ -32,16 +32,16 @@ let dataflow_template = `
           </md-select>
         </md-field>
       </md-menu-item>
-      <md-menu-item v-if="menu.startdata != null && menu.startdata.target_type=='module'">
+      <md-menu-item v-if="menu?.startdata?.module_index !== undefined">
         <md-button  @click="copy_module(menu.startdata.module_index);menu.visible=false;" class="md-raised md-primary">Copy</md-button>
       </md-menu-item>
-      <md-menu-item v-if="menu.startdata != null && menu.startdata.target_type=='module'">
+      <md-menu-item v-if="menu?.startdata?.module_index !== undefined">
         <md-button @click="remove_module(menu.startdata.module_index);menu.visible=false;" class="md-accent md-raised">Delete</md-button>
       </md-menu-item>
-      <md-menu-item v-if="menu.startdata != null && menu.startdata.target_type=='module'">
+      <md-menu-item v-if="menu?.startdata?.module_index !== undefined">
         <md-button @click="rename_module(menu.startdata.module_index);menu.visible=false;" class="md-raised">Rename</md-button>
       </md-menu-item>
-      <md-menu-item v-if="menu.startdata != null && menu.startdata.target_type=='wire'">
+      <md-menu-item v-if="menu.startdata != null && menu.startdata.target_type==='wire'">
         <md-button @click="remove_wire(menu.startdata.wire_index);menu.visible=false;" class="md-accent md-raised">Delete wire</md-button>
       </md-menu-item>
     </md-menu-content>
@@ -77,7 +77,7 @@ let dataflow_template = `
     <g class="dataflow-template" ref="template">
       <module 
         v-for="(module_data, index) in template_data.modules"
-        :key="JSON.stringify(module_data.config)"
+        :key="index"
         ref="modules" 
         :module_index="index"
         :module_def="module_defs[module_data.module]"
@@ -85,6 +85,7 @@ let dataflow_template = `
         :module_data="module_data"
         :selected="selected"
         :moving="drag.modules.includes(index)"
+        :new_wire="drag.new_wire"
         :satisfied="satisfied"
         :options="options"
         @startdata="set_startdata"
@@ -161,7 +162,8 @@ let module_template = `
       :key="module_index.toFixed() + ':' + terminal_def.id"
       class="terminals inputs"
       :class="{selected: (selected.terminals.findIndex(([ii, id]) => (ii == module_index && id == terminal_def.id)) > -1),
-               satisfied: satisfied.terminals.findIndex(([ii, id]) => (ii == module_index && id == terminal_def.id)) > -1}"
+               satisfied: satisfied.terminals.findIndex(([ii, id]) => (ii == module_index && id == terminal_def.id)) > -1,
+               wireable: new_wire && 'x' in new_wire.target}"
       :ref="terminal_def.id"
       :transform="'translate(-' + options.terminal.width + ',' + (index * options.terminal.height) + ')'"
       >
@@ -184,7 +186,8 @@ let module_template = `
       :key="module_index.toFixed() + ':' + terminal_def.id"
       class="terminals outputs"
       :class="{selected: (selected.terminals.findIndex(([ii, id]) => (ii == module_index && id == terminal_def.id)) > -1),
-               satisfied: satisfied.modules.includes(module_index)}"
+               satisfied: satisfied.modules.includes(module_index),
+               wireable: new_wire && 'x' in new_wire.source }"
       :ref="terminal_def.id"
       :transform="'translate(' + display_width + ',' + (index * options.terminal.height) + ')'">
       <text class="output label" x="5" y="5">{{terminal_def.label.toLowerCase()}}</text>
@@ -205,7 +208,7 @@ let module_template = `
 
 const Module = {
   name: "module",
-  props: ["module_def", "module_data", "module_index", "options", "selected", "satisfied", "moving"],
+  props: ["module_def", "module_data", "module_index", "options", "selected", "satisfied", "moving", "new_wire"],
   methods: {
     set_display_width: function () {
       let bbox = this.$refs.title_text.getBBox();
@@ -293,7 +296,6 @@ export const DataflowViewer = {
       }
       else {
         // selecting modules
-        console.log(module_index, first_input);
         this.drag.modules.splice(0);
         this.selected.modules.splice(0, this.selected.modules.length, module_index);
         if (first_input != null) {
@@ -377,6 +379,7 @@ export const DataflowViewer = {
       }
     },
     contextmenu: function (d, x, y) {
+      console.log(d.startdata);
       this.$emit('contextmenu', d.startdata, x, y);
       this.menu.startdata = d.startdata;
       this.menu.x = x;
@@ -395,6 +398,7 @@ export const DataflowViewer = {
     },
     remove_wire(index) {
       this.template_data.wires.splice(index, 1);
+      this.on_change();
     },
     remove_module(index) {
       let indices = [index];
@@ -445,7 +449,7 @@ export const DataflowViewer = {
       }
 
       //console.log(JSON.stringify(this.template_data.wires, null, 2));
-
+      this.on_change();
     },
     copy_module(index) {
       let indices = [index];
@@ -490,6 +494,7 @@ export const DataflowViewer = {
       this.template_data.wires.splice(this.template_data.wires.length, 0, ...new_wires);
       let new_selection = new_modules.map((m, i) => (i + module_offset));
       this.drag.modules.splice(0, this.drag.modules.length, ...new_selection);
+      this.on_change();
     },
     mousedown: function (ev) {
       document.addEventListener('mouseup', this.mouseup);
@@ -570,6 +575,7 @@ export const DataflowViewer = {
         // if all is well, add the wire!
         if (compatible && !is_duplicate && !is_self) {
           wires.push({ source: wire.source, target: wire.target });
+          this.on_change();
         }
       }
 
@@ -638,6 +644,7 @@ export const DataflowViewer = {
       return this.$refs.template.getBBox();
     },
     on_select: function () { },
+    on_change: function () { /* override as needed */ },
     fit_module_text: function () {
       this.$refs.modules.forEach((m) => {
         m.set_display_width();
