@@ -302,6 +302,26 @@ DIRECT_ANGULAR_DIVERGENCE = 150./3600./FWHM
 # Note: receiving resolution (pg 17) is a factor of three lower than expected
 # from the equation 1/2 (s1 + s2) / |d1 - d2|.  If the manual is giving values
 # as 1-sigma, then they are 25% lower than expected.
+
+def _calc_count_time(header):
+    """
+    Determine the count time from header constants
+
+    returns value in seconds
+    """
+    scan_speed = header['MEAS_SCAN_SPEED']
+    scan_speed_unit = (header['MEAS_SCAN_SPEED_UNIT']).lower()
+    if scan_speed_unit == "sec.":
+        return scan_speed
+    elif scan_speed_unit.endswith("/min"):
+        if np.isclose(scan_speed, 0.0):
+            raise ValueError("scan speed can not be zero in scanning mode")
+        scan_step = header['MEAS_SCAN_STEP']
+        # then count_time (sec) = scan_step (step_unit) * 60 (sec/min) * 1/scan_speed (min/step_unit)
+        return scan_step * 60. / scan_speed
+    else:
+        raise ValueError("scan speed unit \"%s\" is not recognized (should be 'sec.' or end with '/min')" % scan_speed_unit)
+
 def _interpret(header, values):
     R = {}
     x, I, scale = np.array(values).T
@@ -315,8 +335,8 @@ def _interpret(header, values):
     R['y_unit'] = header['MEAS_SCAN_UNIT_Y']
     R['y_label'] = header.get('DISP_TITLE_Y', 'y')
 
-    R['count_time'] = header['MEAS_SCAN_SPEED']
-    R['count_time_unit'] = header['MEAS_SCAN_SPEED_UNIT']
+    R['count_time'] = _calc_count_time(header)
+    R['count_time_unit'] = 'seconds'
 
     R['sample'] = header['FILE_SAMPLE']
     R['comment'] = header['FILE_COMMENT']
@@ -383,7 +403,7 @@ def _interpret_axes(header):
             if "/" in position:
                 numerator, denominator = position.split('/')
                 position = float(numerator)/float(denominator)
-            elif position in ("", "-", "None"):
+            elif position in ("", "-", "None", "Open"):
                 position = 1.0
             # Maybe test for zero, or maybe not.  It is possible that the
             # attenuation factor is set to zero when there is a beam stop

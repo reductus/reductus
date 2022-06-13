@@ -19,6 +19,14 @@ from flask_cors import CORS
 from werkzeug.exceptions import HTTPException
 import msgpack as msgpack_converter
 import json
+import mimetypes
+mimetypes.add_type("text/css", ".css")
+mimetypes.add_type("text/html", ".html")
+mimetypes.add_type("application/json", ".json")
+mimetypes.add_type("text/javascript", ".js")
+mimetypes.add_type("text/javascript", ".mjs")
+mimetypes.add_type("image/png", ".png")
+mimetypes.add_type("image/svg+xml", ".svg")
 
 def create_app(config=None):
     from web_gui import api
