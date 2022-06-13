@@ -6,9 +6,14 @@ const signatures = [
   ['png', [137,80,78,71,13,10,26,10]]
 ];
 
-function get_type(contents) {
+const MAX_SIGNATURE_LENGTH = Math.max.apply(null, signatures.map(s => s[1].length));
+
+async function get_type(file) {
+  let slice = file.slice(0, MAX_SIGNATURE_LENGTH);
+  let header = await slice.arrayBuffer();
+  let header_array = new Uint8Array(header);
   let [type, test] = signatures.find(([n,t]) => (
-    t.every((c,i) => (contents[i] == c))
+    t.every((c,i) => (header_array[i] == c))
   ))
   return type
 }
@@ -31,8 +36,9 @@ readers.column = function(contents, sig_length) {
   return JSON.parse(trimmed);
 }
 
-export function reload(contents) {
-  let content_type = get_type(contents);
+export async function reload(file) {
+  let content_type = await get_type(file);
+  let contents = await file.arrayBuffer();
   if (content_type in readers) {
     return readers[content_type](contents)
   }

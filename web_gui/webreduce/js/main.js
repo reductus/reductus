@@ -229,15 +229,10 @@ window.onload = async function () {
         app.download(JSON.stringify(editor._active_template, null, 2), filename);
       }
     },
-    upload_file(file) {
+    async upload_file(file) {
       //window.fheader = file.slice(0, 20).arrayBuffer();
-      const reader = new FileReader();
-      reader.onload = res => {
-        let contents = new Uint8Array(res.target.result);
-        let template_data = reload(contents);
-        editor.load_template(template_data.template, template_data.node, template_data.terminal, template_data.instrument_id);
-      }
-      reader.readAsArrayBuffer(file);
+      let template_data = await reload(file);
+      editor.load_template(template_data.template, template_data.node, template_data.terminal, template_data.instrument_id);
     },
     load_predefined(template_id) {
       let instrument_id = editor._instrument_id;
