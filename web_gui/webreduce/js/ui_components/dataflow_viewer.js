@@ -3,8 +3,8 @@ import { extend } from '../libraries.js';
 let dataflow_template = `
 <div 
   class="dataflow editor container"
-  @mousedown="mousedown"
-  @contextmenu.prevent=""
+  @contextmenu.prevent="contextmenu"
+  @mousedown.left="mousedown"
   >
   <md-menu md-size="auto"
     :md-active.sync="menu.visible"
@@ -378,13 +378,22 @@ export const DataflowViewer = {
         this.terminal_select(data.module_index, data.terminal_def, data.ctrlKey, data.shiftKey);
       }
     },
-    contextmenu: function (d, x, y) {
-      console.log(d.startdata);
+    contextmenu: function (ev) {
+      const { x, y } = this.getSVGCoords(ev);
+      const d = this.drag;
+
       this.$emit('contextmenu', d.startdata, x, y);
       this.menu.startdata = d.startdata;
       this.menu.x = x;
       this.menu.y = y;
       this.menu.visible = true;
+      d.start_x = null;
+      d.start_y = null;
+      d.startdata = null;
+      d.enddata = null;
+      d.started = false;
+      d.active = false;
+      d.new_wire = null;
     },
     add_module: function (ev) {
       let to_add = ev.target.value;
