@@ -9,7 +9,6 @@ import {zip} from './libraries.js';
 import {d3} from './libraries.js';
 import {extend, dataflowEditor} from './libraries.js';
 import { Cache } from './idb_cache.js';
-import {sha1} from './libraries.js';
 import {template_editor_url} from './libraries.js';
 import {filebrowser} from './filebrowser.js';
 //import {make_fieldUI} from './fieldUI.js';
@@ -535,17 +534,23 @@ editor.get_cached_timestamps = function() {
     })
 }
 
-editor.get_signature = function(params) {
-  var template = params.template,
-      config = params.config || {},
-      node = params.node,
-      terminal = params.terminal,
-      return_type = params.return_type || 'metadata',
-      export_type = params.export_type || 'column',
-      concatenate = params.concatenate || false;
+async function digestMessage(message, algorithm="SHA-256") {
+  const msgUint8 = new TextEncoder().encode(message);                           // encode as (utf-8) Uint8Array
+  const hashBuffer = await crypto.subtle.digest(algorithm, msgUint8);           // hash the message
+  const hashArray = Array.from(new Uint8Array(hashBuffer));                     // convert buffer to byte array
+  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join(''); // convert bytes to hex string
+  return hashHex;
+}
+
+editor.get_signature = async function(params) {
+  const config = params.config ?? {};
+  const { node, terminal, template } = params;
+  const return_type = params.return_type ?? 'metadata';
+  const export_type = params.export_type ?? 'column';
+  const concatenate = params.concatenate ?? false;
   
-  var versioned = this.get_versioned_template(template), 
-      sig = sha1(JSON.stringify({
+  const versioned = this.get_versioned_template(template);
+  const sig = await digestMessage(JSON.stringify({
         method: "calculate",
         template: versioned,
         config: config,
@@ -553,7 +558,7 @@ editor.get_signature = function(params) {
         terminal: terminal,
         return_type: return_type, 
         export_type: export_type,
-        concatenate: concatenate}));
+        concatenate: concatenate}), "SHA-1");
         
   return sig
 }
@@ -569,8 +574,10 @@ async function calculate_one(params, caching) {
         concatenate = params.concatenate || false;
       
   if (caching) {
-    var sig = editor.get_signature(params);
-    r = r.then(function() { 
+    r = r.then(function() {
+        return editor.get_signature(params);
+    })
+    .then(function(sig) {
       return editor._cache.get(sig).then(function(cached) {return cached.value})
       .catch(function(e) {
         var versioned = editor.get_versioned_template(template);
