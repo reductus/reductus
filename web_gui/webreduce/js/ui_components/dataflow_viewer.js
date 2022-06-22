@@ -119,6 +119,17 @@ let dataflow_template = `
         >
       </path>
     </g>
+    <rect
+      :class="{'select_many': true}"
+      :width="Math.abs(select_many.x0 - select_many.x1)"
+      :height="Math.abs(select_many.y0 - select_many.y1)"
+      :display="(select_many.active) ? 'inline' : 'none'"
+      fill="grey"
+      fill-opacity="40%"
+      :x="Math.min(select_many.x0, select_many.x1)"
+      :y="Math.min(select_many.y0, select_many.y1)"
+      />
+    </rect>
   </svg>
   <md-dialog id="help" :md-active.sync="menu.help_visible" style="max-width:768px;">
     <md-dialog-title>Using the Template Panel</md-dialog-title>
@@ -245,6 +256,13 @@ export const DataflowViewer = {
     selected: {
       modules: [],
       terminals: []
+    },
+    select_many: {
+      active: false,
+      x0: 0,
+      y0: 0,
+      x1: 0,
+      y1: 0
     },
     satisfied: {
       modules: [],
@@ -509,82 +527,98 @@ export const DataflowViewer = {
       document.addEventListener('mouseup', this.mouseup);
       document.addEventListener('mousemove', this.mousemove);
       let d = this.drag;
-      if (d.started == true) {
+      let s = this.select_many;
+      if (d.started == true || s.active == true) {
         // then we're already dragging.  Ignore other mouse buttons.
         return
       }
-      d.module_start_positions = this.template_data.modules.map((m) => ({ x: m.x, y: m.y }));
-      if (d.startdata && d.startdata.target_type == 'module') {
-        let dmodules = this.drag.modules;
-        d.to_move = (dmodules.includes(d.startdata.module_index)) ? dmodules : [d.startdata.module_index];
+      if (ev.shiftKey || ev.ctrlKey) {
+        // then begin a select_many operation
+        s.active = true;
+        let svgCoords = this.getSVGCoords(ev);
+        s.x0 = svgCoords.x;
+        s.y0 = svgCoords.y;
+        s.x1 = svgCoords.x;
+        s.y1 = svgCoords.y;
       }
       else {
-        d.to_move = [];
+        d.module_start_positions = this.template_data.modules.map((m) => ({ x: m.x, y: m.y }));
+        if (d.startdata && d.startdata.target_type == 'module') {
+          let dmodules = this.drag.modules;
+          d.to_move = (dmodules.includes(d.startdata.module_index)) ? dmodules : [d.startdata.module_index];
+        }
+        else {
+          d.to_move = [];
+        }
+        if (d.startdata && /terminal$/.test(d.startdata.target_type)) {
+          // make a new wire!
+        }
+        d.started = true;
+        d.start_ev = ev;
+        d.start_x = ev.x;
+        d.start_y = ev.y;
+        d.delta_x = 0;
+        d.delta_y = 0;
+        d.buttons = ev.buttons;
+        d.new_wire = null;
       }
-      if (d.startdata && /terminal$/.test(d.startdata.target_type)) {
-        // make a new wire!
-      }
-      d.started = true;
-      d.start_ev = ev;
-      d.start_x = ev.x;
-      d.start_y = ev.y;
-      d.delta_x = 0;
-      d.delta_y = 0;
-      d.buttons = ev.buttons;
-      d.new_wire = null;
       //console.log(JSON.stringify(d));
     },
     mouseup: function (ev) {
       document.removeEventListener('mouseup', this.mouseup);
       document.removeEventListener('mousemove', this.mousemove);
       let d = this.drag;
+      let s = this.select_many;
       if (ev.buttons != 0) {
         // if some reprobate has pushed and release a different button
         // during a drag...
         return
       }
-      if (!d.active) {
-        if (d.buttons == 1) {
-          this.clicked(d.startdata);
-        }
-        else if (d.buttons == 2) {
-          let { x, y } = this.getSVGCoords(ev);
-          this.contextmenu(d, x, y);
+      if (d.active) {
+        if (d.new_wire != null) {
+          // then we're dragging a wire... the last one
+          let wires = this.template_data.wires;
+          let wire = d.new_wire;
+          let compatible = true;
+          if (wire.loose_end == wire.source && d.enddata && d.enddata.target_type == 'output-terminal') {
+            wire.source = [d.enddata.module_index, d.enddata.terminal_def.id];
+          }
+          else if (wire.loose_end == wire.target && d.enddata && d.enddata.target_type == 'input-terminal') {
+            wire.target = [d.enddata.module_index, d.enddata.terminal_def.id];
+          }
+          else {
+            // incompatible landing spot
+            compatible = false;
+            console.warn("can't wire to here...");
+          }
+          let is_duplicate = this.template_data.wires.findIndex((w) => (
+            w.source[0] == wire.source[0] &&
+            w.source[1] == wire.source[1] &&
+            w.target[0] == wire.target[0] &&
+            w.target[1] == wire.target[1]
+          )) > -1;
+          let is_self = (wire.target[0] == wire.source[0]);
+          if (is_duplicate) {
+            console.warn("duplicate wire: not adding")
+          }
+          if (is_self) {
+            console.warn("wire source and target are the same module: not adding");
+          }
+          // if all is well, add the wire!
+          if (compatible && !is_duplicate && !is_self) {
+            wires.push({ source: wire.source, target: wire.target });
+            this.on_change();
+          }
         }
       }
-      if (d.new_wire != null) {
-        // then we're dragging a wire... the last one
-        let wires = this.template_data.wires;
-        let wire = d.new_wire;
-        let compatible = true;
-        if (wire.loose_end == wire.source && d.enddata && d.enddata.target_type == 'output-terminal') {
-          wire.source = [d.enddata.module_index, d.enddata.terminal_def.id];
-        }
-        else if (wire.loose_end == wire.target && d.enddata && d.enddata.target_type == 'input-terminal') {
-          wire.target = [d.enddata.module_index, d.enddata.terminal_def.id];
-        }
-        else {
-          // incompatible landing spot
-          compatible = false;
-          console.warn("can't wire to here...");
-        }
-        let is_duplicate = this.template_data.wires.findIndex((w) => (
-          w.source[0] == wire.source[0] &&
-          w.source[1] == wire.source[1] &&
-          w.target[0] == wire.target[0] &&
-          w.target[1] == wire.target[1]
-        )) > -1;
-        let is_self = (wire.target[0] == wire.source[0]);
-        if (is_duplicate) {
-          console.warn("duplicate wire: not adding")
-        }
-        if (is_self) {
-          console.warn("wire source and target are the same module: not adding");
-        }
-        // if all is well, add the wire!
-        if (compatible && !is_duplicate && !is_self) {
-          wires.push({ source: wire.source, target: wire.target });
-          this.on_change();
+      else if (s.active) {
+
+      }
+      else {
+        if (d.buttons == 1) {
+          // in principle, this is only triggered by left-click so this check 
+          // is not needed.
+          this.clicked(d.startdata);
         }
       }
 
@@ -595,16 +629,20 @@ export const DataflowViewer = {
       d.started = false;
       d.active = false;
       d.new_wire = null;
+
+      s.active = false;
+
     },
     mousemove: function (ev) {
       let d = this.drag;
+      let s = this.select_many;
+      let svgCoords = this.getSVGCoords(ev);
       if (d.started && d.buttons == 1) {
         // drag stuff
         let dx = this.options.move.x_step;
         let dy = this.options.move.y_step;
         let new_delta_x = dx * Math.round((ev.x - d.start_x) / dx);
         let new_delta_y = dy * Math.round((ev.y - d.start_y) / dy);
-        let svgCoords = this.getSVGCoords(ev);
         if (new_delta_x != d.delta_x || new_delta_y != d.delta_y) {
           d.active = true;
           d.delta_x = new_delta_x;
@@ -642,6 +680,10 @@ export const DataflowViewer = {
             }
           }
         }
+      }
+      else if (s.active) {
+        s.x1 = svgCoords.x;
+        s.y1 = svgCoords.y;
       }
     },
     getSVGCoords: function (ev) {
