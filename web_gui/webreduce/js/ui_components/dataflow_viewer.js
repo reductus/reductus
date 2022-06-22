@@ -262,7 +262,8 @@ export const DataflowViewer = {
       x0: 0,
       y0: 0,
       x1: 0,
-      y1: 0
+      y1: 0,
+      module_positions: []
     },
     satisfied: {
       modules: [],
@@ -535,11 +536,18 @@ export const DataflowViewer = {
       if (ev.shiftKey || ev.ctrlKey) {
         // then begin a select_many operation
         s.active = true;
-        let svgCoords = this.getSVGCoords(ev);
+        const svgCoords = this.getSVGCoords(ev);
+        const module_positions = this.$refs.modules.map((m) => ({
+          x: m.module_data.x,
+          y: m.module_data.y,
+          width: m.display_width,
+          height: m.options.terminal.height
+        }));
         s.x0 = svgCoords.x;
         s.y0 = svgCoords.y;
         s.x1 = svgCoords.x;
         s.y1 = svgCoords.y;
+        s.module_positions = module_positions;
       }
       else {
         d.module_start_positions = this.template_data.modules.map((m) => ({ x: m.x, y: m.y }));
@@ -684,6 +692,8 @@ export const DataflowViewer = {
       else if (s.active) {
         s.x1 = svgCoords.x;
         s.y1 = svgCoords.y;
+        const selected = getSelected(s);
+        this.drag.modules = selected;
       }
     },
     getSVGCoords: function (ev) {
@@ -719,4 +729,22 @@ function makeConnector(pt1, pt2) {
   d += (+pt2.x - wirecurve * dx).toFixed() + "," + pt2.y + " ";
   d += pt2.x + "," + pt2.y;
   return d;
+}
+
+function getSelected(select_many) {
+  const { x0, y0, x1, y1, module_positions } = select_many;
+  const [ xmin, xmax ] = [ x0, x1 ].sort((a,b) => ( a - b ));
+  const [ ymin, ymax ] = [ y0, y1 ].sort((a,b) => ( a - b ));
+  const selected = module_positions.map((p, i) => (
+    ( p.x <= xmax &&
+      p.x + p.width >= xmin &&
+      p.y <= ymax &&
+      p.y + p.height >= ymin
+    ) ? i : false
+  )).filter((indexish) => indexish !== false)
+  // module_positions.forEach((p) => {
+  //   console.log('x', p.x, p.x + p.width, xmin, xmax);
+  //   console.log('y', p.y, p.y + p.height, ymin, ymax);
+  // })
+  return selected;
 }
