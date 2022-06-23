@@ -133,7 +133,7 @@ development version, much like you did for the development server.
     cd web_gui/webreduce
     npm install
     rm -rf dist
-    npm run build_index --if-present
+    npm run build
     cd ../..
 
 Then start the server with::
