@@ -6,10 +6,9 @@ import {dependencies} from './deps.js';
 import {instruments} from './instruments/index.js';
 // now a global...
 import {zip} from './libraries.js';
-import {d3} from './libraries.js';
+import { Vue } from './libraries.js';
 import {extend, dataflowEditor} from './libraries.js';
 import { Cache } from './idb_cache.js';
-import {template_editor_url} from './libraries.js';
 import {filebrowser} from './filebrowser.js';
 //import {make_fieldUI} from './fieldUI.js';
 import { fieldUI } from './ui_components/fields_panel.js';
@@ -17,12 +16,11 @@ import { plotter  } from './plot.js';
 import { vueMenu } from './menu.js';
 import { export_dialog } from './ui_components/export_dialog.js';
 import { app_header } from './app_header.js';
+import { DataflowViewer } from './ui_components/dataflow_viewer.js';
 
 const MAX_CACHE_AGE = 90; // days
 
 editor.instruments = instruments;
-
-editor.dispatch = d3.dispatch("accept", "field_update");
 
 editor.guid = function() {
   var uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
@@ -87,130 +85,50 @@ editor.clear_cache = async function() {
 editor.create_instance = function(target_id) {
   // create an instance of the dataflow editor in
   // the html element referenced by target_id
-  this._instance = new dataflowEditor(null, d3);
-  this._target_id = target_id;
-  //this._instance.data([{modules:[],wires: []}]);
-  var target = d3.select("#" + target_id);
-  target.call(this._instance);
-  d3.select("body").on("keydown.accept", null);
-  d3.select("body").on("keydown.accept", function() {
-    var key = d3.event.key;
-    if (key.toLowerCase && key.toLowerCase() == "enter") {
-      var accept_fn = d3.select("button.accept.config").on("click");
-      if (accept_fn) { accept_fn(); }
-      return false
+  let target = document.getElementById(target_id);
+  const DataflowViewerClass = Vue.extend(DataflowViewer);
+  this.instance_container = target.parentElement;
+  this.instance = new DataflowViewerClass({
+    propsData: {instrument_def: {}},
+    methods: {
+      on_select: editor.module_clicked,
+      on_change: editor.update_completions,
     }
-  })
-  // add decoration filters and patterns for highlighting filled paths
-  var defs = this._instance.svg().append("defs");
-  var glow_filter = defs.append("filter")
-    .attr("id", "glow")
-    .attr("filterUnits", "objectBoundingBox")
-    .attr("x", "-50%")
-    .attr("y", "-50%")
-    .attr("width", "200%")
-    .attr("height", "200%")
-  
-  glow_filter.append("feOffset")
-      .attr("result", "offOut")
-      .attr("in", "SourceGraphic")
-      .attr("dx", 0)
-      .attr("dy", 0)
-      
-  glow_filter.append("feColorMatrix")
-      .attr("in", "offOut")
-      .attr("result", "matrixOut")
-      .attr("type", "matrix")
-      .attr("values", "0 0 0 0 0 \
-                        1 1 1 1 0 \
-                        0 0 0 0 0 \
-                        0 0 0 1 0")
-                        
-  glow_filter.append("feGaussianBlur")
-      .attr("in", "matrixOut")
-      .attr("result", "blurOut")
-      .attr("stdDeviation", 10);
-
-  glow_filter.append("feBlend")
-      .attr("in", "SourceGraphic")
-      .attr("in2", "blurOut")
-      .attr("mode", "normal")
-
-  // on wires with data in them:
-  // svg.selectAll("path.wire.filled").style("stroke-dasharray", null).style("stroke", "green");
-  // svg.selectAll("path.wire.empty").style("stroke-dasharray", "2,2").style("stroke", "red");
-
-  var output_pattern = defs.append("pattern")
-    .attr("id", "output_hatch")
-    .attr("patternUnits", "userSpaceOnUse")
-    .attr("width", 10)
-    .attr("height", 10)
-    .append("path")
-      .attr("d", "M-1,1 l2,-2 M0,10 l10,-10 M9,11 l2,-2")
-      .style("stroke", "#88FFFF")
-      .style("stroke-opacity", 1)
-      .style("stroke-width", 3)
-      
-  var input_pattern = defs.append("pattern")
-    .attr("id", "input_hatch")
-    .attr("patternUnits", "userSpaceOnUse")
-    .attr("width", 10)
-    .attr("height", 10)
-    .style("fill-opacity", 1)
-    .append("path")
-      .attr("d", "M-1,1 l2,-2 M0,10 l10,-10 M9,11 l2,-2")
-      .style("stroke", "#88FF88")
-      .style("stroke-opacity", 1)
-      .style("stroke-width", 3)
+  }).$mount(target);
+  // TODO: make fields respond to "enter" key by advancing to next
+  // module in template? (accept on enter)
 }
 
 function module_clicked_multiple() {
-  var editor_select = d3.select("#" + editor._target_id);
-  var active_template = editor._active_template;
   app.hide_fields();
-  var to_compare = [];
-  editor_select.selectAll("g.module").each(function(dd, ii) {
-    d3.select(this).selectAll("g.selected rect.terminal").each(function(ddd,iii) {
-      var tid = d3.select(this).attr("terminal_id");
-      to_compare.push({"node": ii, "terminal": tid})
-    });
-  });
-  compare_in_template(to_compare, active_template);
+  compare_in_template(editor.instance.selected.terminals, editor.instance.template_data);
 }
 
 editor.advance_to_output = function() {
-  let active_template = editor._active_template;
-  let editor_select = d3.select("#" + editor._target_id);
-  let selected_terminal = editor_select.select("g.module g.selected rect.terminal");
-  let i = editor._active_node;
-  let active_module = active_template.modules[i];
-  let module_def = editor._module_defs[active_module.module];
-  if (selected_terminal.empty()) {
-    // then it's a loader that's clicked, with no output selected;
-    let first_output = module_def.outputs[0].id;
-    let selected_title = editor_select.select("g.module g.title.selected");
-    let module_elem = d3.select(selected_title.node().parentNode);
-    module_elem.selectAll("g.terminals").classed('selected', function(d) { return d.id == first_output });
-  }
-  else if (!(selected_terminal.classed("output"))) {
-    // find the first output and select that one...
-    let first_output = module_def.outputs[0].id;
-    let module_elem = d3.select(selected_terminal.node().parentNode.parentNode);
-    module_elem.selectAll("g.terminals").classed('selected', function(d) { return d.id == first_output });
+  let sm = editor.instance.selected.modules;
+  if (sm.length == 1) {
+    // can only advance to output if exactly one module is selected
+    let module_index = sm[0];
+    let module = editor.instance.template_data.modules[module_index];
+    let module_def = editor.instance.module_defs[module.module];
+    let first_output = (module_def.outputs[0] || {}).id;
+    if (first_output != null) {
+      let st = editor.instance.selected.terminals;
+      st.splice(0, st.length, [module_index, first_output]);
+    }
   }
   module_clicked_single();
 }
 
 function module_clicked_single() {
   app.show_fields();
-  var active_template = editor._active_template;
-  var editor_select = d3.select("#" + editor._target_id);
-  var selected_terminal = editor_select.select("g.module g.selected rect.terminal");
-  let data_to_show = (selected_terminal.empty()) ? null : selected_terminal.attr("terminal_id");
+  let active_template = editor.instance.template_data;
+  let selected_terminal = editor.instance.selected.terminals[0];
+  let data_to_show = (selected_terminal || [])[1];
   editor._active_terminal = data_to_show;
-  let i = editor._active_node;
-  let active_module = active_template.modules[i];
-  let module_def = editor._module_defs[active_module.module];
+  let i = editor.instance.selected.modules[0];
+  let active_module = editor.instance.template_data.modules[i];
+  let module_def = editor.instance.module_defs[active_module.module];
   let fileinfos = (module_def.fields || []).filter(f => (f.datatype == 'fileinfo'));
   filebrowser.instance.blocked = (fileinfos.length < 1);
   
@@ -261,14 +179,13 @@ function module_clicked_single() {
 editor.module_clicked_single = module_clicked_single;
 
 editor.get_full = function() {
-  console.log(this._active_node, this._active_template, this._active_terminal);
-  let params_to_calc = {
-    template: this._active_template,
+  let params_to_calc = this.instance.selected.terminals.map(([node, terminal]) => ({
+    template: this.instance.template_data,
     config: {},
-    node: this._active_node,
-    terminal: this._active_terminal,
+    node,
+    terminal,
     return_type: "full"
-  }
+  }));
   return this.calculate(params_to_calc, true).then(function(result) {
     console.log(result);
     return result;
@@ -276,94 +193,36 @@ editor.get_full = function() {
 }
 
 function module_clicked() {
-  var editor_select = d3.select("#" + editor._target_id);
-  if (editor_select.selectAll("g.module g.selected rect.terminal").size() > 1) {
-    module_clicked_multiple();
-  }
-  else {
-    module_clicked_single();
-  }
-}
-editor.module_clicked = module_clicked;
-editor.handle_module_clicked = function(d,i,current_group,clicked_elem) {
-  // d module data, i is module index, elem is registered to catch event
-  //
-  // Flow: 
-  //  - if the module title is clicked, show configuration and 
-  //    data from the first input terminal.
-  //  - if input terminal is clicked, show that data and configuration
-  //  - if output terminal is clicked, show that data and configuration
-  
-  var editor_select = d3.select("#" + editor._target_id);
-  var elem = this; // this function is called from the context of a select.on   
-  var clicked_elem = clicked_elem || d3.event.target;
-  var multiple_select = (d3.event && (d3.event.shiftKey || d3.event.ctrlKey));
-  var data_to_show;
-  
-  // clear all the stashed items, since we are plotting from the template again
-  d3.selectAll("#stashedlist input.compare").property("checked", false);
-  
-  if (multiple_select) {
-    var active_node = i,
-        active_terminal = d3.select(clicked_elem).attr("terminal_id");
-    if (!d3.select(clicked_elem).classed("terminal")) {
-      console.log("can't select multiple module configs, just inputs and outputs");
-      return
-    }
-    var parent = d3.select(clicked_elem.parentNode);
-    parent.classed("selected", !(parent.classed("selected")));
-    editor_select.selectAll("g.module, g.module g.title").classed("selected", false);
-    module_clicked_multiple();   
-  }
-
-  else {
-    editor_select.selectAll(".module .selected").classed("selected", false);
-    d3.select(clicked_elem.parentNode).classed("selected", true);
-    
-    var active_template = editor._active_template;
-    var active_module = active_template.modules[i];
-    var module_def = editor._module_defs[active_module.module];
-    var fields = module_def.fields || [];
-    if (fields.filter(function(d) {return d.datatype == 'fileinfo'}).length == 0) {
-        // var nav = $("#datasources");
-        // nav.find("div.block-overlay").show();
-    }
-    
-    if (d3.select(clicked_elem).classed("title")) {
-      // then it's the module title clicked - 
-      // select the first input terminal to show data from (if any)
-      data_to_show = (module_def.inputs[0] || {}).id;  // second part undefined if no inputs
-      // also highlight the first input terminal, if it's there:
-      d3.select(elem).selectAll("g")
-        .filter(function(d) { return d.id == data_to_show })
-        .classed("selected", true);
+  let nterms = editor.instance.selected.terminals.length;
+  if (nterms > 0) {
+    filebrowser.instance.selected_stashes.splice(0);
+    if (nterms > 1) {
+      module_clicked_multiple();
     }
     else {
-      // it's a terminal - show the data in it with the configuration
-      //var side = d3.select(clicked_elem).classed("input") ? "input" : "output";
-      data_to_show = d3.select(clicked_elem).attr("terminal_id");
-      // also mark title of module as selected:
-      d3.select(elem).select("g.title").classed("selected", true);
+      module_clicked_single();
     }
-    
-    
-    editor._active_node = i;
-    editor._active_terminal = data_to_show;
-
-    module_clicked();
+  }
+  else if(editor.instance.selected.modules.length > 1) {
+    app.hide_fields();
+    filebrowser.instance.blocked = true;
   }
 }
 
-function compare_in_template(to_compare, template) {
-  var template = template || editor._active_template;
+editor.module_clicked = module_clicked;
+
+async function compare_in_template(to_compare, template) {
+  var template = template || editor.instance.template_data;
   let recalc_mtimes = app.settings.check_mtimes.value;
-  let params_to_calc = to_compare.map(function(a) {
-        return {template: template, config: {}, node: a.node, terminal: a.terminal, return_type: "plottable"}
-      });
-  return editor.calculate(params_to_calc, recalc_mtimes)
-    .then(function(results) {
-      editor.show_plots(results);
-    });
+  let params_to_calc = to_compare.map(([node, terminal]) => ({
+        template,
+        config: {}, 
+        node,
+        terminal,
+        return_type: "plottable"
+  }));
+  let results = await editor.calculate(params_to_calc, recalc_mtimes);
+  editor.show_plots(results);
 }
 
 editor.show_plots = async function(results) {
@@ -402,7 +261,7 @@ editor.stash_data = function(suggested_name) {
     alert("localStorage not supported in your browser");
     return;
   }
-  if (editor._active_terminal == null) {
+  if (editor.instance.selected.terminals.length != 1) {
     alert("please select one input or output terminal to stash"); 
     return 
   }
@@ -419,12 +278,10 @@ editor.stash_data = function(suggested_name) {
     if (!overwrite) {return}
   }
   
-  var w = editor,
-    node = w._active_node,
-    terminal = w._active_terminal,
-    template = w._active_template,
-    instrument_id = w._instrument_id;
-  var template_copy = extend(true, {}, template);
+  let [node, terminal] = editor.instance.selected.terminals[0];
+  let template = editor.instance.template_data;
+  let instrument_id = editor._instrument_id;
+  let template_copy = extend(true, {}, template);
   var subroutine = {};
   subroutine.module = "user.stashed"
   subroutine.title = stashname;
@@ -487,7 +344,7 @@ editor.compare_stashed = function(stashnames) {
   // stashnames is a list of stashed data ids
   // eventually send these as-is to server, but for now since the server
   // doesn't handle subroutines...
-  d3.selectAll("g.module .selected").classed("selected", false);
+  this.instance.selected.modules.splice(0); 
   var existing_stashes = _fetch_stashes();
   var stashnames = stashnames.filter(function(s) {return (s in existing_stashes)});
   var recalc_mtimes = app.settings.check_mtimes.value;
@@ -737,21 +594,26 @@ editor.export_targets = [
 ];
 
 editor.export_data = function() {
-  var w = editor;
-  if (w._active_terminal == null) { alert("no input or output selected to export"); }
-  let active_modulename = w._active_template.modules[w._active_node].module;
-  let active_module_def = editor._instrument_def.modules.find(function(m) { return m.id == active_modulename })
-  let active_input_output = active_module_def.inputs
-    .concat(active_module_def.outputs)
-    .find(function(o) { return o.id == w._active_terminal});
+  let {modules, terminals} = this.instance.selected;
+
+  if (terminals.length == 0) { alert("no input or output selected to export"); return }
+  if (terminals.length > 1) { alert("more than one input or output selected to export"); return }
+  let [node, terminal] = terminals[0];
+  let template = this.instance.template_data;
+  let module = this.instance.template_data.modules[node];
+  let module_def = this.instance.module_defs[module.module];
+
+  let active_input_output = module_def.inputs
+    .concat(module_def.outputs)
+    .find(function(o) { return o.id == terminal});
   let export_datatype = active_input_output.datatype;
 
-  var export_types = editor._instrument_def.datatypes.find(function(d) { return d.id == export_datatype}).export_types;
+  let export_types = this.instance.instrument_def.datatypes.find(function(d) { return d.id == export_datatype }).export_types;
   var params = {
-    template: w._active_template,
+    template,
     config: {},
-    node: w._active_node,
-    terminal: w._active_terminal,
+    node,
+    terminal,
     return_type: "export",
     //export_type: export_type,
     concatenate: true
@@ -791,36 +653,28 @@ editor.export_data = function() {
 
 
 editor.update_completions = function() {
-  var satisfactions = dependencies.mark_satisfied(this._active_template, this._module_defs);
-  var wires = this._active_template.wires;
-  var svg = this._instance.svg();
-  svg.selectAll("path.wire").classed("filled", function(d,i) { return satisfactions.wires_satisfied.has(i); });
-  svg.selectAll("g.module").each(function(d,i) {
-    d3.select(this).selectAll("rect.terminal.output").style("fill", (satisfactions.modules_satisfied.has(i)) ? null : "url(#output_hatch)");
-  })
-  svg.selectAll("rect.terminal.input").style("fill", "url(#input_hatch)");
-  svg.selectAll("rect.terminal.input").each(function(d,i) {
-    var term = d3.select(this);
-    var id = term.attr("terminal_id");
-    var node = d3.select(this.parentNode.parentNode).attr("index");
-    wires.forEach(function(w,i) { 
-      var mine = (w.target[0] == node && w.target[1] == id);
-      if (mine && satisfactions.wires_satisfied.has(i)) {
-        term.style("fill", null);
-      }
-    });
+  var satisfactions = dependencies.mark_satisfied(editor.instance.template_data, editor.instance.module_defs);
+  editor.instance.satisfied.wires = Array.from(satisfactions.wires_satisfied.values());
+  editor.instance.satisfied.modules = Array.from(satisfactions.modules_satisfied.values());
+  let sterminals = [];
+  editor.instance.template_data.wires
+    .filter((w,i) => satisfactions.wires_satisfied.has(i))
+    .forEach((w,i) => {
+      sterminals.push(w.source, w.target)
   });
+  editor.instance.satisfied.terminals = sterminals;
 }
 
 editor.load_instrument = async function(instrument_id) {
   editor._instrument_id = instrument_id;
   let instrument_def = await server_api.get_instrument({instrument_id});
   editor._instrument_def = instrument_def;
-  editor._module_defs = Object.fromEntries((instrument_def.modules || []).map(m => (
+  let module_defs = Object.fromEntries((instrument_def.modules || []).map(m => (
     [m.id, m]
   )));
   // load into the editor instance
-  editor._instance.module_defs(editor._module_defs);
+  editor._module_defs = module_defs;
+  editor.instance.$set(editor.instance, 'instrument_def', instrument_def);
   // pass it through:
   return instrument_def;
 }
@@ -853,33 +707,11 @@ editor.switch_instrument = async function(instrument_id, load_default=true) {
   } 
 }
 
-editor.edit_template = function(template_def, instrument_id) {
-  var template_def = template_def || this._active_template;
-  var instrument_id = instrument_id || this._instrument_id;
-  var post_load = function() {
-    var te = editor._active_template_editor;
-    te.load_instrument(instrument_id)
-        .then(function(){
-          te.e.import(template_def, true);
-          te.e.add_brush();
-        })
-    d3.select(te.document.getElementById("apply_changes")).on('click', function() {
-      editor.load_template(te.e.export(), null, null, instrument_id);
-    });
-  }
-  if (this._active_template_editor == null || this._active_template_editor.closed) {
-    var te = window.open(template_editor_url, "template_editor", "width=960,height=480");
-    this._active_template_editor = te;
-    te.addEventListener('editor_ready', post_load, false);
-  }
-}
-
 editor.load_template = async function(template_def, selected_module, selected_terminal, instrument_id) {
-  var we = this;
-  var instrument_id = instrument_id || we._instrument_id;
+  var instrument_id = instrument_id || this._instrument_id;
   await editor.switch_instrument(instrument_id, false);
   editor._active_template = template_def;
-  //var r = we.switch_instrument(instrument_id, false).then(function() {
+  //var r = this.switch_instrument(instrument_id, false).then(function() {
       
   let template_sourcepaths = filebrowser.getAllTemplateSourcePaths(template_def);
   let browser_sourcepaths = filebrowser.getAllBrowserSourcePaths();
@@ -893,37 +725,30 @@ editor.load_template = async function(template_def, selected_module, selected_te
     }
   }
     
-  var target = d3.select("#" + we._target_id);    
-  we._instance.import(template_def);
-
-  target.selectAll(".module").classed("draggable wireable", false);
-  target.selectAll("g.module").on("click", editor.handle_module_clicked);
-  //target.selectAll("g.module").on("contextmenu", editor.handle_module_contextmenu);
+  this.instance.template_data = template_def;
+  this.instance.$nextTick(() => this.instance.fit_module_text());
   
-  var autoselected = template_def.modules.findIndex(function(m) {
-    var has_fileinfo = editor._module_defs[m.module].fields
-      .findIndex(function(f) {return f.datatype == 'fileinfo'}) > -1
-    return has_fileinfo;
-  });
-  
-  if (selected_module != null) {
-    autoselected = selected_module;
+  let autoselected = selected_module;
+  let autoselected_term = selected_terminal || {};
+  if (autoselected == null) {
+    autoselected = template_def.modules.findIndex(function(m) {
+        var has_fileinfo = editor._module_defs[m.module].fields
+          .findIndex(function(f) {return f.datatype == 'fileinfo'}) > -1
+        return has_fileinfo;
+      });
   }
   
   if (autoselected > -1) {
-    var toselect = target.selectAll('.module')
-      .filter(function(d,i) { return i == autoselected })
+    let sm = this.instance.selected.modules;
+    let st = this.instance.selected.terminals;
+    sm.splice(0, sm.length, autoselected);
     // choose the module directly by default
-    var toselect_target = toselect.select(".title").node();
     // but if a terminal is specified, use that as target instead.
-    if (selected_terminal != null) {
-      var term = toselect.select('rect.terminal[terminal_id="'+selected_terminal+'"]').node();
-      if (term != null) {toselect_target = term} // override the selection with terminal
-    }
-    
-    await editor.handle_module_clicked.call(toselect.node(), toselect.datum(), autoselected, null, toselect_target);
+    st.splice(0, st.length, [selected_module, selected_terminal]);
     await editor.update_completions();
   }
+  this.instance.on_select();
+  app.resize_bottom(this.instance.get_bbox());
   app.autoselected = autoselected;  
 }
 

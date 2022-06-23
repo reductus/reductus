@@ -1020,7 +1020,7 @@ def loadMAGIKPSD_helper(file_obj, name, path, collapse=True, collapse_axis='y', 
     #    return
     for entryname, entry in file_obj.items():
         active_slice = slice(None, DETECTOR_ACTIVE[0], DETECTOR_ACTIVE[1])
-        counts_value = entry['DAS_logs/areaDetector/counts'].value[:, 1:DETECTOR_ACTIVE[0]+1, :DETECTOR_ACTIVE[1]]
+        counts_value = entry['DAS_logs/areaDetector/counts'][:, 1:DETECTOR_ACTIVE[0]+1, :DETECTOR_ACTIVE[1]]
         dims = counts_value.shape
         ndims = len(dims)
         if auto_PolState:
@@ -1050,8 +1050,8 @@ def loadMAGIKPSD_helper(file_obj, name, path, collapse=True, collapse_axis='y', 
         if ndims == 2: # one of the dimensions has been collapsed.
             info = []
             info.append({"name": "xpixel", "units": "pixels", "values": arange(xpixels) }) # reverse order
-            samp_angle = entry['DAS_logs/sampleAngle/softPosition'].value
-            det_angle = entry['DAS_logs/detectorAngle/softPosition'].value
+            samp_angle = entry['DAS_logs/sampleAngle/softPosition'][()]
+            det_angle = entry['DAS_logs/detectorAngle/softPosition'][()]
             if samp_angle.size > 1:
                 yaxis = entry['DAS_logs/sampleAngle/softPosition']
                 yaxisname = "theta"
@@ -1063,7 +1063,7 @@ def loadMAGIKPSD_helper(file_obj, name, path, collapse=True, collapse_axis='y', 
                 yaxis = entry['data/x']
                 yaxisname = yaxis.path
             yaxisunits = yaxis.attrs['units']
-            yaxisvalues = yaxis.value
+            yaxisvalues = yaxis[()]
             info.append({"name": yaxisname, "units": yaxisunits, "values": yaxisvalues})
             info.extend([
                     {"name": "Measurements", "cols": [
@@ -1071,13 +1071,13 @@ def loadMAGIKPSD_helper(file_obj, name, path, collapse=True, collapse_axis='y', 
                             {"name": "pixels"},
                             {"name": "monitor"},
                             {"name": "count_time"}]},
-                    {"PolState": PolState, "filename": name, "start_datetime": entry['start_time'].value[0], "friendly_name": entry['DAS_logs/sample/name'].value[0],
-                     "entry": entryname, "path":path, "det_angle":entry['DAS_logs/detectorAngle/softPosition'].value,
-                     "theta": entry['DAS_logs/sampleAngle/softPosition'].value}]
+                    {"PolState": PolState, "filename": name, "start_datetime": entry['start_time'][0], "friendly_name": entry['DAS_logs/sample/name'][0],
+                     "entry": entryname, "path":path, "det_angle":entry['DAS_logs/detectorAngle/softPosition'][()],
+                     "theta": entry['DAS_logs/sampleAngle/softPosition'][()]}]
                 )
             data_array = zeros((xpixels, ypixels, 4))
-            mon =  entry['DAS_logs']['counter']['liveMonitor'].value
-            count_time = entry['DAS_logs']['counter']['liveTime'].value
+            mon =  entry['DAS_logs']['counter']['liveMonitor'][()]
+            count_time = entry['DAS_logs']['counter']['liveTime'][()]
             if ndims == 2:
                 mon.shape = (1,) + mon.shape # broadcast the monitor over the other dimension
                 count_time.shape = (1,) + count_time.shape
@@ -1101,8 +1101,8 @@ def loadMAGIKPSD_helper(file_obj, name, path, collapse=True, collapse_axis='y', 
                 xdim = xpixels if collapse_axis == 'y' else ypixels
                 xaxisvalues = arange(xdim)
                 info.append({"name": xaxis, "units": "pixels", "values": xaxisvalues }) # reverse order
-                samp_angle = entry['DAS_logs/sampleAngle/softPosition'].value
-                det_angle = entry['DAS_logs/detectorAngle/softPosition'].value
+                samp_angle = entry['DAS_logs/sampleAngle/softPosition'][()]
+                det_angle = entry['DAS_logs/detectorAngle/softPosition'][()]
                 if samp_angle.size > 1:
                     yaxis = entry['DAS_logs/sampleAngle/softPosition']
                     yaxisname = "theta"
@@ -1114,7 +1114,7 @@ def loadMAGIKPSD_helper(file_obj, name, path, collapse=True, collapse_axis='y', 
                     yaxis = entry['data/x']
                     yaxisname = yaxis.path
                 yaxisunits = yaxis.attrs['units']
-                yaxisvalues = yaxis.value
+                yaxisvalues = yaxis[()]
                 info.append({"name": yaxisname, "units": yaxisunits, "values": yaxisvalues})
                 info.extend([
                         {"name": "Measurements", "cols": [
@@ -1122,15 +1122,15 @@ def loadMAGIKPSD_helper(file_obj, name, path, collapse=True, collapse_axis='y', 
                                 {"name": "pixels"},
                                 {"name": "monitor"},
                                 {"name": "count_time"}]},
-                        {"PolState": PolState, "start_datetime": entry['start_time'].value[0], "path":path,
+                        {"PolState": PolState, "start_datetime": entry['start_time'][0], "path":path,
                          "det_angle": det_angle.tolist(),
                          "theta": samp_angle.tolist(),
                          "filename": name,
-                         "friendly_name": entry['DAS_logs/sample/name'].value[0], "entry": entryname}]
+                         "friendly_name": entry['DAS_logs/sample/name'][0], "entry": entryname}]
                     )
                 data_array = zeros((xdim, frames, 4))
-                mon =  entry['DAS_logs']['counter']['liveMonitor'].value
-                count_time = entry['DAS_logs']['counter']['liveTime'].value
+                mon =  entry['DAS_logs']['counter']['liveMonitor'][()]
+                count_time = entry['DAS_logs']['counter']['liveTime'][()]
                 if ndims == 3:
                     mon.shape = (1,) + mon.shape # broadcast the monitor over the other dimension
                     count_time.shape = (1,) + count_time.shape
@@ -1150,16 +1150,16 @@ def loadMAGIKPSD_helper(file_obj, name, path, collapse=True, collapse_axis='y', 
             else: # make separate frames
                 infos = []
                 data = []
-                samp_angle =  entry['DAS_logs/sampleAngle/softPosition'].value.astype('float')
+                samp_angle =  entry['DAS_logs/sampleAngle/softPosition'][()].astype('float')
                 if samp_angle.shape[0] == 1:
                     samp_angle = ones((frames,)) * samp_angle
-                det_angle = entry['DAS_logs/detectorAngle/softPosition'].value.astype('float')
+                det_angle = entry['DAS_logs/detectorAngle/softPosition'][()].astype('float')
                 if det_angle.shape[0] == 1:
                     det_angle = ones((frames,)) * det_angle
-                count_time = entry['DAS_logs/counter/liveTime'].value
+                count_time = entry['DAS_logs/counter/liveTime'][()]
                 if count_time.shape[0] == 1:
                     count_time = ones((frames,)) * count_time
-                mon =  entry['DAS_logs/counter/liveMonitor'].value
+                mon =  entry['DAS_logs/counter/liveMonitor'][()]
                 if mon.shape[0] == 1:
                     mon = ones((frames,)) * mon
                 for i in range(frames):
@@ -1172,7 +1172,7 @@ def loadMAGIKPSD_helper(file_obj, name, path, collapse=True, collapse_axis='y', 
                                 {"name": "pixels"},
                                 {"name": "monitor"},
                                 {"name": "count_time"}]},
-                        {"PolState": PolState, "filename": name, "start_datetime": entry['start_time'].value[0], "friendly_name": entry['DAS_logs/sample/name'].value[0],
+                        {"PolState": PolState, "filename": name, "start_datetime": entry['start_time'][0], "friendly_name": entry['DAS_logs/sample/name'][0],
                          "entry": entryname, "path":path, "samp_angle": samp_angle[i], "det_angle": det_angle[i]}]
                     )
                     data_array = zeros((xpixels, ypixels, 4))

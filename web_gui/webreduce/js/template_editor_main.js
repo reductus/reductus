@@ -407,7 +407,7 @@ window.onload = async function() {
           .text(function(d) {return d[0]})  
         
         module_select.on("change", function() {
-          popup.remove();          
+          popup.remove();
           contextMenuShowing=false;
           let module = this.value;
           let title = module_defs[module].name;

@@ -60,37 +60,7 @@ await esbuild.build({
     outfile: 'dist/css/index.css',
   }).catch(() => process.exit(1))
 
-await esbuild.build({
-    entryPoints: ['js/template_editor_main.js'],
-    bundle: true,
-    minify: true,
-    sourcemap: true,
-    outdir: 'dist/js',
-    target: 'es2016',
-    plugins: [
-        alias({
-            './libraries.js': path.resolve(__dirname, `js/libraries_production.js`),
-            '../libraries.js': path.resolve(__dirname, `js/libraries_production.js`),
-            '../../libraries.js': path.resolve(__dirname, `js/libraries_production.js`)
-        }),
-    ],
-  }).catch(() => process.exit(1))
-
-await esbuild.build({
-    entryPoints: ['css/template_editor_live.css'],
-    bundle: true,
-    minify: true,
-    loader: {
-        ".woff": "dataurl",
-        ".woff2": "dataurl",
-        ".ttf": "dataurl",
-        ".eot": "dataurl"
-    },
-    outfile: 'dist/css/template_editor_live.css',
-  }).catch(() => process.exit(1))
-
 let mode = fs.constants.COPYFILE_FICLONE;
 copyRecursiveSync('index.html', 'dist/index.html', mode);
-copyRecursiveSync('template_editor_live.html', 'dist/template_editor_live.html', mode);
 copyRecursiveSync('favicon.ico', 'dist/favicon.ico', mode);
 copyRecursiveSync('img', 'dist/img', mode);

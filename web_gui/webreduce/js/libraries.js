@@ -11,6 +11,11 @@ export {default as Tree} from 'https://cdn.jsdelivr.net/gh/bmaranville/treejs@la
 import { default as Vue } from 'https://cdn.jsdelivr.net/npm/vue@2.6.11/dist/vue.esm.browser.js';
 import { default as VueMaterial } from 'https://cdn.skypack.dev/vue-material@latest';
 Vue.use(VueMaterial);
+//import { default as VueSimpleContextMenu } from 'https://cdn.skypack.dev/vue-simple-context-menu@^3.1.10';
+//Vue.use(VueSimpleContextMenu);
+//import { default as VueCustomContextMenu } from 'https://cdn.skypack.dev/vue-custom-context-menu@^3.0.2';
+//Vue.use(VueCustomContextMenu);
+
 // vuedraggable is available as a single-file esm source, Vue.Draggable/src/vuedraggable.js
 // which depends only on Sortable, which can be found at 
 // https://github.com/SortableJS/sortablejs/blob/master/modular/sortable.complete.esm.js
@@ -44,5 +49,4 @@ export {
 //}  from './d3-science/src/index.js';
 
 export { default as Split } from "https://cdn.skypack.dev/split.js";
-export const template_editor_url = "template_editor_live_dev.html";
 export {default as json_patch} from "https://cdn.skypack.dev/json-patch-es6";
