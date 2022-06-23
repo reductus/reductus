@@ -49,5 +49,4 @@ export {
 //}  from './d3-science/src/index.js';
 
 export { default as Split } from "https://cdn.skypack.dev/split.js";
-export const template_editor_url = "template_editor_live_dev.html";
 export {default as json_patch} from "https://cdn.skypack.dev/json-patch-es6";
