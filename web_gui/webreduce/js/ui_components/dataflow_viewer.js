@@ -439,7 +439,7 @@ export const DataflowViewer = {
         this.drag.modules.splice(0);
       }
       let wires = this.template_data.wires;
-      indices.sort().reverse();
+      indices.sort((a,b) => (a - b)).reverse();
       let old_order = this.template_data.modules.map((m, i) => (i));
       for (let mi of indices) {
         this.template_data.modules.splice(mi, 1);
