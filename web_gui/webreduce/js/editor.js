@@ -9,7 +9,6 @@ import {zip} from './libraries.js';
 import { Vue } from './libraries.js';
 import {extend, dataflowEditor} from './libraries.js';
 import { Cache } from './idb_cache.js';
-import {template_editor_url} from './libraries.js';
 import {filebrowser} from './filebrowser.js';
 //import {make_fieldUI} from './fieldUI.js';
 import { fieldUI } from './ui_components/fields_panel.js';
@@ -706,31 +705,6 @@ editor.switch_instrument = async function(instrument_id, load_default=true) {
       return editor.load_template(template_copy);
     }
   } 
-}
-
-editor.edit_template = async function(template_def, instrument_id) {
-  var template_def = template_def || this.instance.template_data;
-  var instrument_id = instrument_id || this._instrument_id;
-  var post_load = async function() {
-    var te = editor._active_template_editor;
-    await te.load_instrument(instrument_id)
-    te.e.import(template_def, true);
-    te.e.add_brush();
-    te.document.getElementById("apply_changes").onclick = function() {
-      editor.load_template(te.e.export(), null, null, instrument_id);
-    };
-  }
-  if (this._active_template_editor == null || this._active_template_editor.closed) {
-    var te = window.open(template_editor_url, "template_editor", "width=960,height=480");
-    this._active_template_editor = te;
-    te.addEventListener('editor_ready', post_load, false);
-  }
-  else {
-    // synchronize template editor with template in main window
-    let te = editor._active_template_editor;
-    await te.load_instrument(instrument_id);
-    te.e.import(template_def);
-  }
 }
 
 editor.load_template = async function(template_def, selected_module, selected_terminal, instrument_id) {
