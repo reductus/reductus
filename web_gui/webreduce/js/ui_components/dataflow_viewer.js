@@ -258,12 +258,14 @@ export const DataflowViewer = {
       terminals: []
     },
     select_many: {
+      started: false,
       active: false,
       x0: 0,
       y0: 0,
       x1: 0,
       y1: 0,
-      module_positions: []
+      module_positions: [],
+      previously_selected: []
     },
     satisfied: {
       modules: [],
@@ -281,8 +283,8 @@ export const DataflowViewer = {
     },
     options: {
       move: {
-        x_step: 5,
-        y_step: 5
+        x_step: 10,
+        y_step: 10
       },
       autosize_modules: false,
       padding: 5,
@@ -529,13 +531,13 @@ export const DataflowViewer = {
       document.addEventListener('mousemove', this.mousemove);
       let d = this.drag;
       let s = this.select_many;
-      if (d.started == true || s.active == true) {
+      if (d.started == true || s.started == true) {
         // then we're already dragging.  Ignore other mouse buttons.
         return
       }
       if (ev.shiftKey || ev.ctrlKey) {
         // then begin a select_many operation
-        s.active = true;
+        s.started = true;
         const svgCoords = this.getSVGCoords(ev);
         const module_positions = this.$refs.modules.map((m) => ({
           x: m.module_data.x,
@@ -548,6 +550,7 @@ export const DataflowViewer = {
         s.x1 = svgCoords.x;
         s.y1 = svgCoords.y;
         s.module_positions = module_positions;
+        s.previously_selected = [...d.modules];
       }
       else {
         d.module_start_positions = this.template_data.modules.map((m) => ({ x: m.x, y: m.y }));
@@ -575,8 +578,8 @@ export const DataflowViewer = {
     mouseup: function (ev) {
       document.removeEventListener('mouseup', this.mouseup);
       document.removeEventListener('mousemove', this.mousemove);
-      let d = this.drag;
-      let s = this.select_many;
+      const d = this.drag;
+      const s = this.select_many;
       if (ev.buttons != 0) {
         // if some reprobate has pushed and release a different button
         // during a drag...
@@ -620,14 +623,10 @@ export const DataflowViewer = {
         }
       }
       else if (s.active) {
-
+        // console.log('s.active', s);
       }
       else {
-        if (d.buttons == 1) {
-          // in principle, this is only triggered by left-click so this check 
-          // is not needed.
-          this.clicked(d.startdata);
-        }
+        this.clicked(d.startdata);
       }
 
       d.start_x = null;
@@ -638,20 +637,23 @@ export const DataflowViewer = {
       d.active = false;
       d.new_wire = null;
 
+      s.started = false;
       s.active = false;
+      s.previously_selected = [];
 
     },
     mousemove: function (ev) {
       let d = this.drag;
       let s = this.select_many;
-      let svgCoords = this.getSVGCoords(ev);
+      const svgCoords = this.getSVGCoords(ev);
+      // drag stuff
+      const dx = this.options.move.x_step;
+      const dy = this.options.move.y_step;
+      const new_delta_x = dx * Math.round((ev.x - d.start_x) / dx);
+      const new_delta_y = dy * Math.round((ev.y - d.start_y) / dy);
+      const active =  (new_delta_x != d.delta_x || new_delta_y != d.delta_y);
       if (d.started && d.buttons == 1) {
-        // drag stuff
-        let dx = this.options.move.x_step;
-        let dy = this.options.move.y_step;
-        let new_delta_x = dx * Math.round((ev.x - d.start_x) / dx);
-        let new_delta_y = dy * Math.round((ev.y - d.start_y) / dy);
-        if (new_delta_x != d.delta_x || new_delta_y != d.delta_y) {
+        if (active) {
           d.active = true;
           d.delta_x = new_delta_x;
           d.delta_y = new_delta_y;
@@ -689,11 +691,14 @@ export const DataflowViewer = {
           }
         }
       }
-      else if (s.active) {
-        s.x1 = svgCoords.x;
-        s.y1 = svgCoords.y;
-        const selected = getSelected(s);
-        this.drag.modules = selected;
+      else if (s.started) {
+        if (active) {
+          s.active = true;
+          s.x1 = svgCoords.x;
+          s.y1 = svgCoords.y;
+          const selected = getSelected(s);
+          this.drag.modules = selected;
+        }
       }
     },
     getSVGCoords: function (ev) {
@@ -735,16 +740,16 @@ function getSelected(select_many) {
   const { x0, y0, x1, y1, module_positions } = select_many;
   const [ xmin, xmax ] = [ x0, x1 ].sort((a,b) => ( a - b ));
   const [ ymin, ymax ] = [ y0, y1 ].sort((a,b) => ( a - b ));
-  const selected = module_positions.map((p, i) => (
+  const new_selection = module_positions.map((p, i) => (
     ( p.x <= xmax &&
       p.x + p.width >= xmin &&
       p.y <= ymax &&
       p.y + p.height >= ymin
     ) ? i : false
   )).filter((indexish) => indexish !== false)
-  // module_positions.forEach((p) => {
-  //   console.log('x', p.x, p.x + p.width, xmin, xmax);
-  //   console.log('y', p.y, p.y + p.height, ymin, ymax);
-  // })
+
+  const selected_union = new Set([...select_many.previously_selected, ...new_selection]);
+  const selected = [...selected_union].sort((a,b) => (a-b));
+
   return selected;
 }
