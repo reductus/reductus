@@ -137,12 +137,14 @@ let dataflow_template = `
         <md-tab md-label="Editing">
           <p>Left-click and drag a module to move it</p>
           <p>Right-click a module or wire and you will have the option to delete or copy</p>
-          <p>Shift-left-click to highlight multiple modules, 
-          then you can left-click and drag them together, 
-          or right-click to copy or delete them all at once</p>
-          <p>Right-click on an empty spot in the template to add a new module or paste a copied module or group of modules</p>
           <p>Left-click and then drag on a terminal (input or output) to create a new wire.  
           Stop over the opposite type of terminal to finish the connection</p>
+          <p>Shift-left-click to or Ctrl-drag to highlight multiple modules, then:</p>
+          <ul>
+            <li>left-click and drag them together</li>
+            <li>right-click to copy or delete them all at once</li>
+          </ul>
+          <p>Right-click on an empty spot in the template to add a new module or paste a copied module or group of modules</p>
         </md-tab>
         <md-tab md-label="Operating">
           <p>Left-click on a module to select and show/edit its parameters (first input terminal also autoselected)</p>
