@@ -104,17 +104,19 @@ def apply_measured_footprint(data, measured_footprint):
     _apply_footprint(data, footprint)
 
 
-def apply_abinitio_footprint(data, Io, width, offset):
+def apply_abinitio_footprint(data, Io, width, offset, source_divergence=None):
     slit1 = (data.slit1.distance, data.slit1.x, data.slit1.y)
     slit2 = (data.slit2.distance, data.slit2.x, data.slit2.y)
     theta = data.sample.angle_x
+    if source_divergence is None:
+        source_divergence = data.source_divergence
     if width is None:
         width = data.sample.width
     if offset is None:
         offset = 0.
     if Io is None:
         Io = 1.
-    y = Io * _abinitio_footprint(slit1, slit2, theta, width, offset)
+    y = Io * _abinitio_footprint(slit1, slit2, theta, width, offset, source_divergence=source_divergence)
     footprint = U(y, 0.0*y)
     _apply_footprint(data, footprint)
 
@@ -213,15 +215,25 @@ def _abinitio_footprint(slit1, slit2, theta, width, offset=0., source_divergence
     rotation of the sample away from the beam center.  These are in the same
     units as the slits (mm).
 
-    *source_divergence* is the angular divergence of the source, in degrees
-    (e.g. from a parabolic mirror between the true source and the beamline)
-    The beam is assumed to have uniform intensity for the entire width.
+    *source_divergence* is the angular divergence of the source (full-width)
+    in degrees (e.g. from a parabolic mirror between the true source 
+    and the beamline).  The beam is assumed to have uniform intensity 
+    for the entire width.
     """
     # TODO: implement footprint for circular samples
     # TODO: implement vertical footprint if slit y is not inf
 
     d1, s1x, s1y = slit1
     d2, s2x, s2y = slit2
+
+    # for some reason, distances are stored in nexus files with float32 precision,
+    # causing noticeable roundoff differences between different orders of operation
+    # (which affects the reproducibility tests, when the algorithm is altered.)
+
+    if hasattr(d1, 'astype'):
+        d1 = d1.astype(np.float64)
+    if hasattr(d2, 'astype'):
+        d2 = d2.astype(np.float64)
 
     # use radians internally
     theta = radians(theta)
@@ -238,22 +250,24 @@ def _abinitio_footprint(slit1, slit2, theta, width, offset=0., source_divergence
 
     # slope between opposite edges of slits 1 and 2:
     # (i.e. bottom of slit 1, top of slit 2) - always positive
-    outer_slope = (s2x + s1x) / abs(d1 - d2) / 2
-    outer_slope = min(outer_slope, source_max_slope)
+    outer_slope = (s2x + s1x) / np.abs(d1 - d2) / 2
+
+    outer_slope = np.minimum(outer_slope, source_max_slope)
 
     # slope between similar edges of slits 1 and 2 
     # (both tops) - will be positive if s1x < s2x
-    inner_slope = (s2x - s1x) / abs(d1 - d2) / 2
+    inner_slope = (s2x - s1x) / np.abs(d1 - d2) / 2
     # constrain the slope so that it is never larger than the source div.
     # (-source_max_slope <= inner_slope <= source_max_slope)
-    inner_slope = max(-source_max_slope, min(inner_slope, source_max_slope))
+    inner_slope = np.maximum(-source_max_slope, np.minimum(inner_slope, source_max_slope))
+
 
     # Beam profile is a trapezoid, with control points defined by where
     # the inner_slope and outer_slope intersect the sample position, subject
     # to the constraint that they must pass below both the top slit 1 and 
     # slit 2 edges. The lower projected value will be the constraining one...
-    w1 = abs(min(s1x/2 + outer_slope * d1, s2x/2 + outer_slope * d2))
-    w2 = abs(min(s1x/2 + inner_slope * d1, s2x/2 + inner_slope * d2))
+    w1 = np.abs(np.minimum(s1x/2 + outer_slope * np.abs(d1), s2x/2 + outer_slope * np.abs(d2)))
+    w2 = np.abs(np.minimum(s1x/2 + inner_slope * np.abs(d1), s2x/2 + inner_slope * np.abs(d2)))
     
     w_intensity = w1 + w2
     #if use_y:
