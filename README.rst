@@ -79,7 +79,7 @@ install and use that instead of localhost, e.g. ::
 
     docker-machine ip default
 
-*In my case it was http://192.168.99.100:8000/web_gui/web_reduction_filebrowser.html*
+*In my case it was http://192.168.99.100:8000/webreduce/index.html*
 
 
 Method 3: Run from repo (development)

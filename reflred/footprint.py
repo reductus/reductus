@@ -215,7 +215,7 @@ def _abinitio_footprint(slit1, slit2, theta, width, offset=0., source_divergence
     rotation of the sample away from the beam center.  These are in the same
     units as the slits (mm).
 
-    *source_divergence* is the angular divergence of the source (full-width)
+    *source_divergence* is the angular divergence of the source (1-sigma)
     in degrees (e.g. from a parabolic mirror between the true source 
     and the beamline).  The beam is assumed to have uniform intensity 
     for the entire width.
@@ -259,7 +259,7 @@ def _abinitio_footprint(slit1, slit2, theta, width, offset=0., source_divergence
     inner_slope = (s2x - s1x) / np.abs(d1 - d2) / 2
     # constrain the slope so that it is never larger than the source div.
     # (-source_max_slope <= inner_slope <= source_max_slope)
-    inner_slope = np.maximum(-source_max_slope, np.minimum(inner_slope, source_max_slope))
+    inner_slope = np.clip(inner_slope, -source_max_slope, source_max_slope)
 
 
     # Beam profile is a trapezoid, with control points defined by where
@@ -287,17 +287,20 @@ def _trapezoid_sum_right(p, w1, w2):
     """
     Find the integral from p to inf of the trapezoid defined by w1 and w2.
     """
-    slope = 1.0/(w1-w2)
+    slope = 1.0/(w1-w2) if not w1 == w2 else None
+    SUM = 0
     a = np.maximum(p, -w1) + w1
     b = np.maximum(p, -w2) + w1
-    A = 0.5*slope*(b**2-a**2)*(b > a)
+    if slope is not None:
+        SUM += 0.5*slope*(b**2-a**2)*(b > a)
     a = np.maximum(p, -w2) + w2
     b = np.maximum(p, w2) + w2
-    A += (b-a)*(b > a)
+    SUM += (b-a)*(b > a)
     a = w1 - np.maximum(p, w1)
     b = w1 - np.maximum(p, w2)
-    A += 0.5*slope*(b**2-a**2)*(b > a)
-    return A
+    if slope is not None:
+        SUM += 0.5*slope*(b**2-a**2)*(b > a)
+    return SUM
 
 
 def spill(slit, Qz, wavelength, detector_distance, detector_width, thickness,
