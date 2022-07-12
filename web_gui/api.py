@@ -5,8 +5,6 @@ from pprint import pprint
 import json
 import traceback
 
-import requests
-
 import dataflow
 from dataflow.core import Template, load_instrument, lookup_instrument
 from dataflow.core import list_instruments as _list_instruments
@@ -65,6 +63,7 @@ def get_file_metadata(source="ncnr", pathlist=None):
     if source == "local":
         metadata = local_file_metadata(pathlist)
     else:
+        import requests
         url = fetch.FILE_HELPERS[source] #'https://ncnr.nist.gov/ipeek/listftpfiles_json.php'
         req = requests.post(url, json={"pathlist": pathlist})
         metadata = req.json()

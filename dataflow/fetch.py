@@ -46,7 +46,6 @@ from posixpath import basename, join, sep
 import os
 import hashlib
 
-import requests
 import urllib
 
 import pytz
@@ -63,7 +62,6 @@ DATA_SOURCES = []
 FILE_HELPERS = []
 DEFAULT_DATA_SOURCE = "ncnr"
 
-SESSION = requests.Session()
 
 def check_datasource(source):
     datasource = next((x for x in DATA_SOURCES if x['name'] == source), {})
@@ -82,6 +80,7 @@ def check_datasource(source):
 
 
 def url_get(fileinfo, mtime_check=True):
+    import requests
     path, mtime, entries = fileinfo['path'], fileinfo.get('mtime', None), fileinfo.get('entries', None)
     # fingerprint the get, leaving off entries information:
     cache = get_cache()
@@ -99,12 +98,12 @@ def url_get(fileinfo, mtime_check=True):
         source_url = check_datasource(source)
         full_url = join(source_url, urllib.parse.quote(path.strip(sep), safe='/:'))
         print("loading", full_url, name)
-        req = None  # Need placeholder for req in case SESSION.get fails.
+        req = None  # Need placeholder for req in case requests.get fails.
         try:
             if isLocal:
                 t_repo = datetime.datetime.fromtimestamp(int(os.stat(path).st_mtime), pytz.utc)
             else:
-                req = SESSION.get(full_url)
+                req = requests.get(full_url)
                 req.raise_for_status()
                 url_mtime = req.headers.get('last-modified', None)
                 url_time_struct = time.strptime(url_mtime, '%a, %d %b %Y %H:%M:%S %Z')
