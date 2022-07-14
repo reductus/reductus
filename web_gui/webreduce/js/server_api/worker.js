@@ -1,5 +1,7 @@
 // imports pyodide library
 importScripts("https://cdn.jsdelivr.net/pyodide/v0.20.0/full/pyodide.js");
+// imports promise worker library
+importScripts('https://unpkg.com/promise-worker/dist/promise-worker.register.js');
 
 async function loadPyodideAndPackages() { // loads pyodide
   self.pyodide = await loadPyodide(); // run the function and wait for the result (base library)

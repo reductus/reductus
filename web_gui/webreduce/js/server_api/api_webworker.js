@@ -1,3 +1,6 @@
+// imports promise worker library
+importScripts('https://unpkg.com/promise-worker/dist/promise-worker.js');
+
 import {messagepack as msgpack} from '../libraries.js';
 const server_api = {};
 export {server_api};
@@ -42,6 +45,9 @@ toWrap.forEach(function(method_name) {
 
 server_api.__init__ = function() {
   const worker = new Worker('worker.js');
+  var server_api.promiseWorker = new PromiseWorker('worker.js'); // creates new promise worker
+  const promiseWorker = new PromiseWorker('worker.js'); // GO OVER
+
 
   addButton.addEventListener("click", (event) => {
     let one = document.getElementById("firstInput").value;
@@ -53,3 +59,35 @@ server_api.__init__ = function() {
   worker.onmessage = function(message) {
     document.getElementById("printSum").innerHTML = message.data;
 }}
+
+server_api.promiseWorker = promiseWorker; // GO OVER
+
+// function sending the find_calculated function to worker.js
+server_api.find_calculated = async function () {
+  server_api.promiseWorker.postMessage(api[find_calculated()])
+}
+
+// function sending the get_instrument function to worker.js
+server_api.get_instrument = async function () {
+  server_api.promiseWorker.postMessage(api[get_instrument()])
+}
+
+// function sending the calc_terminal function to worker.js
+server_api.calc_terminal = async function () {
+  server_api.promiseWorker.postMessage(api[calc_terminal()])
+}
+
+// function sending the list_datasources function to worker.js
+server_api.list_datasources = async function () {
+  server_api.promiseWorker.postMessage(api[list_datasources()])
+}
+
+// function sending the list_instruments function to worker.js
+server_api.list_instruments = async function () {
+  server_api.promiseWorker.postMessage(api[list_instruments()])
+}
+
+// function sending the get_file_metadata function to worker.js
+server_api.get_file_metadata = async function () {
+  server_api.promiseWorker.postMessage(api[get_file_metadata()])
+}
