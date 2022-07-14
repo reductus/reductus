@@ -1,5 +1,3 @@
-//hello my friend
-
 "use strict";
 // SIDE-EFFECTS ONLY FOR NOW...
 import { extend } from './libraries.js';
