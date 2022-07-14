@@ -1,3 +1,5 @@
+//hello my friend
+
 "use strict";
 // SIDE-EFFECTS ONLY FOR NOW...
 import { extend } from './libraries.js';
@@ -64,7 +66,7 @@ function create_downloader() {
   a.id = "savedata";
   return function (data, fileName) {
     var blob = (data instanceof Blob) ? data : new Blob([data], { type: "text/plain" });
-    // IE 10 / 11 
+    // IE 10 / 11
     if (window.navigator.msSaveOrOpenBlob) {
       window.navigator.msSaveOrOpenBlob(blob, fileName);
     } else {
@@ -118,7 +120,7 @@ function add_datasource(sourcename, start_path_in="") {
   else if (datasource && datasource.start_path) {
     start_path = datasource.start_path;
   }
-  let pathlist = start_path.split("/");      
+  let pathlist = start_path.split("/");
   filebrowser.addDataSource(sourcename, pathlist);
 }
 
@@ -210,7 +212,7 @@ window.onload = async function () {
     accept_button() { editor.advance_to_output() },
     update() { editor.update_completions() },
     clear() { editor.module_clicked_single() },
-    fileinfo_update({value, no_terminal_selected}) { filebrowser.fileinfoUpdate(value, no_terminal_selected) } 
+    fileinfo_update({value, no_terminal_selected}) { filebrowser.fileinfoUpdate(value, no_terminal_selected) }
   };
   fieldUI.instance.$on("action", function(name, argument) {
     fieldUI_actions[name](argument);
@@ -263,7 +265,7 @@ window.onload = async function () {
   })
   export_dialog.create_instance();
 
-  
+
   // set up the communication between these panels:
   // fieldUI.fileinfoUpdateCallback = filebrowser.fileinfoUpdate;
   // filebrowser.fileinfoUpdateCallback = fieldUI.fileinfoUpdate;
@@ -375,7 +377,7 @@ window.onload = async function () {
       });
     }
 
-    // Finally, if the user has denied notifications and you 
+    // Finally, if the user has denied notifications and you
     // want to be respectful there is no need to bother them any more.
   }
 
