@@ -15,6 +15,8 @@ async function loadPyodideAndPackages() { // loads pyodide
 
 let pyodideReadyPromise = loadPyodideAndPackages(); // run the functions stored in lines 4
 
+// make a normal functions
+// replace self.onmessage with const handler
 self.onmessage = async (message) => { // when the worker.js receives a message...
   await pyodideReadyPromise; // waits for loadPyodideAndPackages to load and run. for the second time it doesn't take anytime
 
