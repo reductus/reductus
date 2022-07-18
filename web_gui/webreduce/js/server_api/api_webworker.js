@@ -45,8 +45,8 @@ toWrap.forEach(function(method_name) {
 
 server_api.__init__ = function() {
   const worker = new Worker('worker.js');
-  const promiseWorker = new PromiseWorker('worker'); // GO OVER
-  server_api.promiseWorker = PromiseWorker('worker'); // creates new promise worker
+  const promiseWorker = new PromiseWorker(worker); // GO OVER
+  server_api.promiseWorker = PromiseWorker(worker); // creates new promise worker
 
 
   addButton.addEventListener("click", (event) => {
