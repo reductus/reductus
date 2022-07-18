@@ -60,34 +60,33 @@ server_api.__init__ = function() {
     document.getElementById("printSum").innerHTML = message.data;
 }}
 
-server_api.promiseWorker = promiseWorker; // GO OVER
 
 // function sending the find_calculated function to worker.js
 server_api.find_calculated = async function () {
-  server_api.promiseWorker.postMessage(api[find_calculated()])
+  server_api.myPromiseWorker.postMessage({"name": "find_caculated", "arguments": arguments})
 }
 
 // function sending the get_instrument function to worker.js
 server_api.get_instrument = async function () {
-  server_api.promiseWorker.postMessage(api[get_instrument()])
+  server_api.myPromiseWorker.postMessage({"name": "get_instrument", "arguments": arguments})
 }
 
 // function sending the calc_terminal function to worker.js
 server_api.calc_terminal = async function () {
-  server_api.promiseWorker.postMessage(api[calc_terminal()])
+  server_api.myPromiseWorker.postMessage({"name": "calc_terminal", "arguments": arguments})
 }
 
 // function sending the list_datasources function to worker.js
 server_api.list_datasources = async function () {
-  server_api.promiseWorker.postMessage(api[list_datasources()])
+  server_api.myPromiseWorker.postMessage({"name": "list_datasources", "arguments": arguments})
 }
 
 // function sending the list_instruments function to worker.js
 server_api.list_instruments = async function () {
-  server_api.promiseWorker.postMessage(api[list_instruments()])
+  server_api.myPromiseWorker.postMessage({"name": "list_instruments", "arguments": arguments})
 }
 
 // function sending the get_file_metadata function to worker.js
 server_api.get_file_metadata = async function () {
-  server_api.promiseWorker.postMessage(api[get_file_metadata()])
+  server_api.myPromiseWorker.postMessage({"name": "get_file_metadata", "arguments": arguments})
 }
