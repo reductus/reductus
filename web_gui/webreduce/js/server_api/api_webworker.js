@@ -49,15 +49,15 @@ server_api.__init__ = function() {
   server_api.myPromiseWorker = myPromiseWorker; // creates new promise worker
 
 
-  addButton.addEventListener("click", (event) => {
-    let one = document.getElementById("firstInput").value;
-    let two = document.getElementById("secondInput").value;
+  // addButton.addEventListener("click", (event) => {
+  //   let one = document.getElementById("firstInput").value;
+  //   let two = document.getElementById("secondInput").value;
+  //
+  //   worker.postMessage([one, two]); // main js script sends a message to worker
+  // });
 
-    worker.postMessage([one, two]); // main js script sends a message to worker
-  });
-
-  worker.onmessage = function(message) { // main js script recieves a message from worker
-    document.getElementById("printSum").innerHTML = message.data;
+  // worker.onmessage = function(message) { // main js script recieves a message from worker
+  //   document.getElementById("printSum").innerHTML = message.data;
 }}
 
 
