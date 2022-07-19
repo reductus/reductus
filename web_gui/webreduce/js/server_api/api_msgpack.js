@@ -40,4 +40,29 @@ toWrap.forEach(function(method_name) {
   server_api[method_name] = wrap_hug_msgpack(method_name);
 });
   
-server_api.__init__ = function() { return Promise.resolve(true); }
+const sleep = (seconds) => new Promise(r => setTimeout(r, seconds * 1000));
+
+server_api.__init__ = async function(init_progress_obj) { 
+  init_progress_obj.status_text = "Loading pyodide...";
+  await sleep(1);
+  console.log('loading 1');
+  init_progress_obj.status_text += "\nLoading numpy...";
+  await sleep(2);
+  console.log('loading 2');
+  init_progress_obj.status_text += "\nLoading scipy...";
+  await sleep(10);
+  console.log('loading 3');
+  init_progress_obj.visible = false;
+  return true;
+}
+
+server_api.upload_datafiles = async function(files) {
+  window.uploaded_files = window.uploaded_files ?? {};
+  for (let file of files) {
+    console.log(file.name);
+    const filename = file.name;
+    const contents = await file.arrayBuffer();
+    window.uploaded_files[file.name] = contents; 
+  }
+  console.log(files.length);
+}

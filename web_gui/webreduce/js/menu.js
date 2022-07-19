@@ -61,6 +61,10 @@ let template = `
             <span class="md-list-item-text">Edit Categories</span>
             <md-icon class="mdi mdi-format-list-bulleted md-primary"></md-icon>
           </md-list-item>
+          <md-list-item @click="trigger_upload_datafiles" class="md-inset">
+            <span class="md-list-item-text">Upload Datafiles</span>
+            <md-icon class="mdi mdi-briefcase-upload md-primary"></md-icon>
+          </md-list-item>
           <md-list-item @click="action('export_data')" class="md-inset">
             <span class="md-list-item-text">Export</span>
             <md-icon class="mdi mdi-cloud-download md-primary"></md-icon>
@@ -169,6 +173,17 @@ let template = `
     style="display:none;"
     @change="upload"
   />
+
+  <input 
+    ref="upload_datafiles" 
+    type="file" 
+    multiple="true" 
+    id="upload_datafiles" 
+    name="upload_datafiles" 
+    style="display:none;"
+    @mousedown="function() {this.value=''}"
+    @change="upload_datafiles"
+  />
   
 </div >
 `;
@@ -219,8 +234,14 @@ export const VueMenu = {
       await(this.$nextTick());
       this.template_to_upload = null;
     },
+    async upload_datafiles(ev) {
+      this.action('upload_datafiles', ev.target.files);
+    },
     trigger_upload() {
       this.$refs.upload_template.click();
+    },
+    trigger_upload_datafiles() {
+      this.$refs.upload_datafiles.click();
     }
   },
   watch: {

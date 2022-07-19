@@ -47,6 +47,16 @@ let template = `
     </md-dialog-actions>
   </md-dialog>
 
+  <md-dialog 
+    :md-click-outside-to-close="false"
+    :md-close-on-esc="false"
+    :md-active.sync="init_progress.visible">
+    <md-dialog-title>Initializing</md-dialog-title>
+    <md-dialog-content>
+      <pre>{{init_progress.status_text}}</pre>
+    </md-dialog-content>
+  </md-dialog>
+
   <md-snackbar :md-active.sync="snackbar.visible" md-position="center" :md-duration="snackbar.duration">
     <span>{{snackbar.message}}</span>
   </md-snackbar>
@@ -62,6 +72,10 @@ const header = {
     api_error: {
       visible: false,
       message: ""
+    },
+    init_progress: {
+      visible: true,
+      status_text: "initializing..."
     },
     calculation_progress: {
       visible: false,

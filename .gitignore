@@ -19,3 +19,4 @@ __pycache__
 /dataflow/git_version*
 **/files_cache/
 **/cache/
+**/node_modules/

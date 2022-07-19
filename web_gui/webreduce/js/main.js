@@ -128,9 +128,6 @@ window.onload = async function () {
   window.editor = editor;
   //zip.workerScriptsPath = "js/";
   //zip.useWebWorkers = false;
-  await server_api.__init__();
-  server_api.exception_handler = api_exception_handler;
-  app.server_api = server_api;
   var middle_layout = Split(['.ui-layout-west', '.ui-layout-center', '.ui-layout-east'], {
     sizes: [25, 50, 25],
     elementStyle: (dimension, size, gutterSize) => ({
@@ -184,6 +181,12 @@ window.onload = async function () {
   app_header.instance.$on("toggle-menu", () => {
     vueMenu.instance.showNavigation = !vueMenu.instance.showNavigation
   });
+
+  await server_api.__init__(app_header.instance.init_progress);
+  //app_header.instance.init_progress.visible = false;
+  server_api.exception_handler = api_exception_handler;
+  app.server_api = server_api;
+
   filebrowser.create_instance("filebrowser");
   const filebrowser_actions = {
     remove_stash(stashname) {
@@ -233,6 +236,10 @@ window.onload = async function () {
       //window.fheader = file.slice(0, 20).arrayBuffer();
       let template_data = await reload(file);
       editor.load_template(template_data.template, template_data.node, template_data.terminal, template_data.instrument_id);
+    },
+    async upload_datafiles(files) {
+      await server_api.upload_datafiles(files);
+      notify(`Uploaded: ${files.length} files`);
     },
     load_predefined(template_id) {
       let instrument_id = editor._instrument_id;
