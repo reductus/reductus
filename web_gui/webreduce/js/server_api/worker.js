@@ -19,6 +19,8 @@ let pyodideReadyPromise = loadPyodideAndPackages(); // run the functions stored 
 
 await pyodideReadyPromise; // waits for loadPyodideAndPackages to load and run. for the second time it doesn't take anytime
 
-registerPromiseWorker(function(message)) {
-
+const messageHandler = async function(message) {
+    
 }
+
+registerPromiseWorker(messageHandler);
