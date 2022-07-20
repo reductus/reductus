@@ -17,8 +17,6 @@ async function loadPyodideAndPackages() { // loads pyodide
 
 let pyodideReadyPromise = loadPyodideAndPackages(); // run the functions stored in lines 4
 
-const registerPromiseWorker = require('promise-worker/register'); // take out
-
 await pyodideReadyPromise; // waits for loadPyodideAndPackages to load and run. for the second time it doesn't take anytime
 
 registerPromiseWorker(function(message)) {
