@@ -37,16 +37,17 @@ function wrap_hug_msgpack(method_name) {
   return wrapped
 }
 
-var toWrap = ["find_calculated", "get_instrument", "calc_terminal", "list_datasources", "list_instruments", "get_file_metadata"];
+var toWrap = ["find_calculated", "get_instrument", "calc_terminal", "list_datasources", "list_instruments", "get_file_metadata", "upload_datafiles"];
 
 toWrap.forEach(function(method_name) {
   server_api[method_name] = wrap_hug_msgpack(method_name);
 });
 
 server_api.__init__ = function() {
-  const worker = new Worker('worker.js');
-  const myPromiseWorker = new PromiseWorker(worker); // GO OVER
-  server_api.myPromiseWorker = myPromiseWorker; // creates new promise worker
+  PromiseWorker = require('promise-worker'); // GO OVER
+  const worker = new Worker('worker.js'); // creates a new Worker
+  const myPromiseWorker = new PromiseWorker(worker); // creates a new PromiseWorker
+  server_api.myPromiseWorker = myPromiseWorker; // assigns the server_api's promise worker to a new PromisWorker
 
 
   // addButton.addEventListener("click", (event) => {
@@ -63,30 +64,49 @@ server_api.__init__ = function() {
 
 // function sending the find_calculated function to worker.js
 server_api.find_calculated = async function () {
-  server_api.myPromiseWorker.postMessage({"name": "find_caculated", "arguments": arguments})
+  const result = await server_api.myPromiseWorker.postMessage({"name": "find_caculated", "arguments": arguments})
+  return result
+  const name = "find_calculated";
 }
 
 // function sending the get_instrument function to worker.js
 server_api.get_instrument = async function () {
-  server_api.myPromiseWorker.postMessage({"name": "get_instrument", "arguments": arguments})
+  const result = await server_api.myPromiseWorker.postMessage({"name": "get_instrument", "arguments": arguments})
+  return result
+  const name = "get_instrument";
 }
 
 // function sending the calc_terminal function to worker.js
 server_api.calc_terminal = async function () {
-  server_api.myPromiseWorker.postMessage({"name": "calc_terminal", "arguments": arguments})
+  const result = await server_api.myPromiseWorker.postMessage({"name": "calc_terminal", "arguments": arguments})
+  return result
+  const name = "calc_terminal";
 }
 
 // function sending the list_datasources function to worker.js
 server_api.list_datasources = async function () {
-  server_api.myPromiseWorker.postMessage({"name": "list_datasources", "arguments": arguments})
+  const result = await server_api.myPromiseWorker.postMessage({"name": "list_datasources", "arguments": arguments})
+  return result
+  const name = "list_datasources";
 }
 
 // function sending the list_instruments function to worker.js
 server_api.list_instruments = async function () {
-  server_api.myPromiseWorker.postMessage({"name": "list_instruments", "arguments": arguments})
+  const result = await server_api.myPromiseWorker.postMessage({"name": "list_instruments", "arguments": arguments})
+  return result
+  const name = "list_instruments";
 }
 
 // function sending the get_file_metadata function to worker.js
 server_api.get_file_metadata = async function () {
-  server_api.myPromiseWorker.postMessage({"name": "get_file_metadata", "arguments": arguments})
+  const result = await server_api.myPromiseWorker.postMessage({"name": "get_file_metadata", "arguments": arguments})
+  return result
+  const name = "get_file_metadata";
+}
+
+// function sending the get_file_metadata function to worker.js
+server_api.upload_datafiles = async function () {
+  const result = await server_api.myPromiseWorker.postMessage({"name": "upload_datafiles", "arguments": arguments})
+  return result
+  const name = "upload_datafiles";
 }

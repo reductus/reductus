@@ -19,20 +19,29 @@ let pyodideReadyPromise = loadPyodideAndPackages(); // run the functions stored 
 
 // make a normal functions
 // replace self.onmessage with const handler
+
+const registerPromiseWorker = require('promise-worker/register');
+
 self.onmessage = async (message) => { // when the worker.js receives a message...
   await pyodideReadyPromise; // waits for loadPyodideAndPackages to load and run. for the second time it doesn't take anytime
 
+  registerPromiseWorker(function(message)) {
+    const wrappedAdd = pyodide.runPython(`
+      api[message]
+      `)
+  }
 // creates a function in python using pyodide
 // pyodide.runPython runs python code and returns the value of the last expression
 // pyodide.runPython is a synchronous function (returns when its finished automatically)
-  const wrappedAdd = pyodide.runPython(`
-  def add(a,b):
-      return float(a) + float(b)
-  add
-  `);
+  // const wrappedAdd = pyodide.runPython(`
+  // def add(a,b):
+  //     return float(a) + float(b)
+  // add
+  // `);
 
   try {
-    let results = wrappedAdd(message.data[0], message.data[1]); // calls the function so that the sum is returned
+    // let results = wrappedAdd(message.data[0], message.data[1]); // calls the function so that the sum is returned
+    let results = wrappedAdd(message[0].name);
     self.postMessage(results); // waits to see if the code is completed
   } catch (error) {
     self.postMessage ({ error: error.message}) // sends a message to script.js if there is an error
