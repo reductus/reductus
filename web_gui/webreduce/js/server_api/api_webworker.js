@@ -1,5 +1,5 @@
 // imports promise worker library
-importScripts('https://unpkg.com/promise-worker/dist/promise-worker.js');
+import 'https://unpkg.com/promise-worker/dist/promise-worker.js';
 
 import {messagepack as msgpack} from '../libraries.js';
 const server_api = {};
