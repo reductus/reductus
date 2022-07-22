@@ -1,7 +1,6 @@
 // imports promise worker library
-import 'https://unpkg.com/promise-worker@2.0.1/dist/promise-worker.js';
+import 'https://cdn.jsdelivr.net/npm/promise-worker@2.0.1/dist/promise-worker.js';
 
-import {messagepack as msgpack} from '../libraries.js';
 const server_api = {};
 export {server_api};
 
@@ -31,33 +30,30 @@ server_api.get_instrument = async function (args) {
 }
 
 // function sending the calc_terminal function to worker.js
-server_api.calc_terminal = async function () {
+server_api.calc_terminal = async function (args) {
   const name = "calc_terminal";
-  const args_array = [...arguments];
-  const result = await server_api.myPromiseWorker.postMessage({"name": name, "arguments": args_array});
+  const result = await server_api.myPromiseWorker.postMessage({"name": name, "arguments": args});
   return result;
 }
 
 // function sending the list_datasources function to worker.js
-server_api.list_datasources = async function () {
+server_api.list_datasources = async function (args) {
   const name = "list_datasources";
-  const args_array = [...arguments];
-  const result = await server_api.myPromiseWorker.postMessage({"name": name, "arguments": args_array});
+  const result = await server_api.myPromiseWorker.postMessage({"name": name, "arguments": args});
   return result;
 }
 
 // function sending the list_instruments function to worker.js
-server_api.list_instruments = async function () {
+server_api.list_instruments = async function (args) {
   const name = "list_instruments";
-  const args_array = [...arguments];
-  const result = await server_api.myPromiseWorker.postMessage({"name": name, "arguments": args_array})
+  const result = await server_api.myPromiseWorker.postMessage({"name": name, "arguments": args})
   return result;
 }
 
 // function sending the get_file_metadata function to worker.js
-server_api.get_file_metadata = async function () {
+server_api.get_file_metadata = async function (args) {
   const name = "get_file_metadata";
-  const result = await server_api.myPromiseWorker.postMessage({"name": name, "arguments": arguments})
+  const result = await server_api.myPromiseWorker.postMessage({"name": name, "arguments": args})
   return result;
 }
 
@@ -65,7 +61,8 @@ server_api.get_file_metadata = async function () {
 server_api.upload_datafiles = async function(files) {
   for (let file of files) {
     const filename = file.name;
-    const contents = await file.arrayBuffer();
-    const result = await server_api.myPromiseWorker.postMessage({"name": "upload_datafile", "arguments": [contents]});
+    const contents_buf = await file.arrayBuffer();
+    const contents = new Uint8Array(contents_buf);
+    const result = await server_api.myPromiseWorker.postMessage({"name": "upload_datafile", "arguments": {filename, contents}});
   }
 }
