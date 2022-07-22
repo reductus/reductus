@@ -3,7 +3,7 @@
 const filebrowser = {};
 export { filebrowser };
 import { editor } from './editor.js';
-import { server_api } from './server_api/api_msgpack.js';
+import { server_api } from './server_api/api_webworker.js';
 //import { makeSourceList } from './ui_components/sourcelist.js';
 import { Vue } from './libraries.js';
 import { FilePanel } from './ui_components/file_panel.js';
