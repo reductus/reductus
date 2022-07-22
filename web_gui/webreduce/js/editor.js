@@ -1,7 +1,7 @@
 export var editor = {};
 
 import { app } from './main.js';
-import {server_api} from './server_api/api_msgpack.js';
+import {server_api} from './server_api/api_webworker.js';
 import {dependencies} from './deps.js';
 import {instruments} from './instruments/index.js';
 // now a global...
