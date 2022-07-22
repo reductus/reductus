@@ -17,17 +17,16 @@ server_api.__init__ = async function(init_progress_obj) {
 
 
 // function sending the find_calculated function to worker.js
-server_api.find_calculated = async function () {
+server_api.find_calculated = async function (args) {
   const name = "find_calculated";
-  const result = await server_api.myPromiseWorker.postMessage({"name": name, "arguments": arguments})
+  const result = await server_api.myPromiseWorker.postMessage({"name": name, "arguments": args})
   return result;
 }
 
 // function sending the get_instrument function to worker.js
-server_api.get_instrument = async function () {
+server_api.get_instrument = async function (args) {
   const name = "get_instrument";
-  const args_array = [...arguments];
-  const result = await server_api.myPromiseWorker.postMessage({"name": name, "arguments": args_array});
+  const result = await server_api.myPromiseWorker.postMessage({"name": name, "arguments": args});
   return result;
 }
 
