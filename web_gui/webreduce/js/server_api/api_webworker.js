@@ -7,7 +7,7 @@ export {server_api};
 const toWrap = ["find_calculated", "get_instrument", "calc_terminal", "list_datasources", "list_instruments", "get_file_metadata", "upload_datafiles"];
 
 server_api.__init__ = async function(init_progress_obj) {
-  const worker = new Worker('/webreduce/js/server_api/worker.js'); // creates a new Worker
+  const worker = new Worker(new URL('./worker.js', import.meta.url)); // creates a new Worker
   const myPromiseWorker = new PromiseWorker(worker); // creates a new PromiseWorker
   server_api.myPromiseWorker = myPromiseWorker; // assigns the server_api's promise worker to a new PromisWorker
   await server_api.myPromiseWorker.postMessage({"name": "load_pyodide"});
