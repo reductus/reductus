@@ -8,11 +8,14 @@ async function loadPyodideAndPackages() { // loads pyodide
   await self.pyodide.loadPackage(["numpy", "pytz", "micropip"]); // waits until these python packpages are loaded to continue
 
   //import reductus library with micropip
-  await pyodide.runPythonAsync(`
+  let api = await pyodide.runPythonAsync(`
   import micropip
   await micropip.install("./reductus-0.9.0-py3-none-any.whl")
   from web_gui import api
-  `)
+  
+  api
+  `);
+  return api;
 }
 
 let pyodideReadyPromise = loadPyodideAndPackages(); // run the functions stored in lines 4
@@ -21,9 +24,15 @@ let pyodideReadyPromise = loadPyodideAndPackages(); // run the functions stored 
 
 const messageHandler = async function(message) {
   const name = message.name;
+  const args = message.arguments;
   if (name === 'load_pyodide') {
-    await pyodideReadyPromise;
+    let api = await pyodideReadyPromise;
+    self.api = api;
     return "loaded";
+  }
+  
+  if (name === 'load_datasources') {
+    return api.load_datasources(args);
   }
 
     console.log(message.name) // try this
