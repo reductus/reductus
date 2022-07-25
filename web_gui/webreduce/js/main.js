@@ -240,6 +240,7 @@ window.onload = async function () {
     async upload_datafiles(files) {
       await server_api.upload_datafiles(files);
       notify(`Uploaded: ${files.length} files`);
+      filebrowser.instance.refreshAll();
     },
     load_predefined(template_id) {
       let instrument_id = editor._instrument_id;
