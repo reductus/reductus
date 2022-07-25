@@ -12,7 +12,7 @@ async function loadPyodideAndPackages() { // loads pyodide
   import micropip
   await micropip.install("./reductus-0.9.0-py3-none-any.whl")
   from web_gui import api
-  
+
   config = {
     "cache": None,
     "data_sources": [
@@ -36,7 +36,7 @@ async function loadPyodideAndPackages() { // loads pyodide
           print("args:", args)
           real_kwargs = args.to_py() if args is not None else {}
           return method(**real_kwargs)
-      
+
       return wrapper
 
   for method in api.api_methods:
@@ -63,12 +63,12 @@ const messageHandler = async function(message) {
     return "loaded";
   }
   else if (name === 'upload_datafile') {
-    pyodide.FS.writeFile(args.filename, args.contents);
+    pyodide.FS.writeFile(args.filename, args.contents); // saves the local file to the file system
   }
-  
+
   else {
     result = api.get(name)(args);
-    return result.toJs({dict_converter: Object.fromEntries});
+    return result.toJs({dict_converter: Object.fromEntries}); // converts python args to js
   }
 
   console.log(message.name) // try this

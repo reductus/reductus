@@ -61,8 +61,8 @@ server_api.get_file_metadata = async function (args) {
 server_api.upload_datafiles = async function(files) {
   for (let file of files) {
     const filename = file.name;
-    const contents_buf = await file.arrayBuffer();
-    const contents = new Uint8Array(contents_buf);
+    const contents_buf = await file.arrayBuffer(); // converts into binary array
+    const contents = new Uint8Array(contents_buf); // changes the type of binary array
     const result = await server_api.myPromiseWorker.postMessage({"name": "upload_datafile", "arguments": {filename, contents}});
   }
 }
