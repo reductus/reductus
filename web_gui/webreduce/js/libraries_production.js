@@ -52,4 +52,5 @@ export {
   rectangleSelectPoints
 } from 'd3-science/src/index.js';
 //}  from './node_modules/d3-science/src/index.js';
+export { default as sha1 } from 'sha1/sha1.js';
 export { default as Split } from 'split.js/dist/split.es';
