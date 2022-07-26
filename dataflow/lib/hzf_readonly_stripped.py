@@ -244,11 +244,14 @@ class FieldFile(object):
                 if dtype_str == '<l4': dtype_str = '<i4'
                 if dtype_str == '<l8': dtype_str = '<i8'
                 if dtype_str == '<d8': dtype_str = '<f8'
-                if IS_PY3: dtype_str = dtype_str.replace('S', 'U')
+                if IS_PY3:
+                    dtype_str = dtype_str.replace('S', 'U')
                 dtype = numpy.dtype(dtype_str)
                 if attrs.get('binary', False) == True:
                     s = infile.read()
                     d = numpy.frombuffer(s, dtype=dtype).copy()
+                elif self.root.getsize(target) == 0:
+                    d = numpy.array([], dtype=dtype)
                 elif self.root.getsize(target) == 1:
                     # empty entry: only contains \n
                     # this is only possible with empty string being written.
