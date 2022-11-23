@@ -1,7 +1,3 @@
-import {d3} from './libraries.js';
-//var d3_range = d3.range;
-//var d3_set = d3.set;
-
 const dependencies = {};
 export {dependencies};
 
@@ -15,6 +11,9 @@ function order(template, target) {
     return processing_order(pairs, n)
 }
 
+function range(n) {
+    return Array.from(new Array(n)).map((u,i) => (i))
+}
 
 function processing_order(pairs, n) {
     /*
@@ -51,7 +50,7 @@ function processing_order(pairs, n) {
             throw "Not all dependencies are in the set";
         }
         var order_set = new Set(order);
-        var rest = new Set(d3.range(n).filter(function(r) { return (!order_set.has(r)) }));
+        var rest = new Set(range(n).filter(function(r) { return (!order_set.has(r)) }));
         //set(range(n)) - set(order)
     }
     else {

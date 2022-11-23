@@ -43,7 +43,7 @@ NeXus example using h5py, and a private version of unit::
     file = h5py.File(filename)
     field = file['/entry1/sample/sample_orientation']
     u = unit.Converter(field.attrs.get('units', ''))
-    v = u(field.value, 'radians')
+    v = u(field[()], 'radians')
 
 Note: minutes are used for angle and seconds are used for time.  We
 cannot determine the correct interpretation without knowing something

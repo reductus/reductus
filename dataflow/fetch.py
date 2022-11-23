@@ -46,7 +46,6 @@ from posixpath import basename, join, sep
 import os
 import hashlib
 
-import requests
 import urllib
 
 import pytz
@@ -63,7 +62,6 @@ DATA_SOURCES = []
 FILE_HELPERS = []
 DEFAULT_DATA_SOURCE = "ncnr"
 
-SESSION = requests.Session()
 
 def check_datasource(source):
     datasource = next((x for x in DATA_SOURCES if x['name'] == source), {})
@@ -82,58 +80,55 @@ def check_datasource(source):
 
 
 def url_get(fileinfo, mtime_check=True):
+    source = fileinfo.get("source", DEFAULT_DATA_SOURCE)
     path, mtime, entries = fileinfo['path'], fileinfo.get('mtime', None), fileinfo.get('entries', None)
-    # fingerprint the get, leaving off entries information:
-    cache = get_cache()
-    fileinfo_minimal = {'path': path, 'mtime': mtime}
-    config_str = str(_format_ordered(fileinfo_minimal))
-    fp = generate_fingerprint(("url_get", config_str))
-    if cache.file_exists(fp):
-        ret = cache.retrieve_file(fp)
-        print("getting " + path + " from cache!")
+    isLocal = (source == 'local')
+
+    if isLocal:
+        # no caching for local files.
+        with open(path, 'rb') as localfile:
+            ret = localfile.read()
+
     else:
-        source = fileinfo.get("source", DEFAULT_DATA_SOURCE)
-        name = basename(path)
-        isLocal = (source == 'local')
-        #    path = urllib.request.pathname2url(os.path.abspath(path))
-        source_url = check_datasource(source)
-        full_url = join(source_url, urllib.parse.quote(path.strip(sep), safe='/:'))
-        print("loading", full_url, name)
-        req = None  # Need placeholder for req in case SESSION.get fails.
-        try:
-            if isLocal:
-                t_repo = datetime.datetime.fromtimestamp(int(os.stat(path).st_mtime), pytz.utc)
-            else:
-                req = SESSION.get(full_url)
+        import requests
+        # fingerprint the get, leaving off entries information:
+        cache = get_cache()
+        fileinfo_minimal = {'path': path, 'mtime': mtime}
+        config_str = str(_format_ordered(fileinfo_minimal))
+        fp = generate_fingerprint(("url_get", config_str))
+        if cache.file_exists(fp):
+            ret = cache.retrieve_file(fp)
+            print("getting " + path + " from cache!")
+        else:
+            name = basename(path)
+            source_url = check_datasource(source)
+            full_url = join(source_url, urllib.parse.quote(path.strip(sep), safe='/:'))
+            print("loading", full_url, name)
+            req = None  # Need placeholder for req in case requests.get fails.
+            try:
+                req = requests.get(full_url)
                 req.raise_for_status()
                 url_mtime = req.headers.get('last-modified', None)
                 url_time_struct = time.strptime(url_mtime, '%a, %d %b %Y %H:%M:%S %Z')
                 t_repo = datetime.datetime(*url_time_struct[:6], tzinfo=pytz.utc)
 
-            # Check timestamp if requested and if timestamp is provided
-            if mtime_check and mtime is not None:
-                t_request = datetime.datetime.fromtimestamp(mtime, pytz.utc)
-                if t_request != t_repo:
-                    print("request mtime = %s, repo mtime = %s"%(t_request, t_repo))
-                    compare = "older" if t_request < t_repo else "newer"
-                    raise ValueError("Requested mtime is %s than repository mtime for %r"
-                                     % (compare, path))
+                # Check timestamp if requested and if timestamp is provided
+                if mtime_check and mtime is not None:
+                    t_request = datetime.datetime.fromtimestamp(mtime, pytz.utc)
+                    if t_request != t_repo:
+                        print("request mtime = %s, repo mtime = %s"%(t_request, t_repo))
+                        compare = "older" if t_request < t_repo else "newer"
+                        raise ValueError("Requested mtime is %s than repository mtime for %r"
+                                        % (compare, path))
 
-            if isLocal:
-                with open(path, 'rb') as localfile:
-                    ret = localfile.read()
-                # no caching for local files.
-            else:
                 ret = req.content
                 print("caching " + path)
                 cache.store_file(fp, ret)
 
-        except requests.HTTPError as exc:
-            raise ValueError("Could not open %r\n%s"%(path, str(exc)))
-        except FileNotFoundError as exc:
-            raise ValueError("Could not find %r\n%s"%(path, str(exc)))
-        finally:
-            if req is not None:
-                req.close()
+            except requests.HTTPError as exc:
+                raise ValueError("Could not open %r\n%s"%(path, str(exc)))
+            finally:
+                if req is not None:
+                    req.close()
 
     return ret

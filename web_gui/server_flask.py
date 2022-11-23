@@ -19,12 +19,23 @@ from flask_cors import CORS
 from werkzeug.exceptions import HTTPException
 import msgpack as msgpack_converter
 import json
+import mimetypes
+mimetypes.add_type("text/css", ".css")
+mimetypes.add_type("text/html", ".html")
+mimetypes.add_type("application/json", ".json")
+mimetypes.add_type("text/javascript", ".js")
+mimetypes.add_type("text/javascript", ".mjs")
+mimetypes.add_type("image/png", ".png")
+mimetypes.add_type("image/svg+xml", ".svg")
 
 def create_app(config=None):
     from web_gui import api
 
     RPC_ENDPOINT = '/RPC2'
+    STATIC_FOLDER = "webreduce"
     STATIC_PATH = pkg_resources.resource_filename('web_gui', 'webreduce/')
+    PREBUILT_CLIENT = os.path.join("dist", "index.html")
+    DEV_CLIENT = "index.html"
 
     app = Flask(__name__, static_folder=STATIC_PATH, static_url_path='/webreduce')
     CORS(app)
@@ -32,7 +43,10 @@ def create_app(config=None):
 
     @app.route('/')
     def root():
-        return redirect("webreduce/index.html")
+        if os.path.exists(os.path.join(STATIC_PATH, PREBUILT_CLIENT)):
+            return redirect(os.path.join(STATIC_FOLDER, PREBUILT_CLIENT))
+        else:
+            return redirect(os.path.join(STATIC_FOLDER, DEV_CLIENT))
 
     @app.route('/robots.txt')
     def static_from_root():
@@ -56,9 +70,8 @@ def create_app(config=None):
                 content = {'exception': 
                     'no valid Accept return type provided. \
                     (leave unspecified or use one of application/json or application/msgpack)'}
-                response.headers['Content-Type'] = 'application/msgpack'
-                response = make_response(json.dumps(content))
-                response = make_response()
+                return_type = "application/json"
+                packed = json.dumps(content)
             else:
                 content = mfunc(*args, **real_kwargs)
                 if return_type == "application/msgpack":

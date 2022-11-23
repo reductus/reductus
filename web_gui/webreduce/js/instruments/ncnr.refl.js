@@ -37,10 +37,11 @@ function make_range_icon(global_min_x, global_max_x, min_x, max_x) {
   var rel_x = Math.abs((min_x - global_min_x) / (global_max_x - global_min_x));
   var x = icon_width * rel_x;
     
-  var output = "<svg class=\"range\" width=\"" + (icon_width + 2) + "\" height=\"12\">";
-  output += "<rect width=\"" + width + "\" height=\"10\" x=\"" + x + "\" style=\"fill:IndianRed;stroke:none\"/>"
-  output += "<rect width=\"" + icon_width + "\" height=\"10\" style=\"fill:none;stroke:black;stroke-width:1\"/>"
-  output += "</svg>"
+  var output = `
+  <svg class="range" viewBox="0 0 ${icon_width + 2} 10" width="${icon_width + 2}" height="1em">
+    <rect width="${width}" height="10" x="${x}" style="fill:IndianRed;stroke:none"/>
+    <rect width="${icon_width}" height="10" style="fill:none;stroke:black;stroke-width:1"/>
+  </svg>`;
   return output
 }
 

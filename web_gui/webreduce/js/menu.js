@@ -198,7 +198,7 @@ export const VueMenu = {
     stash_name: null,
     settings: {
       auto_accept: { label: "Auto-accept changes", value: true },
-      check_mtimes: { label: "Auto-reload newer files", value: true },
+      check_mtimes: { label: "Auto-reload newer files", value: false },
       cache_calculations: { label: "Cache calculations", value: true }
     }
   }),

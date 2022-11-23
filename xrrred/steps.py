@@ -65,6 +65,7 @@ def load(filelist=None,
     output (refldata[]): All entries of all files in the list.
 
     | 2022-01-31 Brian Maranville
+    | 2022-04-27 Brian Maranville fix count time for Rigaku in sweep mode
     """
     from reflred.load import url_load_list
     from reflred import xrawref

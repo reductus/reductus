@@ -634,6 +634,25 @@ def calculateDQ_IGOR(data, inQ, del_r=None):
     return QBar, SigmaQ
 
 def _calculate_Q(X, Y, Z, q0):
+    r"""
+    Detector pixels in SAS measurements have a small $q_z$ component.
+
+    Using the definition $q = k_f - k_i$ with the beam along $z$ then::
+
+        k_i = 2 pi/lambda_i [0, 0, 1]
+        k_f = 2 pi/lambda_f [sin 2theta cos phi, sin 2theta sin phi, cos 2theta]
+
+    Assume elastic scattering so $\lambda_i = \lamda_f = \lambda$. Therefore::
+
+        q_x = 2 pi/lambda (sin 2theta cos phi)
+            = 4 pi/lambda sin theta cos theta cos phi
+            = |q| cos theta cos phi
+        q_y = 2 pi/lambda (sin 2theta sin phi)
+            = 4 pi/lambda sin theta cos theta sin phi
+            = |q| cos theta sin phi
+        q_z = 2 pi/lambda (1 - cos 2theta)
+            = 4 pi/lambda sin^2 theta = |q| sin theta
+    """
     r = np.sqrt(X**2+Y**2)
     theta = np.arctan2(r, Z)/2 #remember to convert Z to cm from meters
     q = q0*np.sin(theta)

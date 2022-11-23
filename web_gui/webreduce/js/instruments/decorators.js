@@ -30,7 +30,8 @@ export function add_viewer_link(node_list, leaf_list, node_parents, file_objs) {
       let filename = pathsegments.slice(-1);
       let viewer = viewer_link[datasource];
       let hdf_or_zip = (NEXUS_REGEXP.test(fullpath) ? viewer.replace("-zip-", "-hdf-") : viewer);
-      let link = `<a href="${hdf_or_zip}?pathlist=${pathlist}&filename=${filename}" target="_blank" style="text-decoration:none;">&#9432;</a>`;
+      let href = `${hdf_or_zip}?pathlist=${pathlist}&filename=${filename}`;
+      let link = `<a href="${href}" target="_blank"><img style="height:1em;width:1em;" src="img/info_symbol.svg"/></a>`;
       leaf.text += link;
       if (leaf.id in node_parents) {
         let parent = node_parents[leaf.id];

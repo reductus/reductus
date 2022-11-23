@@ -31,6 +31,13 @@ a svg, a span {
   position: relative;
 }
 
+div.dataflow.editor.container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    user-select: none;
+}
+
 svg.editor {
   flex: 1;
   width: 100%;
@@ -242,25 +249,59 @@ svg.editor g.module rect.title {
   fill-opacity: 0;
 }
 
+svg.editor text.title {
+    pointer-events: none;
+}
 
 svg.editor rect.terminal.output {
+  fill: url(#output_hatch);
+}
+
+svg.editor g.module g.satisfied rect.terminal.output {
     fill: #88FFFF;
 }
 
+svg.editor g.module g.wireable rect.terminal.output:hover {
+    fill: yellow;
+}
+
 svg.editor rect.terminal.input {
+    fill: url(#input_hatch);
+}
+
+svg.editor g.module g.satisfied rect.terminal.input {
     fill: #88FF88;
+}
+
+svg.editor g.module g.wireable rect.terminal.input:hover {
+    fill: yellow;
 }
 
 svg.editor polygon.terminal.state {
     display: none;
 }
     
-    
 svg.editor path.wire {
     fill: none;
     stroke-dasharray: 2,2;
     stroke-width: 5px;
     stroke: red;
+    cursor:context-menu;
+}
+
+svg.editor path.wire-background {
+  fill: none;
+  stroke-width: 8px;
+  stroke: white;
+  cursor:context-menu;
+}
+
+svg.editor path.wire-new {
+    fill: none;
+    stroke-width: 5px;
+    stroke: black;
+    stroke-opacity: 0.5;
+    pointer-events: none;
 }
 
 svg.editor path.exposed-wire, svg.editor rect.exposed {
@@ -276,7 +317,7 @@ svg.editor path.exposed-wire, svg.editor rect.exposed {
   }
 }
     
-svg.editor path.wire.filled {
+svg.editor path.wire.satisfied {
     /*stroke-linecap: round;*/
     stroke-dasharray: none;
     /*animation: offset 1s linear forwards infinite;*/
@@ -285,6 +326,12 @@ svg.editor path.wire.filled {
     
 svg.editor g.module g.selected rect {
     stroke-width: 5px;
+}
+
+svg.editor g.module g.moving rect.title {
+    fill: lightskyblue;
+    fill-opacity: 0.5;
+    cursor: move;
 }
     
     
@@ -482,7 +529,6 @@ div#west_panel {
 }
 
 div#bottom_panel {
-  min-height: 200px;
   display: flex;
   flex-direction: column;
 }

@@ -161,17 +161,25 @@ window.onload = async function () {
 
   var layout = Split(["#middle_content", "#bottom_panel"], {
     sizes: [95, 5],
-    elementStyle: (dimension, size, gutterSize) => ({
-      'flex-basis': `calc(${size}% - ${gutterSize}px)`,
-    }),
-    gutterStyle: (dimension, gutterSize) => ({
-      'flex-basis': `${gutterSize}px`,
-    }),
+    // elementStyle: (dimension, size, gutterSize) => ({
+    //   'flex-basis': `calc(${size}% - ${gutterSize}px)`,
+    // }),
+    // gutterStyle: (dimension, gutterSize) => ({
+    //   'flex-basis': `${gutterSize}px`,
+    // }),
     direction: 'vertical'
   })
   app.vertical_layout = layout;
 
-  editor.create_instance("bottom_panel");
+  app.resize_bottom = function(bbox, border=10) {
+    let full_height = app.vertical_layout.parent.offsetHeight;
+    let box_height = bbox.y + bbox.height + border;
+    let bpercent = box_height / full_height * 100.0;
+    let tpercent = 100.0 - bpercent;
+    app.vertical_layout.setSizes([tpercent, bpercent])
+  }
+
+  await editor.create_instance("template_editor");
   app_header.create_instance("app_header");
   app_header.instance.$on("toggle-menu", () => {
     vueMenu.instance.showNavigation = !vueMenu.instance.showNavigation
@@ -214,22 +222,17 @@ window.onload = async function () {
       var empty_template = { modules: [], wires: [] };
       editor.edit_template(empty_template)
     },
-    edit_template() { editor.edit_template() },
+    edit_template() { editor.instance.menu.help_visible = true },
     download_template() {
       let filename = prompt("Save template as:", "template.json");
       if (filename != null) {
         app.download(JSON.stringify(editor._active_template, null, 2), filename);
       }
     },
-    upload_file(file) {
+    async upload_file(file) {
       //window.fheader = file.slice(0, 20).arrayBuffer();
-      const reader = new FileReader();
-      reader.onload = res => {
-        let contents = new Uint8Array(res.target.result);
-        let template_data = reload(contents);
-        editor.load_template(template_data.template, template_data.node, template_data.terminal, template_data.instrument_id);
-      }
-      reader.readAsArrayBuffer(file);
+      let template_data = await reload(file);
+      editor.load_template(template_data.template, template_data.node, template_data.terminal, template_data.instrument_id);
     },
     load_predefined(template_id) {
       let instrument_id = editor._instrument_id;

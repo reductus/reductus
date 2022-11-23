@@ -39,7 +39,7 @@
     "messagepack": "^1.1.11",
     "roboto-fontface": "^0.10.0",
     "sha1": "^1.1.1",
-    "split.js": "^1.5.11",
+    "split.js": "^1.6.5",
     "vue": "^2.6.11",
     "vue-material": "^1.0.0-beta-15",
     "vuedraggable": "^2.24.0"

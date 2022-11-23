@@ -39,17 +39,20 @@ with the local datastore enabled in config)
 Installation and use
 --------------------
 
-Method 1: pypi install
+Method 1: pip install
 ~~~~~~~~~~~~~~~~~~~~~~
 
 ::
 
-    pip install reductus
+    pip install "reductus[all]"
 
 Then start the server with::
 
     reductus
 
+For the very latest development version use the following::
+
+    pip install "git+https://github.com/reductus/reductus.git#egg=reductus[all]"
 
 Method 2: Docker Compose
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -130,7 +133,7 @@ development version, much like you did for the development server.
     cd web_gui/webreduce
     npm install
     rm -rf dist
-    npm run build_index --if-present
+    npm run build
     cd ../..
 
 Then start the server with::
