@@ -41,6 +41,8 @@ jobs:
       run: |
         rm -rf dist
         npm run build
+      env:
+         CI: ""
     
     - name: Upload pages artifact client artifact
       uses: actions/upload-pages-artifact@v1.0.7
