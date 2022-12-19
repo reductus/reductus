@@ -4,7 +4,7 @@ import { extend } from './libraries.js';
 import { Split } from './libraries.js';
 import { zip } from './libraries.js';
 import { editor } from './editor.js';
-import { server_api } from './server_api/api_webworker.js';
+import { server_api } from './server_api/api_msgpack.js';
 import { filebrowser } from './filebrowser.js';
 import { plotter } from './plot.js';
 import { fieldUI } from './ui_components/fields_panel.js';
