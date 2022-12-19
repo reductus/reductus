@@ -10,6 +10,7 @@ async function loadPyodideAndPackages() { // loads pyodide
   //import reductus library with micropip
   let api = await pyodide.runPythonAsync(`
   import micropip
+  await micropip.install("orsopy")
   await micropip.install("./reductus-0.9.0-py3-none-any.whl")
   from web_gui import api
 
