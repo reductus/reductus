@@ -1,4 +1,4 @@
-import {server_api} from './server_api/api_webworker.js';
+import {server_api} from './server_api/api_msgpack.js';
 import { extend, dataflowEditor, d3 } from './libraries.js';
 
 var debug = false;
