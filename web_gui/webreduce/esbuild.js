@@ -37,7 +37,7 @@ await esbuild.build({
     minify: true,
     sourcemap: true,
     outdir: 'dist/js',
-    target: 'es2016',
+    target: 'es2020',
     plugins: [
         alias({
             './libraries.js': path.resolve(__dirname, `js/libraries_production.js`),
@@ -67,7 +67,7 @@ await esbuild.build({
     sourcemap: true,
     define: { ENABLE_UPLOADS: 'true' },
     outdir: 'dist_webworker/js',
-    target: 'es2016',
+    target: 'es2020',
     plugins: [
         alias({
             './libraries.js': path.resolve(__dirname, `js/libraries_production.js`),
@@ -109,7 +109,7 @@ await esbuild.build({
   sourcemap: true,
   define: { ENABLE_UPLOADS: 'true' },
   outdir: 'dist_serviceworker/js',
-  target: 'es2016',
+  target: 'es2020',
   plugins: [
       alias({
           './libraries.js': path.resolve(__dirname, `js/libraries_production.js`),
