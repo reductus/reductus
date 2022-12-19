@@ -1,0 +1,62 @@
+jobs:
+  # Build job
+  build:
+    # <Not provided for brevity>
+    # At a minimum this job should upload artifacts using actions/upload-pages-artifact
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [16.x]
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.9
+    - name: build wheel
+      run: |
+        python -m pip install wheel orsopy
+        python setup.py bdist_wheel
+        echo "PYTHON_WHL=$(ls dist)" >> $GITHUB_ENV
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v1
+      with:
+        node-version: ${{ matrix.node-version }}
+    - name: initialize npm libs
+      run: npm ci
+      working-directory: web_gui/webreduce
+    - name: build client
+      working-directory: web_gui/webreduce
+      run: |
+        rm -rf dist
+        npm run build
+        cd dist && zip -r ../dist.zip .
+    
+    - name: Upload pages artifact client artifact
+      uses: actions/upload-pages-artifact@v1.0.7
+      with:
+        path: web_gui/webreduce/dist_webworker
+
+  # Deploy job
+  deploy:
+    # Add a dependency to the build job
+    needs: build
+
+    # Grant GITHUB_TOKEN the permissions required to make a Pages deployment
+    permissions:
+      pages: write      # to deploy to Pages
+      id-token: write   # to verify the deployment originates from an appropriate source
+
+    # Deploy to the github-pages environment
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    # Specify runner + deployment step
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v1
