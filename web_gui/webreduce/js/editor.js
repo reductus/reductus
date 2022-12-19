@@ -9,6 +9,7 @@ import {zip} from './libraries.js';
 import { Vue } from './libraries.js';
 import {extend, dataflowEditor} from './libraries.js';
 import { Cache } from './idb_cache.js';
+import { sha1 } from './libraries.js';
 import {filebrowser} from './filebrowser.js';
 //import {make_fieldUI} from './fieldUI.js';
 import { fieldUI } from './ui_components/fields_panel.js';
@@ -391,12 +392,18 @@ editor.get_cached_timestamps = function() {
     })
 }
 
-async function digestMessage(message, algorithm="SHA-256") {
-  const msgUint8 = new TextEncoder().encode(message);                           // encode as (utf-8) Uint8Array
-  const hashBuffer = await crypto.subtle.digest(algorithm, msgUint8);           // hash the message
-  const hashArray = Array.from(new Uint8Array(hashBuffer));                     // convert buffer to byte array
-  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join(''); // convert bytes to hex string
-  return hashHex;
+// NOTE: crypto.subtle only works on https connections
+// async function digestMessage(message, algorithm="SHA-256") {
+//   const msgUint8 = new TextEncoder().encode(message);                           // encode as (utf-8) Uint8Array
+//   const hashBuffer = await crypto.subtle.digest(algorithm, msgUint8);           // hash the message
+//   const hashArray = Array.from(new Uint8Array(hashBuffer));                     // convert buffer to byte array
+//   const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join(''); // convert bytes to hex string
+//   return hashHex;
+// }
+
+async function digestMessage(message, algorithm="SHA-1") {
+  // only SHA-1 is support in this implementation
+  return sha1(message);
 }
 
 editor.get_signature = async function(params) {

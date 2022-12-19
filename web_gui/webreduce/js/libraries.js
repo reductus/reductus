@@ -47,7 +47,7 @@ export {
     rectangleSelectPoints
 }  from 'https://cdn.jsdelivr.net/gh/usnistgov/d3-science@0.2.14/src/index.js';
 //}  from './d3-science/src/index.js';
-
+export {default as sha1} from "https://cdn.skypack.dev/sha1@1.1.1";
 export { default as Split } from "https://cdn.skypack.dev/split.js";
 export {default as json_patch} from "https://cdn.skypack.dev/json-patch-es6";
 
