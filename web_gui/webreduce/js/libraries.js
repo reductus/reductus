@@ -49,6 +49,7 @@ export {
 //}  from './d3-science/src/index.js';
 export {default as sha1} from "https://cdn.skypack.dev/sha1@1.1.1";
 export { default as Split } from "https://cdn.skypack.dev/split.js";
+export { load as yaml_load } from "https://cdn.jsdelivr.net/npm/js-yaml@latest/dist/js-yaml.mjs";
 
 import 'https://cdn.jsdelivr.net/npm/promise-worker@2.0.1/dist/promise-worker.js';
 const PromiseWorker = window.PromiseWorker;
