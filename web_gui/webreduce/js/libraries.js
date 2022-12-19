@@ -50,3 +50,7 @@ export {
 
 export { default as Split } from "https://cdn.skypack.dev/split.js";
 export {default as json_patch} from "https://cdn.skypack.dev/json-patch-es6";
+
+import 'https://cdn.jsdelivr.net/npm/promise-worker@2.0.1/dist/promise-worker.js';
+const PromiseWorker = window.PromiseWorker;
+export { PromiseWorker };
