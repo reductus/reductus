@@ -33,7 +33,7 @@
     "@mdi/font": "^6.5.95",
     "@widgetjs/tree": "https://github.com/bmaranville/treejs#v0.0.2",
     "@zip.js/zip.js": "^2.3.19",
-    "d3": "^5.16.0",
+    "d3": "^7.7.0",
     "d3-science": "https://github.com/usnistgov/d3-science#v0.2.14",
     "idb": "^7.0.0",
     "js-yaml": "^4.1.0",
