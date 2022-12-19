@@ -64,7 +64,7 @@ function create_downloader() {
   a.id = "savedata";
   return function (data, fileName) {
     var blob = (data instanceof Blob) ? data : new Blob([data], { type: "text/plain" });
-    // IE 10 / 11 
+    // IE 10 / 11
     if (window.navigator.msSaveOrOpenBlob) {
       window.navigator.msSaveOrOpenBlob(blob, fileName);
     } else {
@@ -118,7 +118,7 @@ function add_datasource(sourcename, start_path_in="") {
   else if (datasource && datasource.start_path) {
     start_path = datasource.start_path;
   }
-  let pathlist = start_path.split("/");      
+  let pathlist = start_path.split("/");
   filebrowser.addDataSource(sourcename, pathlist);
 }
 
@@ -128,9 +128,6 @@ window.onload = async function () {
   window.editor = editor;
   //zip.workerScriptsPath = "js/";
   //zip.useWebWorkers = false;
-  await server_api.__init__();
-  server_api.exception_handler = api_exception_handler;
-  app.server_api = server_api;
   var middle_layout = Split(['.ui-layout-west', '.ui-layout-center', '.ui-layout-east'], {
     sizes: [25, 50, 25],
     elementStyle: (dimension, size, gutterSize) => ({
@@ -184,6 +181,12 @@ window.onload = async function () {
   app_header.instance.$on("toggle-menu", () => {
     vueMenu.instance.showNavigation = !vueMenu.instance.showNavigation
   });
+
+  await server_api.__init__(app_header.instance.init_progress);
+  //app_header.instance.init_progress.visible = false;
+  server_api.exception_handler = api_exception_handler;
+  app.server_api = server_api;
+
   filebrowser.create_instance("filebrowser");
   const filebrowser_actions = {
     remove_stash(stashname) {
@@ -210,12 +213,12 @@ window.onload = async function () {
     accept_button() { editor.advance_to_output() },
     update() { editor.update_completions() },
     clear() { editor.module_clicked_single() },
-    fileinfo_update({value, no_terminal_selected}) { filebrowser.fileinfoUpdate(value, no_terminal_selected) } 
+    fileinfo_update({value, no_terminal_selected}) { filebrowser.fileinfoUpdate(value, no_terminal_selected) }
   };
   fieldUI.instance.$on("action", function(name, argument) {
     fieldUI_actions[name](argument);
   });
-  vueMenu.create_instance("vue_menu");
+  vueMenu.create_instance("vue_menu", {enable_uploads: typeof ENABLE_UPLOADS !== 'undefined' && ENABLE_UPLOADS });
   app.settings = vueMenu.instance.settings;
   const menu_actions = {
     new_template() {
@@ -233,6 +236,11 @@ window.onload = async function () {
       //window.fheader = file.slice(0, 20).arrayBuffer();
       let template_data = await reload(file);
       editor.load_template(template_data.template, template_data.node, template_data.terminal, template_data.instrument_id);
+    },
+    async upload_datafiles(files) {
+      await server_api.upload_datafiles(files);
+      notify(`Uploaded: ${files.length} files`);
+      filebrowser.instance.refreshAll();
     },
     load_predefined(template_id) {
       let instrument_id = editor._instrument_id;
@@ -263,7 +271,7 @@ window.onload = async function () {
   })
   export_dialog.create_instance();
 
-  
+
   // set up the communication between these panels:
   // fieldUI.fileinfoUpdateCallback = filebrowser.fileinfoUpdate;
   // filebrowser.fileinfoUpdateCallback = fieldUI.fileinfoUpdate;
@@ -375,7 +383,7 @@ window.onload = async function () {
       });
     }
 
-    // Finally, if the user has denied notifications and you 
+    // Finally, if the user has denied notifications and you
     // want to be respectful there is no need to bother them any more.
   }
 

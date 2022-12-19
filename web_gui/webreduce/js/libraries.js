@@ -1,4 +1,4 @@
-import 'https://unpkg.com/d3@5.16.0/dist/d3.min.js';
+import 'https://cdn.jsdelivr.net/npm/d3@5.16.0/dist/d3.min.js';
 let d3 = window.d3;
 export {d3};
 
@@ -22,11 +22,11 @@ Vue.use(VueMaterial);
 export { default as vuedraggable } from 'https://cdn.skypack.dev/vuedraggable';
 export { Vue }
 
-import * as messagepack from "https://unpkg.com/messagepack@1.1.11/dist/messagepack.es.js";
+import * as messagepack from "https://cdn.jsdelivr.net/npm/messagepack@1.1.12/dist/messagepack.es.js";
 export { messagepack };
 // PouchDB can be replaced with idb from https://github.com/jakearchibald/idb 
 // since we are not using the sync features of pouch
-import * as idb from 'https://unpkg.com/idb?module';
+import * as idb from 'https://cdn.jsdelivr.net/npm/idb@7.0.2/build/index.js';
 export { idb };
 export {
     xyChart,
@@ -47,7 +47,9 @@ export {
     rectangleSelectPoints
 }  from 'https://cdn.jsdelivr.net/gh/usnistgov/d3-science@0.2.14/src/index.js';
 //}  from './d3-science/src/index.js';
-
 export {default as sha1} from "https://cdn.skypack.dev/sha1@1.1.1";
 export { default as Split } from "https://cdn.skypack.dev/split.js";
-export {default as json_patch} from "https://cdn.skypack.dev/json-patch-es6";
+
+import 'https://cdn.jsdelivr.net/npm/promise-worker@2.0.1/dist/promise-worker.js';
+const PromiseWorker = window.PromiseWorker;
+export { PromiseWorker };
