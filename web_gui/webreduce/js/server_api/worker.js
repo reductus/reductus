@@ -1,5 +1,5 @@
 // imports pyodide library
-importScripts("https://cdn.jsdelivr.net/pyodide/v0.20.0/full/pyodide.js");
+importScripts("https://cdn.jsdelivr.net/pyodide/v0.21.3/full/pyodide.js");
 // imports promise worker library
 importScripts("https://cdn.jsdelivr.net/npm/promise-worker@2.0.1/dist/promise-worker.register.js");
 
