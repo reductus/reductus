@@ -1,3 +1,12 @@
+name: Build webworker static site
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+  pull_request:
+    branches: [ main ]
+
 jobs:
   # Build job
   build:
