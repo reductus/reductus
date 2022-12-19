@@ -37,6 +37,7 @@
     "d3-science": "https://github.com/usnistgov/d3-science#v0.2.14",
     "idb": "^7.0.0",
     "messagepack": "^1.1.11",
+    "promise-worker": "^2.0.1",
     "roboto-fontface": "^0.10.0",
     "split.js": "^1.6.5",
     "vue": "^2.6.11",
