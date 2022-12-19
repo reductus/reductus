@@ -121,7 +121,7 @@ def process_sourceAperture(field, units):
         if _s(v) == 'OUT':
             return v
         else:
-            return np.float(v.split()[0])
+            return float(v.split()[0])
     handle_values = np.vectorize(handler)
     value = handle_values(field[()])
     units_from = ""
