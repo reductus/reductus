@@ -218,7 +218,7 @@ window.onload = async function () {
   fieldUI.instance.$on("action", function(name, argument) {
     fieldUI_actions[name](argument);
   });
-  vueMenu.create_instance("vue_menu");
+  vueMenu.create_instance("vue_menu", {enable_uploads: typeof ENABLE_UPLOADS !== 'undefined' && ENABLE_UPLOADS });
   app.settings = vueMenu.instance.settings;
   const menu_actions = {
     new_template() {

@@ -61,7 +61,7 @@ let template = `
             <span class="md-list-item-text">Edit Categories</span>
             <md-icon class="mdi mdi-format-list-bulleted md-primary"></md-icon>
           </md-list-item>
-          <md-list-item @click="trigger_upload_datafiles" class="md-inset">
+          <md-list-item v-if="enable_uploads" @click="trigger_upload_datafiles" class="md-inset">
             <span class="md-list-item-text">Upload Datafiles</span>
             <md-icon class="mdi mdi-briefcase-upload md-primary"></md-icon>
           </md-list-item>
@@ -193,6 +193,7 @@ export const VueMenu = {
   components: {
     categoriesEditor
   },
+  props: ['enable_uploads'],
   data: () => ({
     current_instrument: "ncnr.refl",
     instruments: ["ncnr.refl", "ncnr.sans", "ncnr.vsans"],
@@ -259,12 +260,13 @@ function nop(x) { console.log(x) };
 
 export const vueMenu = {};
 
-vueMenu.create_instance = function (target_id) {
+vueMenu.create_instance = function (target_id, propsData={}) {
   let target = document.getElementById(target_id);
   const VueMenuClass = Vue.extend(VueMenu);
   this.instance = new VueMenuClass({
     data: () => ({
       showNavigation: false
-    })
+    }), 
+    propsData,
   }).$mount(target);
 }
