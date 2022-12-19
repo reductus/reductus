@@ -65,6 +65,7 @@ await esbuild.build({
     bundle: true,
     minify: true,
     sourcemap: true,
+    define: { ENABLE_UPLOADS: 'true' },
     outdir: 'dist_webworker/js',
     target: 'es2016',
     plugins: [
@@ -106,6 +107,7 @@ await esbuild.build({
   bundle: true,
   minify: true,
   sourcemap: true,
+  define: { ENABLE_UPLOADS: 'true' },
   outdir: 'dist_serviceworker/js',
   target: 'es2016',
   plugins: [
