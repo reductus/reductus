@@ -40,7 +40,7 @@ jobs:
       working-directory: web_gui/webreduce
       run: |
         rm -rf dist
-        npm run build
+        npm run build_webworker
       env:
          CI: ""
     

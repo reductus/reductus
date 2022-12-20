@@ -8,7 +8,9 @@
   ],
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "./esbuild.js"
+    "build": "./esbuild.js",
+    "build_webworker": "./esbuild_webworker.js",
+    "build_serviceworker": "./esbuild_serviceworker.js"
   },
   "repository": {
     "type": "git",
