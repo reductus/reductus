@@ -1,16 +1,16 @@
 // imports pyodide library
-importScripts("https://cdn.jsdelivr.net/pyodide/v0.21.3/full/pyodide.js");
+importScripts("https://cdn.jsdelivr.net/pyodide/v0.22.1/full/pyodide.js");
 // imports promise worker library
 importScripts("https://cdn.jsdelivr.net/npm/promise-worker@2.0.1/dist/promise-worker.register.js");
 
 async function loadPyodideAndPackages() { // loads pyodide
   self.pyodide = await loadPyodide(); // run the function and wait for the result (base library)
-  await self.pyodide.loadPackage(["numpy", "pytz", "micropip"]); // waits until these python packpages are loaded to continue
+  await self.pyodide.loadPackage(["numpy", "pytz", "h5py", "micropip"]); // waits until these python packpages are loaded to continue
 
   //import reductus library with micropip
   let api = await pyodide.runPythonAsync(`
   import micropip
-  await micropip.install("orsopy")
+  await micropip.install("./orsopy-1.0.1-py2.py3-none-any.whl")
   await micropip.install("./reductus-0.9.0-py3-none-any.whl")
   from web_gui import api
 

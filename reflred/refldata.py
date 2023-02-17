@@ -1198,16 +1198,15 @@ class ReflData(Group):
         with open(filename, 'w') as fid:
             fid.write(self.to_column_text()["value"])
 
-    @exports_ORSO_text("ORSO")
-    def to_ORSO_text(self):
+    def to_orsopy(self):
         from orsopy import fileio
         info = fileio.Orso.empty()
         info.data_set = f"{self.name}:{self.entry}"
         info.columns = [
             fileio.Column("Qz", "1/angstrom"),
             fileio.Column("R"),
-            fileio.Column("sR"),
-            fileio.Column("sQz", "1/angstrom"),
+            fileio.ErrorColumn(error_of="R"),
+            fileio.ErrorColumn(error_of="Qz"),
         ]
         data_arrays = [
             self.x,
@@ -1238,12 +1237,12 @@ class ReflData(Group):
                     if (len(item) > 1 and np.allclose(item, item[0])) or len(item) == 1:
                         item = item[0]
                 if np.isscalar(item):
-                    val = fileio.base.Value(magnitude=float(item), units=units)
+                    val = fileio.base.Value(magnitude=float(item), unit=units)
                     setattr(instrument_settings, ORSO_name, val)
                 elif hasattr(item, '__len__') and len(item) > 1:
-                    info.columns.append(fileio.Column(name=ORSO_name, units=units))
+                    info.columns.append(fileio.Column(name=ORSO_name, physical_quantity=ORSO_name, unit=units))
                     data_arrays.append(np.resize(item, self.points))
-                    val = fileio.base.ValueRange(min=float(min(item)), max=float(max(item)), units=units)
+                    val = fileio.base.ValueRange(min=float(min(item)), max=float(max(item)), unit=units)
                     setattr(instrument_settings, ORSO_name, val)
 
         for ORSO_name, local_name, units in [
@@ -1254,14 +1253,38 @@ class ReflData(Group):
         ]:
             pack(ORSO_name, local_name, units)
 
-        data = np.vstack(data_arrays).T
-        ds = fileio.OrsoDataset(info, data)
+        ds = fileio.OrsoDataset(info, data_arrays)
+        return ds
+
+    @exports_ORSO_text("ORSO_text")
+    def to_ORSO_text(self):
+        orsopy_obj = self.to_orsopy()
         return {
             "name": self.name,
             "entry": self.entry,
+            "value": orsopy_obj,
             "file_suffix": ".ort",
-            "value": ds,
         }
+
+    @exports_HDF5(name="ORSO_nexus")
+    def to_ORSO_nexus(self):
+        from io import BytesIO
+        import h5py
+        from orsopy.fileio.orso import save_nexus
+
+        orsopy_obj = self.to_orsopy()
+        fid = BytesIO()
+        save_nexus([orsopy_obj], fid)
+        fid.seek(0)
+        h5_item = h5py.File(fid, 'r')
+        
+        return {
+            "name": self.name,
+            "entry": self.entry,
+            "value": h5_item,
+            "file_suffix": ".orb",
+        }
+
 
     # TODO: split refldata in to ReflBase and PointRefl so PSD doesn't inherit column format
     @exports_text("column")
