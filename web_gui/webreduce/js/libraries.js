@@ -9,7 +9,7 @@ export {default as Tree} from 'https://cdn.jsdelivr.net/gh/bmaranville/treejs@la
 //export {default as Tree} from './treejs/src/index.js';
 
 import { default as Vue } from 'https://cdn.jsdelivr.net/npm/vue@2.6.11/dist/vue.esm.browser.js';
-import { default as VueMaterial } from 'https://cdn.skypack.dev/vue-material@latest';
+import { default as VueMaterial } from 'https://cdn.skypack.dev/vue-material@1.0.0-beta-15';
 Vue.use(VueMaterial);
 //import { default as VueSimpleContextMenu } from 'https://cdn.skypack.dev/vue-simple-context-menu@^3.1.10';
 //Vue.use(VueSimpleContextMenu);
