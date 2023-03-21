@@ -1242,7 +1242,7 @@ class ReflData(Group):
                 elif hasattr(item, '__len__') and len(item) > 1:
                     info.columns.append(fileio.Column(name=ORSO_name, physical_quantity=ORSO_name, unit=units))
                     data_arrays.append(np.resize(item, self.points))
-                    val = fileio.base.ValueRange(min=float(min(item)), max=float(max(item)), unit=units)
+                    val = fileio.base.ValueRange(min=float(min(item)), max=float(max(item)), unit=units, column=ORSO_name)
                     setattr(instrument_settings, ORSO_name, val)
 
         for ORSO_name, local_name, units in [
