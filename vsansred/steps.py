@@ -963,7 +963,7 @@ def circular_av_new(qspace_data, q_min=None, q_max=None, q_step=None):
         Q = (q_bins[:-1] + q_bins[1:])/2.0
         dx = np.zeros_like(Q)
 
-        mask = det.get('shadow_mask', np.ones_like(det['Q'], dtype=np.bool))
+        mask = det.get('shadow_mask', np.ones_like(det['Q'], dtype=bool))
 
         # dq = data.dq_para if hasattr(data, 'dqpara') else np.ones_like(data.q) * q_step
         I, _bins_used = np.histogram(det['Q'][mask], bins=q_bins, weights=(det['data'].x)[mask])
@@ -1066,7 +1066,7 @@ def geometric_shadow(realspace_data, border_width=4.0, inplace=False):
     # assume that detectors are in decreasing Z-order
     for dnum, (detname, det) in enumerate(detector_angles.items()):
         rdet = realspace_data.detectors[detname]
-        shadow_mask = rdet.get('shadow_mask', np.ones_like(rdet['data'].x, dtype=np.bool))
+        shadow_mask = rdet.get('shadow_mask', np.ones_like(rdet['data'].x, dtype=bool))
         for udet in list(detector_angles.values())[dnum+1:]:
             #final check: is detector in the same plane?
             if udet['Z'] < det['Z'] - 1:
@@ -1157,8 +1157,8 @@ def sector_cut(qspace_data, sector=[0.0, 90.0], mirror=True):
         nonzero = Q_normsq > 0
         Q_normsq[Q_normsq == 0] = 1.0
         cos_theta = (det['Qx'] * x_offset + det['Qy'] * y_offset) / np.sqrt(Q_normsq)
-        shadow_mask = det.get('shadow_mask', np.ones_like(det['data'].x, dtype=np.bool))
-        sector_mask = np.zeros_like(det['data'].x, dtype=np.bool)
+        shadow_mask = det.get('shadow_mask', np.ones_like(det['data'].x, dtype=bool))
+        sector_mask = np.zeros_like(det['data'].x, dtype=bool)
         sector_mask[np.logical_and(nonzero, cos_theta >= cos_theta_min)] = True
         if mirror:
             sector_mask[np.logical_and(nonzero, cos_theta <= -cos_theta_min)] = True
@@ -1205,7 +1205,7 @@ def top_bottom_shadow(realspace_data, width=3, inplace=True):
 
         if orientation == 'VERTICAL':
             oversampling = det.get('oversampling', 1)
-            shadow_mask = det.get('shadow_mask', np.ones_like(det['data'].x, dtype=np.bool))
+            shadow_mask = det.get('shadow_mask', np.ones_like(det['data'].x, dtype=bool))
             effective_width = int(width * oversampling)
             shadow_mask[:,0:effective_width] = False
             shadow_mask[:,-effective_width:] = False

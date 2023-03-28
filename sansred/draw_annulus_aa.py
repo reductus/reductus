@@ -104,7 +104,7 @@ def annular_ellipse_mask_antialiased_cairo(shape, center, inner_radius, outer_ra
     ctx.stroke()
     buf = surface.get_data()
     data = numpy.ndarray(shape=shape, dtype=numpy.uint8, buffer=buf)
-    output = numpy.ones_like(data, dtype=numpy.float) * background_value
+    output = numpy.ones_like(data, dtype=float) * background_value
     output += data.astype(float) * (mask_value - background_value) / 255.0
     return output
 
@@ -129,7 +129,7 @@ def rectangular_mask_antialiased_cairo(shape, rectangle_xy, background_value=0.0
 
     buf = surface.get_data()
     data = numpy.ndarray(shape=shape, dtype=numpy.uint8, buffer=buf)
-    output = numpy.ones_like(data, dtype=numpy.float) * background_value
+    output = numpy.ones_like(data, dtype=float) * background_value
     output += data.astype(float) * (mask_value - background_value) / 255.0
     return output
 
