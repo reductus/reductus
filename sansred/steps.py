@@ -899,7 +899,7 @@ def circular_av_new(data, q_min=None, q_max=None, q_step=None, mask_width=3, dQ_
     """
 
     # adding simple width-based mask around the perimeter:
-    mask = np.zeros_like(data.q, dtype=np.bool)
+    mask = np.zeros_like(data.q, dtype=bool)
     mask_width = abs(mask_width)
     if (mask_width > 0):
         mask[mask_width:-mask_width, mask_width:-mask_width] = True

@@ -149,7 +149,7 @@ class VSansData(object):
                 }
             }
             if 'shadow_mask' in det:
-                new_dataset['mask'] = det['shadow_mask'].astype(np.float).ravel('C')
+                new_dataset['mask'] = det['shadow_mask'].astype(float).ravel('C')
             datasets.append(new_dataset)
         
         data_2d = {
@@ -290,9 +290,9 @@ class VSansDataQSpace(VSansData):
             g["Qz"] = det["Qz"]
             total_length += det["data"].x.size
 
-        I = np.empty((total_length), dtype=np.float)
-        dI = np.empty((total_length), dtype=np.float)
-        Q = np.empty((3,total_length), dtype=np.float)
+        I = np.empty((total_length), dtype=float)
+        dI = np.empty((total_length), dtype=float)
+        Q = np.empty((3,total_length), dtype=float)
 
         data_cursor = 0
         for d_id, sn in enumerate(short_detectors):
