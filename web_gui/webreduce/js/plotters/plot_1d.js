@@ -3,23 +3,23 @@ import { d3, extend, xyChart } from '../libraries.js';
 import { app } from '../main.js'
 
 function merge_1d_plotdata(plotdata) {
-  var values = plotdata.values;
-  var datas = [];
-  var series = [];
-  var xlabel, ylabel;
+  const values = plotdata.values;
+  let datas = [];
+  let series = [];
+  let xlabel, ylabel;
   values.forEach(function (v) {
     series = series.concat(v.options.series || [{}]);
     datas = datas.concat(v.data);
     if (v.options && v.options.axes) {
       if (v.options.axes.xaxis && v.options.axes.xaxis.label != null) {
-        var new_xlabel = v.options.axes.xaxis.label;
+        const new_xlabel = v.options.axes.xaxis.label;
         if (xlabel != null && xlabel != new_xlabel) {
           alert("inconsistent x-axis: " + xlabel + ", " + new_xlabel);
         }
         xlabel = new_xlabel;
       }
       if (v.options.axes.yaxis && v.options.axes.yaxis.label != null) {
-        var new_ylabel = v.options.axes.yaxis.label;
+        const new_ylabel = v.options.axes.yaxis.label;
         if (ylabel != null && ylabel != new_ylabel) {
           alert("inconsistent y-axis: " + ylabel + ", " + new_ylabel);
         }
@@ -27,7 +27,7 @@ function merge_1d_plotdata(plotdata) {
       }
     }
   })
-  var output = {
+  const output = {
     options: {
       series: series,
       axes: {
@@ -42,13 +42,13 @@ function merge_1d_plotdata(plotdata) {
 }
 
 export async function show_plots_1d(plotdata, plot_controls, target, old_plot) {
-  var plotdata = merge_1d_plotdata(plotdata);
-  var options = {
+  const merged = merge_1d_plotdata(plotdata);
+  const options = {
     series: [],
     legend: { show: true, left: 150 },
     axes: { xaxis: { label: "x-axis" }, yaxis: { label: "y-axis" } }
   };
-  extend(true, options, plotdata.options);
+  extend(true, options, merged.options);
   if (options.xtransform) {
     plot_controls.axes.x.transform.value = options.xtransform;
   } else {
@@ -66,11 +66,11 @@ export async function show_plots_1d(plotdata, plot_controls, target, old_plot) {
 
 
   // create the 1d chart:
-  var mychart = new xyChart(options, d3);
+  const mychart = new xyChart(options, d3);
   d3.select(target).selectAll("svg, div").remove();
   d3.select(target).classed("plot", true);
   d3.selectAll([target])
-    .data([plotdata.data])
+    .data([merged.data])
     .call(mychart);
   mychart.zoomRect(true);
   app.callbacks.resize_center = mychart.autofit;
@@ -86,7 +86,7 @@ export async function show_plots_1d(plotdata, plot_controls, target, old_plot) {
   ]);
 
   plot_controls.settingChange = function (setting_name, value) {
-    var o = mychart.options();
+    const o = mychart.options();
     let opt_name = 'show_' + setting_name;
     o[opt_name] = value;
     mychart.options(o).update();
