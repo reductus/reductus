@@ -410,9 +410,9 @@ def pixelsToTwotheta(data, params, pixels_per_degree=50.0, qzero_pixel=149.0, in
                 input_slice = [slice(None, None), slice(None, None), col]
                 #input_slice[pixel_axis] = slice(i, i+1)
                 input_slice[other_axis] = i
-                array_to_rebin = data_in[input_slice]
+                array_to_rebin = data_in[tuple(input_slice)]
                 new_array = reb.rebin(input_twoth_bin_edges, array_to_rebin, output_twoth_bin_edges)
-                new_data.view(ndarray)[input_slice] = new_array
+                new_data.view(ndarray)[tuple(input_slice)] = new_array
 
     return new_data
 
@@ -890,6 +890,8 @@ def add_to_grid(dataset, grid, counts_multiplier=1.0):
             data_slice[dim] = slice(None, None, -1)
         data_edges.append(edges)
 
+    data_slice = tuple(data_slice)
+    grid_slice = tuple(grid_slice)
     new_info = dataset.infoCopy()
     for i, col in enumerate(new_info[2]['cols']):
         #if col['name'] in cols_to_add:
