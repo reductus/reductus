@@ -1217,7 +1217,11 @@ class ReflData(Group):
 
         instrument_settings = info.data_source.measurement.instrument_settings
         info.data_source.experiment.instrument = str(_s(self.instrument))
-        info.data_source.experiment.probe = _s(self.probe)
+        probename = _s(self.probe)
+        if probename.endswith('s'):
+            # ORSO is expecting "neutron" or "x-ray"
+            probename = probename[:-1]
+        info.data_source.experiment.probe = probename
 
         polarization_lookups = {
             "++": "pp",
