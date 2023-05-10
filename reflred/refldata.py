@@ -1228,8 +1228,8 @@ class ReflData(Group):
             "--": "mm",
             "-+": "mp",
             "+-": "pm",
-            "+": "p",
-            "-": "m"
+            "+": "po", # assume front polarization but not back
+            "-": "mo",
         }
         instrument_settings.polarization = polarization_lookups.get(self.polarization, "unpolarized")
 
