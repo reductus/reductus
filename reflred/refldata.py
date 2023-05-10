@@ -1205,14 +1205,14 @@ class ReflData(Group):
         info.columns = [
             fileio.Column("Qz", "1/angstrom"),
             fileio.Column("R"),
-            fileio.ErrorColumn(error_of="R"),
-            fileio.ErrorColumn(error_of="Qz"),
+            fileio.ErrorColumn(error_of="R", error_type="uncertainty", value_is="sigma", distribution="gaussian"),
+            fileio.ErrorColumn(error_of="Qz", error_type="resolution", value_is="sigma", distribution="gaussian"),
         ]
         data_arrays = [
             self.x,
             self.v,
             self.dv,
-            self.dx
+            self.dx,
         ]
 
         instrument_settings = info.data_source.measurement.instrument_settings
@@ -1229,31 +1229,35 @@ class ReflData(Group):
         }
         instrument_settings.polarization = polarization_lookups.get(self.polarization, "unpolarized")
 
-        def pack(ORSO_name, local_name, units=None):
+        def pack(ORSO_name, local_name, units=None, is_resolution=False):
             if getattr(self, local_name, None) is not None:
                 item = getattr(self, local_name)
+                ORSO_name_suffix = "_resolution" if is_resolution else ""
                 if hasattr(item, '__len__'):
                     # if all values are the same, collapse to first element
                     if (len(item) > 1 and np.allclose(item, item[0])) or len(item) == 1:
                         item = item[0]
                 if np.isscalar(item):
                     val = fileio.base.Value(magnitude=float(item), unit=units)
-                    setattr(instrument_settings, ORSO_name, val)
+                    setattr(instrument_settings, ORSO_name + ORSO_name_suffix, val)
                 elif hasattr(item, '__len__') and len(item) > 1:
-                    info.columns.append(fileio.Column(name=ORSO_name, physical_quantity=ORSO_name, unit=units))
+                    if is_resolution:
+                        info.columns.append(fileio.ErrorColumn(error_of=ORSO_name, error_type="uncertainty", value_is="sigma", distribution="gaussian"))
+                    else:
+                        info.columns.append(fileio.Column(name=ORSO_name, physical_quantity=ORSO_name, unit=units))
                     data_arrays.append(np.resize(item, self.points))
                     val = fileio.base.ValueRange(min=float(min(item)), max=float(max(item)), unit=units, column=ORSO_name)
-                    setattr(instrument_settings, ORSO_name, val)
+                    setattr(instrument_settings, ORSO_name + ORSO_name_suffix, val)
 
-        for ORSO_name, local_name, units in [
-            ("wavelength", "Ld", "angstrom"),
-            ("wavelength_resolution", "dL", "angstrom"),
-            ("incident_angle", "Ti", "degrees"),
-            ("angular_resolution", "angular_resolution", "degrees")
+        for ORSO_name, local_name, units, is_resolution in [
+            ("wavelength", "Ld", "angstrom", False),
+            ("wavelength", "dL", "angstrom", True),
+            ("incident_angle", "Ti", "degrees", False),
+            ("incident_angle", "angular_resolution", "degrees", True)
         ]:
-            pack(ORSO_name, local_name, units)
+            pack(ORSO_name, local_name, units, is_resolution)
 
-        ds = fileio.OrsoDataset(info, data_arrays)
+        ds = fileio.OrsoDataset(info, np.vstack(data_arrays).T)
         return ds
 
     @exports_ORSO_text("ORSO_text")
