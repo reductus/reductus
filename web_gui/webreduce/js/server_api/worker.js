@@ -11,7 +11,7 @@ async function loadPyodideAndPackages() { // loads pyodide
   let api = await pyodide.runPythonAsync(`
   import micropip
   await micropip.install("./orsopy-1.0.1-py2.py3-none-any.whl")
-  await micropip.install("./reductus-0.9.0-py3-none-any.whl")
+  await micropip.install("./reductus-0.9.1-py3-none-any.whl")
   from web_gui import api
 
   config = {
