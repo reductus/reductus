@@ -59,7 +59,9 @@ def create_app(config=None):
             code = e.code
         content = {'exception': repr(e), 'traceback': traceback.format_exc()}
         logging.info(content['traceback'])
-        return make_response(msgpack_converter.packb(content, use_bin_type=True), code)
+        response = make_response(msgpack_converter.packb(content, use_bin_type=True), code)
+        response.headers['Content-Type'] = "application/msgpack"
+        return response
 
     def wrap_method(mfunc):
         def wrapper(*args, **kwargs):
