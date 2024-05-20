@@ -249,7 +249,7 @@ def _apply_correction(data, dtheta, Hinv, use_pm, use_mp):
     for p in parts[1:]:
         px = data[p].Qz
         py = U(data[p].v, data[p].dv)
-        y.append(interp(x, px, py, left=np.NaN, right=np.NaN))
+        y.append(interp(x, px, py, left=np.nan, right=np.nan))
     Y = np.vstack(y)
 
     # Look up correction matrix for each point using the ++ cross section
@@ -267,7 +267,7 @@ def _apply_correction(data, dtheta, Hinv, use_pm, use_mp):
         x = data[xs].Qz
         px = data['++'].Qz
         py = U(X[k, :], dX[k, :])
-        y = interp(x, px, py, left=np.NaN, right=np.NaN)
+        y = interp(x, px, py, left=np.nan, right=np.nan)
         data[xs].v, data[xs].dv = nominal_values(y), std_devs(y)
         data[xs].vlabel = 'counts per incident count'
         data[xs].vunits = None
@@ -439,7 +439,7 @@ def _interp_intensity(dT, data):
 def clip_no_error(field, low, high, nanval=0.):
     """
     Clip the values to the range, returning the indices of the values
-    which were clipped.  Note that this modifies field in place. NaN
+    which were clipped.  Note that this modifies field in place. nan
     values are clipped to the nanval default.  *field* is a floating
     point array, with no uncertainty.
     """
@@ -461,7 +461,7 @@ def clip_no_error(field, low, high, nanval=0.):
 def clip_reflred_err1d(field, low, high, nanval=0.):
     """
     Clip the values to the range, returning the indices of the values
-    which were clipped.  Note that this modifies field in place. NaN
+    which were clipped.  Note that this modifies field in place. nan
     values are clipped to the nanval default.
 
     *field* is dataflow.uncertainty array, whose values retain their
@@ -486,7 +486,7 @@ def clip_reflred_err1d(field, low, high, nanval=0.):
 def clip_pypi_uncertainties(field, low, high, nanval=0.):
     """
     Clip the values to the range, returning the indices of the values
-    which were clipped.  Note that this modifies field in place. NaN
+    which were clipped.  Note that this modifies field in place. nan
     values are clipped to the nanval default.
 
     *field* is an array from the uncertainties package, whose values retain

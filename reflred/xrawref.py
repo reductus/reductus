@@ -203,7 +203,7 @@ class BrukerRefl(refldata.ReflData):
             self.scan_label = ['theta', 'two_theta']
         else:
             raise ValueError("Unknown sample angle in file")
-        self.Qz_target = np.NaN
+        self.Qz_target = np.nan
 
 class RigakuRefl(refldata.ReflData):
     """
@@ -302,7 +302,7 @@ class RigakuRefl(refldata.ReflData):
             raise ValueError("Unknown scan type " + scan_axis)
         self.sample.angle_x_target = self.sample.angle_x
         self.detector.angle_x_target = self.detector.angle_x
-        self.Qz_target = np.NaN
+        self.Qz_target = np.nan
 
 
 class XRDMLRefl(refldata.ReflData):
@@ -402,7 +402,7 @@ class XRDMLRefl(refldata.ReflData):
         self.scan_value = [self.sample.angle_x, self.detector.angle_x]
         self.scan_units = ['degrees', 'degrees']
         self.scan_label = ['theta', 'two_theta']
-        self.Qz_target = np.NaN
+        self.Qz_target = np.nan
 
 def demo():
     import sys

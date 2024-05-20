@@ -285,7 +285,7 @@ EMISSION_LINEWIDTH = 0.00021  # 0.05% dL/L FWHM as 1-sigma line width
 MONOCHROMATOR_WAVELENGTH_RESOLUTION = {
     # 'mirror': Ka1 + Ka2 + Kb
     'Ge(220)x2': 3.8e-4/FWHM,
-    'Ge(400)x2': np.NaN,  # Manual doesn't list the resolution for this config.
+    'Ge(400)x2': np.nan,  # Manual doesn't list the resolution for this config.
     'Ge(220)x4': 1.5e-4/FWHM,
     'Ge(440)x4': 2.3e-5/FWHM,
 }
@@ -356,7 +356,7 @@ def _interpret(header, values):
     monochromator = R['axis']['IncidentMonochromator'][2]
     #print("monochromator", monochromator)
     R['wavelength_resolution'] \
-        = MONOCHROMATOR_WAVELENGTH_RESOLUTION.get(monochromator, np.NaN)
+        = MONOCHROMATOR_WAVELENGTH_RESOLUTION.get(monochromator, np.nan)
     R['angular_divergence'] \
         = MONOCHROMATOR_ANGULAR_DIVERGENCE.get(monochromator, DIRECT_ANGULAR_DIVERGENCE)
     if header['MEAS_COND_XG_WAVE_TYPE'] == "Ka1":
@@ -416,11 +416,11 @@ def _interpret_axes(header):
         elif position == "None":
             position = None
         elif position == "-":
-            position = np.NaN
+            position = np.nan
 
         # Offsets are much easier: either "-" or a floating point number
         if offset == "-":
-            offset = np.NaN
+            offset = np.nan
 
         axis[name] = label, unit, position, offset
         idx += 1

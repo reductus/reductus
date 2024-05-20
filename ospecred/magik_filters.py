@@ -10,7 +10,7 @@ from functools import wraps
 from numpy import (cos, pi, cumsum, arange, ndarray, ones, zeros, array,
                    newaxis, linspace, empty, resize, sin, allclose, zeros_like,
                    linalg, dot, arctan2, float64, histogram2d, sum, nansum,
-                   sqrt, loadtxt, searchsorted, NaN, logical_not, fliplr,
+                   sqrt, loadtxt, searchsorted, nan, logical_not, fliplr,
                    flipud, indices, polyfit)
 import numpy
 from numpy.ma import MaskedArray
@@ -713,7 +713,7 @@ class NormalizeToMonitor(Filter2D):
         info = data.infoCopy()
         info[-2]['cols'] = []
         output_array = zeros(data.shape[:-1] + (len(counts_cols) + len(passthrough_cols),),
-                             dtype=float) * NaN
+                             dtype=float) * nan
         expressions = []
         for i, col in enumerate(passthrough_cols):
             info[-2]['cols'].append({"name":col})
@@ -1280,7 +1280,7 @@ class ThetaTwothetaToQxQz(Filter2D):
             monitor_col = monitor_cols[0]
             data_missing_mask = (output_grid[:, :, monitor_col] == 0)
             for dc in data_cols:
-                output_grid[:, :, dc].view(ndarray)[data_missing_mask] = NaN
+                output_grid[:, :, dc].view(ndarray)[data_missing_mask] = nan
 
 
         #extra info changed
@@ -1363,7 +1363,7 @@ class ThetaTwothetaToAlphaIAlphaF(Filter2D):
             monitor_col = monitor_cols[0]
             data_missing_mask = (output_grid[:, :, monitor_col] == 0)
             for dc in data_cols:
-                output_grid[:, :, dc].view(ndarray)[data_missing_mask] = NaN
+                output_grid[:, :, dc].view(ndarray)[data_missing_mask] = nan
 
         #extra info changed
         creation_story = data._info[-1]['CreationStory']

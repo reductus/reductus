@@ -14,7 +14,7 @@ try:
 except ImportError: # CRUFT: pre-3.7 support
     import importlib_resources as resources
 
-from numpy import NaN, inf
+from numpy import nan, inf
 
 from .deps import processing_order
 
@@ -729,7 +729,7 @@ def sanitizeFromJSON(obj):
     elif obj == _MINUS_INF_STRING:
         return -inf
     elif obj == _NAN_STRING:
-        return NaN
+        return nan
     else:
         return obj
 
