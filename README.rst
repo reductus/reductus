@@ -91,6 +91,7 @@ Clone the repo, then install in "editable" mode (might be a good idea to make
 a virtualenv first)::
 
     python -m pip install -e .
+    python -m pip install -r requirements.txt
     web_gui/run.py
 
 or without install (and with headless flag)::
