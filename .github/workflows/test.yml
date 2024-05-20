@@ -12,15 +12,15 @@ jobs:
     strategy:
       matrix:
         config:
-          - { os: ubuntu-latest, py: 3.8 }
-          - { os: windows-latest, py: 3.8 }
+          - { os: ubuntu-latest, py: 3.10 }
+          - { os: windows-latest, py: 3.10 }
 
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
 
     - name: Set up Python ${{ matrix.config.py }}
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.config.py }}
 
@@ -29,7 +29,7 @@ jobs:
         python -m pip install --upgrade pip
         python -m pip install wheel setuptools
         python -m pip install pytest python-dateutil requests h5py
-        python setup.py install
+        python -m pip install .
     - name: Run tests
       run: |
         pytest -v
