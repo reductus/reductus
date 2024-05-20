@@ -12,8 +12,8 @@ jobs:
     strategy:
       matrix:
         config:
-          - { os: ubuntu-latest, py: 3.10 }
-          - { os: windows-latest, py: 3.10 }
+          - { os: ubuntu-latest, py: "3.10" }
+          - { os: windows-latest, py: "3.10" }
 
 
     steps:
