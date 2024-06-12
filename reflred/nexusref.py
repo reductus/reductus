@@ -307,6 +307,9 @@ class NCNRNeXusRefl(ReflData):
         self.monochromator.wavelength = data_as(entry, 'instrument/monochromator/wavelength', 'Ang', rep=n)
         self.monochromator.wavelength_resolution = data_as(entry, 'instrument/monochromator/wavelength_error', 'Ang', rep=n)
         if self.monochromator.wavelength is None:
+            # for old NG7 data, wavelength is in DAS_logs
+            self.monochromator.wavelength = data_as(das, 'wavelength/wavelength', 'Ang', rep=n)
+        if self.monochromator.wavelength is None:
             self.warn("Wavelength is missing; using {WAVELENGTH} A".format(WAVELENGTH=WAVELENGTH))
             self.monochromator.wavelength = WAVELENGTH
         if self.monochromator.wavelength_resolution is None:
