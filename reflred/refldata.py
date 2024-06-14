@@ -862,6 +862,8 @@ class ReflData(Group):
     _intent = Intent.none
     _v = None
     _dv = None
+    # _dq is used when resolution can't be computed from dT and dL
+    _dq = None  # type: Optional[np.ndarray]
 
     ## Data representation for generic plotter as (x,y,z,v) -> (qz,qx,qy,Iq)
     ## TODO: subclass Data so we get pixel edges calculations
@@ -972,7 +974,6 @@ class ReflData(Group):
     def Qz(self):
         # Note: specular reflectivity assumes elastic scattering
         Li = Ld = self.Ld
-        #print("Qz_basis", self.Qz_basis, self.Ti.shape, self.Td.shape, self.Ti_target.shape, self.Td_target.shape, Li.shape)
         if self.Qz_basis == 'actual':
             return calc_Qz(self.Ti, self.Td, Li, Ld)
         if self.Qz_basis == 'target':
@@ -1008,6 +1009,8 @@ class ReflData(Group):
 
     @property
     def dQ(self):
+        if self._dq is not None:
+            return self._dq
         if self.angular_resolution is None:
             return None
             #raise ValueError("Need to estimate divergence before requesting dQ")
@@ -1016,6 +1019,10 @@ class ReflData(Group):
         L, dL = self.Ld, self.detector.wavelength_resolution
         #print(T.shape, dT.shape, L.shape, dL.shape)
         return dTdL2dQ(T, dT, L, dL)
+
+    @dQ.setter
+    def dQ(self, dQ):
+        self._dq = dQ
 
     @property
     def columns(self):
@@ -1029,7 +1036,8 @@ class ReflData(Group):
             ('Qx', {'label': 'Qx', 'units': "1/Ang"}),
             ('angular_resolution', {'label': 'Angular Resolution (1-sigma)', 'units': 'degrees'})
         ])
-        # TODO: duplicate code in columns, apply_mask and refldata._group
+        # TODO: duplicate code in columns & apply_mask
+        # TODO: list of groups mostly follows ReflData._group
         for subclsnm in ['sample', 'detector', 'monitor', 'slit1', 'slit2', 'slit3', 'slit4', 'monochromator']:
             subcls = getattr(self, subclsnm, None)
             if subcls is None:
@@ -1064,7 +1072,7 @@ class ReflData(Group):
             mask[mask_indices] = False
             return mask
 
-        for prop in ['_v', '_dv', 'angular_resolution', 'Qz_target']:
+        for prop in ['_v', '_dv', '_dq', 'angular_resolution', 'Qz_target']:
             v = getattr(self, prop, None)
             if check_array(v):
                 # TODO: use numpy.delete(v, indices) instead
@@ -1074,6 +1082,8 @@ class ReflData(Group):
 
         self.scan_value = [v[make_mask(v, mask_indices)] if check_array(v) else v for v in self.scan_value]
 
+        # TODO: duplicate code in columns & apply_mask
+        # TODO: list of groups mostly follows ReflData._group
         for subclsnm in ['sample', 'detector', 'monitor', 'slit1', 'slit2', 'slit3', 'slit4', 'monochromator']:
             subcls = getattr(self, subclsnm, None)
             if subcls is None:
@@ -1342,7 +1352,7 @@ class ReflData(Group):
             else:
                 _write_key_value(fid, "columns", [self.xlabel, self.vlabel, "uncertainty", "resolution"])
                 _write_key_value(fid, "units", [self.xunits, self.vunits, self.vunits, self.xunits])
-                data = np.vstack([self.x, self.v, self.dv, self.dx]).T
+                data = np.vstack((self.x, self.v, self.dv, self.dx)).T
                 np.savetxt(fid, data, fmt="%.10e")
                 suffix = ".refl"
             value = fid.getvalue()
