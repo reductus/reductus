@@ -834,6 +834,9 @@ class ReflData(Group):
     mask = None
     #: Computed 1-sigma angular resolution in degrees
     angular_resolution = None  # type: np.ndarray
+    #: Resolution shape. For now just 'uniform' or 'normal', with a shared
+    #: value for every point. In practice it is more complicated than that.
+    resolution_shape = 'normal'
     #: Hint for axis to use for aligning data with intensity scans:
     align_intensity = 'angular_resolution'
     #: For background scans, the choice of Qz for the
@@ -1318,6 +1321,11 @@ class ReflData(Group):
                 _write_key_value(fid, "angle", self.Ti)
             if self.angular_resolution is not None:
                 _write_key_value(fid, "angular_resolution", self.angular_resolution)
+            # TODO: should we always record resolution shape?
+            # Note: only recording resolution shape if it is not the default (normal)
+            # so that regression tests don't fail.
+            if self.resolution_shape != 'normal':
+                _write_key_value(fid, "resolution_shape", self.resolution_shape)
             if Intent.isscan(self.intent):
                 _write_key_value(fid, "columns", list(self.columns.keys()))
                 _write_key_value(fid, "units", [c.get("units", "") for c in self.columns.values()])
