@@ -44,9 +44,9 @@ def create_app(config=None):
     @app.route('/')
     def root():
         if os.path.exists(os.path.join(STATIC_PATH, PREBUILT_CLIENT)):
-            return redirect(os.path.join(STATIC_FOLDER, PREBUILT_CLIENT))
+            return redirect(posixpath.join(STATIC_FOLDER, PREBUILT_CLIENT))
         else:
-            return redirect(os.path.join(STATIC_FOLDER, DEV_CLIENT))
+            return redirect(posixpath.join(STATIC_FOLDER, DEV_CLIENT))
 
     @app.route('/robots.txt')
     def static_from_root():
