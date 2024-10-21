@@ -3,6 +3,7 @@ from copy import deepcopy
 from posixpath import basename, join
 import time
 from io import BytesIO
+from typing import List
 
 import pytz
 from numpy import (cos, pi, cumsum, arange, ndarray, ones, zeros, array,
@@ -1012,7 +1013,7 @@ def LoadMAGIKPSD(fileinfo=None, collapse=True, collapse_axis='y', auto_PolState=
 def LoadMAGIKPSDFile(path, **kw):
     return loadMAGIKPSD_helper(h5_open_zip(path), path, path, **kw)
 
-def loadMAGIKPSD_helper(file_obj, name, path, collapse=True, collapse_axis='y', auto_PolState=False, PolState='', flip=True, transpose=True):
+def loadMAGIKPSD_helper(file_obj, name, path, collapse=True, collapse_axis='y', auto_PolState=False, PolState='', flip=True, transpose=True) -> List[MetaArray]:
     lookup = {"DOWN_DOWN":"_down_down", "UP_DOWN":"_up_down", "DOWN_UP":"_down_up", "UP_UP":"_up_up", "entry": ""}
     #nx_entries = LoadMAGIKPSD.load_entries(name, fid, entries=entries)
     #fid.close()
@@ -1191,7 +1192,7 @@ def loadMAGIKPSD_helper(file_obj, name, path, collapse=True, collapse_axis='y', 
                     output = data
     return output
 
-def test():
+def demo():
     from dataflow import fetch
     fetch.DATA_SOURCES = [{"name": "ncnr", "url": "https://ncnr.nist.gov/pub/"}]
     fileinfo = {
@@ -1201,3 +1202,9 @@ def test():
         'entries': ['entry']
     }
     return LoadMAGIKPSD(fileinfo)
+
+def test():
+    loaded_files = demo()
+    assert len(loaded_files) == 1
+    loaded_file = loaded_files[0]
+    assert loaded_file.get_metadata()['filename'] == 'wp10v132.nxz.cgd'
