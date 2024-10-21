@@ -250,7 +250,7 @@ def nexus_common(self, entry, entryname, filename):
     # TODO: magnetic field
     if 'temp' in das:
         if 'temp/primaryControlLoop' in das:
-            temp_controller = das['temp/primaryControlLoop'][()]
+            temp_controller = das['temp/primaryControlLoop'][0]
             setpoint_field = 'temp/setpoint_%d' % (temp_controller,)
             self.sample.temp_setpoint = data_as(das, setpoint_field, 'K')[0]
         temp_values = data_as(das, 'temp/primaryNode/value', 'K')
