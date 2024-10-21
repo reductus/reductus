@@ -333,12 +333,12 @@ class NCNRNeXusRefl(ReflData):
         for k, slit in enumerate([self.slit1, self.slit2, self.slit3, self.slit4]):
             x = 'slitAperture%d/softPosition'%(k+1)
             x_target = 'slitAperture%d/desiredSoftPosition'%(k+1)
-            slit.x = data_as(das, x, 'mm', rep=n)
-            slit.x_target = data_as(das, x_target, 'mm', rep=n)
+            slit.x = data_as(das, x, 'mm', rep=n, dtype='d')
+            slit.x_target = data_as(das, x_target, 'mm', rep=n, dtype='d')
             y = 'vertSlitAperture%d/softPosition'%(k+1)
             y_target = 'vertSlitAperture%d/desiredSoftPosition'%(k+1)
-            slit.y = data_as(das, y, 'mm', rep=n)
-            slit.y_target = data_as(das, y_target, 'mm', rep=n)
+            slit.y = data_as(das, y, 'mm', rep=n, dtype='d')
+            slit.y_target = data_as(das, y_target, 'mm', rep=n, dtype='d')
 
         # Detector
         self.detector.wavelength = self.monochromator.wavelength
