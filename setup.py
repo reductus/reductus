@@ -21,8 +21,8 @@ packages = find_packages(exclude=['reflbin'])
 # pip dependencies
 install_requires = [
     'scipy', 'numpy', 'uncertainties', 'docutils',
-    'pytz', 'importlib_resources'
-    ]
+    'pytz',
+]
 extras_require = {
     'server': ['msgpack', 'flask', 'flask-cors', 'requests'],
     'masked_curve_fit': ['numdifftools'],
