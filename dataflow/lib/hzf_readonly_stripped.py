@@ -7,15 +7,9 @@ import json
 
 import numpy
 
-IS_PY3 = sys.version_info[0] >= 3
-if IS_PY3:
-    def bytes_to_str(s):
-        # type: (AnyStr) -> str
-        return s.decode('utf-8') if isinstance(s, bytes) else s  # type: ignore
-else:  # python 2.x
-    def bytes_to_str(s):
-        # type: (AnyStr) -> str
-        return s
+def bytes_to_str(s):
+    # type: (AnyStr) -> str
+    return s.decode('utf-8') if isinstance(s, bytes) else s  # type: ignore
 
 builtin_open = open
 
@@ -244,8 +238,7 @@ class FieldFile(object):
                 if dtype_str == '<l4': dtype_str = '<i4'
                 if dtype_str == '<l8': dtype_str = '<i8'
                 if dtype_str == '<d8': dtype_str = '<f8'
-                if IS_PY3:
-                    dtype_str = dtype_str.replace('S', 'U')
+                dtype_str = dtype_str.replace('S', 'U')
                 dtype = numpy.dtype(dtype_str)
                 if attrs.get('binary', False) == True:
                     s = infile.read()

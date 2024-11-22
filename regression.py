@@ -31,13 +31,10 @@ from dataflow.calc import process_template
 from dataflow.rev import revision_info
 from dataflow.configure import apply_config
 
-IS_PY3 = sys.version_info[0] >= 3
-if IS_PY3:
-    def encode(s):
-        return s.encode('utf-8')
-else:
-    def encode(s):
-        return s
+
+def encode(s):
+    return s.encode('utf-8')
+
 
 # Match the following on the first line:
 # - initial comment ("#" or "//")

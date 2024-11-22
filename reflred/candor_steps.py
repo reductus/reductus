@@ -495,6 +495,7 @@ def stitch_intensity(data, tol=0.001):
         # TODO: maybe update counts (unnormalized) rather than v (normalized)
         atten = a.v[-1] / b.v[0]
         b.v *= atten[None, ...]
+        b.dv *= atten[None, ...]
 
         # Better scale estimation:
         # * user provides an overlap fitting radius

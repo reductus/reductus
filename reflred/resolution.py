@@ -364,25 +364,29 @@ def divergence(slits=None, distance=None, T=None,
 
     # Compute pair-wise delta-theta
     def _divergence(i, j):
+        # Note: divergence_simple below uses (s1 + s2)/|2d| for FWHM. Given
+        # s1 = s2, this form returns arctan((s1 + s2)/|2d|)/sqrt(6) 1-sigma.
+        # sqrt(6) ~ 2.45 whereas FWHM to 1-sigma conversion ~ 2.35. The arctan
+        # makes the values closer still.
         s1, s2, d = slits[i], slits[j], distance[i] - distance[j]
         w, t = np.arctan(abs((s1 + s2)/2/d)), np.arctan(abs((s1 - s2)/2/d))
-        return np.sqrt((w**2 + t**2)/6)
+        return np.sqrt((w**2 + t**2)/6) # 1-sigma radians
     n = len(slits)
-    sigma = [_divergence(i, j) for i in range(n) for j in range(i+1, n)]
+    sigma_rad = [_divergence(i, j) for i in range(n) for j in range(i+1, n)]
     ## With four slit pairs plus sample, show whether the sample footprint
     ## is the limiting factor in the divergence. The structure of the
     ## divergence list sigma is as follows:
     ##  [S1:S2 S1:S3 S1:S4 S1:foot S2:S3 S2:S4 S2:foot S3:S4 S3:foot S4:foot]
-    #print(f"sample dT = {min(sigma[k].min() for k in (3, 6, 8, 9))},"
-    #      f" slit dT = {min(sigma[k].min() for k in (0, 1, 2, 4, 5, 7))}")
+    #print(f"sample dT = {min(sigma_rad[k].min() for k in (3, 6, 8, 9))},"
+    #      f" slit dT = {min(sigma_rad[k].min() for k in (0, 1, 2, 4, 5, 7))}")
 
     # Find the minimum delta-theta across all pairs
     # Sample slit is one per angle, so some divergence values will be vectors
-    sigma = np.asarray(np.broadcast_arrays(*sigma))
-    min_sigma = np.min(sigma, axis=0)
+    sigma_rad = np.asarray(np.broadcast_arrays(*sigma_rad))
+    min_sigma_rad = np.min(sigma_rad, axis=0)
 
     # Convert to 1-sigma distribution in degrees
-    return degrees(min_sigma)
+    return degrees(min_sigma_rad)
 
 def divergence_simple(slits=None, distance=None, T=None,
                       sample_width=np.inf, use_sample=True):

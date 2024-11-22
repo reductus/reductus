@@ -13,13 +13,15 @@ await esbuild.build({
   bundle: true,
   minify: true,
   sourcemap: true,
-  outdir: 'dist/js',
+  define: { ENABLE_UPLOADS: 'true' },
+  outdir: 'dist_serviceworker/js',
   target: 'es2016',
   plugins: [
     alias({
       './libraries.js': path.resolve(__dirname, `js/libraries_production.js`),
       '../libraries.js': path.resolve(__dirname, `js/libraries_production.js`),
-      '../../libraries.js': path.resolve(__dirname, `js/libraries_production.js`)
+      '../../libraries.js': path.resolve(__dirname, `js/libraries_production.js`),
+      './server_api/api_msgpack.js': path.resolve(__dirname, 'js/server_api/api_serviceworker.js')
     }),
   ],
 }).catch(() => process.exit(1))
@@ -34,11 +36,13 @@ await esbuild.build({
     ".ttf": "dataurl",
     ".eot": "dataurl"
   },
-  outfile: 'dist/css/index.css',
+  outfile: 'dist_serviceworker/css/index.css',
 }).catch(() => process.exit(1))
 
 let mode = fs.constants.COPYFILE_FICLONE;
 
-copyRecursiveSync('index.html', 'dist/index.html', mode);
-copyRecursiveSync('favicon.ico', 'dist/favicon.ico', mode);
-copyRecursiveSync('img', 'dist/img', mode);
+copyRecursiveSync('index.html', 'dist_serviceworker/index.html', mode);
+copyRecursiveSync('favicon.ico', 'dist_serviceworker/favicon.ico', mode);
+copyRecursiveSync('img', 'dist_serviceworker/img', mode);
+copyRecursiveSync('js/server_api/sw.js', 'dist_serviceworker/sw.js', mode);
+copyRecursiveSync('../../dist', 'dist_serviceworker', mode)

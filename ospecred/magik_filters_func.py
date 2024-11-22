@@ -3,12 +3,13 @@ from copy import deepcopy
 from posixpath import basename, join
 import time
 from io import BytesIO
+from typing import List
 
 import pytz
 from numpy import (cos, pi, cumsum, arange, ndarray, ones, zeros, array,
                    newaxis, linspace, empty, resize, sin, allclose, zeros_like,
                    linalg, dot, arctan2, float64, histogram2d, sum, nansum,
-                   sqrt, loadtxt, searchsorted, NaN, logical_not, fliplr,
+                   sqrt, loadtxt, searchsorted, nan, logical_not, fliplr,
                    flipud, indices, polyfit, radians, argsort)
 
 from numpy.ma import MaskedArray
@@ -130,7 +131,7 @@ def normalizeToMonitor(data):
     monitor_cols = [col for col in cols if col.startswith('monitor')]
     info = data.infoCopy()
     info[-2]['cols'] = []
-    output_array = zeros( data.shape[:-1] + (len(counts_cols) + len(passthrough_cols),), dtype=float) * NaN
+    output_array = zeros( data.shape[:-1] + (len(counts_cols) + len(passthrough_cols),), dtype=float) * nan
     expressions = []
     for i, col in enumerate(passthrough_cols):
         info[-2]['cols'].append({"name":col})
@@ -410,9 +411,9 @@ def pixelsToTwotheta(data, params, pixels_per_degree=50.0, qzero_pixel=149.0, in
                 input_slice = [slice(None, None), slice(None, None), col]
                 #input_slice[pixel_axis] = slice(i, i+1)
                 input_slice[other_axis] = i
-                array_to_rebin = data_in[input_slice]
+                array_to_rebin = data_in[tuple(input_slice)]
                 new_array = reb.rebin(input_twoth_bin_edges, array_to_rebin, output_twoth_bin_edges)
-                new_data.view(ndarray)[input_slice] = new_array
+                new_data.view(ndarray)[tuple(input_slice)] = new_array
 
     return new_data
 
@@ -515,7 +516,7 @@ def thetaTwothetaToQxQz(data, output_grid, wavelength=5.0, qxmin=-0.003, qxmax=0
         monitor_col = monitor_cols[0]
         data_missing_mask = (output_grid[:,:,monitor_col] == 0)
         for dc in data_cols:
-            output_grid[:,:,dc].view(ndarray)[data_missing_mask] = NaN;
+            output_grid[:,:,dc].view(ndarray)[data_missing_mask] = nan;
 
     #extra_info
     output_grid._info[-1] = data._info[-1].copy()
@@ -594,7 +595,7 @@ def thetaTwothetaToAlphaIAlphaF(data):
         monitor_col = monitor_cols[0]
         data_missing_mask = (output_grid[:,:,monitor_col] == 0)
         for dc in data_cols:
-            output_grid[:,:,dc].view(ndarray)[data_missing_mask] = NaN;
+            output_grid[:,:,dc].view(ndarray)[data_missing_mask] = nan
 
     #extra info changed
     output_grid._info[-1] = data._info[-1].copy()
@@ -890,6 +891,8 @@ def add_to_grid(dataset, grid, counts_multiplier=1.0):
             data_slice[dim] = slice(None, None, -1)
         data_edges.append(edges)
 
+    data_slice = tuple(data_slice)
+    grid_slice = tuple(grid_slice)
     new_info = dataset.infoCopy()
     for i, col in enumerate(new_info[2]['cols']):
         #if col['name'] in cols_to_add:
@@ -1010,7 +1013,7 @@ def LoadMAGIKPSD(fileinfo=None, collapse=True, collapse_axis='y', auto_PolState=
 def LoadMAGIKPSDFile(path, **kw):
     return loadMAGIKPSD_helper(h5_open_zip(path), path, path, **kw)
 
-def loadMAGIKPSD_helper(file_obj, name, path, collapse=True, collapse_axis='y', auto_PolState=False, PolState='', flip=True, transpose=True):
+def loadMAGIKPSD_helper(file_obj, name, path, collapse=True, collapse_axis='y', auto_PolState=False, PolState='', flip=True, transpose=True) -> List[MetaArray]:
     lookup = {"DOWN_DOWN":"_down_down", "UP_DOWN":"_up_down", "DOWN_UP":"_down_up", "UP_UP":"_up_up", "entry": ""}
     #nx_entries = LoadMAGIKPSD.load_entries(name, fid, entries=entries)
     #fid.close()
@@ -1189,7 +1192,7 @@ def loadMAGIKPSD_helper(file_obj, name, path, collapse=True, collapse_axis='y', 
                     output = data
     return output
 
-def test():
+def demo():
     from dataflow import fetch
     fetch.DATA_SOURCES = [{"name": "ncnr", "url": "https://ncnr.nist.gov/pub/"}]
     fileinfo = {
@@ -1199,3 +1202,9 @@ def test():
         'entries': ['entry']
     }
     return LoadMAGIKPSD(fileinfo)
+
+def test():
+    loaded_files = demo()
+    assert len(loaded_files) == 1
+    loaded_file = loaded_files[0]
+    assert loaded_file.get_metadata()['filename'] == 'wp10v132.nxz.cgd'

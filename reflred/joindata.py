@@ -370,7 +370,7 @@ def _scalar_to_vector(value, data, field):
     """
     n = len(data.v)
     if value is None:  # Convert missing data to NaN
-        value = np.NaN
+        value = np.nan
     if np.isscalar(value) or len(value) == 1:
         return np.repeat(value, n, axis=0)
     elif len(value) == n:

@@ -168,7 +168,7 @@ import numpy as np
 #def U(x,dx): return Uncertainty(x,dx**2)
 #def nominal_values(u): return u.x
 #def std_devs(u): return u.dx
-from uncertainties.unumpy import uarray as U, matrix as UM, nominal_values, std_devs
+from uncertainties.unumpy import uarray as U, nominal_values, std_devs, ulinalg
 from uncertainties import ufloat
 
 from dataflow.lib.errutil import interp
@@ -249,8 +249,9 @@ def _apply_correction(data, dtheta, Hinv, use_pm, use_mp):
     for p in parts[1:]:
         px = data[p].Qz
         py = U(data[p].v, data[p].dv)
-        y.append(interp(x, px, py, left=np.NaN, right=np.NaN))
+        y.append(interp(x, px, py, left=np.nan, right=np.nan))
     Y = np.vstack(y)
+    Y = U(nominal_values(Y), std_devs(Y))
 
     # Look up correction matrix for each point using the ++ cross section
     correction_index = util.nearest(data['++'].angular_resolution, dtheta)
@@ -258,7 +259,7 @@ def _apply_correction(data, dtheta, Hinv, use_pm, use_mp):
     # Apply the correction at each point
     X, dX = np.zeros(Y.shape), np.zeros(Y.shape)
     for point, polarization in enumerate(correction_index):
-        x = Hinv[polarization] * UM(Y[:, point]).T
+        x = Hinv[polarization] @ Y[:, point].T
         X[:, point], dX[:, point] = nominal_values(x).flat, std_devs(x).flat
 
     # Put the corrected intensities back into the datasets
@@ -267,7 +268,7 @@ def _apply_correction(data, dtheta, Hinv, use_pm, use_mp):
         x = data[xs].Qz
         px = data['++'].Qz
         py = U(X[k, :], dX[k, :])
-        y = interp(x, px, py, left=np.NaN, right=np.NaN)
+        y = interp(x, px, py, left=np.nan, right=np.nan)
         data[xs].v, data[xs].dv = nominal_values(y), std_devs(y)
         data[xs].vlabel = 'counts per incident count'
         data[xs].vunits = None
@@ -309,7 +310,7 @@ def _correction_matrix(beta, fp, rp, x, y, use_pm, use_mp):
             ])
 
     #print("H:", UM(H[:,:,0]), UM(H[:,:,0]).I)
-    return [UM(H[:, :, k]*Bk).I for k, Bk in enumerate(beta)]
+    return [ulinalg.pinv(H[:, :, k]*Bk) for k, Bk in enumerate(beta)]
 
 def plot_efficiency(beam, Imin=0.0, Emin=0.0, FRbal=0.5, clip=False):
     eff = polarization_efficiency(beam, Imin=Imin, Emin=Emin, FRbal=FRbal, clip=clip)
@@ -439,7 +440,7 @@ def _interp_intensity(dT, data):
 def clip_no_error(field, low, high, nanval=0.):
     """
     Clip the values to the range, returning the indices of the values
-    which were clipped.  Note that this modifies field in place. NaN
+    which were clipped.  Note that this modifies field in place. nan
     values are clipped to the nanval default.  *field* is a floating
     point array, with no uncertainty.
     """
@@ -461,7 +462,7 @@ def clip_no_error(field, low, high, nanval=0.):
 def clip_reflred_err1d(field, low, high, nanval=0.):
     """
     Clip the values to the range, returning the indices of the values
-    which were clipped.  Note that this modifies field in place. NaN
+    which were clipped.  Note that this modifies field in place. nan
     values are clipped to the nanval default.
 
     *field* is dataflow.uncertainty array, whose values retain their
@@ -486,7 +487,7 @@ def clip_reflred_err1d(field, low, high, nanval=0.):
 def clip_pypi_uncertainties(field, low, high, nanval=0.):
     """
     Clip the values to the range, returning the indices of the values
-    which were clipped.  Note that this modifies field in place. NaN
+    which were clipped.  Note that this modifies field in place. nan
     values are clipped to the nanval default.
 
     *field* is an array from the uncertainties package, whose values retain

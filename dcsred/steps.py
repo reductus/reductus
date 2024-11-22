@@ -149,8 +149,8 @@ def RawToEQ(rawdata):
     #binning resolution
     Q_max = Qfunc(ki,ki,150)
     Q_min = 0
-    E_bins = np.linspace(-Ei, Ei, int(2*Ei/dE)*0.5 )
-    Q_bins = np.linspace(Q_min,Q_max,301*0.5)
+    E_bins = np.linspace(-Ei, Ei, int(int(2*Ei/dE)*0.5) )
+    Q_bins = np.linspace(Q_min,Q_max,int(301*0.5))
 
     #for every point in {timechannel, detectorchannel} space, map into a bin of {E,Q} space
     #remember, data is organized as data[detectorchannel][timechannel]

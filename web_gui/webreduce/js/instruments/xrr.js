@@ -58,8 +58,7 @@ var get_refl_item = function(obj, path) {
 
 instrument.load_file = load_refl; 
 instrument.default_categories = [
-  [["intent"]], 
-  [["filenumber"]], 
+  [["name"]], 
 ];
 instrument.categories = extend(true, [], instrument.default_categories);
 

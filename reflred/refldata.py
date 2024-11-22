@@ -700,6 +700,44 @@ def infer_intent(data):
 
     return intent
 
+def exports_ORSO_text(name="column"):
+    def inner_function(f):
+        f.exporter = ORSO_text
+        f.export_name = name
+        return f
+    return inner_function
+
+def ORSO_text(datasets, export_method=None, template_data=None, concatenate=False):
+    from io import StringIO
+    from orsopy import fileio
+    from dataflow.lib.exporters import _build_filename
+    exports = [getattr(d, export_method)() for d in datasets]
+    # exports should contain items of class OrsoDataset
+    outputs = []
+    if concatenate and exports:
+        parts = [export['value'] for export in exports]
+        for part in parts:
+            part.info.reduction.software.name = "reductus"
+            part.info.reduction.software.template_data = template_data['template_data']
+        with StringIO() as output_buffer:
+            fileio.save_orso(parts, output_buffer, data_separator="\n\n")
+            output_buffer.seek(0)
+            export_string = output_buffer.read()
+        filename = _build_filename(exports[0], ext=".ort")
+        outputs.append({"filename": filename, "value": export_string})
+    else:
+        for i, export in enumerate(exports):
+            part = export['value']
+            part.info.reduction.software.name = "reductus"
+            part.info.reduction.software.template_data = template_data['template_data']
+            with StringIO() as output_buffer:
+                fileio.save_orso([part], output_buffer, data_separator="\n\n")
+                output_buffer.seek(0)
+                export_string = output_buffer.read()
+            filename = _build_filename(export, ext=".ort", index=i)
+            outputs.append({"filename": filename, "value": export_string})
+    return outputs
+
 
 @set_fields
 class ReflData(Group):
@@ -1162,6 +1200,111 @@ class ReflData(Group):
     def save(self, filename):
         with open(filename, 'w') as fid:
             fid.write(self.to_column_text()["value"])
+
+    def to_orsopy(self):
+        from orsopy import fileio
+        info = fileio.Orso.empty()
+        info.data_set = f"{self.name}:{self.entry}"
+        info.columns = [
+            fileio.Column("Qz", "1/angstrom"),
+            fileio.Column("R"),
+            fileio.ErrorColumn(error_of="R", error_type="uncertainty", value_is="sigma", distribution="gaussian"),
+            fileio.ErrorColumn(error_of="Qz", error_type="resolution", value_is="sigma", distribution="gaussian"),
+        ]
+        data_arrays = [
+            self.x,
+            self.v,
+            self.dv,
+            self.dx,
+        ]
+
+        instrument_settings = info.data_source.measurement.instrument_settings
+        info.data_source.experiment.instrument = str(_s(self.instrument))
+        probename = _s(self.probe)
+        if probename.endswith('s'):
+            # ORSO is expecting "neutron" or "x-ray"
+            probename = probename[:-1]
+        info.data_source.experiment.probe = probename
+
+        polarization_lookups = {
+            "++": "pp",
+            "--": "mm",
+            "-+": "mp",
+            "+-": "pm",
+            "+": "po", # assume front polarization but not back
+            "-": "mo",
+        }
+        instrument_settings.polarization = polarization_lookups.get(self.polarization, "unpolarized")
+
+        def pack(ORSO_name, local_name, local_resolution_name, units=None):
+            if getattr(self, local_name, None) is not None:
+                item = getattr(self, local_name)
+                res = getattr(self, local_resolution_name)
+                # item and resolution can be either columns or single values,
+                # but have to make the same choice for both:
+                if np.isscalar(item):
+                    item = np.array([item])
+                if np.isscalar(res):
+                    res = np.array([res])
+
+                item_collapsible = np.allclose(item, item[0]) or len(item) == 1
+                res_collapsible = np.allclose(res, res[0]) or len(res) == 1
+                collapsed = False
+                if item_collapsible and res_collapsible:
+                    item = item[0]
+                    res = res[0]
+                    collapsed = True
+
+                if collapsed:
+                    error = fileio.base.ErrorValue(error_value=float(res), error_type="resolution", value_is="sigma", distribution="gaussian")
+                    val = fileio.base.Value(magnitude=float(item), unit=units, error=error)
+                    setattr(instrument_settings, ORSO_name, val)
+                else:
+                    info.columns.append(fileio.Column(name=ORSO_name, physical_quantity=ORSO_name, unit=units))
+                    info.columns.append(fileio.ErrorColumn(error_of=ORSO_name, error_type="uncertainty", value_is="sigma", distribution="gaussian"))
+                    data_arrays.append(np.resize(item, self.points))
+                    data_arrays.append(np.resize(res, self.points))
+                    val = fileio.base.ValueRange(min=float(min(item)), max=float(max(item)), unit=units)
+                    setattr(instrument_settings, ORSO_name, val)
+
+        for ORSO_name, local_name, resolution_name, units in [
+            ("wavelength", "Ld", "dL", "angstrom"),
+            ("incident_angle", "Ti", "angular_resolution", "degrees"),
+        ]:
+            pack(ORSO_name, local_name, resolution_name, units)
+
+        ds = fileio.OrsoDataset(info, np.vstack(data_arrays).T)
+        return ds
+
+    @exports_ORSO_text("ORSO_text")
+    def to_ORSO_text(self):
+        orsopy_obj = self.to_orsopy()
+        return {
+            "name": self.name,
+            "entry": self.entry,
+            "value": orsopy_obj,
+            "file_suffix": ".ort",
+        }
+
+    @exports_HDF5(name="ORSO_nexus")
+    def to_ORSO_nexus(self):
+        from io import BytesIO
+        import h5py
+        from orsopy.fileio.orso import save_nexus
+
+        orsopy_obj = self.to_orsopy()
+        fid = BytesIO()
+        save_nexus([orsopy_obj], fid)
+        fid.seek(0)
+        h5_item = h5py.File(fid, 'r')
+        
+        return {
+            "name": self.name,
+            "entry": self.entry,
+            "value": h5_item,
+            "file_suffix": ".orb",
+        }
+
 
     # TODO: split refldata in to ReflBase and PointRefl so PSD doesn't inherit column format
     @exports_text("column")

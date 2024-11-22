@@ -1,5 +1,4 @@
 import io
-import os
 from zipfile import ZipFile, is_zipfile
 
 import h5py

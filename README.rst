@@ -87,10 +87,11 @@ install and use that instead of localhost, e.g. ::
 
 Method 3: Run from repo (development)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Clone the repo, then install in "develop" mode (might be a good idea to make
+Clone the repo, then install in "editable" mode (might be a good idea to make
 a virtualenv first)::
 
-    python setup.py develop
+    python -m pip install -e .
+    python -m pip install -r requirements.txt
     web_gui/run.py
 
 or without install (and with headless flag)::

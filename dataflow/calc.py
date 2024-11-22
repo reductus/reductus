@@ -361,8 +361,12 @@ def _format_ordered(value):
         print("fingerprinting function %s"%str(value))
         return getsource(value)
     elif hasattr(value, '__getstate__'):
-        print("fingerprinting class using getstate %s"%str(value))
-        return [value.__class__.__name__, _format_ordered(value.__getstate__())]
+        value_state = value.__getstate__()
+        if value_state is None:
+            return value
+        else:
+           print("fingerprinting class using getstate %s"%str(value))
+           return [value.__class__.__name__, _format_ordered(value_state)]
     elif hasattr(value, '__dict__'):
         print("fingerprinting class using dict %s"%str(value))
         return [value.__class__.__name__, _format_ordered(value.__dict__)]

@@ -21,8 +21,8 @@ packages = find_packages(exclude=['reflbin'])
 # pip dependencies
 install_requires = [
     'scipy', 'numpy', 'uncertainties', 'docutils',
-    'pytz', 'importlib_resources'
-    ]
+    'pytz',
+]
 extras_require = {
     'server': ['msgpack', 'flask', 'flask-cors', 'requests'],
     'masked_curve_fit': ['numdifftools'],
@@ -34,7 +34,7 @@ tests_require = ['pytest']
 #sys.dont_write_bytecode = False
 dist = setup(
     name='reductus',
-    version='0.9.0',
+    version='0.9.1',
     author='Paul Kienzle',
     author_email='paul.kienzle@nist.gov',
     url='https://github.com/reductus/reductus',

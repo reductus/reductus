@@ -8,13 +8,9 @@ import importlib
 import inspect
 import json
 from collections import OrderedDict
+from importlib import resources
 
-try:
-    from importlib import resources
-except ImportError: # CRUFT: pre-3.7 support
-    import importlib_resources as resources
-
-from numpy import NaN, inf
+from numpy import nan, inf
 
 from .deps import processing_order
 
@@ -140,10 +136,11 @@ def load_templates(package):
         )
     """
     templates = {}
-    for filename in resources.contents(package):
-        if filename.endswith('.json'):
-            name = filename.split('.')[-2]
-            template = json.loads(resources.read_text(package, filename))
+    templates_dir = resources.files(package)
+    for item in templates_dir.iterdir():
+        if item.is_file() and item.name.endswith('.json'):
+            name = item.name.split('.')[-2]
+            template = json.loads(templates_dir.joinpath(item.name).read_text())
             templates[name] = template
     return templates
 
@@ -729,7 +726,7 @@ def sanitizeFromJSON(obj):
     elif obj == _MINUS_INF_STRING:
         return -inf
     elif obj == _NAN_STRING:
-        return NaN
+        return nan
     else:
         return obj
 

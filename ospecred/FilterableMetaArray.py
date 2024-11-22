@@ -1,7 +1,7 @@
 from io import BytesIO
 #from cStringIO import StringIO as BytesIO
 
-from numpy import ndarray, array, fromstring, float, float32, ones, empty, newaxis, savetxt, sqrt, mod, isnan, ma, hstack, log10
+from numpy import ndarray, array, fromstring, float32, ones, empty, newaxis, savetxt, sqrt, mod, isnan, ma, hstack, log10
 from dataflow.lib.exporters import exports_HDF5, exports_text
 
 from .MetaArray import MetaArray
@@ -12,6 +12,11 @@ class FilterableMetaArray(MetaArray):
         #print("fma extra")
         obj.extrainfo = obj._info[-1]
         return obj
+
+    def todict(self):
+        output = { 'shape': self.shape, 'type': str(self.dtype), 'info': self.infoCopy()}
+        output['data'] = self.tolist()
+        return _toDictItem(output)
 
     def dumps(self):
         meta = { 'shape': self.shape, 'type': str(self.dtype), 'info': self.infoCopy()}
@@ -336,3 +341,24 @@ class FilterableMetaArray(MetaArray):
 #        dump = dict(type=type, z=z, title=title, dims=dims, xlabel=xlabel, ylabel=ylabel, zlabel=zlabel)
 #        res = simplejson.dumps(dump, sort_keys=True)
 #        return res
+
+import datetime
+from collections import OrderedDict
+import numpy as np
+
+def _toDictItem(obj, convert_bytes=False):
+    if isinstance(obj, np.integer):
+        obj = int(obj)
+    elif isinstance(obj, np.floating):
+        obj = float(obj)
+    elif isinstance(obj, np.ndarray):
+        obj = obj.tolist()
+    elif isinstance(obj, datetime.datetime):
+        obj = [obj.year, obj.month, obj.day, obj.hour, obj.minute, obj.second]
+    elif isinstance(obj, list):
+        obj = [_toDictItem(a, convert_bytes=convert_bytes) for a in obj]
+    elif isinstance(obj, dict):
+        obj = OrderedDict([(k, _toDictItem(v, convert_bytes=convert_bytes)) for k, v in obj.items()])
+    elif isinstance(obj, bytes) and convert_bytes == True:
+        obj = obj.decode()
+    return obj

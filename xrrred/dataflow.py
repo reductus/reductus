@@ -17,7 +17,7 @@ def define_instrument():
     modules = make_modules(actions, prefix=INSTRUMENT+'.')
     # Define data types
     refldata = df.DataType(INSTRUMENT+".refldata", ReflData)
-    footprint = df.DataType(INSTRUMENT+".footprint.params", FootprintData)
+    footprint = df.DataType("ncnr.refl.footprint.params", FootprintData)
     plottable = df.DataType(INSTRUMENT+".plot", Plottable)
 
     # Define instrument

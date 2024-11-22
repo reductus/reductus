@@ -250,7 +250,7 @@ def nexus_common(self, entry, entryname, filename):
     # TODO: magnetic field
     if 'temp' in das:
         if 'temp/primaryControlLoop' in das:
-            temp_controller = das['temp/primaryControlLoop'][()]
+            temp_controller = das['temp/primaryControlLoop'][0]
             setpoint_field = 'temp/setpoint_%d' % (temp_controller,)
             self.sample.temp_setpoint = data_as(das, setpoint_field, 'K')[0]
         temp_values = data_as(das, 'temp/primaryNode/value', 'K')
@@ -307,6 +307,9 @@ class NCNRNeXusRefl(ReflData):
         self.monochromator.wavelength = data_as(entry, 'instrument/monochromator/wavelength', 'Ang', rep=n)
         self.monochromator.wavelength_resolution = data_as(entry, 'instrument/monochromator/wavelength_error', 'Ang', rep=n)
         if self.monochromator.wavelength is None:
+            # for old NG7 data, wavelength is in DAS_logs
+            self.monochromator.wavelength = data_as(das, 'wavelength/wavelength', 'Ang', rep=n)
+        if self.monochromator.wavelength is None:
             self.warn("Wavelength is missing; using {WAVELENGTH} A".format(WAVELENGTH=WAVELENGTH))
             self.monochromator.wavelength = WAVELENGTH
         if self.monochromator.wavelength_resolution is None:
@@ -330,12 +333,12 @@ class NCNRNeXusRefl(ReflData):
         for k, slit in enumerate([self.slit1, self.slit2, self.slit3, self.slit4]):
             x = 'slitAperture%d/softPosition'%(k+1)
             x_target = 'slitAperture%d/desiredSoftPosition'%(k+1)
-            slit.x = data_as(das, x, 'mm', rep=n)
-            slit.x_target = data_as(das, x_target, 'mm', rep=n)
+            slit.x = data_as(das, x, 'mm', rep=n, dtype='d')
+            slit.x_target = data_as(das, x_target, 'mm', rep=n, dtype='d')
             y = 'vertSlitAperture%d/softPosition'%(k+1)
             y_target = 'vertSlitAperture%d/desiredSoftPosition'%(k+1)
-            slit.y = data_as(das, y, 'mm', rep=n)
-            slit.y_target = data_as(das, y_target, 'mm', rep=n)
+            slit.y = data_as(das, y, 'mm', rep=n, dtype='d')
+            slit.y_target = data_as(das, y_target, 'mm', rep=n, dtype='d')
 
         # Detector
         self.detector.wavelength = self.monochromator.wavelength
