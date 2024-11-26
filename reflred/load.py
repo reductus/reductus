@@ -27,6 +27,10 @@ def url_load(fileinfo, check_timestamps=True, loader=None):
         from . import candor
         return load_from_string(filename, content, entries=entries,
                                 loader=candor.load_entries)
+    elif filename.endswith('.spec'):
+        from . import gans
+        return load_from_string(filename, content, entries=entries,
+                                loader=gans.load_entries)
     else:
         from . import nexusref
         return load_from_string(filename, content, entries=entries,
@@ -90,9 +94,9 @@ def setup_fetch():
 def fetch_uri(uri, loader=None):
     import os.path
 
-    if ':' not in uri:
+    if '://' not in uri:
         # some sort of filename...
-        source, path = 'file', os.path.realpath(os.path.expanduser(uri))
+        source, path = 'local', os.path.realpath(os.path.expanduser(uri))
     else:
         source, path = uri.split('://')
     entries = url_load(
