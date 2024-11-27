@@ -27,10 +27,6 @@ def url_load(fileinfo, check_timestamps=True, loader=None):
         from . import candor
         return load_from_string(filename, content, entries=entries,
                                 loader=candor.load_entries)
-    elif filename.endswith('.spec'):
-        from . import gans
-        return load_from_string(filename, content, entries=entries,
-                                loader=gans.load_entries)
     else:
         from . import nexusref
         return load_from_string(filename, content, entries=entries,

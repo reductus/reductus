@@ -1,0 +1,248 @@
+{
+  "modules": [
+    {
+      "title": "load spec",
+      "module": "gans.load",
+      "x": 30,
+      "y": 10,
+      "config": {
+        "intent": "specular"
+      }
+    },
+    {
+      "y": 10,
+      "x": 170,
+      "module": "gans.mask_points",
+      "title": "mask"
+    },
+    {
+      "y": 10,
+      "x": 310,
+      "module": "gans.join",
+      "title": "join"
+    },
+    {
+      "title": "load bg+",
+      "module": "gans.load",
+      "x": 30,
+      "y": 50,
+      "config": {
+        "intent": "background+"
+      }
+    },
+    {
+      "y": 50,
+      "x": 170,
+      "module": "gans.mask_points",
+      "title": "mask"
+    },
+    {
+      "title": "load bg-",
+      "module": "gans.load",
+      "x": 30,
+      "y": 90,
+      "config": {
+        "intent": "background-"
+      }
+    },
+    {
+      "y": 90,
+      "x": 170,
+      "module": "gans.mask_points",
+      "title": "mask"
+    },
+    {
+      "y": 90,
+      "x": 310,
+      "module": "gans.join",
+      "title": "join"
+    },
+    {
+      "y": 50,
+      "x": 310,
+      "module": "gans.join",
+      "title": "join"
+    },
+    {
+      "title": "load slit",
+      "module": "gans.load",
+      "x": 30,
+      "y": 130,
+      "config": {
+        "intent": "intensity"
+      }
+    },
+    {
+      "y": 130,
+      "x": 170,
+      "module": "gans.mask_points",
+      "title": "mask"
+    },
+    {
+      "y": 10,
+      "x": 455,
+      "module": "gans.subtract_background",
+      "title": "sub bg"
+    },
+    {
+      "y": 130,
+      "x": 310,
+      "module": "gans.rescale",
+      "title": "rescale"
+    },
+    {
+      "y": 130,
+      "x": 455,
+      "module": "gans.join",
+      "title": "join"
+    },
+    {
+      "y": 55,
+      "x": 600,
+      "module": "gans.divide_intensity",
+      "title": "divide"
+    }
+  ],
+  "wires": [
+    {
+      "source": [
+        0,
+        "output"
+      ],
+      "target": [
+        1,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        1,
+        "output"
+      ],
+      "target": [
+        2,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        2,
+        "output"
+      ],
+      "target": [
+        11,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        3,
+        "output"
+      ],
+      "target": [
+        4,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        4,
+        "output"
+      ],
+      "target": [
+        8,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        8,
+        "output"
+      ],
+      "target": [
+        11,
+        "backp"
+      ]
+    },
+    {
+      "source": [
+        5,
+        "output"
+      ],
+      "target": [
+        6,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        6,
+        "output"
+      ],
+      "target": [
+        7,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        7,
+        "output"
+      ],
+      "target": [
+        11,
+        "backm"
+      ]
+    },
+    {
+      "source": [
+        9,
+        "output"
+      ],
+      "target": [
+        10,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        10,
+        "output"
+      ],
+      "target": [
+        12,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        12,
+        "output"
+      ],
+      "target": [
+        13,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        13,
+        "output"
+      ],
+      "target": [
+        14,
+        "base"
+      ]
+    },
+    {
+      "source": [
+        11,
+        "output"
+      ],
+      "target": [
+        14,
+        "data"
+      ]
+    }
+  ]
+}

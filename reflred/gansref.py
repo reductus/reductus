@@ -57,7 +57,7 @@ def _parse_header(header: str) -> dict:
                 case 'F':
                     res.update({'name': data})
                 case 'E':
-                    res.update({'E': data})
+                    res.update({'epoch': data})
                 case 'D':
                     res.update({'timestamp': data})
                 case 'O':
@@ -140,9 +140,12 @@ def load_entries(filename, file_obj=None, entries=None):
     parsed_header = _parse_header(header)
     parsed_sections = [_parse_section(section) for section in sections if section[:2] == '#S']
     parsed_sections = [section for section in parsed_sections if section['actual_number_points'] > 0]
-    entries = [GANSRefl(section, parsed_header, filename) for section in parsed_sections]
+    ret_entries = [GANSRefl(section, parsed_header, filename) for section in parsed_sections]
 
-    return entries
+    if entries is not None:
+        ret_entries = [entry for entry in ret_entries if entry.entry in entries]
+
+    return ret_entries
 
 def entry_field(entry: dict, header: dict, entry_name: str):
     """Gets data from entry if it exists, otherwise from the header
@@ -172,7 +175,7 @@ class GANSRefl(ReflData):
     def _set_metadata(self, entry, header, filename):
         self.entry = '%s_%d' % (header['name'], entry['scan_number'])
         self.path = os.path.abspath(filename)
-        self.name = self.entry
+        self.name = header['name']
 
         self.filenumber = entry['scan_number']
 
@@ -196,7 +199,7 @@ class GANSRefl(ReflData):
         self.monitor.roi_variance = self.monitor.roi_counts.copy()
 
         # Needed?
-        self.sample.name = self.name
+        self.sample.name = header['name']
         self.sample.description = self.description
 
         self.scan_value = []
@@ -249,8 +252,8 @@ class GANSRefl(ReflData):
         # Detector
         self.detector.wavelength = self.monochromator.wavelength
         self.detector.wavelength_resolution = self.monochromator.wavelength_resolution
-        self.detector.deadtime = 0.0
-        self.detector.deadtime_error = 0.0
+        self.detector.deadtime = np.array([0.0])
+        self.detector.deadtime_error = np.array([0.0])
         self.detector.distance = 1000.0
         self.detector.rotation = 0.0
 
