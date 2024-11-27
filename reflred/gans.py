@@ -132,10 +132,16 @@ def load_entries(filename, file_obj=None, entries=None):
         data: str = file_obj.read().decode('ascii')
 
     header, sections = _split_sections(data)
-    parsed_header = _parse_header(header)
-    parsed_sections = [_parse_section(section) for section in sections]
 
-    entries = [GANSRefl(section, parsed_header, filename) for section in parsed_sections if section['actual_number_points'] > 0]
+    if header[:2] != '#F':
+        print(f'Invalid SPEC file {filename}')
+        return []
+
+    parsed_header = _parse_header(header)
+    parsed_sections = [_parse_section(section) for section in sections if section[:2] == '#S']
+    parsed_sections = [section for section in parsed_sections if section['actual_number_points'] > 0]
+    entries = [GANSRefl(section, parsed_header, filename) for section in parsed_sections]
+
     return entries
 
 def entry_field(entry: dict, header: dict, entry_name: str):
@@ -166,7 +172,7 @@ class GANSRefl(ReflData):
     def _set_metadata(self, entry, header, filename):
         self.entry = '%s_%d' % (header['name'], entry['scan_number'])
         self.path = os.path.abspath(filename)
-        self.name = header['name']
+        self.name = self.entry
 
         self.filenumber = entry['scan_number']
 
@@ -274,7 +280,7 @@ def demo():
             entries = fetch_uri(uri, loader=load_entries)
         except Exception as exc:
             print("Error while loading", uri, ':', str(exc))
-            traceback.print_exc(); raise
+            #traceback.print_exc(); raise
             continue
 
         # print the first entry
