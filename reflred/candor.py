@@ -465,46 +465,40 @@ class Candor(ReflData):
     def to_column_text(self):
         pass
 
-class QData(ReflData):
-    def __init__(self, data, q, dq, v, dv, ti=None, dt=None, ld=None, dl=None):
-        super().__init__()
-        self.probe = data.probe
-        self.path = data.path
-        self.uri = data.uri
-        self.name = data.name
-        self.entry = data.entry
-        self.description = data.description
-        self.polarization = data.polarization
-        self.normbase = data.normbase
-        self.v = v
-        self.dv = dv
-        self.intent = Intent.spec
-        self.points = len(q)
-        self.scan_value = []
-        self.scan_units = []
-        self.scan_label = []
-        # Put angles and resolution in the appropriate places in the refldata
-        # data structure.
-        self.sample = copy(data.sample)
-        self.sample.angle_x = ti
-        self.sample.angle_x_target = ti
-        self.angular_resolution = dt
-        self.detector = Detector()
-        self.detector.wavelength = ld
-        self.detector.wavelength_resolution = dl
-        self.detector.angle_x = 2*ti
-        self.detector.angle_x_target = 2*ti
-        # Since dq is not computed directly from dt and dl, we need to store
-        # it specially. Need to override apply_mask to fix up dq.
-        self._dq = dq
-
-    @property
-    def dQ(self):
-        return self._dq
-
-    def apply_mask(self, mask_indices):
-        self._dq = np.delete(self._dq, mask_indices)
-        ReflData.apply_mask(self, mask_indices)
+def QData(data, q, dq, v, dv, ti=None, dt=None, ld=None, dl=None):
+    self = ReflData()
+    self.probe = data.probe
+    self.path = data.path
+    self.uri = data.uri
+    self.name = data.name
+    self.entry = data.entry
+    self.description = data.description
+    self.polarization = data.polarization
+    self.normbase = data.normbase
+    self.v = v
+    self.dv = dv
+    self.intent = data.intent
+    self.points = len(q)
+    self.scan_value = []
+    self.scan_units = []
+    self.scan_label = []
+    # Put angles and resolution in the appropriate places in the refldata
+    # data structure.
+    self.sample = copy(data.sample)
+    # Make T consistent with Q, L, throwing away the computed average.
+    ti = np.degrees(np.arcsin(ld*q/4/np.pi))
+    self.sample.angle_x = ti
+    self.sample.angle_x_target = ti
+    self.angular_resolution = dt
+    self.detector = Detector()
+    self.detector.wavelength = ld
+    self.detector.wavelength_resolution = dl
+    self.detector.angle_x = 2*ti
+    self.detector.angle_x_target = 2*ti
+    # Note that dL and dT will not be consistent with dQ since we are combining
+    # points with different T,L but the same Q. Instead we store dQ separately.
+    self.dQ = dq
+    return self
 
 def nobin(data):
     """
@@ -667,9 +661,10 @@ def _rebin_bank(data, bank, q_edges, average):
     sum_w = np.bincount(bin_index, weights=w, minlength=nbins)
     #assert ((sum_w == 0) == empty_q).all()
     sum_w += empty_q  # protect against divide by zero
+
+    # Combine q, dq according to mixture distribution.
     sum_q = np.bincount(bin_index, weights=q*w, minlength=nbins)
     bar_q = sum_q / sum_w
-    # Combined dq according to mixture distribution.
     sum_dqsq = np.bincount(bin_index, weights=w*(dq**2 + q**2), minlength=nbins)
     bar_dq = np.sqrt(sum_dqsq/sum_w - bar_q**2)
     ## Combined dq according average of variance.
@@ -678,24 +673,24 @@ def _rebin_bank(data, bank, q_edges, average):
     #bar_dq = bar_q*0.01
 
     # Combine wavelengths
-    sum_Linv = np.bincount(bin_index, weights=w/L, minlength=nbins)
-    #assert ((sum_Linv == 0) == empty_q).all()
-    sum_Linv += empty_q  # protect against divide by zero
-    bar_Linv = sum_w/sum_Linv  # Not the first moment of L
+    # Simulation shows that it is better to use mean(L) rather than 1/mean(1/L)
+    # See _sim_q_avg() below.
     sum_L = np.bincount(bin_index, weights=w*L, minlength=nbins)
-    sum_dLsq = np.bincount(bin_index, weights=w*(dL**2+L**2), minlength=nbins)
-    bar_dL = np.sqrt(sum_dLsq/sum_w - (sum_L/sum_w)**2)
+    bar_L = sum_L / sum_w
+    sum_dLsq = np.bincount(bin_index, weights=w*(dL**2 + L**2), minlength=nbins)
+    bar_dL = np.sqrt(sum_dLsq/sum_w - bar_L**2)
 
     # Combine angles
-    bar_T = np.degrees(np.arcsin(bar_q*bar_Linv / 4 / np.pi))
-    sum_dT = np.bincount(bin_index, weights=w*dT**2, minlength=nbins)
-    bar_dT = np.sqrt(sum_dT/sum_w)
+    sum_T = np.bincount(bin_index, weights=w*T, minlength=nbins)
+    bar_T = sum_T / sum_w
+    sum_dT = np.bincount(bin_index, weights=w*(dT**2 + T**2), minlength=nbins)
+    bar_dT = np.sqrt(sum_dT/sum_w - bar_T**2)
 
     # Need to drop catch-all bins before and after q edges.
     # Also need to drop q bins which don't contain any values.
     keep = ~empty_q
     keep[0] = keep[-1] = False
-    columns = (bar_q, bar_dq, bar_y, bar_dy, bar_T, bar_dT, bar_Linv, bar_dL)
+    columns = (bar_q, bar_dq, bar_y, bar_dy, bar_T, bar_dT, bar_L, bar_dL)
     return [p[keep] for p in columns]
 
 def edges(c, extended=False):
@@ -711,6 +706,20 @@ def edges(c, extended=False):
         return np.hstack((-np.inf, left, midpoints, right, np.inf))
     else:
         return np.hstack((left, midpoints, right))
+
+def _sim_q_avg():
+    # Checking whether it is better to average L or 1/L when matching Q average
+    from numpy import radians, sin, arcsin, pi, linspace, mean
+    from numpy.random import randn
+    dT, dL = radians(randn(54,1000)*0.02), randn(54,1000)*0.04
+    L = linspace(4, 6, 54)
+    q = 0.08
+    T = arcsin(q*L/4/pi)
+    Tp, Lp = T[:, None]+dT, L[:, None]+dL
+    qp = 4*pi/Lp*sin(Tp)
+    print(mean(mean(qp, axis=0)), std(mean(qp, axis=0)))
+    print(mean(4*pi*mean(1/Lp, axis=0)*sin(mean(Tp, axis=0))))
+    print(mean(4*pi/mean(Lp, axis=0)*sin(mean(Tp, axis=0))))
 
 if __name__ == "__main__":
     from .nexusref import demo
