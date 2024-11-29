@@ -116,8 +116,16 @@ class BrukerRefl(refldata.ReflData):
         self.instrument = 'BrukerXray'
         # 1-sigma angular resolution (degrees) reported by Bruker.  Our own
         # measurements give a similar value (~ 0.033 degrees FWHM)
-        nominal_resolution = 0.03
-        self.angular_resolution = FWHM2sigma(nominal_resolution)
+        nominal_resolution = FWHM2sigma(0.03)
+        if entry['scan_mode'] == 1: # continuous
+            # If sweep resolution >> slit resolution then uniform otherwise
+            # keep the default value of 'normal'. Guessing a cutoff of 3x
+            # where tails no longer matter, but didn't check.
+            sweep_width = entry['increment_1']
+            if sweep_width >= 3*nominal_resolution:
+                self.resolution_shape = 'uniform'
+            nominal_resolution = np.sqrt(nominal_resolution**2 + sweep_width**2/12)
+        self.angular_resolution = nominal_resolution
         self.slit1.distance = -275.5
         self.slit2.distance = -192.7
         self.slit3.distance = +175.0
@@ -143,7 +151,7 @@ class BrukerRefl(refldata.ReflData):
             # this happens on some converted files...
             if 'alpha_1' in entry and 'alpha_2' in entry and 'alpha_21' in entry:
                 self.detector.wavelength = (entry['alpha_1'] + entry['alpha_21'] * entry['alpha_2']) / (1.0 + entry['alpha_21'])
-                
+
         self.detector.wavelength_resolution = np.std([
             entry['alpha_1'], entry['alpha_1'], entry['alpha_2']], ddof=1)
         #print("res:", self.angular_resolution, self.detector.wavelength_resolution, self.detector.wavelength)
@@ -243,8 +251,21 @@ class RigakuRefl(refldata.ReflData):
         self.polarization = "unpolarized"
 
     def _set_data(self, data):
+        # Nominal 'normal' resolution unless the instrument or scan mode
+        # indicate otherwise
+        resolution_shape = 'normal'
         # Resolution info (returned as 1-sigma from rigaku reader)
-        self.angular_resolution = data['angular_divergence']
+        nominal_resolution = data['angular_divergence']
+        if data['scan_mode'] != 'STEP': # continuous
+            # If sweep resolution >> slit resolution then uniform otherwise
+            # keep the default value of 'normal'. Guessing a cutoff of 3x
+            # where tails no longer matter, but didn't check.
+            sweep_width = data['x_resolution']
+            if sweep_width >= 3*nominal_resolution:
+                resolution_shape = 'uniform'
+            nominal_resolution = np.sqrt(nominal_resolution**2 + sweep_width**2/12)
+        self.resolution_shape = resolution_shape
+        self.angular_resolution = nominal_resolution
         self.slit1.distance = data['slit1_distance']
         self.slit2.distance = data['slit2_distance']
         self.slit3.distance = data['slit3_distance']

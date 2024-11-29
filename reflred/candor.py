@@ -466,7 +466,8 @@ class Candor(ReflData):
         pass
 
 class QData(ReflData):
-    def __init__(self, data, q, dq, v, dv, ti=None, dt=None, ld=None, dl=None):
+    def __init__(self, data, q, dq, v, dv, ti=None, dt=None, ld=None, dl=None,
+            resolution_shape='normal'):
         super().__init__()
         self.probe = data.probe
         self.path = data.path
@@ -497,6 +498,7 @@ class QData(ReflData):
         # Since dq is not computed directly from dt and dl, we need to store
         # it specially. Need to override apply_mask to fix up dq.
         self._dq = dq
+        self.resolution_shape = resolution_shape
 
     @property
     def dQ(self):
@@ -523,7 +525,7 @@ def nobin(data):
         index = np.argsort(columns_bank[0])
         columns_bank = [p[index] for p in columns_bank]
         Qx, dQ, v, dv, Ti, dT, L, dL = columns_bank
-        datasets.append(QData(data, Qx, dQ, v, dv, Ti, dT, L, dL))
+        datasets.append(QData(data, Qx, dQ, v, dv, Ti, dT, L, dL, 'normal'))
 
     # Only look at bank 0 for now
     return datasets[0]
@@ -540,7 +542,11 @@ def rebin(data, q, average="poisson"):
         #output = ReflData()
         #output.v, output.dv = v, dv
         #output.x, output.dx = q, dq
-        datasets.append(QData(data, qz, dq, v, dv, Ti, dT, L, dL))
+        # Assume rebinned data will be approximately uniform. This is not
+        # true particularly at the end points where there may be a single
+        # value per bin, but for those cases the resolution ought to be tight
+        # enough that the convolution has minimimal effect.
+        datasets.append(QData(data, qz, dq, v, dv, Ti, dT, L, dL, 'uniform'))
 
     # Only look at bank 0 for now
     return datasets[0]
