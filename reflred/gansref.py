@@ -32,10 +32,14 @@ def _split_sections(data: str) -> Tuple[str, list[str]]:
         str, list[str]: header and list of data sections
     """
 
-    sections = data.split('\r\n\r\n')
+    sections = data.split('#S')
 
     # first section is the header
     header = sections.pop(0)
+
+    # add split string back in
+    for i, section in enumerate(sections):
+        sections[i] = '#S' + section
 
     return header, sections
 
@@ -52,6 +56,7 @@ def _parse_header(header: str) -> dict:
     res = {}
 
     for line in header.splitlines():
+        line = line.rstrip()
         if len(line):
             code, data = line.split('#')[1].split(' ', 1)
             match code[0]:
@@ -80,6 +85,9 @@ def _parse_section(section: str) -> dict:
     table_data = []
 
     for line in section.splitlines():
+        line = line.rstrip()
+        if not len(line):
+            continue
         
         # header information
         if '#' in line:
@@ -233,7 +241,7 @@ class GANSRefl(ReflData):
         twotheta = entry['scan_parameters'].get('tth', None)
         theta = entry['scan_parameters'].get('th', None)
         chi = entry['scan_parameters'].get('ch', None)
-        slit1 = entry['scan_parameters'].get('slit1', None)
+        slit1 = entry['scan_parameters'].get('s1', None)
         if twotheta is not None:
             starting_twotheta = twotheta['start']
             if theta is not None:
