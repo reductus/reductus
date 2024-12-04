@@ -1,3 +1,4 @@
+import copy
 import datetime
 import os
 import numpy as np
@@ -165,6 +166,21 @@ def entry_field(entry: dict, header: dict, entry_name: str):
     else:
         print(f'{entry_name} not found')
 
+def _convert_slitrotation_to_aperture(rot: float, rot_zero: float = 0.0) -> float:
+    """Converts a rotary slit rotation in degrees to a slit aperture in mm
+
+    Args:
+        rot (float): slit rotation (deg)
+        rot_zero (float, optional): zero of slit rotation. Optional, default 0.0.
+
+    Returns:
+        float: slit aperture in mm
+    """
+
+    slit_aperture = 27.2024 * np.cos(np.radians(31.1036 + 44.9851 + rot - rot_zero)) - 6.54
+                                         
+    return slit_aperture
+
 class GANSRefl(ReflData):
 
     def __init__(self, entry, header, filename):
@@ -239,15 +255,18 @@ class GANSRefl(ReflData):
         self.monochromator.wavelength_resolution = FWHM2sigma(WAVELENGTH_DISPERSION*self.monochromator.wavelength)
 
         # Slits
-        self.slit1.distance = -1770
-        self.slit2.distance = -370
+        self.slit1.distance = -1911
+        self.slit2.distance = -200
         self.slit3.distance = 282
-        self.slit4.distance = 631
-        for lbl, slit in zip(['slit1', 'slit2', 'Slit3'], [self.slit1, self.slit2, self.slit3]):
+        self.slit4.distance = 921
+        for lbl, slit in zip(['slit1', 'slit2', 'Slit3'], [self.slit1, self.slit2, self.slit4]):
             slit.x = entry_field(entry, header, lbl)
-            slit.x_target = entry_field(entry, header, lbl)
-            slit.y = 80
-            slit.y_target = 80
+            slit.x_target = copy.copy(slit.x)
+            slit.y = 50
+            slit.y_target = 50
+
+        self.slit3.x = 12.7
+        self.slit3.x_target = copy.copy(self.slit3.x)
 
         # Detector
         self.detector.wavelength = self.monochromator.wavelength

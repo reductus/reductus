@@ -21,7 +21,7 @@ config = {
 
     # Cache engines are diskcache, redis, or memory if not specified
     "cache": {
-        "engine": "diskcache", 
+        "engine": "", 
         "params": {"size_limit": int(4*2**30)}
     },
     "data_sources": [
@@ -52,5 +52,5 @@ config = {
     ],
     
     # if not set, will instantiate all instruments.
-    "instruments": ["refl", "ospec", "sans", "vsans"]
+    "instruments": ["gans"]
 }

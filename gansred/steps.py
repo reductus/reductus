@@ -1,6 +1,9 @@
+import copy
+
 from reflred.steps import subtract_background, divide_intensity, rescale, mask_points, join, divergence, normalize, abinitio_footprint, fit_footprint, correct_footprint
 
 from dataflow.automod import module
+from reflred.gansref import _convert_slitrotation_to_aperture
 
 
 @module
@@ -10,12 +13,16 @@ def load(filelist=None,
         sample_width=None,
         slit1_distance=None,
         slit1_aperture=None,
+        slit1_rotary=True,
         slit2_distance=None,
         slit2_aperture=None,
+        slit2_rotary=True,
         slit3_distance=None,
         slit3_aperture=None,
+        slit3_rotary=False,
         slit4_distance=None,
-        slit4_aperture=None        
+        slit4_aperture=None,
+        slit4_rotary=False        
         ):
     r"""
     Load a list of GANS Reflectivity files.
@@ -56,6 +63,10 @@ def load(filelist=None,
     : if specified, will override the value found in the file for
     the opening of slit 1 in mm
 
+    slit1_rotary {slit1 rotary?} (bool)
+    : designates slit 1 as a rotary slit and converts its value from
+    slit rotation to a slit aperture in mm
+
     slit2_distance {override slit2 distance} (float?)
     : if specified, will override the value found in the file for
     the distance from the sample to slit 2
@@ -63,6 +74,10 @@ def load(filelist=None,
     slit2_aperture {override slit2 aperture} (float?)
     : if specified, will override the value found in the file for
     the opening of slit 2 in mm
+
+    slit2_rotary {slit2 rotary?} (bool)
+    : designates slit 2 as a rotary slit and converts its value from
+    slit rotation to a slit aperture in mm    
 
     slit3_distance {override slit3 distance} (float?)
     : if specified, will override the value found in the file for
@@ -72,6 +87,10 @@ def load(filelist=None,
     : if specified, will override the value found in the file for
     the opening of slit 3 in mm
 
+    slit3_rotary {slit3 rotary?} (bool)
+    : designates slit 3 as a rotary slit and converts its value from
+    slit rotation to a slit aperture in mm
+
     slit4_distance {override slit4 distance} (float?)
     : if specified, will override the value found in the file for
     the distance from the sample to slit 4
@@ -79,6 +98,10 @@ def load(filelist=None,
     slit4_aperture {override slit4 aperture} (float?)
     : if specified, will override the value found in the file for
     the opening of slit 4 in mm    
+
+    slit4_rotary {slit4 rotary?} (bool)
+    : designates slit 4 as a rotary slit and converts its value from
+    slit rotation to a slit aperture in mm
 
     **Returns**
 
@@ -107,18 +130,30 @@ def load(filelist=None,
             data.slit1.distance = slit1_distance
         if slit1_aperture is not None:
             data.slit1.x = data.slit1.x_target = slit1_aperture
+        if slit1_rotary:
+            data.slit1.x = _convert_slitrotation_to_aperture(data.slit1.x)
+            data.slit1.x_target = copy.copy(data.slit1.x)
         if slit2_distance is not None:
             data.slit2.distance = slit2_distance
         if slit2_aperture is not None:
             data.slit2.x = data.slit2.x_target = slit2_aperture
+        if slit2_rotary:
+            data.slit2.x = _convert_slitrotation_to_aperture(data.slit2.x)
+            data.slit2.x_target = copy.copy(data.slit2.x)            
         if slit3_distance is not None:
             data.slit3.distance = slit3_distance
         if slit3_aperture is not None:
             data.slit3.x = data.slit3.x_target = slit3_aperture
+        if slit3_rotary:
+            data.slit3.x = _convert_slitrotation_to_aperture(data.slit3.x)
+            data.slit3.x_target = copy.copy(data.slit3.x)
         if slit4_distance is not None:
             data.slit4.distance = slit4_distance
         if slit4_aperture is not None:
-            data.slit4.x = data.slit4.x_target = slit4_aperture            
+            data.slit4.x = data.slit4.x_target = slit4_aperture
+        if slit4_rotary:
+            data.slit4.x = _convert_slitrotation_to_aperture(data.slit4.x)
+            data.slit4.x_target = copy.copy(data.slit4.x)                        
         if auto_divergence:
             data = divergence(data, sample_width)
         
