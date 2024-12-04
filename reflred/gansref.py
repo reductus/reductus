@@ -231,10 +231,11 @@ class GANSRefl(ReflData):
     def load(self, entry, header):
         n = entry['actual_number_points']
         twotheta = entry['scan_parameters'].get('tth', None)
+        theta = entry['scan_parameters'].get('th', None)
+        chi = entry['scan_parameters'].get('ch', None)
         slit1 = entry['scan_parameters'].get('slit1', None)
         if twotheta is not None:
             starting_twotheta = twotheta['start']
-            theta = entry['scan_parameters'].get('th', None)
             if theta is not None:
                 starting_theta = theta['start']
                 if np.isclose(starting_theta, starting_twotheta / 2.0, rtol=1e-4):
@@ -245,8 +246,12 @@ class GANSRefl(ReflData):
                     self.intent = 'background-'
             else:
                 print('intent could not be determined, has starting two-theta but not starting theta')
-        else:
+        elif theta is not None:
+            self.intent = 'rock sample'
+        elif slit1 is not None:
             self.intent = 'intensity'
+        else:
+            self.intent = 'scan'
 
         # TODO: Polarizers
 
