@@ -191,14 +191,17 @@ def fit_rocking_curve(rock, A0=None, x00=None, sigma0=None, bkg0=None):
 
     fitparams (gans.fitters.gaussianparams) : fit parameters, errors, and chi-squared
 
+    fit (refldata) : ReflData structure containing fit outputs (for plotting against
+    inputs to inspect fit)
+
     2024-12-04 David P. Hoogerheide
     """
 
     from .alignfit import fit_gaussian_background
 
-    bff = fit_gaussian_background(rock, A0, sigma0, x00, bkg0)
+    bff, rock2 = fit_gaussian_background(rock, A0, sigma0, x00, bkg0)
 
-    return bff
+    return bff, rock2
 
 
 @module

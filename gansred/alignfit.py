@@ -117,11 +117,17 @@ def fit_gaussian_background(rock, A0, sigma0, x00, bkg0):
 
         perr, chisq = np.sqrt(np.diag(pcov)), np.sum(minfunc(pout)**2) / (len(x) - lenpout)
 
-        return GaussianBackgroundFitResult(chisq, *pout, *perr)
+        # create fit result data
+
+        rock2 = copy(rock)
+        rock2.v = gaussian_background(x, *pout)
+        rock2.dv = np.sqrt(np.array([j.T.dot(pcov.dot(j)) for j in jacfunc(pout)]))
+
+        return GaussianBackgroundFitResult(chisq, *pout, *perr), rock2
 
     else:
 
-        return ErrorFitResult(msg)
+        return ErrorFitResult(msg), None
 
 # ===============
 
