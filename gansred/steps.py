@@ -43,7 +43,7 @@ def load(filelist=None,
 
     filelist (fileinfo[]): List of files to open.
 
-    intent (opt:auto|specular|background+\|background-\|intensity|rock sample|rock detector|rock qx|scan)
+    intent (opt:auto|specular|background+\|background-\|intensity|rock sample|rock detector|rock chi|slit align|scan)
     : Measurement intent (specular, background+, background-, slit, rock),
     auto or infer.  If intent is 'scan', then use the first scanned variable.
 
@@ -162,3 +162,72 @@ def load(filelist=None,
         datasets.append(data)
 
     return datasets
+
+@module
+def fit_rocking_curve(rock, A0=None, x00=None, sigma0=None, bkg0=None):
+    """
+    Fit a rocking curve to a Gaussian plus background model.
+
+    The rocking curve datasets are fit using a Levenberg-Marquardt algorithm to a model
+    involving four parameters:
+     o A, the (possibly negative) Gaussian amplitude
+     o x0, the center of the Gaussian
+     o sigma, the width of the Gaussian
+     o bkg, the background level of the Gaussian
+
+    **Inputs**
+
+    rock (refldata) : single rocking curve
+
+    A0 {Amplitude guess} (float) : initial guess for amplitude
+
+    x00 {Gaussian center guess} (float) : initial guess for center
+
+    sigma0 {width guess} (float) : initial guess for width
+
+    bkg0 {background guess} (float) : initial guess for background
+    
+    **Returns**
+
+    fitparams (gans.fitters.gaussianparams) : fit parameters, errors, and chi-squared
+
+    2024-12-04 David P. Hoogerheide
+    """
+
+    from .alignfit import fit_gaussian_background
+
+    bff = fit_gaussian_background(rock, A0, sigma0, x00, bkg0)
+
+    return bff
+
+
+@module
+def fit_slit_alignment(slit_align, m0=None, x00=None):
+    """
+    Fit a slit alignment curve to a linear model with x-intercept.
+
+    The slit alignment datasets are fit using a Levenberg-Marquardt algorithm to a model
+    involving four parameters:
+     o m, the linear slope
+     o x0, the x-intercept of the line
+
+    **Inputs**
+
+    slit_align (refldata) : slit alignment curve
+
+    m0 {slope guess} (float) : initial guess for slope
+
+    x00 {x-intercept guess} (float) : initial guess for x intercept
+    
+    **Returns**
+
+    fitparams (gans.fitters.linearparams) : fit parameters, errors, and chi-squared
+
+    2024-12-04 David P. Hoogerheide
+    """
+
+    from .alignfit import fit_line_xintercept
+
+    bff = fit_line_xintercept(slit_align, m0, x00)
+
+    return bff

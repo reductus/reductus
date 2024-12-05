@@ -253,11 +253,13 @@ class GANSRefl(ReflData):
                 elif (starting_theta < starting_twotheta / 2.0):
                     self.intent = 'background-'
             else:
-                print('intent could not be determined, has starting two-theta but not starting theta')
+                self.intent = 'rock detector'
         elif theta is not None:
             self.intent = 'rock sample'
         elif slit1 is not None:
             self.intent = 'intensity'
+        elif chi is not None:
+            self.intent = 'rock chi'
         else:
             self.intent = 'scan'
 
@@ -278,7 +280,7 @@ class GANSRefl(ReflData):
             slit.y = 50
             slit.y_target = 50
 
-        self.slit3.x = 12.7
+        self.slit3.x = 12.7 * np.ones(entry['actual_number_points'])
         self.slit3.x_target = copy.copy(self.slit3.x)
 
         # Detector
@@ -299,6 +301,7 @@ class GANSRefl(ReflData):
         self.detector.angle_x = entry_field(entry, header, '2Theta')
         self.sample.angle_x_target = self.sample.angle_x.copy()
         self.detector.angle_x_target = self.detector.angle_x.copy()
+        self.sample.angle_y = entry_field(entry, header, 'Chi')
 
 def demo():
     import sys

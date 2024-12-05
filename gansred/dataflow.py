@@ -6,6 +6,7 @@ from dataflow.lib.exporters import exports_json
 
 from . import steps
 from . import templates
+from .alignfit import GaussianBackgroundFitResult, LineXInterceptFitResult, ErrorFitResult
 from reflred.refldata import ReflData
 from reflred.footprint import FootprintData
 
@@ -18,6 +19,9 @@ def define_instrument():
     # Define data types
     refldata = df.DataType(INSTRUMENT+".refldata", ReflData)
     footprint = df.DataType("ncnr.refl.footprint.params", FootprintData)
+    errorparams = df.DataType(INSTRUMENT + ".fitters.errorparams", ErrorFitResult)
+    gaussianparams = df.DataType(INSTRUMENT + ".fitters.gaussianparams", GaussianBackgroundFitResult)
+    linexinterceptparams = df.DataType(INSTRUMENT + ".fitters.linearparams", LineXInterceptFitResult)
     plottable = df.DataType(INSTRUMENT+".plot", Plottable)
 
     # Define instrument
@@ -26,7 +30,7 @@ def define_instrument():
         name='GANS',
         menu=[('steps', modules)],
         datatypes=[
-            refldata, footprint, plottable,
+            refldata, footprint, plottable, gaussianparams, linexinterceptparams, errorparams
             ],
         template_defs=df.load_templates(templates),
         )
