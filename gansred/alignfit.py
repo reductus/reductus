@@ -81,7 +81,7 @@ def fit_gaussian_background(rock, A0, sigma0, x00, bkg0):
     elif rock.intent == 'rock chi':
         x = rock.sample.angle_y
     else:
-        return ErrorFitResult(msg=f'intent must be either "rock sample" or "rock detector" or "rock chi", actually {rock.intent}')
+        return ErrorFitResult(msg=f'intent must be either "rock sample" or "rock detector" or "rock chi", actually {rock.intent}'), None
 
     if A0 is None:
         A0 = max(v)
@@ -170,10 +170,10 @@ def fit_line_xintercept(slit_align, m0, x00):
                 break
 
         if x is None:
-            return ErrorFitResult(msg=f'no slits appear to be scanned')
+            return ErrorFitResult(msg=f'no slits appear to be scanned'), None
         
     else:
-        return ErrorFitResult(msg=f'intent must be "slit align" or "intensity", actually {slit_align.intent}')
+        return ErrorFitResult(msg=f'intent must be "slit align" or "intensity", actually {slit_align.intent}'), None
 
     if m0 is None:
         m0 = (v[-1] - v[0]) / (x[-1] - x[0])
@@ -203,8 +203,14 @@ def fit_line_xintercept(slit_align, m0, x00):
 
         perr, chisq = np.sqrt(np.diag(pcov)), np.sum(minfunc(pout)**2) / (len(x) - lenpout)
 
-        return LineXInterceptFitResult(chisq, *pout, *perr)
+        # create fit result data
+
+        slit_align2 = copy(slit_align)
+        slit_align2.v = line_xintercept(x, *pout)
+        slit_align2.dv = np.sqrt(np.array([j.T.dot(pcov.dot(j)) for j in jacfunc(pout)]))
+
+        return LineXInterceptFitResult(chisq, *pout, *perr), slit_align2
 
     else:
 
-        return ErrorFitResult(msg)
+        return ErrorFitResult(msg), None

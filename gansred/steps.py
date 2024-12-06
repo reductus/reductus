@@ -226,11 +226,14 @@ def fit_slit_alignment(slit_align, m0=None, x00=None):
 
     fitparams (gans.fitters.linearparams) : fit parameters, errors, and chi-squared
 
+    fit (refldata) : ReflData structure containing fit outputs (for plotting against
+    inputs to inspect fit)
+
     2024-12-04 David P. Hoogerheide
     """
 
     from .alignfit import fit_line_xintercept
 
-    bff = fit_line_xintercept(slit_align, m0, x00)
+    bff, slit_align2 = fit_line_xintercept(slit_align, m0, x00)
 
-    return bff
+    return bff, slit_align2
