@@ -9,6 +9,7 @@ from . import templates
 from .alignfit import GaussianBackgroundFitResult, LineXInterceptFitResult, ErrorFitResult
 from reflred.refldata import ReflData
 from reflred.footprint import FootprintData
+from reflred.backgroundfield import BackgroundFieldData
 
 INSTRUMENT = "gans"
 
@@ -23,6 +24,7 @@ def define_instrument():
     gaussianparams = df.DataType(INSTRUMENT + ".fitters.gaussianparams", GaussianBackgroundFitResult)
     linexinterceptparams = df.DataType(INSTRUMENT + ".fitters.linearparams", LineXInterceptFitResult)
     plottable = df.DataType(INSTRUMENT+".plot", Plottable)
+    backgroundfield = df.DataType("ncnr.refl.backgroundfield.params", BackgroundFieldData)
 
     # Define instrument
     gans = df.Instrument(
@@ -30,7 +32,7 @@ def define_instrument():
         name='GANS',
         menu=[('steps', modules)],
         datatypes=[
-            refldata, footprint, plottable, gaussianparams, linexinterceptparams, errorparams
+            refldata, footprint, plottable, gaussianparams, linexinterceptparams, errorparams, backgroundfield
             ],
         template_defs=df.load_templates(templates),
         )

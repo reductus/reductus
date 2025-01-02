@@ -1,6 +1,7 @@
 import copy
+import numpy as np
 
-from reflred.steps import subtract_background, divide_intensity, rescale, mask_points, join, divergence, normalize, abinitio_footprint, fit_footprint, correct_footprint
+from reflred.steps import subtract_background, divide_intensity, rescale, mask_points, join, divergence, normalize, abinitio_footprint, fit_footprint, correct_footprint, fit_background_field, subtract_background_field
 
 from dataflow.automod import module
 from reflred.gansref import _convert_slitrotation_to_aperture
@@ -126,6 +127,14 @@ def load(filelist=None,
                 data.sample.angle_x = data.sample.angle_x_target = data.detector.angle_x / 2.0
             elif data.Qz_basis == 'sample':
                 data.detector.angle_x = data.detector.angle_x_target = data.sample.angle_x * 2.0
+        if data.intent.startswith('background'):
+            if data.Qz_basis == 'detector':
+                data.Qz_target = 4 * np.pi / data.monochromator.wavelength * np.sin(np.radians(data.detector.angle_x_target / 2.0))
+            elif data.Qz_basis == 'sample':
+                data.Qz_target = 4 * np.pi / data.monochromator.wavelength * np.sin(np.radians(data.sample.angle_x_target))
+            else:
+                data.Qz_target = data.Qz
+      
         if slit1_distance is not None:
             data.slit1.distance = slit1_distance
         if slit1_aperture is not None:
