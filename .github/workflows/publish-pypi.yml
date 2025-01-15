@@ -32,6 +32,7 @@ jobs:
     - name: build reductus
       run: |
         python -m pip install -e ./reductus
+        python -m reductus.rev
         python -m reductus.web_gui.build_client --cleanup
 
     - name: Install dependencies for building the wheel
