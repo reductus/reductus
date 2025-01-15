@@ -47,7 +47,7 @@ version = { attr = "reductus.__version__" }
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["reductus"]
+include = ["reductus*"]
 
 [tool.pytest]
 addopts = "--maxfail=1 --disable-warnings"
