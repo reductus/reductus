@@ -11,9 +11,9 @@ import datetime
 import h5py
 import numpy as np
 
-from dataflow.lib import hzf_readonly_stripped as hzf
-from dataflow.lib import unit
-from dataflow.lib.h5_open import h5_open_zip
+from reductus.dataflow.lib import hzf_readonly_stripped as hzf
+from reductus.dataflow.lib import unit
+from reductus.dataflow.lib.h5_open import h5_open_zip
 
 from .vsansdata import VSansData, RawVSANSData, _s, _b
 

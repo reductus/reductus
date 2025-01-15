@@ -8,7 +8,7 @@ from copy import deepcopy
 
 import numpy as np
 
-from dataflow.lib import unit
+from reductus.dataflow.lib import unit
 from .refldata import Intent, ReflData, Environment
 from .util import poisson_average, extend
 from .resolution import divergence_simple, dTdL2dQ, TiTdL2Qxz

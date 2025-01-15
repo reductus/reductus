@@ -2,7 +2,7 @@ from __future__ import print_function
 
 import numpy as np
 
-from dataflow.lib import err1d
+from reductus.dataflow.lib import err1d
 
 def extend(a, b):
     """
@@ -136,7 +136,7 @@ def plot_sa(data):
     """
     from matplotlib import pyplot as plt
     from uncertainties.unumpy import uarray as U, nominal_values, std_devs
-    from dataflow.lib.errutil import interp
+    from reductus.dataflow.lib.errutil import interp
     # TODO: interp doesn't test for matching resolution
     data = dict((d.polarization, d) for d in data)
     pp, mm = data['++'], data['--']

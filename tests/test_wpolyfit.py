@@ -17,7 +17,7 @@ from __future__ import print_function
 
 import sys
 import numpy as N
-from dataflow.lib.wsolve import wpolyfit
+from reductus.dataflow.lib.wsolve import wpolyfit
 
 VERBOSE = 1
 

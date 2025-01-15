@@ -18,7 +18,7 @@ transforming values.
 
 Usage example::
 
-    >>> from dataflow.lib import unit
+    >>> from reductus.dataflow.lib import unit
     >>> u = unit.Converter('mili*metre')  # Units stored in mm
     >>> v = u(3000, 'm')  # Convert the value 3000 mm into meters
 
@@ -39,7 +39,7 @@ NeXus example::
 NeXus example using h5py, and a private version of unit::
 
     import h5py
-    from dataflow.lib import unit
+    from reductus.dataflow.lib import unit
     file = h5py.File(filename)
     field = file['/entry1/sample/sample_orientation']
     u = unit.Converter(field.attrs.get('units', ''))

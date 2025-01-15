@@ -9,12 +9,12 @@ from zipfile import ZipFile, is_zipfile
 from collections import OrderedDict
 import h5py
 
-from dataflow.lib import hzf_readonly_stripped as hzf
-from dataflow.lib import unit
-from dataflow.lib.h5_open import h5_open_zip
+from reductus.dataflow.lib import hzf_readonly_stripped as hzf
+from reductus.dataflow.lib import unit
+from reductus.dataflow.lib.h5_open import h5_open_zip
 
-from vsansred.loader import load_detector, load_metadata
-from vsansred.steps import _s, _b
+from reductus.vsansred.loader import load_detector, load_metadata
+from reductus.vsansred.steps import _s, _b
 
 from .sansdata import SansData, RawSANSData
 

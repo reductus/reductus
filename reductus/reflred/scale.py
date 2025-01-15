@@ -1,7 +1,7 @@
 import numpy as np
 import functools
 
-from dataflow.lib import err1d
+from reductus.dataflow.lib import err1d
 from .util import extend
 
 

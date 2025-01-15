@@ -1,8 +1,8 @@
-from dataflow import core as df
-from dataflow.automod import make_modules, make_template, auto_module, get_modules
-from dataflow.calc import process_template
-from dataflow.data import Plottable
-from dataflow.lib.exporters import exports_json
+from reductus.dataflow import core as df
+from reductus.dataflow.automod import make_modules, make_template, auto_module, get_modules
+from reductus.dataflow.calc import process_template
+from reductus.dataflow.data import Plottable
+from reductus.dataflow.lib.exporters import exports_json
 
 from . import steps
 from . import candor_steps
@@ -211,7 +211,7 @@ def unpolarized_template():
     return template
 
 def demo():
-    from dataflow.calc import process_template
+    from reductus.dataflow.calc import process_template
 
     template = unpolarized_template()
     #print "========== Template ========"
@@ -229,7 +229,7 @@ def demo():
 
 
 if __name__ == "__main__":
-    from dataflow.cache import use_redis
+    from reductus.dataflow.cache import use_redis
     use_redis()
     define_instrument()
     demo()

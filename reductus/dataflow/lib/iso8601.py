@@ -7,7 +7,7 @@ ISO 8601 date time support
 
 Basic usage::
 
-    >>> from dataflow.lib import iso8601
+    >>> from reductus.dataflow.lib import iso8601
     >>> iso8601.parse_date("2007-01-25T12:34:56Z")
     datetime.datetime(2007, 1, 25, 12, 34, 56, tzinfo=<TimeZone 'UTC'>)
     >>> iso8601.parse_date("2007-01-25T12:34:56-0500")

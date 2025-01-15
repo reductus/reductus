@@ -72,7 +72,7 @@ def LoadDCS(filelist=None, check_timestamps=True):
 
     2018-04-25 Brian Maranville
     """
-    from dataflow.fetch import url_get
+    from reductus.dataflow.fetch import url_get
     from .dcsdata import readDCS
     if filelist is None:
         filelist = []

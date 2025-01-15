@@ -8,7 +8,7 @@ if the data source has an associated DOI, then specify the DOI.
 
 For example::
 
-    from dataflow import fetch
+    from reductus.dataflow import fetch
     fetch.DATA_SOURCES = [
         {
             "name": "ncnr_DOI",

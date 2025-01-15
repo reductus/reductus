@@ -3,7 +3,7 @@ import os
 import numpy as np
 from copy import copy
 
-from dataflow.automod import cache, nocache, module
+from reductus.dataflow.automod import cache, nocache, module
 
 # TODO: maybe bring back formula to show the math of each step
 # TODO: what about polarized data?
@@ -88,7 +88,7 @@ def dark_current(data, poly_coeff=[0], poly_cov=None):
 
     # TODO: datatype hierarchy: accepts any kind of refldata
 
-    from dataflow.lib.uncertainty import Uncertainty as U
+    from reductus.dataflow.lib.uncertainty import Uncertainty as U
 
     datasets = list()
     dcs = list()
@@ -851,7 +851,7 @@ def psd_integrate(
     | 2020-02-03 Paul Kienzle
     """
     from .ng7psd import apply_integration
-    from dataflow.data import Plottable
+    from reductus.dataflow.data import Plottable
 
     mc_seed = mc_samples if mc_samples > 0 else None
     #print("slices", slices)
@@ -1995,12 +1995,12 @@ def average_flux(data, base, beam_height=25):
 
     2018-03-01 Brian Maranville
     """
-    from dataflow.modules import refl
+    from reductus.dataflow.modules import refl
     TIME_RESOLUTION = 1e-6 # 1 microsecond for NCNR timers.
 
     if base is not None:
         from .scale import calculate_number
-        from dataflow.lib import err1d
+        from reductus.dataflow.lib import err1d
 
         fluxes = []
         total_number = 0.0

@@ -14,15 +14,15 @@ from numpy import (cos, pi, cumsum, arange, ndarray, ones, zeros, array,
 
 from numpy.ma import MaskedArray
 
-from dataflow.lib.h5_open import h5_open_zip
+from reductus.dataflow.lib.h5_open import h5_open_zip
 
-from dataflow.core import Template
-from dataflow.calc import process_template
-from dataflow.fetch import url_get
-from dataflow.lib import rebin as reb
-from dataflow.lib.iso8601 import seconds_since_epoch
+from reductus.dataflow.core import Template
+from reductus.dataflow.calc import process_template
+from reductus.dataflow.fetch import url_get
+from reductus.dataflow.lib import rebin as reb
+from reductus.dataflow.lib.iso8601 import seconds_since_epoch
 
-from dataflow.automod import cache, nocache, module
+from reductus.dataflow.automod import cache, nocache, module
 
 from .FilterableMetaArray import FilterableMetaArray as MetaArray
 
@@ -1193,7 +1193,7 @@ def loadMAGIKPSD_helper(file_obj, name, path, collapse=True, collapse_axis='y', 
     return output
 
 def demo():
-    from dataflow import fetch
+    from reductus.dataflow import fetch
     fetch.DATA_SOURCES = [{"name": "ncnr", "url": "https://ncnr.nist.gov/pub/"}]
     fileinfo = {
         'mtime': 1457795231.0,

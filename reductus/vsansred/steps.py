@@ -4,7 +4,7 @@ from io import BytesIO
 import sys
 import numpy as np
 
-from dataflow.lib.uncertainty import Uncertainty
+from reductus.dataflow.lib.uncertainty import Uncertainty
 
 # Action names
 __all__ = [] # type: List[str]
@@ -95,7 +95,7 @@ def _LoadVSANS(filelist=None, check_timestamps=True):
     | 2018-04-29 Brian Maranville
     | 2020-10-01 Brian Maranville adding fileinfo to metadata
     """
-    from dataflow.fetch import url_get
+    from reductus.dataflow.fetch import url_get
     from .loader import readVSANSNexuz
     if filelist is None:
         filelist = []
@@ -140,8 +140,8 @@ def LoadVSANS(filelist=None, check_timestamps=True, load_data=True):
     | 2020-09-30 Brian Maranville adding option to not load data
     """
 
-    from dataflow.calc import process_template
-    from dataflow.core import Template
+    from reductus.dataflow.calc import process_template
+    from reductus.dataflow.core import Template
 
     template_def = {
         "name": "loader_template",
@@ -215,7 +215,7 @@ def LoadVSANSHe3(filelist=None, check_timestamps=True):
 
     2018-04-29 Brian Maranville
     """
-    from dataflow.fetch import url_get
+    from reductus.dataflow.fetch import url_get
     from .loader import readVSANSNexuz, he3_metadata_lookup
     if filelist is None:
         filelist = []
@@ -250,8 +250,8 @@ def LoadVSANSHe3Parallel(filelist=None, check_timestamps=True):
     | 2019-11-20 Brian Maranville changed metadata list
     """
 
-    from dataflow.calc import process_template
-    from dataflow.core import Template
+    from reductus.dataflow.calc import process_template
+    from reductus.dataflow.core import Template
 
     template_def = {
         "name": "loader_template",
@@ -294,7 +294,7 @@ def LoadVSANSDIV(filelist=None, check_timestamps=True):
 
     2019-10-30 Brian Maranville
     """
-    from dataflow.fetch import url_get
+    from reductus.dataflow.fetch import url_get
     from .loader import readVSANSNexuz
     
 

@@ -3,7 +3,7 @@ from copy import copy
 
 import numpy as np
 
-from dataflow.automod import cache, nocache, module, copy_module
+from reductus.dataflow.automod import cache, nocache, module, copy_module
 # Note: do not load symbols from .steps directly into the file scope
 # or they will be defined twice as reduction modules.
 from . import steps

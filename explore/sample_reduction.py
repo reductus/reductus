@@ -10,11 +10,11 @@ from pprint import pprint
 
 from numpy.random import random
 
-from dataflow import config
-from dataflow.calc import run_template
-from dataflow.core import Module, DataType, Instrument, Template, register_instrument
-from dataflow.modules.load import load_module
-from dataflow.modules.save import save_module
+from reductus.dataflow import config
+from reductus.dataflow.calc import run_template
+from reductus.dataflow.core import Module, DataType, Instrument, Template, register_instrument
+from reductus.dataflow.modules.load import load_module
+from reductus.dataflow.modules.save import save_module
 
 # ====== Define the module =======
 

@@ -49,7 +49,7 @@ class Parameters(OrderedDict):
     correct inputs in your graph template.  In your instrument definition
     do the following::
 
-        from dataflow.data import Parameters
+        from reductus.dataflow.data import Parameters
         import dataflow.core as df
 
         INSTRUMENT = 'ncnr.refl'

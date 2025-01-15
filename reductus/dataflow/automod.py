@@ -102,10 +102,10 @@ def copy_module(f, new_name, old_type, new_type, tag=None):
 
     For example::
 
-        from dataflow.automod import copy_module
+        from reductus.dataflow.automod import copy_module
         # Note: do not load symbols from steps directly into the file scope
         # or they will be defined twice as reduction modules.
-        from reflred import steps
+        from reductus.reflred import steps
 
         candor_join = copy_module(
             steps.join, "candor_join", "refldata", "candordata", tag="candor")

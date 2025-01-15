@@ -235,7 +235,7 @@ def apply_integration(
     *slices* is a list of coordinates at which to display cross sections of
     the background fit.
     """
-    from dataflow.lib.seed import push_seed
+    from reductus.dataflow.lib.seed import push_seed
 
     # Make sure Monte Carlo simulations are reproducible by using the
     # same seed every time.
@@ -277,8 +277,8 @@ def _build_1d(head, intensity):
 
 def integrate(data, spec, left, right, pixel_range,
               degree, mc_samples, slices):
-    from dataflow.lib import err1d
-    from dataflow.lib.wsolve import wpolyfit
+    from reductus.dataflow.lib import err1d
+    from reductus.dataflow.lib.wsolve import wpolyfit
 
     nframes, npixels = data.v.shape
 

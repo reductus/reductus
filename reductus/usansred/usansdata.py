@@ -8,9 +8,9 @@ import sys
 
 IS_PY3 = sys.version_info[0] >= 3
 
-from dataflow.lib.uncertainty import Uncertainty
-from dataflow.lib.strings import _s, _b
-from dataflow.lib.exporters import exports_text, exports_HDF5
+from reductus.dataflow.lib.uncertainty import Uncertainty
+from reductus.dataflow.lib.strings import _s, _b
+from reductus.dataflow.lib.exporters import exports_text, exports_HDF5
 
 class RawData(object):
     def __init__(self, metadata=None, countTime=None, detCts=None, transCts=None, monCts=None, Q=None):

@@ -5,7 +5,7 @@ Drop the file rev.py into a top level directory PACKAGE_NAME of your
 application, right below the root of the repository.  Set the PACKAGE_NAME
 variable in this file to the package name.  For example::
 
-    PACKAGE_NAME = "dataflow"
+    PACKAGE_NAME = "reductus"
 
 From within your application you can then do::
 
@@ -76,7 +76,7 @@ def store_revision():
         fd.write(commit + "\n")
 
 
-PACKAGE_NAME = "dataflow"
+PACKAGE_NAME = "reductus"
 RESOURCE_NAME = "git_revision"
 _REVISION_INFO = None # cached value of git revision
 def revision_info():

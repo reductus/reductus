@@ -15,7 +15,7 @@ from numpy import (cos, pi, cumsum, arange, ndarray, ones, zeros, array,
 import numpy
 from numpy.ma import MaskedArray
 
-from dataflow.lib import rebin as reb
+from reductus.dataflow.lib import rebin as reb
 
 from .FilterableMetaArray import FilterableMetaArray as MetaArray
 from .he3analyzer import He3AnalyzerCollection

@@ -14,13 +14,13 @@ from collections import OrderedDict
 
 import numpy as np
 
-from dataflow.lib.uncertainty import Uncertainty
-from dataflow.lib import uncertainty
+from reductus.dataflow.lib.uncertainty import Uncertainty
+from reductus.dataflow.lib import uncertainty
 
 from .sansdata import RawSANSData, SansData, Sans1dData, SansIQData, Parameters
 from .sans_vaxformat import readNCNRSensitivity
 
-from vsansred.steps import _s, _b
+from reductus.vsansred.steps import _s, _b
 
 ALL_ACTIONS = []
 IGNORE_CORNER_PIXELS = True
@@ -84,7 +84,7 @@ def LoadDIV(filelist=None, variance=0.0001):
 
     2018-04-21 Brian Maranville
     """
-    from dataflow.fetch import url_get
+    from reductus.dataflow.fetch import url_get
     from .sans_vaxformat import readNCNRSensitivity
 
     output = []
@@ -127,7 +127,7 @@ def LoadRawSANS(filelist=None, check_timestamps=True):
 
     2018-04-23 Brian Maranville
     """
-    from dataflow.fetch import url_get
+    from reductus.dataflow.fetch import url_get
     from .loader import readSANSNexuz
     if filelist is None:
         filelist = []
@@ -1117,7 +1117,7 @@ def rescale_1d(data, scale=1.0, dscale=0.0):
 
     2016-04-17 Brian Maranville
     """
-    from dataflow.lib import err1d
+    from reductus.dataflow.lib import err1d
 
     I, varI = err1d.mul(data.v, data.dv, scale, dscale**2)
     data.v, data.dv = I, varI

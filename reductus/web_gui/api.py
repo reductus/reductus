@@ -5,14 +5,14 @@ from pprint import pprint
 import json
 import traceback
 
-import dataflow
-from dataflow.core import Template, load_instrument, lookup_instrument
-from dataflow.core import list_instruments as _list_instruments
-from dataflow.cache import get_cache
-from dataflow.calc import process_template
-from dataflow.rev import revision_info
-from dataflow import configure
-from dataflow import fetch
+from reductus import dataflow
+from reductus.dataflow.core import Template, load_instrument, lookup_instrument
+from reductus.dataflow.core import list_instruments as _list_instruments
+from reductus.dataflow.cache import get_cache
+from reductus.dataflow.calc import process_template
+from reductus.rev import revision_info
+from reductus.dataflow import configure
+from reductus.dataflow import fetch
 
 api_methods = []
 

@@ -6,10 +6,10 @@ import os
 
 import numpy as np
 
-from dataflow.lib import unit
-from dataflow.lib import iso8601
-from dataflow.lib import h5_open
-from dataflow.lib.strings import _s, _b
+from reductus.dataflow.lib import unit
+from reductus.dataflow.lib import iso8601
+from reductus.dataflow.lib import h5_open
+from reductus.dataflow.lib.strings import _s, _b
 
 from .refldata import ReflData
 from .resolution import FWHM2sigma

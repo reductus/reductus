@@ -86,8 +86,8 @@ from io import BytesIO
 import numpy as np
 from numpy import inf, arctan2, sqrt, sin, cos, pi, radians
 
-from dataflow.lib.exporters import exports_text, exports_json, exports_HDF5, NumpyEncoder
-from dataflow.lib.strings import _s, _b
+from reductus.dataflow.lib.exporters import exports_text, exports_json, exports_HDF5, NumpyEncoder
+from reductus.dataflow.lib.strings import _s, _b
 from .resolution import calc_Qx, calc_Qz, dTdL2dQ
 
 IS_PY3 = sys.version_info[0] >= 3
@@ -710,7 +710,7 @@ def exports_ORSO_text(name="column"):
 def ORSO_text(datasets, export_method=None, template_data=None, concatenate=False):
     from io import StringIO
     from orsopy import fileio
-    from dataflow.lib.exporters import _build_filename
+    from reductus.dataflow.lib.exporters import _build_filename
     exports = [getattr(d, export_method)() for d in datasets]
     # exports should contain items of class OrsoDataset
     outputs = []

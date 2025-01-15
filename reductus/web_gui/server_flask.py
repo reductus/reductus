@@ -29,11 +29,11 @@ mimetypes.add_type("image/png", ".png")
 mimetypes.add_type("image/svg+xml", ".svg")
 
 def create_app(config=None):
-    from web_gui import api
+    from reductus.web_gui import api
 
     RPC_ENDPOINT = '/RPC2'
     STATIC_FOLDER = "webreduce"
-    STATIC_PATH = pkg_resources.resource_filename('web_gui', 'webreduce/')
+    STATIC_PATH = pkg_resources.resource_filename('reductus.web_gui', 'webreduce/')
     PREBUILT_CLIENT = os.path.join("dist", "index.html")
     DEV_CLIENT = "index.html"
 
@@ -96,7 +96,7 @@ def create_app(config=None):
         app.add_url_rule(path, path, wrapped, methods=["POST"])
         app.add_url_rule(shortpath, shortpath, wrapped, methods=["POST"])
 
-    from dataflow.rev import print_revision
+    from reductus.rev import print_revision
     print_revision()
 
     return app

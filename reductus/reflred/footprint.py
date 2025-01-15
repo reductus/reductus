@@ -3,8 +3,8 @@ from copy import copy
 import numpy as np
 from numpy import pi, sqrt, polyval, radians, tan, arctan, inf, sin
 
-from dataflow.lib.wsolve import wpolyfit
-from dataflow.lib.uncertainty import Uncertainty as U, interp
+from reductus.dataflow.lib.wsolve import wpolyfit
+from reductus.dataflow.lib.uncertainty import Uncertainty as U, interp
 from .util import extend
 
 class FootprintData(object):
