@@ -1013,7 +1013,7 @@ def circular_average(qspace_data):
 
     2018-04-27 Brian Maranville
     """
-    from sansred.sansdata import Sans1dData
+    from reductus.sansred.sansdata import Sans1dData
     from collections import OrderedDict
 
 def calculate_IQ(realspace_data):
@@ -1029,7 +1029,7 @@ def calculate_IQ(realspace_data):
 
     2018-04-27 Brian Maranville
     """
-    from sansred.sansdata import Sans1dData
+    from reductus.sansred.sansdata import Sans1dData
     from collections import OrderedDict
 
 @cache
