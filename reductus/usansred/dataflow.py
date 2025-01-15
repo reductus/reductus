@@ -4,7 +4,7 @@ from reductus.dataflow.automod import make_modules
 from . import steps
 from . import templates
 from .usansdata import RawData, USansData, USansCorData
-from sansred.sansdata import Parameters
+from reductus.sansred.sansdata import Parameters
 
 INSTRUMENT = "ncnr.usans"
 

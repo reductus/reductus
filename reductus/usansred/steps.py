@@ -171,7 +171,7 @@ def findTWideCts(data, q_threshold=1e-4):
 
     2020-01-28 Brian Maranville
     """
-    from sansred.sansdata import Parameters
+    from reductus.sansred.sansdata import Parameters
 
     twide, missing_data_warn = _findTWideCts(data, q_threshold)
 
@@ -226,7 +226,7 @@ def getPeakParams(data):
 
     2020-01-29 Brian Maranville
     """
-    from sansred.sansdata import Parameters
+    from reductus.sansred.sansdata import Parameters
 
     peak_params = {"fileNumber": data.metadata["run.instFileNum"], "intent": data.metadata["analysis.intent"]}
     peak_params.update(findPeak(data.Q, data.detCts.x))
@@ -263,7 +263,7 @@ def correctData(sample, empty, bkg_level=0.0, emp_level=0.0, thick=1.0, dOmega=7
     """
     from reductus.dataflow.lib.uncertainty import Uncertainty
     from .usansdata import USansCorData
-    from sansred.sansdata import Parameters
+    from reductus.sansred.sansdata import Parameters
     # find q-range of empty:
     empty_qmax = empty.Q.max()
     empty_qmin = empty.Q.min()
@@ -343,7 +343,7 @@ def correctJoinData(sample, empty, q_tol=0.01, bkg_level=0.0, emp_level=0.0, thi
 
     from reductus.dataflow.lib.uncertainty import Uncertainty
     from .usansdata import USansCorData
-    from sansred.sansdata import Parameters
+    from reductus.sansred.sansdata import Parameters
 
 
     data_groups = make_groups([s.Q for s in sample])

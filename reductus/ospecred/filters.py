@@ -74,7 +74,7 @@ items_to_load = {
 
 for module in items_to_load.keys():
     itemlist = items_to_load[module]
-    module = 'ospecred.'+module  # relative imports
+    module = 'reductus.ospecred.'+module  # relative imports
     for item in itemlist:
         mod = getattr(__import__(module, globals=globals(), fromlist=[item]), item)
         globals()[item] = mod
