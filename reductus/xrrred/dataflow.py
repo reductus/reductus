@@ -1,13 +1,13 @@
-from dataflow import core as df
-from dataflow.automod import make_modules, make_template, auto_module, get_modules
-from dataflow.calc import process_template
-from dataflow.data import Plottable
-from dataflow.lib.exporters import exports_json
+from reductus.dataflow import core as df
+from reductus.dataflow.automod import make_modules, make_template, auto_module, get_modules
+from reductus.dataflow.calc import process_template
+from reductus.dataflow.data import Plottable
+from reductus.dataflow.lib.exporters import exports_json
 
 from . import steps
 from . import templates
-from reflred.refldata import ReflData
-from reflred.footprint import FootprintData
+from reductus.reflred.refldata import ReflData
+from reductus.reflred.footprint import FootprintData
 
 INSTRUMENT = "xrr"
 

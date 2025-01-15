@@ -11,7 +11,7 @@ changed.  The output is stored in a file in /tmp [sorry windows users], so
 that the regression test can be quickly updated if the change is a valid
 change (e.g., if there is a bug fix in the monitor normalization for example).
 
-The location of the data sources is read from configurations.default.config
+The location of the data sources is read from reductus.configurations.default.config
 
 Note: if the filename ends with .json, then assume it is a template file
 and run the reduction, saving the output to *replay.dat*.  This may make it
@@ -26,10 +26,10 @@ import re
 import difflib
 import warnings
 
-from dataflow.core import Template, lookup_module
-from dataflow.calc import process_template
-from dataflow.rev import revision_info
-from dataflow.configure import apply_config
+from reductus.dataflow.core import Template, lookup_module
+from reductus.dataflow.calc import process_template
+from reductus.rev import revision_info
+from reductus.dataflow.configure import apply_config
 
 
 def encode(s):
@@ -73,7 +73,7 @@ def run_template(template_data, concatenate=True):
 
     Example::
 
-        from dataflow.rev import revision_info
+        from reductus.rev import revision_info
         revision = revision_info()
         template_data = {
             "template": json.loads(template_str),
@@ -104,7 +104,7 @@ def run_template(template_data, concatenate=True):
     # TODO: use datasources given in template? It may be a security risk...
     #datasources = template_data.get('datasources', [])
     #if datasources:
-    #    from dataflow import fetch
+    #    from reductus.dataflow import fetch
     #    original = fetch.DATA_SOURCES
     #    fetch.DATA_SOURCES = datasources
     #    try:

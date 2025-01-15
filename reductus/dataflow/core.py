@@ -52,7 +52,7 @@ def load_instrument(name):
 
     TODO: Include instrument definition module name in the saved template.
     """
-    module_name = name + 'red.dataflow'
+    module_name = f'reductus.{name}red.dataflow'
     if module_name not in _loaded_instruments:
         module = importlib.import_module(module_name)
         _loaded_instruments.add(module_name)
@@ -127,7 +127,7 @@ def load_templates(package):
     be stored in a templates subdirectory, made into a package by inclusion
     of an empty __init__.py file.  They can then be loaded using::
 
-        from dataflow import core as df
+        from reductus.dataflow import core as df
         from . import templates
         ...
         instrument = df.Instrument(
@@ -586,7 +586,7 @@ class DataType(object):
 
     Data objects define available exporters as::
 
-        from dataflow.lib import exporters
+        from reductus.dataflow.lib import exporters
         self.export_types = {
             "NAME" : {
                 "method_name": "METHOD",

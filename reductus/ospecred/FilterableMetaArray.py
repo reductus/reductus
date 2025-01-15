@@ -2,7 +2,7 @@ from io import BytesIO
 #from cStringIO import StringIO as BytesIO
 
 from numpy import ndarray, array, fromstring, float32, ones, empty, newaxis, savetxt, sqrt, mod, isnan, ma, hstack, log10
-from dataflow.lib.exporters import exports_HDF5, exports_text
+from reductus.dataflow.lib.exporters import exports_HDF5, exports_text
 
 from .MetaArray import MetaArray
 

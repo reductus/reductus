@@ -76,7 +76,7 @@ def rebin2d(x, y, I, xo, yo, dtype=np.float64):
     y representing the row edges in each column, the following
     represents a uniform field::
 
-        >>> from dataflow.lib.rebin import rebin2d
+        >>> from reductus.dataflow.lib.rebin import rebin2d
         >>> x, y = [0, 2, 4, 5], [0, 1, 3]
         >>> z = [[2, 2, 1], [4, 4, 2]]
 

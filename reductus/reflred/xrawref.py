@@ -14,8 +14,8 @@ from io import BytesIO
 
 import numpy as np
 
-from dataflow.lib import unit
-from dataflow.lib import iso8601
+from reductus.dataflow.lib import unit
+from reductus.dataflow.lib import iso8601
 
 from . import bruker
 from . import rigaku

@@ -2,7 +2,7 @@ import os
 
 import numpy as np
 
-from dataflow.lib import iso8601
+from reductus.dataflow.lib import iso8601
 from .refldata import ReflData
 from .nexusref import data_as, str_data
 from .nexusref import NCNRNeXusRefl, load_nexus_entries

@@ -1,5 +1,5 @@
-from dataflow import core as df
-from dataflow.automod import get_modules, make_modules, make_template
+from reductus.dataflow import core as df
+from reductus.dataflow.automod import get_modules, make_modules, make_template
 
 from . import magik_filters_func as steps
 from . import templates
@@ -109,7 +109,7 @@ def unpolarized_template():
     return template
 
 def demo():
-    from dataflow.calc import process_template
+    from reductus.dataflow.calc import process_template
 
     template = unpolarized_template()
     #print "========== Template ========"
@@ -127,7 +127,7 @@ def demo():
 
 
 if __name__ == "__main__":
-    from dataflow.cache import use_redis
+    from reductus.dataflow.cache import use_redis
     use_redis()
     define_instrument()
     demo()

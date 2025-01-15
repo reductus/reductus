@@ -86,7 +86,7 @@ def LoadRawUSANS(filelist=None, check_timestamps=True, det_deadtime=7e-6, trans_
 
     2020-01-29 Brian Maranville
     """
-    from dataflow.fetch import url_get
+    from reductus.dataflow.fetch import url_get
     from .loader import readUSANSNexus
     from .usansdata import USansData
     if filelist is None:
@@ -261,7 +261,7 @@ def correctData(sample, empty, bkg_level=0.0, emp_level=0.0, thick=1.0, dOmega=7
 
     2020-01-29 Brian Maranville
     """
-    from dataflow.lib.uncertainty import Uncertainty
+    from reductus.dataflow.lib.uncertainty import Uncertainty
     from .usansdata import USansCorData
     from sansred.sansdata import Parameters
     # find q-range of empty:
@@ -341,7 +341,7 @@ def correctJoinData(sample, empty, q_tol=0.01, bkg_level=0.0, emp_level=0.0, thi
     2020-01-29 Brian Maranville
     """
 
-    from dataflow.lib.uncertainty import Uncertainty
+    from reductus.dataflow.lib.uncertainty import Uncertainty
     from .usansdata import USansCorData
     from sansred.sansdata import Parameters
 

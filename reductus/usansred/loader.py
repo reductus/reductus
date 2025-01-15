@@ -8,10 +8,10 @@ import io
 from collections import OrderedDict
 import h5py
 
-from dataflow.lib import hzf_readonly_stripped as hzf
-from dataflow.lib import unit
-from dataflow.lib.h5_open import h5_open_zip
-from dataflow.lib.strings import _s, _b
+from reductus.dataflow.lib import hzf_readonly_stripped as hzf
+from reductus.dataflow.lib import unit
+from reductus.dataflow.lib.h5_open import h5_open_zip
+from reductus.dataflow.lib.strings import _s, _b
 
 from .usansdata import RawData, USansData
 

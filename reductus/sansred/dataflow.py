@@ -1,5 +1,5 @@
-from dataflow import core as df
-from dataflow.automod import make_modules
+from reductus.dataflow import core as df
+from reductus.dataflow.automod import make_modules
 
 from . import steps
 from . import templates

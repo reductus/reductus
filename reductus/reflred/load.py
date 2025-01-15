@@ -1,7 +1,7 @@
 from os.path import basename
 from io import BytesIO
 
-from dataflow.fetch import url_get
+from reductus.dataflow.fetch import url_get
 
 
 def load_from_string(filename, data, entries=None, loader=None):
@@ -46,8 +46,8 @@ def url_load_list(files=None, check_timestamps=True, loader=None):
 
 def setup_fetch():
     #from web_gui import default_config
-    from dataflow.cache import set_test_cache
-    from dataflow import fetch
+    from reductus.dataflow.cache import set_test_cache
+    from reductus.dataflow import fetch
 
     set_test_cache()
     fetch.DATA_SOURCES = [

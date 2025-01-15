@@ -4,7 +4,7 @@ from copy import copy
 
 import numpy as np
 
-from dataflow.lib.exporters import exports_json
+from reductus.dataflow.lib.exporters import exports_json
 
 from .refldata import ReflData, Intent, Group, Detector, set_fields
 from .nexusref import load_nexus_entries, nexus_common, get_pol

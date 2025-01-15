@@ -4,13 +4,13 @@ import copy
 from .core import load_instrument
 from .cache import get_cache
 from . import fetch
-from configurations import default
+from reductus.configurations import default
 
 DEFAULT_CONFIG = copy.deepcopy(default.config)
 
 def load_update(name="config_overrides"):
     """
-    Load named configuration from configurations folder, and update
+    Load named configuration from reductus.configurations folder, and update
     a copy of default configuration with user settings
     """
     import importlib

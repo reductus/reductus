@@ -1,6 +1,6 @@
-from reflred.steps import ncnr_load, subtract_background, divide_intensity, rescale, mask_points, join, divergence, normalize, abinitio_footprint, fit_footprint, correct_footprint
+from reductus.reflred.steps import ncnr_load, subtract_background, divide_intensity, rescale, mask_points, join, divergence, normalize, abinitio_footprint, fit_footprint, correct_footprint
 
-from dataflow.automod import module
+from reductus.dataflow.automod import module
 
 
 @module
@@ -67,8 +67,8 @@ def load(filelist=None,
     | 2022-01-31 Brian Maranville
     | 2022-04-27 Brian Maranville fix count time for Rigaku in sweep mode
     """
-    from reflred.load import url_load_list
-    from reflred import xrawref
+    from reductus.reflred.load import url_load_list
+    from reductus.reflred import xrawref
     
     # TODO: sample_width is ignored if datafile defines angular_divergence
     auto_divergence = True

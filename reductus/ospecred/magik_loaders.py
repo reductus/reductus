@@ -7,7 +7,7 @@ import numpy
 from numpy.ma import MaskedArray
 import h5py
 
-from dataflow.lib import hzf_readonly_stripped as hzf
+from reductus.dataflow.lib import hzf_readonly_stripped as hzf
 
 from .FilterableMetaArray import FilterableMetaArray as MetaArray
 from .he3analyzer import He3AnalyzerCollection

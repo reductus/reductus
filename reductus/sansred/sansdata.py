@@ -14,9 +14,9 @@ from collections import OrderedDict
 
 import numpy as np
 
-from dataflow.lib.uncertainty import Uncertainty
-from dataflow.lib.exporters import exports_HDF5, exports_text
-from vsansred.vsansdata import RawVSANSData, _toDictItem
+from reductus.dataflow.lib.uncertainty import Uncertainty
+from reductus.dataflow.lib.exporters import exports_HDF5, exports_text
+from reductus.vsansred.vsansdata import RawVSANSData, _toDictItem
 
 IS_PY3 = sys.version_info[0] >= 3
 

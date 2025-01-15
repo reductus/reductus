@@ -7,7 +7,7 @@ import numpy as np
 import scipy.optimize as so
 from copy import copy
 
-#from dataflow.lib.uncertainty import Uncertainty as U, interp
+#from reductus.dataflow.lib.uncertainty import Uncertainty as U, interp
 #from .refldata import ReflData
 
 # BackgroundFieldData class returns results of background field fitting

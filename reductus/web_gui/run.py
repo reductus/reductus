@@ -14,7 +14,7 @@ def main():
         import json
         config = json.loads(open(args.config_file, 'rt').read())
     else:
-        from dataflow.configure import load_config
+        from reductus.dataflow.configure import load_config
         config = load_config(name="config", fallback=True)
     if args.instruments is not None:
         config["instruments"] = args.instruments
@@ -25,7 +25,7 @@ def main():
             if d["name"] != "local"
         ]
 
-    from web_gui.server_flask import create_app
+    from reductus.web_gui.server_flask import create_app
     app = create_app(config)
     if not args.headless:
         import webbrowser

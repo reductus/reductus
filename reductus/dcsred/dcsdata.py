@@ -15,8 +15,8 @@ def _b(s):
     else:
         return s
 
-from dataflow.lib import octave
-from dataflow.lib.exporters import exports_HDF5, exports_text
+from reductus.dataflow.lib import octave
+from reductus.dataflow.lib.exporters import exports_HDF5, exports_text
 
 class RawData(object):
     def __init__(self, name, data):

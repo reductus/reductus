@@ -68,7 +68,7 @@ def rebin2d(x, y, I, xo, yo, Io=None, dtype=None):
     y representing the row edges in each column, the following
     represents a uniform field::
 
-        >>> from reflred.rebin import rebin2d
+        >>> from reductus.reflred.rebin import rebin2d
         >>> x, y = [0, 2, 4, 5], [0, 1, 3]
         >>> z = [[2, 2, 1], [4, 4, 2]]
 
