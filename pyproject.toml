@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "reductus"
-version = "0.9.1"
+dynamic = ["version"]
 description = "Data reduction for neutron scattering"
 readme = "README.rst"
 requires-python = ">=3.9"
@@ -41,6 +41,9 @@ all = ["msgpack", "flask", "flask-cors", "requests", "numdifftools", "h5py"]
 
 [project.scripts]
 reductus = "reductus.web_gui.run:main"
+
+[tool.setuptools.dynamic]
+version = { attr = "reductus.__version__" }
 
 [tool.setuptools.packages.find]
 where = ["."]
