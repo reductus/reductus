@@ -62,8 +62,8 @@ jobs:
       - name: show files
         run: |
           ls -R artifacts
-          echo "PY3_WHL=$(ls artifacts/dist/*.whl)" >> $GITHUB_ENV
-          echo "PY3_WHL=$(ls artifacts/dist/*.whl)"
+          echo "PY3_WHL=$(ls artifacts/*.whl)" >> $GITHUB_ENV
+          echo "PY3_WHL=$(ls artifacts/*.whl)"
 
       - name: Update current release
         if: startsWith(github.ref, 'refs/tags')
@@ -86,4 +86,4 @@ jobs:
         if: startsWith(github.ref, 'refs/tags')
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          packages-dir: artifacts/dist/
+          packages-dir: artifacts/
