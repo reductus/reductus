@@ -45,4 +45,4 @@ copyRecursiveSync('index.html', 'dist_webworker/index.html', mode);
 copyRecursiveSync('favicon.ico', 'dist_webworker/favicon.ico', mode);
 copyRecursiveSync('img', 'dist_webworker/img', mode);
 copyRecursiveSync('js/server_api/worker.js', 'dist_webworker/worker.js', mode);
-copyRecursiveSync('../../dist', 'dist_webworker', mode)
+copyRecursiveSync('../../../dist', 'dist_webworker', mode)
