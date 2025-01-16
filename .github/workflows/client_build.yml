@@ -59,4 +59,4 @@ jobs:
         tag: sid
         files: |
           reductus/web_gui/webreduce/dist.zip 
-          reductus/dist/${{ env.PYTHON_WHL }}
+          dist/${{ env.PYTHON_WHL }}
