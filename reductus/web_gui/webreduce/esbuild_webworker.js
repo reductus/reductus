@@ -46,3 +46,7 @@ copyRecursiveSync('favicon.ico', 'dist_webworker/favicon.ico', mode);
 copyRecursiveSync('img', 'dist_webworker/img', mode);
 copyRecursiveSync('js/server_api/worker.js', 'dist_webworker/worker.js', mode);
 copyRecursiveSync('../../../dist', 'dist_webworker', mode)
+
+// generate a list of files ending in .whl in the dist folder and write to file
+let files = fs.readdirSync('dist_webworker').filter(f => f.endsWith('.whl'));
+fs.writeFileSync('dist_webworker/wheel_files.json', JSON.stringify(files));

@@ -7,12 +7,19 @@ async function loadPyodideAndPackages() { // loads pyodide
   self.pyodide = await loadPyodide(); // run the function and wait for the result (base library)
   await self.pyodide.loadPackage(["numpy", "pytz", "h5py", "micropip"]); // waits until these python packpages are loaded to continue
 
+  // get local wheels
+  const local_wheels = await (await fetch('./wheel_files.json')).text(); // fetches the wheel files from the json file
+  console.log({local_wheels});
   //import reductus library with micropip
   let api = await pyodide.runPythonAsync(`
+  import json
   import micropip
-  await micropip.install("./orsopy-1.0.1-py2.py3-none-any.whl")
-  await micropip.install("./reductus-0.9.1-py3-none-any.whl")
-  from web_gui import api
+  await micropip.install("orsopy")
+
+  local_wheels = json.loads('${local_wheels}')
+  for wheel in local_wheels:
+      await micropip.install(f"./{wheel}")
+  from reductus.web_gui import api
 
   config = {
     "cache": None,
