@@ -66,6 +66,10 @@ sudo service apache2 reload
 # sudo systemctl enable ufw
 # sudo ufw reload
 
+# firewall-cmd --add-service=ssh --permanent
+firewall-cmd --add-service=http --permanent
+firewall-cmd --reload
+
 # set up apache2 to keep log files longer
 sudo sed -i -e 's/rotate [0-9]\+/rotate 31/g' /etc/logrotate.d/apache2
 
