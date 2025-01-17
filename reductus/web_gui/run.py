@@ -9,6 +9,7 @@ def main():
     parser.add_argument('-p', '--port', default=8002, type=int, help='port on which to start the server')
     parser.add_argument('-c', '--config-file', type=str, help='path to JSON configuration to load')
     parser.add_argument('-i','--instruments', nargs='+', help='instruments to load (overrides config)')
+    parser.add_argument('--cache-engine', type=str, default='memory', choices=['memory', 'diskcache', 'redis'], help='select cache engine (default is "memory", overrides config)')
     args = parser.parse_args()
     if args.config_file is not None:
         import json
@@ -18,6 +19,9 @@ def main():
         config = load_config(name="config", fallback=True)
     if args.instruments is not None:
         config["instruments"] = args.instruments
+    if args.cache_engine is not None:
+        config.setdefault("cache", {})
+        config["cache"]["engine"] = args.cache_engine
     # Strip "local" from data sources if running external
     if args.external:
         config["data_sources"] = [
