@@ -65,8 +65,14 @@ def create_app(config=None):
 
     def wrap_method(mfunc):
         def wrapper(*args, **kwargs):
-            real_kwargs = request.get_json() if request.get_data() else {}
+            if request.method == "GET":
+                real_kwargs = request.args.to_dict()
+            else:
+                real_kwargs = request.get_json() if request.get_data() else {}
             return_type = request.headers.get("Accept", "application/msgpack")
+            if return_type not in ["application/json", "application/msgpack"]:
+                # fall back to application/json for debugging GET requests
+                return_type = "application/json"
             if return_type not in ["application/json", "application/msgpack"]:
                 code = 406
                 content = {'exception': 
@@ -93,8 +99,8 @@ def create_app(config=None):
         wrapped = wrap_method(mfunc)
         path = posixpath.join(RPC_ENDPOINT, method)
         shortpath = posixpath.join("/", method)
-        app.add_url_rule(path, path, wrapped, methods=["POST"])
-        app.add_url_rule(shortpath, shortpath, wrapped, methods=["POST"])
+        app.add_url_rule(path, path, wrapped, methods=["POST", "GET"])
+        app.add_url_rule(shortpath, shortpath, wrapped, methods=["POST", "GET"])
 
     from reductus.rev import print_revision
     print_revision()
