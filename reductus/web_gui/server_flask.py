@@ -34,8 +34,8 @@ def create_app(config=None):
     RPC_ENDPOINT = '/RPC2'
     STATIC_FOLDER = "webreduce"
     STATIC_PATH = pkg_resources.resource_filename('reductus.web_gui', 'webreduce/')
-    PREBUILT_CLIENT = os.path.join("dist", "index.html")
-    DEV_CLIENT = "index.html"
+    DIST_PATH = "dist"
+    CLIENT = "index.html"
 
     app = Flask(__name__, static_folder=STATIC_PATH, static_url_path='/webreduce')
     CORS(app)
@@ -43,10 +43,10 @@ def create_app(config=None):
 
     @app.route('/')
     def root():
-        if os.path.exists(os.path.join(STATIC_PATH, PREBUILT_CLIENT)):
-            return redirect(posixpath.join(STATIC_FOLDER, PREBUILT_CLIENT))
+        if os.path.exists(os.path.join(STATIC_PATH, DIST_PATH, CLIENT)):
+            return redirect(posixpath.join(STATIC_FOLDER, DIST_PATH, CLIENT))
         else:
-            return redirect(posixpath.join(STATIC_FOLDER, DEV_CLIENT))
+            return redirect(posixpath.join(STATIC_FOLDER, CLIENT))
 
     @app.route('/robots.txt')
     def static_from_root():
