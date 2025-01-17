@@ -34,7 +34,7 @@ config = {
             "name": "ncnr",
             "url": "https://ncnr.nist.gov/pub/",
             "start_path": "ncnrdata",
-            "file_helper_url": "https://ncnr.nist.gov/ncnrdata/listftpfiles_json.php",
+            "file_helper_url": "https://ncnr.nist.gov/ncnrdata/listftpfiles_pg.php",
         },
         {
             "name": "charlotte",
