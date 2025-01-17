@@ -1,0 +1,17 @@
+[Unit]
+Description=Reductus uWSGI Master Process
+After=network.target
+
+[Service]
+ExecStart=/home/bbm/reductus-venv/bin/uwsgi --ini /home/bbm/reductus-work/uwsgi.ini
+WorkingDirectory=/home/bbm/reductus-work
+User=bbm
+Group=bbm
+Restart=always
+KillSignal=SIGTERM
+Type=notify
+StandardError=syslog
+NotifyAccess=main
+
+[Install]
+WantedBy=multi-user.target

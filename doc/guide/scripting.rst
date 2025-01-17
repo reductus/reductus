@@ -41,7 +41,7 @@ Configure a python session::
 
     $ cd ~/path/to/reductus
     $ ipython --pylab
-    from dataflow.configure import apply_config
+    from reductus.dataflow.configure import apply_config
     user_overrides = {'instruments': ['refl']}
     apply_config(user_overrides=user_overrides)
 
@@ -72,8 +72,8 @@ combination stored with the output file::
 
     target = template_data['node'], template_data['terminal']
     config = template_data.get('config', {})
-    from dataflow.core import Template
-    from dataflow.calc import process_template
+    from reductus.dataflow.core import Template
+    from reductus.dataflow.calc import process_template
     bundle = process_template(Template(**template), config, target=target)
 
 You can access various fields in the bundle. In this case it is a
