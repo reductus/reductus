@@ -90,9 +90,9 @@ def setup_fetch():
 def fetch_uri(uri, loader=None):
     import os.path
 
-    if ':' not in uri:
+    if '://' not in uri:
         # some sort of filename...
-        source, path = 'file', os.path.realpath(os.path.expanduser(uri))
+        source, path = 'local', os.path.realpath(os.path.expanduser(uri))
     else:
         source, path = uri.split('://')
     entries = url_load(
