@@ -28,7 +28,7 @@ def load_config(name="config", fallback=True):
     import importlib
 
     try:
-        config_module = importlib.import_module("configurations.{name}".format(name=name))
+        config_module = importlib.import_module("reductus.configurations.{name}".format(name=name))
         return copy.deepcopy(config_module.config)
     except ImportError:
         if fallback:
