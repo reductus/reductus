@@ -3,6 +3,7 @@ Core class definitions
 """
 from __future__ import print_function
 
+from dataclasses import dataclass
 import sys
 import importlib
 import inspect
@@ -110,7 +111,7 @@ def lookup_module(id):
 def register_datatype(datatype):
     if (datatype.id in _datatype_registry
             and datatype != _datatype_registry[datatype.id]):
-        raise TypeError("Datatype already registered")
+        raise TypeError("Datatype already registered", datatype, _datatype_registry[datatype.id])
     _datatype_registry[datatype.id] = datatype
 
 
@@ -555,7 +556,10 @@ class Instrument(object):
         return definition
 
 
+@dataclass
 class DataType(object):
+    id: str
+    cls: type
     """
     Data objects represent the information flowing over a wire.
 
