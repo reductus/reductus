@@ -18,7 +18,7 @@ config = {
             "name": "ncnr",
             "url": "https://www.ncnr.nist.gov/pub/",
             "start_path": "ncnrdata",
-            "file_helper_url": "https://www.ncnr.nist.gov/ipeek/listftpfiles.php",
+            "file_helper_url": "https://www.ncnr.nist.gov/ipeek/listftpfiles_pg.php",
         },
     ],
     "instruments": ["refl", "ospec", "sans", "dcs", "usans"],
