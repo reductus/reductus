@@ -1,6 +1,6 @@
-recursive-include dataflow *.json
-recursive-include web_gui/webreduce *.js *.html *.css *.svg *.png
-include dataflow/git_revision
-include */templates/*.json
-include */*.csv
-prune web_gui/webreduce/node_modules/
+recursive-include reductus/dataflow *.json
+recursive-include reductus/web_gui/webreduce *.js *.html *.css *.svg *.png
+include reductus/git_revision
+include reductus/**/templates/*.json
+include reductus/**/*.csv
+prune reductus/web_gui/webreduce/node_modules/

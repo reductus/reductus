@@ -11,8 +11,8 @@ import json
 
 import numpy as np
 
-from dataflow.core import Template
-from dataflow.calc import process_template
+from reductus.dataflow.core import Template
+from reductus.dataflow.calc import process_template
 
 # TODO: share Environment with regression.py, etc.
 class Environment:
@@ -30,8 +30,8 @@ class Environment:
             from web_gui import config
         except ImportError:
             from web_gui import default_config as config
-        from dataflow.cache import set_test_cache
-        from dataflow import fetch
+        from reductus.dataflow.cache import set_test_cache
+        from reductus.dataflow import fetch
 
         set_test_cache()
         fetch.DATA_SOURCES = config.data_sources

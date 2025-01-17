@@ -27,9 +27,9 @@ jobs:
         node-version: ${{ matrix.node-version }}
     - name: initialize npm libs
       run: npm ci
-      working-directory: web_gui/webreduce
+      working-directory: reductus/web_gui/webreduce
     - name: build client
-      working-directory: web_gui/webreduce
+      working-directory: reductus/web_gui/webreduce
       run: |
         rm -rf dist
         npm run build --if-present
@@ -48,8 +48,8 @@ jobs:
       with:
         name: artifacts
         path: |
-          web_gui/webreduce/dist.zip
-          dist/*.whl
+          reductus/web_gui/webreduce/dist.zip
+          reductus/dist/*.whl
     - name: Update release
       if: ${{ github.ref_name == 'main' }}
       uses: johnwbyrd/update-release@v1.0.0
@@ -58,5 +58,5 @@ jobs:
         release: unstable
         tag: sid
         files: |
-          web_gui/webreduce/dist.zip 
+          reductus/web_gui/webreduce/dist.zip 
           dist/${{ env.PYTHON_WHL }}

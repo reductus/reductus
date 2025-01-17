@@ -1,0 +1,54 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "reductus"
+dynamic = ["version"]
+description = "Data reduction for neutron scattering"
+readme = "README.rst"
+requires-python = ">=3.9"
+license = {text = "Public Domain"}
+authors = [
+    {name = "Paul Kienzle", email = "paul.kienzle@nist.gov"},
+    {name = "Brian Maranville", email = "brian.maranville@nist.gov"}
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Intended Audience :: Science/Research",
+    "License :: Public Domain",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3.9",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Chemistry",
+    "Topic :: Scientific/Engineering :: Physics",
+]
+dependencies = [
+    "scipy",
+    "numpy",
+    "uncertainties",
+    "docutils",
+    "pytz",
+]
+
+[project.optional-dependencies]
+server = ["msgpack", "flask", "flask-cors", "requests"]
+masked_curve_fit = ["numdifftools"]
+nexus_files = ["h5py"]
+all = ["msgpack", "flask", "flask-cors", "requests", "numdifftools", "h5py"]
+
+[project.scripts]
+reductus = "reductus.web_gui.run:main"
+
+[tool.setuptools.dynamic]
+version = { attr = "reductus.__version__" }
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["reductus*"]
+
+[tool.pytest]
+addopts = "--maxfail=1 --disable-warnings"
+testpaths = ["tests"]

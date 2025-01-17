@@ -326,7 +326,7 @@ def q_bin(q_edges, angle, wavelength, rate):
 
 def q_res(q_edges, angle, wavelength, incident_intensity, spectrum):
     # TODO: incorporate delta theta
-    from dataflow.lib.rebin import rebin
+    from reductus.dataflow.lib.rebin import rebin
 
     # Determine q values of measured points.
     q = 4*pi/wavelength[None, :] * sin(radians(angle[:, None]))
@@ -364,7 +364,7 @@ def q_res(q_edges, angle, wavelength, incident_intensity, spectrum):
     return q_edges, dq_edges, dq
 
 def binned_dL(q_edges, angle, wavelength, incident_intensity, spectrum):
-    from dataflow.lib.rebin import rebin
+    from reductus.dataflow.lib.rebin import rebin
 
     # Determine q values of measured points.
     q = 4*pi/wavelength[None, :] * sin(radians(angle[:, None]))
