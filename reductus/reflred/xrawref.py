@@ -337,7 +337,7 @@ class XRDMLRefl(refldata.ReflData):
         self.angular_resolution = None
         # full-width source divergence (degrees) suggested by Malvern Panalytical
         # nominal_divergence = 0.005
-        self.source_divergence = 0.005
+        self.source_divergence_fw = 0.005
         self.slit1.distance = -entry['incidentRadius']
         self.slit1.x = FULLY_OPEN_SLIT
         self.slit2.distance = -entry['divergenceSlitDistance']

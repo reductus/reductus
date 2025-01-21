@@ -104,19 +104,19 @@ def apply_measured_footprint(data, measured_footprint):
     _apply_footprint(data, footprint)
 
 
-def apply_abinitio_footprint(data, Io, width, offset, source_divergence=None):
+def apply_abinitio_footprint(data, Io, width, offset, source_divergence_fw=None):
     slit1 = (data.slit1.distance, data.slit1.x, data.slit1.y)
     slit2 = (data.slit2.distance, data.slit2.x, data.slit2.y)
     theta = data.sample.angle_x
-    if source_divergence is None:
-        source_divergence = data.source_divergence
+    if source_divergence_fw is None:
+        source_divergence_fw = data.source_divergence_fw
     if width is None:
         width = data.sample.width
     if offset is None:
         offset = 0.
     if Io is None:
         Io = 1.
-    y = Io * _abinitio_footprint(slit1, slit2, theta, width, offset, source_divergence=source_divergence)
+    y = Io * _abinitio_footprint(slit1, slit2, theta, width, offset, source_divergence_fw=source_divergence_fw)
     footprint = U(y, 0.0*y)
     _apply_footprint(data, footprint)
 
@@ -198,7 +198,7 @@ def apply(fp, R):
     return corrected_y, corrected_dy
 
 
-def _abinitio_footprint(slit1, slit2, theta, width, offset=0., source_divergence=None):
+def _abinitio_footprint(slit1, slit2, theta, width, offset=0., source_divergence_fw=None):
     """
     Ab-initio footprint calculation from slits, angles and sample size.
 
@@ -215,7 +215,7 @@ def _abinitio_footprint(slit1, slit2, theta, width, offset=0., source_divergence
     rotation of the sample away from the beam center.  These are in the same
     units as the slits (mm).
 
-    *source_divergence* is the angular divergence of the source (1-sigma)
+    *source_divergence_fw* is the angular divergence of the source (full width)
     in degrees (e.g. from a parabolic mirror between the true source 
     and the beamline).  The beam is assumed to have uniform intensity 
     for the entire width.
@@ -245,8 +245,7 @@ def _abinitio_footprint(slit1, slit2, theta, width, offset=0., source_divergence
     p_far = (+width / 2 + offset) * sin(theta)
 
     # source divergence sets a limit on all angles in the problem:
-    source_divergence = 180.0 if source_divergence is None else abs(source_divergence)
-    source_max_slope = np.tan(np.radians(source_divergence/2))
+    source_max_slope = np.inf if source_divergence_fw is None else tan(radians(source_divergence_fw/2))
 
     # slope between opposite edges of slits 1 and 2:
     # (i.e. bottom of slit 1, top of slit 2) - always positive
