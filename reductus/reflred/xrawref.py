@@ -304,6 +304,7 @@ class RigakuRefl(refldata.ReflData):
         self.detector.angle_x_target = self.detector.angle_x
         self.Qz_target = np.nan
 
+FULLY_OPEN_SLIT = 1000. # a semi-infinite opening for a slit; used if that slit is not present.
 
 class XRDMLRefl(refldata.ReflData):
     """
@@ -332,12 +333,13 @@ class XRDMLRefl(refldata.ReflData):
 
         self.description = entry['comment']
         self.instrument = 'Malvern Panalytical'
-        # 1-sigma angular resolution (degrees) reported by Bruker.  Our own
-        # measurements give a similar value (~ 0.033 degrees FWHM)
-        #nominal_resolution = 0.03
+
         self.angular_resolution = None
+        # full-width source divergence (degrees) suggested by Malvern Panalytical
+        # nominal_divergence = 0.005
+        self.source_divergence_fw = 0.005
         self.slit1.distance = -entry['incidentRadius']
-        self.slit1.x = entry['sourceLineWidth']
+        self.slit1.x = FULLY_OPEN_SLIT
         self.slit2.distance = -entry['divergenceSlitDistance']
         self.slit2.x = entry['divergenceSlitHeight']
         self.slit3.distance = entry['diffractedRadius']

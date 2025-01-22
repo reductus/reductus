@@ -11,7 +11,8 @@ def load(filelist=None,
         slit1_distance=None,
         slit1_aperture=None,
         slit2_distance=None,
-        slit2_aperture=None
+        slit2_aperture=None,
+        source_divergence_fw=None,
         ):
     r"""
     Load a list of X-ray Reflectivity files.
@@ -60,6 +61,10 @@ def load(filelist=None,
     : if specified, will override the value found in the file for
     the opening of slit 2 in mm
 
+    source_divergence_fw {source divergence full width} (float?)
+    : if specified, will override the value found in the file for
+    the full width of the source divergence in degrees
+
     **Returns**
 
     output (refldata[]): All entries of all files in the list.
@@ -92,6 +97,8 @@ def load(filelist=None,
             data.slit2.distance = slit2_distance
         if slit2_aperture is not None:
             data.slit2.x = data.slit2.x_target = slit2_aperture
+        if source_divergence_fw is not None:
+            data.source_divergence_fw = source_divergence_fw
         if auto_divergence:
             data = divergence(data, sample_width)
         

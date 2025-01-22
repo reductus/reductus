@@ -6,7 +6,7 @@ import numpy as np
 def load(file_or_filename):
     tree = ElementTree.parse(file_or_filename)
     root = tree.getroot()
-    ns = {'': root.attrib[root.keys()[0]].split()[0]}
+    ns = {'': root.attrib[next(iter(root))].split()[0]}
 
     context = {}
     sample_id = root.find("./sample/id", ns).text
@@ -32,6 +32,7 @@ def parse_measurement_node(node, ns, context):
     # output['wavelength'] = (ka1 + kratio * ka2) / (kratio + 1.0)
 
     context['incidentRadius'] = float(node.find("./incidentBeamPath/radius", ns).text)
+    context['incidentMirrorPresent'] = node.find("./incidentBeamPath/xRayMirror", ns) is not None
     context['sourceLineWidth'] = float(node.find("./incidentBeamPath/xRayTube/focus/width", ns).text)
 
     divergence_slit = node.find("./incidentBeamPath/divergenceSlit", ns)
@@ -41,9 +42,9 @@ def parse_measurement_node(node, ns, context):
 
     context['diffractedRadius'] = float(node.find("./diffractedBeamPath/radius", ns).text)
     
-    detector = node.find("./diffractedBeamPath/detector", ns)
-    detectorTypeKey = next(k for k in detector.attrib if k.endswith('type'))
-    detectorType = detector.attrib[detectorTypeKey]
+    # detector = node.find("./diffractedBeamPath/detector", ns)
+    # detectorTypeKey = next(k for k in detector.attrib if k.endswith('type'))
+    # detectorType = detector.attrib[detectorTypeKey]
     
     receivingSlitHeight = None
     receiving_slit = node.find("./diffractedBeamPath/receivingSlit", ns)
