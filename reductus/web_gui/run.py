@@ -1,5 +1,7 @@
 import os
 import argparse
+import threading
+import requests
 
 def main():
     parser = argparse.ArgumentParser()
@@ -32,10 +34,22 @@ def main():
     from reductus.web_gui.server_flask import create_app
     app = create_app(config)
     if not args.headless:
-        import webbrowser
-        webbrowser.open("http://localhost:%d" % (args.port))
+        thread = threading.Thread(target=_open_browser_when_server_ready, args=(args.port,))
+        thread.start()
     host = '0.0.0.0' if args.external else None
     app.run(port=args.port, host=host, debug=args.debug)
+
+def _open_browser_when_server_ready(port, retry_interval=0.2, max_retries=50):
+    # Wait for the server to start
+    retry_count = 0
+    while retry_count < max_retries:
+        try:
+            requests.get("http://localhost:%d" % (port), timeout=retry_interval)
+            break
+        except requests.exceptions.ConnectionError:
+            retry_count += 1
+    import webbrowser
+    webbrowser.open("http://localhost:%d" % (port))
 
 if __name__ == '__main__':
     main()
