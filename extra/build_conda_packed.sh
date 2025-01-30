@@ -17,7 +17,7 @@ conda install -y conda-pack
 if ! test -f "$ENV_NAME.tar.gz"; then
   echo "creating isolated environment"
   conda remove -n "$ENV_NAME" -y --all
-  conda create -n "$ENV_NAME" -q --force -y "python=$PYTHON_VERSION" "nodejs"
+  conda create -n "$ENV_NAME" -q --force -y "python=$PYTHON_VERSION" "nodejs" "micromamba"
   conda-pack -n "$ENV_NAME" -f -o "$ENV_NAME.tar.gz"
 fi
 
