@@ -179,10 +179,11 @@ def fit_rocking_curve(rock, A0=None, x00=None, sigma0=None, bkg0=None):
 
     The rocking curve datasets are fit using a Levenberg-Marquardt algorithm to a model
     involving four parameters:
-     o A, the (possibly negative) Gaussian amplitude
-     o x0, the center of the Gaussian
-     o sigma, the width of the Gaussian
-     o bkg, the background level of the Gaussian
+
+    - A, the (possibly negative) Gaussian amplitude
+    - x0, the center of the Gaussian
+    - sigma, the width of the Gaussian
+    - bkg, the background level of the Gaussian
 
     **Inputs**
 
@@ -220,8 +221,9 @@ def fit_slit_alignment(slit_align, m0=None, x00=None):
 
     The slit alignment datasets are fit using a Levenberg-Marquardt algorithm to a model
     involving four parameters:
-     o m, the linear slope
-     o x0, the x-intercept of the line
+
+    - m, the linear slope
+    - x0, the x-intercept of the line
 
     **Inputs**
 
