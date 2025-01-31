@@ -36,6 +36,9 @@ def create_app(config=None):
     STATIC_PATH = pkg_resources.resource_filename('reductus.web_gui', 'webreduce/')
     DIST_PATH = "dist"
     CLIENT = "index.html"
+    SHOW_EXCEPTIONS = False
+    if hasattr(config, 'get'):
+        SHOW_EXCEPTIONS = config.get('show_exceptions', False)
 
     app = Flask(__name__, static_folder=STATIC_PATH, static_url_path='/webreduce')
     CORS(app)
@@ -57,7 +60,10 @@ def create_app(config=None):
         code = 500
         if isinstance(e, HTTPException):
             code = e.code
-        content = {'exception': repr(e), 'traceback': traceback.format_exc()}
+        if SHOW_EXCEPTIONS:
+            content = {'exception': repr(e), 'traceback': traceback.format_exc()}
+        else:
+            content = {'exception': 'API exception', 'traceback': ''}
         logging.info(content['traceback'])
         response = make_response(msgpack_converter.packb(content, use_bin_type=True), code)
         response.headers['Content-Type'] = "application/msgpack"

@@ -22,5 +22,6 @@
             "file_helper_url": "http://charlotte.ncnr.nist.gov/ipeek/listftpfiles.php"
         }
     ],
-    "instruments": ["refl", "ospec", "sans"]
+    "instruments": ["refl", "ospec", "sans"],
+    "show_exceptions": true
 }
