@@ -121,7 +121,7 @@ def fit_gaussian_background(rock, A0, sigma0, x00, bkg0):
 
         rock2 = copy(rock)
         rock2.v = gaussian_background(x, *pout)
-        rock2.dv = np.sqrt(np.array([j.T.dot(pcov.dot(j)) for j in jacfunc(pout)]))
+        rock2.dv = np.sqrt(np.array([j.T.dot(pcov.dot(j)) for j in gaussian_background_jac(x, *pout).T]))
 
         return GaussianBackgroundFitResult(chisq, *pout, *perr), rock2
 
@@ -162,18 +162,12 @@ def line_xintercept_jac(x, m, x0):
 
 def fit_line_xintercept(slit_align, m0, x00):
     v, dv = slit_align.v, slit_align.dv
-    x = None
-    if slit_align.intent in ['slit align', 'intensity']:
-        for slit in [slit_align.slit1, slit_align.slit2, slit_align.slit3, slit_align.slit4]:
-            if any(bool(d) for d in np.diff(v)!=0):
-                x = slit.x
-                break
-
-        if x is None:
-            return ErrorFitResult(msg=f'no slits appear to be scanned'), None
+    x = slit_align.x
+    if x is None:
+        return ErrorFitResult(msg=f'no slits appear to be scanned'), None
         
-    else:
-        return ErrorFitResult(msg=f'intent must be "slit align" or "intensity", actually {slit_align.intent}'), None
+#    else:
+#        return ErrorFitResult(msg=f'intent must be "slit align" or "intensity", actually {slit_align.intent}'), None
 
     if m0 is None:
         m0 = (v[-1] - v[0]) / (x[-1] - x[0])
@@ -207,7 +201,7 @@ def fit_line_xintercept(slit_align, m0, x00):
 
         slit_align2 = copy(slit_align)
         slit_align2.v = line_xintercept(x, *pout)
-        slit_align2.dv = np.sqrt(np.array([j.T.dot(pcov.dot(j)) for j in jacfunc(pout)]))
+        slit_align2.dv = np.sqrt(np.array([j.T.dot(pcov.dot(j)) for j in line_xintercept_jac(x, *pout).T]))
 
         return LineXInterceptFitResult(chisq, *pout, *perr), slit_align2
 

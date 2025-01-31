@@ -7,7 +7,7 @@ import traceback
 from random import randint
 from typing import Tuple
 
-from .refldata import ReflData
+from .refldata import ReflData, Intent
 from .resolution import FWHM2sigma
 
 WAVELENGTH = 2.35
@@ -271,15 +271,20 @@ class GANSRefl(ReflData):
 
         # Slits
         self.slit1.distance = -1911
-        self.slit2.distance = -200
-        self.slit3.distance = 282
-        self.slit4.distance = 921
-        for lbl, slit in zip(['slit1', 'slit2', 'Slit3'], [self.slit1, self.slit2, self.slit4]):
+        self.slit2.distance = -75
+        self.slit3.distance = 141
+        self.slit4.distance = 914
+        for lbl, slit in zip(['slit1', 'slit2', 'slit3'], [self.slit1, self.slit2, self.slit4]):
             slit.x = entry_field(entry, header, lbl)
             slit.x_target = copy.copy(slit.x)
             slit.y = 50
             slit.y_target = 50
 
+        # special case handling for Slit3. TODO: deprecate
+        if self.slit4.x is None:
+            self.slit4.x = entry_field(entry, header, 'Slit3')
+            self.slit4.x_target = copy.copy(self.slit4.x)
+        
         self.slit3.x = 12.7 * np.ones(entry['actual_number_points'])
         self.slit3.x_target = copy.copy(self.slit3.x)
 
@@ -302,6 +307,27 @@ class GANSRefl(ReflData):
         self.sample.angle_x_target = self.sample.angle_x.copy()
         self.detector.angle_x_target = self.detector.angle_x.copy()
         self.sample.angle_y = entry_field(entry, header, 'Chi')
+
+    @property
+    def x(self):
+        # Return different x depending on intent
+        intent = self.intent
+        if Intent.isback(intent) or Intent.isspec(intent):
+            return self.Qz
+        elif Intent.isrock(intent):
+            return self.Qx
+        elif Intent.isslit(intent):
+            return self.slit1.x
+            #return self.angular_resolution
+        elif Intent.isscan(intent):
+            return self.scan_value[0]
+        elif intent == 'slit align':
+            for i, slit in enumerate([self.slit1, self.slit2, self.slit3, self.slit4]):
+                if slit.x is not None:
+                    if any(bool(d) for d in np.diff(slit.x)!=0):
+                        return slit.x
+        else:
+            return np.arange(1, len(self.v)+1)
 
 def demo():
     import sys
