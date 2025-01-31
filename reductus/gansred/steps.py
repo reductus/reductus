@@ -12,6 +12,7 @@ def load(filelist=None,
         intent='auto',
         Qz_basis='detector',
         sample_width=None,
+        base='auto',
         slit1_distance=None,
         slit1_aperture=None,
         slit1_rotary=True,
@@ -23,7 +24,7 @@ def load(filelist=None,
         slit3_rotary=False,
         slit4_distance=None,
         slit4_aperture=None,
-        slit4_rotary=False        
+        slit4_rotary=True        
         ):
     r"""
     Load a list of GANS Reflectivity files.
@@ -55,6 +56,9 @@ def load(filelist=None,
     : Width of the sample along the beam direction in mm, used for
     calculating the effective resolution when the sample is smaller
     than the beam.  Leave blank to use value from data file.
+
+    base {Normalize by} (opt:auto|monitor|time|none)
+    : how to convert from counts to count rates
 
     slit1_distance {override slit1 distance} (float?)
     : if specified, will override the value found in the file for
@@ -166,7 +170,7 @@ def load(filelist=None,
         if auto_divergence:
             data = divergence(data, sample_width)
         
-        data = normalize(data, base='time')
+        data = normalize(data, base=base)
         print("data loaded and normalized")
         datasets.append(data)
 
