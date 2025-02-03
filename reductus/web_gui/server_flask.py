@@ -9,10 +9,10 @@ python server_flask.py 8002
 (then visit http://localhost:8002 in your browser)
 
 """
+from importlib import resources
 import os, sys, posixpath
 import traceback
 import logging
-import pkg_resources
 
 from flask import Flask, request, make_response, redirect, send_from_directory
 from flask_cors import CORS
@@ -33,7 +33,7 @@ def create_app(config=None):
 
     RPC_ENDPOINT = '/RPC2'
     STATIC_FOLDER = "webreduce"
-    STATIC_PATH = pkg_resources.resource_filename('reductus.web_gui', 'webreduce/')
+    STATIC_PATH = str(resources.files('reductus.web_gui').joinpath('webreduce'))
     DIST_PATH = "dist"
     CLIENT = "index.html"
     SHOW_EXCEPTIONS = False
