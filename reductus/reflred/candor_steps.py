@@ -416,13 +416,15 @@ def attenuation(data, transmission=None, transmission_err=None, target_value=Non
     if target_value is not None:
         data.attenuator.target_value = np.array(target_value)
 
-    num_attenuators = data.attenuator.transmission.shape[0]
+    av = data.attenuator.target_value
+    target_values = np.unique(av)
 
-    for ai in range(1, num_attenuators+1):
-        av = data.attenuator.target_value
-        matching = (av == ai)
-        if not np.any(matching):
+    for ai in target_values:
+        if ai == 0:
+            # No attenuation when target_value = 0, so skip
             continue
+        # Find all the data points with this attenuator setting
+        matching = (av == ai)
 
         trans = data.attenuator.transmission[ai-1][None, :, None]
         trans_err = data.attenuator.transmission_err
