@@ -5,6 +5,7 @@ from copy import copy
 import numpy as np
 
 from reductus.dataflow.lib.exporters import exports_json
+from reductus.dataflow.data import todict
 
 from .refldata import ReflData, Intent, Group, Detector, set_fields
 from .nexusref import load_nexus_entries, nexus_common, get_pol
@@ -432,7 +433,7 @@ class Candor(ReflData):
         # One z per detector bank
         #z = [data[..., k].ravel('F').tolist() for k in range(data.shape[-1])]
         # One z with banks back-to-back
-        z = [data.ravel('F').tolist()]
+        z = [data.ravel('F')]
         #print("data", data.shape, dims, len(z))
         plottable = {
             'type': '2d_multi',
@@ -447,7 +448,7 @@ class Candor(ReflData):
             'ztransform': 'log',
         }
         #print(plottable)
-        return plottable
+        return todict(plottable)
 
     # TODO: Define export format for partly reduced PSD data.
     @exports_json("json")
