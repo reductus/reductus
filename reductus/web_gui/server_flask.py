@@ -50,6 +50,23 @@ def create_app(config=None):
             return redirect(posixpath.join(STATIC_FOLDER, DIST_PATH, CLIENT))
         else:
             return redirect(posixpath.join(STATIC_FOLDER, CLIENT))
+        
+    @app.route('/<instrument>')
+    def use_instrument(instrument):
+        # A simplified interface to load a specific instrument
+        # This uses the existing GET structure, but is a bit less strict on the name
+        known_instruments = api.list_instruments()
+        # Explicitly coerce the instrument name to a lower-case string
+        instrument = str(instrument).lower()
+        # Get base URL
+        initial_redirect = root()
+        if instrument not in known_instruments:
+            # Allow for { vsans | sans | refl } instead of ncnr.{ vsans | sans | refl }
+            instrument = f"ncnr.{instrument}"
+        if instrument in known_instruments:
+            # If the name passed matches a known instrument, set the redirect location to include the instrument
+            initial_redirect.location = f"{redir.location}?instrument={instrument}"
+        return initial_redirect
 
     @app.route('/robots.txt')
     def static_from_root():
