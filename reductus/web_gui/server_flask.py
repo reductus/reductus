@@ -63,10 +63,8 @@ def create_app(config=None):
         if instrument not in known_instruments and config.get('instrument_prefix', None):
             # Allow passed instrument name to be { vsans | sans | refl } instead of ncnr.{ vsans | sans | refl }
             instrument = f"{config.get('instrument_prefix')}.{instrument}"
-        if instrument in known_instruments:
-            # If the name passed matches a known instrument, set the redirect location to include the instrument
-            initial_redirect.location = f"{redir.location}?instrument={instrument}"
-            initial_redirect.location = f"{initial_redirect.location}?instrument={instrument}"
+        # Regardless of the resulting instrument name, attempt to load the instrument and let the client manage
+        initial_redirect.location = f"{initial_redirect.location}?instrument={instrument}"
         return initial_redirect
 
     @app.route('/robots.txt')

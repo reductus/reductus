@@ -690,7 +690,15 @@ editor.switch_instrument = async function(instrument_id, load_default=true) {
   // load_default_template is a boolean: true if you want to do that action
   // (defaults to true)
   if (instrument_id !== editor._instrument_id) {
-    let instrument_def = await this.load_instrument(instrument_id);
+    let original_id = editor._instrument_id;
+    let instrument_def = Object;
+    try {
+      instrument_def = await this.load_instrument(instrument_id);
+    }
+    catch (error) {
+      alert("Unable to load instrument " + instrument_id + ". Loading the default instrument instead.")
+      instrument_def = await this.load_instrument(original_id);
+    }
     let categories = editor.instruments[instrument_id].categories;
     let old_categories = vueMenu.instance.categories;
     old_categories.splice(0, old_categories.length, ...categories);
