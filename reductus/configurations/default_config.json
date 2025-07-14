@@ -23,5 +23,6 @@
         }
     ],
     "instruments": ["refl", "ospec", "sans"],
-    "show_exceptions": true
+    "show_exceptions": true,
+    "instrument_prefix": "ncnr"
 }
