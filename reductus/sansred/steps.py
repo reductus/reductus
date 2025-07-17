@@ -1522,13 +1522,13 @@ def absolute_scaling(empty, sample, Tsam, div, instrument="NG7", integration_box
 
     **Inputs**
 
-    empty (sans2d): measurement with no sample in the beam
-
     sample (sans2d): measurement with sample in the beam
+
+    div (sans2d): DIV measurement
 
     Tsam (params): sample transmission
 
-    div (sans2d): DIV measurement
+    empty (sans2d): measurement with no sample in the beam
 
     instrument (opt:NG7|NGB|NGB30): instrument name, should be NG7 or NG3
 
@@ -1548,6 +1548,7 @@ def absolute_scaling(empty, sample, Tsam, div, instrument="NG7", integration_box
     | 2017-01-13 Andrew Jackson
     | 2019-07-04 Brian Maranville
     | 2019-07-14 Brian Maranville
+    | 2025-07-17 Jeff Krzywon
     """
         # data (that is going through reduction), empty beam,
     # div, Transmission of the sample, instrument(NG3.NG5, NG7)
