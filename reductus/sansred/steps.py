@@ -1119,10 +1119,18 @@ def rescale_1d(data, scale=1.0, dscale=0.0):
     """
     from reductus.dataflow.lib import err1d
 
-    I, varI = err1d.mul(data.v, data.dv, scale, dscale**2)
-    data.v, data.dv = I, varI
+    # Allow for either raw or reduced data without having to differentiate upfront
+    intensity = data.v if hasattr(data, 'v') else data.I
+    uncertainty = data.dv if hasattr(data, 'dv') else data.dI
+
+    I, varI = err1d.mul(intensity, uncertainty, scale, dscale**2)
+    if hasattr(data, 'v'):
+        data.v, data.dv = I, varI
+    else:
+        data.I, data.dI = I, varI
     
     return data
+
 
 @module
 def correct_detector_efficiency(sansdata):
