@@ -34,11 +34,11 @@
         "do_mon_norm": false,
         "do_det_eff": true
       },
-      "y": 140,
-      "title": "open trans"
+      "y": 155,
+      "title": "empty trans"
     },
     {
-      "x": 5,
+      "x": 10,
       "module": "ncnr.sans.SuperLoadSANS",
       "config": {
         "filelist": [],
@@ -46,13 +46,13 @@
         "do_atten_correct": true,
         "do_det_eff": true
       },
-      "y": 110,
+      "y": 125,
       "title": "sample trans"
     },
     {
-      "x": 255,
+      "x": 200,
       "module": "ncnr.sans.generate_transmission",
-      "y": 110,
+      "y": 155,
       "title": "Gen trans",
       "config": {
         "align_by": "",
@@ -83,27 +83,27 @@
       "title": "Subtract"
     },
     {
-      "x": 230,
+      "x": 200,
       "module": "ncnr.sans.subtract",
-      "y": 55,
+      "y": 65,
       "title": "Subtract"
     },
     {
-      "x": 380,
+      "x": 365,
       "module": "ncnr.sans.product",
-      "y": 30,
+      "y": 35,
       "title": "Product"
     },
     {
-      "x": 515,
+      "x": 525,
       "module": "ncnr.sans.subtract",
       "y": 5,
       "title": "Subtract"
     },
     {
-      "x": 935,
+      "x": 895,
       "module": "ncnr.sans.absolute_scaling",
-      "y": 50,
+      "y": 35,
       "title": "Abs Scale",
       "config": {
         "auto_box": false,
@@ -118,8 +118,8 @@
     {
       "module": "ncnr.sans.LoadDIV",
       "title": "DIV",
-      "x": 590,
-      "y": 140,
+      "x": 525,
+      "y": 65,
       "config": {
         "filelist": [
           {
@@ -136,8 +136,8 @@
     {
       "module": "ncnr.sans.PixelsToQ",
       "title": "Pixelstoq",
-      "x": 1085,
-      "y": 50,
+      "x": 1045,
+      "y": 35,
       "config": {
         "correct_solid_angle": true
       }
@@ -145,8 +145,8 @@
     {
       "module": "ncnr.sans.circular_av_new",
       "title": "Circular Av New",
-      "x": 1230,
-      "y": 50,
+      "x": 1190,
+      "y": 35,
       "config": {
         "dQ_method": "IGOR",
         "mask_width": 3
@@ -155,17 +155,32 @@
     {
       "module": "ncnr.sans.correct_detector_sensitivity",
       "title": "Div Correction",
-      "x": 725,
+      "x": 685,
       "y": 5
     },
     {
       "module": "ncnr.sans.SuperLoadSANS",
-      "title": "empty trans",
-      "x": 755,
-      "y": 50,
+      "title": "open beam trans",
+      "x": 480,
+      "y": 155,
       "config": {
         "filelist": [],
         "do_mon_norm": false
+      }
+    },
+    {
+      "x": 685,
+      "module": "ncnr.sans.generate_transmission",
+      "y": 95,
+      "title": "Gen trans",
+      "config": {
+        "align_by": "",
+        "integration_box": [
+          58.05363984674328,
+          74,
+          57.86973180076629,
+          72
+        ]
       }
     }
   ],
@@ -282,16 +297,6 @@
     },
     {
       "source": [
-        4,
-        "output"
-      ],
-      "target": [
-        10,
-        "Tsam"
-      ]
-    },
-    {
-      "source": [
         10,
         "abs"
       ],
@@ -348,6 +353,36 @@
       "target": [
         10,
         "empty"
+      ]
+    },
+    {
+      "source": [
+        16,
+        "output"
+      ],
+      "target": [
+        10,
+        "Tsam"
+      ]
+    },
+    {
+      "source": [
+        3,
+        "output"
+      ],
+      "target": [
+        16,
+        "in_beam"
+      ]
+    },
+    {
+      "source": [
+        15,
+        "output"
+      ],
+      "target": [
+        16,
+        "empty_beam"
       ]
     }
   ]
