@@ -1098,6 +1098,7 @@ def sector_cut(data, sector=[0.0, 90.0], mirror=True):
 
     return nominal_output, mean_output
 
+
 @module
 def rescale_1d(data, scale=1.0, dscale=0.0):
     """
@@ -2054,3 +2055,46 @@ def getPoissonUncertainty(y):
     lo = -0.5+np.sqrt(y+0.25)
     #return {"yupper": y+hi, "ylower": y-lo, "hi": hi, "lo": lo}
     return {"yupper": y+hi, "ylower": y-lo}
+
+
+@module
+def sort_n_data_sets(data: [SansIQData], excluded_points: [(int, int)], auto_scale_to: int | None = None,
+                     scaling_factors: [float] | int | None = None):
+    """A module that allows the user to combine multiple reduced 1D data sets together. This is a similar process to the
+    NSORT function in the Igor Pro macros. This will optionally scale each data set by a defined amount and then exclude
+    a number of points from each end of the data set. The primary reason for performing this task is to combine multiple
+    instrument configurations together that were measured at the same sample condition.
+
+    A number of scaling options are available, including the default, which is to not scale data sets at all. Scaling
+    relative to a single data set requires
+    """
+    # TODO: This needs to accept any number of data sets, the scaling method (auto scale to specific data, scale by
+    #  inputs, don't scale), and the number of data points on each end that are being removed
+    # TODO: The 'removed' point should still be shown in the resulting chart to allow the user to see what points have
+    #  been masked out, but should be greyed out or very transparent
+    #
+    if scaling_factors is None or not any(scaling_factors):
+        # Ensure scaling factors are all 1 for cases where the data should not be scaled, or no factors are given
+        scaling_factors = [1] * len(data)
+    # Create a data object so we aren't modifying the underlying data that will be displayed
+    scaled_data = SansIQData(np.zeros(0), np.zeros(0), np.zeros(0), np.zeros(0), np.zeros(0), np.zeros(0))
+    for datum, scale, exclude in zip(data, scaling_factors, excluded_points):
+        # Scale the intensity by the scaling factor
+        if auto_scale_to is not None:
+            # TODO: Calculate the scale relative to another data set
+            scale = scale
+        datum = rescale_1d(datum, scale)
+        # Cut all data outside the region of interest
+        datum.set_q_limits(exclude[0], exclude[1])
+        new_data = datum.q_cutoff
+        scaled_data.append_1d_data_set(new_data)
+    return scaled_data
+
+
+def _get_scaling_factor_between_data(scale_to_data: SansIQData, data_to_be_scaled: SansIQData) -> float:
+    overlap = (min(data_to_be_scaled.Q), max(scale_to_data.Q)) if max(scale_to_data.Q) > min(data_to_be_scaled.Q) \
+        else (max(data_to_be_scaled.Q), min(scale_to_data.Q))
+    # Slice data at limits after determining if you slice the upper or lower section
+    # Sum all values in the sliced section
+    # Divide scale_to_data sum by data_to_be_scaled sum
+    return np.sum(scale_to_data)
