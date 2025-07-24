@@ -190,6 +190,7 @@ class SansData(object):
         metadata.update(_toDictItem(self.metadata, convert_bytes=True))
         return metadata
 
+
 class Sans1dData(object):
     properties = ['x', 'v', 'dx', 'dv', 'xlabel', 'vlabel', 'xunits', 'vunits', 'xscale', 'vscale', 'metadata', 'fit_function']
 
@@ -256,16 +257,46 @@ class Sans1dData(object):
             "value": value.decode('utf-8'),
         }
 
+
 class SansIQData(object):
     def __init__(self, I=None, dI=None, Q=None, dQ=None, meanQ=None, ShadowFactor=None, label='', metadata=None):
-        self.I = I
-        self.dI = dI
-        self.Q = Q
-        self.dQ = dQ
-        self.meanQ = meanQ
-        self.ShadowFactor = ShadowFactor
+        self.I = I if I is not None else np.zeros_like(0)
+        self.dI = dI if dI is not None else np.zeros_like(0)
+        self.Q = Q if Q is not None else np.zeros_like(0)
+        self.dQ = dQ if dQ is not None else np.zeros_like(0)
+        self.meanQ = meanQ if meanQ is not None else np.zeros_like(0)
+        self.ShadowFactor = ShadowFactor if ShadowFactor is not None else np.zeros_like(0)
         self.label = label
         self.metadata = metadata if metadata is not None else {}
+        self._q_point_cutoffs: (int, int) = None
+
+    def q_cutoff(self) -> SansIQData:
+        if self._q_point_cutoffs is None:
+            # If no limits have been set, no truncation
+            self._q_point_cutoffs = (0, -1)
+        lo, hi = self._q_point_cutoffs
+        # Ensure all arrays are different memory objects when passing them to the new data object
+        data = SansIQData(copy(self.I[lo:hi]) if self.I is not None else None,
+                          copy(self.dI[lo:hi]) if self.dI is not None else None,
+                          copy(self.Q[lo:hi]) if self.Q is not None else None,
+                          copy(self.dQ[lo:hi] )if self.dQ is not None else None,
+                          copy(self.meanQ[lo:hi]) if self.meanQ is not None else None,
+                          copy(self.ShadowFactor[lo:hi]) if self.ShadowFactor is not None else None,
+                          copy(self.label),
+                          copy(self.metadata))
+        return data
+
+    def set_q_limits(self, lo: int | float = 0, hi: int | float = -1):
+        # Allow the user to either send an integer index or a Q value. The chance a Q value being a whole number is low
+        if lo in self.Q:
+            # If lo is a Q point, find the first index matching the Q value
+            limit_lo = np.where(self.Q == lo)
+            lo = limit_lo[0]
+        if hi in self.Q:
+            # If hi is a Q point, find the last index matching the Q value
+            limit_hi = np.where(self.Q == hi)
+            hi = limit_hi[-1]
+        self._q_point_cutoffs = (lo, hi)
     
     def get_plottable(self):
         columns = OrderedDict([
@@ -370,6 +401,26 @@ class SansIQData(object):
             "file_suffix": ".sansIQ.nx.h5",
             "value": h5_item,
         }
+
+    def append_1d_data_set(self, data: SansIQData):
+        """Concatenate another data set with the existing one. The resulting data arrays will be sorted """
+        # Create concatenated Q array
+        self.Q.concatenate(data.Q)
+        # Determine order of Q values based in current index
+        indices = np.argsort(self.Q)
+        # Reorder Q array using the indices
+        self.Q.sort(order=indices)
+        # Concatenate and reorder remaining data arrays if they exist in both data sets
+        self.I.concatenate(data.I).sort(order=indices)
+        if self.dI is not None and data.dI is not None:
+            self.dI.concatenate(data.dI).sort(order=indices)
+        if self.dQ is not None and data.dQ is not None:
+            self.dQ.concatenate(data.dQ).sort(order=indices)
+        if self.meanQ is not None and data.meanQ is not None:
+            self.meanQ.concatenate(data.meanQ).sort(order=indices)
+        if self.ShadowFactor is not None and data.ShadowFactor is not None:
+            self.ShadowFactor.concatenate(data.ShadowFactor).sort(order=indices)
+
 
 class Parameters(object):
     def __init__(self, params=None):
