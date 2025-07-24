@@ -11,8 +11,7 @@
         "do_deadtime": true
       },
       "y": 5,
-      "title": "sample",
-      "text_width": 64
+      "title": "sample"
     },
     {
       "x": 10,
@@ -24,8 +23,7 @@
         "do_det_eff": true
       },
       "y": 65,
-      "title": "empty cell",
-      "text_width": 85
+      "title": "empty cell"
     },
     {
       "x": 10,
@@ -37,8 +35,7 @@
         "do_det_eff": true
       },
       "y": 155,
-      "title": "empty trans",
-      "text_width": 96
+      "title": "empty trans"
     },
     {
       "x": 10,
@@ -50,8 +47,7 @@
         "do_det_eff": true
       },
       "y": 125,
-      "title": "sample trans",
-      "text_width": 104
+      "title": "sample trans"
     },
     {
       "x": 200,
@@ -66,8 +62,7 @@
           57.86973180076629,
           72
         ]
-      },
-      "text_width": 80
+      }
     },
     {
       "x": 10,
@@ -79,36 +74,31 @@
         "do_det_eff": true
       },
       "y": 35,
-      "title": "blocked",
-      "text_width": 67
+      "title": "blocked"
     },
     {
       "x": 200,
       "module": "ncnr.sans.subtract",
       "y": 5,
-      "title": "Subtract",
-      "text_width": 71
+      "title": "Subtract"
     },
     {
       "x": 200,
       "module": "ncnr.sans.subtract",
       "y": 65,
-      "title": "Subtract",
-      "text_width": 71
+      "title": "Subtract"
     },
     {
       "x": 365,
       "module": "ncnr.sans.product",
       "y": 35,
-      "title": "Product",
-      "text_width": 67
+      "title": "Product"
     },
     {
       "x": 525,
       "module": "ncnr.sans.subtract",
       "y": 5,
-      "title": "Subtract",
-      "text_width": 71
+      "title": "Subtract"
     },
     {
       "x": 895,
@@ -123,8 +113,7 @@
           56,
           73
         ]
-      },
-      "text_width": 83
+      }
     },
     {
       "module": "ncnr.sans.LoadDIV",
@@ -142,8 +131,7 @@
             ]
           }
         ]
-      },
-      "text_width": 36
+      }
     },
     {
       "module": "ncnr.sans.PixelsToQ",
@@ -152,8 +140,7 @@
       "y": 35,
       "config": {
         "correct_solid_angle": true
-      },
-      "text_width": 77
+      }
     },
     {
       "module": "ncnr.sans.circular_av_new",
@@ -163,15 +150,13 @@
       "config": {
         "dQ_method": "IGOR",
         "mask_width": 3
-      },
-      "text_width": 125
+      }
     },
     {
       "module": "ncnr.sans.correct_detector_sensitivity",
       "title": "Div Correction",
       "x": 685,
-      "y": 5,
-      "text_width": 113
+      "y": 5
     },
     {
       "module": "ncnr.sans.SuperLoadSANS",
@@ -181,8 +166,7 @@
       "config": {
         "filelist": [],
         "do_mon_norm": false
-      },
-      "text_width": 132
+      }
     },
     {
       "x": 685,
@@ -197,8 +181,7 @@
           57.86973180076629,
           72
         ]
-      },
-      "text_width": 80
+      }
     }
   ],
   "wires": [
