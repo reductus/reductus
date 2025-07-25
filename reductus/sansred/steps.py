@@ -2068,33 +2068,42 @@ def sort_n_data_sets(data: [SansIQData], excluded_points: [(int, int)], auto_sca
     A number of scaling options are available, including the default, which is to not scale data sets at all. Scaling
     relative to a single data set requires
     """
-    # TODO: This needs to accept any number of data sets, the scaling method (auto scale to specific data, scale by
-    #  inputs, don't scale), and the number of data points on each end that are being removed
-    # TODO: The 'removed' point should still be shown in the resulting chart to allow the user to see what points have
-    #  been masked out, but should be greyed out or very transparent
-    #
     if scaling_factors is None or not any(scaling_factors):
         # Ensure scaling factors are all 1 for cases where the data should not be scaled, or no factors are given
         scaling_factors = [1] * len(data)
-    # Create a data object so we aren't modifying the underlying data that will be displayed
+    # Create a data object, so we aren't modifying the underlying data that will be displayed
     scaled_data = SansIQData(np.zeros(0), np.zeros(0), np.zeros(0), np.zeros(0), np.zeros(0), np.zeros(0))
     for datum, scale, exclude in zip(data, scaling_factors, excluded_points):
         # Scale the intensity by the scaling factor
         if auto_scale_to is not None:
-            # TODO: Calculate the scale relative to another data set
-            scale = scale
-        datum = rescale_1d(datum, scale)
+            scale = _get_scaling_factor_between_data(data[auto_scale_to].Q, datum.Q)
         # Cut all data outside the region of interest
         datum.set_q_limits(exclude[0], exclude[1])
-        new_data = datum.q_cutoff
+        new_data = rescale_1d(datum, scale)
         scaled_data.append_1d_data_set(new_data)
     return scaled_data
 
 
-def _get_scaling_factor_between_data(scale_to_data: SansIQData, data_to_be_scaled: SansIQData) -> float:
-    overlap = (min(data_to_be_scaled.Q), max(scale_to_data.Q)) if max(scale_to_data.Q) > min(data_to_be_scaled.Q) \
-        else (max(data_to_be_scaled.Q), min(scale_to_data.Q))
+def find_nearest(array : np.ndarray, value: float) -> float:
+    array = np.asarray(array)
+    idx = (np.abs(array - value)).argmin()
+    return array[idx]
+
+
+def _get_scaling_factor_between_data(scale_to_data: np.ndarray, data_to_be_scaled: np.ndarray) -> float:
+    if min(data_to_be_scaled) > min(scale_to_data):
+        # Overlap is on the high-Q end of the data to be scaled
+        scale_to_upper_index = np.where(scale_to_data == find_nearest(scale_to_data, np.max(data_to_be_scaled)))[0]
+        scaled_lower_index = np.where(data_to_be_scaled == find_nearest(data_to_be_scaled, np.min(scale_to_data)))[0]
+        numerator = np.sum(data_to_be_scaled[scaled_lower_index:])
+        denominator = np.sum(scale_to_data[:scale_to_upper_index])
+    else:
+        # Overlap is on the low-Q end of the data to be scaled
+        scaled_upper_index = np.where(scale_to_data == find_nearest(scale_to_data, np.min(data_to_be_scaled)))[0]
+        scale_to_lower_index = np.where(data_to_be_scaled == find_nearest(data_to_be_scaled, np.max(scale_to_data)))[0]
+        numerator = np.sum(data_to_be_scaled[:scaled_upper_index])
+        denominator = np.sum(scale_to_data[scale_to_lower_index:])
     # Slice data at limits after determining if you slice the upper or lower section
     # Sum all values in the sliced section
     # Divide scale_to_data sum by data_to_be_scaled sum
-    return np.sum(scale_to_data)
+    return numerator / denominator
