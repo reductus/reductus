@@ -403,24 +403,24 @@ class SansIQData(object):
             "value": h5_item,
         }
 
-    def append_1d_data_set(self, data: SansIQData):
+    def append_1d_data_set(self, data):
         """Concatenate another data set with the existing one. The resulting data arrays will be sorted """
         # Create concatenated Q array
-        self.Q.concatenate(data.Q)
+        self.Q = np.concatenate((self.Q, data.Q))
         # Determine order of Q values based in current index
         indices = np.argsort(self.Q)
         # Reorder Q array using the indices
-        self.Q.sort(order=indices)
+        self.Q[indices]
         # Concatenate and reorder remaining data arrays if they exist in both data sets
-        self.I.concatenate(data.I).sort(order=indices)
+        self.I = np.concatenate((self.I, data.I))[indices]
         if self.dI is not None and data.dI is not None:
-            self.dI.concatenate(data.dI).sort(order=indices)
+            self.dI = np.concatenate((self.dI, data.dI))[indices]
         if self.dQ is not None and data.dQ is not None:
-            self.dQ.concatenate(data.dQ).sort(order=indices)
+            self.dQ = np.concatenate((self.dQ, data.dQ))[indices]
         if self.meanQ is not None and data.meanQ is not None:
-            self.meanQ.concatenate(data.meanQ).sort(order=indices)
+            self.meanQ = np.concatenate((self.meanQ, data.meanQ))[indices]
         if self.ShadowFactor is not None and data.ShadowFactor is not None:
-            self.ShadowFactor.concatenate(data.ShadowFactor).sort(order=indices)
+            self.ShadowFactor = np.concatenate((self.ShadowFactor, data.ShadowFactor))[indices]
 
 
 class Parameters(object):
