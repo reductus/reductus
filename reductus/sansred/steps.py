@@ -1098,6 +1098,7 @@ def sector_cut(data, sector=[0.0, 90.0], mirror=True):
 
     return nominal_output, mean_output
 
+
 @module
 def rescale_1d(data, scale=1.0, dscale=0.0):
     """
@@ -1119,10 +1120,18 @@ def rescale_1d(data, scale=1.0, dscale=0.0):
     """
     from reductus.dataflow.lib import err1d
 
-    I, varI = err1d.mul(data.v, data.dv, scale, dscale**2)
-    data.v, data.dv = I, varI
+    # Allow for either raw or reduced data without having to differentiate upfront
+    intensity = data.v if hasattr(data, 'v') else data.I
+    uncertainty = data.dv if hasattr(data, 'dv') else data.dI
+
+    I, varI = err1d.mul(intensity, uncertainty, scale, dscale**2)
+    if hasattr(data, 'v'):
+        data.v, data.dv = I, varI
+    else:
+        data.I, data.dI = I, varI
     
     return data
+
 
 @module
 def correct_detector_efficiency(sansdata):
@@ -2046,3 +2055,137 @@ def getPoissonUncertainty(y):
     lo = -0.5+np.sqrt(y+0.25)
     #return {"yupper": y+hi, "ylower": y-lo, "hi": hi, "lo": lo}
     return {"yupper": y+hi, "ylower": y-lo}
+
+
+@module
+def scale_to_data(data_to_scale: SansIQData | Sans1dData, data_to_scale_by: SansIQData | Sans1dData) -> SansIQData | Sans1dData:
+    """Scale a data set relative to another data set.
+
+    **Inputs**
+
+    data_to_scale (sans1d): SANS 1D to be scaled
+
+    data_to_scale_by (sans1d): SANS 1D the data set should be scaled to
+
+    **Returns**
+
+    output(sans1d): A scaled 1D SANS data set
+
+    | 2025-07-30 Jeff Krzywon initial implementation
+    """
+    scaling_factor = 1.0
+    if data_to_scale_by is not None:
+        scaling_factor = _get_scaling_factor_between_data(data_to_scale, data_to_scale_by)
+    data_to_scale.scaling_factor = scaling_factor
+    return data_to_scale
+
+
+@module
+def scale_by_factor(data_to_scale: SansIQData | Sans1dData, scaling_factor: float = 1.0) -> SansIQData | Sans1dData:
+    """Scale a data set relative to another data set.
+
+    **Inputs**
+
+    data_to_scale (sans1d): SANS 1D to be scaled
+
+    scaling_factor (float): The factor to scale a dataset by
+
+    **Returns**
+
+    output(sans1d): A scaled 1D SANS data set
+
+    | 2025-07-30 Jeff Krzywon initial implementation
+    """
+    new_data = rescale_1d(data_to_scale, scaling_factor)
+    return new_data
+
+
+@module
+def set_q_limits(data: SansIQData | Sans1dData, lower_q: float = 0, upper_q: float = -1) -> SansIQData | Sans1dData:
+    """Scale a data set relative to another data set.
+
+    **Inputs**
+
+    data (sans1d): SANS 1D to be scaled
+
+    lower_q (float): The lowest Q value to accept from the data set
+
+    upper_q (float): The highest Q value to accept from the data set
+
+    **Returns**
+
+    output(sans1d): A scaled 1D SANS data set
+
+    | 2025-07-30 Jeff Krzywon initial implementation
+
+    """
+    data.set_q_limits(lower_q, upper_q)
+    return data.q_cutoff()
+
+
+@module
+def sort_n_data_sets(data: [SansIQData]):
+    """A module that allows the user to combine multiple reduced 1D data sets together. This is a similar process to the
+    NSORT function in the Igor Pro macros. This will optionally scale each data set by a defined amount and then exclude
+    a number of points from each end of the data set. The primary reason for performing this task is to combine multiple
+    instrument configurations together that were measured at the same sample condition.
+
+    :param data: A list of reduced data sets that will be combined.
+    :return: A single data set with all the other data sets scaled, and q cutoff points removed.
+
+    **Inputs**
+
+    data (sans1d[]): SANS 1D data reduced data
+
+    **Returns**
+
+    output (sans1d): A combined reduced data set with all points stitched together into a single data object
+
+    | 2025-07-29 Jeff Krzywon initial implementation
+    """
+    # Create a data object, so we aren't modifying the underlying data that will be displayed
+    scaled_data = SansIQData(np.zeros(0), np.zeros(0), np.zeros(0), np.zeros(0), np.zeros(0), np.zeros(0))
+    for datum in data:
+        # Get data with the q points cutoff
+        cutoff = datum.q_cutoff()
+        # Scale the intensity by the scaling factor
+        new_data = rescale_1d(cutoff, datum.scaling_factor)
+        scaled_data.append_1d_data_set(new_data)
+    return scaled_data
+
+
+def _find_nearest(array: np.ndarray, value: float) -> float:
+    """Find the value in an array closest to the seek value.
+
+    :param array: A numpy array of numerical values any dimension.
+    :param value: The value to compare to the array used to find the closest array value.
+    :return: The array value closest to the seek value.
+    """
+    array = np.asarray(array)
+    idx = (np.abs(array - value)).argmin()
+    return array[idx]
+
+
+def _get_scaling_factor_between_data(scale_to_data: np.ndarray, data_to_be_scaled: np.ndarray) -> float:
+    """Find the overlap region between two numerical arrays, and find the ratio of the sum of values in the overlap
+    region.
+
+    :param scale_to_data: A numerical array
+    """
+
+    if min(data_to_be_scaled) > min(scale_to_data):
+        # Overlap is on the high-Q end of the data to be scaled
+        scale_to_upper_index = np.where(scale_to_data == _find_nearest(scale_to_data, np.max(data_to_be_scaled)))[0]
+        scaled_lower_index = np.where(data_to_be_scaled == _find_nearest(data_to_be_scaled, np.min(scale_to_data)))[0]
+        numerator = np.sum(data_to_be_scaled[scaled_lower_index:])
+        denominator = np.sum(scale_to_data[:scale_to_upper_index])
+    else:
+        # Overlap is on the low-Q end of the data to be scaled
+        scaled_upper_index = np.where(scale_to_data == _find_nearest(scale_to_data, np.min(data_to_be_scaled)))[0]
+        scale_to_lower_index = np.where(data_to_be_scaled == _find_nearest(data_to_be_scaled, np.max(scale_to_data)))[0]
+        numerator = np.sum(data_to_be_scaled[:scaled_upper_index])
+        denominator = np.sum(scale_to_data[scale_to_lower_index:])
+    # Slice data at limits after determining if you slice the upper or lower section
+    # Sum all values in the sliced section
+    # Divide scale_to_data sum by data_to_be_scaled sum
+    return numerator / denominator
