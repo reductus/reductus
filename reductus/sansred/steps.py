@@ -2058,36 +2058,32 @@ def getPoissonUncertainty(y):
 
 
 @module
-def sort_n_data_sets(data: [SansIQData], excluded_points: [(int, int)], auto_scale_to: int | None = None,
-                     scaling_factors: [float] | int | None = None):
+def sort_n_data_sets(data: [SansIQData]):
     """A module that allows the user to combine multiple reduced 1D data sets together. This is a similar process to the
     NSORT function in the Igor Pro macros. This will optionally scale each data set by a defined amount and then exclude
     a number of points from each end of the data set. The primary reason for performing this task is to combine multiple
     instrument configurations together that were measured at the same sample condition.
 
-    A number of scaling options are available, including the default, which is to not scale data sets at all. Scaling
-    relative to a single data set requires overlap between the data sets being scaled, or a given scaling factor can
-    be given for each data set.
-
     :param data: A list of reduced data sets that will be combined.
-    :param excluded_points: A list of tuples where the list index matches the data index and the tuple gives the number
-        of points to exclude from the start and end of the data, respectively.
-    :param auto_scale_to: The data list index for the data set to scale all other data to.
-    :param scaling_factors: A list of values where the list index matches the data index and each value is a given
-        factor to scale the given data set.
+    :return: A single data set with all the other data sets scaled, and q cutoff points removed.
+
+    **Inputs**
+
+    data (sans1d[]): SANS 1D data reduced data
+
+    **Returns**
+
+    output (sans1d): A combined reduced data set with all points stitched together into a single data object
+
+    | 2025-07-29 Jeff Krzywon initial implementation
     """
-    if scaling_factors is None or not any(scaling_factors):
-        # Ensure scaling factors are all 1 for cases where the data should not be scaled, or no factors are given
-        scaling_factors = [1] * len(data)
     # Create a data object, so we aren't modifying the underlying data that will be displayed
     scaled_data = SansIQData(np.zeros(0), np.zeros(0), np.zeros(0), np.zeros(0), np.zeros(0), np.zeros(0))
-    for datum, scale, exclude in zip(data, scaling_factors, excluded_points):
-        # Cut all data outside the region of interest
-        datum.set_q_limits(exclude[0], exclude[1])
+    for datum in data:
+        # Get data with the q points cutoff
+        cutoff = datum.q_cutoff()
         # Scale the intensity by the scaling factor
-        if auto_scale_to is not None:
-            scale = _get_scaling_factor_between_data(data[auto_scale_to].Q, datum.Q)
-        new_data = rescale_1d(datum, scale)
+        new_data = rescale_1d(cutoff, datum.scaling_factor)
         scaled_data.append_1d_data_set(new_data)
     return scaled_data
 
