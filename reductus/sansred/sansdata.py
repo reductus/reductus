@@ -269,8 +269,9 @@ class SansIQData(object):
         self.label = label
         self.metadata = metadata if metadata is not None else {}
         self._q_point_cutoffs: (int, int) = None
+        self.scaling_factor: float = 1.0
 
-    def q_cutoff(self) -> SansIQData:
+    def q_cutoff(self):
         if self._q_point_cutoffs is None:
             # If no limits have been set, no truncation
             self._q_point_cutoffs = (0, -1)
