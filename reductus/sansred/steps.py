@@ -2058,6 +2058,72 @@ def getPoissonUncertainty(y):
 
 
 @module
+def scale_to_data(data_to_scale: SansIQData | Sans1dData, data_to_scale_by: SansIQData | Sans1dData) -> SansIQData | Sans1dData:
+    """Scale a data set relative to another data set.
+
+    **Inputs**
+
+    data_to_scale (sans1d): SANS 1D to be scaled
+
+    data_to_scale_by (sans1d): SANS 1D the data set should be scaled to
+
+    **Returns**
+
+    output(sans1d): A scaled 1D SANS data set
+
+    | 2025-07-30 Jeff Krzywon initial implementation
+    """
+    scaling_factor = 1.0
+    if data_to_scale_by is not None:
+        scaling_factor = _get_scaling_factor_between_data(data_to_scale, data_to_scale_by)
+    data_to_scale.scaling_factor = scaling_factor
+    return data_to_scale
+
+
+@module
+def scale_by_factor(data_to_scale: SansIQData | Sans1dData, scaling_factor: float = 1.0) -> SansIQData | Sans1dData:
+    """Scale a data set relative to another data set.
+
+    **Inputs**
+
+    data_to_scale (sans1d): SANS 1D to be scaled
+
+    scaling_factor (float): The factor to scale a dataset by
+
+    **Returns**
+
+    output(sans1d): A scaled 1D SANS data set
+
+    | 2025-07-30 Jeff Krzywon initial implementation
+    """
+    new_data = rescale_1d(data_to_scale, scaling_factor)
+    return new_data
+
+
+@module
+def set_q_limits(data: SansIQData | Sans1dData, lower_q: float = 0, upper_q: float = -1) -> SansIQData | Sans1dData:
+    """Scale a data set relative to another data set.
+
+    **Inputs**
+
+    data (sans1d): SANS 1D to be scaled
+
+    lower_q (float): The lowest Q value to accept from the data set
+
+    upper_q (float): The highest Q value to accept from the data set
+
+    **Returns**
+
+    output(sans1d): A scaled 1D SANS data set
+
+    | 2025-07-30 Jeff Krzywon initial implementation
+
+    """
+    data.set_q_limits(lower_q, upper_q)
+    return data.q_cutoff()
+
+
+@module
 def sort_n_data_sets(data: [SansIQData]):
     """A module that allows the user to combine multiple reduced 1D data sets together. This is a similar process to the
     NSORT function in the Igor Pro macros. This will optionally scale each data set by a defined amount and then exclude
