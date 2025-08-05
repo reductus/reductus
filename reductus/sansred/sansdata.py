@@ -207,6 +207,27 @@ class Sans1dData(object):
         self.vscale = vscale
         self.metadata = metadata if metadata is not None else {}
         self.fit_function = fit_function
+        self._q_mask: list[int] | None = None
+
+    def q_cutoff(self):
+        if self._q_mask is None:
+            # If no limits have been set, no truncation
+            self._q_mask = []
+        data = SansIQData(np.delete(self.v, self._q_mask) if self.v is not None else None,
+                          np.delete(self.dv, self._q_mask) if self.dv is not None else None,
+                          np.delete(self.x, self._q_mask) if self.x is not None else None,
+                          np.delete(self.dx, self._q_mask)if self.dx is not None else None,
+                          metadata=self.metadata)
+        return data
+
+    @property
+    def mask(self):
+        return self.q_cutoff()
+
+    @mask.setter
+    def mask(self, masked_points: list[int] | None = None):
+        # Allow the user to either send an integer index or a Q value. The chance a Q value being a whole number is low
+        self._q_mask = masked_points
 
     def to_dict(self):
         props = dict([(p, getattr(self, p, None)) for p in self.properties])
@@ -268,36 +289,31 @@ class SansIQData(object):
         self.ShadowFactor = ShadowFactor if ShadowFactor is not None else np.zeros_like(0)
         self.label = label
         self.metadata = metadata if metadata is not None else {}
-        self._q_point_cutoffs: (int, int) = None
+        self._q_mask: list[int] | None = None
         self.scaling_factor: float = 1.0
 
     def q_cutoff(self):
-        if self._q_point_cutoffs is None:
+        if self._q_mask is None:
             # If no limits have been set, no truncation
-            self._q_point_cutoffs = (0, -1)
-        lo, hi = self._q_point_cutoffs
-        # Ensure all arrays are different memory objects when passing them to the new data object
-        data = SansIQData(copy(self.I[lo:hi]) if self.I is not None else None,
-                          copy(self.dI[lo:hi]) if self.dI is not None else None,
-                          copy(self.Q[lo:hi]) if self.Q is not None else None,
-                          copy(self.dQ[lo:hi] )if self.dQ is not None else None,
-                          copy(self.meanQ[lo:hi]) if self.meanQ is not None else None,
-                          copy(self.ShadowFactor[lo:hi]) if self.ShadowFactor is not None else None,
-                          copy(self.label),
-                          copy(self.metadata))
+            self._q_mask = []
+        data = SansIQData(np.delete(self.I, self._q_mask) if self.I is not None else None,
+                          np.delete(self.dI, self._q_mask) if self.dI is not None else None,
+                          np.delete(self.Q, self._q_mask) if self.Q is not None else None,
+                          np.delete(self.dQ, self._q_mask)if self.dQ is not None else None,
+                          np.delete(self.meanQ, self._q_mask) if self.meanQ is not None else None,
+                          np.delete(self.ShadowFactor, self._q_mask) if self.ShadowFactor is not None else None,
+                          self.label,
+                          self.metadata)
         return data
 
-    def set_q_limits(self, lo: int | float = 0, hi: int | float = -1):
+    @property
+    def mask(self):
+        return self.q_cutoff()
+
+    @mask.setter
+    def mask(self, masked_points: list[int] | None = None):
         # Allow the user to either send an integer index or a Q value. The chance a Q value being a whole number is low
-        if lo in self.Q:
-            # If lo is a Q point, find the first index matching the Q value
-            limit_lo = np.where(self.Q == lo)
-            lo = limit_lo[0]
-        if hi in self.Q:
-            # If hi is a Q point, find the last index matching the Q value
-            limit_hi = np.where(self.Q == hi)
-            hi = limit_hi[-1]
-        self._q_point_cutoffs = (lo, hi)
+        self._q_mask = masked_points
     
     def get_plottable(self):
         columns = OrderedDict([
