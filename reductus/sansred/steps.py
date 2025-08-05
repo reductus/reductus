@@ -2101,25 +2101,31 @@ def scale_by_factor(data_to_scale: SansIQData | Sans1dData, scaling_factor: floa
 
 
 @module
-def set_q_limits(data: SansIQData | Sans1dData, lower_q: float = 0, upper_q: float = -1) -> SansIQData | Sans1dData:
-    """Scale a data set relative to another data set.
+def mask_1d_data(data: SansIQData | Sans1dData, mask_indices: list[int] = None) -> SansIQData | Sans1dData:
+    """
+    Identify and mask out user-specified points.
+
+    This defines the *mask* attribute of *data* to include all data
+    except those indicated in *mask_indices*.  Any previous mask is cleared.
+    The masked data are not actually removed from the data, since this
+    operation is done by *join*.
 
     **Inputs**
 
-    data (sans1d): SANS 1D to be scaled
+    data (sans1d) : background data which may contain specular point
 
-    lower_q (float): The lowest Q value to accept from the data set
-
-    upper_q (float): The highest Q value to accept from the data set
+    mask_indices (index[]*) : 0-origin data point indices to mask. For example,
+    *mask_indices=[1,4,6]* masks the 2nd, 5th and 7th point respectively. Each
+    dataset should have its own mask.
 
     **Returns**
 
-    output(sans1d): A scaled 1D SANS data set
+    output (sans1d) : masked data
 
-    | 2025-07-30 Jeff Krzywon initial implementation
-
+    | 2025-08-01 Jeff Krzywon: initial port of refl mask_points
     """
-    data.set_q_limits(lower_q, upper_q)
+    data = copy(data)
+    data.mask = mask_indices
     return data.q_cutoff()
 
 
