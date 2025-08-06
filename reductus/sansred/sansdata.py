@@ -290,7 +290,6 @@ class SansIQData(object):
         self.label = label
         self.metadata = metadata if metadata is not None else {}
         self._q_mask: list[int] | None = None
-        self.scaling_factor: float = 1.0
 
     def q_cutoff(self):
         if self._q_mask is None:
