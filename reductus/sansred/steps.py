@@ -1134,6 +1134,41 @@ def rescale_1d(data, scale=1.0, dscale=0.0):
 
 
 @module
+def shift_1d(data, shift=1.0, dshift=0.0):
+    """
+    Multiply 1d data by a scale factor
+
+    **Inputs**
+
+    data (sans1d): data in
+
+    shift (float) : amount to shift, one for each dataset
+
+    dshift {Scale err} (float:<0,inf>) : scale uncertainty for gaussian error propagation
+
+    **Returns**
+
+    output (sans1d) : shifted data
+
+    2025-08-05 Jeff Krzywon
+    """
+    from reductus.dataflow.lib import err1d
+
+    # Allow for either raw or reduced data without having to differentiate upfront
+    intensity = data.v if hasattr(data, 'v') else data.I
+    uncertainty = data.dv if hasattr(data, 'dv') else data.dI
+
+    # TODO: FIXME
+    I, varI = err1d.add(intensity, uncertainty, shift, dshift**2)
+    if hasattr(data, 'v'):
+        data.v, data.dv = I, varI
+    else:
+        data.I, data.dI = I, varI
+
+    return data
+
+
+@module
 def correct_detector_efficiency(sansdata):
     """
     Given a SansData object, corrects for the efficiency of the detection process
@@ -2076,8 +2111,8 @@ def scale_to_data(data_to_scale: SansIQData | Sans1dData, data_to_scale_by: Sans
     scaling_factor = 1.0
     if data_to_scale_by is not None:
         scaling_factor = _get_scaling_factor_between_data(data_to_scale, data_to_scale_by)
-    data_to_scale.scaling_factor = scaling_factor
-    return data_to_scale
+    new_data = rescale_1d(data_to_scale, scaling_factor)
+    return new_data
 
 
 @module
@@ -2097,6 +2132,49 @@ def scale_by_factor(data_to_scale: SansIQData | Sans1dData, scaling_factor: floa
     | 2025-07-30 Jeff Krzywon initial implementation
     """
     new_data = rescale_1d(data_to_scale, scaling_factor)
+    return new_data
+
+
+@module
+def shift_to_data(data_to_shift: SansIQData | Sans1dData, data_to_shift_to: SansIQData | Sans1dData) -> SansIQData | Sans1dData:
+    """Scale a data set relative to another data set.
+
+    **Inputs**
+
+    data_to_shift (sans1d): SANS 1D where the intensity is to be shifted by a fixed amount on all Q values
+
+    data_to_shift_to (sans1d): SANS 1D the data set should be shifted to match
+
+    **Returns**
+
+    output(sans1d): A 1D SANS data set that has been shifted
+
+    | 2025-08-05 Jeff Krzywon initial implementation
+    """
+    shifting_factor = 0.0
+    if data_to_shift_to is not None:
+        shifting_factor = _get_shifting_factor_between_data(data_to_shift, data_to_shift_to)
+    new_data = shift_1d(data_to_shift, shifting_factor)
+    return new_data
+
+
+@module
+def shift_by_factor(data_to_shift: SansIQData | Sans1dData, shifting_factor: float = 0.0) -> SansIQData | Sans1dData:
+    """Scale a data set relative to another data set.
+
+    **Inputs**
+
+    data_to_shift (sans1d): SANS 1D to be scaled
+
+    shifting_factor (float): The factor to scale a dataset by
+
+    **Returns**
+
+    output(sans1d): A scaled 1D SANS data set
+
+    | 2025-08-05 Jeff Krzywon initial implementation
+    """
+    new_data = shift_1d(data_to_shift, shifting_factor)
     return new_data
 
 
@@ -2195,3 +2273,29 @@ def _get_scaling_factor_between_data(scale_to_data: np.ndarray, data_to_be_scale
     # Sum all values in the sliced section
     # Divide scale_to_data sum by data_to_be_scaled sum
     return numerator / denominator
+
+
+def _get_shifting_factor_between_data(scale_to_data: np.ndarray, data_to_be_scaled: np.ndarray) -> float:
+    """Find the overlap region between two numerical arrays, and average difference between the regions
+
+    :param scale_to_data: A numerical array
+    """
+
+    if min(data_to_be_scaled) > min(scale_to_data):
+        # Overlap is on the high-Q end of the data to be scaled
+        scale_to_upper_index = np.where(scale_to_data == _find_nearest(scale_to_data, np.max(data_to_be_scaled)))[0]
+        scaled_lower_index = np.where(data_to_be_scaled == _find_nearest(data_to_be_scaled, np.min(scale_to_data)))[0]
+        a = np.sum(data_to_be_scaled[scaled_lower_index:])
+        b = np.sum(scale_to_data[:scale_to_upper_index])
+        npts = len(data_to_be_scaled) - scaled_lower_index
+    else:
+        # Overlap is on the low-Q end of the data to be scaled
+        scaled_upper_index = np.where(scale_to_data == _find_nearest(scale_to_data, np.min(data_to_be_scaled)))[0]
+        scale_to_lower_index = np.where(data_to_be_scaled == _find_nearest(data_to_be_scaled, np.max(scale_to_data)))[0]
+        a = np.sum(data_to_be_scaled[:scaled_upper_index])
+        b = np.sum(scale_to_data[scale_to_lower_index:])
+        npts = scaled_upper_index
+    # Slice data at limits after determining if you slice the upper or lower section
+    # Sum all values in the sliced section
+    # Divide scale_to_data sum by data_to_be_scaled sum
+    return (a - b) / npts
