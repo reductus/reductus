@@ -182,6 +182,12 @@
           72
         ]
       }
+    },
+    {
+      "x": 1375,
+      "module": "ncnr.sans.mask_1d_data",
+      "y": 35,
+      "title": "Trim Points"
     }
   ],
   "wires": [
@@ -383,6 +389,16 @@
       "target": [
         16,
         "empty_beam"
+      ]
+    },
+    {
+      "source": [
+        13,
+        "output"
+      ],
+      "target": [
+        17,
+        "data"
       ]
     }
   ]
