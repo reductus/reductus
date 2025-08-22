@@ -1,8 +1,7 @@
 "use strict";
 // SIDE-EFFECTS ONLY FOR NOW...
-import { extend } from './libraries.js';
-import { Split } from './libraries.js';
-import { zip } from './libraries.js';
+import Split from "split.js";
+// import zip from "zip";
 import { editor } from './editor.js';
 import { server_api } from './server_api/api_msgpack.js';
 import { filebrowser } from './filebrowser.js';
@@ -19,7 +18,7 @@ var active_reduction = {
   "config": {},
   "template": {}
 }
-app.current_instrument = "ncnr.refl";
+app.current_instrument = "ncnr.refl"; 
 app.stored_layout_sizes = null;
 
 var statusline_log = function (message) {
@@ -244,7 +243,7 @@ window.onload = async function () {
     },
     load_predefined(template_id) {
       let instrument_id = editor._instrument_id;
-      let template_copy = extend(true, {}, editor._instrument_def.templates[template_id]);
+  let template_copy = structuredClone(editor._instrument_def.templates[template_id]);
       editor.load_template(template_copy, null, null, instrument_id);
       // Remember this choice, to be used on next instrument switch:
       try {

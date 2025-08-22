@@ -1,5 +1,6 @@
 import {server_api} from './server_api/api_msgpack.js';
-import { extend, dataflowEditor, d3 } from './libraries.js';
+import { dataflowEditor } from "d3-science";
+import * as d3 from "d3";
 
 var debug = false;
 
@@ -206,13 +207,13 @@ window.onload = async function() {
               var old_index = this.getAttribute("index");
               module_index_lookup[old_index] = i;
             });
-            modules_to_copy = extend(true, [], modules_to_copy);
+            modules_to_copy = structuredClone(modules_to_copy);
             var wires_to_copy = [];
             datum.wires.forEach(function(w,i) { 
               var ks = w.source[0].toString(),
                   kt = w.target[0].toString();
               if (ks in module_index_lookup && kt in module_index_lookup) {
-                var new_wire = extend(true, {}, w);
+                var new_wire = structuredClone(w);
                 new_wire.source[0] = module_index_lookup[ks];
                 new_wire.target[0] = module_index_lookup[kt];
                 wires_to_copy.push(new_wire);
@@ -331,7 +332,7 @@ window.onload = async function() {
         d3.event.preventDefault();
         contextMenuShowing = true;
         
-        var to_paste = extend(true, {}, e._clipboard.content);
+        var to_paste = structuredClone(e._clipboard.content);
         var rx = e._clipboard.reference_pos[0];
         var ry = e._clipboard.reference_pos[1];
         // Build the popup            

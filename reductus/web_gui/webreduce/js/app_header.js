@@ -1,4 +1,4 @@
-import { Vue } from './libraries.js';
+import Vue from "vue";
 
 let template = `
 <div class="app">

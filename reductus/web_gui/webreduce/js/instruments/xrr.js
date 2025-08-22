@@ -1,4 +1,4 @@
-import {extend} from '../libraries.js';
+
 import { add_viewer_link, add_sample_description } from './decorators.js';
 const instrument = {};
 export default instrument;
@@ -60,7 +60,7 @@ instrument.load_file = load_refl;
 instrument.default_categories = [
   [["name"]], 
 ];
-instrument.categories = extend(true, [], instrument.default_categories);
+instrument.categories = structuredClone(instrument.default_categories);
 
 function add_range_indicators(node_list, leaf_list, node_parents, file_objs) {
   var propagate_up_levels = 2; // levels to push up xmin and xmax.

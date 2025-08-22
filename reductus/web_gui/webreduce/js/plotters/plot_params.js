@@ -1,4 +1,5 @@
-import { Tree, d3 } from '../libraries.js';
+import { default as Tree } from "@widgetjs/tree";
+import * as d3 from "d3";
 
 /**
  *

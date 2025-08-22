@@ -1,4 +1,4 @@
-import { Vue } from './libraries.js';
+import Vue from "vue";
 import { PlotControls } from './plotters/plot_controls.js';
 import { app } from './main.js';
 import { show_plots_nd } from './plotters/plot_nd.js';
