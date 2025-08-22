@@ -1,4 +1,4 @@
-import { Vue } from './libraries.js';
+import Vue from "vue";
 import { categoriesEditor } from './ui_components/categories_editor.js';
 
 let template = `

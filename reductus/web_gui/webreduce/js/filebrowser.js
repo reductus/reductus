@@ -5,7 +5,7 @@ export { filebrowser };
 import { editor } from './editor.js';
 import { server_api } from './server_api/api_msgpack.js';
 //import { makeSourceList } from './ui_components/sourcelist.js';
-import { Vue } from './libraries.js';
+import Vue from "vue";
 import { FilePanel } from './ui_components/file_panel.js';
 import { fieldUI } from './ui_components/fields_panel.js';
 

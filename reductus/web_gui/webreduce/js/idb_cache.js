@@ -1,4 +1,4 @@
-import { idb } from './libraries.js';
+import * as idb from "idb";
 
 export class Cache {
   constructor(dbname = 'calculations', storename = 'calculations') {

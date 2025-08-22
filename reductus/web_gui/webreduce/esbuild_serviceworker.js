@@ -18,9 +18,9 @@ await esbuild.build({
   target: 'es2016',
   plugins: [
     alias({
-      './libraries.js': path.resolve(__dirname, `js/libraries_production.js`),
-      '../libraries.js': path.resolve(__dirname, `js/libraries_production.js`),
-      '../../libraries.js': path.resolve(__dirname, `js/libraries_production.js`),
+      // './libraries.js': path.resolve(__dirname, `js/libraries_production.js`),
+      // '../libraries.js': path.resolve(__dirname, `js/libraries_production.js`),
+      // '../../libraries.js': path.resolve(__dirname, `js/libraries_production.js`),
       './server_api/api_msgpack.js': path.resolve(__dirname, 'js/server_api/api_serviceworker.js')
     }),
   ],
@@ -45,4 +45,4 @@ copyRecursiveSync('index.html', 'dist_serviceworker/index.html', mode);
 copyRecursiveSync('favicon.ico', 'dist_serviceworker/favicon.ico', mode);
 copyRecursiveSync('img', 'dist_serviceworker/img', mode);
 copyRecursiveSync('js/server_api/sw.js', 'dist_serviceworker/sw.js', mode);
-copyRecursiveSync('../../dist', 'dist_serviceworker', mode)
+copyRecursiveSync('../../../dist', 'dist_serviceworker', mode)

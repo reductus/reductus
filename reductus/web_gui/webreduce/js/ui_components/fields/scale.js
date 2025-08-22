@@ -1,4 +1,5 @@
-import { d3, extend, scaleInteractor } from '../../libraries.js';
+import * as d3 from "d3";
+import { scaleInteractor } from "d3-science";
 import { plotter } from '../../plot.js';
 
 let template = `
@@ -22,7 +23,7 @@ export const ScaleUi = {
   computed: {
     dimensioned_value() {
       if (this.value != null) {
-        return extend(true, [], this.value);
+        return structuredClone(this.value);
       }
       else {
         let default_value = (this.field.default != null) ? this.field.default : 1;

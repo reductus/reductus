@@ -1,4 +1,4 @@
-import { yaml_load } from './libraries.js';
+import { load as yaml_load } from "js-yaml";
 
 const signatures = [
   ['json', [123]], // just the { character
