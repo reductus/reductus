@@ -1,11 +1,11 @@
+import * as d3 from "d3";
 import {
-  d3,
   rectangleInteractor,
   ellipseInteractor,
   xSliceInteractor,
   ySliceInteractor,
   angleSliceInteractor
-} from '../../libraries.js';
+} from 'd3-science';
 import { plotter } from '../../plot.js';
 
 let template = `
