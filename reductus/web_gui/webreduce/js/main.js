@@ -1,6 +1,9 @@
 "use strict";
 // SIDE-EFFECTS ONLY FOR NOW...
 import Split from "split.js";
+import Vue from "vue";
+import VueMaterial from 'vue-material';
+Vue.use(VueMaterial);
 // import zip from "zip";
 import { editor } from './editor.js';
 import { server_api } from './server_api/api_msgpack.js';

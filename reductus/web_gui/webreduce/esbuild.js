@@ -20,6 +20,7 @@ await esbuild.build({
       // './libraries.js': path.resolve(__dirname, `js/libraries_production.js`),
       // '../libraries.js': path.resolve(__dirname, `js/libraries_production.js`),
       // '../../libraries.js': path.resolve(__dirname, `js/libraries_production.js`)
+      "vue": path.resolve(__dirname, `node_modules/vue/dist/vue.esm.js`),
     }),
   ],
 }).catch(() => process.exit(1))
