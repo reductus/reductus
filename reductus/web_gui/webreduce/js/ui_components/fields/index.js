@@ -1,4 +1,5 @@
-import { d3, extend, rectangleSelectPoints } from '../../libraries.js';
+import * as d3 from "d3";
+import { extend, rectangleSelectPoints } from "d3-science";
 import { plotter } from '../../plot.js';
 
 let template = `

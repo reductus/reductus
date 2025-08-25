@@ -1,5 +1,5 @@
 import { treeItem } from './tree_item.js';
-import { extend, vuedraggable } from '../libraries.js';
+import vuedraggable from "vuedraggable";
 
 let template = `
 <div>
@@ -194,7 +194,7 @@ export const categoriesEditor = {
       this.pick_category.open = false;
     },
     reload_defaults() {
-      let default_categories = extend(true, [], this.default_categories);
+      let default_categories = structuredClone(this.default_categories);
       console.log(default_categories);
       this.local_categories.splice(0, this.local_categories.length, ...default_categories);
     }
@@ -223,7 +223,7 @@ export const categoriesEditor = {
       this.category_tree.children.splice(0, this.category_tree.children.length, ...newChildren);
     },
     categories: function(old, newVal) {
-      let newCopy = extend(true, [], newVal);
+      let newCopy = structuredClone(newVal);
       this.local_categories.splice(0, this.local_categories.length, ...newCopy);
     }
   },

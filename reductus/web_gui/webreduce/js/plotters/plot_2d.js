@@ -1,4 +1,5 @@
-import { d3, get_colormap, colormap_names, heatChartMultiMasked, heatChart } from '../libraries.js';
+import * as d3 from "d3";
+import { get_colormap, colormap_names, heatChartMultiMasked, heatChart } from "d3-science";
 import { app } from '../main.js';
 
 export async function show_plots_2d_multi(plotdata, plot_controls, target, old_plot) {

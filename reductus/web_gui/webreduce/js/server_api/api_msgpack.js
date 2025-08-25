@@ -1,4 +1,4 @@
-import {messagepack as msgpack} from '../libraries.js';
+import * as msgpack from "messagepack";
 const server_api = {};
 export {server_api};
 

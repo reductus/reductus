@@ -1,4 +1,4 @@
-import { Vue } from '../libraries.js';
+import Vue from "vue";
 
 let template = `
 <md-dialog :md-active.sync="active" @md-closed="onClose">

@@ -1,4 +1,4 @@
-import {extend} from '../libraries.js';
+
 const instrument = {};
 export default instrument;
 
@@ -35,6 +35,6 @@ instrument.load_file = load_tas;
 instrument.default_categories = [
   [["filename"]]
 ];
-instrument.categories = extend(true, [], instrument.default_categories);
+instrument.categories = structuredClone(instrument.default_categories);
 
 instrument.decorators = [];
