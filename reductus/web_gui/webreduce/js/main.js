@@ -11,6 +11,7 @@ import { fieldUI } from './ui_components/fields_panel.js';
 import { vueMenu } from './menu.js';
 import { export_dialog } from './ui_components/export_dialog.js';
 import { reload } from './reload.js';
+import { app_header } from './app_header.js';
 
 export const app = {}; // put state here.
 
@@ -176,6 +177,10 @@ window.onload = async function () {
   }
 
   await editor.create_instance("template_editor");
+  app_header.create_instance("app_header");
+  await server_api.__init__(app_header.instance.init_progress);
+  //app_header.instance.init_progress.visible = false;
+
   server_api.exception_handler = api_exception_handler;
   app.server_api = server_api;
 
@@ -212,7 +217,6 @@ window.onload = async function () {
   });
   vueMenu.create_instance("vue_menu", {enable_uploads: typeof ENABLE_UPLOADS !== 'undefined' && ENABLE_UPLOADS });
   app.settings = vueMenu.instance.settings;
-  await server_api.__init__(vueMenu.instance.init_progress);
 
   const menu_actions = {
     new_template() {
@@ -357,7 +361,7 @@ window.onload = async function () {
       var notification = new Notification(message);
       notification.onclick = function (event) {
         event.preventDefault();
-        vueMenu.instance.show_api_error(longmessage);
+        app_header.instance.show_api_error(longmessage);
       }
       setTimeout(notification.close.bind(notification), 5000);
     }
@@ -370,7 +374,7 @@ window.onload = async function () {
           var notification = new Notification(message);
           notification.onclick = function (event) {
             event.preventDefault();
-            vueMenu.instance.show_api_error(longmessage);
+            app_header.instance.show_api_error(longmessage);
           }
           setTimeout(notification.close.bind(notification), 5000);
         }

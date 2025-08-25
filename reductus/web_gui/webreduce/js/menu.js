@@ -4,9 +4,8 @@ import { DropdownMenu } from './ui_components/dropdown_menu.js';
 
 let template = `
 
-<div class="container-fluid">
-  <!-- Sidebar Navigation -->
-    <nav class="navbar navbar-light bg-light px-3">
+<div>
+  <nav class="navbar navbar-light px-2" style="background-color: #ffff00;">
       <div class="d-flex align-items-center w-100">
         <a class="navbar-brand d-flex align-items-center me-3" href="#">
           <img src="img/reductus_logo.svg" style="height:2em;" alt="Reductus logo"/>
@@ -86,6 +85,9 @@ let template = `
       </dropdown-menu>
     </div>
         <div class="ms-auto d-flex align-items-center gap-3">
+          <a href="https://doi.org/10.5281/zenodo.3524406" target="_blank" class="text-decoration-none me-2" title="Cite Reductus">
+            <i class="bi bi-journal-text me-1"></i>Cite
+          </a>
           <img src="img/NCNR_nonlogo.png" alt="NCNR logo" title="NIST Center for Neutron Research" style="height:2em;padding-right:1.5em;">
           <img src="img/nist-logo.svg" alt="NIST logo" title="National Institute of Standards and Technology" style="height:2em;">
         </div>
