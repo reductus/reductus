@@ -281,14 +281,15 @@ class Sans1dData(object):
 
 class SansIQData(object):
     def __init__(self, I=None, dI=None, Q=None, dQ=None, meanQ=None, ShadowFactor=None, label='', metadata=None):
-        self.I = I if I is not None else np.zeros_like(0)
-        self.dI = dI if dI is not None else np.zeros_like(0)
-        self.Q = Q if Q is not None else np.zeros_like(0)
-        self.dQ = dQ if dQ is not None else np.zeros_like(0)
-        self.meanQ = meanQ if meanQ is not None else np.zeros_like(0)
-        self.ShadowFactor = ShadowFactor if ShadowFactor is not None else np.zeros_like(0)
-        self.label = label
-        self.metadata = metadata if metadata is not None else {}
+        shape = np.shape(Q) if Q is not None else 0
+        self.I: np.ndarray = I if I is not None else np.empty(shape)
+        self.dI: np.ndarray = dI if dI is not None else np.empty(shape)
+        self.Q: np.ndarray = Q if Q is not None else np.empty(shape)
+        self.dQ: np.ndarray = dQ if dQ is not None else np.empty(shape)
+        self.meanQ: np.ndarray = meanQ if meanQ is not None else np.empty(shape)
+        self.ShadowFactor: np.ndarray = ShadowFactor if ShadowFactor is not None else np.empty(shape)
+        self.label: str = label
+        self.metadata: dict[str, str | int | float | list] = metadata if metadata is not None else {}
         self._q_mask: list[int] | None = None
 
     def q_cutoff(self):
