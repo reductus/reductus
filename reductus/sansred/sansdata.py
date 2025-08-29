@@ -308,11 +308,13 @@ class SansIQData(object):
 
     @property
     def mask(self):
-        return self.q_cutoff()
+        return self._q_mask
 
     @mask.setter
     def mask(self, masked_points: list[int] | None = None):
-        # Allow the user to either send an integer index or a Q value. The chance a Q value being a whole number is low
+        # masked_points should be a list of self.Q indices that are to be excluded from calcaulations
+        if masked_points is not None and min(masked_points) < 0 and max(masked_points) >= len(self.Q):
+            raise ValueError("The masked indices are out of range of the Q data.")
         self._q_mask = masked_points
     
     def get_plottable(self):
