@@ -190,6 +190,7 @@ class SansData(object):
         metadata.update(_toDictItem(self.metadata, convert_bytes=True))
         return metadata
 
+
 class Sans1dData(object):
     properties = ['x', 'v', 'dx', 'dv', 'xlabel', 'vlabel', 'xunits', 'vunits', 'xscale', 'vscale', 'metadata', 'fit_function']
 
@@ -206,6 +207,27 @@ class Sans1dData(object):
         self.vscale = vscale
         self.metadata = metadata if metadata is not None else {}
         self.fit_function = fit_function
+        self._q_mask: list[int] | None = None
+
+    def q_cutoff(self):
+        if self._q_mask is None:
+            # If no limits have been set, no truncation
+            self._q_mask = []
+        data = SansIQData(np.delete(self.v, self._q_mask) if self.v is not None else None,
+                          np.delete(self.dv, self._q_mask) if self.dv is not None else None,
+                          np.delete(self.x, self._q_mask) if self.x is not None else None,
+                          np.delete(self.dx, self._q_mask)if self.dx is not None else None,
+                          metadata=self.metadata)
+        return data
+
+    @property
+    def mask(self):
+        return self.q_cutoff()
+
+    @mask.setter
+    def mask(self, masked_points: list[int] | None = None):
+        # Allow the user to either send an integer index or a Q value. The chance a Q value being a whole number is low
+        self._q_mask = masked_points
 
     def to_dict(self):
         props = dict([(p, getattr(self, p, None)) for p in self.properties])
@@ -256,16 +278,44 @@ class Sans1dData(object):
             "value": value.decode('utf-8'),
         }
 
+
 class SansIQData(object):
     def __init__(self, I=None, dI=None, Q=None, dQ=None, meanQ=None, ShadowFactor=None, label='', metadata=None):
-        self.I = I
-        self.dI = dI
-        self.Q = Q
-        self.dQ = dQ
-        self.meanQ = meanQ
-        self.ShadowFactor = ShadowFactor
-        self.label = label
-        self.metadata = metadata if metadata is not None else {}
+        shape = np.shape(Q) if Q is not None else 0
+        self.I: np.ndarray = I if I is not None else np.empty(shape)
+        self.dI: np.ndarray = dI if dI is not None else np.empty(shape)
+        self.Q: np.ndarray = Q if Q is not None else np.empty(shape)
+        self.dQ: np.ndarray = dQ if dQ is not None else np.empty(shape)
+        self.meanQ: np.ndarray = meanQ if meanQ is not None else np.empty(shape)
+        self.ShadowFactor: np.ndarray = ShadowFactor if ShadowFactor is not None else np.empty(shape)
+        self.label: str = label
+        self.metadata: dict[str, str | int | float | list] = metadata if metadata is not None else {}
+        self._q_mask: list[int] | None = None
+
+    def q_cutoff(self):
+        if self._q_mask is None:
+            # If no limits have been set, no truncation
+            self._q_mask = []
+        data = SansIQData(np.delete(self.I, self._q_mask) if self.I is not None else None,
+                          np.delete(self.dI, self._q_mask) if self.dI is not None else None,
+                          np.delete(self.Q, self._q_mask) if self.Q is not None else None,
+                          np.delete(self.dQ, self._q_mask)if self.dQ is not None else None,
+                          np.delete(self.meanQ, self._q_mask) if self.meanQ is not None else None,
+                          np.delete(self.ShadowFactor, self._q_mask) if self.ShadowFactor is not None else None,
+                          self.label,
+                          self.metadata)
+        return data
+
+    @property
+    def mask(self):
+        return self._q_mask
+
+    @mask.setter
+    def mask(self, masked_points: list[int] | None = None):
+        # masked_points should be a list of self.Q indices that are to be excluded from calcaulations
+        if masked_points is not None and min(masked_points) < 0 and max(masked_points) >= len(self.Q):
+            raise ValueError("The masked indices are out of range of the Q data.")
+        self._q_mask = masked_points
     
     def get_plottable(self):
         columns = OrderedDict([
@@ -370,6 +420,26 @@ class SansIQData(object):
             "file_suffix": ".sansIQ.nx.h5",
             "value": h5_item,
         }
+
+    def append_1d_data_set(self, data):
+        """Concatenate another data set with the existing one. The resulting data arrays will be sorted """
+        # Create concatenated Q array
+        self.Q = np.concatenate((self.Q, data.Q))
+        # Determine order of Q values based in current index
+        indices = np.argsort(self.Q)
+        # Reorder Q array using the indices
+        self.Q = self.Q[indices]
+        # Concatenate and reorder remaining data arrays if they exist in both data sets
+        self.I = np.concatenate((self.I, data.I))[indices]
+        if self.dI is not None and data.dI is not None:
+            self.dI = np.concatenate((self.dI, data.dI))[indices]
+        if self.dQ is not None and data.dQ is not None:
+            self.dQ = np.concatenate((self.dQ, data.dQ))[indices]
+        if self.meanQ is not None and data.meanQ is not None:
+            self.meanQ = np.concatenate((self.meanQ, data.meanQ))[indices]
+        if self.ShadowFactor is not None and data.ShadowFactor is not None:
+            self.ShadowFactor = np.concatenate((self.ShadowFactor, data.ShadowFactor))[indices]
+
 
 class Parameters(object):
     def __init__(self, params=None):
