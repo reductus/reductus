@@ -162,7 +162,7 @@
       "module": "ncnr.sans.SuperLoadSANS",
       "title": "open beam trans",
       "x": 480,
-      "y": 155,
+      "y": 135,
       "config": {
         "filelist": [],
         "do_mon_norm": false
@@ -187,7 +187,18 @@
       "x": 1375,
       "module": "ncnr.sans.mask_1d_data",
       "y": 35,
-      "title": "Trim Points"
+      "title": "Trim Points",
+      "text_width": 93
+    },
+    {
+      "module": "ncnr.sans.SuperLoadSANS",
+      "title": "config open beam",
+      "x": 705,
+      "y": 153,
+      "config": {
+        "filelist": [],
+        "do_mon_norm": false
+      }
     }
   ],
   "wires": [
@@ -353,16 +364,6 @@
     },
     {
       "source": [
-        15,
-        "output"
-      ],
-      "target": [
-        10,
-        "empty"
-      ]
-    },
-    {
-      "source": [
         16,
         "output"
       ],
@@ -399,6 +400,16 @@
       "target": [
         17,
         "data"
+      ]
+    },
+    {
+      "source": [
+        18,
+        "output"
+      ],
+      "target": [
+        10,
+        "empty"
       ]
     }
   ]
