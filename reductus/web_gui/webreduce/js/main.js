@@ -178,12 +178,9 @@ window.onload = async function () {
 
   await editor.create_instance("template_editor");
   app_header.create_instance("app_header");
-  app_header.instance.$on("toggle-menu", () => {
-    vueMenu.instance.showNavigation = !vueMenu.instance.showNavigation
-  });
-
   await server_api.__init__(app_header.instance.init_progress);
   //app_header.instance.init_progress.visible = false;
+
   server_api.exception_handler = api_exception_handler;
   app.server_api = server_api;
 
@@ -220,6 +217,7 @@ window.onload = async function () {
   });
   vueMenu.create_instance("vue_menu", {enable_uploads: typeof ENABLE_UPLOADS !== 'undefined' && ENABLE_UPLOADS });
   app.settings = vueMenu.instance.settings;
+
   const menu_actions = {
     new_template() {
       var empty_template = { modules: [], wires: [] };
