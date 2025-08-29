@@ -428,7 +428,7 @@ class SansIQData(object):
         # Determine order of Q values based in current index
         indices = np.argsort(self.Q)
         # Reorder Q array using the indices
-        self.Q[indices]
+        self.Q = self.Q[indices]
         # Concatenate and reorder remaining data arrays if they exist in both data sets
         self.I = np.concatenate((self.I, data.I))[indices]
         if self.dI is not None and data.dI is not None:
