@@ -2140,6 +2140,9 @@ def scale_by_factor(data_to_scale: SansIQData | Sans1dData, scaling_factor: floa
 def shift_to_data(data_to_shift: SansIQData | Sans1dData, data_to_shift_to: SansIQData | Sans1dData) -> SansIQData | Sans1dData:
     """Scale a data set relative to another data set.
 
+    WARNING: This is, in general, a bad idea. Data should never be scaled, and this is not included in the default
+             protocol. Use at your own risk.
+
     **Inputs**
 
     data_to_shift (sans1d): SANS 1D where the intensity is to be shifted by a fixed amount on all Q values
