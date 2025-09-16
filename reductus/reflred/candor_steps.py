@@ -443,11 +443,11 @@ def attenuation(data: "Candor", transmission=None, transmission_err=None, target
 
         v = data.detector.counts[matching]
         var_v = data.detector.counts_variance[matching]
-        masked_att = att[data.detector.mask] if data.detector.mask is not None else att
-        masked_datt = datt[data.detector.mask] if data.detector.mask is not None else datt
+        masked_att = att[:, data.detector.mask] if data.detector.mask is not None else att
+        masked_datt = datt[:, data.detector.mask] if data.detector.mask is not None else datt
         new_var = var_v * masked_att**2 + masked_datt**2 * v**2
         data.detector.counts_variance[matching] = new_var
-        data.detector.counts[matching] *= att
+        data.detector.counts[matching] *= masked_att
 
     return data
 
