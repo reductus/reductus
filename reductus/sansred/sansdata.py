@@ -316,6 +316,22 @@ class SansIQData(object):
         if masked_points is not None and min(masked_points) < 0 and max(masked_points) >= len(self.Q):
             raise ValueError("The masked indices are out of range of the Q data.")
         self._q_mask = masked_points
+
+    @property
+    def v(self):
+        return self.I
+
+    @v.setter
+    def v(self, v):
+        self.I = v
+
+    @property
+    def dv(self):
+        return self.dI
+
+    @dv.setter
+    def dv(self, dv):
+        self.dI = dv
     
     def get_plottable(self):
         columns = OrderedDict([

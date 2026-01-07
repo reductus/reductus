@@ -1117,18 +1117,11 @@ def rescale_1d(data, scale=1.0, dscale=0.0):
     output (sans1d) : scaled data
 
     2016-04-17 Brian Maranville
+    2026-01-07 Jeff Krzywon
     """
     from reductus.dataflow.lib import err1d
 
-    # Allow for either raw or reduced data without having to differentiate upfront
-    intensity = data.v if hasattr(data, 'v') else data.I
-    uncertainty = data.dv if hasattr(data, 'dv') else data.dI
-
-    I, varI = err1d.mul(intensity, uncertainty, scale, dscale**2)
-    if hasattr(data, 'v'):
-        data.v, data.dv = I, varI
-    else:
-        data.I, data.dI = I, varI
+    data.v, data.dv = err1d.mul(data.v, data.dv, scale, dscale**2)
     
     return data
 
@@ -1136,7 +1129,7 @@ def rescale_1d(data, scale=1.0, dscale=0.0):
 @module
 def shift_1d(data, shift=1.0, dshift=0.0):
     """
-    Multiply 1d data by a scale factor
+    Shift 1d data by a scale factor
 
     **Inputs**
 
@@ -1154,16 +1147,7 @@ def shift_1d(data, shift=1.0, dshift=0.0):
     """
     from reductus.dataflow.lib import err1d
 
-    # Allow for either raw or reduced data without having to differentiate upfront
-    intensity = data.v if hasattr(data, 'v') else data.I
-    uncertainty = data.dv if hasattr(data, 'dv') else data.dI
-
-    # TODO: FIXME
-    I, varI = err1d.add(intensity, uncertainty, shift, dshift**2)
-    if hasattr(data, 'v'):
-        data.v, data.dv = I, varI
-    else:
-        data.I, data.dI = I, varI
+    data.v, data.dv = err1d.add(data.v, data.dv, shift, dshift**2)
 
     return data
 
