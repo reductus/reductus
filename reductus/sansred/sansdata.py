@@ -37,7 +37,7 @@ def _s(b):
 class RawSANSData(RawVSANSData):
     suffix = ".sans"
 
-class SansData(object):
+class SansData:
     """SansData object used for storing values from a sample file (not div/mask).
        Stores the array of data as a Uncertainty object (detailed in uncertainty.py)
        Stores all metadata
@@ -191,7 +191,7 @@ class SansData(object):
         return metadata
 
 
-class Sans1dData(object):
+class Sans1dData:
     properties = ['x', 'v', 'dx', 'dv', 'xlabel', 'vlabel', 'xunits', 'vunits', 'xscale', 'vscale', 'metadata', 'fit_function']
 
     def __init__(self, x, v, dx=0, dv=0, xlabel="", vlabel="", xunits="", vunits="", xscale="linear", vscale="linear", metadata=None, fit_function=None):
@@ -279,7 +279,7 @@ class Sans1dData(object):
         }
 
 
-class SansIQData(object):
+class SansIQData:
     def __init__(self, I=None, dI=None, Q=None, dQ=None, meanQ=None, ShadowFactor=None, label='', metadata=None):
         shape = np.shape(Q) if Q is not None else 0
         self.I: np.ndarray = I if I is not None else np.empty(shape)
@@ -457,7 +457,7 @@ class SansIQData(object):
             self.ShadowFactor = np.concatenate((self.ShadowFactor, data.ShadowFactor))[indices]
 
 
-class Parameters(object):
+class Parameters:
     def __init__(self, params=None):
         self.params = params
 
