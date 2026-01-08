@@ -10,6 +10,7 @@ import { plotter } from './plot.js';
 import { fieldUI } from './ui_components/fields_panel.js';
 import { vueMenu } from './menu.js';
 import { export_dialog } from './ui_components/export_dialog.js';
+import { startup_banner_dialog } from './ui_components/startup_banner_dialog.js';
 import { reload } from './reload.js';
 import { app_header } from './app_header.js';
 
@@ -220,6 +221,7 @@ window.onload = async function () {
   });
   vueMenu.create_instance("vue_menu", {enable_uploads: typeof ENABLE_UPLOADS !== 'undefined' && ENABLE_UPLOADS });
   app.settings = vueMenu.instance.settings;
+  startup_banner_dialog.create_instance("startup_banner_dialog");
   const menu_actions = {
     new_template() {
       var empty_template = { modules: [], wires: [] };
@@ -283,6 +285,13 @@ window.onload = async function () {
     return datasources
   }
 
+  async function get_startup_banner() {
+    let banner = await server_api.get_startup_banner();
+    if (banner && banner.message) {
+      startup_banner_dialog.instance.open(banner);
+    }
+    return banner;
+  }
 
   async function list_instruments() {
     let instruments = await server_api.list_instruments();
@@ -387,6 +396,7 @@ window.onload = async function () {
     // want to be respectful there is no need to bother them any more.
   }
 
+  await get_startup_banner();
   await list_instruments();
   await list_datasources();
   window.onpopstate();

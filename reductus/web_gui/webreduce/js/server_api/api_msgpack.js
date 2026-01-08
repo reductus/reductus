@@ -34,7 +34,7 @@ function wrap_hug_msgpack(method_name) {
   return wrapped
 }
   
-var toWrap = ["find_calculated", "get_instrument", "calc_terminal", "list_datasources", "list_instruments", "get_file_metadata"];
+var toWrap = ["find_calculated", "get_instrument", "calc_terminal", "list_datasources", "list_instruments", "get_file_metadata", "get_startup_banner"];
   
 toWrap.forEach(function(method_name) {
   server_api[method_name] = wrap_hug_msgpack(method_name);
