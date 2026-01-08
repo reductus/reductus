@@ -196,6 +196,10 @@ def list_datasources():
 def list_instruments():
     return _list_instruments()
 
+@expose
+def get_startup_banner():
+    return configure.STARTUP_BANNER
+
 def initialize(config=None):
     if config is None:
         config = configure.load_config('config')
