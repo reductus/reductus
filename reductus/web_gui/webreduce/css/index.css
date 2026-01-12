@@ -14,3 +14,65 @@
 @import "./params_tree.css";
 /* @import "jquery-ui-1.12.1.css"; */
 /* @import "jstree-3.3.min.js"; */
+
+/* Ensure full height layout for split.js */
+* {
+  box-sizing: border-box;
+}
+
+html {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  height: 100%;
+  width: 100%;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden;
+}
+
+#body_wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+  margin: 0;
+  padding: 0;
+}
+
+#app_header {
+  flex-shrink: 0;
+  width: 100%;
+}
+
+#vue_menu {
+  flex-shrink: 0;
+  width: 100%;
+}
+
+#all_content {
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+#middle_content {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: row;
+}
+
+#bottom_panel {
+  flex: 0 0 auto;
+  width: 100%;
+  min-height: 100px;
+}

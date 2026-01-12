@@ -22,7 +22,7 @@ let template = `
     @transformChange="transformChange"
     @settingChange="settingChange"
     @downloadSVG="downloadSVG"
-    @export-data="$emit('action', 'export_data')"
+    @export-data="emitter.emit('plotter.action', 'export_data')"
   ></plot-controls>
 </div>
 `;
@@ -43,6 +43,9 @@ const plotters = {
 export const PlotPanel = {
   name: 'plot-panel',
   components: { PlotControls },
+  props: {
+    emitter: Object
+  },
   data: () => ({
     type: 'null',
     instances: {},
@@ -66,6 +69,22 @@ export const PlotPanel = {
     },
     set_plot_title(title) {
       this.title = title;
+    },
+    setPlotData(plotdata) {
+      if (!plotdata || plotdata.type === 'null') {
+        this.type = 'null';
+        this.instances = {};
+        this.active_plot = null;
+      } else {
+        this.type = plotdata.type || 'null';
+        const plotter_fn = plotters[this.type] || plotters['null'];
+        const plotdiv = this.$refs.plotdiv;
+        const controls = this.$refs.controls;
+        if (plotdiv && controls) {
+          plotter_fn(plotdata, controls, plotdiv);
+          this.active_plot = plotdata;
+        }
+      }
     }
   },
   template  
@@ -85,29 +104,17 @@ class Deferred {
   }
 }
 
-plotter.create_instance = function(target_id) {
+plotter.create_instance = function(target_id, emitter) {
   let target = document.getElementById(target_id);
-  const PlotPanelClass = Vue.extend(PlotPanel);
-  plotter.instance = new PlotPanelClass({
-    data: () => ({
-      type: 'null',
-      instances: {},
-      active_plot: null,
-      plot_controls: null
-    }),
-    methods: {
-      async setPlotData(plotdata) {
-        let typeChange = (this.type != plotdata.type);
-        this.type = plotdata.type;
-        this.title = "";
-        await this.$nextTick();
-        this.active_plot = await plotters[plotdata.type](plotdata, this.$refs.controls, this.$refs.plotdiv, this.active_plot);
-      }
-    },
-    mounted: function() {
-      //plotPanelMounted.resolve(true);
-    }
-  }).$mount(target);
-
+  plotter.instance = Vue.createApp(PlotPanel, {
+    emitter: emitter,
+    type: 'null',
+    instances: {},
+    active_plot: null,
+    plot_controls: null
+  }).mount(target);
 }
+
+
+
 

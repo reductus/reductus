@@ -24,13 +24,16 @@ let template = `
 export const SourceList = {
   name: "source-list",
   components: { DataSource },
-  props: ["datasources", "blocked"],
+  props: {
+    datasources: Array,
+    blocked: Boolean
+  },
   methods: {
     pathChange(source, new_pathlist, index) {
       this.$emit("pathChange", source, new_pathlist, index);
     },
     remove(index) {
-      this.$delete(this.datasources, index);
+      delete this.datasources[index];
     },
     refresh(index) {
       let s = this.datasources[index];

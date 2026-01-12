@@ -1,78 +1,80 @@
 import { treeItem } from './tree_item.js';
-import { extend, vuedraggable } from '../libraries.js';
+import { Sortable } from '../libraries.js';
 
 let template = `
 <div>
-  <md-dialog :md-active="dialog">
-    <md-card>
-      <md-card-header>
-        <div class="md-title">Categories Editor</div>
-      </md-card-header>
-      <md-card-content>
-        <draggable v-model="local_categories">
-          <template v-for="(category, index) in local_categories">
-            <md-card :key="JSON.stringify(category)" style="margin:8px;padding:0.5em;">
-              <div class="md-layout md-alignment-center-space-between">
-                <div class="md-layout-item">
-                  <md-icon class="handle" style="cursor:grab;">reorder</md-icon>
-                  <template v-if="true" v-for="(sub, subindex) in category">
-                    <md-chip 
-                      :key="sub.join('.')"
-                      md-clickable
-                      md-deletable
-                      @click.stop="editSub(index, subindex)"
-                      @md-delete.stop="removeSub(index, subindex)"
-                      >
-                      {{sub.join('.')}}
-                    </md-chip>
-                    <span v-if="(subindex < category.length-1)">{{settings.subcategory_separator}}</span>
-                  </template>
-                  <md-button @click="addSub(index)" class="md-icon-button md-dense">
-                    <md-icon class="md-primary">add</md-icon>
-                  </md-button>
+  <dialog ref="main_dialog" class="categories-editor-dialog" style="width: 800px;">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Categories Editor</h5>
+          <button type="button" class="btn-close" @click="close"></button>
+        </div>
+        
+        <div class="modal-body">
+          <div style="margin-bottom: 1rem;">
+            <div ref="categories_list">
+              <template v-for="(category, index) in local_categories" :key="JSON.stringify(category)">
+                <div class="card" style="margin: 0.5rem 0; padding: 0.5rem;">
+                  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <div class="d-flex align-items-center flex-wrap gap-2">
+                      <span class="handle" style="cursor: grab; color: #666;">≡</span>
+                      <template v-for="(sub, subindex) in category" :key="sub.join('.')">
+                        <span class="badge bg-primary" style="cursor: pointer;" @click="editSub(index, subindex)">
+                          {{sub.join('.')}}
+                          <button type="button" @click.stop="removeSub(index, subindex)" style="background: none; border: none; color: inherit; cursor: pointer; margin-left: 0.25rem;">×</button>
+                        </span>
+                        <span v-if="(subindex < category.length-1)" style="color: #666;">{{settings.subcategory_separator}}</span>
+                      </template>
+                      <button type="button" class="btn btn-sm btn-outline-primary" @click="addSub(index)">+ Add</button>
+                    </div>
+                    <div>
+                      <button type="button" class="btn btn-sm btn-outline-danger" @click="remove(index)">Remove</button>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <md-button @click="remove(index)" class="md-layout-item md-icon-button md-dense md-accent">
-                    <md-icon>cancel</md-icon>
-                  </md-button>
-                </div>
-              </div>
-            </md-card>
-          </template>
-        </draggable>
-        <md-button @click="addCategory" class="md-layout-item md-icon-button md-dense md-raised md-primary">
-          <md-icon>add</md-icon>
-        </md-button>
-        <md-field>
-          <label>subcategory separator</label>
-          <md-input outlined v-model="settings.subcategory_separator" :style="{width: 5}" />
-        </md-field>
-      </md-card-content>
-      <md-dialog-actions>
-        <md-button class="md-primary" @click="reload_defaults">Load Defaults</md-button>
-        <md-button class="md-raised md-accent" @click="close">Cancel</md-button>
-        <md-button class="md-raised md-primary" @click="apply">Apply</md-button>
-        <md-button class="md-raised md-primary" @click="apply(); close()">Apply and Close</md-button>
-      </md-dialog-actions>
-    </md-card>
-  </md-dialog>
+              </template>
+            </div>
+            <button type="button" class="btn btn-sm btn-primary mt-2" @click="addCategory">+ Add Category</button>
+          </div>
+          
+          <div class="mb-3">
+            <label for="separator_input" class="form-label">Subcategory Separator</label>
+            <input type="text" id="separator_input" class="form-control" style="width: 100px;" v-model="settings.subcategory_separator" />
+          </div>
+        </div>
+        
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" @click="reload_defaults">Load Defaults</button>
+          <button type="button" class="btn btn-secondary" @click="close">Cancel</button>
+          <button type="button" class="btn btn-primary" @click="apply">Apply</button>
+          <button type="button" class="btn btn-primary" @click="apply(); close()">Apply and Close</button>
+        </div>
+      </div>
+    </div>
+  </dialog>
 
-  <md-dialog scrollable persistent :md-active="pick_category.open" max-width="500px">
-    <md-dialog-title>Select Category</md-dialog-title>
-    <md-dialog-content>
-      <md-card>      
-        <md-card-content style="min-height:500px;max-height: 90%;">
+  <dialog ref="pick_dialog" class="category-picker-dialog" style="width: 500px;">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Select Category</h5>
+          <button type="button" class="btn-close" @click="closePick"></button>
+        </div>
+        
+        <div class="modal-body" style="min-height: 500px; max-height: 70vh; overflow-y: auto;">
           <tree-item 
             :item="category_tree"
             @item-picked="pick">
           </tree-item>
-        </md-card-content>
-      </md-card>  
-    </md-dialog-content>
-    <md-dialog-actions>
-      <md-button class="md-accent md-raised" @click="pick_category.open = false">cancel</md-button>
-    </md-dialog-actions>
-  </md-dialog>
+        </div>
+        
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" @click="closePick">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </dialog>
 </div>
 `
 
@@ -132,18 +134,20 @@ let category_tree = {name: '/', children: annotate(category_keys)};
 export const categoriesEditor = {
   name: "categories-editor",
   components: { 
-    treeItem,
-    draggable: vuedraggable
+    treeItem
   },
   props: {
-    dialog: {
-      default: false
-    },
     categories: Array,
     default_categories: Array,
     category_keys: Array
   },
   methods: {
+    open() {
+      this.$nextTick(() => {
+        this.$refs.main_dialog.showModal();
+        console.log('opened categories editor', this.categories, this.category_keys);
+      });
+    },
     removeSub(index, subindex) {
       console.log('removeSub', index, subindex);
       this.local_categories[index].splice(subindex, 1);
@@ -154,19 +158,24 @@ export const categoriesEditor = {
     editSub(index, subindex) {
       console.log('editSub', index, subindex);
       this.pick_category.current_target = {index, subindex};
-      this.pick_category.open = true;
+      this.$nextTick(() => {
+        this.$refs.pick_dialog.showModal();
+      });
     },
     addSub(index) {
       let category = this.local_categories[index];
       category.push([]);
       this.pick_category.current_target = {index, subindex: (category.length - 1)}
-      this.pick_category.open = true;
+      this.$nextTick(() => {
+        this.$refs.pick_dialog.showModal();
+      });
     },
     addCategory() {
       let index = (this.local_categories.push([]) - 1);
       this.addSub(index);
     },
     close() {
+      this.$refs.main_dialog.close();
       this.$emit('close');
     },
     apply() {
@@ -191,19 +200,35 @@ export const categoriesEditor = {
       let subcategory = this.local_categories[index][subindex];
       let new_sub = JSON.parse(item.id);
       subcategory.splice(0, subcategory.length, ...new_sub)
-      this.pick_category.open = false;
+      this.$refs.pick_dialog.close();
+    },
+    closePick() {
+      this.$refs.pick_dialog.close();
     },
     reload_defaults() {
-      let default_categories = extend(true, [], this.default_categories);
+      const default_categories = structuredClone(this.default_categories);
       console.log(default_categories);
       this.local_categories.splice(0, this.local_categories.length, ...default_categories);
+    },
+    initializeSortable() {
+      const container = this.$refs.categories_list;
+      if (!container || this.sortable_instance) return;
+      
+      this.sortable_instance = Sortable.create(container, {
+        handle: '.handle',
+        animation: 150,
+        ghostClass: 'sortable-ghost',
+        onEnd: (evt) => {
+          const movedItem = this.local_categories[evt.oldIndex];
+          this.local_categories.splice(evt.oldIndex, 1);
+          this.local_categories.splice(evt.newIndex, 0, movedItem);
+        }
+      });
     }
   },
   data: () => ({
     disabled: false,
-    dialog_open: true,
     pick_category: {
-      open: false,
       current_target: {index: null, subindex: null},
       current_id: ""
     },
@@ -217,13 +242,21 @@ export const categoriesEditor = {
       subcategory_separator: ':'
     }
   }),
+  mounted() {
+    this.initializeSortable();
+  },
+  updated() {
+    this.initializeSortable();
+  },
   watch: {
     category_keys: function(old, newVal) {
-      let newChildren = annotate(newVal);
+      const newChildren = annotate(newVal);
+      console.log(newChildren);
+      console.log(this.category_tree);
       this.category_tree.children.splice(0, this.category_tree.children.length, ...newChildren);
     },
     categories: function(old, newVal) {
-      let newCopy = extend(true, [], newVal);
+      const newCopy = structuredClone(newVal);
       this.local_categories.splice(0, this.local_categories.length, ...newCopy);
     }
   },

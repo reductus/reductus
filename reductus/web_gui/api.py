@@ -160,9 +160,16 @@ def calc_terminal(template_def, config, nodenum, terminal_id, return_type='full'
                 #"datasources": fetch.DATA_SOURCES, # Is this needed?
             }
         }
-        to_export = retval.get_export(
-            export_type=export_type, template_data=template_data,
-            concatenate=concatenate)
+        try:
+            to_export = retval.get_export(
+                export_type=export_type, template_data=template_data,
+                concatenate=concatenate)
+        except Exception:
+            print("==== template ===="); pprint(template_def)
+            print("==== config ===="); pprint(config)
+            print("==== export_type ===="); pprint(export_type)
+            traceback.print_exc()
+            raise
 
         return to_export
 

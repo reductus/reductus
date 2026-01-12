@@ -41,7 +41,7 @@ toWrap.forEach(function(method_name) {
   server_api[method_name] = wrap(method_name);
 });
 
-server_api.__init__ = async function(init_progress_obj) {
+server_api.__init__ = async function(header_instance) {
   if ('serviceWorker' in navigator) {
     try {
         const registration = await navigator.serviceWorker.register('./sw.js');
@@ -69,7 +69,9 @@ server_api.__init__ = async function(init_progress_obj) {
     // initialize the pyodide:
     const ready = await (await fetch("/SW/load_pyodide")).json();
     console.log({ready});
-    init_progress_obj.visible = false;
+    if (header_instance && header_instance.close_init_progress) {
+      header_instance.close_init_progress();
+    }
 };
 
 server_api.upload_datafiles = async function(files) {

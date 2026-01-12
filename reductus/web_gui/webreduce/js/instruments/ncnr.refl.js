@@ -119,14 +119,14 @@ instrument.export_targets = [
     "id": "unpolarized_reflcalc",
     "label": "webfit",
     "type": "webapi",
-    "url": "https://ncnr.nist.gov/instruments/magik/calculators/reflectivity-calculator.html",
+    "url": "https://pages.nist.gov/reflectometry-calculators/reflectivity-calculator.html",
     "method": "set_data"
   },
   { 
     "id": "polarized_reflcalc",
     "label": "pol. webfit",
     "type": "webapi",
-    "url": "https://ncnr.nist.gov/instruments/magik/calculators/magnetic-reflectivity-calculator.html",
+    "url": "https://pages.nist.gov/reflectometry-calculators/magnetic-reflectivity-calculator.html",
     "method": "set_data"
   }
 ]

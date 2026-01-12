@@ -1,4 +1,3 @@
-import { Vue, extend } from '../libraries.js';
 import { Components } from './fields/components.js';
 
 let template = `
@@ -44,6 +43,9 @@ let template = `
 
 export const FieldsPanel = {
   name: "fields-panel",
+  props: {
+    emitter: Object
+  },
   components: Components,
   data: () => ({
     visible: true,
@@ -73,21 +75,12 @@ export const FieldsPanel = {
   },
   methods: {
     reset_local_config() {
-      // this.fields.forEach((f) => {
-      //   let id = f.id;
-      //   if (this.module.config && id in this.module.config) {
-      //     if (Array.isArray(this.local_config[id]) && Array.isArray(this.module.config[id])) {
-      //       this.local_config[id].splice(0, this.local_config[id].length, ...this.module.config[id]);
-      //     }
-      //     else {
-      //       this.$set(this.local_config, id, this.module.config[id]);
-      //     }
-      //   }
-      //   else {
-      //     this.$delete(this.local_config, id);
-      //   }
-      // })
-      this.local_config = extend(true, {}, this.module.config);
+      // Create a shallow copy of the config object
+      if (this.module.config) {
+        this.local_config = { ...this.module.config };
+      } else {
+        this.local_config = {};
+      }
     },
     help() {
       let helpwindow = window.open("", "help", "location=0,toolbar=no,menubar=no,scrollbars=yes,resizable=yes,width=960,height=480");
@@ -104,10 +97,10 @@ export const FieldsPanel = {
       }
       else {
         if (value == null) {
-          this.$delete(this.local_config, id);
+          delete this.local_config[id];
         }
         else {
-          this.$set(this.local_config, id, value);
+          this.local_config[id] = value;
         }
       }
     },
@@ -115,20 +108,20 @@ export const FieldsPanel = {
       if (value == null) {
         // remove items where value is unset.
         if (this.module.config) {
-          this.$delete(this.module.config, id);
+          delete this.module.config[id];
           if (Object.keys(this.module.config).length == 0) {
             // remove config completely if it is empty.
-            this.$delete(this.module, 'config')
+            delete this.module.config;
           }
         }
       }
       else {
         if (!this.module.config) {
-          this.$set(this.module, 'config', {});
+          this.module.config = {};
         }
-        this.$set(this.module.config, id, value);
+        this.module.config[id] = value;
       }
-      this.$emit("action", "update");
+      this.emitter.emit("fields.update");
       this.reset_local_config();
     },
     activate_fileinfo(index = null) {
@@ -138,7 +131,7 @@ export const FieldsPanel = {
       let active_field = this.fileinfos[this.active_fileinfo];
       let value = (active_field) ? ((this.local_config || {})[active_field.id] || []) : [];
       let no_terminal_selected = (this.terminal_id == null);
-      this.$emit("action", 'fileinfo_update', { value, no_terminal_selected });
+      this.emitter.emit("fields.fileinfo_update", { value, no_terminal_selected });
     },
     update_fileinfo(value) {
       let active_field = this.fileinfos[this.active_fileinfo];
@@ -148,22 +141,32 @@ export const FieldsPanel = {
     },
     accept_clicked() {
       if (!this.auto_accept.value) {
-        this.$set(this.module, 'config', this.local_config);
-        this.$emit("action", "update");
+        this.module.config = this.local_config;
+        this.emitter.emit("fields.update");
       }
-      this.$emit("action", "accept_button");
+      this.emitter.emit("fields.accept_button");
     },
     clear() {
       if (this.auto_accept.value) {
-        if (this.module.config) { this.$delete(this.module, 'config') }
+        if (this.module.config) { delete this.module.config; }
         this.reset_local_config();
-        this.$emit("action", "update");
-        this.$emit("action", "clear");
+        this.emitter.emit("fields.update");
+        this.emitter.emit("fields.clear");
       }
       else {
         this.local_config = {};
       }
       this.timestamp = Date.now();
+    },
+    set_calculator_single(payload) {
+      this.num_datasets_in = payload.num_datasets_in;
+      this.module = payload.module;
+      this.module_id = payload.module_id;
+      this.terminal_id = payload.terminal_id;
+      this.module_def = payload.module_def;
+      this.timestamp = payload.timestamp;
+      this.auto_accept = payload.auto_accept;
+      this.reset_local_config();
     }
   },
   beforeUpdate: function () {
@@ -173,16 +176,4 @@ export const FieldsPanel = {
   template
 }
 
-export const fieldUI = {};
 
-fieldUI.create_instance = function (target_id) {
-  let target = document.getElementById(target_id);
-  const FieldsPanelClass = Vue.extend(FieldsPanel);
-  this.instance = new FieldsPanelClass({
-    data: () => ({
-      module: {},
-      module_def: {},
-      auto_accept: { value: true }
-    })
-  }).$mount(target);
-}

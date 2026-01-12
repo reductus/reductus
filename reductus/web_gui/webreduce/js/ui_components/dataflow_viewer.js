@@ -3,49 +3,58 @@ import { extend } from '../libraries.js';
 let dataflow_template = `
 <div 
   class="dataflow editor container"
+  style="position: relative;"
   @contextmenu.prevent="contextmenu"
   @mousedown.left="mousedown"
   >
-  <md-menu md-size="auto"
-    :md-active.sync="menu.visible"
-    :style="{height: 0}"
-    :md-offset-x="menu.x"
-    :md-offset-y="menu.y"
-    md-direction="bottom-start">
-    <md-button style="visibility:hidden"></md-button>
-
-    <md-menu-content>
-      <md-menu-item v-if="menu.startdata == null">
-          <select name="add_module" id="add_module" @change="add_module">
-            <option value="" disabled="true" selected="true">Add module:</option>
-            <option v-for="module in instrument_def.modules" :value="module.id">{{module.name}}</option>
-          </select>
-      </md-menu-item>
-      <md-menu-item v-if="menu.startdata == null && menu.clipboard != null">
-        <md-button @click="paste_module();menu.visible=false;" class="md-raised md-primary">Paste</md-button>
-      </md-menu-item>
-      <md-menu-item v-if="false && menu.startdata == null">
-        <md-field>
-          <label for="add_module">Add Module Here</label>
-          <md-select name="add_module" id="add_module" @md-selected="add_module">
-            <md-option v-for="module in instrument_def.modules" :value="module.id">{{module.name}}</md-option>
-          </md-select>
-        </md-field>
-      </md-menu-item>
-      <md-menu-item v-if="menu?.startdata?.module_index !== undefined">
-        <md-button  @click="copy_module(menu.startdata.module_index);menu.visible=false;" class="md-raised md-primary">Copy</md-button>
-      </md-menu-item>
-      <md-menu-item v-if="menu?.startdata?.module_index !== undefined">
-        <md-button @click="remove_module(menu.startdata.module_index);menu.visible=false;" class="md-accent md-raised">Delete</md-button>
-      </md-menu-item>
-      <md-menu-item v-if="menu?.startdata?.module_index !== undefined">
-        <md-button @click="rename_module(menu.startdata.module_index);menu.visible=false;" class="md-raised">Rename</md-button>
-      </md-menu-item>
-      <md-menu-item v-if="menu.startdata != null && menu.startdata.target_type==='wire'">
-        <md-button @click="remove_wire(menu.startdata.wire_index);menu.visible=false;" class="md-accent md-raised">Delete wire</md-button>
-      </md-menu-item>
-    </md-menu-content>
-  </md-menu>
+  <!-- Context menu -->
+  <div v-if="menu.visible" 
+       class="dropdown-menu show"
+       :style="{position: 'absolute', left: menu.x + 'px', top: menu.y + 'px', zIndex: 1000}">
+    
+    <!-- Add module select -->
+    <div v-if="menu.startdata == null" class="px-2 py-2">
+      <select name="add_module" id="add_module" @change="add_module" class="form-select form-select-sm">
+        <option value="" disabled="true" selected="true">Add module:</option>
+        <option v-for="module in instrument_def.modules" :value="module.id">{{module.name}}</option>
+      </select>
+    </div>
+    
+    <!-- Paste button -->
+    <button v-if="menu.startdata == null && menu.clipboard != null" 
+            @click="paste_module();menu.visible=false;" 
+            class="dropdown-item btn-primary">
+      Paste
+    </button>
+    
+    <!-- Copy button -->
+    <button v-if="menu?.startdata?.module_index !== undefined"
+            @click="copy_module(menu.startdata.module_index);menu.visible=false;" 
+            class="dropdown-item btn-primary">
+      Copy
+    </button>
+    
+    <!-- Delete button -->
+    <button v-if="menu?.startdata?.module_index !== undefined"
+            @click="remove_module(menu.startdata.module_index);menu.visible=false;" 
+            class="dropdown-item btn-danger">
+      Delete
+    </button>
+    
+    <!-- Rename button -->
+    <button v-if="menu?.startdata?.module_index !== undefined"
+            @click="rename_module(menu.startdata.module_index);menu.visible=false;" 
+            class="dropdown-item">
+      Rename
+    </button>
+    
+    <!-- Delete wire button -->
+    <button v-if="menu.startdata != null && menu.startdata.target_type==='wire'"
+            @click="remove_wire(menu.startdata.wire_index);menu.visible=false;" 
+            class="dropdown-item btn-danger">
+      Delete wire
+    </button>
+  </div>
 
   <svg class="dataflow editor" ref="svg">
     <defs>
@@ -91,7 +100,6 @@ let dataflow_template = `
         @startdata="set_startdata"
         @enddata="set_enddata"
         @clicked="clicked"
-        v-on="$listeners"
       >
       </module>
       <template v-for="(wire_data, wire_index) in template_data.wires">
@@ -128,32 +136,50 @@ let dataflow_template = `
       fill-opacity="40%"
       :x="Math.min(select_many.x0, select_many.x1)"
       :y="Math.min(select_many.y0, select_many.y1)"
-      />
-    </rect>
+    />
   </svg>
-  <md-dialog id="help" :md-active.sync="menu.help_visible" style="max-width:768px;">
-    <md-dialog-title>Using the Template Panel</md-dialog-title>
-      <md-tabs md-dynamic-height>
-        <md-tab md-label="Editing">
-          <p>Left-click and drag a module to move it</p>
-          <p>Right-click a module or wire and you will have the option to delete or copy</p>
-          <p>Left-click and then drag on a terminal (input or output) to create a new wire.  
-          Stop over the opposite type of terminal to finish the connection</p>
-          <p>Shift-left-click to or Ctrl-drag to highlight multiple modules, then:</p>
-          <ul>
-            <li>left-click and drag them together</li>
-            <li>right-click to copy or delete them all at once</li>
-          </ul>
-          <p>Right-click on an empty spot in the template to add a new module or paste a copied module or group of modules</p>
-        </md-tab>
-        <md-tab md-label="Operating">
-          <p>Left-click on a module to select and show/edit its parameters (first input terminal also autoselected)</p>
-          <p>Select module with datafile fields (fileinfo) to show filebrowser</p>
-          <p>Left-click on a terminal to plot its data (module is autoselected)</p>
-          <p>Shift-left-click on multiple terminals to compare data (if compatible for plotting)</p>
-        </md-tab>
-      </md-tabs>
-  </md-dialog>
+  <!-- Help dialog -->
+  <dialog ref="help_dialog" class="modal-dialog" style="width: 768px;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Using the Template Panel</h5>
+        <button type="button" class="btn-close" @click="close_help()"></button>
+      </div>
+      <div class="modal-body">
+        <ul class="nav nav-tabs" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" :class="{active: active_help_tab === 'editing'}" @click="active_help_tab = 'editing'" id="editing-tab" type="button" role="tab">Editing</button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" :class="{active: active_help_tab === 'operating'}" @click="active_help_tab = 'operating'" id="operating-tab" type="button" role="tab">Operating</button>
+          </li>
+        </ul>
+        <div class="tab-content">
+          <div class="tab-pane" :class="{active: active_help_tab === 'editing'}" id="editing" role="tabpanel">
+            <p>Left-click and drag a module to move it</p>
+            <p>Right-click a module or wire and you will have the option to delete or copy</p>
+            <p>Left-click and then drag on a terminal (input or output) to create a new wire.  
+            Stop over the opposite type of terminal to finish the connection</p>
+            <p>Shift-left-click to or Ctrl-drag to highlight multiple modules, then:</p>
+            <ul>
+              <li>left-click and drag them together</li>
+              <li>right-click to copy or delete them all at once</li>
+            </ul>
+            <p>Right-click on an empty spot in the template to add a new module or paste a copied module or group of modules</p>
+          </div>
+          <div class="tab-pane" :class="{active: active_help_tab === 'operating'}" id="operating" role="tabpanel">
+            <p>Left-click on a module to select and show/edit its parameters (first input terminal also autoselected)</p>
+            <p>Select module with datafile fields (fileinfo) to show filebrowser</p>
+            <p>Left-click on a terminal to plot its data (module is autoselected)</p>
+            <p>Shift-left-click on multiple terminals to compare data (if compatible for plotting)</p>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" @click="close_help()">Close</button>
+      </div>
+    </div>
+  </dialog>
 </div>
 `;
 
@@ -225,7 +251,7 @@ const Module = {
   methods: {
     set_display_width: function () {
       let bbox = this.$refs.title_text.getBBox();
-      this.$set(this.module_data, 'text_width', Math.round(bbox.width) + 10)
+      this.module_data.text_width = Math.round(bbox.width) + 10;
     }
   },
   computed: {
@@ -239,15 +265,16 @@ const Module = {
 export const DataflowViewer = {
   name: "dataflow-viewer",
   components: { "module": Module },
-  props: ["instrument_def"],
   data: () => ({
+    instrument_def: {},
     template_data: {
       modules: [],
       wires: []
     },
+    active_help_tab: 'editing',
     menu: {
       visible: false,
-      help_visible: false,
+
       x: 0,
       y: 0,
       data: null,
@@ -410,6 +437,21 @@ export const DataflowViewer = {
       this.menu.x = x;
       this.menu.y = y;
       this.menu.visible = true;
+      
+      // Wait for menu to render, then adjust position if needed
+      this.$nextTick(() => {
+        const menuEl = this.$el.querySelector('.dropdown-menu');
+        if (menuEl) {
+          const menuHeight = menuEl.offsetHeight;
+          const containerHeight = this.$el.clientHeight;
+          
+          // If menu extends past bottom, position it above the click point instead
+          if (y + menuHeight > containerHeight) {
+            this.menu.y = Math.max(0, y - menuHeight);
+          }
+        }
+      });
+      
       d.start_x = null;
       d.start_y = null;
       d.startdata = null;
@@ -512,6 +554,16 @@ export const DataflowViewer = {
         module.title = new_title;
       }
       this.$nextTick(() => this.$refs.modules[index].set_display_width());
+    },
+    show_help() {
+      if (this.$refs.help_dialog) {
+        this.$refs.help_dialog.showModal();
+      }
+    },
+    close_help() {
+      if (this.$refs.help_dialog) {
+        this.$refs.help_dialog.close();
+      }
     },
     paste_module() {
       let { modules, wires, reference_point } = this.menu.clipboard;

@@ -12,12 +12,12 @@ import { Cache } from './idb_cache.js';
 import { sha1 } from './libraries.js';
 import {filebrowser} from './filebrowser.js';
 //import {make_fieldUI} from './fieldUI.js';
-import { fieldUI } from './ui_components/fields_panel.js';
 import { plotter  } from './plot.js';
 import { vueMenu } from './menu.js';
 import { export_dialog } from './ui_components/export_dialog.js';
 import { app_header } from './app_header.js';
 import { DataflowViewer } from './ui_components/dataflow_viewer.js';
+import { emitter } from './bus.js';
 
 const MAX_CACHE_AGE = 90; // days
 
@@ -78,26 +78,20 @@ editor.make_cache();
 window.indexedDB.deleteDatabase("_pouch_calculations");
 
 editor.clear_cache = async function() {
-  app_header.instance.show_snackbar("clearing cache...", 4000);
+  emitter.emit('app_header.show_snackbar', {message: "clearing cache...", duration: 4000});
   await this._cache.clear();
-  app_header.instance.show_snackbar("cache cleared", 4000);
+  emitter.emit('app_header.show_snackbar', {message: "cache cleared", duration: 4000});
 }
 
 editor.create_instance = function(target_id) {
   // create an instance of the dataflow editor in
   // the html element referenced by target_id
   let target = document.getElementById(target_id);
-  const DataflowViewerClass = Vue.extend(DataflowViewer);
   this.instance_container = target.parentElement;
-  this.instance = new DataflowViewerClass({
-    propsData: {instrument_def: {}},
-    methods: {
-      on_select: editor.module_clicked,
-      on_change: editor.update_completions,
-    }
-  }).$mount(target);
-  // TODO: make fields respond to "enter" key by advancing to next
-  // module in template? (accept on enter)
+  this.instance = Vue.createApp(DataflowViewer).mount(target);
+  // Setup event handlers
+  this.instance.on_select = editor.module_clicked;
+  this.instance.on_change = editor.update_completions;
 }
 
 function module_clicked_multiple() {
@@ -164,16 +158,16 @@ function module_clicked_single() {
       });
     });
     await editor.show_plots([datasets_in]);
-    fieldUI.instance.num_datasets_in = ((datasets_in || {}).values || []).length;
-    fieldUI.instance.module = active_module;
-    fieldUI.instance.reset_local_config();
 
-    fieldUI.instance.module_id = i;
-    fieldUI.instance.terminal_id = data_to_show;
-    fieldUI.instance.module_def = module_def;
-    fieldUI.instance.timestamp = Date.now();
-
-    fieldUI.instance.auto_accept = app.settings.auto_accept;
+    emitter.emit('editor.calculate_single', {
+      num_datasets_in: ((datasets_in || {}).values || []).length,
+      module: active_module,
+      module_id: i,
+      terminal_id: data_to_show,
+      module_def: module_def,
+      timestamp: Date.now(),
+      auto_accept: app.settings.auto_accept
+    });
   });
 }
 
@@ -490,35 +484,38 @@ editor.calculate = async function(params, recalc_mtimes, noblock, result_callbac
   // call result_callback on each result individually (this function will return all results
   // if you want to act on the aggregate after)
   var caching = app.settings.cache_calculations.value;
-  app_header.instance.calculation_progress.done = 0;
-  app_header.instance.$off("cancel-calculation"); // clear previous handlers
+  emitter.emit('app_header.reset_progress');
   editor._calculation_cancelled = false;
   var calculation_finished = false;
   var r = Promise.resolve();
+  
+  let cancelResolve;
   var cancel_promise = new Promise(function(resolve, reject) { 
-    app_header.instance.$on("cancel-calculation", function() {
+    cancelResolve = resolve;
+    const cancelHandler = () => {
       editor._calculation_cancelled = true;
       calculation_finished = true;
+      emitter.off('app_header.cancel_calculation', cancelHandler);
       resolve({"cancelled": true});
-    });
+    };
+    emitter.on('app_header.cancel_calculation', cancelHandler);
   });
   
   let results = [];
-  if (!noblock) {
-    app_header.instance.calculation_progress.visible = true;
+  if (!noblock && params && (params instanceof Array ? params.length > 0 : true)) {
+    emitter.emit('app_header.show_calculation_progress', params instanceof Array ? params.length : 1);
   }
   try {
     if (recalc_mtimes) {
       await Promise.race([cancel_promise, app.update_file_mtimes()]);
     }
     if (params instanceof Array) {
-      app_header.instance.calculation_progress.total = params.length;
       for (let i=0; i<params.length; i++) {
         let p = params[i];
         if (!editor._calculation_cancelled) {
           let result = await Promise.race([cancel_promise, calculate_one(p, caching)]);
           if (result_callback) { await result_callback(r, p, i); }
-          app_header.instance.calculation_progress.done = i+1;
+          emitter.emit('app_header.update_progress', i+1, params.length);
           results.push(result);
         }
       }
@@ -529,7 +526,11 @@ editor.calculate = async function(params, recalc_mtimes, noblock, result_callbac
   } catch(err) {
 
   } finally {
-    app_header.instance.calculation_progress.visible = false;
+    // Clean up cancel listener and close dialog
+    emitter.off('app_header.cancel_calculation');
+    if (!noblock) {
+      emitter.emit('app_header.close_calculation_progress');
+    }
   }
   return results;
 }
@@ -681,7 +682,8 @@ editor.load_instrument = async function(instrument_id) {
   )));
   // load into the editor instance
   editor._module_defs = module_defs;
-  editor.instance.$set(editor.instance, 'instrument_def', instrument_def);
+  // Update component data directly
+  editor.instance.instrument_def = instrument_def;
   // pass it through:
   return instrument_def;
 }
@@ -760,6 +762,7 @@ editor.load_template = async function(template_def, selected_module, selected_te
 }
 
 editor.load_metadata = async function(files_metadata, datasource, path) {
+  console.log("loading metadata for files:", files_metadata);
   var instrument_id = editor._instrument_id;
   var instrument = editor.instruments[instrument_id];
   var file_objs = {};
@@ -790,8 +793,12 @@ editor.load_metadata = async function(files_metadata, datasource, path) {
   
   editor._datafiles = results;
   try {
-    vueMenu.instance.category_keys = get_all_keys(results[0]["values"][0])
+    const new_keys = get_all_keys(results[0]["values"][0]);
+    // console.log("detected metadata keys:", new_keys);
+    vueMenu.instance.category_keys = new_keys;
   }
-  catch(e) {}
+  catch(e) {
+    console.error("could not determine metadata keys");
+  }
   return file_objs;
 }

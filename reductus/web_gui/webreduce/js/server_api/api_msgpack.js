@@ -40,4 +40,8 @@ toWrap.forEach(function(method_name) {
   server_api[method_name] = wrap_hug_msgpack(method_name);
 });
   
-server_api.__init__ = async function(init_progress_obj) { init_progress_obj.visible = false; }
+server_api.__init__ = async function(header_instance) { 
+  if (header_instance && header_instance.close_init_progress) {
+    header_instance.close_init_progress();
+  }
+}

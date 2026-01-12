@@ -7,7 +7,7 @@ import { server_api } from './server_api/api_msgpack.js';
 //import { makeSourceList } from './ui_components/sourcelist.js';
 import { Vue } from './libraries.js';
 import { FilePanel } from './ui_components/file_panel.js';
-import { fieldUI } from './ui_components/fields_panel.js';
+import { emitter } from './bus.js';
 
 filebrowser.datasources = [];
 
@@ -148,28 +148,29 @@ function updateHistory(target) {
   history.pushState({}, "", urlstr);
 }
 
-filebrowser.create_instance = function (target_id) {
+filebrowser.create_instance = function (target_id, emitter) {
   let target = document.getElementById(target_id);
-  const FilePanelClass = Vue.extend(FilePanel);
-  filebrowser.instance = new FilePanelClass({
-    data: () => ({
-      datasources: filebrowser.datasources
-    }),
-    methods: {
-      handleChecked,
-      async pathChange(source, pathlist, index) {
-        let dirdata = await server_api.get_file_metadata({ source, pathlist });
-        let subdirs = [...dirdata.subdirs];
-        subdirs.sort(sortAlphaNumeric).reverse();
-        let treedata = await categorizeFiles(dirdata.files_metadata, source, pathlist.join("/"));
-        this.$set(this.datasources, index, { name: source, pathlist, subdirs, treedata })
-      },
-      setChecked(values) {
-        this.$refs.sourcelist.set_checked(values);
-      }
-    }
-
-  }).$mount(target);
+  
+  const pathChangeHandler = async (source, pathlist, datasourceIndex) => {
+    let dirdata = await server_api.get_file_metadata({ source, pathlist });
+    let treedata = await categorizeFiles(dirdata.files_metadata, source, pathlist.join("/"));
+    let subdirs = [...dirdata.subdirs];
+    subdirs.sort(sortAlphaNumeric).reverse();
+    filebrowser.instance.datasources.splice(datasourceIndex, 1, {
+      name: source,
+      pathlist,
+      subdirs,
+      treedata
+    });
+    filebrowser.instance.$refs.sourcelist.set_treedata(datasourceIndex, treedata);
+    updateHistory(target);
+  };
+  
+  filebrowser.instance = Vue.createApp(FilePanel, {
+    emitter: emitter,
+    onPathChange: pathChangeHandler,
+    onHandleChecked: handleChecked
+  }).mount(target);
 }
 
 filebrowser.refreshAll = function () {
@@ -194,7 +195,8 @@ async function handleChecked(values, stopPropagation) {
   })
 
   if (!stopPropagation) {
-    fieldUI.instance.update_fileinfo(fileinfo);
+    emitter.emit("filebrowser.checked", fileinfo);
+    // fieldUI.instance.update_fileinfo(fileinfo);
   }
 
   let loader_template = loader(fileinfo, null, false, 'plottable');

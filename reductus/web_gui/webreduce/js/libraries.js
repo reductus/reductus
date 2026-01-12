@@ -8,19 +8,21 @@ export {zip};
 export {default as Tree} from 'https://cdn.jsdelivr.net/gh/bmaranville/treejs@latest/src/index.js';
 //export {default as Tree} from './treejs/src/index.js';
 
-import { default as Vue } from 'https://cdn.jsdelivr.net/npm/vue@2.6.11/dist/vue.esm.browser.js';
-import { default as VueMaterial } from 'https://cdn.skypack.dev/vue-material@1.0.0-beta-15';
-Vue.use(VueMaterial);
+export * as Vue from 'https://unpkg.com/vue@3/dist/vue.esm-browser.js'
+
+// export { default as Vue } from 'https://cdn.jsdelivr.net/npm/vue@2.6.11/dist/vue.esm.browser.js';
+// import { default as VueMaterial } from 'https://cdn.skypack.dev/vue-material@1.0.0-beta-15';
+// Vue.use(VueMaterial);
 //import { default as VueSimpleContextMenu } from 'https://cdn.skypack.dev/vue-simple-context-menu@^3.1.10';
 //Vue.use(VueSimpleContextMenu);
 //import { default as VueCustomContextMenu } from 'https://cdn.skypack.dev/vue-custom-context-menu@^3.0.2';
 //Vue.use(VueCustomContextMenu);
 
-// vuedraggable is available as a single-file esm source, Vue.Draggable/src/vuedraggable.js
-// which depends only on Sortable, which can be found at 
-// https://github.com/SortableJS/sortablejs/blob/master/modular/sortable.complete.esm.js
-export { default as vuedraggable } from 'https://cdn.skypack.dev/vuedraggable';
-export { Vue }
+
+// Use Sortable.js directly for drag-and-drop
+// Can be used in Vue components with v-sortable directive or direct refs
+import Sortable from 'https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/modular/sortable.esm.js';
+export { Sortable };
 
 import * as messagepack from "https://cdn.jsdelivr.net/npm/messagepack@1.1.12/dist/messagepack.es.js";
 export { messagepack };
@@ -54,3 +56,5 @@ export { load as yaml_load } from "https://cdn.jsdelivr.net/npm/js-yaml@latest/d
 import 'https://cdn.jsdelivr.net/npm/promise-worker@2.0.1/dist/promise-worker.js';
 const PromiseWorker = window.PromiseWorker;
 export { PromiseWorker };
+
+export { default as mitt } from "https://cdn.jsdelivr.net/npm/mitt@3.0.1/dist/mitt.mjs";

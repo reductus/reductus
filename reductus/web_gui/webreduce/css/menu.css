@@ -8,13 +8,6 @@
     cursor: pointer;
 }
 
-.dropdown {
-/*    position: relative;*/
-    display: inline-block;
-    float: right;
-    z-index: 111;
-}
-
 .dropdown-content {
     display: none;
     position: absolute;
@@ -78,4 +71,27 @@
 
 .md-list-item-expand {
     background-color: whitesmoke;
+}
+
+/* Bootstrap Offcanvas fixes for split.js layout */
+.offcanvas {
+    z-index: 1050;
+    position: fixed;
+    height: 100vh;
+    max-width: 100%;
+}
+
+.offcanvas-backdrop {
+    z-index: 1040;
+    position: fixed;
+}
+
+.modal-backdrop {
+    z-index: 1040;
+    position: fixed;
+}
+
+#vue_menu {
+    position: relative;
+    z-index: 1030;
 }

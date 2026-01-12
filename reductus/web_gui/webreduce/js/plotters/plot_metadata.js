@@ -100,18 +100,10 @@ export function show_plots_metadata(plotdata, plot_controls, target, old_plot) {
   container.style.overflowX = "scroll";
   target.appendChild(container);
 
-  let MetadataTableClass = Vue.extend(MetadataTable);
-  let metadata_table = new MetadataTableClass({
-    data: () => ({
-      cols,
-      metadata
-    }),
-    mounted: function () {
-      console.log(this.metadata, this.$refs.rows);
-      // reset patches?
-      //this.patched = [];
-    }
-  }).$mount(container);
+  let metadata_table = Vue.createApp(MetadataTable, {
+    cols,
+    metadata
+  }).mount(container);
 
   return metadata_table
 }
