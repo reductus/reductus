@@ -12,120 +12,144 @@ let template = `
     </div>
     
     <div class="offcanvas-body p-0">
-      <div class="list-group list-group-flush">
-        <!-- Template Section -->
-        <div class="list-group-item p-0">
-          <button class="btn btn-link w-100 text-start p-3 border-bottom" type="button" @click="expandTemplate = !expandTemplate">
-            Template
-          </button>
-          <div v-if="expandTemplate" class="list-group list-group-flush ms-3">
-            <button @click="action('new_template')" class="list-group-item list-group-item-action">
-              <i class="bi bi-plus me-2"></i> New
+      <div class="accordion" id="mainAccordion">
+        <!-- Template Accordion Item -->
+        <div class="accordion-item">
+          <h2 class="accordion-header">
+            <button class="accordion-button" :class="{ collapsed: !expandTemplate }" type="button" @click="expandTemplate = !expandTemplate" aria-controls="templateCollapse">
+              Template
             </button>
-            <button @click="action('edit_template')" class="list-group-item list-group-item-action">
-              <i class="bi bi-pencil me-2"></i> Edit
-            </button>
-            <button @click="action('download_template')" class="list-group-item list-group-item-action">
-              <i class="bi bi-download me-2"></i> Download
-            </button>
-            <button @click="trigger_upload" class="list-group-item list-group-item-action">
-              <i class="bi bi-upload me-2"></i> Upload Template
-            </button>
-            <div class="list-group-item">
-              <label for="predefined_template" class="form-label">Predefined</label>
-              <select v-model="predefined_template" class="form-select form-select-sm mb-2" id="predefined_template">
-                <option v-for="template in predefined_templates" :value="template">
-                  {{template}}
-                </option>
-              </select>
-              <button 
-                class="btn btn-primary btn-sm w-100"
-                :disabled="predefined_template == ''"
-                @click="action('load_predefined', predefined_template)">
-                Load
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Data Section -->
-        <div class="list-group-item p-0">
-          <button class="btn btn-link w-100 text-start p-3 border-bottom" type="button" @click="expandData = !expandData">
-            Data
-          </button>
-          <div v-if="expandData" class="list-group list-group-flush ms-3">
-            <button @click="action('stash_data')" class="list-group-item list-group-item-action">
-              <i class="bi bi-box-arrow-right me-2"></i> Stash Data
-            </button>
-            <button @click="showCategoriesEditor(); showNavigation = false" class="list-group-item list-group-item-action">
-              <i class="bi bi-list me-2"></i> Edit Categories
-            </button>
-            <button v-if="enable_uploads" @click="trigger_upload_datafiles" class="list-group-item list-group-item-action">
-              <i class="bi bi-briefcase-plus me-2"></i> Upload Datafiles
-            </button>
-            <button @click="action('export_data')" class="list-group-item list-group-item-action">
-              <i class="bi bi-cloud-download me-2"></i> Export
-            </button>
-            <button @click="trigger_upload" class="list-group-item list-group-item-action">
-              <i class="bi bi-upload me-2"></i> Reload Exported
-            </button>
-            <button @click="action('clear_cache')" class="list-group-item list-group-item-action">
-              <i class="bi bi-trash me-2"></i> Clear Cache
-            </button>
-            <div class="list-group-item">
-              <label for="select_datasource" class="form-label">Data Sources</label>
-              <select v-model="select_datasource" class="form-select form-select-sm mb-2" id="select_datasource">
-                <option v-for="source in datasources" :value="source">
-                  {{source}}
-                </option>
-              </select>
-              <button 
-                class="btn btn-primary btn-sm w-100"
-                @click="action('add_datasource', select_datasource)">
-                Add
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Settings Section -->
-        <div class="list-group-item p-0">
-          <button class="btn btn-link w-100 text-start p-3 border-bottom" type="button" @click="expandSettings = !expandSettings">
-            Settings
-          </button>
-          <div v-if="expandSettings" class="list-group list-group-flush ms-3">
-            <div v-for="(setting, setting_name) in settings" class="list-group-item">
-              <div class="form-check">
-                <input 
-                  type="checkbox" 
-                  class="form-check-input" 
-                  v-model="setting.value" 
-                  :id="'setting_' + setting_name"
-                />
-                <label class="form-check-label" :for="'setting_' + setting_name">
-                  {{setting.label}}
-                </label>
-                <button 
-                  class="btn btn-sm btn-link ms-auto" 
-                  @click.stop="settingsHelpActiveTab=setting_name; showSettingsHelp = true">
-                  <i class="bi bi-info-circle"></i>
+          </h2>
+          <div id="templateCollapse" class="accordion-collapse collapse" :class="{ show: expandTemplate }">
+            <div class="accordion-body p-0">
+              <div class="list-group list-group-flush">
+                <button @click="action('new_template')" class="list-group-item list-group-item-action">
+                  <i class="bi bi-plus me-2"></i> New
                 </button>
+                <button @click="action('edit_template')" class="list-group-item list-group-item-action">
+                  <i class="bi bi-pencil me-2"></i> Edit
+                </button>
+                <button @click="action('download_template')" class="list-group-item list-group-item-action">
+                  <i class="bi bi-download me-2"></i> Download
+                </button>
+                <button @click="trigger_upload" class="list-group-item list-group-item-action">
+                  <i class="bi bi-upload me-2"></i> Upload Template
+                </button>
+                <div class="list-group-item">
+                  <label for="predefined_template" class="form-label">Predefined</label>
+                  <select v-model="predefined_template" class="form-select form-select-sm mb-2" id="predefined_template">
+                    <option v-for="template in predefined_templates" :value="template">
+                      {{template}}
+                    </option>
+                  </select>
+                  <button 
+                    class="btn btn-primary btn-sm w-100"
+                    :disabled="predefined_template == ''"
+                    @click="action('load_predefined', predefined_template)">
+                    Load
+                  </button>
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- Instrument Section -->
-        <div class="list-group-item p-0">
-          <button class="btn btn-link w-100 text-start p-3 border-bottom" type="button" @click="expandInstrument = !expandInstrument">
-            Instrument: <span class="fw-bold">{{current_instrument}}</span>
-          </button>
-          <div v-if="expandInstrument" class="list-group list-group-flush ms-3">
-            <div v-for="instrument in instruments" class="list-group-item d-flex justify-content-between align-items-center">
-              <span>{{instrument}}</span>
-              <button class="btn btn-primary btn-sm" @click.stop="action('switch_instrument', instrument)">
-                switch
-              </button>
+        <!-- Data Accordion Item -->
+        <div class="accordion-item">
+          <h2 class="accordion-header">
+            <button class="accordion-button" :class="{ collapsed: !expandData }" type="button" @click="expandData = !expandData" aria-controls="dataCollapse">
+              Data
+            </button>
+          </h2>
+          <div id="dataCollapse" class="accordion-collapse collapse" :class="{ show: expandData }">
+            <div class="accordion-body p-0">
+              <div class="list-group list-group-flush">
+                <button @click="action('stash_data')" class="list-group-item list-group-item-action">
+                  <i class="bi bi-box-arrow-right me-2"></i> Stash Data
+                </button>
+                <button @click="showCategoriesEditor(); showNavigation = false" class="list-group-item list-group-item-action">
+                  <i class="bi bi-list me-2"></i> Edit Categories
+                </button>
+                <button v-if="enable_uploads" @click="trigger_upload_datafiles" class="list-group-item list-group-item-action">
+                  <i class="bi bi-briefcase-plus me-2"></i> Upload Datafiles
+                </button>
+                <button @click="action('export_data')" class="list-group-item list-group-item-action">
+                  <i class="bi bi-cloud-download me-2"></i> Export
+                </button>
+                <button @click="trigger_upload" class="list-group-item list-group-item-action">
+                  <i class="bi bi-upload me-2"></i> Reload Exported
+                </button>
+                <button @click="action('clear_cache')" class="list-group-item list-group-item-action">
+                  <i class="bi bi-trash me-2"></i> Clear Cache
+                </button>
+                <div class="list-group-item">
+                  <label for="select_datasource" class="form-label">Data Sources</label>
+                  <select v-model="select_datasource" class="form-select form-select-sm mb-2" id="select_datasource">
+                    <option v-for="source in datasources" :value="source">
+                      {{source}}
+                    </option>
+                  </select>
+                  <button 
+                    class="btn btn-primary btn-sm w-100"
+                    @click="action('add_datasource', select_datasource)">
+                    Add
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Settings Accordion Item -->
+        <div class="accordion-item">
+          <h2 class="accordion-header">
+            <button class="accordion-button" :class="{ collapsed: !expandSettings }" type="button" @click="expandSettings = !expandSettings" aria-controls="settingsCollapse">
+              Settings
+            </button>
+          </h2>
+          <div id="settingsCollapse" class="accordion-collapse collapse" :class="{ show: expandSettings }">
+            <div class="accordion-body p-0">
+              <div class="list-group list-group-flush">
+                <div v-for="(setting, setting_name) in settings" :key="setting_name" class="list-group-item">
+                  <div class="form-check">
+                    <input 
+                      type="checkbox" 
+                      class="form-check-input" 
+                      v-model="setting.value" 
+                      :id="'setting_' + setting_name"
+                    />
+                    <label class="form-check-label" :for="'setting_' + setting_name">
+                      {{setting.label}}
+                    </label>
+                    <button 
+                      class="btn btn-sm btn-link ms-auto" 
+                      @click.stop="settingsHelpActiveTab=setting_name; showSettingsHelp = true">
+                      <i class="bi bi-info-circle"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Instrument Accordion Item -->
+        <div class="accordion-item">
+          <h2 class="accordion-header">
+            <button class="accordion-button" :class="{ collapsed: !expandInstrument }" type="button" @click="expandInstrument = !expandInstrument" aria-controls="instrumentCollapse">
+              Instrument: <span class="fw-bold ms-2">{{current_instrument}}</span>
+            </button>
+          </h2>
+          <div id="instrumentCollapse" class="accordion-collapse collapse" :class="{ show: expandInstrument }">
+            <div class="accordion-body p-0">
+              <div class="list-group list-group-flush">
+                <div v-for="instrument in instruments" class="list-group-item d-flex justify-content-between align-items-center">
+                  <span>{{instrument}}</span>
+                  <button class="btn btn-primary btn-sm" @click.stop="action('switch_instrument', instrument)">
+                    switch
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
