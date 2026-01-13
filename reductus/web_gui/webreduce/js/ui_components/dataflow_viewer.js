@@ -1,5 +1,3 @@
-import { extend } from '../libraries.js';
-
 let dataflow_template = `
 <div 
   class="dataflow editor container"
@@ -534,7 +532,7 @@ export const DataflowViewer = {
       // and duplicate their contents
       let wires = this.template_data.wires
         .filter((w) => (indices.includes(w.source[0]) && indices.includes(w.target[0])))
-        .map((w) => (extend(true, {}, w)));
+        .map((w) => (structuredClone(w)));
 
       wires.forEach((w, i) => {
         let new_source = indices.indexOf(w.source[0]);
@@ -543,7 +541,7 @@ export const DataflowViewer = {
         w.target[0] = new_target;
       })
 
-      let modules = indices.map((mi) => (extend(true, {}, this.template_data.modules[mi])));
+      let modules = indices.map((mi) => (structuredClone(this.template_data.modules[mi])));
       let reference_point = { x: this.menu.x, y: this.menu.y };
       this.menu.clipboard = { modules, wires, reference_point };
     },
@@ -569,8 +567,8 @@ export const DataflowViewer = {
       let { modules, wires, reference_point } = this.menu.clipboard;
       let relative_x = this.menu.x - reference_point.x;
       let relative_y = this.menu.y - reference_point.y;
-      let new_modules = modules.map((m) => (extend(true, {}, m)));
-      let new_wires = wires.map((w) => (extend(true, {}, w)));
+      let new_modules = modules.map((m) => (structuredClone(m)));
+      let new_wires = wires.map((w) => (structuredClone(w)));
       let module_offset = this.template_data.modules.length;
       new_modules.forEach((m) => { m.x += relative_x; m.y += relative_y });
       new_wires.forEach((w) => { w.source[0] += module_offset; w.target[0] += module_offset; });

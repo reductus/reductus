@@ -1,4 +1,4 @@
-import { Vue } from '../libraries.js';
+import * as Vue from 'vue';
 
 let template = `
 <dialog ref="dialog" class="export-dialog" style="width: 500px;">

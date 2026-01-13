@@ -1,9 +1,8 @@
 "use strict";
 // SIDE-EFFECTS ONLY FOR NOW...
 import { createApp } from 'vue';
-import { Split } from './libraries.js';
+import Split from 'split.js';
 import { emitter } from './bus.js';
-import { zip } from './libraries.js';
 import { editor } from './editor.js';
 import { server_api } from './server_api/api_msgpack.js';
 import { filebrowser } from './filebrowser.js';
@@ -235,7 +234,7 @@ window.onload = async function () {
     }
   });
 
-  plotter.create_instance("plotdiv", emitter);
+  plotter.create_instance("plot_panel", emitter);
   emitter.on("plotter.action", (name, argument) => {
     // there's only one action from plotter... export:
     if (name === 'export_data') {

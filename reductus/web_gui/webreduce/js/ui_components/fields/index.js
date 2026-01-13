@@ -1,4 +1,5 @@
-import { d3, extend, rectangleSelectPoints } from '../../libraries.js';
+import { rectangleSelectPoints } from 'd3-science';
+import * as d3 from 'd3';
 import { plotter } from '../../plot.js';
 
 let template = `
@@ -44,7 +45,7 @@ export const IndexUi = {
       set(newValue) {
         //this.local_value = JSON.parse('[' + newValue + ']').map(x => (+x));
         let parsed = JSON.parse(newValue);
-        parsed.forEach((v,i) => this.$set(this.local_value, i, v));
+        parsed.forEach((v,i) => this.local_value[i] = v);
       }
     }
   },
@@ -68,20 +69,20 @@ export const IndexUi = {
     if (this.add_interactors) {
       let chart = plotter.instance.active_plot;
       if (!chart) { return } // bail out
-      var selected = extend(true, [], this.local_value);
+      var selected = structuredClone(this.local_value);
       let state = {
         skip_points: false
       }
 
       var update = (values) => {
         values.forEach((v,i) => {
-          this.$set(this.local_value, i, v)
+          this.local_value[i] = v;
         });
         this.$emit("change", this.field.id, this.local_value);
       }
       this.changed = () => {
         this.$emit('change', this.field.id, this.local_value);
-        selected = extend(true, [], this.local_value);
+        selected = structuredClone(this.local_value);
         update_plot();
       }
       function update_plot() {

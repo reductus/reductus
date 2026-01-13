@@ -1,4 +1,3 @@
-import { extend } from '../../libraries.js';
 import { plotter } from '../../plot.js';
 
 let field_template = `
@@ -25,7 +24,7 @@ export const PatchUi = {
   name: 'patch_metadata-ui',
   props: ["field", "value", "add_interactors"],
   computed: {
-    local_value: function() { return extend(true, [], this.value) },
+    local_value: function() { return structuredClone(this.value) },
     key_col: function() { return this.field.typeattr.key }
   },
   methods: {
@@ -54,7 +53,7 @@ export const PatchUi = {
       let chart = plotter.instance.active_plot;
       chart.editing = true;
       chart.key_col = this.key_col;
-      chart.$set(chart, 'patches', this.value || []);
+      chart.patches = this.value || [];
       chart.$on("change", (row, col, value) => {
         this.update_patch(row, col, value);
       })
@@ -63,7 +62,7 @@ export const PatchUi = {
   updated: function() {
     if (this.add_interactors) {
       let chart = plotter.instance.active_plot;
-      chart.$set(chart, 'patches', this.value || []);
+      chart.patches = this.value || [];
     }
   }
 }

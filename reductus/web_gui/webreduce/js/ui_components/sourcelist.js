@@ -3,6 +3,7 @@ import { DataSource } from './datasource.js';
 let template = `
 <div class="sourcelist">
   <div><button id="refresh_all" @click="refreshAll">refresh all</button></div>
+  <span>Number of sources: {{datasources.length}}</span>
   <div style="position: relative">
     <div :class="{'block-overlay': blocked}"></div>
     <data-source 

@@ -1,4 +1,5 @@
-import { d3, extend, xyChart } from '../libraries.js';
+import { extend, xyChart } from 'd3-science';
+import * as d3 from 'd3';
 import { app } from '../main.js'
 
 export async function show_plots_nd(plotdata, plot_controls, target, old_plot) {
@@ -11,10 +12,10 @@ export async function show_plots_nd(plotdata, plot_controls, target, old_plot) {
   extend(true, options, plotdata.options);
 
   var colnames = Object.keys(plotdata.columns).sort();
-  plot_controls.$set(plot_controls.axes.x.coord, 'options', colnames);
-  plot_controls.$set(plot_controls.axes.y.coord, 'options', colnames);
-  plot_controls.$set(plot_controls.axes.x.transform, 'options', ["linear", "log", "ln", "pow(2)", "pow(4)"]);
-  plot_controls.$set(plot_controls.axes.y.transform, 'options', ["linear", "log", "ln", "pow(2)", "pow(4)"]);
+  plot_controls.axes.x.coord.options = colnames;
+  plot_controls.axes.y.coord.options = colnames;
+  plot_controls.axes.x.transform.options = ["linear", "log", "ln", "pow(2)", "pow(4)"];
+  plot_controls.axes.y.transform.options = ["linear", "log", "ln", "pow(2)", "pow(4)"];
 
   if (options.xcol) {
     plot_controls.axes.x.coord.value = options.xcol;
@@ -100,6 +101,7 @@ export async function show_plots_nd(plotdata, plot_controls, target, old_plot) {
     });
 
     await plot_controls.$nextTick();
+    console.log("plot_controls updated", target);
     d3.select(target).selectAll("svg, div").remove();
     d3.select(target).classed("plot", true);
     d3.selectAll([target])

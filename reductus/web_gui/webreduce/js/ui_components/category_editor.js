@@ -1,4 +1,4 @@
-import { d3 } from '../libraries.js';
+import * as d3 from 'd3';
 import { filebrowser } from '../filebrowser.js';
 
 export function category_editor (categories, default_categories, category_keys) {

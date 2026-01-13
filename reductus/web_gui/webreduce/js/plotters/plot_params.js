@@ -1,4 +1,5 @@
-import { Tree, d3 } from '../libraries.js';
+import Tree from 'treejs';
+import * as d3 from 'd3';
 
 /**
  *

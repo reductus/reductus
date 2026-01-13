@@ -1,4 +1,4 @@
-import { Tree } from '../libraries.js';
+import Tree from 'treejs';
 import { PathEditor } from './patheditor.js';
 import { DirBrowser } from './dirbrowser.js';
 
@@ -59,7 +59,8 @@ export const DataSource = {
   },
   mounted: function () {
     //this.tree = new Tree(this.$refs.tree.$el, this.source.treedata);
-    //console.log(this.source.treedata);
+    console.log("treedata: ", this.source.treedata);
+    console.log("source: ", this.source);
     // go get tree data
     this.set_treedata(this.source.treedata);
     // var updater = null;

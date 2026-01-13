@@ -3,28 +3,8 @@ export { zip };
 window.zip = zip;
 
 export { default as Tree } from '@widgetjs/tree/src/index.js';
-import Vue from 'vue/dist/vue.esm.js';
-import * as vm from 'vue-material/dist/components/index.js';
-Vue.use(vm.MdToolbar);
-Vue.use(vm.MdSubheader);
-Vue.use(vm.MdButton);
-Vue.use(vm.MdContent);
-Vue.use(vm.MdTabs);
-Vue.use(vm.MdMenu);
-Vue.use(vm.MdApp);
-Vue.use(vm.MdDialog);
-Vue.use(vm.MdCheckbox);
-Vue.use(vm.MdSnackbar);
-Vue.use(vm.MdList);
-Vue.use(vm.MdDrawer);
-Vue.use(vm.MdIcon);
-Vue.use(vm.MdField);
-Vue.use(vm.MdProgress);
-Vue.use(vm.MdSteppers);
-Vue.use(vm.MdDivider);
-Vue.use(vm.MdRadio);
-window.Vue = Vue;
-export { Vue };
+export * as Vue from 'vue/dist/vue.esm.js';
+
 export { default as vuedraggable } from 'vuedraggable/src/vuedraggable.js';
 
 // import * as d3 from 'd3/dist/d3.min.js';

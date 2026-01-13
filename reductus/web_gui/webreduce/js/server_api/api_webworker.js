@@ -1,5 +1,6 @@
 // imports promise worker library
-import { PromiseWorker } from "../libraries.js";
+import 'promise-worker';
+const PromiseWorker = window.PromiseWorker;
 const server_api = {};
 export {server_api};
 

@@ -1,3 +1,3 @@
-import { mitt } from "./libraries.js";
+import mitt from 'mitt';
 
 export const emitter = mitt();

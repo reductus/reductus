@@ -5,11 +5,10 @@ import {server_api} from './server_api/api_msgpack.js';
 import {dependencies} from './deps.js';
 import {instruments} from './instruments/index.js';
 // now a global...
-import {zip} from './libraries.js';
-import { Vue } from './libraries.js';
-import {extend, dataflowEditor} from './libraries.js';
+import * as zip from '@zip.js/zip.js';
+import * as Vue from 'vue';
 import { Cache } from './idb_cache.js';
-import { sha1 } from './libraries.js';
+import sha1 from 'sha1';
 import {filebrowser} from './filebrowser.js';
 //import {make_fieldUI} from './fieldUI.js';
 import { plotter  } from './plot.js';
@@ -154,7 +153,7 @@ function module_clicked_single() {
       .map(function(d) {return im[d.id]});
     field_inputs.forEach(function(d) {
       d.values.forEach(function(v) {
-        extend(true, fields_in, v.params);
+        Object.assign(fields_in, structuredClone(v.params));
       });
     });
     await editor.show_plots([datasets_in]);
@@ -276,7 +275,7 @@ editor.stash_data = function(suggested_name) {
   let [node, terminal] = editor.instance.selected.terminals[0];
   let template = editor.instance.template_data;
   let instrument_id = editor._instrument_id;
-  let template_copy = extend(true, {}, template);
+  let template_copy = structuredClone(template);
   var subroutine = {};
   subroutine.module = "user.stashed"
   subroutine.title = stashname;
@@ -367,7 +366,7 @@ editor.compare_stashed = function(stashnames) {
 }
 
 editor.get_versioned_template = function(template) {
-  var versioned = extend(true, {}, template),
+  var versioned = structuredClone(template),
       editor = this,
       module_list = versioned.modules;
   module_list.forEach(function(m) {
@@ -696,7 +695,7 @@ editor.switch_instrument = async function(instrument_id, load_default=true) {
     let categories = editor.instruments[instrument_id].categories;
     let old_categories = vueMenu.instance.categories;
     old_categories.splice(0, old_categories.length, ...categories);
-    vueMenu.instance.default_categories = extend(true, [], categories);
+    vueMenu.instance.default_categories = structuredClone(categories);
     vueMenu.instance.predefined_templates = Object.keys(instrument_def.templates || {});
     vueMenu.instance.current_instrument = instrument_id;
     let template_names = Object.keys(instrument_def.templates);
@@ -710,7 +709,7 @@ editor.switch_instrument = async function(instrument_id, load_default=true) {
     }
     if (load_default) {
       app.current_instrument = instrument_id;
-      var template_copy = extend(true, {}, instrument_def.templates[default_template]);
+      var template_copy = structuredClone(instrument_def.templates[default_template]);
       return editor.load_template(template_copy);
     }
   } 

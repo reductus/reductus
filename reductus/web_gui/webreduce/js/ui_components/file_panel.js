@@ -95,6 +95,12 @@ export const FilePanel = {
     blocked: false
   }),
   methods: {
+    addDataSource(source) {
+      this.datasources.unshift(source);
+    },
+    updateDataSource(index, source) {
+      this.datasources.splice(index, 1, source);
+    },
     refreshAll() {
       this.$refs.sourcelist.refreshAll();
     },
@@ -104,6 +110,7 @@ export const FilePanel = {
       }
     },
     pathChange(source, pathlist, datasourceIndex) {
+      console.log("pathChange", source, pathlist, datasourceIndex);
       if (this.onPathChange) {
         this.onPathChange(source, pathlist, datasourceIndex);
       }

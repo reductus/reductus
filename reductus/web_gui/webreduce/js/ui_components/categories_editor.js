@@ -1,5 +1,5 @@
 import { treeItem } from './tree_item.js';
-import { Sortable } from '../libraries.js';
+import Sortable from 'sortablejs';
 
 let template = `
 <div>

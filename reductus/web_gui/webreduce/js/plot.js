@@ -1,4 +1,4 @@
-import { Vue } from './libraries.js';
+import * as Vue from 'vue';
 import { PlotControls } from './plotters/plot_controls.js';
 import { app } from './main.js';
 import { show_plots_nd } from './plotters/plot_nd.js';
@@ -11,7 +11,6 @@ const plotter = {};
 export { plotter };
 
 let template = `
-<div class="reductus-plot-panel">
   <header id="plot_title">{{title}}</header>
   <div id="plotdiv" class="plotdiv" ref="plotdiv">
   </div>
@@ -24,7 +23,6 @@ let template = `
     @downloadSVG="downloadSVG"
     @export-data="emitter.emit('plotter.action', 'export_data')"
   ></plot-controls>
-</div>
 `;
 
 const plotters = {
@@ -50,6 +48,7 @@ export const PlotPanel = {
     type: 'null',
     instances: {},
     active_plot: null,
+    plot_controls: null,
     title: ""
   }),
   methods: {
@@ -70,22 +69,30 @@ export const PlotPanel = {
     set_plot_title(title) {
       this.title = title;
     },
-    setPlotData(plotdata) {
-      if (!plotdata || plotdata.type === 'null') {
-        this.type = 'null';
-        this.instances = {};
-        this.active_plot = null;
-      } else {
-        this.type = plotdata.type || 'null';
-        const plotter_fn = plotters[this.type] || plotters['null'];
-        const plotdiv = this.$refs.plotdiv;
-        const controls = this.$refs.controls;
-        if (plotdiv && controls) {
-          plotter_fn(plotdata, controls, plotdiv);
-          this.active_plot = plotdata;
-        }
-      }
-    }
+    async setPlotData(plotdata) {
+      let typeChange = (this.type != plotdata.type);
+      console.log(`plot type change: ${this.type} -> ${plotdata.type}`);
+      this.type = plotdata.type;
+      this.title = "";
+      await this.$nextTick();
+      this.active_plot = await plotters[plotdata.type](plotdata, this.$refs.controls, this.$refs.plotdiv, this.active_plot);
+    },
+    // setPlotData(plotdata) {
+    //   if (!plotdata || plotdata.type === 'null') {
+    //     this.type = 'null';
+    //     this.instances = {};
+    //     this.active_plot = null;
+    //   } else {
+    //     this.type = plotdata.type || 'null';
+    //     const plotter_fn = plotters[this.type] || plotters['null'];
+    //     const plotdiv = this.$refs.plotdiv;
+    //     const controls = this.$refs.controls;
+    //     if (plotdiv && controls) {
+    //       plotter_fn(plotdata, controls, plotdiv);
+    //       this.active_plot = plotdata;
+    //     }
+    //   }
+    // }
   },
   template  
 };
@@ -108,10 +115,6 @@ plotter.create_instance = function(target_id, emitter) {
   let target = document.getElementById(target_id);
   plotter.instance = Vue.createApp(PlotPanel, {
     emitter: emitter,
-    type: 'null',
-    instances: {},
-    active_plot: null,
-    plot_controls: null
   }).mount(target);
 }
 

@@ -5,7 +5,7 @@ export { filebrowser };
 import { editor } from './editor.js';
 import { server_api } from './server_api/api_msgpack.js';
 //import { makeSourceList } from './ui_components/sourcelist.js';
-import { Vue } from './libraries.js';
+import * as Vue from 'vue';
 import { FilePanel } from './ui_components/file_panel.js';
 import { emitter } from './bus.js';
 
@@ -103,7 +103,11 @@ function file_objs_to_tree(file_objs, categories, datasource) {
 filebrowser.addDataSource = async function (source, pathlist) {
   let dirdata = await server_api.get_file_metadata({ source, pathlist });
   let treedata = await categorizeFiles(dirdata.files_metadata, source, pathlist.join("/"));
-  filebrowser.datasources.unshift({ name: source, pathlist, treedata, subdirs: dirdata.subdirs });
+  let datasource = { name: source, pathlist, treedata, subdirs: dirdata.subdirs };
+  filebrowser.datasources.unshift(datasource);
+  if (filebrowser.instance) {
+    filebrowser.instance.addDataSource(datasource);
+  }
   //filebrowser.instance.pathChange(source, pathlist, 0);
 }
 
@@ -157,23 +161,29 @@ filebrowser.create_instance = function (target_id, emitter) {
     let subdirs = [...dirdata.subdirs];
     console.log({dirdata, treedata, subdirs});
     subdirs.sort(sortAlphaNumeric).reverse();
-    filebrowser.instance.datasources.splice(datasourceIndex, 1, {
+    let datasource = {
       name: source,
       pathlist,
       subdirs,
       treedata
-    });
+    };
+    filebrowser.instance.updateDataSource(datasourceIndex, datasource);
     filebrowser.instance.$refs.sourcelist.set_treedata(datasourceIndex, treedata);
     updateHistory(target);
   };
   
   filebrowser.pathChangeHandler = pathChangeHandler;
-  
+  console.log("datasources: ", filebrowser.datasources);
   filebrowser.instance = Vue.createApp(FilePanel, {
     emitter: emitter,
     onPathChange: pathChangeHandler,
     onHandleChecked: handleChecked
   }).mount(target);
+  
+  // Copy any pre-existing datasources into the Vue instance
+  filebrowser.datasources.forEach(ds => {
+    filebrowser.instance.addDataSource(ds);
+  });
 }
 
 filebrowser.refreshAll = function () {
