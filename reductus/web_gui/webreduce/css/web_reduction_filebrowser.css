@@ -31,7 +31,7 @@ a svg, a span {
   position: relative;
 }
 
-div.dataflow.editor.container {
+div.dataflow.editor {
     flex: 1;
     display: flex;
     flex-direction: column;

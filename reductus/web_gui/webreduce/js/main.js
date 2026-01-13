@@ -175,10 +175,10 @@ window.onload = async function () {
     let box_height = bbox.y + bbox.height + border;
     let bpercent = box_height / full_height * 100.0;
     let tpercent = 100.0 - bpercent;
-    app.vertical_layout.setSizes([tpercent, bpercent])
+    app.vertical_layout.setSizes([tpercent, bpercent]);
   }
 
-  await editor.create_instance("template_editor");
+  await editor.create_instance("bottom_panel", emitter);
   const app_header = createApp(headerComponent, { emitter: emitter }).mount(document.getElementById("app_header"));
   emitter.on("toggle-menu", () => {
     vueMenu.instance.showNavigation = !vueMenu.instance.showNavigation

@@ -1,6 +1,6 @@
 let dataflow_template = `
 <div 
-  class="dataflow editor container"
+  class="dataflow editor"
   style="position: relative;"
   @contextmenu.prevent="contextmenu"
   @mousedown.left="mousedown"
