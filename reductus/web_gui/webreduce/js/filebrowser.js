@@ -155,6 +155,7 @@ filebrowser.create_instance = function (target_id, emitter) {
     let dirdata = await server_api.get_file_metadata({ source, pathlist });
     let treedata = await categorizeFiles(dirdata.files_metadata, source, pathlist.join("/"));
     let subdirs = [...dirdata.subdirs];
+    console.log({dirdata, treedata, subdirs});
     subdirs.sort(sortAlphaNumeric).reverse();
     filebrowser.instance.datasources.splice(datasourceIndex, 1, {
       name: source,
@@ -165,6 +166,8 @@ filebrowser.create_instance = function (target_id, emitter) {
     filebrowser.instance.$refs.sourcelist.set_treedata(datasourceIndex, treedata);
     updateHistory(target);
   };
+  
+  filebrowser.pathChangeHandler = pathChangeHandler;
   
   filebrowser.instance = Vue.createApp(FilePanel, {
     emitter: emitter,

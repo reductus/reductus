@@ -210,6 +210,14 @@ window.onload = async function () {
 
   filebrowser.create_instance("filebrowser", emitter);
   
+  // Initialize file browser with default datasource
+  if (app._datasources && app._datasources.length > 0) {
+    const defaultDatasource = app._datasources[0];
+    const defaultPath = [];
+    filebrowser.datasources.push({ name: defaultDatasource.name, pathlist: defaultPath, treedata: [], subdirs: [] });
+    await filebrowser.pathChangeHandler(defaultDatasource.name, defaultPath, 0);
+  }
+  
   const filebrowser_actions = {
     remove_stash(stashname) {
       editor.remove_stash(stashname);
