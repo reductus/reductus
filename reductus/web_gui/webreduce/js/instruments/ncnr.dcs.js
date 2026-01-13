@@ -1,4 +1,3 @@
-import {extend} from '../libraries.js';
 const instrument = {};
 export default instrument;
 
@@ -37,5 +36,5 @@ instrument.default_categories = [
   [["temp_setpoint"], ["field_setpoint"]],
   [["name"]]
 ];
-instrument.categories = extend(true, [], instrument.default_categories);  
+instrument.categories = structuredClone(instrument.default_categories);
 instrument.decorators = [];
