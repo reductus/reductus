@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 
 import esbuild from 'esbuild';
-import alias from 'esbuild-plugin-alias';
 import fs from 'fs';
 import path from 'path';
 import { copyRecursiveSync } from './copy_recursive_sync.mjs';
@@ -15,12 +14,11 @@ await esbuild.build({
   sourcemap: true,
   outdir: 'dist/js',
   target: 'es2016',
+  alias: {
+    // Use Vue's full build with template compiler instead of runtime-only
+    'vue': 'vue/dist/vue.esm-bundler.js'
+  },
   plugins: [
-    alias({
-      './libraries.js': path.resolve(__dirname, `js/libraries_production.js`),
-      '../libraries.js': path.resolve(__dirname, `js/libraries_production.js`),
-      '../../libraries.js': path.resolve(__dirname, `js/libraries_production.js`)
-    }),
   ],
 }).catch(() => process.exit(1))
 
