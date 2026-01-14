@@ -135,9 +135,8 @@ function module_clicked_single() {
   }
   let recalc_mtimes = app.settings.check_mtimes.value;
   let params_to_calc = terminals_to_calculate.map(function(terminal_id) {
-    return {template: active_template, config: {}, node: i, terminal: terminal_id, return_type: "plottable"}
+    return {template: Vue.toRaw(active_template), config: {}, node: i, terminal: terminal_id, return_type: "plottable"}
   });
-  console.log("calculating for terminals", terminals_to_calculate, "with recalc_mtimes", recalc_mtimes);
   editor.calculate(params_to_calc, recalc_mtimes)
     .then(function(results) {
     var inputs_map = {};
