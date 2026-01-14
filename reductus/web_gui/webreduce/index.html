@@ -16,11 +16,11 @@
         "vue": "https://cdn.jsdelivr.net/npm/vue@3.5.26/dist/vue.esm-browser.prod.js",
         "d3": "https://cdn.jsdelivr.net/npm/d3@7/+esm",
         "@zip.js/zip.js": "https://cdn.jsdelivr.net/npm/@zip.js/zip.js@2.3.19/lib/zip-full.js",
-        "treejs": "https://cdn.jsdelivr.net/gh/bmaranville/treejs@latest/src/index.js",
+        "@widgetjs/tree": "https://cdn.jsdelivr.net/gh/bmaranville/treejs@latest/src/index.js",
         "sortablejs": "https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/modular/sortable.esm.js",
         "messagepack": "https://cdn.jsdelivr.net/npm/messagepack@1.1.12/dist/messagepack.es.js",
         "idb": "https://cdn.jsdelivr.net/npm/idb@7.0.2/build/index.js",
-        "d3-science": "https://cdn.jsdelivr.net/gh/usnistgov/d3-science@0.2.14/src/index.js",
+        "d3-science": "https://cdn.jsdelivr.net/gh/usnistgov/d3-science@6d277899060f127cd210fa2fe5f4c8bdb522db4c/src/index.js",
         "sha1": "https://cdn.skypack.dev/sha1@1.1.1",
         "split.js": "https://cdn.skypack.dev/split.js",
         "js-yaml": "https://cdn.jsdelivr.net/npm/js-yaml@latest/dist/js-yaml.mjs",
@@ -29,7 +29,6 @@
       }
     }
     </script>
-    <script type="module" src="./js/main.js"></script>
 </head>
 
 <body>
@@ -43,19 +42,15 @@
             <div id="filebrowser"></div>
           </div>
       
-          <div id="centerpane" class="ui-layout-center split content split-horizontal">
-            <div id="plot_panel" class="reductus-plot-panel"></div>
-          </div>
+          <div id="centerpane" class="ui-layout-center split content split-horizontal"></div>
       
-          <div id="east_panel" class="ui-layout-east split content split-horizontal">
-            <div id="fieldsdiv"></div>
-          </div>
+          <div id="east_panel" class="ui-layout-east split content split-horizontal"></div>
       
         </div>
         <div id="bottom_panel" class="ui-layout-south split"></div>
       </div>
     
   </div>
-
+<script type="module" src="./js/main.js"></script>
 </body>
 </html>
