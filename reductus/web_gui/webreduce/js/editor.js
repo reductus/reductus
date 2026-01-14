@@ -476,7 +476,7 @@ editor.calculate = async function(params, recalc_mtimes, noblock, result_callbac
   
   let results = [];
   if (!noblock && params && (params instanceof Array ? params.length > 0 : true)) {
-    emitter.emit('app_header.show_calculation_progress', params instanceof Array ? params.length : 1);
+    emitter.emit('app_header.show_calculation_progress', { total: params instanceof Array ? params.length : 1 });
   }
   try {
     if (recalc_mtimes) {
@@ -488,7 +488,7 @@ editor.calculate = async function(params, recalc_mtimes, noblock, result_callbac
         if (!editor._calculation_cancelled) {
           let result = await Promise.race([cancel_promise, calculate_one(p, caching)]);
           if (result_callback) { await result_callback(r, p, i); }
-          emitter.emit('app_header.update_progress', i+1, params.length);
+          emitter.emit('app_header.update_progress', { done: i+1, total: params.length });
           results.push(result);
         }
       }

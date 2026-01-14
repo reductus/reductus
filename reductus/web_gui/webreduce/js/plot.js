@@ -22,7 +22,7 @@ let template = `
     @transformChange="transformChange"
     @settingChange="settingChange"
     @downloadSVG="downloadSVG"
-    @export-data="emitter.emit('plotter.action', 'export_data')"
+    @export-data="emitter.emit('plotter.action', { name: 'export_data' })"
   ></plot-controls>
 </div>
 `;

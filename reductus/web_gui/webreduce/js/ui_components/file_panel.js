@@ -50,7 +50,7 @@ let template = `
                   :id="'stash_' + name"
                   v-model="selected_stashes" 
                   :value="name"
-                  @change="emitter.emit('filebrowser.action', 'compare_stashed', selected_stashes)"
+                  @change="emitter.emit('filebrowser.action', { name: 'compare_stashed', argument: selected_stashes })"
                 >
                 <label class="form-check-label flex-grow-1 mb-0" :for="'stash_' + name">
                   {{name}}
@@ -58,13 +58,13 @@ let template = `
                 <button 
                   type="button" 
                   class="btn btn-sm btn-outline-primary" 
-                  @click.stop="emitter.emit('filebrowser.action', 'reload_stash', name)">
+                  @click.stop="emitter.emit('filebrowser.action', { name: 'reload_stash', argument: name })">
                   <i class="bi bi-box-arrow-up-right" style="margin-right: 0.25rem;"></i>reload
                 </button>
                 <button 
                   type="button" 
                   class="btn btn-sm btn-outline-danger" 
-                  @click.stop="emitter.emit('filebrowser.action', 'remove_stash', name)">
+                  @click.stop="emitter.emit('filebrowser.action', { name: 'remove_stash', argument: name })">
                   <i class="bi bi-trash"></i>
                 </button>
               </div>

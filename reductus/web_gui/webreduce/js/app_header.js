@@ -3,7 +3,7 @@ const template = `
   <nav class="navbar" style="background-color: yellow;">
     <div class="container-fluid">
       <div class="d-flex align-items-center">
-        <button class="btn btn-link" @click="emitter.emit('toggle-menu', true)" style="padding: 0; margin-right: 1rem;">
+        <button class="btn btn-link" @click="emitter.emit('toggle-menu', { show: true })" style="padding: 0; margin-right: 1rem;">
           <i class="mdi mdi-menu" title="MENU" style="font-size: 1.5em;"></i>
         </button>
         <span style="font-weight: bold; font-size: 1.25em;">

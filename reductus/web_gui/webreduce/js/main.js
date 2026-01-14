@@ -181,7 +181,7 @@ window.onload = async function () {
   await editor.create_instance("bottom_panel", emitter);
   const app_header = createApp(headerComponent, { emitter: emitter }).mount(document.getElementById("app_header"));
   console.log("app_header instance: ", app_header, app_header.$el);
-  emitter.on("toggle-menu", () => {
+  emitter.on("toggle-menu", (payload) => {
     vueMenu.instance.showNavigation = !vueMenu.instance.showNavigation
   });
 
@@ -189,10 +189,10 @@ window.onload = async function () {
   emitter.on("app_header.reset_progress", () => {
     app_header.calculation_progress.done = 0;
   });
-  emitter.on("app_header.show_calculation_progress", (total) => {
+  emitter.on("app_header.show_calculation_progress", ({ total }) => {
     app_header.show_calculation_progress(total);
   });
-  emitter.on("app_header.update_progress", (done, total) => {
+  emitter.on("app_header.update_progress", ({ done, total }) => {
     app_header.calculation_progress.done = done;
     app_header.calculation_progress.total = total;
   });
@@ -231,14 +231,14 @@ window.onload = async function () {
       editor.compare_stashed(stashnames);
     }
   }
-  emitter.on("filebrowser.action", (name, argument) => {
+  emitter.on("filebrowser.action", ({ name, argument }) => {
     if (filebrowser_actions[name]) {
       filebrowser_actions[name](argument);
     }
   });
 
   plotter.create_instance("centerpane", emitter);
-  emitter.on("plotter.action", (name, argument) => {
+  emitter.on("plotter.action", ({ name, argument }) => {
     // there's only one action from plotter... export:
     if (name === 'export_data') {
       editor.export_data();
@@ -311,7 +311,7 @@ window.onload = async function () {
       editor.switch_instrument(instrument_id);
     }
   }
-  emitter.on("vue_menu.action", (name, argument) => {
+  emitter.on("vue_menu.action", ({ name, argument }) => {
     if (menu_actions[name]) {
       menu_actions[name](argument);
     }

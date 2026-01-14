@@ -299,7 +299,7 @@ export const VueMenu = {
     hide() { this.showNavigation = false },
     action(name, argument) {
       this.hide();
-      this.emitter.emit("vue_menu.action", name, argument);
+      this.emitter.emit("vue_menu.action", { name, argument });
     },
     showCategoriesEditor() {
       this.$refs.categories_editor.open();

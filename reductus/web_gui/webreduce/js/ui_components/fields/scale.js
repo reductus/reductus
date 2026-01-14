@@ -1,5 +1,4 @@
-import { scaleInteractor } from 'd3-science';
-import * as d3 from 'd3';
+import { extend, scaleInteractor } from 'd3-science';
 import { plotter } from '../../plot.js';
 
 let template = `
@@ -23,7 +22,7 @@ export const ScaleUi = {
   computed: {
     dimensioned_value() {
       if (this.value != null) {
-        return structuredClone(this.value);
+        return extend(true, [],this.value);
       }
       else {
         let default_value = (this.field.default != null) ? this.field.default : 1;
@@ -55,13 +54,15 @@ export const ScaleUi = {
         scales,
         point_size: 10
       }
-      let scaler = new scaleInteractor(opts, null, null, d3);
+      let scaler = new scaleInteractor(opts);
       scaler.dispatch.on("update", () => {
+        console.log("scales updated", opts.scales);
         this.$emit("change", this.field.id, opts.scales);
       //   opts.scales.forEach((v,i) => this.$set(this.local_value, i, v));
         chart.update()
       });
       scaler.dispatch.on("end", () => {
+        console.log("scales updated (end)", opts.scales);
         this.$emit("change", this.field.id, opts.scales);
       });
       // TODO: the update function is not implemented in the interactor,
