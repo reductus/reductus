@@ -121,7 +121,7 @@ function add_datasource(sourcename, start_path_in="") {
     start_path = datasource.start_path;
   }
   let pathlist = start_path.split("/");
-  filebrowser.addDataSource(sourcename, pathlist);
+  app.filebrowser_instance.addDataSource(sourcename, pathlist);
 }
 
 window.onload = async function () {
@@ -180,6 +180,7 @@ window.onload = async function () {
 
   await editor.create_instance("bottom_panel", emitter);
   const app_header = createApp(headerComponent, { emitter: emitter }).mount(document.getElementById("app_header"));
+  console.log("app_header instance: ", app_header, app_header.$el);
   emitter.on("toggle-menu", () => {
     vueMenu.instance.showNavigation = !vueMenu.instance.showNavigation
   });
@@ -207,14 +208,16 @@ window.onload = async function () {
   server_api.exception_handler = api_exception_handler;
   app.server_api = server_api;
 
-  filebrowser.create_instance("filebrowser", emitter);
+  const filebrowser_instance = createApp(filebrowser, {
+    emitter: emitter
+  }).mount(document.getElementById("filebrowser"));
+  app.filebrowser_instance = filebrowser_instance;
   
   // Initialize file browser with default datasource
   if (app._datasources && app._datasources.length > 0) {
     const defaultDatasource = app._datasources[0];
     const defaultPath = [];
-    filebrowser.datasources.push({ name: defaultDatasource.name, pathlist: defaultPath, treedata: [], subdirs: [] });
-    await filebrowser.pathChangeHandler(defaultDatasource.name, defaultPath, 0);
+    await filebrowser_instance.addDataSource(defaultDatasource.name, defaultPath);
   }
   
   const filebrowser_actions = {
@@ -234,7 +237,7 @@ window.onload = async function () {
     }
   });
 
-  plotter.create_instance("plot_panel", emitter);
+  plotter.create_instance("centerpane", emitter);
   emitter.on("plotter.action", (name, argument) => {
     // there's only one action from plotter... export:
     if (name === 'export_data') {
@@ -243,7 +246,7 @@ window.onload = async function () {
   });
   app.plot_instance = plotter.instance;
 
-  const fieldUI = createApp(FieldsPanel, { emitter: emitter }).mount(document.getElementById("fieldsdiv"));
+  const fieldUI = createApp(FieldsPanel, { emitter: emitter }).mount(document.getElementById("east_panel"));
   emitter.on("fields.fileinfo_update", ({value, no_terminal_selected}) => {
     fieldUI.update_fileinfo(value, no_terminal_selected);
   });
@@ -255,9 +258,6 @@ window.onload = async function () {
   });
   emitter.on("fields.accept_button", () => {
     editor.advance_to_output();
-  });
-  emitter.on("filebrowser.checked", (fileinfo) => {
-    fieldUI.update_fileinfo(fileinfo);
   });
   emitter.on("editor.calculate_single", (payload) => {
     fieldUI.set_calculator_single(payload);
@@ -285,7 +285,7 @@ window.onload = async function () {
     async upload_datafiles(files) {
       await server_api.upload_datafiles(files);
       notify(`Uploaded: ${files.length} files`);
-      filebrowser.instance.refreshAll();
+      app.filebrowser_instance.refreshAll();
     },
     load_predefined(template_id) {
       let instrument_id = editor._instrument_id;
@@ -301,8 +301,8 @@ window.onload = async function () {
     stash_data() { editor.stash_data() },
     set_categories(new_categories) {
       editor.instruments[editor._instrument_id].categories = new_categories;
-      console.log(filebrowser.instance);
-      filebrowser.instance.refreshAll();
+      console.log(app.filebrowser_instance);
+      app.filebrowser_instance.refreshAll();
     },
     export_data() { editor.export_data() },
     add_datasource,

@@ -30,8 +30,8 @@ let template = `
 export const IndexUi = {
   name: "index-ui",
   props: ["field", "value", "num_datasets_in", "add_interactors"],
-  data: function () {
-    let local_value = this.getLocal(this.value)
+  data() {
+    const local_value = this.getLocal(this.value)
     return {
       local_value,
       interaction: 'select'
@@ -54,13 +54,13 @@ export const IndexUi = {
       this.$emit('change', this.field.id, this.local_value);
     },
     getLocal(value) {
-      let value_length = (this.value || []).length;
-      if (this.value != null && this.num_datasets_in != value_length) {
+      const value_length = (value || []).length;
+      if (value != null && this.num_datasets_in != value_length) {
         alert(`${value_length} index values defined for ${this.num_datasets_in} datasets; 
         Extending with empty values or truncating to match data length`);
       }
-      return Array.from(Array(this.num_datasets_in)).map((x,i) => 
-          ((this.value || [])[i] || []));
+      return Array.from({ length: this.num_datasets_in }).map((x,i) => 
+          ((value || [])[i] || []));
     },
     setLocal() {}
   },
@@ -69,7 +69,7 @@ export const IndexUi = {
     if (this.add_interactors) {
       let chart = plotter.instance.active_plot;
       if (!chart) { return } // bail out
-      var selected = structuredClone(this.local_value);
+      var selected = this.local_value.map(v => [...v]);
       let state = {
         skip_points: false
       }
@@ -82,7 +82,7 @@ export const IndexUi = {
       }
       this.changed = () => {
         this.$emit('change', this.field.id, this.local_value);
-        selected = structuredClone(this.local_value);
+        selected = this.local_value.map(v => [...v]);
         update_plot();
       }
       function update_plot() {
@@ -132,9 +132,9 @@ export const IndexUi = {
       chart.svg.selectAll(".dot").on("click", null); // clear previous handlers
       chart.svg.selectAll("g.series").each(function (d, i) {
         let index_list = selected[i];
-        d3.select(this).selectAll('.dot').on('click', (dd,ii) => {
-          d3.event.stopPropagation();
-          d3.event.preventDefault();
+        d3.select(this).selectAll('.dot').on('click', (event, dd, ii) => {
+          event.stopPropagation();
+          event.preventDefault();
           let index_index = index_list.indexOf(ii);
           let included = index_index > -1;
           if (included) {

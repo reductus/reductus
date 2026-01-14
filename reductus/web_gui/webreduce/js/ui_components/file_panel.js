@@ -6,30 +6,28 @@ let template = `
     <ul class="nav nav-tabs" role="tablist" style="flex-shrink: 0;">
       <li class="nav-item" role="presentation">
         <button 
-          class="nav-link active" 
+          :class="['nav-link', { active: activeTab === 'navigation' }]"
           id="navigation-tab" 
-          data-bs-toggle="tab" 
-          data-bs-target="#navigation" 
           type="button" 
-          role="tab">
+          role="tab"
+          @click="activeTab = 'navigation'">
           raw data
         </button>
       </li>
       <li class="nav-item" role="presentation">
         <button 
-          class="nav-link" 
+          :class="['nav-link', { active: activeTab === 'stashedlist' }]"
           id="stashedlist-tab" 
-          data-bs-toggle="tab" 
-          data-bs-target="#stashedlist" 
           type="button" 
-          role="tab">
+          role="tab"
+          @click="activeTab = 'stashedlist'">
           stashed
         </button>
       </li>
     </ul>
 
     <div class="tab-content flex-grow-1 overflow-auto">
-      <div class="tab-pane fade show active" id="navigation" role="tabpanel">
+      <div :class="['tab-pane', 'fade', { show: activeTab === 'navigation', active: activeTab === 'navigation' }]" id="navigation" role="tabpanel">
         <source-list 
           :datasources="datasources"
           :blocked="blocked"
@@ -40,7 +38,7 @@ let template = `
         ></source-list>
       </div>
       
-      <div class="tab-pane fade" id="stashedlist" role="tabpanel">
+      <div :class="['tab-pane', 'fade', { show: activeTab === 'stashedlist', active: activeTab === 'stashedlist' }]" id="stashedlist" role="tabpanel">
         <div class="p-3">
           <h6 class="mb-3">Compare Stashed</h6>
           <div class="list-group">
@@ -61,13 +59,13 @@ let template = `
                   type="button" 
                   class="btn btn-sm btn-outline-primary" 
                   @click.stop="emitter.emit('filebrowser.action', 'reload_stash', name)">
-                  <i class="mdi mdi-launch" style="margin-right: 0.25rem;"></i>reload
+                  <i class="bi bi-box-arrow-up-right" style="margin-right: 0.25rem;"></i>reload
                 </button>
                 <button 
                   type="button" 
                   class="btn btn-sm btn-outline-danger" 
                   @click.stop="emitter.emit('filebrowser.action', 'remove_stash', name)">
-                  <i class="mdi mdi-delete"></i>
+                  <i class="bi bi-trash"></i>
                 </button>
               </div>
             </div>
@@ -84,12 +82,10 @@ export const FilePanel = {
   components: { SourceList },
   props: {
     emitter: Object,
-    onPathChange: Function,
-    onHandleChecked: Function
   },
   data: () => ({
     datasources: [],
-    tab_select: 'data',
+    activeTab: 'navigation',
     stashnames: [],
     selected_stashes: [],
     blocked: false
@@ -105,15 +101,10 @@ export const FilePanel = {
       this.$refs.sourcelist.refreshAll();
     },
     handleChecked(values) {
-      if (this.onHandleChecked) {
-        this.onHandleChecked(values);
-      }
+      this.emitter.emit("filebrowser.checked", values);
     },
     pathChange(source, pathlist, datasourceIndex) {
-      console.log("pathChange", source, pathlist, datasourceIndex);
-      if (this.onPathChange) {
-        this.onPathChange(source, pathlist, datasourceIndex);
-      }
+      this.emitter.emit("filebrowser.pathChange", { source, pathlist, datasourceIndex });
     },
     resize() {
       // Bootstrap tabs don't need manual position calculation

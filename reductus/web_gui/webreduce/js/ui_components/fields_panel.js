@@ -169,6 +169,14 @@ export const FieldsPanel = {
       this.reset_local_config();
     }
   },
+  mounted() {
+    // Listen for filebrowser.checked events
+    this.emitter.on('filebrowser.checked', this.update_fileinfo);
+  },
+  beforeUnmount() {
+    // Clean up listener
+    this.emitter.off('filebrowser.checked', this.update_fileinfo);
+  },
   beforeUpdate: function () {
     // reset the active file picker to the first one.
     this.active_fileinfo = 0;

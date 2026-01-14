@@ -11,6 +11,7 @@ const plotter = {};
 export { plotter };
 
 let template = `
+<div class="reductus-plot-panel">
   <header id="plot_title">{{title}}</header>
   <div id="plotdiv" class="plotdiv" ref="plotdiv">
   </div>
@@ -23,6 +24,7 @@ let template = `
     @downloadSVG="downloadSVG"
     @export-data="emitter.emit('plotter.action', 'export_data')"
   ></plot-controls>
+</div>
 `;
 
 const plotters = {
@@ -51,7 +53,40 @@ export const PlotPanel = {
     plot_controls: null,
     title: ""
   }),
+  mounted() {
+    // Listen for show_plots events
+    this.emitter.on('show_plots', this.showPlots);
+  },
+  beforeUnmount() {
+    // Clean up listener
+    this.emitter.off('show_plots', this.showPlots);
+  },
   methods: {
+    async showPlots(results) {
+      var new_plotdata;
+      if (results.length == 0 || results[0] == null || results[0].values.length == 0) { 
+        new_plotdata = null; 
+      }
+      else { 
+        new_plotdata = {values: [], type: null, xcol: null, ycol: null}
+        new_plotdata.type = results[0].values[0].type;
+        results.forEach(function(r) {
+          var values = r.values || [];
+          values.forEach(function(v) {
+            if (new_plotdata.type == null && v.type) {
+              new_plotdata.type = v.type;
+            }
+            new_plotdata.values.push(v);
+          });
+        });
+      }
+      if (new_plotdata == null) {
+        await this.setPlotData({type: 'null'});
+      }
+      else if (['nd', '1d', '2d', '2d_multi', 'params', 'metadata'].includes(new_plotdata.type)) {
+        await this.setPlotData(new_plotdata);
+      }
+    },
     transformChange(axis, new_transform) {
       console.log(`changing transform for axis ${axis} to ${new_transform}`);
     },
@@ -75,7 +110,16 @@ export const PlotPanel = {
       this.type = plotdata.type;
       this.title = "";
       await this.$nextTick();
-      this.active_plot = await plotters[plotdata.type](plotdata, this.$refs.controls, this.$refs.plotdiv, this.active_plot);
+      if (!this.$refs.controls || !this.$refs.plotdiv) {
+        console.warn('Plot refs not ready yet');
+        return;
+      }
+      const plotter_fn = plotters[plotdata.type];
+      if (!plotter_fn) {
+        console.warn(`Unknown plot type: ${plotdata.type}`);
+        return;
+      }
+      this.active_plot = await plotter_fn(plotdata, this.$refs.controls, this.$refs.plotdiv, this.active_plot);
     },
     // setPlotData(plotdata) {
     //   if (!plotdata || plotdata.type === 'null') {

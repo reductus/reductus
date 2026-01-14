@@ -1,4 +1,4 @@
-import Tree from 'treejs';
+import Tree from '@widgetjs/tree';
 import { PathEditor } from './patheditor.js';
 import { DirBrowser } from './dirbrowser.js';
 

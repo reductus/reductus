@@ -754,23 +754,30 @@ export const DataflowViewer = {
       }
     },
     getSVGCoords: function (ev) {
+      // Lazy initialization: create svgPoint when first needed
+      if (!this.drag.svgPoint && this.$refs.svg) {
+        this.drag.svgPoint = this.$refs.svg.createSVGPoint();
+      }
       this.drag.svgPoint.x = ev.clientX;
       this.drag.svgPoint.y = ev.clientY;
       return this.drag.svgPoint.matrixTransform(this.$refs.svg.getScreenCTM().inverse());
     },
     get_bbox() {
-      return this.$refs.template.getBBox();
+      return this.$refs?.template?.getBBox() || { x: 0, y: 0, width: 0, height: 0 };
     },
     on_select: function () { },
     on_change: function () { /* override as needed */ },
     fit_module_text: function () {
+      if (!this.$refs.modules) {
+        return;
+      }
       this.$refs.modules.forEach((m) => {
         m.set_display_width();
       })
     }
   },
   mounted: function () {
-    this.drag.svgPoint = this.$refs.svg.createSVGPoint();
+    // svgPoint now initialized lazily in getSVGCoords when first needed
   },
   template: dataflow_template
 }

@@ -1,4 +1,4 @@
-import Tree from 'treejs';
+import Tree from '@widgetjs/tree';
 import * as d3 from 'd3';
 
 /**

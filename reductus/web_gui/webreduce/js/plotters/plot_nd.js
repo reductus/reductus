@@ -86,15 +86,15 @@ export async function show_plots_nd(plotdata, plot_controls, target, old_plot) {
   var tooltip = d3.select("body").append("div").classed("tooltip", true);
   var tip_prec = 4;
   d3.select(target).selectAll(".dot")
-    .on("mouseover", function (d) {
+    .on("mouseover", function (event, d) {
       tooltip.transition()
         .duration(200)
         .style("opacity", .9);
       tooltip.html("x: " + d[0].toPrecision(tip_prec) + "<br/>y: " + d[1].toPrecision(tip_prec))
-        .style("left", (d3.event.pageX + 10) + "px")
-        .style("top", (d3.event.pageY - 35) + "px");
+        .style("left", (event.pageX + 10) + "px")
+        .style("top", (event.pageY - 35) + "px");
     })
-    .on("mouseout", function (d) {
+    .on("mouseout", function (event, d) {
       tooltip.transition()
         .duration(500)
         .style("opacity", 0);

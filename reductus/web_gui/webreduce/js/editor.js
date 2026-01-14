@@ -124,7 +124,7 @@ function module_clicked_single() {
   let active_module = editor.instance.template_data.modules[i];
   let module_def = editor.instance.module_defs[active_module.module];
   let fileinfos = (module_def.fields || []).filter(f => (f.datatype == 'fileinfo'));
-  filebrowser.instance.blocked = (fileinfos.length < 1);
+  app.filebrowser_instance.blocked = (fileinfos.length < 1);
   
   var terminals_to_calculate = module_def.inputs
     .filter(function(inp) {return /\.params$/.test(inp.datatype)})
@@ -136,7 +136,8 @@ function module_clicked_single() {
   let recalc_mtimes = app.settings.check_mtimes.value;
   let params_to_calc = terminals_to_calculate.map(function(terminal_id) {
     return {template: active_template, config: {}, node: i, terminal: terminal_id, return_type: "plottable"}
-  })
+  });
+  console.log("calculating for terminals", terminals_to_calculate, "with recalc_mtimes", recalc_mtimes);
   editor.calculate(params_to_calc, recalc_mtimes)
     .then(function(results) {
     var inputs_map = {};
@@ -156,7 +157,7 @@ function module_clicked_single() {
         Object.assign(fields_in, structuredClone(v.params));
       });
     });
-    await editor.show_plots([datasets_in]);
+    emitter.emit('show_plots', [datasets_in]);
 
     emitter.emit('editor.calculate_single', {
       num_datasets_in: ((datasets_in || {}).values || []).length,
@@ -189,7 +190,7 @@ editor.get_full = function() {
 function module_clicked() {
   let nterms = editor.instance.selected.terminals.length;
   if (nterms > 0) {
-    filebrowser.instance.selected_stashes.splice(0);
+    app.filebrowser_instance.selected_stashes.splice(0);
     if (nterms > 1) {
       module_clicked_multiple();
     }
@@ -199,7 +200,7 @@ function module_clicked() {
   }
   else if(editor.instance.selected.modules.length > 1) {
     app.hide_fields();
-    filebrowser.instance.blocked = true;
+    app.filebrowser_instance.blocked = true;
   }
 }
 
@@ -216,34 +217,8 @@ async function compare_in_template(to_compare, template) {
         return_type: "plottable"
   }));
   let results = await editor.calculate(params_to_calc, recalc_mtimes);
-  editor.show_plots(results);
+  emitter.emit('show_plots', results);
 }
-
-editor.show_plots = async function(results) {
-  var new_plotdata;
-  if (results.length == 0 || results[0] == null || results[0].values.length == 0) { 
-    new_plotdata = null; 
-  }
-  else { 
-    new_plotdata = {values: [], type: null, xcol: null, ycol: null}
-    new_plotdata.type = results[0].values[0].type;
-    results.forEach(function(r) {
-      var values = r.values || [];
-      values.forEach(function(v) {
-        if (new_plotdata.type == null && v.type) {
-          new_plotdata.type = v.type;
-        }
-        new_plotdata.values.push(v);
-      });
-    });
-  }
-    if (new_plotdata == null) {
-      await plotter.instance.setPlotData({type: 'null'});
-    }
-    else if (['nd', '1d', '2d', '2d_multi', 'params', 'metadata'].includes(new_plotdata.type)) {
-      await plotter.instance.setPlotData(new_plotdata);
-    }
-  }
 
 editor.stash_data = function(suggested_name) {
   // embed the active template in a subroutine, exposing the
@@ -296,7 +271,7 @@ editor.stash_data = function(suggested_name) {
 editor.load_stashes = function(stashes) {
   var existing_stashes = stashes || _fetch_stashes();
   var stashnames = Object.keys(existing_stashes);
-  filebrowser.instance.stashnames = stashnames;
+  app.filebrowser_instance.stashnames = stashnames;
 }
 
 function _fetch_stashes() {
@@ -361,7 +336,7 @@ editor.compare_stashed = function(stashnames) {
           first.values = first.values.concat(results[i].values);
         }
       }
-      editor.show_plots([first]);
+      emitter.emit('show_plots', [first]);
     });
 }
 
@@ -675,14 +650,13 @@ editor.update_completions = function() {
 editor.load_instrument = async function(instrument_id) {
   editor._instrument_id = instrument_id;
   let instrument_def = await server_api.get_instrument({instrument_id});
+  // Store non-reactive copies for editor's internal use
   editor._instrument_def = instrument_def;
-  let module_defs = Object.fromEntries((instrument_def.modules || []).map(m => (
+  editor._module_defs = Object.fromEntries((instrument_def.modules || []).map(m => (
     [m.id, m]
   )));
-  // load into the editor instance
-  editor._module_defs = module_defs;
-  // Update component data directly
-  editor.instance.instrument_def = instrument_def;
+  // Update component with shallow reactive - only top level is reactive
+  editor.instance.instrument_def = Vue.shallowReactive(instrument_def);
   // pass it through:
   return instrument_def;
 }
@@ -722,13 +696,13 @@ editor.load_template = async function(template_def, selected_module, selected_te
   //var r = this.switch_instrument(instrument_id, false).then(function() {
       
   let template_sourcepaths = filebrowser.getAllTemplateSourcePaths(template_def);
-  let browser_sourcepaths = filebrowser.getAllBrowserSourcePaths();
+  let browser_sourcepaths = app.filebrowser_instance.getAllBrowserSourcePaths();
   var sources_loaded = Promise.resolve();
   for (let [source, pathobj] of Object.entries(template_sourcepaths)) {
     let paths = Object.keys(pathobj);
     for (let path of paths) {
       if (browser_sourcepaths.findIndex(sp => (sp.source == source && sp.path == path)) < 0) {
-        await filebrowser.addDataSource(source, path.split("/"));
+        await app.filebrowser_instance.addDataSource(source, path.split("/"));
       }
     }
   }
