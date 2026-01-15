@@ -35,7 +35,6 @@
     "idb": "^7.0.2",
     "js-yaml": "^4.1.0",
     "messagepack": "^1.1.12",
-    "mitt": "^3.0.1",
     "promise-worker": "^2.0.1",
     "roboto-fontface": "^0.10.0",
     "sha1": "^1.1.1",
