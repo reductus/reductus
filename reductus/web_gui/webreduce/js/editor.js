@@ -156,9 +156,9 @@ function module_clicked_single() {
         Object.assign(fields_in, structuredClone(v.params));
       });
     });
-    emitter.emit('show_plots', [datasets_in]);
+    await emitter.emit('show_plots', [datasets_in]);
 
-    emitter.emit('editor.calculate_single', {
+    await emitter.emit('editor.calculate_single', {
       num_datasets_in: ((datasets_in || {}).values || []).length,
       module: active_module,
       module_id: i,
@@ -734,7 +734,6 @@ editor.load_template = async function(template_def, selected_module, selected_te
 }
 
 editor.load_metadata = async function(files_metadata, datasource, path) {
-  console.log("loading metadata for files:", files_metadata);
   var instrument_id = editor._instrument_id;
   var instrument = editor.instruments[instrument_id];
   var file_objs = {};
