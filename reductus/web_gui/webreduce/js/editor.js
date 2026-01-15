@@ -580,7 +580,7 @@ editor.export_data = function() {
   if (terminals.length == 0) { alert("no input or output selected to export"); return }
   if (terminals.length > 1) { alert("more than one input or output selected to export"); return }
   let [node, terminal] = terminals[0];
-  let template = this.instance.template_data;
+  let template = Vue.toRaw(this.instance.template_data);
   let module = this.instance.template_data.modules[node];
   let module_def = this.instance.module_defs[module.module];
 
