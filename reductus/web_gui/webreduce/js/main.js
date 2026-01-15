@@ -316,7 +316,7 @@ window.onload = async function () {
       menu_actions[name](argument);
     }
   });
-  export_dialog.create_instance();
+  export_dialog.create_instance(emitter);
 
 
   // set up the communication between these panels:
