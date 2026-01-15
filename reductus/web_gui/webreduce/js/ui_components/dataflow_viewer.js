@@ -669,7 +669,10 @@ export const DataflowViewer = {
           }
           // if all is well, add the wire!
           if (compatible && !is_duplicate && !is_self) {
-            wires.push({ source: wire.source, target: wire.target });
+            wires.push({
+              source: [...wire.source],
+              target: [...wire.target]
+            });
             this.on_change();
           }
         }
