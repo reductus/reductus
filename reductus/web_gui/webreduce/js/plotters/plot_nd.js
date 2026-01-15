@@ -101,7 +101,6 @@ export async function show_plots_nd(plotdata, plot_controls, target, old_plot) {
     });
 
     await plot_controls.$nextTick();
-    console.log("plot_controls updated", target);
     d3.select(target).selectAll("svg, div").remove();
     d3.select(target).classed("plot", true);
     d3.selectAll([target])

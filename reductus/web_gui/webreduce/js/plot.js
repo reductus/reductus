@@ -106,7 +106,6 @@ export const PlotPanel = {
     },
     async setPlotData(plotdata) {
       let typeChange = (this.type != plotdata.type);
-      console.log(`plot type change: ${this.type} -> ${plotdata.type}`);
       this.type = plotdata.type;
       this.title = "";
       await this.$nextTick();
