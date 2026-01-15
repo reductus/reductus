@@ -29,7 +29,8 @@ const filebrowser = {
       return this.datasources.map(d => ({ source: d.name, path: d.pathlist.join("/") }));
     },
     
-    async pathChangeHandler(source, pathlist, datasourceIndex) {
+    async pathChange(source, pathlist, datasourceIndex) {
+      // override file_panel generic handler
       let dirdata = await server_api.get_file_metadata({ source, pathlist });
       let treedata = await categorizeFiles(dirdata.files_metadata, source, pathlist.join("/"));
       let subdirs = [...dirdata.subdirs];
