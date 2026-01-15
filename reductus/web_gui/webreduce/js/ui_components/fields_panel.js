@@ -75,7 +75,7 @@ export const FieldsPanel = {
   },
   methods: {
     reset_local_config() {
-      // Create a shallow copy of the config object
+      // Create a new reactive object to trigger updates
       if (this.module.config) {
         this.local_config = { ...this.module.config };
       } else {
@@ -102,6 +102,8 @@ export const FieldsPanel = {
         else {
           this.local_config[id] = value;
         }
+        // Trigger reactivity by reassigning the object
+        // this.local_config = { ...this.local_config };
       }
     },
     accept_change(id, value) {
@@ -119,7 +121,10 @@ export const FieldsPanel = {
         if (!this.module.config) {
           this.module.config = {};
         }
-        this.module.config[id] = value;
+        // Deep clone arrays/objects to ensure new references for reactivity
+        this.module.config[id] = Array.isArray(value) ? [...value] : 
+                                  (typeof value === 'object' && value !== null) ? { ...value } : 
+                                  value;
       }
       this.emitter.emit("fields.update");
       this.reset_local_config();
@@ -156,7 +161,7 @@ export const FieldsPanel = {
       else {
         this.local_config = {};
       }
-      this.timestamp = Date.now();
+      this.timestamp = Date.now(); // update timestamp
     },
     set_calculator_single(payload) {
       this.num_datasets_in = payload.num_datasets_in;
