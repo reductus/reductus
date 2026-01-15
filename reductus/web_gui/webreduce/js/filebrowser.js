@@ -54,7 +54,7 @@ const filebrowser = {
       let keys = info.map(fi => (
         JSON.stringify([fi.source, fi.path, fi.entries[0], fi.mtime])
       ));
-      this.setChecked(keys);
+      this.$refs.sourcelist.set_checked(keys);
       if (update_plots) { this.handleChecked(keys, true) };
     },
     

@@ -248,7 +248,7 @@ window.onload = async function () {
 
   const fieldUI = createApp(FieldsPanel, { emitter: emitter }).mount(document.getElementById("east_panel"));
   emitter.on("fields.fileinfo_update", ({value, no_terminal_selected}) => {
-    fieldUI.update_fileinfo(value, no_terminal_selected);
+    filebrowser_instance.fileinfoUpdate(value, no_terminal_selected);
   });
   emitter.on("fields.update", () => {
     editor.update_completions();
