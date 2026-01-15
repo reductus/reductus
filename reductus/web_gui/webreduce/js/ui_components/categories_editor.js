@@ -145,7 +145,7 @@ export const categoriesEditor = {
     open() {
       this.$nextTick(() => {
         this.$refs.main_dialog.showModal();
-        console.log('opened categories editor', this.categories, this.category_keys);
+        // console.log('opened categories editor', this.categories, this.category_keys);
       });
     },
     removeSub(index, subindex) {
@@ -156,7 +156,7 @@ export const categoriesEditor = {
       this.local_categories.splice(index, 1);
     },
     editSub(index, subindex) {
-      console.log('editSub', index, subindex);
+      // console.log('editSub', index, subindex);
       this.pick_category.current_target = {index, subindex};
       this.$nextTick(() => {
         this.$refs.pick_dialog.showModal();
@@ -207,7 +207,7 @@ export const categoriesEditor = {
     },
     reload_defaults() {
       const default_categories = structuredClone(this.default_categories);
-      console.log(default_categories);
+      // console.log(default_categories);
       this.local_categories.splice(0, this.local_categories.length, ...default_categories);
     },
     initializeSortable() {
@@ -251,8 +251,8 @@ export const categoriesEditor = {
   watch: {
     category_keys: function(old, newVal) {
       const newChildren = annotate(newVal);
-      console.log(newChildren);
-      console.log(this.category_tree);
+      // console.log(newChildren);
+      // console.log(this.category_tree);
       this.category_tree.children.splice(0, this.category_tree.children.length, ...newChildren);
     },
     categories: function(old, newVal) {
