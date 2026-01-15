@@ -123,6 +123,7 @@ let template = `
 
 export const exportDialog = {
   name: "export-dialog",
+  props: ["emitter"],
   data() {
     return {
       selected_export_type: 0,
@@ -170,7 +171,11 @@ export const exportDialog = {
       this.$refs.dialog.close();      
     },
     onExportSelect() {
-      this.$emit('export-select', this.export_types[this.selected_export_type], this.combine_outputs);
+      const payload = {
+        export_type: this.export_types[this.selected_export_type],
+        combine_outputs: this.combine_outputs
+      }
+      this.emitter.emit('export-select', payload);
       this.active_step = "retrieve";
       this.export_select_done = true;
     },
@@ -181,7 +186,11 @@ export const exportDialog = {
       this.retrieve_done = true;
     },
     onExportRoute() {
-      this.$emit('export-route', this.filename, this.export_targets[this.selected_export_target]);
+      const payload = {
+        export_target: this.export_targets[this.selected_export_target],
+        filename: this.filename
+      }
+      this.emitter.emit('export-route', payload);
       this.close();
     }
   },
@@ -195,8 +204,8 @@ export const exportDialog = {
 
 export const export_dialog = {};
 
-export_dialog.create_instance = function() {
+export_dialog.create_instance = function(emitter) {
   let target  = document.createElement('div');
   document.body.appendChild(target);
-  this.instance = Vue.createApp(exportDialog).mount(target);
+  this.instance = Vue.createApp(exportDialog, { emitter }).mount(target);
 }

@@ -30,6 +30,14 @@ function createAsyncEmitter() {
       
       // Execute all handlers and wait for them to complete
       await Promise.all(list.map(handler => handler(data)));
+    },
+
+    once(type, handler) {
+      const wrappedHandler = async (data) => {
+        await handler(data);
+        this.off(type, wrappedHandler);
+      };
+      this.on(type, wrappedHandler);
     }
   };
 }

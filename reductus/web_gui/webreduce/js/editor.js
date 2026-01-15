@@ -613,19 +613,21 @@ editor.export_data = function() {
   else {
     // when there are more than one export types defined, ask which one to use:
     export_dialog.instance.open(export_types);
-    export_dialog.instance.$once("export-select", async function(export_type, concatenate) {
+    emitter.once("export-select", async function(export_data) {
+      const { export_type, combine_outputs } = export_data;
       var w = editor;
       var recalc_mtimes = app.settings.check_mtimes.value;
       params.export_type = export_type;
-      params.concatenate = concatenate;
+      params.concatenate = combine_outputs;
       let exported = await editor.calculate(params, recalc_mtimes, true);
       let suggested_name = (exported.values[0] || {}).filename || "myfile.refl";
       let additional_export_targets = w.instruments[w._instrument_id].export_targets || [];
       let export_targets = w.export_targets.concat(additional_export_targets);
       export_dialog.instance.export_targets = export_targets;
       export_dialog.instance.retrieved(suggested_name);
-      export_dialog.instance.$once("export-route", function(filename, target) {
-        export_handlers[target.type](exported, filename, target || {});
+      emitter.once("export-route", function(route_data) {
+        const { filename, export_target } = route_data;
+        export_handlers[export_target.type](exported, filename, export_target || {});
       })
     });
   }
