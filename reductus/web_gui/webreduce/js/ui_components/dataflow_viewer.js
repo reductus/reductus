@@ -6,46 +6,25 @@ let dataflow_template = `
   @contextmenu.prevent="contextmenu"
   @mousedown.left="mousedown"
   >
-  <md-menu md-size="auto"
-    :md-active.sync="menu.visible"
-    :style="{height: 0}"
-    :md-offset-x="menu.x"
-    :md-offset-y="menu.y"
-    md-direction="bottom-start">
-    <md-button style="visibility:hidden"></md-button>
-
-    <md-menu-content>
-      <md-menu-item v-if="menu.startdata == null">
-          <select name="add_module" id="add_module" @change="add_module">
-            <option value="" disabled="true" selected="true">Add module:</option>
-            <option v-for="module in instrument_def.modules" :value="module.id">{{module.name}}</option>
-          </select>
-      </md-menu-item>
-      <md-menu-item v-if="menu.startdata == null && menu.clipboard != null">
-        <md-button @click="paste_module();menu.visible=false;" class="md-raised md-primary">Paste</md-button>
-      </md-menu-item>
-      <md-menu-item v-if="false && menu.startdata == null">
-        <md-field>
-          <label for="add_module">Add Module Here</label>
-          <md-select name="add_module" id="add_module" @md-selected="add_module">
-            <md-option v-for="module in instrument_def.modules" :value="module.id">{{module.name}}</md-option>
-          </md-select>
-        </md-field>
-      </md-menu-item>
-      <md-menu-item v-if="menu?.startdata?.module_index !== undefined">
-        <md-button  @click="copy_module(menu.startdata.module_index);menu.visible=false;" class="md-raised md-primary">Copy</md-button>
-      </md-menu-item>
-      <md-menu-item v-if="menu?.startdata?.module_index !== undefined">
-        <md-button @click="remove_module(menu.startdata.module_index);menu.visible=false;" class="md-accent md-raised">Delete</md-button>
-      </md-menu-item>
-      <md-menu-item v-if="menu?.startdata?.module_index !== undefined">
-        <md-button @click="rename_module(menu.startdata.module_index);menu.visible=false;" class="md-raised">Rename</md-button>
-      </md-menu-item>
-      <md-menu-item v-if="menu.startdata != null && menu.startdata.target_type==='wire'">
-        <md-button @click="remove_wire(menu.startdata.wire_index);menu.visible=false;" class="md-accent md-raised">Delete wire</md-button>
-      </md-menu-item>
-    </md-menu-content>
-  </md-menu>
+  <div
+    v-if="menu.visible"
+    class="dropdown-menu show"
+    :style="{position: 'absolute', left: menu.x + 'px', top: menu.y + 'px', zIndex: 1050, minWidth: '200px'}"
+    @mouseleave="menu.visible = false"
+  >
+    <div v-if="menu.startdata == null" class="dropdown-item">
+      <select name="add_module" id="add_module" @change="add_module" class="form-select">
+        <option value="" disabled selected>Add module:</option>
+        <option v-for="module in instrument_def.modules" :value="module.id">{{module.name}}</option>
+      </select>
+    </div>
+    <button v-if="menu.startdata == null && menu.clipboard != null" @click="paste_module();menu.visible=false;" class="dropdown-item btn btn-primary">Paste</button>
+    <!-- Skipping the md-field/md-select block as it is not used (v-if false) -->
+    <button v-if="menu?.startdata?.module_index !== undefined" @click="copy_module(menu.startdata.module_index);menu.visible=false;" class="dropdown-item btn btn-primary">Copy</button>
+    <button v-if="menu?.startdata?.module_index !== undefined" @click="remove_module(menu.startdata.module_index);menu.visible=false;" class="dropdown-item btn btn-danger">Delete</button>
+    <button v-if="menu?.startdata?.module_index !== undefined" @click="rename_module(menu.startdata.module_index);menu.visible=false;" class="dropdown-item btn btn-secondary">Rename</button>
+    <button v-if="menu.startdata != null && menu.startdata.target_type==='wire'" @click="remove_wire(menu.startdata.wire_index);menu.visible=false;" class="dropdown-item btn btn-danger">Delete wire</button>
+  </div>
 
   <svg class="dataflow editor" ref="svg">
     <defs>
@@ -131,10 +110,22 @@ let dataflow_template = `
       />
     </rect>
   </svg>
-  <md-dialog id="help" :md-active.sync="menu.help_visible" style="max-width:768px;">
-    <md-dialog-title>Using the Template Panel</md-dialog-title>
-      <md-tabs md-dynamic-height>
-        <md-tab md-label="Editing">
+  <dialog v-if="menu.help_visible" open class="modal-dialog modal-lg" style="max-width:768px;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Using the Template Panel</h5>
+        <button type="button" class="btn-close" @click="menu.help_visible = false"></button>
+      </div>
+      <div class="modal-body">
+        <ul class="nav nav-tabs mb-3">
+          <li class="nav-item">
+            <button class="nav-link" :class="{active: helpTab === 'editing'}" @click="helpTab = 'editing'">Editing</button>
+          </li>
+          <li class="nav-item">
+            <button class="nav-link" :class="{active: helpTab === 'operating'}" @click="helpTab = 'operating'">Operating</button>
+          </li>
+        </ul>
+        <div v-if="helpTab === 'editing'">
           <p>Left-click and drag a module to move it</p>
           <p>Right-click a module or wire and you will have the option to delete or copy</p>
           <p>Left-click and then drag on a terminal (input or output) to create a new wire.  
@@ -145,15 +136,19 @@ let dataflow_template = `
             <li>right-click to copy or delete them all at once</li>
           </ul>
           <p>Right-click on an empty spot in the template to add a new module or paste a copied module or group of modules</p>
-        </md-tab>
-        <md-tab md-label="Operating">
+        </div>
+        <div v-if="helpTab === 'operating'">
           <p>Left-click on a module to select and show/edit its parameters (first input terminal also autoselected)</p>
           <p>Select module with datafile fields (fileinfo) to show filebrowser</p>
           <p>Left-click on a terminal to plot its data (module is autoselected)</p>
           <p>Shift-left-click on multiple terminals to compare data (if compatible for plotting)</p>
-        </md-tab>
-      </md-tabs>
-  </md-dialog>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" @click="menu.help_visible = false">Close</button>
+      </div>
+    </div>
+  </dialog>
 </div>
 `;
 
@@ -296,7 +291,8 @@ export const DataflowViewer = {
         width: 20,
         height: 30
       }
-    }
+    },
+    helpTab: 'editing'
   }),
   computed: {
     module_defs: function () {

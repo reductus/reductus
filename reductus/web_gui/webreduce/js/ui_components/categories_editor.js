@@ -3,76 +3,65 @@ import { extend, vuedraggable } from '../libraries.js';
 
 let template = `
 <div>
-  <md-dialog :md-active="dialog">
-    <md-card>
-      <md-card-header>
-        <div class="md-title">Categories Editor</div>
-      </md-card-header>
-      <md-card-content>
+  <dialog v-if="dialog" open class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Categories Editor</h5>
+        <button type="button" class="btn-close" @click="close"></button>
+      </div>
+      <div class="modal-body">
         <draggable v-model="local_categories">
           <template v-for="(category, index) in local_categories">
-            <md-card :key="JSON.stringify(category)" style="margin:8px;padding:0.5em;">
-              <div class="md-layout md-alignment-center-space-between">
-                <div class="md-layout-item">
-                  <md-icon class="handle" style="cursor:grab;">reorder</md-icon>
-                  <template v-if="true" v-for="(sub, subindex) in category">
-                    <md-chip 
-                      :key="sub.join('.')"
-                      md-clickable
-                      md-deletable
-                      @click.stop="editSub(index, subindex)"
-                      @md-delete.stop="removeSub(index, subindex)"
-                      >
+            <div :key="JSON.stringify(category)" class="card mb-2 p-2">
+              <div class="d-flex justify-content-between align-items-center">
+                <div>
+                  <span class="handle me-2" style="cursor:grab;"><i class="bi bi-list"></i></span>
+                  <template v-for="(sub, subindex) in category">
+                    <span class="badge bg-secondary me-1" style="cursor:pointer;" @click.stop="editSub(index, subindex)">
                       {{sub.join('.')}}
-                    </md-chip>
+                      <button type="button" class="btn-close btn-sm ms-1" @click.stop="removeSub(index, subindex)"></button>
+                    </span>
                     <span v-if="(subindex < category.length-1)">{{settings.subcategory_separator}}</span>
                   </template>
-                  <md-button @click="addSub(index)" class="md-icon-button md-dense">
-                    <md-icon class="md-primary">add</md-icon>
-                  </md-button>
+                  <button type="button" class="btn btn-outline-primary btn-sm ms-2" @click="addSub(index)"><i class="bi bi-plus"></i></button>
                 </div>
-                <div>
-                  <md-button @click="remove(index)" class="md-layout-item md-icon-button md-dense md-accent">
-                    <md-icon>cancel</md-icon>
-                  </md-button>
-                </div>
+                <button type="button" class="btn btn-outline-danger btn-sm" @click="remove(index)"><i class="bi bi-x"></i></button>
               </div>
-            </md-card>
+            </div>
           </template>
         </draggable>
-        <md-button @click="addCategory" class="md-layout-item md-icon-button md-dense md-raised md-primary">
-          <md-icon>add</md-icon>
-        </md-button>
-        <md-field>
-          <label>subcategory separator</label>
-          <md-input outlined v-model="settings.subcategory_separator" :style="{width: 5}" />
-        </md-field>
-      </md-card-content>
-      <md-dialog-actions>
-        <md-button class="md-primary" @click="reload_defaults">Load Defaults</md-button>
-        <md-button class="md-raised md-accent" @click="close">Cancel</md-button>
-        <md-button class="md-raised md-primary" @click="apply">Apply</md-button>
-        <md-button class="md-raised md-primary" @click="apply(); close()">Apply and Close</md-button>
-      </md-dialog-actions>
-    </md-card>
-  </md-dialog>
+        <button type="button" class="btn btn-primary btn-sm mt-2" @click="addCategory"><i class="bi bi-plus"></i> Add Category</button>
+        <div class="mt-3">
+          <label class="form-label">Subcategory separator</label>
+          <input type="text" class="form-control form-control-sm d-inline-block" style="width:5em;" v-model="settings.subcategory_separator" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" @click="reload_defaults">Load Defaults</button>
+        <button type="button" class="btn btn-outline-secondary" @click="close">Cancel</button>
+        <button type="button" class="btn btn-primary" @click="apply">Apply</button>
+        <button type="button" class="btn btn-primary" @click="apply(); close()">Apply and Close</button>
+      </div>
+    </div>
+  </dialog>
 
-  <md-dialog scrollable persistent :md-active="pick_category.open" max-width="500px">
-    <md-dialog-title>Select Category</md-dialog-title>
-    <md-dialog-content>
-      <md-card>      
-        <md-card-content style="min-height:500px;max-height: 90%;">
-          <tree-item 
-            :item="category_tree"
-            @item-picked="pick">
-          </tree-item>
-        </md-card-content>
-      </md-card>  
-    </md-dialog-content>
-    <md-dialog-actions>
-      <md-button class="md-accent md-raised" @click="pick_category.open = false">cancel</md-button>
-    </md-dialog-actions>
-  </md-dialog>
+  <dialog v-if="pick_category.open" open class="modal-dialog" style="max-width:500px;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Select Category</h5>
+        <button type="button" class="btn-close" @click="pick_category.open = false"></button>
+      </div>
+      <div class="modal-body" style="min-height:500px;max-height:90%;overflow-y:auto;">
+        <tree-item 
+          :item="category_tree"
+          @item-picked="pick">
+        </tree-item>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" @click="pick_category.open = false">Cancel</button>
+      </div>
+    </div>
+  </dialog>
 </div>
 `
 

@@ -1,169 +1,149 @@
 import { Vue } from './libraries.js';
 import { categoriesEditor } from './ui_components/categories_editor.js';
+import { DropdownMenu } from './ui_components/dropdown_menu.js';
 
 let template = `
-<div class="page-container md-layout-column">
-  
-  <md-drawer :md-active.sync="showNavigation" md-swipeable>
-    <md-toolbar class="md-transparent" md-elevation="0">
-      <span class="md-title"><img src="img/reductus_logo.svg" style="height:2em;"/>Reductus</span>
-    </md-toolbar>
 
-    <md-list>
-      <md-list-item md-expand md-expanded>
-        <md-icon md-src="img/mediation-black-18dp.svg"></md-icon>
-        <span class="md-list-item-text md-title">Template</span>
-        <md-list slot="md-expand">
-          <md-list-item @click="action('new_template')" class="md-inset">
-            <span class="md-list-item-text">New</span>
-            <md-icon class="mdi mdi-plus md-primary"></md-icon>
-          </md-list-item>
-          <md-list-item @click="action('edit_template')" class="md-inset">
-            <span class="md-list-item-text">Edit</span>
-            <md-icon class="mdi mdi-pencil md-primary"></md-icon>
-          </md-list-item>
-          <md-list-item @click="action('download_template')" class="md-inset">
-            <span class="md-list-item-text">Download</span>
-            <md-icon class="mdi mdi-download md-primary"></md-icon>
-          </md-list-item>
-          <md-list-item @click="trigger_upload" class="md-inset">
-            <span class="md-list-item-text">Upload Template</span>
-            <md-icon class="mdi mdi-upload md-primary"></md-icon>
-          </md-list-item>
-          <md-list-item class="md-inset md-double-line">
-            <md-field>
-            <label for="predefined_template">Predefined</label>
-            <md-select v-model="predefined_template" name="predefined_template" id="predefined_template">
-              <md-option v-for="template in predefined_templates" :value="template">
-                {{template}}
-              </md-option>
-            </md-select>
-            </md-field>
-            <md-button 
-              class="md-raised md-primary"
-              :disabled="predefined_template == ''"
-              @click="action('load_predefined', predefined_template)">
-              Load
-            </md-button>
-          </md-list-item>
-        </md-list>
-      </md-list-item>
-      
-      <md-list-item md-expand md-expanded>
-        <md-icon md-src="img/source-black-18dp.svg"></md-icon>
-        <span class="md-list-item-text md-title">Data</span>
-        <md-list slot="md-expand">
-          <md-list-item @click="action('stash_data')" class="md-inset">
-            <span class="md-list-item-text">Stash Data</span>
-            <md-icon class="mdi mdi-arrow-right-bold-box-outline md-primary"></md-icon>
-          </md-list-item>
-          <md-list-item @click="showCategoriesEditor = true; showNavigation = false" class="md-inset">
-            <span class="md-list-item-text">Edit Categories</span>
-            <md-icon class="mdi mdi-format-list-bulleted md-primary"></md-icon>
-          </md-list-item>
-          <md-list-item v-if="enable_uploads" @click="trigger_upload_datafiles" class="md-inset">
-            <span class="md-list-item-text">Upload Datafiles</span>
-            <md-icon class="mdi mdi-briefcase-upload md-primary"></md-icon>
-          </md-list-item>
-          <md-list-item @click="action('export_data')" class="md-inset">
-            <span class="md-list-item-text">Export</span>
-            <md-icon class="mdi mdi-cloud-download md-primary"></md-icon>
-          </md-list-item>
-          <md-list-item @click="trigger_upload" class="md-inset">
-            <span class="md-list-item-text">Reload Exported</span>
-            <md-icon class="mdi mdi-upload md-primary"></md-icon>
-          </md-list-item>
-          <md-list-item @click="action('clear_cache')" class="md-inset">
-            <span class="md-list-item-text">Clear Cache</span>
-            <md-icon class="mdi mdi-delete-circle md-primary"></md-icon>
-          </md-list-item>
-          <md-list-item class="md-inset">
-            <md-field>
-            <label for="select_datasource">Data Sources</label>
-            <md-select v-model="select_datasource" name="select_datasource" id="select_datasource">
-              <md-option v-for="source in datasources" :value="source">
-                {{source}}
-              </md-option>
-            </md-select>
-            </md-field>
-            <md-button 
-              class="md-raised md-primary"
-              @click="action('add_datasource', select_datasource)">
-              Add
-            </md-button>
-          </md-list-item>
-        </md-list>  
-      </md-list-item>
+<div>
+  <nav class="navbar navbar-light px-2" style="background-color: #ffff00;">
+      <div class="d-flex align-items-center w-100">
+        <a class="navbar-brand d-flex align-items-center me-3" href="#">
+          <img src="img/reductus_logo.svg" style="height:2em;" alt="Reductus logo"/>
+          <span class="ms-2">Reductus</span>
+        </a>
+        <div class="d-flex flex-row gap-2 align-items-center">
+      <dropdown-menu label="Template">
+        <a class="dropdown-item" href="#" @click="action('new_template')">
+          <i class="bi bi-file-earmark-plus me-2"></i>New
+        </a>
+        <a class="dropdown-item" href="#" @click="action('edit_template')">
+          <i class="bi bi-pencil-square me-2"></i>Edit
+        </a>
+        <a class="dropdown-item" href="#" @click="action('download_template')">
+          <i class="bi bi-download me-2"></i>Download
+        </a>
+        <a class="dropdown-item" href="#" @click="trigger_upload">
+          <i class="bi bi-upload me-2"></i>Upload Template
+        </a>
+        <div class="px-3 py-2">
+          <label for="predefined_template">Predefined</label>
+          <select v-model="predefined_template" name="predefined_template" id="predefined_template" class="form-select mb-2">
+            <option v-for="template in predefined_templates" :value="template">{{template}}</option>
+          </select>
+          <button class="btn btn-primary w-100" :disabled="predefined_template == ''" @click="action('load_predefined', predefined_template)">
+            <i class="bi bi-box-arrow-in-down me-2"></i>Load
+          </button>
+        </div>
+      </dropdown-menu>
+      <dropdown-menu label="Data">
+        <a class="dropdown-item" href="#" @click="action('stash_data')">
+          <i class="bi bi-box-arrow-right me-2"></i>Stash Data
+        </a>
+        <a class="dropdown-item" href="#" @click="showCategoriesEditor = true; showNavigation = false">
+          <i class="bi bi-list-ul me-2"></i>Edit Categories
+        </a>
+        <a v-if="enable_uploads" class="dropdown-item" href="#" @click="trigger_upload_datafiles">
+          <i class="bi bi-briefcase me-2"></i>Upload Datafiles
+        </a>
+        <a class="dropdown-item" href="#" @click="action('export_data')">
+          <i class="bi bi-cloud-download me-2"></i>Export
+        </a>
+        <a class="dropdown-item" href="#" @click="trigger_upload">
+          <i class="bi bi-arrow-repeat me-2"></i>Reload Exported
+        </a>
+        <a class="dropdown-item" href="#" @click="action('clear_cache')">
+          <i class="bi bi-trash me-2"></i>Clear Cache
+        </a>
+        <div class="px-3 py-2">
+          <label for="select_datasource">Data Sources</label>
+          <select v-model="select_datasource" name="select_datasource" id="select_datasource" class="form-select mb-2">
+            <option v-for="source in datasources" :value="source">{{source}}</option>
+          </select>
+          <button class="btn btn-primary w-100" @click="action('add_datasource', select_datasource)">
+            <i class="bi bi-plus-lg me-2"></i>Add
+          </button>
+        </div>
+      </dropdown-menu>
+      <dropdown-menu label="Settings">
+        <div v-for="(setting, setting_name) in settings" class="dropdown-item d-flex align-items-center">
+          <i class="bi bi-gear me-2"></i>
+          <input type="checkbox" v-model="setting.value" class="form-check-input me-2" />
+          <span>{{setting.label}}</span>
+          <button class="btn btn-link btn-sm ms-auto" @click.stop="settingsHelpActiveTab=setting_name; showSettingsHelp = true">
+            <i class="bi bi-info-circle"></i>
+          </button>
+        </div>
+      </dropdown-menu>
+      <dropdown-menu :label="'Instrument: ' + current_instrument">
+        <div v-for="instrument in instruments" class="dropdown-item d-flex justify-content-between align-items-center">
+          <i class="bi bi-diagram-3 me-2"></i>
+          <span>{{instrument}}</span>
+          <button class="btn btn-primary btn-sm" @click.stop="action('switch_instrument', instrument)">
+            <i class="bi bi-arrow-left-right me-1"></i>switch
+          </button>
+        </div>
+      </dropdown-menu>
+    </div>
+        <div class="ms-auto d-flex align-items-center gap-3">
+          <a href="https://doi.org/10.5281/zenodo.3524406" target="_blank" class="text-decoration-none me-2" title="Cite Reductus">
+            <i class="bi bi-journal-text me-1"></i>Cite
+          </a>
+          <img src="img/NCNR_nonlogo.png" alt="NCNR logo" title="NIST Center for Neutron Research" style="height:2em;padding-right:1.5em;">
+          <img src="img/nist-logo.svg" alt="NIST logo" title="National Institute of Standards and Technology" style="height:2em;">
+        </div>
+      </div>
+  </nav>
 
-      <md-list-item md-expand>
-        <md-icon class="mdi mdi-cog"></md-icon>
-        <span class="md-list-item-text md-title">Settings</span>
-        <md-list slot="md-expand">
-          <md-list-item v-for="(setting, setting_name) in settings" class="md-inset">
-            <md-checkbox v-model="setting.value" class="md-primary" />
-            <span class="md-list-item-text">{{setting.label}}</span>
-            <md-button class="md-icon-button" @click.stop="settingsHelpActiveTab=setting_name; showSettingsHelp = true">
-              <md-icon class="mdi mdi-information-outline md-primary"></md-icon>
-            </md-button>
-          </md-list-item>
-        </md-list>
-      </md-list-item>
+  <!-- Native Dialog for Settings Help -->
+  <dialog v-if="showSettingsHelp" open class="modal-dialog modal-lg" style="max-width:768px;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Settings</h5>
+        <button type="button" class="btn-close" @click="showSettingsHelp = false"></button>
+      </div>
+      <div class="modal-body">
+        <ul class="nav nav-tabs" role="tablist">
+          <li class="nav-item" v-for="(setting, setting_name) in settings" :key="setting_name">
+            <button class="nav-link" :class="{'active': settingsHelpActiveTab === setting_name}" @click="settingsHelpActiveTab = setting_name">{{setting.label}}</button>
+          </li>
+        </ul>
+        <div class="tab-content mt-3">
+          <div v-if="settingsHelpActiveTab === 'auto_accept'">
+            <p>If checked, any changes to values in the parameter panel are immediately applied to the template.</p>
+            <p>If unchecked, the user must press the "Accept" button after changing numbers in a panel</p>
+          </div>
+          <div v-if="settingsHelpActiveTab === 'check_mtimes'">
+            <p>If checked, when a calculation is requested the last-modified times of all files to be loaded are compared to the most recent available files from the datasource</p>
+            <p>If a newer version of any of the files is available, the newer version is loaded and used for the calculation</p>
+            <p>If unchecked, the datasource is not queried for last-modified times</p>
+          </div>
+          <div v-if="settingsHelpActiveTab === 'cache_calculations'">
+            <p>If checked, all calculations requested from the server are locally cached.
+              When a new calculation is requested, the request is compared to previous 
+              requests and if there is a match the cached data is used and no request 
+              is made to the server
+            </p>
+            <p>If unchecked, all calculation requests are sent to the server</p>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" @click="showSettingsHelp = false">Close</button>
+      </div>
+    </div>
+  </dialog>
 
-      <md-list-item md-expand>
-        <md-icon md-src="img/biotech-black-18dp.svg"></md-icon>
-        <div class="md-list-item-text">Instrument: <span class="md-title">{{current_instrument}}</span></div>
-        <md-list slot="md-expand">
-          <md-list-item class="md-inset" v-for="instrument in instruments">
-            <span class="md-list-item-text">{{instrument}}</span>
-            <md-button class="md-raised md-primary" @click.stop="action('switch_instrument', instrument)">
-              switch
-            </md-button>
-          </md-list-item>
-        </md-list>
-      </md-list-item>
-    </md-list>
-  </md-drawer>
-
-  <md-dialog :md-active.sync="showSettingsHelp" style="max-width:768px;">
-    <md-dialog-title>Settings</md-dialog-title>
-
-    <md-tabs :md-active-tab.sync="settingsHelpActiveTab" md-dynamic-height>
-      <md-tab id="auto_accept" md-label="Auto Accept">
-        <p>If checked, any changes to values in the parameter panel are immediately applied to the template.</p>
-        <p>If unchecked, the user must press the "Accept" button after changing numbers in a panel</p>
-      </md-tab>
-
-      <md-tab id="check_mtimes" md-label="Auto Reload">
-        <p>If checked, when a calculation is requested the last-modified times of all files to be loaded are compared to the most recent available files from the datasource</p>
-        <p>If a newer version of any of the files is available, the newer version is loaded and used for the calculation</p>
-        <p>If unchecked, the datasource is not queried for last-modified times</p>
-        </md-tab>
-
-      <md-tab id="cache_calculations" md-label="Cache">
-        <p>If checked, all calculations requested from the server are locally cached.
-           When a new calculation is requested, the request is compared to previous 
-           requests and if there is a match the cached data is used and no request 
-           is made to the server
-        </p>
-        <p>If unchecked, all calculation requests are sent to the server</p>
-      </md-tab>
-    </md-tabs>
-
-    <md-dialog-actions>
-      <md-button class="md-primary" @click="showSettingsHelp = false">Close</md-button>
-    </md-dialog-actions>
-  </md-dialog>
-
+  <!-- Categories Editor (unchanged, still a Vue component) -->
   <categories-editor 
     :dialog="showCategoriesEditor" 
     :categories="categories"
     :default_categories="default_categories"
     :category_keys="category_keys"
     @close="showCategoriesEditor=false"
-
     @apply="set_categories">
   </categories-editor>
 
+  <!-- File Inputs -->
   <input 
     ref="upload_template" 
     type="file" 
@@ -173,7 +153,6 @@ let template = `
     style="display:none;"
     @change="upload"
   />
-
   <input 
     ref="upload_datafiles" 
     type="file" 
@@ -184,14 +163,14 @@ let template = `
     @mousedown="function() {this.value=''}"
     @change="upload_datafiles"
   />
-  
-</div >
+</div>
 `;
 
 export const VueMenu = {
   name: 'vue-menu',
   components: {
-    categoriesEditor
+    categoriesEditor,
+    DropdownMenu
   },
   props: ['enable_uploads'],
   data: () => ({
@@ -216,6 +195,15 @@ export const VueMenu = {
       auto_accept: { label: "Auto-accept changes", value: true },
       check_mtimes: { label: "Auto-reload newer files", value: false },
       cache_calculations: { label: "Cache calculations", value: true }
+    },
+    // From app_header
+    api_error: {
+      visible: false,
+      message: ""
+    },
+    init_progress: {
+      visible: true,
+      status_text: "Loading pyodide backend..."
     }
   }),
   methods: {
@@ -243,6 +231,11 @@ export const VueMenu = {
     },
     trigger_upload_datafiles() {
       this.$refs.upload_datafiles.click();
+    },
+    // From app_header
+    show_api_error(message) {
+      this.api_error.message = message;
+      this.api_error.visible = true;
     }
   },
   watch: {

@@ -28,6 +28,8 @@
   "homepage": "https://github.com/reductus/reductus#readme",
   "type": "module",
   "devDependencies": {
+    "bootstrap": "^5.3.7",
+    "bootstrap-icons": "^1.13.1",
     "esbuild": "^0.25.0",
     "esbuild-plugin-alias": "^0.2.1"
   },
@@ -45,7 +47,6 @@
     "sha1": "^1.1.1",
     "split.js": "^1.6.5",
     "vue": "^2.6.11",
-    "vue-material": "^1.0.0-beta-15",
     "vuedraggable": "^2.24.0"
   }
 }

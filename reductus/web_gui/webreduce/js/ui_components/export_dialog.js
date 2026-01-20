@@ -1,43 +1,55 @@
 import { Vue } from '../libraries.js';
 
 let template = `
-<md-dialog :md-active.sync="active" @md-closed="onClose">
-  <md-dialog-title>Export Data</md-dialog-title>
-  <md-dialog-content>
-    <md-steppers :md-active-step.sync="active_step" md-linear>
-      <md-step id="select_export_type" md-label="Select Export Type" :md-done.sync="export_select_done" :md-editable="false">
-
-        <template v-for="(export_type, index) in export_types">
-          <md-radio v-model="selected_export_type" :value="index">
-            {{export_type}}
-          </md-radio>
-        </template>
-        <md-divider/>
-        <md-checkbox v-model="combine_outputs" >Combine Outputs</md-checkbox>
-        <md-divider/>
-        <md-button :disabled="selected_export_type==null" @click="onExportSelect">continue</md-button>
-        <md-button class="md-raised md-accent" @click="close">cancel</md-button>
-      </md-step>
-      <md-step id="retrieve" :md-done.sync="retrieve_done" md-label="Retrieve From Server" :md-editable="false">
-        <md-progress-bar md-mode="indeterminate"></md-progress-bar>
-      </md-step>
-      <md-step id="select_destination" md-label="Route Exported Data">
-        <md-field>
-          <label>Filename:</label>
-          <md-input v-model="filename"></md-input>
-        </md-field>
-        <template v-for="(export_target, index) in export_targets">
-          <md-radio v-model="selected_export_target" :value="index">
-            {{export_target.label}}
-          </md-radio>
-        </template>
-        <md-divider/>
-        <md-button class="md-raised md-primary" @click="onExportRoute">export</md-button>
-        <md-button class="md-raised md-accent" @click="close">cancel</md-button>
-      </md-step>
-    </md-steppers>
-  </md-dialog-content>
-</md-dialog>
+<dialog v-if="active" open class="modal-dialog modal-lg" style="max-width:600px;">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h5 class="modal-title">Export Data</h5>
+      <button type="button" class="btn-close" @click="close"></button>
+    </div>
+    <div class="modal-body">
+      <!-- Step 1: Select Export Type -->
+      <div v-if="active_step === 'select_export_type'">
+        <div class="mb-3"><strong>Select Export Type</strong></div>
+        <div class="form-check" v-for="(export_type, index) in export_types" :key="index">
+          <input class="form-check-input" type="radio" :id="'export_type_' + index" v-model="selected_export_type" :value="index">
+          <label class="form-check-label" :for="'export_type_' + index">{{export_type}}</label>
+        </div>
+        <div class="form-check mt-3">
+          <input class="form-check-input" type="checkbox" id="combine_outputs" v-model="combine_outputs">
+          <label class="form-check-label" for="combine_outputs">Combine Outputs</label>
+        </div>
+        <div class="mt-4 d-flex gap-2">
+          <button class="btn btn-primary" :disabled="selected_export_type==null" @click="onExportSelect">Continue</button>
+          <button class="btn btn-secondary" @click="close">Cancel</button>
+        </div>
+      </div>
+      <!-- Step 2: Retrieve From Server -->
+      <div v-if="active_step === 'retrieve'">
+        <div class="mb-3"><strong>Retrieve From Server</strong></div>
+        <div class="progress">
+          <div class="progress-bar progress-bar-striped progress-bar-animated" style="width: 100%"></div>
+        </div>
+      </div>
+      <!-- Step 3: Route Exported Data -->
+      <div v-if="active_step === 'select_destination'">
+        <div class="mb-3"><strong>Route Exported Data</strong></div>
+        <div class="mb-3">
+          <label for="filename" class="form-label">Filename:</label>
+          <input type="text" class="form-control" id="filename" v-model="filename">
+        </div>
+        <div class="form-check" v-for="(export_target, index) in export_targets" :key="index">
+          <input class="form-check-input" type="radio" :id="'export_target_' + index" v-model="selected_export_target" :value="index">
+          <label class="form-check-label" :for="'export_target_' + index">{{export_target.label}}</label>
+        </div>
+        <div class="mt-4 d-flex gap-2">
+          <button class="btn btn-primary" @click="onExportRoute">Export</button>
+          <button class="btn btn-secondary" @click="close">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</dialog>
 `;
 
 export const exportDialog = {
