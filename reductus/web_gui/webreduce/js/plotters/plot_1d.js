@@ -1,5 +1,6 @@
 
-import { d3, extend, xyChart } from '../libraries.js';
+import * as d3 from "d3";
+import { xyChart } from "d3-science";
 import { app } from '../main.js'
 
 function merge_1d_plotdata(plotdata) {

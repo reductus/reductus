@@ -1,4 +1,4 @@
-import { Vue, extend } from '../libraries.js';
+import Vue from "vue";
 import { Components } from './fields/components.js';
 
 let template = `
@@ -87,7 +87,7 @@ export const FieldsPanel = {
       //     this.$delete(this.local_config, id);
       //   }
       // })
-      this.local_config = extend(true, {}, this.module.config);
+      this.local_config = structuredClone(this.module.config);
     },
     help() {
       let helpwindow = window.open("", "help", "location=0,toolbar=no,menubar=no,scrollbars=yes,resizable=yes,width=960,height=480");

@@ -1,4 +1,4 @@
-import { extend } from '../libraries.js';
+import { extend } from "d3-science";
 
 let dataflow_template = `
 <div 
