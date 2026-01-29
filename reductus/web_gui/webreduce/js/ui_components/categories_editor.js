@@ -1,7 +1,7 @@
 import { treeItem } from './tree_item.js';
 import Sortable from 'sortablejs';
 
-let template = `
+const template = /*html*/`
 <div>
   <dialog ref="main_dialog" class="categories-editor-dialog" style="width: 800px;">
     <div class="modal-dialog">
@@ -78,7 +78,7 @@ let template = `
 </div>
 `
 
-let default_categories = [
+const default_categories = [
   [
     [
       "sample",

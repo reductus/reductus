@@ -1,6 +1,6 @@
 import { DataSource } from './datasource.js';
 
-let template = `
+const template = /*html*/`
 <div class="sourcelist">
   <div><button id="refresh_all" @click="refreshAll">refresh all</button></div>
   <div style="position: relative">
@@ -33,7 +33,7 @@ export const SourceList = {
       this.$emit("pathChange", source, new_pathlist, index);
     },
     remove(index) {
-      delete this.datasources[index];
+      this.datasources.splice(index, 1);
     },
     refresh(index) {
       let s = this.datasources[index];

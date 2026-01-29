@@ -1,6 +1,6 @@
 import { SourceList } from './sourcelist.js';
 
-let template = `
+let template = /*html*/`
 <div class="filepanel">
   <div class="d-flex flex-column h-100">
     <ul class="nav nav-tabs" role="tablist" style="flex-shrink: 0;">

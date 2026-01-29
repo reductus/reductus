@@ -1,6 +1,6 @@
 import * as Vue from 'vue';
 
-let template = `
+const template = /*html*/`
 <dialog ref="dialog" class="export-dialog" style="width: 500px;">
   <div class="modal-dialog">
     <div class="modal-content">

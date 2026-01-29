@@ -1,6 +1,8 @@
 import { Components } from './fields/components.js';
 
-let template = `
+const html = (strings) => strings[0];
+
+let template = html`
 <div class="fields-panel">
   <div class="hideable" v-show="visible">
     <h3>{{ module_def.name }}</h3>
@@ -41,6 +43,7 @@ let template = `
 </div>
 `
 
+/** @type {import('vue').DefineComponent} */
 export const FieldsPanel = {
   name: "fields-panel",
   props: {

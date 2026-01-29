@@ -1,4 +1,4 @@
-let template = `
+let template = /*html*/`
 <div class="patheditor">
   <span v-for="(dir, index) in pathlist" class="pathitem" @click="handle(index)">
     {{dir}}/ 

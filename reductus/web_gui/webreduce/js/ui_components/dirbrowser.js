@@ -1,4 +1,4 @@
-let template = `
+const template = /*html*/`
 <ul class="dirbrowser">
   <li v-for="subdir in subdirs" :key="subdir" class="subdiritem">
     <span @click="$emit('change', subdir)">(dir) {{subdir}}</span> 

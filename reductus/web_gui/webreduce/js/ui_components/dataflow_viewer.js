@@ -1,4 +1,4 @@
-let dataflow_template = `
+let dataflow_template = /*html*/`
 <div 
   class="dataflow editor"
   style="position: relative;"
@@ -181,7 +181,7 @@ let dataflow_template = `
 </div>
 `;
 
-let module_template = `
+let module_template = /*svg*/`
   <g class="module" style="cursor: move;">
     <g class="title" :class="{selected: selected.modules.includes(module_index), moving}">
         <text ref="title_text" class="title text" x="5" y="5" dy="1em">{{module_data.title}}</text>
