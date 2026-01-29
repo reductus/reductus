@@ -135,7 +135,7 @@ function module_clicked_single() {
   }
   let recalc_mtimes = app.settings.check_mtimes.value;
   let params_to_calc = terminals_to_calculate.map(function(terminal_id) {
-    return {template: Vue.toRaw(active_template), config: {}, node: i, terminal: terminal_id, return_type: "plottable"}
+    return {template: active_template, config: {}, node: i, terminal: terminal_id, return_type: "plottable"}
   });
   editor.calculate(params_to_calc, recalc_mtimes)
     .then(function(results) {
@@ -339,16 +339,12 @@ editor.compare_stashed = function(stashnames) {
     });
 }
 
-editor.get_versioned_template = function(template) {
-  var versioned = structuredClone(template),
-      editor = this,
-      module_list = versioned.modules;
-  module_list.forEach(function(m) {
-    if (m.module && m.module in editor._module_defs) {
-      m.version = editor._module_defs[m.module].version;
-    }
+editor.get_versions = function(template) {
+  const { modules } = template;
+  return modules.map(m => {
+    const def = editor._module_defs[m.module] || {};
+    return { module: m.module, version: def.version || "unknown" };
   });
-  return versioned
 }
 
 editor.get_cached_timestamps = function() {
@@ -379,18 +375,19 @@ editor.get_signature = async function(params) {
   const return_type = params.return_type ?? 'metadata';
   const export_type = params.export_type ?? 'column';
   const concatenate = params.concatenate ?? false;
-  
-  const versioned = this.get_versioned_template(template);
-  const sig = await digestMessage(JSON.stringify({
+  const versions = this.get_versions(template);
+  const to_digest = JSON.stringify({
         method: "calculate",
-        template: versioned,
+        template: template,
+        versions: versions,
         config: config,
         node: node,
         terminal: terminal,
-        return_type: return_type, 
+        return_type: return_type,
         export_type: export_type,
-        concatenate: concatenate}), "SHA-1");
-        
+        concatenate: concatenate
+      });
+  const sig = await digestMessage(to_digest, "SHA-1");
   return sig
 }
 
@@ -411,9 +408,8 @@ async function calculate_one(params, caching) {
     .then(function(sig) {
       return editor._cache.get(sig).then(function(cached) {return cached.value})
       .catch(function(e) {
-        var versioned = editor.get_versioned_template(template);
         return server_api.calc_terminal({
-            template_def: versioned,
+            template_def: template,
             config: config,
             nodenum: node,
             terminal_id: terminal,
@@ -580,7 +576,7 @@ editor.export_data = function() {
   if (terminals.length == 0) { alert("no input or output selected to export"); return }
   if (terminals.length > 1) { alert("more than one input or output selected to export"); return }
   let [node, terminal] = terminals[0];
-  let template = Vue.toRaw(this.instance.template_data);
+  let template = this.instance.template_data;
   let module = this.instance.template_data.modules[node];
   let module_def = this.instance.module_defs[module.module];
 
