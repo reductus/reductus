@@ -392,60 +392,62 @@ editor.get_signature = async function(params) {
 }
 
 async function calculate_one(params, caching) {
-  var r = new Promise(function(resolve, reject) {resolve()});
-  var template = params.template,
-        config = params.config || {},
-        node = params.node,
-        terminal = params.terminal,
-        return_type = params.return_type || 'metadata',
-        export_type = params.export_type || 'column',
-        concatenate = params.concatenate || false;
-      
+  const template = params.template;
+  const config = params.config || {};
+  const node = params.node;
+  const terminal = params.terminal;
+  const return_type = params.return_type || 'metadata';
+  const export_type = params.export_type || 'column';
+  const concatenate = params.concatenate || false;
+
   if (caching) {
-    r = r.then(function() {
-        return editor.get_signature(params);
-    })
-    .then(function(sig) {
-      return editor._cache.get(sig).then(function(cached) {return cached.value})
-      .catch(function(e) {
-        return server_api.calc_terminal({
-            template_def: template,
-            config: config,
-            nodenum: node,
-            terminal_id: terminal,
-            return_type: return_type,
-            export_type: export_type,
-            concatenate: concatenate
-          })
-          .then(function(result) {
-            var doc = {
-              _id: sig, 
-              created_at: Date.now(),
-              value: result 
-            }
-            editor._cache.set(sig, doc);
-            return result
-          })
-          .catch(function(e) {
-            console.log("error", e)
-          })
-      })
-    })
+    let sig;
+    try {
+      sig = await editor.get_signature(params);
+    } catch (e) {
+      console.log("error", e);
+      return;
+    }
+    try {
+      const cached = await editor._cache.get(sig);
+      return cached.value;
+    } catch (e) {
+      try {
+        const result = await server_api.calc_terminal({
+          template_def: template,
+          config: config,
+          nodenum: node,
+          terminal_id: terminal,
+          return_type: return_type,
+          export_type: export_type,
+          concatenate: concatenate
+        });
+        const doc = {
+          _id: sig,
+          created_at: Date.now(),
+          value: result
+        };
+        editor._cache.set(sig, doc);
+        return result;
+      } catch (err) {
+        console.log("error", err);
+      }
+    }
   } else {
-    r = r.then(function() { return server_api.calc_terminal({
-      template_def: template,
-      config: config,
-      nodenum: node,
-      terminal_id: terminal,
-      return_type: return_type,
-      export_type: export_type,
-      concatenate: concatenate});
-    })
-    .catch(function(e) {
-      console.log("error", e)
-    });
+    try {
+      return await server_api.calc_terminal({
+        template_def: template,
+        config: config,
+        nodenum: node,
+        terminal_id: terminal,
+        return_type: return_type,
+        export_type: export_type,
+        concatenate: concatenate
+      });
+    } catch (e) {
+      console.log("error", e);
+    }
   }
-  return r
 }
 
 editor.calculate = async function(params, recalc_mtimes, noblock, result_callback) {
