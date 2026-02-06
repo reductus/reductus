@@ -1,4 +1,5 @@
 import { plotter } from '../../plot.js';
+import { emitter } from '../../bus.js';
 
 let field_template = `
 <div class="fields">
@@ -24,7 +25,7 @@ export const PatchUi = {
   name: 'patch_metadata-ui',
   props: ["field", "value", "add_interactors"],
   computed: {
-    local_value: function() { return structuredClone(this.value) },
+    local_value: function() { return [...(this.value ?? [])] },
     key_col: function() { return this.field.typeattr.key }
   },
   methods: {
@@ -54,7 +55,7 @@ export const PatchUi = {
       chart.editing = true;
       chart.key_col = this.key_col;
       chart.patches = this.value || [];
-      chart.$on("change", (row, col, value) => {
+      emitter.on("metadata_table.change", ({row, col, value}) => {
         this.update_patch(row, col, value);
       })
     }

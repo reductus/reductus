@@ -1,4 +1,5 @@
 import * as Vue from 'vue';
+import { emitter } from '../bus.js';
 
 let template = `
 <div class="metadata-table">
@@ -32,9 +33,18 @@ let template = `
 
 const MetadataTable = {
   name: "metadata-table",
+  emits: ["change"],
+  props: {
+    cols: {
+      type: Array,
+      default: () => []
+    },
+    metadata: {
+      type: Array,
+      default: () => []
+    }
+  },
   data: () => ({
-    cols: [],
-    metadata: [],
     patches: [],
     patchesByPathNew: {},
     editing: false,
@@ -47,7 +57,6 @@ const MetadataTable = {
     },
     patchesByPath() {
       let result = Object.fromEntries(this.patches.map(p => [p.path, p]));
-      console.log(JSON.stringify(result));
       return result;
     }
   },
@@ -65,6 +74,7 @@ const MetadataTable = {
       let oldVal = this.pretty(row[col]);
       if (value != oldVal) {
         this.$emit("change", row, col, value);
+        emitter.emit("metadata_table.change", {row, col, value});
       }
     },
     patched(row, col) {

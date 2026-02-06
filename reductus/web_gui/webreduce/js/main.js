@@ -289,7 +289,7 @@ window.onload = async function () {
     },
     load_predefined(template_id) {
       let instrument_id = editor._instrument_id;
-      const template_copy = structuredClone(editor._instrument_def.predefined_templates[template_id]);
+      const template_copy = structuredClone(editor._instrument_def.templates[template_id]);
       editor.load_template(template_copy, null, null, instrument_id);
       // Remember this choice, to be used on next instrument switch:
       try {
