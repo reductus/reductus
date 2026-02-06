@@ -8,7 +8,9 @@ let dataflow_template = /*html*/`
   <!-- Context menu -->
   <div v-if="menu.visible" 
        class="dropdown-menu show"
-       :style="{position: 'absolute', left: menu.x + 'px', top: menu.y + 'px', zIndex: 1000}">
+       :style="{position: 'absolute', left: menu.x + 'px', top: menu.y + 'px', zIndex: 1000}"
+       @mousedown.stop
+       @mouseup.stop>
     
     <!-- Add module select -->
     <div v-if="menu.startdata == null" class="px-2 py-2">
@@ -242,6 +244,10 @@ let module_template = /*svg*/`
     </g>      
   </g>
 `;
+
+function deepClone(obj) {
+  return JSON.parse(JSON.stringify(obj));
+}
 
 const Module = {
   name: "module",
@@ -532,7 +538,7 @@ export const DataflowViewer = {
       // and duplicate their contents
       let wires = this.template_data.wires
         .filter((w) => (indices.includes(w.source[0]) && indices.includes(w.target[0])))
-        .map((w) => (structuredClone(w)));
+        .map((w) => (deepClone(w)));
 
       wires.forEach((w, i) => {
         let new_source = indices.indexOf(w.source[0]);
@@ -541,7 +547,7 @@ export const DataflowViewer = {
         w.target[0] = new_target;
       })
 
-      let modules = indices.map((mi) => (structuredClone(this.template_data.modules[mi])));
+      let modules = indices.map((mi) => (deepClone(this.template_data.modules[mi])));
       let reference_point = { x: this.menu.x, y: this.menu.y };
       this.menu.clipboard = { modules, wires, reference_point };
     },
@@ -567,8 +573,8 @@ export const DataflowViewer = {
       let { modules, wires, reference_point } = this.menu.clipboard;
       let relative_x = this.menu.x - reference_point.x;
       let relative_y = this.menu.y - reference_point.y;
-      let new_modules = modules.map((m) => (structuredClone(m)));
-      let new_wires = wires.map((w) => (structuredClone(w)));
+      let new_modules = modules.map((m) => (deepClone(m)));
+      let new_wires = wires.map((w) => (deepClone(w)));
       let module_offset = this.template_data.modules.length;
       new_modules.forEach((m) => { m.x += relative_x; m.y += relative_y });
       new_wires.forEach((w) => { w.source[0] += module_offset; w.target[0] += module_offset; });
