@@ -1,0 +1,12 @@
+{
+  "modules": [
+    {
+      "x": 10,
+      "module": "ncnr.sans.compactSANSReduction",
+      "config": {
+        "auto_box": true
+      },
+      "y": 5
+    }
+  ]
+}

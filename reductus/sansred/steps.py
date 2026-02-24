@@ -25,6 +25,17 @@ from reductus.vsansred.steps import _s, _b
 ALL_ACTIONS = []
 IGNORE_CORNER_PIXELS = True
 
+
+# TODO: Define all steps and move ancillary functions to their own python file
+#  - Reduction methods:
+#    - None (output to 1D or 2D in different formats)
+#    - Basic correction to 2D
+#    - Different 1D averaging methods (circular, sector, annular, elliptical, etc)
+#    - Polarization (different cross-sections)
+#  - Resolution types:
+#  - Corrections:
+
+
 def cache(action):
     """
     Decorator which adds the *cached* attribute to the function.
@@ -218,7 +229,10 @@ def autosort(rawdata, subsort="det.des_dis", add_scattering=True):
 
     empty_trans (sans2d[]): Empty Cell Transmission
 
+    open_trans (sans2d[]): Open Beam Transmission
+
     2019-07-24 Brian Maranville
+    2026-01-30 Jeff Krzywon
     """
 
     sample_scatt = []
@@ -226,6 +240,7 @@ def autosort(rawdata, subsort="det.des_dis", add_scattering=True):
     empty_scatt = []
     sample_trans = []
     empty_trans = []
+    open_trans = []
 
     print(rawdata)
 
@@ -242,6 +257,8 @@ def autosort(rawdata, subsort="det.des_dis", add_scattering=True):
             sample_trans.extend(to_sansdata(r))
         elif purpose.lower() == 'transmission' and intent.lower().startswith('empty'):
             empty_trans.extend(to_sansdata(r))
+        elif intent.lower.startswith('open'):
+            open_trans.extend(to_sansdata(r))
 
     def keyFunc(l):
         return l.metadata.get(subsort, 0)
@@ -259,7 +276,7 @@ def autosort(rawdata, subsort="det.des_dis", add_scattering=True):
             added_samples[key] = addSimple(added_samples[key])
         sample_scatt = list(added_samples.values())
 
-    return sample_scatt, blocked_beam, empty_scatt, sample_trans, empty_trans
+    return sample_scatt, blocked_beam, empty_scatt, sample_trans, empty_trans, open_trans
 
 
 @cache
@@ -2075,6 +2092,84 @@ def getPoissonUncertainty(y):
     lo = -0.5+np.sqrt(y+0.25)
     #return {"yupper": y+hi, "ylower": y-lo, "hi": hi, "lo": lo}
     return {"yupper": y+hi, "ylower": y-lo}
+
+
+@module
+def compact_sans_reduction(filelist, integration_box=None):
+    """Single module to handle all data reduction for a single configuration in a single shot
+
+    **Inputs**
+
+    filelist (fileinfo[]): All data files required to reduce files at a single configuration.
+
+    integration_box (range:xy): region over which to integrate
+
+    **Returns**
+
+    output(sans1d[]): A fully reduced set of 1D SANS data set on absolute scale.
+
+    | 2026-01-30 Jeff Krzywon initial implementation
+    """
+    # TODO: Process:
+    #  (3) Associate transmissions with scattering
+    #  (4) Determine number of blocked beam and empty cell files
+    #  (5) Associate them with individual data sets
+    #  (6) Run reduction
+    # Use the center of the detector if no box is given
+    if not integration_box:
+        integration_box = [55, 74, 53, 72]
+
+    reduced_data = []
+
+    div_file = None
+    for file in filelist:
+        if file.endswith(".div"):
+            div_file = file
+            filelist.remove(file)
+            break
+
+    div = LoadDIV(div_file) if div_file else None
+
+    loaded_data = LoadSANS(filelist)
+
+    sample_scatt, blocked_beam, empty_scatt, sample_trans, empty_trans, open_trans = autosort(
+        loaded_data, subsort="sample.name", add_scattering=False)
+    sample_data = SuperLoadSANS(sample_scatt)
+    transmission = generate_transmission(sample_trans, empty_trans, integration_box)
+    empty_transmissions = generate_transmission(empty_trans, empty_scatt, integration_box)
+
+    PixelsToQ(sample_scatt)
+    for i, sample in enumerate(sample_data):
+        # TODO: Need workflow...
+        #  COR = (SAM - BGD) - [Tsam / Temp](EMP - BGD)
+        #  Tsam = SUM(Sample Trans) / SUM(Open Trans)
+        #  Temp = SUM(EmptyCellTrans) / SUM(OpenTrans)
+        #  CORDIV = COR / DIV
+        #  ABS = Kappa * CORDIV
+        #  Kappa = Phi * A * deltaQ * Sigma * t
+        #  OpenTrans = Phi * A * Sigma
+        #  t = scattTime * 10^8 / MCR
+        #  deltaQ = (0.508 / SDD_cm) ^ 2
+        #  => ABS = OpenTrans * scattTime * (10^8 / MCR) * (0.508 / SDD_cm)^2 * {(SAM-BGD)-[Tsam / Temp](EMP - BGD)}
+        bb = _find_associated_data_set(sample, blocked_beam)
+        mt = _find_associated_data_set(sample, empty_scatt)
+        bb_cor = subtract([sample_data], [bb])[0]
+        trans = transmission[i]
+        em_trans = empty_transmissions[0]
+        cor = bb_cor - (em_trans / trans)*subtract([mt], [bb_cor])[0]
+        cor_div = correct_detector_sensitivity([cor], [div])[0]
+        kappa = 1.0  # TODO: Calculate this...
+        abs_data = absolute_scaling()
+        nom, mean, avg = circular_av_new(sample, mask_width=2, dQ_method='Igor')
+        reduced_data.append(avg)
+
+    return reduced_data
+
+
+def _find_associated_data_set(sample_scatt: Sans1dData, data_list: list[Sans1dData], criteria="det.des_dis"):
+    """Finds the most appropriate blocked beam for a sample based on the list given."""
+    # TODO: Find most appropriate data set based on the criteria
+    return data_list[0]
 
 
 @module
