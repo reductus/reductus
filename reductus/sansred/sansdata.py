@@ -34,6 +34,13 @@ def _s(b):
     else:
         return b
 
+# TODO: Items needed for SANS data
+#  - Differentiate Raw vs Intermediate vs Reduced
+#  - Single class for any data with all others inheriting from
+#  - Method(s) to scale, shift, and mask data
+#  - DIV/mask file handling
+#  - Hold intent (emtpy/BB/open/sample) and measurement type (Scatt/Trans)
+
 class RawSANSData(RawVSANSData):
     suffix = ".sans"
 
@@ -207,27 +214,20 @@ class Sans1dData:
         self.vscale = vscale
         self.metadata = metadata if metadata is not None else {}
         self.fit_function = fit_function
-        self._q_mask: list[int] | None = None
 
-    def q_cutoff(self):
-        if self._q_mask is None:
+    def q_cutoff(self, masked_points: list[int] | None = None):
+        if masked_points is None or len(masked_points) == 0:
             # If no limits have been set, no truncation
-            self._q_mask = []
-        data = SansIQData(np.delete(self.v, self._q_mask) if self.v is not None else None,
-                          np.delete(self.dv, self._q_mask) if self.dv is not None else None,
-                          np.delete(self.x, self._q_mask) if self.x is not None else None,
-                          np.delete(self.dx, self._q_mask)if self.dx is not None else None,
-                          metadata=self.metadata)
+            return self
+        new_dx = np.delete(self.dx, masked_points) if isinstance(self.dx, np.ndarray) else self.dx
+
+        data = Sans1dData(
+            x=np.delete(self.x, masked_points) if self.x is not None else None,
+            v=np.delete(self.v, masked_points) if self.v is not None else None,
+            dx=np.delete(self.dx, masked_points) if self.dx is not None else None,
+            dv=np.delete(self.dv, masked_points)if self.dv is not None else None,
+            metadata=self.metadata)
         return data
-
-    @property
-    def mask(self):
-        return self.q_cutoff()
-
-    @mask.setter
-    def mask(self, masked_points: list[int] | None = None):
-        # Allow the user to either send an integer index or a Q value. The chance a Q value being a whole number is low
-        self._q_mask = masked_points
 
     def to_dict(self):
         props = dict([(p, getattr(self, p, None)) for p in self.properties])
@@ -295,7 +295,7 @@ class SansIQData:
     def q_cutoff(self):
         if self._q_mask is None:
             # If no limits have been set, no truncation
-            self._q_mask = []
+            return self
         data = SansIQData(np.delete(self.I, self._q_mask) if self.I is not None else None,
                           np.delete(self.dI, self._q_mask) if self.dI is not None else None,
                           np.delete(self.Q, self._q_mask) if self.Q is not None else None,
