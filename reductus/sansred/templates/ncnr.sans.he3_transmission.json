@@ -1,0 +1,28 @@
+{
+  "wires": [
+    {
+      "source": [
+        1,
+        "output"
+      ],
+      "target": [
+        0,
+        "he3data"
+      ]
+    }
+  ],
+  "modules": [
+    {
+      "module": "ncnr.vsans.He3_transmission",
+      "title": "He3 Transmission",
+      "x": 360,
+      "y": 25
+    },
+    {
+      "module": "ncnr.vsans.LoadVSANSHe3Parallel",
+      "title": "Loadvsanshe3parallel",
+      "x": 105,
+      "y": 25
+    }
+  ]
+}
