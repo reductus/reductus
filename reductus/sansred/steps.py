@@ -257,7 +257,7 @@ def autosort(rawdata, subsort="det.des_dis", add_scattering=True):
             sample_trans.extend(to_sansdata(r))
         elif purpose.lower() == 'transmission' and intent.lower().startswith('empty'):
             empty_trans.extend(to_sansdata(r))
-        elif intent.lower.startswith('open'):
+        elif intent.lower().strip().startswith('open'):
             open_trans.extend(to_sansdata(r))
 
     def keyFunc(l):
@@ -2108,7 +2108,7 @@ def compact_sans_reduction(filelist=None, integration_box=None):
 
     output(sans1d[]): A fully reduced set of 1D SANS data set on absolute scale.
 
-    | 2026-01-30 Jeff Krzywon initial implementation
+    | 2026-02-26 Jeff Krzywon initial implementation
     """
     if filelist is None:
         return []
@@ -2120,26 +2120,25 @@ def compact_sans_reduction(filelist=None, integration_box=None):
 
     div_file = None
     for file in filelist:
-        if file.endswith(".div"):
+        if file['path'].endswith(".div"):
             div_file = file
             filelist.remove(file)
             break
 
     div = LoadDIV(div_file) if div_file else None
 
-    loaded_data = LoadSANS(filelist)
+    loaded_data = LoadRawSANS(filelist)
 
     sample_scatt, blocked_beam, empty_scatt, sample_trans, empty_trans, open_trans = autosort(
         loaded_data, subsort="sample.name", add_scattering=False)
-    sample_data = SuperLoadSANS(sample_scatt)
     transmission = generate_transmission(sample_trans, empty_trans, integration_box)
     empty_transmissions = generate_transmission(empty_trans, empty_scatt, integration_box)
     open_beam = open_trans[0]
 
-    for i, sample in enumerate(sample_data):
+    for i, sample in enumerate(sample_scatt):
         bb = _find_associated_data_set(sample, blocked_beam)
         mt = _find_associated_data_set(sample, empty_scatt)
-        bb_cor = subtract([sample_data], [bb])[0]
+        bb_cor = subtract([sample_scatt], [bb])[0]
         trans = transmission[i]
         em_trans = empty_transmissions[0]
         cor = bb_cor - (em_trans / trans)*subtract([mt], [bb_cor])[0]
