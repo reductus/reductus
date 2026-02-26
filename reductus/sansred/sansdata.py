@@ -470,6 +470,12 @@ class Parameters:
             result.data = value/other
         return result
 
+    def __copy__(self):
+        return self.copy()
+
+    def copy(self):
+        return Parameters(copy(self.params))
+
     def get_metadata(self):
         return self.params
 
