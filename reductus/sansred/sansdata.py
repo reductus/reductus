@@ -461,6 +461,15 @@ class Parameters:
     def __init__(self, params=None):
         self.params = params
 
+    def __truediv__(self, other):
+        result = self.copy()
+        value = Uncertainty(result.params.get('factor', 1.0), result.params.get('factor_variance', 0.0))
+        if isinstance(other, Parameters):
+            result.data = value/Uncertainty(other.params.get('factor', 1.0), other.params.get('factor_variance', 0.0))
+        else:
+            result.data = value/other
+        return result
+
     def get_metadata(self):
         return self.params
 
