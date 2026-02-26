@@ -2095,7 +2095,7 @@ def getPoissonUncertainty(y):
 
 
 @module
-def compact_sans_reduction(filelist, integration_box=None):
+def compact_sans_reduction(filelist=None, integration_box=None):
     """Single module to handle all data reduction for a single configuration in a single shot
 
     **Inputs**
@@ -2110,6 +2110,8 @@ def compact_sans_reduction(filelist, integration_box=None):
 
     | 2026-01-30 Jeff Krzywon initial implementation
     """
+    if filelist is None:
+        return []
     # Use the center of the detector if no box is given
     if not integration_box:
         integration_box = [55, 74, 53, 72]
