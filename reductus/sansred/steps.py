@@ -1619,7 +1619,10 @@ def absolute_scaling(empty, sample, Tsam, div, instrument="NG7", integration_box
     #-------------------------------------------------------------------------------------#
 
     # Correct empty beam by the sensitivity
-    data = empty.data/div.data
+    if div is not None:
+        data = empty.data/div.data
+    else:
+        data = empty.data
     # Then take the sum in XY box, including stat. error
     if auto_box:
         height, x, y, width_x, width_y = moments(empty.data.x)
