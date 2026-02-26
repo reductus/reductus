@@ -2110,11 +2110,6 @@ def compact_sans_reduction(filelist, integration_box=None):
 
     | 2026-01-30 Jeff Krzywon initial implementation
     """
-    # TODO: Process:
-    #  (3) Associate transmissions with scattering
-    #  (4) Determine number of blocked beam and empty cell files
-    #  (5) Associate them with individual data sets
-    #  (6) Run reduction
     # Use the center of the detector if no box is given
     if not integration_box:
         integration_box = [55, 74, 53, 72]
@@ -2137,30 +2132,17 @@ def compact_sans_reduction(filelist, integration_box=None):
     sample_data = SuperLoadSANS(sample_scatt)
     transmission = generate_transmission(sample_trans, empty_trans, integration_box)
     empty_transmissions = generate_transmission(empty_trans, empty_scatt, integration_box)
+    open_beam = open_trans[0]
 
-    PixelsToQ(sample_scatt)
     for i, sample in enumerate(sample_data):
-        # TODO: Need workflow...
-        #  COR = (SAM - BGD) - [Tsam / Temp](EMP - BGD)
-        #  Tsam = SUM(Sample Trans) / SUM(Open Trans)
-        #  Temp = SUM(EmptyCellTrans) / SUM(OpenTrans)
-        #  CORDIV = COR / DIV
-        #  ABS = Kappa * CORDIV
-        #  Kappa = Phi * A * deltaQ * Sigma * t
-        #  OpenTrans = Phi * A * Sigma
-        #  t = scattTime * 10^8 / MCR
-        #  deltaQ = (0.508 / SDD_cm) ^ 2
-        #  => ABS = OpenTrans * scattTime * (10^8 / MCR) * (0.508 / SDD_cm)^2 * {(SAM-BGD)-[Tsam / Temp](EMP - BGD)}
         bb = _find_associated_data_set(sample, blocked_beam)
         mt = _find_associated_data_set(sample, empty_scatt)
         bb_cor = subtract([sample_data], [bb])[0]
         trans = transmission[i]
         em_trans = empty_transmissions[0]
         cor = bb_cor - (em_trans / trans)*subtract([mt], [bb_cor])[0]
-        cor_div = correct_detector_sensitivity([cor], [div])[0]
-        kappa = 1.0  # TODO: Calculate this...
-        abs_data = absolute_scaling()
-        nom, mean, avg = circular_av_new(sample, mask_width=2, dQ_method='Igor')
+        abs_data = absolute_scaling(empty=open_beam, sample=cor, Tsam=trans, div=div)
+        nom, mean, avg = circular_av_new(abs_data, mask_width=2, dQ_method='Igor')
         reduced_data.append(avg)
 
     return reduced_data
