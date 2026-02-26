@@ -2131,8 +2131,8 @@ def compact_sans_reduction(filelist=None, integration_box=None):
 
     sample_scatt, blocked_beam, empty_scatt, sample_trans, empty_trans, open_trans = autosort(
         loaded_data, subsort="sample.name", add_scattering=False)
-    transmission = generate_transmission(sample_trans, empty_trans, integration_box)
-    empty_transmissions = generate_transmission(empty_trans, empty_scatt, integration_box)
+    transmission = generate_transmission(sample_trans, open_trans, integration_box)
+    empty_transmissions = generate_transmission(empty_trans, open_trans, integration_box)
     open_beam = open_trans[0]
 
     for i, sample in enumerate(sample_scatt):
