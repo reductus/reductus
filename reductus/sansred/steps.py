@@ -242,8 +242,6 @@ def autosort(rawdata, subsort="det.des_dis", add_scattering=True):
     empty_trans = []
     open_trans = []
 
-    print(rawdata)
-
     for r in rawdata:
         purpose = _s(r.metadata['analysis.filepurpose'])
         intent = _s(r.metadata['analysis.intent'])
@@ -1458,7 +1456,7 @@ def divide(data, factor_param):
     2010-01-01 unknown
     """
     if factor_param is not None:
-        return data.__truediv__(factor_param.params['factor'])
+        return data.__truediv__(Uncertainty(factor_param.params.get('factor', 1.0), factor_param.params.get('factor_variance', 0.0)))
     else:
         return data
 
@@ -2138,10 +2136,10 @@ def compact_sans_reduction(filelist=None, integration_box=None):
     for i, sample in enumerate(sample_scatt):
         bb = _find_associated_data_set(sample, blocked_beam)
         mt = _find_associated_data_set(sample, empty_scatt)
-        bb_cor = subtract([sample_scatt], [bb])[0]
+        bb_cor = subtract([sample], [bb])[0]
         trans = transmission[i]
         em_trans = empty_transmissions[0]
-        cor = bb_cor - (em_trans / trans)*subtract([mt], [bb_cor])[0]
+        cor = subtract([bb_cor], [product(subtract([mt], [bb_cor]), [divide(em_trans, trans)])])
         abs_data = absolute_scaling(empty=open_beam, sample=cor, Tsam=trans, div=div)
         nom, mean, avg = circular_av_new(abs_data, mask_width=2, dQ_method='Igor')
         reduced_data.append(avg)
