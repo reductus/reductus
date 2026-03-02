@@ -2143,7 +2143,7 @@ def compact_sans_reduction(filelist=None, integration_box=None):
         trans = transmission[i]
         em_trans = empty_transmissions[0]
         cor = subtract([bb_cor], [product(subtract([mt], [bb_cor]), [divide(em_trans, trans)])])
-        abs_data = absolute_scaling(empty=open_beam, sample=cor, Tsam=trans, div=div)
+        abs_data = absolute_scaling(empty=open_beam, sample=cor[0], Tsam=trans, div=div)
         nom, mean, avg = circular_av_new(abs_data, mask_width=2, dQ_method='Igor')
         reduced_data.append(avg)
 
