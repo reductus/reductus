@@ -2,7 +2,7 @@
   "modules": [
     {
       "x": 10,
-      "module": "ncnr.sans.compactSANSReduction",
+      "module": "ncnr.sans.compact_sans_reduction",
       "config": {
         "auto_box": true
       },
