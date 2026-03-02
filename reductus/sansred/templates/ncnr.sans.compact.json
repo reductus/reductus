@@ -2,6 +2,7 @@
   "modules": [
     {
       "x": 10,
+      "title": "Single Configuration Data",
       "module": "ncnr.sans.compact_sans_reduction",
       "config": {
         "auto_box": true
