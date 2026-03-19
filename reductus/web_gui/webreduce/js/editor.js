@@ -5,19 +5,18 @@ import {server_api} from './server_api/api_msgpack.js';
 import {dependencies} from './deps.js';
 import {instruments} from './instruments/index.js';
 // now a global...
-import {zip} from './libraries.js';
-import { Vue } from './libraries.js';
-import {extend, dataflowEditor} from './libraries.js';
+import * as zip from '@zip.js/zip.js';
+import * as Vue from 'vue';
 import { Cache } from './idb_cache.js';
-import { sha1 } from './libraries.js';
+import sha1 from 'sha1';
 import {filebrowser} from './filebrowser.js';
 //import {make_fieldUI} from './fieldUI.js';
-import { fieldUI } from './ui_components/fields_panel.js';
 import { plotter  } from './plot.js';
 import { vueMenu } from './menu.js';
 import { export_dialog } from './ui_components/export_dialog.js';
 import { app_header } from './app_header.js';
 import { DataflowViewer } from './ui_components/dataflow_viewer.js';
+import { emitter } from './bus.js';
 
 const MAX_CACHE_AGE = 90; // days
 
@@ -78,26 +77,20 @@ editor.make_cache();
 window.indexedDB.deleteDatabase("_pouch_calculations");
 
 editor.clear_cache = async function() {
-  app_header.instance.show_snackbar("clearing cache...", 4000);
+  emitter.emit('app_header.show_snackbar', {message: "clearing cache...", duration: 4000});
   await this._cache.clear();
-  app_header.instance.show_snackbar("cache cleared", 4000);
+  emitter.emit('app_header.show_snackbar', {message: "cache cleared", duration: 4000});
 }
 
 editor.create_instance = function(target_id) {
   // create an instance of the dataflow editor in
   // the html element referenced by target_id
   let target = document.getElementById(target_id);
-  const DataflowViewerClass = Vue.extend(DataflowViewer);
   this.instance_container = target.parentElement;
-  this.instance = new DataflowViewerClass({
-    propsData: {instrument_def: {}},
-    methods: {
-      on_select: editor.module_clicked,
-      on_change: editor.update_completions,
-    }
-  }).$mount(target);
-  // TODO: make fields respond to "enter" key by advancing to next
-  // module in template? (accept on enter)
+  this.instance = Vue.createApp(DataflowViewer).mount(target);
+  // Setup event handlers
+  this.instance.on_select = editor.module_clicked;
+  this.instance.on_change = editor.update_completions;
 }
 
 function module_clicked_multiple() {
@@ -131,7 +124,7 @@ function module_clicked_single() {
   let active_module = editor.instance.template_data.modules[i];
   let module_def = editor.instance.module_defs[active_module.module];
   let fileinfos = (module_def.fields || []).filter(f => (f.datatype == 'fileinfo'));
-  filebrowser.instance.blocked = (fileinfos.length < 1);
+  app.filebrowser_instance.blocked = (fileinfos.length < 1);
   
   var terminals_to_calculate = module_def.inputs
     .filter(function(inp) {return /\.params$/.test(inp.datatype)})
@@ -143,7 +136,7 @@ function module_clicked_single() {
   let recalc_mtimes = app.settings.check_mtimes.value;
   let params_to_calc = terminals_to_calculate.map(function(terminal_id) {
     return {template: active_template, config: {}, node: i, terminal: terminal_id, return_type: "plottable"}
-  })
+  });
   editor.calculate(params_to_calc, recalc_mtimes)
     .then(function(results) {
     var inputs_map = {};
@@ -160,20 +153,20 @@ function module_clicked_single() {
       .map(function(d) {return im[d.id]});
     field_inputs.forEach(function(d) {
       d.values.forEach(function(v) {
-        extend(true, fields_in, v.params);
+        Object.assign(fields_in, structuredClone(v.params));
       });
     });
-    await editor.show_plots([datasets_in]);
-    fieldUI.instance.num_datasets_in = ((datasets_in || {}).values || []).length;
-    fieldUI.instance.module = active_module;
-    fieldUI.instance.reset_local_config();
+    await emitter.emit('show_plots', [datasets_in]);
 
-    fieldUI.instance.module_id = i;
-    fieldUI.instance.terminal_id = data_to_show;
-    fieldUI.instance.module_def = module_def;
-    fieldUI.instance.timestamp = Date.now();
-
-    fieldUI.instance.auto_accept = app.settings.auto_accept;
+    await emitter.emit('editor.calculate_single', {
+      num_datasets_in: ((datasets_in || {}).values || []).length,
+      module: active_module,
+      module_id: i,
+      terminal_id: data_to_show,
+      module_def: module_def,
+      timestamp: Date.now(),
+      auto_accept: app.settings.auto_accept
+    });
   });
 }
 
@@ -196,7 +189,7 @@ editor.get_full = function() {
 function module_clicked() {
   let nterms = editor.instance.selected.terminals.length;
   if (nterms > 0) {
-    filebrowser.instance.selected_stashes.splice(0);
+    app.filebrowser_instance.selected_stashes.splice(0);
     if (nterms > 1) {
       module_clicked_multiple();
     }
@@ -206,7 +199,7 @@ function module_clicked() {
   }
   else if(editor.instance.selected.modules.length > 1) {
     app.hide_fields();
-    filebrowser.instance.blocked = true;
+    app.filebrowser_instance.blocked = true;
   }
 }
 
@@ -223,34 +216,8 @@ async function compare_in_template(to_compare, template) {
         return_type: "plottable"
   }));
   let results = await editor.calculate(params_to_calc, recalc_mtimes);
-  editor.show_plots(results);
+  emitter.emit('show_plots', results);
 }
-
-editor.show_plots = async function(results) {
-  var new_plotdata;
-  if (results.length == 0 || results[0] == null || results[0].values.length == 0) { 
-    new_plotdata = null; 
-  }
-  else { 
-    new_plotdata = {values: [], type: null, xcol: null, ycol: null}
-    new_plotdata.type = results[0].values[0].type;
-    results.forEach(function(r) {
-      var values = r.values || [];
-      values.forEach(function(v) {
-        if (new_plotdata.type == null && v.type) {
-          new_plotdata.type = v.type;
-        }
-        new_plotdata.values.push(v);
-      });
-    });
-  }
-    if (new_plotdata == null) {
-      await plotter.instance.setPlotData({type: 'null'});
-    }
-    else if (['nd', '1d', '2d', '2d_multi', 'params', 'metadata'].includes(new_plotdata.type)) {
-      await plotter.instance.setPlotData(new_plotdata);
-    }
-  }
 
 editor.stash_data = function(suggested_name) {
   // embed the active template in a subroutine, exposing the
@@ -282,7 +249,7 @@ editor.stash_data = function(suggested_name) {
   let [node, terminal] = editor.instance.selected.terminals[0];
   let template = editor.instance.template_data;
   let instrument_id = editor._instrument_id;
-  let template_copy = extend(true, {}, template);
+  let template_copy = structuredClone(template);
   var subroutine = {};
   subroutine.module = "user.stashed"
   subroutine.title = stashname;
@@ -303,7 +270,7 @@ editor.stash_data = function(suggested_name) {
 editor.load_stashes = function(stashes) {
   var existing_stashes = stashes || _fetch_stashes();
   var stashnames = Object.keys(existing_stashes);
-  filebrowser.instance.stashnames = stashnames;
+  app.filebrowser_instance.stashnames = stashnames;
 }
 
 function _fetch_stashes() {
@@ -368,20 +335,16 @@ editor.compare_stashed = function(stashnames) {
           first.values = first.values.concat(results[i].values);
         }
       }
-      editor.show_plots([first]);
+      emitter.emit('show_plots', [first]);
     });
 }
 
-editor.get_versioned_template = function(template) {
-  var versioned = extend(true, {}, template),
-      editor = this,
-      module_list = versioned.modules;
-  module_list.forEach(function(m) {
-    if (m.module && m.module in editor._module_defs) {
-      m.version = editor._module_defs[m.module].version;
-    }
+editor.get_versions = function(template) {
+  const { modules } = template;
+  return modules.map(m => {
+    const def = editor._module_defs[m.module] || {};
+    return { module: m.module, version: def.version || "unknown" };
   });
-  return versioned
 }
 
 editor.get_cached_timestamps = function() {
@@ -412,77 +375,79 @@ editor.get_signature = async function(params) {
   const return_type = params.return_type ?? 'metadata';
   const export_type = params.export_type ?? 'column';
   const concatenate = params.concatenate ?? false;
-  
-  const versioned = this.get_versioned_template(template);
-  const sig = await digestMessage(JSON.stringify({
+  const versions = this.get_versions(template);
+  const to_digest = JSON.stringify({
         method: "calculate",
-        template: versioned,
+        template: template,
+        versions: versions,
         config: config,
         node: node,
         terminal: terminal,
-        return_type: return_type, 
+        return_type: return_type,
         export_type: export_type,
-        concatenate: concatenate}), "SHA-1");
-        
+        concatenate: concatenate
+      });
+  const sig = await digestMessage(to_digest, "SHA-1");
   return sig
 }
 
 async function calculate_one(params, caching) {
-  var r = new Promise(function(resolve, reject) {resolve()});
-  var template = params.template,
-        config = params.config || {},
-        node = params.node,
-        terminal = params.terminal,
-        return_type = params.return_type || 'metadata',
-        export_type = params.export_type || 'column',
-        concatenate = params.concatenate || false;
-      
+  const template = params.template;
+  const config = params.config || {};
+  const node = params.node;
+  const terminal = params.terminal;
+  const return_type = params.return_type || 'metadata';
+  const export_type = params.export_type || 'column';
+  const concatenate = params.concatenate || false;
+
   if (caching) {
-    r = r.then(function() {
-        return editor.get_signature(params);
-    })
-    .then(function(sig) {
-      return editor._cache.get(sig).then(function(cached) {return cached.value})
-      .catch(function(e) {
-        var versioned = editor.get_versioned_template(template);
-        return server_api.calc_terminal({
-            template_def: versioned,
-            config: config,
-            nodenum: node,
-            terminal_id: terminal,
-            return_type: return_type,
-            export_type: export_type,
-            concatenate: concatenate
-          })
-          .then(function(result) {
-            var doc = {
-              _id: sig, 
-              created_at: Date.now(),
-              value: result 
-            }
-            editor._cache.set(sig, doc);
-            return result
-          })
-          .catch(function(e) {
-            console.log("error", e)
-          })
-      })
-    })
+    let sig;
+    try {
+      sig = await editor.get_signature(params);
+    } catch (e) {
+      console.log("error", e);
+      return;
+    }
+    try {
+      const cached = await editor._cache.get(sig);
+      return cached.value;
+    } catch (e) {
+      try {
+        const result = await server_api.calc_terminal({
+          template_def: template,
+          config: config,
+          nodenum: node,
+          terminal_id: terminal,
+          return_type: return_type,
+          export_type: export_type,
+          concatenate: concatenate
+        });
+        const doc = {
+          _id: sig,
+          created_at: Date.now(),
+          value: result
+        };
+        editor._cache.set(sig, doc);
+        return result;
+      } catch (err) {
+        console.log("error", err);
+      }
+    }
   } else {
-    r = r.then(function() { return server_api.calc_terminal({
-      template_def: template,
-      config: config,
-      nodenum: node,
-      terminal_id: terminal,
-      return_type: return_type,
-      export_type: export_type,
-      concatenate: concatenate});
-    })
-    .catch(function(e) {
-      console.log("error", e)
-    });
+    try {
+      return await server_api.calc_terminal({
+        template_def: template,
+        config: config,
+        nodenum: node,
+        terminal_id: terminal,
+        return_type: return_type,
+        export_type: export_type,
+        concatenate: concatenate
+      });
+    } catch (e) {
+      console.log("error", e);
+    }
   }
-  return r
 }
 
 editor.calculate = async function(params, recalc_mtimes, noblock, result_callback) {
@@ -490,35 +455,38 @@ editor.calculate = async function(params, recalc_mtimes, noblock, result_callbac
   // call result_callback on each result individually (this function will return all results
   // if you want to act on the aggregate after)
   var caching = app.settings.cache_calculations.value;
-  app_header.instance.calculation_progress.done = 0;
-  app_header.instance.$off("cancel-calculation"); // clear previous handlers
+  emitter.emit('app_header.reset_progress');
   editor._calculation_cancelled = false;
   var calculation_finished = false;
   var r = Promise.resolve();
+  
+  let cancelResolve;
   var cancel_promise = new Promise(function(resolve, reject) { 
-    app_header.instance.$on("cancel-calculation", function() {
+    cancelResolve = resolve;
+    const cancelHandler = () => {
       editor._calculation_cancelled = true;
       calculation_finished = true;
+      emitter.off('app_header.cancel_calculation', cancelHandler);
       resolve({"cancelled": true});
-    });
+    };
+    emitter.on('app_header.cancel_calculation', cancelHandler);
   });
   
   let results = [];
-  if (!noblock) {
-    app_header.instance.calculation_progress.visible = true;
+  if (!noblock && params && (params instanceof Array ? params.length > 0 : true)) {
+    emitter.emit('app_header.show_calculation_progress', { total: params instanceof Array ? params.length : 1 });
   }
   try {
     if (recalc_mtimes) {
       await Promise.race([cancel_promise, app.update_file_mtimes()]);
     }
     if (params instanceof Array) {
-      app_header.instance.calculation_progress.total = params.length;
       for (let i=0; i<params.length; i++) {
         let p = params[i];
         if (!editor._calculation_cancelled) {
           let result = await Promise.race([cancel_promise, calculate_one(p, caching)]);
           if (result_callback) { await result_callback(r, p, i); }
-          app_header.instance.calculation_progress.done = i+1;
+          emitter.emit('app_header.update_progress', { done: i+1, total: params.length });
           results.push(result);
         }
       }
@@ -529,7 +497,11 @@ editor.calculate = async function(params, recalc_mtimes, noblock, result_callbac
   } catch(err) {
 
   } finally {
-    app_header.instance.calculation_progress.visible = false;
+    // Clean up cancel listener and close dialog
+    emitter.off('app_header.cancel_calculation');
+    if (!noblock) {
+      emitter.emit('app_header.close_calculation_progress');
+    }
   }
   return results;
 }
@@ -639,19 +611,21 @@ editor.export_data = function() {
   else {
     // when there are more than one export types defined, ask which one to use:
     export_dialog.instance.open(export_types);
-    export_dialog.instance.$once("export-select", async function(export_type, concatenate) {
+    emitter.once("export-select", async function(export_data) {
+      const { export_type, combine_outputs } = export_data;
       var w = editor;
       var recalc_mtimes = app.settings.check_mtimes.value;
       params.export_type = export_type;
-      params.concatenate = concatenate;
+      params.concatenate = combine_outputs;
       let exported = await editor.calculate(params, recalc_mtimes, true);
       let suggested_name = (exported.values[0] || {}).filename || "myfile.refl";
       let additional_export_targets = w.instruments[w._instrument_id].export_targets || [];
       let export_targets = w.export_targets.concat(additional_export_targets);
       export_dialog.instance.export_targets = export_targets;
       export_dialog.instance.retrieved(suggested_name);
-      export_dialog.instance.$once("export-route", function(filename, target) {
-        export_handlers[target.type](exported, filename, target || {});
+      emitter.once("export-route", function(route_data) {
+        const { filename, export_target } = route_data;
+        export_handlers[export_target.type](exported, filename, export_target || {});
       })
     });
   }
@@ -675,13 +649,13 @@ editor.update_completions = function() {
 editor.load_instrument = async function(instrument_id) {
   editor._instrument_id = instrument_id;
   let instrument_def = await server_api.get_instrument({instrument_id});
+  // Store non-reactive copies for editor's internal use
   editor._instrument_def = instrument_def;
-  let module_defs = Object.fromEntries((instrument_def.modules || []).map(m => (
+  editor._module_defs = Object.fromEntries((instrument_def.modules || []).map(m => (
     [m.id, m]
   )));
-  // load into the editor instance
-  editor._module_defs = module_defs;
-  editor.instance.$set(editor.instance, 'instrument_def', instrument_def);
+  // Update component with shallow reactive - only top level is reactive
+  editor.instance.instrument_def = Vue.shallowReactive(instrument_def);
   // pass it through:
   return instrument_def;
 }
@@ -694,7 +668,7 @@ editor.switch_instrument = async function(instrument_id, load_default=true) {
     let categories = editor.instruments[instrument_id].categories;
     let old_categories = vueMenu.instance.categories;
     old_categories.splice(0, old_categories.length, ...categories);
-    vueMenu.instance.default_categories = extend(true, [], categories);
+    vueMenu.instance.default_categories = structuredClone(categories);
     vueMenu.instance.predefined_templates = Object.keys(instrument_def.templates || {});
     vueMenu.instance.current_instrument = instrument_id;
     let template_names = Object.keys(instrument_def.templates);
@@ -708,7 +682,7 @@ editor.switch_instrument = async function(instrument_id, load_default=true) {
     }
     if (load_default) {
       app.current_instrument = instrument_id;
-      var template_copy = extend(true, {}, instrument_def.templates[default_template]);
+      var template_copy = structuredClone(instrument_def.templates[default_template]);
       return editor.load_template(template_copy);
     }
   } 
@@ -721,13 +695,13 @@ editor.load_template = async function(template_def, selected_module, selected_te
   //var r = this.switch_instrument(instrument_id, false).then(function() {
       
   let template_sourcepaths = filebrowser.getAllTemplateSourcePaths(template_def);
-  let browser_sourcepaths = filebrowser.getAllBrowserSourcePaths();
+  let browser_sourcepaths = app.filebrowser_instance.getAllBrowserSourcePaths();
   var sources_loaded = Promise.resolve();
   for (let [source, pathobj] of Object.entries(template_sourcepaths)) {
     let paths = Object.keys(pathobj);
     for (let path of paths) {
       if (browser_sourcepaths.findIndex(sp => (sp.source == source && sp.path == path)) < 0) {
-        await filebrowser.addDataSource(source, path.split("/"));
+        await app.filebrowser_instance.addDataSource(source, path.split("/"));
       }
     }
   }
@@ -790,8 +764,12 @@ editor.load_metadata = async function(files_metadata, datasource, path) {
   
   editor._datafiles = results;
   try {
-    vueMenu.instance.category_keys = get_all_keys(results[0]["values"][0])
+    const new_keys = get_all_keys(results[0]["values"][0]);
+    // console.log("detected metadata keys:", new_keys);
+    vueMenu.instance.category_keys = new_keys;
   }
-  catch(e) {}
+  catch(e) {
+    console.error("could not determine metadata keys");
+  }
   return file_objs;
 }

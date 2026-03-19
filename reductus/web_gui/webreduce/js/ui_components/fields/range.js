@@ -1,11 +1,11 @@
 import {
-  d3,
   rectangleInteractor,
   ellipseInteractor,
   xSliceInteractor,
   ySliceInteractor,
   angleSliceInteractor
-} from '../../libraries.js';
+} from 'd3-science';
+import * as d3 from 'd3';
 import { plotter } from '../../plot.js';
 
 let template = `
@@ -60,7 +60,7 @@ export const RangeUi = {
   },
   methods: {
     changed(updateInteractors = true) {
-      this.local_value.forEach((x,i) => { this.$set(this.local_value, i, (isNaN(+x) || x == null) ? null : +x) });
+      this.local_value.forEach((x,i) => { this.local_value[i] = (isNaN(+x) || x == null) ? null : +x });
       this.$emit('change', this.field.id, this.local_value);
       if (updateInteractors) {
         this.interactors.forEach(I => {
@@ -108,8 +108,8 @@ function add_x_interactor(vm, xrange, yrange) {
     show_lines: true,
     get x1() { return (vm.default_value[0] == null) ? xrange[0] : vm.default_value[0] },
     get x2() { return (vm.default_value[1] == null) ? xrange[1] : vm.default_value[1] },
-    set x1(x) { vm.$set(value, 0, x) },
-    set x2(x) { vm.$set(value, 1, x) }
+    set x1(x) { value[0] = x },
+    set x2(x) { value[1] = x }
   }
   return new xSliceInteractor(opts, null, null, d3);
 }
@@ -123,8 +123,8 @@ function add_y_interactor(vm, xrange, yrange) {
     show_lines: true,
     get y1() { return (vm.default_value[0] == null) ? yrange[0] : vm.default_value[0] },
     get y2() { return (vm.default_value[1] == null) ? yrange[1] : vm.default_value[1] },
-    set y1(x) { vm.$set(value, 0, x) },
-    set y2(x) { vm.$set(value, 1, x) }
+    set y1(x) { value[0] = x },
+    set y2(x) { value[1] = x }
   }
   return new ySliceInteractor(opts, null, null, d3);
 }
@@ -143,10 +143,10 @@ function add_xy_interactor(vm, xrange, yrange) {
     get xmax() { return (vm.default_value[1] == null) ? xrange[1] : vm.default_value[1] },
     get ymin() { return (vm.default_value[2] == null) ? yrange[0] : vm.default_value[2] },
     get ymax() { return (vm.default_value[3] == null) ? yrange[1] : vm.default_value[3] },
-    set xmin(x) { vm.$set(value, 0, x) },
-    set xmax(x) { vm.$set(value, 1, x) },
-    set ymin(x) { vm.$set(value, 2, x) },
-    set ymax(x) { vm.$set(value, 3, x) }
+    set xmin(x) { value[0] = x },
+    set xmax(x) { value[1] = x },
+    set ymin(x) { value[2] = x },
+    set ymax(x) { value[3] = x }
   }
   return new rectangleInteractor(opts, null, null, d3);
 }
@@ -165,10 +165,10 @@ function add_ellipse_interactor(vm, xrange, yrange) {
     get cy() { return (vm.default_value[1] == null) ? (yrange[0] + yrange[1]) / 2 : vm.default_value[1] },
     get rx() { return (vm.default_value[2] == null) ? Math.abs(xrange[1] - xrange[0]) / 2 : vm.default_value[2] },
     get ry() { return (vm.default_value[3] == null) ? Math.abs(yrange[1] - yrange[0]) / 2 : vm.default_value[3] },
-    set cx(x) { vm.$set(value, 0, x) },
-    set cy(x) { vm.$set(value, 1, x) },
-    set rx(x) { vm.$set(value, 2, x) },
-    set ry(x) { vm.$set(value, 3, x) }
+    set cx(x) { value[0] = x },
+    set cy(x) { value[1] = x },
+    set rx(x) { value[2] = x },
+    set ry(x) { value[3] = x }
   }
   return new ellipseInteractor(opts, null, null, d3);
 }
@@ -187,10 +187,10 @@ function add_sector_interactor(vm, xrange, yrange) {
     get cy() { return (vm.default_value[1] == null) ? 0 : vm.default_value[1] },
     get angle_offset() { return ((vm.default_value[2] == null) ? 0 : vm.default_value[2]) * Math.PI / 180.0 },
     get angle_range() { return ((vm.default_value[3] == null) ? 90 : vm.default_value[3]) * Math.PI / 180.0 },
-    set cx(x) { vm.$set(value, 0, x) },
-    set cy(x) { vm.$set(value, 1, x) },
-    set angle_offset(x) { vm.$set(value, 2, x * 180.0 / Math.PI) },
-    set angle_range(x) { vm.$set(value, 3, x * 180.0 / Math.PI) }
+    set cx(x) { value[0] = x },
+    set cy(x) { value[1] = x },
+    set angle_offset(x) { value[2] = x * 180.0 / Math.PI },
+    set angle_range(x) { value[3] = x * 180.0 / Math.PI }
   }
   return new angleSliceInteractor(opts, null, null, d3);
 }
@@ -209,8 +209,8 @@ function add_sector_centered_interactor(vm, xrange, yrange) {
     cy: 0,
     get angle_offset() { return ((vm.default_value[0] == null) ? 0 : vm.default_value[0]) * Math.PI / 180.0 },
     get angle_range() { return ((vm.default_value[1] == null) ? 90 : vm.default_value[1]) * Math.PI / 180.0 },
-    set angle_offset(x) { vm.$set(value, 0, x * 180.0 / Math.PI) },
-    set angle_range(x) { vm.$set(value, 1, x * 180.0 / Math.PI) }
+    set angle_offset(x) { value[0] = x * 180.0 / Math.PI },
+    set angle_range(x) { value[1] = x * 180.0 / Math.PI }
   }
   return new angleSliceInteractor(opts, null, null, d3);
 }

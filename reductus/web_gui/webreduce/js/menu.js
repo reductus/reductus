@@ -1,169 +1,239 @@
-import { Vue } from './libraries.js';
+import * as Vue from 'vue';
 import { categoriesEditor } from './ui_components/categories_editor.js';
 
 let template = `
-<div class="page-container md-layout-column">
+<div class="d-flex flex-column">
   
-  <md-drawer :md-active.sync="showNavigation" md-swipeable>
-    <md-toolbar class="md-transparent" md-elevation="0">
-      <span class="md-title"><img src="img/reductus_logo.svg" style="height:2em;"/>Reductus</span>
-    </md-toolbar>
+  <!-- Bootstrap Offcanvas Sidebar -->
+  <div class="offcanvas offcanvas-start" :class="{ show: showNavigation }" tabindex="-1">
+    <div class="offcanvas-header">
+      <h5 class="offcanvas-title"><img src="img/reductus_logo.svg" style="height:2em;"/>Reductus</h5>
+      <button type="button" class="btn-close" @click="showNavigation = false"></button>
+    </div>
+    
+    <div class="offcanvas-body p-0">
+      <div class="accordion" id="mainAccordion">
+        <!-- Template Accordion Item -->
+        <div class="accordion-item">
+          <h2 class="accordion-header">
+            <button class="accordion-button" :class="{ collapsed: !expandTemplate }" type="button" @click="expandTemplate = !expandTemplate" aria-controls="templateCollapse">
+              Template
+            </button>
+          </h2>
+          <div id="templateCollapse" class="accordion-collapse collapse" :class="{ show: expandTemplate }">
+            <div class="accordion-body p-0">
+              <div class="list-group list-group-flush">
+                <button @click="action('new_template')" class="list-group-item list-group-item-action">
+                  <i class="bi bi-plus me-2"></i> New
+                </button>
+                <button @click="action('edit_template')" class="list-group-item list-group-item-action">
+                  <i class="bi bi-pencil me-2"></i> Edit
+                </button>
+                <button @click="action('download_template')" class="list-group-item list-group-item-action">
+                  <i class="bi bi-download me-2"></i> Download
+                </button>
+                <button @click="trigger_upload" class="list-group-item list-group-item-action">
+                  <i class="bi bi-upload me-2"></i> Upload Template
+                </button>
+                <div class="list-group-item">
+                  <label for="predefined_template" class="form-label">Predefined</label>
+                  <select v-model="predefined_template" class="form-select form-select-sm mb-2" id="predefined_template">
+                    <option v-for="template in predefined_templates" :value="template">
+                      {{template}}
+                    </option>
+                  </select>
+                  <button 
+                    class="btn btn-primary btn-sm w-100"
+                    :disabled="predefined_template == ''"
+                    @click="action('load_predefined', predefined_template)">
+                    Load
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
 
-    <md-list>
-      <md-list-item md-expand md-expanded>
-        <md-icon md-src="img/mediation-black-18dp.svg"></md-icon>
-        <span class="md-list-item-text md-title">Template</span>
-        <md-list slot="md-expand">
-          <md-list-item @click="action('new_template')" class="md-inset">
-            <span class="md-list-item-text">New</span>
-            <md-icon class="mdi mdi-plus md-primary"></md-icon>
-          </md-list-item>
-          <md-list-item @click="action('edit_template')" class="md-inset">
-            <span class="md-list-item-text">Edit</span>
-            <md-icon class="mdi mdi-pencil md-primary"></md-icon>
-          </md-list-item>
-          <md-list-item @click="action('download_template')" class="md-inset">
-            <span class="md-list-item-text">Download</span>
-            <md-icon class="mdi mdi-download md-primary"></md-icon>
-          </md-list-item>
-          <md-list-item @click="trigger_upload" class="md-inset">
-            <span class="md-list-item-text">Upload Template</span>
-            <md-icon class="mdi mdi-upload md-primary"></md-icon>
-          </md-list-item>
-          <md-list-item class="md-inset md-double-line">
-            <md-field>
-            <label for="predefined_template">Predefined</label>
-            <md-select v-model="predefined_template" name="predefined_template" id="predefined_template">
-              <md-option v-for="template in predefined_templates" :value="template">
-                {{template}}
-              </md-option>
-            </md-select>
-            </md-field>
-            <md-button 
-              class="md-raised md-primary"
-              :disabled="predefined_template == ''"
-              @click="action('load_predefined', predefined_template)">
-              Load
-            </md-button>
-          </md-list-item>
-        </md-list>
-      </md-list-item>
-      
-      <md-list-item md-expand md-expanded>
-        <md-icon md-src="img/source-black-18dp.svg"></md-icon>
-        <span class="md-list-item-text md-title">Data</span>
-        <md-list slot="md-expand">
-          <md-list-item @click="action('stash_data')" class="md-inset">
-            <span class="md-list-item-text">Stash Data</span>
-            <md-icon class="mdi mdi-arrow-right-bold-box-outline md-primary"></md-icon>
-          </md-list-item>
-          <md-list-item @click="showCategoriesEditor = true; showNavigation = false" class="md-inset">
-            <span class="md-list-item-text">Edit Categories</span>
-            <md-icon class="mdi mdi-format-list-bulleted md-primary"></md-icon>
-          </md-list-item>
-          <md-list-item v-if="enable_uploads" @click="trigger_upload_datafiles" class="md-inset">
-            <span class="md-list-item-text">Upload Datafiles</span>
-            <md-icon class="mdi mdi-briefcase-upload md-primary"></md-icon>
-          </md-list-item>
-          <md-list-item @click="action('export_data')" class="md-inset">
-            <span class="md-list-item-text">Export</span>
-            <md-icon class="mdi mdi-cloud-download md-primary"></md-icon>
-          </md-list-item>
-          <md-list-item @click="trigger_upload" class="md-inset">
-            <span class="md-list-item-text">Reload Exported</span>
-            <md-icon class="mdi mdi-upload md-primary"></md-icon>
-          </md-list-item>
-          <md-list-item @click="action('clear_cache')" class="md-inset">
-            <span class="md-list-item-text">Clear Cache</span>
-            <md-icon class="mdi mdi-delete-circle md-primary"></md-icon>
-          </md-list-item>
-          <md-list-item class="md-inset">
-            <md-field>
-            <label for="select_datasource">Data Sources</label>
-            <md-select v-model="select_datasource" name="select_datasource" id="select_datasource">
-              <md-option v-for="source in datasources" :value="source">
-                {{source}}
-              </md-option>
-            </md-select>
-            </md-field>
-            <md-button 
-              class="md-raised md-primary"
-              @click="action('add_datasource', select_datasource)">
-              Add
-            </md-button>
-          </md-list-item>
-        </md-list>  
-      </md-list-item>
+        <!-- Data Accordion Item -->
+        <div class="accordion-item">
+          <h2 class="accordion-header">
+            <button class="accordion-button" :class="{ collapsed: !expandData }" type="button" @click="expandData = !expandData" aria-controls="dataCollapse">
+              Data
+            </button>
+          </h2>
+          <div id="dataCollapse" class="accordion-collapse collapse" :class="{ show: expandData }">
+            <div class="accordion-body p-0">
+              <div class="list-group list-group-flush">
+                <button @click="action('stash_data')" class="list-group-item list-group-item-action">
+                  <i class="bi bi-box-arrow-right me-2"></i> Stash Data
+                </button>
+                <button @click="showCategoriesEditor(); showNavigation = false" class="list-group-item list-group-item-action">
+                  <i class="bi bi-list me-2"></i> Edit Categories
+                </button>
+                <button v-if="enable_uploads" @click="trigger_upload_datafiles" class="list-group-item list-group-item-action">
+                  <i class="bi bi-briefcase-plus me-2"></i> Upload Datafiles
+                </button>
+                <button @click="action('export_data')" class="list-group-item list-group-item-action">
+                  <i class="bi bi-cloud-download me-2"></i> Export
+                </button>
+                <button @click="trigger_upload" class="list-group-item list-group-item-action">
+                  <i class="bi bi-upload me-2"></i> Reload Exported
+                </button>
+                <button @click="action('clear_cache')" class="list-group-item list-group-item-action">
+                  <i class="bi bi-trash me-2"></i> Clear Cache
+                </button>
+                <div class="list-group-item">
+                  <label for="select_datasource" class="form-label">Data Sources</label>
+                  <select v-model="select_datasource" class="form-select form-select-sm mb-2" id="select_datasource">
+                    <option v-for="source in datasources" :value="source">
+                      {{source}}
+                    </option>
+                  </select>
+                  <button 
+                    class="btn btn-primary btn-sm w-100"
+                    @click="action('add_datasource', select_datasource)">
+                    Add
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
 
-      <md-list-item md-expand>
-        <md-icon class="mdi mdi-cog"></md-icon>
-        <span class="md-list-item-text md-title">Settings</span>
-        <md-list slot="md-expand">
-          <md-list-item v-for="(setting, setting_name) in settings" class="md-inset">
-            <md-checkbox v-model="setting.value" class="md-primary" />
-            <span class="md-list-item-text">{{setting.label}}</span>
-            <md-button class="md-icon-button" @click.stop="settingsHelpActiveTab=setting_name; showSettingsHelp = true">
-              <md-icon class="mdi mdi-information-outline md-primary"></md-icon>
-            </md-button>
-          </md-list-item>
-        </md-list>
-      </md-list-item>
+        <!-- Settings Accordion Item -->
+        <div class="accordion-item">
+          <h2 class="accordion-header">
+            <button class="accordion-button" :class="{ collapsed: !expandSettings }" type="button" @click="expandSettings = !expandSettings" aria-controls="settingsCollapse">
+              Settings
+            </button>
+          </h2>
+          <div id="settingsCollapse" class="accordion-collapse collapse" :class="{ show: expandSettings }">
+            <div class="accordion-body p-0">
+              <div class="list-group list-group-flush">
+                <div v-for="(setting, setting_name) in settings" :key="setting_name" class="list-group-item">
+                  <div class="form-check">
+                    <input 
+                      type="checkbox" 
+                      class="form-check-input" 
+                      v-model="setting.value" 
+                      :id="'setting_' + setting_name"
+                    />
+                    <label class="form-check-label" :for="'setting_' + setting_name">
+                      {{setting.label}}
+                    </label>
+                    <button 
+                      class="btn btn-sm btn-link ms-auto" 
+                      @click.stop="settingsHelpActiveTab=setting_name; showSettingsHelp = true">
+                      <i class="bi bi-info-circle"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
 
-      <md-list-item md-expand>
-        <md-icon md-src="img/biotech-black-18dp.svg"></md-icon>
-        <div class="md-list-item-text">Instrument: <span class="md-title">{{current_instrument}}</span></div>
-        <md-list slot="md-expand">
-          <md-list-item class="md-inset" v-for="instrument in instruments">
-            <span class="md-list-item-text">{{instrument}}</span>
-            <md-button class="md-raised md-primary" @click.stop="action('switch_instrument', instrument)">
-              switch
-            </md-button>
-          </md-list-item>
-        </md-list>
-      </md-list-item>
-    </md-list>
-  </md-drawer>
+        <!-- Instrument Accordion Item -->
+        <div class="accordion-item">
+          <h2 class="accordion-header">
+            <button class="accordion-button" :class="{ collapsed: !expandInstrument }" type="button" @click="expandInstrument = !expandInstrument" aria-controls="instrumentCollapse">
+              Instrument: <span class="fw-bold ms-2">{{current_instrument}}</span>
+            </button>
+          </h2>
+          <div id="instrumentCollapse" class="accordion-collapse collapse" :class="{ show: expandInstrument }">
+            <div class="accordion-body p-0">
+              <div class="list-group list-group-flush">
+                <div v-for="instrument in instruments" class="list-group-item d-flex justify-content-between align-items-center">
+                  <span>{{instrument}}</span>
+                  <button class="btn btn-primary btn-sm" @click.stop="action('switch_instrument', instrument)">
+                    switch
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
-  <md-dialog :md-active.sync="showSettingsHelp" style="max-width:768px;">
-    <md-dialog-title>Settings</md-dialog-title>
+  <!-- Settings Help Modal -->
+  <div class="modal" :class="{ show: showSettingsHelp }" :style="{ display: showSettingsHelp ? 'block' : 'none' }">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Settings</h5>
+          <button type="button" class="btn-close" @click="showSettingsHelp = false"></button>
+        </div>
+        <div class="modal-body">
+          <ul class="nav nav-tabs mb-3" role="tablist">
+            <li class="nav-item" role="presentation">
+              <button 
+                class="nav-link" 
+                :class="{ active: settingsHelpActiveTab === 'auto_accept' }"
+                @click="settingsHelpActiveTab = 'auto_accept'">
+                Auto Accept
+              </button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button 
+                class="nav-link" 
+                :class="{ active: settingsHelpActiveTab === 'check_mtimes' }"
+                @click="settingsHelpActiveTab = 'check_mtimes'">
+                Auto Reload
+              </button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button 
+                class="nav-link" 
+                :class="{ active: settingsHelpActiveTab === 'cache_calculations' }"
+                @click="settingsHelpActiveTab = 'cache_calculations'">
+                Cache
+              </button>
+            </li>
+          </ul>
 
-    <md-tabs :md-active-tab.sync="settingsHelpActiveTab" md-dynamic-height>
-      <md-tab id="auto_accept" md-label="Auto Accept">
-        <p>If checked, any changes to values in the parameter panel are immediately applied to the template.</p>
-        <p>If unchecked, the user must press the "Accept" button after changing numbers in a panel</p>
-      </md-tab>
+          <div v-if="settingsHelpActiveTab === 'auto_accept'">
+            <p>If checked, any changes to values in the parameter panel are immediately applied to the template.</p>
+            <p>If unchecked, the user must press the "Accept" button after changing numbers in a panel</p>
+          </div>
 
-      <md-tab id="check_mtimes" md-label="Auto Reload">
-        <p>If checked, when a calculation is requested the last-modified times of all files to be loaded are compared to the most recent available files from the datasource</p>
-        <p>If a newer version of any of the files is available, the newer version is loaded and used for the calculation</p>
-        <p>If unchecked, the datasource is not queried for last-modified times</p>
-        </md-tab>
+          <div v-if="settingsHelpActiveTab === 'check_mtimes'">
+            <p>If checked, when a calculation is requested the last-modified times of all files to be loaded are compared to the most recent available files from the datasource</p>
+            <p>If a newer version of any of the files is available, the newer version is loaded and used for the calculation</p>
+            <p>If unchecked, the datasource is not queried for last-modified times</p>
+          </div>
 
-      <md-tab id="cache_calculations" md-label="Cache">
-        <p>If checked, all calculations requested from the server are locally cached.
-           When a new calculation is requested, the request is compared to previous 
-           requests and if there is a match the cached data is used and no request 
-           is made to the server
-        </p>
-        <p>If unchecked, all calculation requests are sent to the server</p>
-      </md-tab>
-    </md-tabs>
+          <div v-if="settingsHelpActiveTab === 'cache_calculations'">
+            <p>If checked, all calculations requested from the server are locally cached.
+               When a new calculation is requested, the request is compared to previous 
+               requests and if there is a match the cached data is used and no request 
+               is made to the server
+            </p>
+            <p>If unchecked, all calculation requests are sent to the server</p>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-primary" @click="showSettingsHelp = false">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
-    <md-dialog-actions>
-      <md-button class="md-primary" @click="showSettingsHelp = false">Close</md-button>
-    </md-dialog-actions>
-  </md-dialog>
+  <!-- Modal Backdrop -->
+  <div v-if="showSettingsHelp" class="modal-backdrop fade show"></div>
+  <div v-if="showNavigation" class="offcanvas-backdrop fade show" @click="showNavigation = false"></div>
 
-  <categories-editor 
-    :dialog="showCategoriesEditor" 
+  <!-- Categories Editor Component -->
+  <categories-editor
+    ref="categories_editor"
     :categories="categories"
     :default_categories="default_categories"
     :category_keys="category_keys"
-    @close="showCategoriesEditor=false"
-
     @apply="set_categories">
   </categories-editor>
 
+  <!-- File Upload Inputs -->
   <input 
     ref="upload_template" 
     type="file" 
@@ -185,7 +255,7 @@ let template = `
     @change="upload_datafiles"
   />
   
-</div >
+</div>
 `;
 
 export const VueMenu = {
@@ -193,36 +263,46 @@ export const VueMenu = {
   components: {
     categoriesEditor
   },
-  props: ['enable_uploads'],
-  data: () => ({
-    current_instrument: "ncnr.refl",
-    instruments: ["ncnr.refl", "ncnr.sans", "ncnr.vsans"],
-    datasources: ["ncnr", "charlotte"],
-    categories: [],
-    default_categories: [],
-    category_keys: [],
-    select_datasource: "ncnr",
-    showNavigation: false,
-    showSettingsHelp: false,
-    showApiError: false,
-    APIErrorMessage: "",
-    showCategoriesEditor: false,
-    settingsHelpActiveTab: "",
-    template_to_upload: null,
-    predefined_template: "",
-    predefined_templates: [""],
-    stash_name: null,
-    settings: {
-      auto_accept: { label: "Auto-accept changes", value: true },
-      check_mtimes: { label: "Auto-reload newer files", value: false },
-      cache_calculations: { label: "Cache calculations", value: true }
-    }
-  }),
+  props: {
+    enable_uploads: Boolean,
+    emitter: Object
+  },
+  data() {
+    return {
+      current_instrument: "ncnr.refl",
+      instruments: ["ncnr.refl", "ncnr.sans", "ncnr.vsans"],
+      datasources: ["ncnr", "charlotte"],
+      categories: [],
+      default_categories: [],
+      category_keys: [],
+      select_datasource: "ncnr",
+      showNavigation: false,
+      showSettingsHelp: false,
+      showApiError: false,
+      APIErrorMessage: "",
+      settingsHelpActiveTab: "auto_accept",
+      template_to_upload: null,
+      predefined_template: "",
+      predefined_templates: [""],
+      expandTemplate: true,
+      expandData: true,
+      expandSettings: false,
+      expandInstrument: false,
+      settings: {
+        auto_accept: { label: "Auto-accept changes", value: true },
+        check_mtimes: { label: "Auto-reload newer files", value: false },
+        cache_calculations: { label: "Cache calculations", value: true }
+      }
+    };
+  },
   methods: {
     hide() { this.showNavigation = false },
     action(name, argument) {
       this.hide();
-      this.$emit("action", name, argument);
+      this.emitter.emit("vue_menu.action", { name, argument });
+    },
+    showCategoriesEditor() {
+      this.$refs.categories_editor.open();
     },
     new_template: nop,
     set_categories(new_categories) {
@@ -260,13 +340,7 @@ function nop(x) { console.log(x) };
 
 export const vueMenu = {};
 
-vueMenu.create_instance = function (target_id, propsData={}) {
+vueMenu.create_instance = function (target_id, propsData={}, emitter=null) {
   let target = document.getElementById(target_id);
-  const VueMenuClass = Vue.extend(VueMenu);
-  this.instance = new VueMenuClass({
-    data: () => ({
-      showNavigation: false
-    }), 
-    propsData,
-  }).$mount(target);
+  this.instance = Vue.createApp(VueMenu, { ...propsData, emitter }).mount(target);
 }

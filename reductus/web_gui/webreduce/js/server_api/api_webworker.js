@@ -1,16 +1,19 @@
 // imports promise worker library
-import { PromiseWorker } from "../libraries.js";
+import 'promise-worker';
+const PromiseWorker = window.PromiseWorker;
 const server_api = {};
 export {server_api};
 
 const toWrap = ["find_calculated", "get_instrument", "calc_terminal", "list_datasources", "list_instruments", "get_file_metadata", "upload_datafiles"];
 
-server_api.__init__ = async function(init_progress_obj) {
+server_api.__init__ = async function(header_instance) {
   const worker = new Worker('./worker.js'); // creates a new Worker
   const myPromiseWorker = new PromiseWorker(worker); // creates a new PromiseWorker
   server_api.myPromiseWorker = myPromiseWorker; // assigns the server_api's promise worker to a new PromisWorker
   await server_api.myPromiseWorker.postMessage({"name": "load_pyodide"});
-  init_progress_obj.visible = false;
+  if (header_instance && header_instance.close_init_progress) {
+    header_instance.close_init_progress();
+  }
 }
 
 

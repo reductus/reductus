@@ -1,4 +1,3 @@
-import {extend} from '../libraries.js';
 import { add_viewer_link, add_counts } from './decorators.js';
 const instrument = {};
 export default instrument;
@@ -46,5 +45,5 @@ instrument.default_categories = [
   [["run.filePrefix"]],
   [["run.instFileNum"]]
 ];
-instrument.categories = extend(true, [], instrument.default_categories);
+instrument.categories = structuredClone(instrument.default_categories);
 instrument.decorators = [add_viewer_link, add_counts];

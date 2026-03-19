@@ -561,13 +561,13 @@ def patch(data, patches=None):
 
     **Inputs**
 
-    data (raw): datafiles with metadata to patch
+    data (raw[]): datafiles with metadata to patch
 
     patches (patch_metadata[]:run.filename): patches to be applied, with run.filename used as unique key
 
     **Returns**
 
-    patched (raw): datafiles with patched metadata
+    patched (raw[]): datafiles with patched metadata
 
     2019-07-26 Brian Maranville
     """

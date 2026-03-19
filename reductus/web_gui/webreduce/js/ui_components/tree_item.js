@@ -1,6 +1,6 @@
 /* adapted from https://vuejs.org/v2/examples/tree-view.html */
 
-let template = `
+const template = /*html*/`
 <li>
   <div
     :class="{bold: isFolder}"

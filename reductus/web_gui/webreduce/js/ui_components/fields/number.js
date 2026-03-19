@@ -1,5 +1,3 @@
-import { extend } from '../../libraries.js';
-
 let template = `
 <div class="fields">
   <label>
@@ -73,7 +71,13 @@ export const IntUi = {
   template
 }
 
-const FloatUi = extend(true, {}, IntUi);
-FloatUi.name = "float-ui";
-FloatUi.methods.coerceType = function (value) { return +value }
-export { FloatUi }
+export const FloatUi = {
+  ...IntUi,
+  name: "float-ui",
+  methods: {
+    ...IntUi.methods,
+    coerceType(value) {
+      return +value;
+    }
+  }
+};
