@@ -121,7 +121,7 @@ function module_clicked_single() {
   let data_to_show = (selected_terminal || [])[1];
   editor._active_terminal = data_to_show;
   let i = editor.instance.selected.modules[0];
-  let active_module = editor.instance.template_data.modules[i];
+  let active_module = Vue.toRaw(editor.instance.template_data.modules[i]);
   let module_def = editor.instance.module_defs[active_module.module];
   let fileinfos = (module_def.fields || []).filter(f => (f.datatype == 'fileinfo'));
   app.filebrowser_instance.blocked = (fileinfos.length < 1);
@@ -165,7 +165,7 @@ function module_clicked_single() {
       terminal_id: data_to_show,
       module_def: module_def,
       timestamp: Date.now(),
-      auto_accept: app.settings.auto_accept
+      auto_accept: app.settings.auto_accept.value,
     });
   });
 }
@@ -414,7 +414,7 @@ async function calculate_one(params, caching) {
     } catch (e) {
       try {
         const result = await server_api.calc_terminal({
-          template_def: template,
+          template_def: Vue.toRaw(template),
           config: config,
           nodenum: node,
           terminal_id: terminal,
