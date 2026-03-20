@@ -36,7 +36,7 @@ let template = html`
       </component>
     </div>
     <div class="control-buttons" style="position:absolute;bottom:10px;">
-      <button class="accept config" @click="accept_clicked">{{(auto_accept.value) ? "replot" : "accept"}}</button>
+      <button class="accept config" @click="accept_clicked">{{(auto_accept) ? "replot" : "accept"}}</button>
       <button class="clear config" @click="clear">clear</button>
     </div>
   </div>
@@ -59,7 +59,7 @@ export const FieldsPanel = {
     module_def: {},
     module_id: null,
     terminal_id: null,
-    auto_accept: { value: true },
+    auto_accept: true,
     active_fileinfo: 0
   }),
   computed: {
@@ -95,7 +95,7 @@ export const FieldsPanel = {
       }
     },
     changed(id, value) {
-      if (this.auto_accept.value) {
+      if (this.auto_accept) {
         this.accept_change(id, value);
       }
       else {
@@ -148,14 +148,14 @@ export const FieldsPanel = {
       }
     },
     accept_clicked() {
-      if (!this.auto_accept.value) {
+      if (!this.auto_accept) {
         this.module.config = this.local_config;
         this.emitter.emit("fields.update");
       }
       this.emitter.emit("fields.accept_button");
     },
     clear() {
-      if (this.auto_accept.value) {
+      if (this.auto_accept) {
         if (this.module.config) { delete this.module.config; }
         this.reset_local_config();
         this.emitter.emit("fields.update");
