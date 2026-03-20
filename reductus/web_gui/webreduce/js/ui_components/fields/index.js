@@ -23,7 +23,6 @@ let template = `
      {{opt}}
     </label>
   </div>
-  </select>
 </div>
 `;
 
