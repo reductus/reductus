@@ -392,7 +392,7 @@ editor.get_signature = async function(params) {
 }
 
 async function calculate_one(params, caching) {
-  const template = params.template;
+  const template = Vue.toRaw(params.template);
   const config = params.config || {};
   const node = params.node;
   const terminal = params.terminal;
@@ -414,7 +414,7 @@ async function calculate_one(params, caching) {
     } catch (e) {
       try {
         const result = await server_api.calc_terminal({
-          template_def: Vue.toRaw(template),
+          template_def: template,
           config: config,
           nodenum: node,
           terminal_id: terminal,
