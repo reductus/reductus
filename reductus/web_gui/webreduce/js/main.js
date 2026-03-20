@@ -4,7 +4,7 @@ import { createApp } from 'vue';
 import Split from 'split.js';
 import { emitter } from './bus.js';
 import { editor } from './editor.js';
-import { server_api } from './server_api/api_msgpack.js';
+import { server_api } from 'server_api';
 import { filebrowser } from './filebrowser.js';
 import { plotter } from './plot.js';
 import { FieldsPanel } from './ui_components/fields_panel.js';

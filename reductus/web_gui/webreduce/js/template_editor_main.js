@@ -1,4 +1,4 @@
-import {server_api} from './server_api/api_msgpack.js';
+import {server_api} from 'server_api';
 import { dataflowEditor } from 'd3-science';
 import * as d3 from 'd3';
 

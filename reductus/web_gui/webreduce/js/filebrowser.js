@@ -1,7 +1,7 @@
 // require(jstree, webreduce.server_api)
 'use strict';
 import { editor } from './editor.js';
-import { server_api } from './server_api/api_msgpack.js';
+import { server_api } from 'server_api';
 import * as Vue from 'vue';
 import { FilePanel } from './ui_components/file_panel.js';
 import { emitter } from './bus.js';

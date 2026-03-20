@@ -13,10 +13,11 @@ await esbuild.build({
   minify: true,
   sourcemap: true,
   outdir: 'dist/js',
-  target: 'es2016',
+  target: 'es2020',
   alias: {
     // Use Vue's full build with template compiler instead of runtime-only
-    'vue': 'vue/dist/vue.esm-bundler.js'
+    'vue': 'vue/dist/vue.esm-bundler.js',
+    "server_api": "./js/server_api/api_msgpack.js",
   },
   plugins: [
   ],
