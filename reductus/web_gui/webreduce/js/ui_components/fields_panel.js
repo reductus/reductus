@@ -125,9 +125,8 @@ export const FieldsPanel = {
           this.module.config = {};
         }
         // Deep clone arrays/objects to ensure new references for reactivity
-        this.module.config[id] = Array.isArray(value) ? [...value] : 
-                                  (typeof value === 'object' && value !== null) ? { ...value } : 
-                                  value;
+        this.module.config[id] = JSON.parse(JSON.stringify(value));
+
       }
       this.emitter.emit("fields.update");
       this.reset_local_config();
