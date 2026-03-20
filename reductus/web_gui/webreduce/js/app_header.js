@@ -152,9 +152,12 @@ export const headerComponent = {
       });
     },
     close_init_progress() {
-      if (this.$refs.init_progress_dialog) {
-        this.$refs.init_progress_dialog.close();
-      }
+      // Ensure the dialog is fully rendered before closing
+      this.$nextTick(() => {
+        if (this.$refs.init_progress_dialog) {
+          this.$refs.init_progress_dialog.close();
+        }
+      });
     },
     show_snackbar(message, duration=4000) {
       if (this.snackbar.timeout_id) {
