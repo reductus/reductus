@@ -31,7 +31,7 @@ const filebrowser = {
     
     async pathChange(source, pathlist, datasourceIndex) {
       // override file_panel generic handler
-      let dirdata = await server_api.get_file_metadata({ source, pathlist });
+      let dirdata = await server_api.get_file_metadata({ source, pathlist: Vue.toRaw(pathlist) });
       let treedata = await categorizeFiles(dirdata.files_metadata, source, pathlist.join("/"));
       let subdirs = [...dirdata.subdirs];
       console.log({dirdata, treedata, subdirs});
