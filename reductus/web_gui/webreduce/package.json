@@ -31,11 +31,10 @@
     "@widgetjs/tree": "https://github.com/bmaranville/treejs",
     "@zip.js/zip.js": "^2.3.19",
     "d3": "^7.9.0",
-    "d3-science": "https://github.com/usnistgov/d3-science#v0.5.0",
+    "d3-science": "https://github.com/usnistgov/d3-science#v0.5.1",
     "idb": "^7.0.2",
     "js-yaml": "^4.1.0",
     "messagepack": "^1.1.12",
-    "promise-worker": "^2.0.1",
     "roboto-fontface": "^0.10.0",
     "sha1": "^1.1.1",
     "sortablejs": "^1.15.0",
@@ -43,6 +42,7 @@
     "vue": "^3.5.26"
   },
   "devDependencies": {
+    "comlink": "^4.4.2",
     "esbuild": "^0.27.2"
   }
 }
