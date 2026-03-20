@@ -181,6 +181,8 @@ window.onload = async function () {
   await editor.create_instance("bottom_panel", emitter);
   const app_header = createApp(headerComponent, { emitter: emitter }).mount(document.getElementById("app_header"));
   console.log("app_header instance: ", app_header, app_header.$el);
+  // Show init progress dialog on app start
+  app_header.show_init_progress();
   emitter.on("toggle-menu", (payload) => {
     vueMenu.instance.showNavigation = !vueMenu.instance.showNavigation
   });
@@ -203,7 +205,7 @@ window.onload = async function () {
     app_header.show_snackbar(message, duration);
   });
 
-  await server_api.__init__(app_header.init_progress);
+  await server_api.__init__(app_header);
   //app_header.instance.init_progress.visible = false;
   server_api.exception_handler = api_exception_handler;
   app.server_api = server_api;
