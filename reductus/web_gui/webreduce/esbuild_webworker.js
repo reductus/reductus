@@ -8,7 +8,7 @@ import { copyRecursiveSync } from './copy_recursive_sync.mjs';
 const __dirname = path.resolve();
 
 await esbuild.build({
-  entryPoints: ['index.html'],
+  entryPoints: ['js/main.js'],
   bundle: true,
   minify: true,
   sourcemap: true,
