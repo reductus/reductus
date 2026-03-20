@@ -1,85 +1,68 @@
-// imports pyodide library
-importScripts("https://cdn.jsdelivr.net/pyodide/v0.26.1/full/pyodide.js");
-// imports promise worker library
-importScripts("https://cdn.jsdelivr.net/npm/promise-worker@2.0.1/dist/promise-worker.register.js");
+// Use ESM imports instead of importScripts
+import { loadPyodide } from "https://cdn.jsdelivr.net/pyodide/v0.26.1/full/pyodide.mjs";
+// import * as Comlink from "https://unpkg.com/comlink/dist/esm/comlink.mjs";
+import * as Comlink from "comlink";
 
-async function loadPyodideAndPackages() { // loads pyodide
-  self.pyodide = await loadPyodide(); // run the function and wait for the result (base library)
-  await self.pyodide.loadPackage(["numpy", "pytz", "h5py", "micropip"]); // waits until these python packpages are loaded to continue
+let api;
+let pyodideInstance;
 
-  // get local wheels
-  const local_wheels = await (await fetch('./wheel_files.json')).text(); // fetches the wheel files from the json file
-  console.log({local_wheels});
-  //import reductus library with micropip
-  let api = await pyodide.runPythonAsync(`
+async function initPyodide() {
+  // Initialize Pyodide
+  pyodideInstance = await loadPyodide();
+  await pyodideInstance.loadPackage(["numpy", "pytz", "h5py", "micropip"]);
+
+  const response = await fetch('./wheel_files.json');
+  const local_wheels_text = await response.text();
+
+  // Initialize Reductus API in Python
+  api = await pyodideInstance.runPythonAsync(`
   import json
   import micropip
   await micropip.install("orsopy")
 
-  local_wheels = json.loads('${local_wheels}')
+  local_wheels = json.loads('${local_wheels_text}')
   for wheel in local_wheels:
       await micropip.install(f"./{wheel}")
   from reductus.web_gui import api
 
   config = {
     "cache": None,
-    "data_sources": [
-      {
-        "name": "local",
-        "url": "file:///",
-        "start_path": "/home/pyodide"
-      }
-    ],
-    "instruments": [
-      "xrr",
-    ]
+    "data_sources": [{"name": "local", "url": "file:///", "start_path": "/home/pyodide"}],
+    "instruments": ["xrr"]
   }
-
   api.initialize(config=config)
 
-  wrapped_api = {}
-
-  def expose(method):
+  def wrap_method(method):
       def wrapper(args):
-          print("args:", args)
-          real_kwargs = args.to_py() if args is not None else {}
-          return method(**real_kwargs)
-
+          args_dict = args.to_py() if args is not None else {}
+          return method(**(args_dict or {}))
       return wrapper
 
-  for method in api.api_methods:
-      mfunc = getattr(api, method)
-      wrapped = expose(mfunc)
-      wrapped_api[method] = wrapped
-
+  # Map the API methods
+  wrapped_api = {m: wrap_method(getattr(api, m)) for m in api.api_methods}
   wrapped_api
   `);
-  return api;
+  
+  return "loaded";
 }
 
-let pyodideReadyPromise = loadPyodideAndPackages(); // run the functions stored in lines 4
+const apiService = {
+  async init() {
+    return await initPyodide();
+  },
 
-// await pyodideReadyPromise; // waits for loadPyodideAndPackages to load and run. for the second time it doesn't take anytime
+  async upload_datafile(filename, contents) {
+    // contents is a Uint8Array
+    pyodideInstance.FS.writeFile(filename, contents);
+    return true;
+  },
 
-const messageHandler = async function(message) {
-  await pyodideReadyPromise;
-  const name = message.name;
-  const args = message.arguments;
-  if (name === 'load_pyodide') {
-    let api = await pyodideReadyPromise;
-    self.api = api;
-    return "loaded";
+  async call_api(methodName, args) {
+    const pyMethod = api.get(methodName);
+    const result = pyMethod(args);
+    // Convert Python proxies to JS objects
+    return result.toJs({ dict_converter: Object.fromEntries });
   }
-  else if (name === 'upload_datafile') {
-    pyodide.FS.writeFile(args.filename, args.contents); // saves the local file to the file system
-  }
+};
 
-  else {
-    result = api.get(name)(args);
-    return result.toJs({dict_converter: Object.fromEntries}); // converts python args to js
-  }
-
-  console.log(message.name) // try this
-}
-
-registerPromiseWorker(messageHandler);
+Comlink.expose(apiService);

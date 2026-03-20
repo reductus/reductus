@@ -1,70 +1,57 @@
-// imports promise worker library
-import 'promise-worker';
-const PromiseWorker = window.PromiseWorker;
-const server_api = {};
-export {server_api};
+import * as Comlink from 'comlink';
 
-const toWrap = ["find_calculated", "get_instrument", "calc_terminal", "list_datasources", "list_instruments", "get_file_metadata", "upload_datafiles"];
+const server_api = {};
+export { server_api };
+
+let remoteApi;
 
 server_api.__init__ = async function(header_instance) {
-  const worker = new Worker('./worker.js'); // creates a new Worker
-  const myPromiseWorker = new PromiseWorker(worker); // creates a new PromiseWorker
-  server_api.myPromiseWorker = myPromiseWorker; // assigns the server_api's promise worker to a new PromisWorker
-  await server_api.myPromiseWorker.postMessage({"name": "load_pyodide"});
+  const worker = new Worker("./worker.js", {
+    type: "module"
+  });
+  // Wrap the worker with Comlink
+  remoteApi = Comlink.wrap(worker);
+  
+  // Call the init method on the worker
+  await remoteApi.init();
+
   if (header_instance && header_instance.close_init_progress) {
     header_instance.close_init_progress();
   }
-}
+};
 
+/**
+ * Helper to handle the standard API calls.
+ * This dynamically calls 'call_api' on the worker.
+ */
+const makeApiCall = (methodName) => {
+  return async (args) => {
+    console.log(`Calling API method: ${methodName} with args:`, args);
+    return await remoteApi.call_api(methodName, args);
+  };
+};
 
-// function sending the find_calculated function to worker.js
-server_api.find_calculated = async function (args) {
-  const name = "find_calculated";
-  const result = await server_api.myPromiseWorker.postMessage({"name": name, "arguments": args})
-  return result;
-}
+// Define the methods listed in your original "toWrap" array
+const methods = [
+  "find_calculated", "get_instrument", "calc_terminal", 
+  "list_datasources", "list_instruments", "get_file_metadata"
+];
 
-// function sending the get_instrument function to worker.js
-server_api.get_instrument = async function (args) {
-  const name = "get_instrument";
-  const result = await server_api.myPromiseWorker.postMessage({"name": name, "arguments": args});
-  return result;
-}
+methods.forEach(method => {
+  server_api[method] = makeApiCall(method);
+});
 
-// function sending the calc_terminal function to worker.js
-server_api.calc_terminal = async function (args) {
-  const name = "calc_terminal";
-  const result = await server_api.myPromiseWorker.postMessage({"name": name, "arguments": args});
-  return result;
-}
-
-// function sending the list_datasources function to worker.js
-server_api.list_datasources = async function (args) {
-  const name = "list_datasources";
-  const result = await server_api.myPromiseWorker.postMessage({"name": name, "arguments": args});
-  return result;
-}
-
-// function sending the list_instruments function to worker.js
-server_api.list_instruments = async function (args) {
-  const name = "list_instruments";
-  const result = await server_api.myPromiseWorker.postMessage({"name": name, "arguments": args})
-  return result;
-}
-
-// function sending the get_file_metadata function to worker.js
-server_api.get_file_metadata = async function (args) {
-  const name = "get_file_metadata";
-  const result = await server_api.myPromiseWorker.postMessage({"name": name, "arguments": args})
-  return result;
-}
-
-// function sending the get_file_metadata function to worker.js
+// Specialized logic for multi-file upload
 server_api.upload_datafiles = async function(files) {
   for (let file of files) {
     const filename = file.name;
-    const contents_buf = await file.arrayBuffer(); // converts into binary array
-    const contents = new Uint8Array(contents_buf); // changes the type of binary array
-    const result = await server_api.myPromiseWorker.postMessage({"name": "upload_datafile", "arguments": {filename, contents}});
+    const contents_buf = await file.arrayBuffer();
+    const contents = new Uint8Array(contents_buf);
+    
+    // Transfer the large Uint8Array buffer instead of copying it for performance
+    await remoteApi.upload_datafile(
+      filename, 
+      Comlink.transfer(contents, [contents.buffer])
+    );
   }
-}
+};
