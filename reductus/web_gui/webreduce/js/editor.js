@@ -86,7 +86,6 @@ editor.create_instance = function(target_id) {
   // create an instance of the dataflow editor in
   // the html element referenced by target_id
   let target = document.getElementById(target_id);
-  this.instance_container = target.parentElement;
   this.instance = Vue.createApp(DataflowViewer).mount(target);
   // Setup event handlers
   this.instance.on_select = editor.module_clicked;
