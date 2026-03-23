@@ -7,6 +7,7 @@ from . import fetch
 from reductus.configurations import default
 
 DEFAULT_CONFIG = copy.deepcopy(default.config)
+STARTUP_BANNER = None
 
 def load_update(name="config_overrides"):
     """
@@ -85,3 +86,6 @@ def apply_config(user_config=None, user_overrides=None):
             return family
 
         urllib3_cn.allowed_gai_family = allowed_gai_family
+
+    global STARTUP_BANNER
+    STARTUP_BANNER = config.get("startup_banner", None)
