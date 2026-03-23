@@ -1,4 +1,3 @@
-import {extend} from '../libraries.js';
 import { add_viewer_link, add_sample_description } from './decorators.js';
 const instrument = {};
 export default instrument;
@@ -62,7 +61,7 @@ instrument.default_categories = [
   [["filenumber"]], 
   [["polarization"]]
 ];
-instrument.categories = extend(true, [], instrument.default_categories);
+instrument.categories = structuredClone(instrument.default_categories);
 
 function add_range_indicators(node_list, leaf_list, node_parents, file_objs) {
   var propagate_up_levels = 2; // levels to push up xmin and xmax.
@@ -119,14 +118,14 @@ instrument.export_targets = [
     "id": "unpolarized_reflcalc",
     "label": "webfit",
     "type": "webapi",
-    "url": "https://ncnr.nist.gov/instruments/magik/calculators/reflectivity-calculator.html",
+    "url": "https://pages.nist.gov/reflectometry-calculators/reflectivity-calculator.html",
     "method": "set_data"
   },
   { 
     "id": "polarized_reflcalc",
     "label": "pol. webfit",
     "type": "webapi",
-    "url": "https://ncnr.nist.gov/instruments/magik/calculators/magnetic-reflectivity-calculator.html",
+    "url": "https://pages.nist.gov/reflectometry-calculators/magnetic-reflectivity-calculator.html",
     "method": "set_data"
   }
 ]

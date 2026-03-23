@@ -1,4 +1,4 @@
-import { d3, extend, scaleInteractor } from '../../libraries.js';
+import { scaleInteractor } from 'd3-science';
 import { plotter } from '../../plot.js';
 
 let template = `
@@ -22,7 +22,7 @@ export const ScaleUi = {
   computed: {
     dimensioned_value() {
       if (this.value != null) {
-        return extend(true, [], this.value);
+        return [...this.value];
       }
       else {
         let default_value = (this.field.default != null) ? this.field.default : 1;
@@ -48,13 +48,16 @@ export const ScaleUi = {
     // create the interactor here, if commanded
     if (this.add_interactors) {
       let chart = plotter.instance.active_plot;
-      if (!chart) {return}
+      if (!chart) {
+        console.log("No active plot found for scale interactor");
+        return
+      }
       let scales = this.dimensioned_value;
       let opts = {
         scales,
         point_size: 10
       }
-      let scaler = new scaleInteractor(opts, null, null, d3);
+      let scaler = new scaleInteractor(opts);
       scaler.dispatch.on("update", () => {
         this.$emit("change", this.field.id, opts.scales);
       //   opts.scales.forEach((v,i) => this.$set(this.local_value, i, v));

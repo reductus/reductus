@@ -1,77 +1,182 @@
-import { Vue } from '../libraries.js';
+import * as Vue from 'vue';
 
-let template = `
-<md-dialog :md-active.sync="active" @md-closed="onClose">
-  <md-dialog-title>Export Data</md-dialog-title>
-  <md-dialog-content>
-    <md-steppers :md-active-step.sync="active_step" md-linear>
-      <md-step id="select_export_type" md-label="Select Export Type" :md-done.sync="export_select_done" :md-editable="false">
+const template = /*html*/`
+<dialog ref="dialog" class="export-dialog" style="width: 500px;">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Export Data</h5>
+        <button type="button" class="btn-close" @click="close"></button>
+      </div>
+      
+      <div class="modal-body">
+        <!-- Step Indicator -->
+        <div class="mb-3">
+          <div class="progress" style="height: 2px;">
+            <div 
+              class="progress-bar" 
+              :style="{ width: stepProgress + '%' }">
+            </div>
+          </div>
+          <div class="mt-2 small text-muted">
+            Step {{ stepNumber }} of 3: {{ stepTitle }}
+          </div>
+        </div>
 
-        <template v-for="(export_type, index) in export_types">
-          <md-radio v-model="selected_export_type" :value="index">
-            {{export_type}}
-          </md-radio>
-        </template>
-        <md-divider/>
-        <md-checkbox v-model="combine_outputs" >Combine Outputs</md-checkbox>
-        <md-divider/>
-        <md-button :disabled="selected_export_type==null" @click="onExportSelect">continue</md-button>
-        <md-button class="md-raised md-accent" @click="close">cancel</md-button>
-      </md-step>
-      <md-step id="retrieve" :md-done.sync="retrieve_done" md-label="Retrieve From Server" :md-editable="false">
-        <md-progress-bar md-mode="indeterminate"></md-progress-bar>
-      </md-step>
-      <md-step id="select_destination" md-label="Route Exported Data">
-        <md-field>
-          <label>Filename:</label>
-          <md-input v-model="filename"></md-input>
-        </md-field>
-        <template v-for="(export_target, index) in export_targets">
-          <md-radio v-model="selected_export_target" :value="index">
-            {{export_target.label}}
-          </md-radio>
-        </template>
-        <md-divider/>
-        <md-button class="md-raised md-primary" @click="onExportRoute">export</md-button>
-        <md-button class="md-raised md-accent" @click="close">cancel</md-button>
-      </md-step>
-    </md-steppers>
-  </md-dialog-content>
-</md-dialog>
+        <!-- Step 1: Select Export Type -->
+        <div v-show="active_step === 'select_export_type'" class="step-content">
+          <h6>Select Export Type</h6>
+          <div class="mb-3 d-flex gap-3">
+            <div v-for="(export_type, index) in export_types" class="form-check">
+              <input 
+                type="radio" 
+                :id="'export_type_' + index"
+                class="form-check-input" 
+                v-model.number="selected_export_type" 
+                :value="index"
+              />
+              <label class="form-check-label" :for="'export_type_' + index">
+                {{export_type}}
+              </label>
+            </div>
+          </div>
+          
+          <hr/>
+          
+          <div class="form-check mb-3">
+            <input 
+              type="checkbox" 
+              id="combine_outputs"
+              class="form-check-input" 
+              v-model="combine_outputs"
+            />
+            <label class="form-check-label" for="combine_outputs">
+              Combine Outputs
+            </label>
+          </div>
+          
+          <hr/>
+          
+          <div class="d-flex gap-2 justify-content-end">
+            <button 
+              type="button" 
+              class="btn btn-primary"
+              :disabled="selected_export_type===null" 
+              @click="onExportSelect">
+              Continue
+            </button>
+            <button type="button" class="btn btn-secondary" @click="close">Cancel</button>
+          </div>
+        </div>
+
+        <!-- Step 2: Retrieve From Server -->
+        <div v-show="active_step === 'retrieve'" class="step-content">
+          <h6>Retrieve From Server</h6>
+          <div class="progress">
+            <div class="progress-bar progress-bar-striped progress-bar-animated" style="width: 100%"></div>
+          </div>
+        </div>
+
+        <!-- Step 3: Route Exported Data -->
+        <div v-show="active_step === 'select_destination'" class="step-content">
+          <h6>Route Exported Data</h6>
+          
+          <div class="mb-3">
+            <label for="filename" class="form-label">Filename:</label>
+            <input 
+              type="text" 
+              id="filename"
+              class="form-control" 
+              v-model="filename"
+              placeholder="Enter filename"
+            />
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label">Export Target:</label>
+            <div v-for="(export_target, index) in export_targets" class="form-check">
+              <input 
+                type="radio" 
+                :id="'export_target_' + index"
+                class="form-check-input" 
+                v-model.number="selected_export_target" 
+                :value="index"
+              />
+              <label class="form-check-label" :for="'export_target_' + index">
+                {{export_target.label}}
+              </label>
+            </div>
+          </div>
+          
+          <hr/>
+          
+          <div class="d-flex gap-2 justify-content-end">
+            <button type="button" class="btn btn-primary" @click="onExportRoute">Export</button>
+            <button type="button" class="btn btn-secondary" @click="close">Cancel</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</dialog>
 `;
 
 export const exportDialog = {
   name: "export-dialog",
-  data: () => ({
-    active: false,
-    selected_export_type: 0,
-    export_types: [],
-    combine_outputs: true,
-    active_step: "select_export_type",
-    export_select_done: false,
-    retrieve_done: false,
-    export_targets: [],
-    selected_export_target: 0,
-    filename: ""
-  }),
+  props: ["emitter"],
+  data() {
+    return {
+      selected_export_type: 0,
+      export_types: [],
+      combine_outputs: true,
+      active_step: "select_export_type",
+      export_select_done: false,
+      retrieve_done: false,
+      export_targets: [],
+      selected_export_target: 0,
+      filename: ""
+    };
+  },
+  computed: {
+    stepNumber() {
+      const steps = ["select_export_type", "retrieve", "select_destination"];
+      return steps.indexOf(this.active_step) + 1;
+    },
+    stepTitle() {
+      const titles = {
+        select_export_type: "Select Export Type",
+        retrieve: "Retrieve From Server",
+        select_destination: "Route Exported Data"
+      };
+      return titles[this.active_step] || "";
+    },
+    stepProgress() {
+      const steps = ["select_export_type", "retrieve", "select_destination"];
+      const index = steps.indexOf(this.active_step);
+      return ((index + 1) / steps.length) * 100;
+    }
+  },
   methods: {
     open(export_types=[]) {
       this.export_types = export_types;
       this.active_step = "select_export_type";
       this.retrieve_done = false;
       this.export_select_done = false;
-      this.active = true;
+      this.selected_export_type = 0; // default to first export type
+      this.$nextTick(() => {
+        this.$refs.dialog.showModal();
+      });
     },
     close() {
-      this.active = false;      
-    },
-    onClose() {
-      this.$off("export-select");
-      this.$off("export-route");
+      this.$refs.dialog.close();      
     },
     onExportSelect() {
-      this.$emit('export-select', this.export_types[this.selected_export_type], this.combine_outputs);
-      this.active_step = "retrieve"
+      const payload = {
+        export_type: this.export_types[this.selected_export_type],
+        combine_outputs: this.combine_outputs
+      }
+      this.emitter.emit('export-select', payload);
+      this.active_step = "retrieve";
       this.export_select_done = true;
     },
     retrieved(suggested_name) {
@@ -81,22 +186,26 @@ export const exportDialog = {
       this.retrieve_done = true;
     },
     onExportRoute() {
-      this.$emit('export-route', this.filename, this.export_targets[this.selected_export_target]);
-      this.active = false;
+      const payload = {
+        export_target: this.export_targets[this.selected_export_target],
+        filename: this.filename
+      }
+      this.emitter.emit('export-route', payload);
+      this.close();
     }
   },
-  beforeDestroy() {
-    this.$el.parentNode.removeChild(this.$el);
+  beforeUnmount() {
+    if (this.$el && this.$el.parentNode) {
+      this.$el.parentNode.removeChild(this.$el);
+    }
   },
   template
 }
 
-const ExportDialogComponent = Vue.extend(exportDialog);
-
 export const export_dialog = {};
 
-export_dialog.create_instance = function() {
+export_dialog.create_instance = function(emitter) {
   let target  = document.createElement('div');
   document.body.appendChild(target);
-  this.instance = new ExportDialogComponent({}).$mount(target);
+  this.instance = Vue.createApp(exportDialog, { emitter }).mount(target);
 }

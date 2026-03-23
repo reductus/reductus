@@ -1,16 +1,121 @@
 // require(jstree, webreduce.server_api)
 'use strict';
-const filebrowser = {};
-export { filebrowser };
 import { editor } from './editor.js';
-import { server_api } from './server_api/api_msgpack.js';
-//import { makeSourceList } from './ui_components/sourcelist.js';
-import { Vue } from './libraries.js';
+import { server_api } from 'server_api';
+import * as Vue from 'vue';
 import { FilePanel } from './ui_components/file_panel.js';
-import { fieldUI } from './ui_components/fields_panel.js';
+import { emitter } from './bus.js';
 
-filebrowser.datasources = [];
+// Extend FilePanel component with filebrowser-specific functionality
+const filebrowser = {
+  ...FilePanel,
+  
+  // Additional data
+  datasources: [],
+  
+  // Extended methods
+  methods: {
+    ...FilePanel.methods,
+    
+    async addDataSource(source, pathlist) {
+      let dirdata = await server_api.get_file_metadata({ source, pathlist });
+      let treedata = await categorizeFiles(dirdata.files_metadata, source, pathlist.join("/"));
+      let datasource = { name: source, pathlist, treedata, subdirs: dirdata.subdirs };
+      // Call the parent FilePanel addDataSource method
+      FilePanel.methods.addDataSource.call(this, datasource);
+    },
+    
+    getAllBrowserSourcePaths() {
+      return this.datasources.map(d => ({ source: d.name, path: d.pathlist.join("/") }));
+    },
+    
+    async pathChange(source, pathlist, datasourceIndex) {
+      // override file_panel generic handler
+      let dirdata = await server_api.get_file_metadata({ source, pathlist: Vue.toRaw(pathlist) });
+      let treedata = await categorizeFiles(dirdata.files_metadata, source, pathlist.join("/"));
+      let subdirs = [...dirdata.subdirs];
+      console.log({dirdata, treedata, subdirs});
+      subdirs.sort(sortAlphaNumeric).reverse();
+      let datasource = {
+        name: source,
+        pathlist,
+        subdirs,
+        treedata
+      };
+      this.updateDataSource(datasourceIndex, datasource);
+      this.$refs.sourcelist.set_treedata(datasourceIndex, treedata);
+      updateHistory(this);
+    },
+    
+    refreshAll() {
+      FilePanel.methods.refreshAll.call(this);
+    },
+    
+    fileinfoUpdate(info, update_plots = false) {
+      let keys = info.map(fi => (
+        JSON.stringify([fi.source, fi.path, fi.entries[0], fi.mtime])
+      ));
+      this.$refs.sourcelist.set_checked(keys);
+      if (update_plots) { this.handleChecked(keys, true) };
+    },
+    
+    async handleChecked(values, stopPropagation) {
+      var instrument_id = editor._instrument_id;
+      var loader = editor.instruments[instrument_id].load_file;
+      var fileinfo = values.map(v => {
+        let f = JSON.parse(v);
+        let [source, path, entryname, mtime] = JSON.parse(v);
+        return { source, path, mtime, entries: [entryname] }
+      })
 
+      if (!stopPropagation) {
+        emitter.emit("filebrowser.checked", fileinfo);
+      }
+
+      let loader_template = loader(fileinfo, null, false, 'plottable');
+      let results = await editor.calculate(loader_template, false, false);
+      let entries = results.map(function (r, i) {
+        var values = r.values || [];
+        var fi = fileinfo[i];
+        var entry = values.find(function (e) { return e.entry == fi.entries[0] });
+        return entry;
+      });
+      let result = { "values": entries }
+      emitter.emit('show_plots', [result]);
+    }
+  }
+};
+
+// Static utility method - doesn't need instance state
+filebrowser.getAllTemplateSourcePaths = function(template) {
+  // Generate a list of all sources/paths for getting needed info from server
+  var template = template || editor._active_template;
+  var fsp = {}; // group by source and path
+  template.modules.forEach(function (m, i) {
+    var def = editor._module_defs[m.module];
+    var fileinfo_fields = def.fields.filter(function (f) { return f.datatype == "fileinfo" })
+      .map(function (f) { return f.id });
+    fileinfo_fields.forEach(function (fname) {
+      if (m.config && m.config[fname]) {
+        m.config[fname].forEach(function (finfo) {
+          var parsepath = finfo.path.match(/(.*)\/([^\/]+)*$/);
+          if (parsepath) {
+            var path = parsepath[1],
+              fname = parsepath[2];
+            if (!(finfo.source in fsp)) { fsp[finfo.source] = {} }
+            if (!(path in fsp[finfo.source])) { fsp[finfo.source][path] = [] }
+            fsp[finfo.source][path].push(fname);
+          }
+        });
+      }
+    });
+  });
+  return fsp;
+};
+
+export { filebrowser };
+
+// Helper functions
 async function categorizeFiles(files_metadata, datasource, path) {
   let file_objs = await editor.load_metadata(files_metadata, datasource, path);
   var instrument_id = editor._instrument_id;
@@ -100,113 +205,14 @@ function file_objs_to_tree(file_objs, categories, datasource) {
   return tree.children;
 }
 
-filebrowser.addDataSource = async function (source, pathlist) {
-  let dirdata = await server_api.get_file_metadata({ source, pathlist });
-  let treedata = await categorizeFiles(dirdata.files_metadata, source, pathlist.join("/"));
-  filebrowser.datasources.unshift({ name: source, pathlist, treedata, subdirs: dirdata.subdirs });
-  //filebrowser.instance.pathChange(source, pathlist, 0);
-}
-
-filebrowser.getAllTemplateSourcePaths = function (template) {
-  // Generate a list of all sources/paths for getting needed info from server
-  var template = template || editor._active_template;
-  var fsp = {}; // group by source and path
-  template.modules.forEach(function (m, i) {
-    var def = editor._module_defs[m.module];
-    var fileinfo_fields = def.fields.filter(function (f) { return f.datatype == "fileinfo" })
-      .map(function (f) { return f.id });
-    fileinfo_fields.forEach(function (fname) {
-      if (m.config && m.config[fname]) {
-        m.config[fname].forEach(function (finfo) {
-          var parsepath = finfo.path.match(/(.*)\/([^\/]+)*$/);
-          if (parsepath) {
-            var path = parsepath[1],
-              fname = parsepath[2];
-            if (!(finfo.source in fsp)) { fsp[finfo.source] = {} }
-            if (!(path in fsp[finfo.source])) { fsp[finfo.source][path] = [] }
-            fsp[finfo.source][path].push(fname);
-          }
-        });
-      }
-    });
-  });
-  return fsp;
-}
-
-
-function getAllBrowserSourcePaths() {
-  return filebrowser.datasources.map(d => ({ source: d.name, path: d.pathlist.join("/") }));
-}
-
-function updateHistory(target) {
-  // call with id or object for nav pane
-  var sourcepaths = getAllBrowserSourcePaths(target);
+function updateHistory(instance) {
+  // call with filebrowser instance
+  var sourcepaths = instance.getAllBrowserSourcePaths();
   var urlstr = "?instrument=" + editor._instrument_id;
   if (sourcepaths.length > 0) {
     urlstr += "&" + sourcepaths.map(function (s) { return "source=" + s.source + "&pathlist=" + s.path }).join("&");
   }
   history.pushState({}, "", urlstr);
-}
-
-filebrowser.create_instance = function (target_id) {
-  let target = document.getElementById(target_id);
-  const FilePanelClass = Vue.extend(FilePanel);
-  filebrowser.instance = new FilePanelClass({
-    data: () => ({
-      datasources: filebrowser.datasources
-    }),
-    methods: {
-      handleChecked,
-      async pathChange(source, pathlist, index) {
-        let dirdata = await server_api.get_file_metadata({ source, pathlist });
-        let subdirs = [...dirdata.subdirs];
-        subdirs.sort(sortAlphaNumeric).reverse();
-        let treedata = await categorizeFiles(dirdata.files_metadata, source, pathlist.join("/"));
-        this.$set(this.datasources, index, { name: source, pathlist, subdirs, treedata })
-      },
-      setChecked(values) {
-        this.$refs.sourcelist.set_checked(values);
-      }
-    }
-
-  }).$mount(target);
-}
-
-filebrowser.refreshAll = function () {
-  this.instance.refreshAll();
-}
-
-filebrowser.fileinfoUpdate = function (info, update_plots = false) {
-  let keys = info.map(fi => (
-    JSON.stringify([fi.source, fi.path, fi.entries[0], fi.mtime])
-  ));
-  this.instance.setChecked(keys);
-  if (update_plots) { handleChecked(keys, true) };
-}
-
-async function handleChecked(values, stopPropagation) {
-  var instrument_id = editor._instrument_id;
-  var loader = editor.instruments[instrument_id].load_file;
-  var fileinfo = values.map(v => {
-    let f = JSON.parse(v);
-    let [source, path, entryname, mtime] = JSON.parse(v);
-    return { source, path, mtime, entries: [entryname] }
-  })
-
-  if (!stopPropagation) {
-    fieldUI.instance.update_fileinfo(fileinfo);
-  }
-
-  let loader_template = loader(fileinfo, null, false, 'plottable');
-  let results = await editor.calculate(loader_template, false, false);
-  let entries = results.map(function (r, i) {
-    var values = r.values || [];
-    var fi = fileinfo[i];
-    var entry = values.find(function (e) { return e.entry == fi.entries[0] });
-    return entry;
-  });
-  let result = { "values": entries }
-  editor._active_plot = editor.show_plots([result]);
 }
 
 function sortAlphaNumeric(a, b) {
@@ -252,6 +258,6 @@ function sortAlphaNumeric(a, b) {
   return 0
 }
 
-//filebrowser.updateFileBrowserPane = updateFileBrowserPane;
-filebrowser.handleChecked = handleChecked;
-filebrowser.getAllBrowserSourcePaths = getAllBrowserSourcePaths;
+// //filebrowser.updateFileBrowserPane = updateFileBrowserPane;
+// filebrowser.handleChecked = handleChecked;
+// filebrowser.getAllBrowserSourcePaths = getAllBrowserSourcePaths;

@@ -1,18 +1,18 @@
 "use strict";
 // SIDE-EFFECTS ONLY FOR NOW...
-import { extend } from './libraries.js';
-import { Split } from './libraries.js';
-import { zip } from './libraries.js';
+import { createApp } from 'vue';
+import Split from 'split.js';
+import { emitter } from './bus.js';
 import { editor } from './editor.js';
-import { server_api } from './server_api/api_msgpack.js';
+import { server_api } from 'server_api';
 import { filebrowser } from './filebrowser.js';
 import { plotter } from './plot.js';
-import { fieldUI } from './ui_components/fields_panel.js';
+import { FieldsPanel } from './ui_components/fields_panel.js';
 import { vueMenu } from './menu.js';
 import { export_dialog } from './ui_components/export_dialog.js';
 import { startup_banner_dialog } from './ui_components/startup_banner_dialog.js';
 import { reload } from './reload.js';
-import { app_header } from './app_header.js';
+import { headerComponent } from './app_header.js';
 
 export const app = {}; // put state here.
 
@@ -107,6 +107,8 @@ window.onpopstate = async function (e) {
   await editor.switch_instrument(instrument);
   editor.load_stashes();
 
+  console.log("adding datasource:", source, " at path:", start_path);
+
   add_datasource(source, start_path);
 }
 
@@ -120,7 +122,7 @@ function add_datasource(sourcename, start_path_in="") {
     start_path = datasource.start_path;
   }
   let pathlist = start_path.split("/");
-  filebrowser.addDataSource(sourcename, pathlist);
+  app.filebrowser_instance.addDataSource(sourcename, pathlist);
 }
 
 window.onload = async function () {
@@ -143,7 +145,7 @@ window.onload = async function () {
   app.hide_fields = function() {
     // idempotent
     if (this.stored_layout_sizes == null) {
-      fieldUI.instance.visible = false;
+      fieldUI.visible = false;
       this.stored_layout_sizes = this.layout.getSizes();
       this.layout.collapse(2);
     }
@@ -152,7 +154,7 @@ window.onload = async function () {
     if (this.stored_layout_sizes) {
       this.layout.setSizes(this.stored_layout_sizes);
       this.stored_layout_sizes = null;
-      fieldUI.instance.visible = true;
+      fieldUI.visible = true;
     }
   }
   //$("#menu").menu({width: '200px;', position: {my: "left top", at: "left+15 bottom"}});
@@ -174,21 +176,53 @@ window.onload = async function () {
     let box_height = bbox.y + bbox.height + border;
     let bpercent = box_height / full_height * 100.0;
     let tpercent = 100.0 - bpercent;
-    app.vertical_layout.setSizes([tpercent, bpercent])
+    app.vertical_layout.setSizes([tpercent, bpercent]);
   }
 
-  await editor.create_instance("template_editor");
-  app_header.create_instance("app_header");
-  app_header.instance.$on("toggle-menu", () => {
+  await editor.create_instance("bottom_panel", emitter);
+  const app_header = createApp(headerComponent, { emitter: emitter }).mount(document.getElementById("app_header"));
+  console.log("app_header instance: ", app_header, app_header.$el);
+  // Show init progress dialog on app start
+  app_header.show_init_progress();
+  emitter.on("toggle-menu", (payload) => {
     vueMenu.instance.showNavigation = !vueMenu.instance.showNavigation
   });
 
-  await server_api.__init__(app_header.instance.init_progress);
+  // Wire up app_header events
+  emitter.on("app_header.reset_progress", () => {
+    app_header.calculation_progress.done = 0;
+  });
+  emitter.on("app_header.show_calculation_progress", ({ total }) => {
+    app_header.show_calculation_progress(total);
+  });
+  emitter.on("app_header.update_progress", ({ done, total }) => {
+    app_header.calculation_progress.done = done;
+    app_header.calculation_progress.total = total;
+  });
+  emitter.on("app_header.close_calculation_progress", () => {
+    app_header.close_calculation_progress();
+  });
+  emitter.on("app_header.show_snackbar", ({message, duration}) => {
+    app_header.show_snackbar(message, duration);
+  });
+
+  await server_api.__init__(app_header);
   //app_header.instance.init_progress.visible = false;
   server_api.exception_handler = api_exception_handler;
   app.server_api = server_api;
 
-  filebrowser.create_instance("filebrowser");
+  const filebrowser_instance = createApp(filebrowser, {
+    emitter: emitter
+  }).mount(document.getElementById("filebrowser"));
+  app.filebrowser_instance = filebrowser_instance;
+  
+  // Initialize file browser with default datasource
+  if (app._datasources && app._datasources.length > 0) {
+    const defaultDatasource = app._datasources[0];
+    const defaultPath = [];
+    await filebrowser_instance.addDataSource(defaultDatasource.name, defaultPath);
+  }
+  
   const filebrowser_actions = {
     remove_stash(stashname) {
       editor.remove_stash(stashname);
@@ -200,26 +234,39 @@ window.onload = async function () {
       editor.compare_stashed(stashnames);
     }
   }
-  filebrowser.instance.$on("action", function (name, argument) {
-    filebrowser_actions[name](argument);
+  emitter.on("filebrowser.action", ({ name, argument }) => {
+    if (filebrowser_actions[name]) {
+      filebrowser_actions[name](argument);
+    }
   });
-  plotter.create_instance("plotdiv");
-  plotter.instance.$on("action", function(name, argument) {
+
+  plotter.create_instance("centerpane", emitter);
+  emitter.on("plotter.action", ({ name, argument }) => {
     // there's only one action from plotter... export:
-    editor.export_data();
-  })
-  app.plot_instance = plotter.instance;
-  fieldUI.create_instance("fieldsdiv");
-  const fieldUI_actions = {
-    accept_button() { editor.advance_to_output() },
-    update() { editor.update_completions() },
-    clear() { editor.module_clicked_single() },
-    fileinfo_update({value, no_terminal_selected}) { filebrowser.fileinfoUpdate(value, no_terminal_selected) }
-  };
-  fieldUI.instance.$on("action", function(name, argument) {
-    fieldUI_actions[name](argument);
+    if (name === 'export_data') {
+      editor.export_data();
+    }
   });
-  vueMenu.create_instance("vue_menu", {enable_uploads: typeof ENABLE_UPLOADS !== 'undefined' && ENABLE_UPLOADS });
+  app.plot_instance = plotter.instance;
+
+  const fieldUI = createApp(FieldsPanel, { emitter: emitter }).mount(document.getElementById("east_panel"));
+  emitter.on("fields.fileinfo_update", ({value, no_terminal_selected}) => {
+    filebrowser_instance.fileinfoUpdate(value, no_terminal_selected);
+  });
+  emitter.on("fields.update", () => {
+    editor.update_completions();
+  });
+  emitter.on("fields.clear", () => {
+    editor.module_clicked_single();
+  });
+  emitter.on("fields.accept_button", () => {
+    editor.advance_to_output();
+  });
+  emitter.on("editor.calculate_single", (payload) => {
+    fieldUI.set_calculator_single(payload);
+  });
+  
+  vueMenu.create_instance("vue_menu", {enable_uploads: typeof ENABLE_UPLOADS !== 'undefined' && ENABLE_UPLOADS }, emitter);
   app.settings = vueMenu.instance.settings;
   startup_banner_dialog.create_instance("startup_banner_dialog");
   const menu_actions = {
@@ -227,7 +274,7 @@ window.onload = async function () {
       var empty_template = { modules: [], wires: [] };
       editor.edit_template(empty_template)
     },
-    edit_template() { editor.instance.menu.help_visible = true },
+    edit_template() { editor.instance.show_help() },
     download_template() {
       let filename = prompt("Save template as:", "template.json");
       if (filename != null) {
@@ -242,11 +289,11 @@ window.onload = async function () {
     async upload_datafiles(files) {
       await server_api.upload_datafiles(files);
       notify(`Uploaded: ${files.length} files`);
-      filebrowser.instance.refreshAll();
+      app.filebrowser_instance.refreshAll();
     },
     load_predefined(template_id) {
       let instrument_id = editor._instrument_id;
-      let template_copy = extend(true, {}, editor._instrument_def.templates[template_id]);
+      const template_copy = structuredClone(editor._instrument_def.templates[template_id]);
       editor.load_template(template_copy, null, null, instrument_id);
       // Remember this choice, to be used on next instrument switch:
       try {
@@ -258,8 +305,8 @@ window.onload = async function () {
     stash_data() { editor.stash_data() },
     set_categories(new_categories) {
       editor.instruments[editor._instrument_id].categories = new_categories;
-      console.log(filebrowser.instance);
-      filebrowser.instance.refreshAll();
+      console.log(app.filebrowser_instance);
+      app.filebrowser_instance.refreshAll();
     },
     export_data() { editor.export_data() },
     add_datasource,
@@ -268,10 +315,12 @@ window.onload = async function () {
       editor.switch_instrument(instrument_id);
     }
   }
-  vueMenu.instance.$on("action", function (name, argument) {
-    menu_actions[name](argument);
-  })
-  export_dialog.create_instance();
+  emitter.on("vue_menu.action", ({ name, argument }) => {
+    if (menu_actions[name]) {
+      menu_actions[name](argument);
+    }
+  });
+  export_dialog.create_instance(emitter);
 
 
   // set up the communication between these panels:
@@ -372,7 +421,7 @@ window.onload = async function () {
       var notification = new Notification(message);
       notification.onclick = function (event) {
         event.preventDefault();
-        app_header.instance.show_api_error(longmessage);
+        app_header.show_api_error(longmessage);
       }
       setTimeout(notification.close.bind(notification), 5000);
     }
@@ -385,7 +434,7 @@ window.onload = async function () {
           var notification = new Notification(message);
           notification.onclick = function (event) {
             event.preventDefault();
-            app_header.instance.show_api_error(longmessage);
+            app_header.show_api_error(longmessage);
           }
           setTimeout(notification.close.bind(notification), 5000);
         }

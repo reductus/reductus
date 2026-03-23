@@ -1,7 +1,8 @@
-import { Vue, extend } from '../libraries.js';
 import { Components } from './fields/components.js';
 
-let template = `
+const html = (strings) => strings[0];
+
+let template = html`
 <div class="fields-panel">
   <div class="hideable" v-show="visible">
     <h3>{{ module_def.name }}</h3>
@@ -35,15 +36,19 @@ let template = `
       </component>
     </div>
     <div class="control-buttons" style="position:absolute;bottom:10px;">
-      <button class="accept config" @click="accept_clicked">{{(auto_accept.value) ? "replot" : "accept"}}</button>
+      <button class="accept config" @click="accept_clicked">{{(auto_accept) ? "replot" : "accept"}}</button>
       <button class="clear config" @click="clear">clear</button>
     </div>
   </div>
 </div>
 `
 
+/** @type {import('vue').DefineComponent} */
 export const FieldsPanel = {
   name: "fields-panel",
+  props: {
+    emitter: Object
+  },
   components: Components,
   data: () => ({
     visible: true,
@@ -54,7 +59,7 @@ export const FieldsPanel = {
     module_def: {},
     module_id: null,
     terminal_id: null,
-    auto_accept: { value: true },
+    auto_accept: true,
     active_fileinfo: 0
   }),
   computed: {
@@ -73,21 +78,12 @@ export const FieldsPanel = {
   },
   methods: {
     reset_local_config() {
-      // this.fields.forEach((f) => {
-      //   let id = f.id;
-      //   if (this.module.config && id in this.module.config) {
-      //     if (Array.isArray(this.local_config[id]) && Array.isArray(this.module.config[id])) {
-      //       this.local_config[id].splice(0, this.local_config[id].length, ...this.module.config[id]);
-      //     }
-      //     else {
-      //       this.$set(this.local_config, id, this.module.config[id]);
-      //     }
-      //   }
-      //   else {
-      //     this.$delete(this.local_config, id);
-      //   }
-      // })
-      this.local_config = extend(true, {}, this.module.config);
+      // Create a new reactive object to trigger updates
+      if (this.module.config) {
+        this.local_config = { ...this.module.config };
+      } else {
+        this.local_config = {};
+      }
     },
     help() {
       let helpwindow = window.open("", "help", "location=0,toolbar=no,menubar=no,scrollbars=yes,resizable=yes,width=960,height=480");
@@ -99,36 +95,40 @@ export const FieldsPanel = {
       }
     },
     changed(id, value) {
-      if (this.auto_accept.value) {
+      if (this.auto_accept) {
         this.accept_change(id, value);
       }
       else {
         if (value == null) {
-          this.$delete(this.local_config, id);
+          delete this.local_config[id];
         }
         else {
-          this.$set(this.local_config, id, value);
+          this.local_config[id] = value;
         }
+        // Trigger reactivity by reassigning the object
+        // this.local_config = { ...this.local_config };
       }
     },
     accept_change(id, value) {
       if (value == null) {
         // remove items where value is unset.
         if (this.module.config) {
-          this.$delete(this.module.config, id);
+          delete this.module.config[id];
           if (Object.keys(this.module.config).length == 0) {
             // remove config completely if it is empty.
-            this.$delete(this.module, 'config')
+            delete this.module.config;
           }
         }
       }
       else {
         if (!this.module.config) {
-          this.$set(this.module, 'config', {});
+          this.module.config = {};
         }
-        this.$set(this.module.config, id, value);
+        // Deep clone arrays/objects to ensure new references for reactivity
+        this.module.config[id] = JSON.parse(JSON.stringify(value));
+
       }
-      this.$emit("action", "update");
+      this.emitter.emit("fields.update");
       this.reset_local_config();
     },
     activate_fileinfo(index = null) {
@@ -138,7 +138,7 @@ export const FieldsPanel = {
       let active_field = this.fileinfos[this.active_fileinfo];
       let value = (active_field) ? ((this.local_config || {})[active_field.id] || []) : [];
       let no_terminal_selected = (this.terminal_id == null);
-      this.$emit("action", 'fileinfo_update', { value, no_terminal_selected });
+      this.emitter.emit("fields.fileinfo_update", { value, no_terminal_selected });
     },
     update_fileinfo(value) {
       let active_field = this.fileinfos[this.active_fileinfo];
@@ -147,24 +147,42 @@ export const FieldsPanel = {
       }
     },
     accept_clicked() {
-      if (!this.auto_accept.value) {
-        this.$set(this.module, 'config', this.local_config);
-        this.$emit("action", "update");
+      if (!this.auto_accept) {
+        this.module.config = this.local_config;
+        this.emitter.emit("fields.update");
       }
-      this.$emit("action", "accept_button");
+      this.emitter.emit("fields.accept_button");
     },
     clear() {
-      if (this.auto_accept.value) {
-        if (this.module.config) { this.$delete(this.module, 'config') }
+      if (this.auto_accept) {
+        if (this.module.config) { delete this.module.config; }
         this.reset_local_config();
-        this.$emit("action", "update");
-        this.$emit("action", "clear");
+        this.emitter.emit("fields.update");
+        this.emitter.emit("fields.clear");
       }
       else {
         this.local_config = {};
       }
-      this.timestamp = Date.now();
+      this.timestamp = Date.now(); // update timestamp
+    },
+    set_calculator_single(payload) {
+      this.num_datasets_in = payload.num_datasets_in;
+      this.module = payload.module;
+      this.module_id = payload.module_id;
+      this.terminal_id = payload.terminal_id;
+      this.module_def = payload.module_def;
+      this.timestamp = payload.timestamp;
+      this.auto_accept = payload.auto_accept;
+      this.reset_local_config();
     }
+  },
+  mounted() {
+    // Listen for filebrowser.checked events
+    this.emitter.on('filebrowser.checked', this.update_fileinfo);
+  },
+  beforeUnmount() {
+    // Clean up listener
+    this.emitter.off('filebrowser.checked', this.update_fileinfo);
   },
   beforeUpdate: function () {
     // reset the active file picker to the first one.
@@ -173,16 +191,4 @@ export const FieldsPanel = {
   template
 }
 
-export const fieldUI = {};
 
-fieldUI.create_instance = function (target_id) {
-  let target = document.getElementById(target_id);
-  const FieldsPanelClass = Vue.extend(FieldsPanel);
-  this.instance = new FieldsPanelClass({
-    data: () => ({
-      module: {},
-      module_def: {},
-      auto_accept: { value: true }
-    })
-  }).$mount(target);
-}

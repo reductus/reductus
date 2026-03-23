@@ -1,4 +1,4 @@
-import { d3 } from '../libraries.js';
+import * as d3 from 'd3';
 import { filebrowser } from '../filebrowser.js';
 
 export function category_editor (categories, default_categories, category_keys) {
@@ -115,7 +115,7 @@ export function category_editor (categories, default_categories, category_keys) 
       })
     });
     categories.splice(0, categories.length, ...unpacked);
-    filebrowser.refreshAll();
+    app.filebrowser_instance.refreshAll();
   })
   d3_handle.select("button.close").on("click", function () { dialog.dialog("close"); });
   d3_handle.select("button.load-defaults").on("click", function () {
