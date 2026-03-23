@@ -1,12 +1,11 @@
-import { extend } from 'vue';
+import { createApp } from 'vue';
 
-let template = `
-<dialog ref="dialog" class="export-dialog">
+let template = /*html*/`
+<dialog ref="dialog" class="export-dialog" style="max-width:800px;">
   <div class="modal-dialog">
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title">{{ banner_data.title || 'Welcome' }}</h5>
-        <button type="button" class="btn-close" @click="close"></button>
       </div>
       <div class="modal-body">
         <div v-html="banner_data.message" class="banner-message-content"></div>
@@ -22,7 +21,6 @@ let template = `
 export const startup_banner_dialog_component = {
   name: "startup-banner-dialog",
   data: () => ({
-    active: false,
     banner_data: {
       title: '',
       message: '',
@@ -37,10 +35,10 @@ export const startup_banner_dialog_component = {
         message: 'Welcome to the application',
         button_text: 'OK'
       };
-      this.active = true;
+      this.$refs?.dialog?.showModal();
     },
     close() {
-      this.active = false;
+      this.$refs?.dialog?.close();
     },
     onClose() {
       this.$emit("close");
@@ -48,12 +46,11 @@ export const startup_banner_dialog_component = {
   }
 };
 
-const Component = extend(startup_banner_dialog_component);
 
 export const startup_banner_dialog = {};
 
 startup_banner_dialog.create_instance = function() {
   let target  = document.createElement('div');
   document.body.appendChild(target);
-  this.instance = new Component({}).$mount(target);
+  this.instance = createApp(startup_banner_dialog_component).mount(target);
 }
