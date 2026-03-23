@@ -1,15 +1,22 @@
-import { Vue } from '../libraries.js';
+import { extend } from 'vue';
 
 let template = `
-<md-dialog :md-active.sync="active" @md-closed="onClose" class="startup-banner-dialog">
-  <md-dialog-title>{{ banner_data.title || 'Welcome' }}</md-dialog-title>
-  <md-dialog-content>
-    <div v-html="banner_data.message" class="banner-message-content"></div>
-  </md-dialog-content>
-  <md-dialog-actions>
-    <md-button @click="close" class="md-primary">{{ banner_data.button_text || 'OK' }}</md-button>
-  </md-dialog-actions>
-</md-dialog>
+<dialog ref="dialog" class="export-dialog">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">{{ banner_data.title || 'Welcome' }}</h5>
+        <button type="button" class="btn-close" @click="close"></button>
+      </div>
+      <div class="modal-body">
+        <div v-html="banner_data.message" class="banner-message-content"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" @click="close">{{ banner_data.button_text || 'OK' }}</button>
+      </div>
+    </div>
+  </div>
+</dialog>
 `;
 
 export const startup_banner_dialog_component = {
@@ -41,7 +48,7 @@ export const startup_banner_dialog_component = {
   }
 };
 
-const Component = Vue.extend(startup_banner_dialog_component);
+const Component = extend(startup_banner_dialog_component);
 
 export const startup_banner_dialog = {};
 
