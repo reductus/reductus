@@ -125,7 +125,7 @@ function add_datasource(sourcename, start_path_in="") {
   app.filebrowser_instance.addDataSource(sourcename, pathlist);
 }
 
-window.onload = async function () {
+async function initialize_app() {
   window.app = app;
   app.download = create_downloader();
   window.editor = editor;
@@ -450,3 +450,5 @@ window.onload = async function () {
   await list_datasources();
   window.onpopstate();
 }
+
+initialize_app();
