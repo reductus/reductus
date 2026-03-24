@@ -28,7 +28,7 @@
   "homepage": "https://github.com/reductus/reductus#readme",
   "type": "module",
   "dependencies": {
-    "@noble/hashes": "^2.0.1",
+    "@noble/hashes": "2.0.1",
     "@widgetjs/tree": "https://github.com/bmaranville/treejs",
     "@zip.js/zip.js": "^2.3.19",
     "d3": "^7.9.0",
