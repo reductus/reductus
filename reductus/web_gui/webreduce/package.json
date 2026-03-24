@@ -9,8 +9,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "vite build",
-    "build_webworker": "node esbuild_webworker.js",
-    "build_serviceworker": "node esbuild_serviceworker.js"
+    "build_webworker": "vite build --config vite.webworker.config.js"
   },
   "repository": {
     "type": "git",
