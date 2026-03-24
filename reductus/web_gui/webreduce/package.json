@@ -28,6 +28,7 @@
   "homepage": "https://github.com/reductus/reductus#readme",
   "type": "module",
   "dependencies": {
+    "@noble/hashes": "^2.0.1",
     "@widgetjs/tree": "https://github.com/bmaranville/treejs",
     "@zip.js/zip.js": "^2.3.19",
     "d3": "^7.9.0",
@@ -36,7 +37,6 @@
     "js-yaml": "^4.1.0",
     "messagepack": "^1.1.12",
     "roboto-fontface": "^0.10.0",
-    "sha1": "^1.1.1",
     "sortablejs": "^1.15.0",
     "split.js": "^1.6.5",
     "vue": "^3.5.26"
