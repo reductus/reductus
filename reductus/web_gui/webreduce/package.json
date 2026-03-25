@@ -8,9 +8,8 @@
   ],
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "node esbuild.js",
-    "build_webworker": "node esbuild_webworker.js",
-    "build_serviceworker": "node esbuild_serviceworker.js"
+    "build": "vite build",
+    "build_webworker": "vite build --config vite.webworker.config.js"
   },
   "repository": {
     "type": "git",
@@ -43,6 +42,6 @@
   },
   "devDependencies": {
     "comlink": "^4.4.2",
-    "esbuild": "^0.27.2"
+    "vite": "^8.0.2"
   }
 }
