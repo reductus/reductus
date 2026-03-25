@@ -682,6 +682,7 @@ editor.switch_instrument = async function(instrument_id, load_default=true) {
     if (load_default) {
       app.current_instrument = instrument_id;
       var template_copy = structuredClone(instrument_def.templates[default_template]);
+      template_copy.name = default_template;
       return editor.load_template(template_copy);
     }
   } 
