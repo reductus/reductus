@@ -277,9 +277,9 @@ export const DataflowViewer = {
     instrument_def: {},
     template_data: {
       modules: [],
-      wires: []
       wires: [],
       name: "",
+      modified: false
     },
     active_help_tab: 'editing',
     menu: {
