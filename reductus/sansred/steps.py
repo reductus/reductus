@@ -14,6 +14,8 @@ from collections import OrderedDict
 
 import numpy as np
 
+from reductus.dataflow.calc import process_template
+from reductus.dataflow.core import Template
 from reductus.dataflow.lib.uncertainty import Uncertainty
 from reductus.dataflow.lib import uncertainty
 
@@ -2154,6 +2156,111 @@ def _find_associated_data_set(sample_scatt: Sans1dData, data_list: list[Sans1dDa
     """Finds the most appropriate blocked beam for a sample based on the list given."""
     # TODO: Find most appropriate data set based on the criteria
     return data_list[0]
+
+
+@module
+def template_test(filelist=None):
+    """Single module to handle all data reduction for a single configuration in a single shot
+
+        **Inputs**
+
+        filelist (fileinfo[]): All data files required to reduce files at a single configuration.
+
+        **Returns**
+
+        output(sans1d[]): A fully reduced set of 1D SANS data set on absolute scale.
+
+        | 2026-04-09 Jeff Krzywon initial implementation
+        """
+    template_def = {
+        "name": "loader_template",
+        "description": "SANS compact reduction",
+        "modules":
+        [
+            {"x": 10, "y": 5, "title": "sample", "module": "ncnr.sans.SuperLoadSANS", "config": {"filelist": []}},
+            {"x": 10, "y": 65, "title": "empty cell", "module": "ncnr.sans.SuperLoadSANS", "config": {"filelist": []}},
+            {"x": 10, "y": 155, "title": "empty trans", "module": "ncnr.sans.SuperLoadSANS", "config": {"filelist": []}},
+            {"x": 10, "y": 125, "title": "sample trans", "module": "ncnr.sans.SuperLoadSANS", "config": {"filelist": []}},
+            {"x": 200, "y": 155, "title": "Gen trans", "module": "ncnr.sans.generate_transmission",
+                "config": {"align_by": "", "integration_box": [58,74,57,72]}},
+            {"x": 10, "y": 35, "title": "blocked", "module": "ncnr.sans.SuperLoadSANS", "config": {"filelist": []}},
+            {"x": 200, "y": 5, "title": "Subtract", "module": "ncnr.sans.subtract"},
+            {"x": 200, "y": 65, "title": "Subtract", "module": "ncnr.sans.subtract"},
+            {"x": 365, "y": 35, "title": "Product", "module": "ncnr.sans.product"},
+            {"x": 525, "y": 5, "title": "Subtract", "module": "ncnr.sans.subtract"},
+            { "x": 895, "y": 35, "title": "Abs Scale", "module": "ncnr.sans.absolute_scaling",
+                "config": {"auto_box": 'false', "integration_box": [106,121,56,73]}
+            },
+            {"x": 525, "y": 65, "title": "DIV", "module": "ncnr.sans.LoadDIV",
+                "config": {"filelist": [{
+                    "path": "ncnrdata/ancillary/ng7sans/DIV/PLEX_20190719_NG7.DIV", "source": "ncnr",
+                    "mtime": 1564154809, "entries": ["entry"]}]},
+            },
+            {"x": 1045, "y": 35, "title": "Pixelstoq", "module": "ncnr.sans.PixelsToQ",
+                "config": {"correct_solid_angle": 'true'}
+             },
+            {"x": 1190, "y": 35, "title": "Circular Av New", "module": "ncnr.sans.circular_av_new",
+                "config": {"dQ_method": "IGOR", "mask_width": 3}
+             },
+            {"x": 685, "y": 5, "title": "Div Correction", "module": "ncnr.sans.correct_detector_sensitivity"},
+            {"x": 480, "y": 135, "title": "open beam trans", "module": "ncnr.sans.SuperLoadSANS",
+                "config": {"filelist": [], "do_mon_norm": 'false'}
+            },
+            {"x": 685, "y": 95, "title": "Gen trans", "module": "ncnr.sans.generate_transmission",
+                "config": {"align_by": "", "integration_box": [58,74,57,72]}
+             },
+            {"x": 1375, "y": 35, "title": "Trim Points", "module": "ncnr.sans.mask_1d_data", "text_width": 93},
+            {"x": 705, "y": 153, "title": "config open beam", "module": "ncnr.sans.SuperLoadSANS",
+                "config": {"filelist": [], "do_mon_norm": 'false'}
+             }
+        ],
+        "wires":
+        [
+            {"source": [0, "output"], "target": [6, "subtrahend"]},
+            {"source": [1, "output"], "target": [7, "subtrahend"]},
+            {"source": [2, "output"], "target": [4, "empty_beam"]},
+            {"source": [3, "output"], "target": [4, "in_beam"]},
+            {"source": [3, "output"], "target": [16, "in_beam"]},
+            {"source": [4, "output"], "target": [8, "factor_param"]},
+            {"source": [5, "output"], "target": [6, "minuend"]},
+            {"source": [5, "output"], "target": [7, "minuend"]},
+            {"source": [6, "output"], "target": [9, "subtrahend"]},
+            {"source": [7, "output"], "target": [8, "data"]},
+            {"source": [8, "output"], "target": [9, "minuend"]},
+            {"source": [9, "output"], "target": [14, "sansdata"]},
+            {"source": [10, "abs"], "target": [12, "data"]},
+            {"source": [11, "output"], "target": [10, "div"]},
+            {"source": [11, "output"], "target": [14, "sensitivity"]},
+            {"source": [12, "output"], "target": [13, "data"]},
+            {"source": [13, "output"], "target": [17, "data"]},
+            {"source": [14, "output"], "target": [10, "sample"]},
+            {"source": [15, "output"], "target": [16, "empty_beam"]},
+            {"source": [16, "output"], "target": [10, "Tsam"]},
+            {"source": [18, "output"], "target": [10, "empty"]}
+  ],
+        "instrument": "ncnr.sans",
+        "version": "1.0"
+    }
+
+    template = Template(**template_def)
+    print(template.name)
+
+    for file in filelist:
+        if file['path'].endswith(".div"):
+            div_file = file
+    else:
+        div_file = None
+
+    loaded_data = LoadRawSANS(filelist)
+    sample_scatt, blocked_beam, empty_scatt, sample_trans, empty_trans, open_trans = autosort(
+        loaded_data, subsort="sample.name", add_scattering=False)
+    config = {"0": {"filelist": sample_scatt}, "1": {"filelist": empty_scatt}, "2": {"filelist": empty_trans},
+              "3": {"filelist": sample_trans}, "5": {"filelist": blocked_beam}, "11": {"filelist": div_file}}
+
+    nodenum = 0
+    terminal_id = "output"
+    output = process_template(template, config, target=(nodenum, terminal_id))
+    return output
 
 
 @module
