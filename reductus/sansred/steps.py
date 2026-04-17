@@ -2113,6 +2113,44 @@ def compact_sans_reduction(filelist=None, integration_box=None):
 
     | 2026-02-26 Jeff Krzywon initial implementation
     """
+    template_def = {
+        "name": "loader_template",
+        "description": "SANS compact reduction",
+        "modules": [
+            {"module": "ncnr.sans.loaddiv", "x": 10, "y": 10, "title": "Load DIV", "config": {'filelist': []}},
+            {"module": "ncnr.sans.LoadRawSANS", "x": 10, "y": 40, "title": "Load Raw SANS", "config": {'filelist': []}},
+            {"module": "ncnr.sans.autosort", "x": 50, "y": 40, "title": "Autosort Data", "config": {"subsort":"sample.name", "add_scattering":False}},
+            {"module": "ncnr.sans.generate_transmission",},
+            {"module": "ncnr.sans.subtract",},
+            {"module": "ncnr.sans.product",},
+            {"module": "ncnr.sans.divide",},
+            {"module": "ncnr.sans.absolute_scaling",},
+            {"module": "ncnr.sans.circular_av_new",}
+        ],
+        "wires": [
+            {'target': [6, 'subtrahend'], 'source': [0, 'output']},
+            {'target': [6, 'minuend'], 'source': [5, 'output']},
+            {'target': [7, 'minuend'], 'source': [5, 'output']},
+            {'target': [7, 'subtrahend'], 'source': [1, 'output']},
+            {'target': [4, 'in_beam'], 'source': [3, 'output']},
+            {'target': [4, 'empty_beam'], 'source': [2, 'output']},
+            {'target': [8, 'factor_param'], 'source': [4, 'output']},
+            {'target': [8, 'data'], 'source': [7, 'output']},
+            {'target': [9, 'subtrahend'], 'source': [6, 'output']},
+            {'target': [9, 'minuend'], 'source': [8, 'output']},
+            {'target': [10, 'sansdata'], 'source': [9, 'output']},
+            {'target': [12, 'in_beam'], 'source': [3, 'output']},
+            {'target': [12, 'empty_beam'], 'source': [11, 'output']},
+            {'target': [13, 'sample'], 'source': [10, 'output']},
+            {'target': [13, 'empty'], 'source': [11, 'output']},
+            {'target': [13, 'Tsam'], 'source': [12, 'output']},
+            {'source': [14, 'output'], 'target': [13, 'div']}],
+        "instrument": "ncnr.sans",
+        "version": "0.0"
+    }
+
+    template = Template(**template_def)
+
     if filelist is None:
         return []
     # Use the center of the detector if no box is given
