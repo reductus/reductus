@@ -2163,10 +2163,9 @@ def compact_sans_reduction(filelist=None, integration_box=None):
     for file in filelist:
         if file['path'].endswith(".div"):
             div_file = file
+            div = LoadDIV(div_file)
             filelist.remove(file)
             break
-
-    div = LoadDIV(div_file) if div_file else None
 
     loaded_data = LoadRawSANS(filelist)
 
