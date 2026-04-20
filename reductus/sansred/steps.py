@@ -2214,13 +2214,10 @@ def template_test(filelist=None):
         "description": "SANS compact reduction",
         "modules":
         [
-            {"x": 10, "y": 5, "title": "sample", "module": "ncnr.sans.SuperLoadSANS", "config": {"filelist": []}},
-            {"x": 10, "y": 65, "title": "empty cell", "module": "ncnr.sans.SuperLoadSANS", "config": {"filelist": []}},
-            {"x": 10, "y": 155, "title": "empty trans", "module": "ncnr.sans.SuperLoadSANS", "config": {"filelist": []}},
-            {"x": 10, "y": 125, "title": "sample trans", "module": "ncnr.sans.SuperLoadSANS", "config": {"filelist": []}},
+            {"x": 10, "y": 5, "title": "all", "module": "ncnr.sans.SuperLoadSANS", "config": {"filelist": []}},
+            {"x": 10, "y": 65, "title": "sort_data", "module": "ncnr.sans.autosort", "config": {"filelist": []}},
             {"x": 200, "y": 155, "title": "Gen trans", "module": "ncnr.sans.generate_transmission",
                 "config": {"align_by": "", "integration_box": [58,74,57,72]}},
-            {"x": 10, "y": 35, "title": "blocked", "module": "ncnr.sans.SuperLoadSANS", "config": {"filelist": []}},
             {"x": 200, "y": 5, "title": "Subtract", "module": "ncnr.sans.subtract"},
             {"x": 200, "y": 65, "title": "Subtract", "module": "ncnr.sans.subtract"},
             {"x": 365, "y": 35, "title": "Product", "module": "ncnr.sans.product"},
@@ -2253,51 +2250,44 @@ def template_test(filelist=None):
         ],
         "wires":
         [
-            {"source": [0, "output"], "target": [6, "subtrahend"]},
-            {"source": [1, "output"], "target": [7, "subtrahend"]},
-            {"source": [2, "output"], "target": [4, "empty_beam"]},
-            {"source": [3, "output"], "target": [4, "in_beam"]},
-            {"source": [3, "output"], "target": [16, "in_beam"]},
-            {"source": [4, "output"], "target": [8, "factor_param"]},
+            {"source": [0, "output"], "target": [1, "rawdata"]},
+            {"source": [1, "sample_scatt"], "target": [4, "subtrahend"]},
+            {"source": [1, "empty_trans"], "target": [2, "empty_beam"]},
+            {"source": [1, "sample_trans"], "target": [2, "in_beam"]},
+            {"source": [1, "sample_trans"], "target": [13, "in_beam"]},
+            {"source": [2, "output"], "target": [5, "factor_param"]},
+            {"source": [1, "blocked_beam"], "target": [3, "minuend"]},
+            {"source": [1, "blocked_beam"], "target": [4, "minuend"]},
+            {"source": [3, "output"], "target": [6, "subtrahend"]},
+            {"source": [4, "output"], "target": [5, "data"]},
             {"source": [5, "output"], "target": [6, "minuend"]},
-            {"source": [5, "output"], "target": [7, "minuend"]},
-            {"source": [6, "output"], "target": [9, "subtrahend"]},
-            {"source": [7, "output"], "target": [8, "data"]},
-            {"source": [8, "output"], "target": [9, "minuend"]},
-            {"source": [9, "output"], "target": [14, "sansdata"]},
-            {"source": [10, "abs"], "target": [12, "data"]},
-            {"source": [11, "output"], "target": [10, "div"]},
-            {"source": [11, "output"], "target": [14, "sensitivity"]},
-            {"source": [12, "output"], "target": [13, "data"]},
-            {"source": [13, "output"], "target": [17, "data"]},
-            {"source": [14, "output"], "target": [10, "sample"]},
-            {"source": [15, "output"], "target": [16, "empty_beam"]},
-            {"source": [16, "output"], "target": [10, "Tsam"]},
-            {"source": [18, "output"], "target": [10, "empty"]}
+            {"source": [6, "output"], "target": [11, "sansdata"]},
+            {"source": [7, "abs"], "target": [9, "data"]},
+            {"source": [8, "output"], "target": [7, "div"]},
+            {"source": [8, "output"], "target": [11, "sensitivity"]},
+            {"source": [9, "output"], "target": [10, "data"]},
+            {"source": [10, "output"], "target": [14, "data"]},
+            {"source": [11, "output"], "target": [7, "sample"]},
+            {"source": [12, "output"], "target": [13, "empty_beam"]},
+            {"source": [13, "output"], "target": [7, "Tsam"]},
+            {"source": [15, "output"], "target": [7, "empty"]}
   ],
         "instrument": "ncnr.sans",
         "version": "1.0"
     }
 
     template = Template(**template_def)
-    print(template.name)
 
-    for file in filelist:
-        if file['path'].endswith(".div"):
-            div_file = file
-    else:
-        div_file = None
+    div_files = [f for f in filelist if f['path'].endswith(".div")]
 
-    loaded_data = LoadRawSANS(filelist)
-    sample_scatt, blocked_beam, empty_scatt, sample_trans, empty_trans, open_trans = autosort(
-        loaded_data, subsort="sample.name", add_scattering=False)
-    config = {"0": {"filelist": sample_scatt}, "1": {"filelist": empty_scatt}, "2": {"filelist": empty_trans},
-              "3": {"filelist": sample_trans}, "5": {"filelist": blocked_beam}, "11": {"filelist": div_file}}
+    config = {"0": {"filelist": filelist}, "8": {"filelist": div_files}}
 
     nodenum = 0
     terminal_id = "output"
-    output = process_template(template, config, target=(nodenum, terminal_id))
-    return output
+    results = process_template(template, config, target=(nodenum, terminal_id))
+    print(f"DEBUG results: {results}")
+    data_list = results.values
+    return data_list
 
 
 @module
