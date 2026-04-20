@@ -368,7 +368,7 @@ class Template(object):
         self.name = name
         self.description = description
         self.modules = modules
-        self.wires = wires
+        self.wires = wires if wires is not None else []
         self.instrument = instrument
         self.version = version
 
