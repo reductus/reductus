@@ -1320,13 +1320,11 @@ def generate_transmission(in_beam, empty_beam, integration_box=[55, 74, 53, 72],
         output = []
         for ib in in_beam:
             eb = eb_lookup.get(get_compound_key(ib.metadata, align_by), None)
-            if eb is None:
-                raise ValueError("no matching empty was found for configuration: " + get_compound_key(ib.metadata, align_by))
             output.append(_generate_transmission(ib, eb, integration_box=integration_box, auto_integrate=auto_integrate, margin=margin))
         return output        
         
 def _generate_transmission(in_beam, empty_beam, integration_box=None, auto_integrate=True, margin=5):
-    if auto_integrate:
+    if auto_integrate and empty_beam:
         height, x, y, width_x, width_y = moments(empty_beam.data.x)
         center_x = x + 0.5
         center_y = y + 0.5
@@ -1340,7 +1338,7 @@ def _generate_transmission(in_beam, empty_beam, integration_box=None, auto_integ
         xmin, xmax, ymin, ymax = map(int, integration_box)
     
     I_in_beam = np.sum(in_beam.data[xmin:xmax+1, ymin:ymax+1])
-    I_empty_beam = np.sum(empty_beam.data[xmin:xmax+1, ymin:ymax+1])
+    I_empty_beam = np.sum(empty_beam.data[xmin:xmax+1, ymin:ymax+1]) if empty_beam else I_in_beam
 
     ratio = I_in_beam/I_empty_beam
     result = Parameters(OrderedDict([
