@@ -2283,7 +2283,6 @@ def template_test(filelist=None):
     nodenum = 0
     terminal_id = "output"
     results = process_template(template, config, target=(nodenum, terminal_id))
-    print(f"DEBUG results: {results}")
     data_list = results.values
     return data_list
 
