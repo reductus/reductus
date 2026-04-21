@@ -2212,7 +2212,7 @@ def template_test(filelist=None):
         "description": "SANS compact reduction",
         "modules":
         [
-            {"x": 10, "y": 5, "title": "all", "module": "ncnr.sans.SuperLoadSANS", "config": {"filelist": []}},
+            {"x": 10, "y": 5, "title": "all", "module": "ncnr.sans.LoadRawSANS", "config": {"filelist": []}},
             {"x": 10, "y": 65, "title": "sort_data", "module": "ncnr.sans.autosort", "config": {"filelist": []}},
             {"x": 200, "y": 155, "title": "Gen trans", "module": "ncnr.sans.generate_transmission",
                 "config": {"align_by": "", "integration_box": [58,74,57,72]}},
