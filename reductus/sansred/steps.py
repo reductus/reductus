@@ -2111,6 +2111,7 @@ def compact_sans_reduction(filelist=None, integration_box=None):
 
         | 2026-04-09 Jeff Krzywon initial implementation
         """
+    integration_box = integration_box if integration_box else [58,74,57,72]
     template_def = {
         "name": "loader_template",
         "description": "SANS compact reduction",
@@ -2119,13 +2120,13 @@ def compact_sans_reduction(filelist=None, integration_box=None):
             {"x": 10, "y": 5, "title": "all", "module": "ncnr.sans.LoadRawSANS", "config": {"filelist": []}},
             {"x": 10, "y": 65, "title": "sort_data", "module": "ncnr.sans.autosort", "config": {"filelist": []}},
             {"x": 200, "y": 155, "title": "Gen trans", "module": "ncnr.sans.generate_transmission",
-                "config": {"align_by": "", "integration_box": [58,74,57,72]}},
+                "config": {"align_by": "", "integration_box": integration_box}},
             {"x": 200, "y": 5, "title": "Subtract", "module": "ncnr.sans.subtract"},
             {"x": 200, "y": 65, "title": "Subtract", "module": "ncnr.sans.subtract"},
             {"x": 365, "y": 35, "title": "Product", "module": "ncnr.sans.product"},
             {"x": 525, "y": 5, "title": "Subtract", "module": "ncnr.sans.subtract"},
             { "x": 895, "y": 35, "title": "Abs Scale", "module": "ncnr.sans.absolute_scaling",
-                "config": {"auto_box": False, "integration_box": [106,121,56,73]}
+                "config": {"auto_box": False, "integration_box": integration_box}
             },
             {"x": 525, "y": 65, "title": "DIV", "module": "ncnr.sans.LoadDIV",
                 "config": {"filelist": [{
@@ -2143,7 +2144,7 @@ def compact_sans_reduction(filelist=None, integration_box=None):
                 "config": {"filelist": [], "do_mon_norm": False}
             },
             {"x": 685, "y": 95, "title": "Gen trans", "module": "ncnr.sans.generate_transmission",
-                "config": {"align_by": "", "integration_box": [58,74,57,72]}
+                "config": {"align_by": "", "integration_box": integration_box}
              },
             {"x": 1375, "y": 35, "title": "Trim Points", "module": "ncnr.sans.mask_1d_data", "text_width": 93},
             {"x": 705, "y": 153, "title": "config open beam", "module": "ncnr.sans.SuperLoadSANS",
