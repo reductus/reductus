@@ -1735,7 +1735,7 @@ def addSimple(data):
 
 def get_compound_key(data_dict, compound_key, separator=","):
     subkeys = [s.strip() for s in compound_key.split(separator)]
-    key = separator.join([_s(data_dict.get(sk, 'unknown')) for sk in subkeys])
+    key = separator.join([str(data_dict.get(sk, 'unknown')) for sk in subkeys])
     return key
 
 @module
