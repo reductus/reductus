@@ -2280,8 +2280,8 @@ def template_test(filelist=None):
 
     config = {"0": {"filelist": filelist}, "8": {"filelist": div_files}}
 
-    nodenum = 0
-    terminal_id = "output"
+    nodenum = 10
+    terminal_id = "nominal_output"
     results = process_template(template, config, target=(nodenum, terminal_id))
     data_list = results.values
     return data_list
