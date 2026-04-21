@@ -2099,107 +2099,11 @@ def getPoissonUncertainty(y):
 def compact_sans_reduction(filelist=None, integration_box=None):
     """Single module to handle all data reduction for a single configuration in a single shot
 
-    **Inputs**
-
-    filelist (fileinfo[]): All data files required to reduce files at a single configuration.
-
-    integration_box (range:xy): region over which to integrate
-
-    **Returns**
-
-    output(sans1d[]): A fully reduced set of 1D SANS data set on absolute scale.
-
-    | 2026-02-26 Jeff Krzywon initial implementation
-    """
-    template_def = {
-        "name": "loader_template",
-        "description": "SANS compact reduction",
-        "modules": [
-            {"module": "ncnr.sans.loaddiv", "x": 10, "y": 10, "title": "Load DIV", "config": {'filelist': []}},
-            {"module": "ncnr.sans.LoadRawSANS", "x": 10, "y": 40, "title": "Load Raw SANS", "config": {'filelist': []}},
-            {"module": "ncnr.sans.autosort", "x": 50, "y": 40, "title": "Autosort Data", "config": {"subsort":"sample.name", "add_scattering":False}},
-            {"module": "ncnr.sans.generate_transmission",},
-            {"module": "ncnr.sans.subtract",},
-            {"module": "ncnr.sans.product",},
-            {"module": "ncnr.sans.divide",},
-            {"module": "ncnr.sans.absolute_scaling",},
-            {"module": "ncnr.sans.circular_av_new",}
-        ],
-        "wires": [
-            {'target': [6, 'subtrahend'], 'source': [0, 'output']},
-            {'target': [6, 'minuend'], 'source': [5, 'output']},
-            {'target': [7, 'minuend'], 'source': [5, 'output']},
-            {'target': [7, 'subtrahend'], 'source': [1, 'output']},
-            {'target': [4, 'in_beam'], 'source': [3, 'output']},
-            {'target': [4, 'empty_beam'], 'source': [2, 'output']},
-            {'target': [8, 'factor_param'], 'source': [4, 'output']},
-            {'target': [8, 'data'], 'source': [7, 'output']},
-            {'target': [9, 'subtrahend'], 'source': [6, 'output']},
-            {'target': [9, 'minuend'], 'source': [8, 'output']},
-            {'target': [10, 'sansdata'], 'source': [9, 'output']},
-            {'target': [12, 'in_beam'], 'source': [3, 'output']},
-            {'target': [12, 'empty_beam'], 'source': [11, 'output']},
-            {'target': [13, 'sample'], 'source': [10, 'output']},
-            {'target': [13, 'empty'], 'source': [11, 'output']},
-            {'target': [13, 'Tsam'], 'source': [12, 'output']},
-            {'source': [14, 'output'], 'target': [13, 'div']}],
-        "instrument": "ncnr.sans",
-        "version": "0.0"
-    }
-
-    template = Template(**template_def)
-
-    if filelist is None:
-        return []
-    # Use the center of the detector if no box is given
-    if not integration_box:
-        integration_box = [55, 74, 53, 72]
-
-    reduced_data = []
-
-    div_file = None
-    for file in filelist:
-        if file['path'].endswith(".div"):
-            div_file = file
-            div = LoadDIV(div_file)
-            filelist.remove(file)
-            break
-
-    loaded_data = LoadRawSANS(filelist)
-
-    sample_scatt, blocked_beam, empty_scatt, sample_trans, empty_trans, open_trans = autosort(
-        loaded_data, subsort="sample.name", add_scattering=False)
-    transmission = generate_transmission(sample_trans, open_trans, integration_box)
-    empty_transmissions = generate_transmission(empty_trans, open_trans, integration_box)
-    open_beam = open_trans[0]
-
-    for i, sample in enumerate(sample_scatt):
-        bb = _find_associated_data_set(sample, blocked_beam)
-        mt = _find_associated_data_set(sample, empty_scatt)
-        bb_cor = subtract([sample], [bb])[0]
-        trans = transmission[i]
-        em_trans = empty_transmissions[0]
-        cor = subtract([bb_cor], [product(subtract([mt], [bb_cor]), [divide(em_trans, trans)])])
-        abs_data = absolute_scaling(empty=open_beam, sample=cor[0], Tsam=trans, div=div)
-        nom, mean, avg = circular_av_new(abs_data, mask_width=2, dQ_method='Igor')
-        reduced_data.append(avg)
-
-    return reduced_data
-
-
-def _find_associated_data_set(sample_scatt: Sans1dData, data_list: list[Sans1dData], criteria="det.des_dis"):
-    """Finds the most appropriate blocked beam for a sample based on the list given."""
-    # TODO: Find most appropriate data set based on the criteria
-    return data_list[0]
-
-
-@module
-def template_test(filelist=None):
-    """Single module to handle all data reduction for a single configuration in a single shot
-
         **Inputs**
 
         filelist (fileinfo[]): All data files required to reduce files at a single configuration.
+
+        integration_box (range:xy): region over which to integrate
 
         **Returns**
 
@@ -2281,7 +2185,7 @@ def template_test(filelist=None):
     config = {"0": {"filelist": filelist}, "8": {"filelist": div_files}}
 
     nodenum = 10
-    terminal_id = "nominal_output"
+    terminal_id = "mean_output"
     results = process_template(template, config, target=(nodenum, terminal_id))
     data_list = results.values
     return data_list
