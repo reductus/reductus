@@ -2127,7 +2127,7 @@ def compact_sans_reduction(filelist=None, integration_box=None, view_step=10):
             {"x": 200, "y": 65, "title": "Subtract", "module": "ncnr.sans.subtract"},
             {"x": 365, "y": 35, "title": "Product", "module": "ncnr.sans.product"},
             {"x": 525, "y": 5, "title": "Subtract", "module": "ncnr.sans.subtract"},
-            { "x": 895, "y": 35, "title": "Abs Scale", "module": "ncnr.sans.absolute_scaling",
+            {"x": 895, "y": 35, "title": "Abs Scale", "module": "ncnr.sans.absolute_scaling",
                 "config": {"auto_box": False, "integration_box": integration_box}
             },
             {"x": 525, "y": 65, "title": "DIV", "module": "ncnr.sans.LoadDIV",
@@ -2137,21 +2137,21 @@ def compact_sans_reduction(filelist=None, integration_box=None, view_step=10):
             },
             {"x": 1045, "y": 35, "title": "Pixelstoq", "module": "ncnr.sans.PixelsToQ",
                 "config": {"correct_solid_angle": True}
-             },
+            },
             {"x": 1190, "y": 35, "title": "Circular Av New", "module": "ncnr.sans.circular_av_new",
                 "config": {"dQ_method": "IGOR", "mask_width": 3}
-             },
+            },
             {"x": 685, "y": 5, "title": "Div Correction", "module": "ncnr.sans.correct_detector_sensitivity"},
             {"x": 480, "y": 135, "title": "open beam trans", "module": "ncnr.sans.SuperLoadSANS",
                 "config": {"filelist": [], "do_mon_norm": False}
             },
             {"x": 685, "y": 95, "title": "Gen trans", "module": "ncnr.sans.generate_transmission",
                 "config": {"align_by": "", "integration_box": integration_box}
-             },
+            },
             {"x": 1375, "y": 35, "title": "Trim Points", "module": "ncnr.sans.mask_1d_data", "text_width": 93},
             {"x": 705, "y": 153, "title": "config open beam", "module": "ncnr.sans.SuperLoadSANS",
                 "config": {"filelist": [], "do_mon_norm": False}
-             }
+            }
         ],
         "wires":
         [
