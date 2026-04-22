@@ -2174,7 +2174,7 @@ def compact_sans_reduction(filelist=None, integration_box=None):
             {"source": [12, "output"], "target": [13, "empty_beam"]},
             {"source": [13, "output"], "target": [7, "Tsam"]},
             {"source": [15, "output"], "target": [7, "empty"]}
-  ],
+        ],
         "instrument": "ncnr.sans",
         "version": "1.0"
     }
