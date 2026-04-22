@@ -2096,7 +2096,7 @@ def getPoissonUncertainty(y):
 
 
 @module
-def compact_sans_reduction(filelist=None, integration_box=None):
+def compact_sans_reduction(filelist=None, integration_box=None, view_step=10):
     """Single module to handle all data reduction for a single configuration in a single shot
 
         **Inputs**
@@ -2104,6 +2104,8 @@ def compact_sans_reduction(filelist=None, integration_box=None):
         filelist (fileinfo[]): All data files required to reduce files at a single configuration.
 
         integration_box (range:xy): region over which to integrate
+
+        view_step (int): What step of the data should be displayed
 
         **Returns**
 
@@ -2185,8 +2187,8 @@ def compact_sans_reduction(filelist=None, integration_box=None):
 
     config = {"0": {"filelist": filelist}, "8": {"filelist": div_files}}
 
-    nodenum = 10
-    terminal_id = "mean_output"
+    nodenum = view_step
+    terminal_id = "output"
     results = process_template(template, config, target=(nodenum, terminal_id))
     data_list = results.values
     return data_list
