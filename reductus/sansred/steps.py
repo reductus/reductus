@@ -2189,7 +2189,8 @@ def compact_sans_reduction(filelist=None, integration_box=None, view_step=10):
 
     nodenum = view_step
     terminal_id = "output"
-    results = process_template(template, config, target=(nodenum, terminal_id))
+    target = (nodenum, terminal_id) if nodenum >= 0 else (None, None)
+    results = process_template(template, config, target=target)
     data_list = results.values
     return data_list
 
