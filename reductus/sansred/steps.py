@@ -206,7 +206,7 @@ def patch(data, patches=None):
 
 @cache
 @module
-def autosort(rawdata, subsort="det.des_dis", add_scattering=True):
+def autosort(rawdata, subsort="sample.labl", add_scattering=True):
     """
     redirects a batch of files to different outputs based on metadata in the files
 
