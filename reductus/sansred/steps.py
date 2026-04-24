@@ -2124,20 +2124,27 @@ def compact_sans_reduction(filelist=None, integration_box=None, view_step=10, vi
         "modules":
         [
             {"x": 10, "y": 5, "title": "all", "module": "ncnr.sans.LoadRawSANS", "config": {"filelist": []}},
-            {"x": 10, "y": 65, "title": "sort_data", "module": "ncnr.sans.autosort", "config": {"filelist": []}},
-            {"x": 200, "y": 155, "title": "Gen trans", "module": "ncnr.sans.generate_transmission",
-                "config": {"integration_box": integration_box}},
+            {"x": 10, "y": 65, "title": "sort_data", "module": "ncnr.sans.autosort",
+                "config": {"filelist": [], "subsort": "sample.label", "add_scattering": False}
+            },
             {"x": 200, "y": 5, "title": "Subtract", "module": "ncnr.sans.subtract"},
             {"x": 200, "y": 65, "title": "Subtract", "module": "ncnr.sans.subtract"},
-            {"x": 365, "y": 35, "title": "Product", "module": "ncnr.sans.product"},
-            {"x": 525, "y": 5, "title": "Subtract", "module": "ncnr.sans.subtract"},
-            {"x": 895, "y": 35, "title": "Abs Scale", "module": "ncnr.sans.absolute_scaling",
+            {"x": 200, "y": 155, "title": "Gen trans", "module": "ncnr.sans.generate_transmission",
                 "config": {"integration_box": integration_box}
             },
+            {"x": 685, "y": 95, "title": "Gen trans", "module": "ncnr.sans.generate_transmission",
+                "config": {"integration_box": integration_box}
+            },
+            {"x": 365, "y": 35, "title": "Product", "module": "ncnr.sans.product"},
+            {"x": 525, "y": 5, "title": "Subtract", "module": "ncnr.sans.subtract"},
             {"x": 525, "y": 65, "title": "DIV", "module": "ncnr.sans.LoadDIV",
                 "config": {"filelist": [{
                     "path": "ncnrdata/ancillary/ng7sans/DIV/PLEX_20190719_NG7.DIV", "source": "ncnr",
                     "mtime": 1564154809, "entries": ["entry"]}]},
+            },
+            {"x": 685, "y": 5, "title": "Div Correction", "module": "ncnr.sans.correct_detector_sensitivity"},
+            {"x": 895, "y": 35, "title": "Abs Scale", "module": "ncnr.sans.absolute_scaling",
+                "config": {"integration_box": integration_box}
             },
             {"x": 1045, "y": 35, "title": "Pixelstoq", "module": "ncnr.sans.PixelsToQ",
                 "config": {"correct_solid_angle": True}
@@ -2145,41 +2152,32 @@ def compact_sans_reduction(filelist=None, integration_box=None, view_step=10, vi
             {"x": 1190, "y": 35, "title": "Circular Av New", "module": "ncnr.sans.circular_av_new",
                 "config": {"dQ_method": "IGOR", "mask_width": 3}
             },
-            {"x": 685, "y": 5, "title": "Div Correction", "module": "ncnr.sans.correct_detector_sensitivity"},
-            {"x": 480, "y": 135, "title": "open beam trans", "module": "ncnr.sans.SuperLoadSANS",
-                "config": {"filelist": [], "do_mon_norm": False}
-            },
-            {"x": 685, "y": 95, "title": "Gen trans", "module": "ncnr.sans.generate_transmission",
-                "config": {"integration_box": integration_box}
-            },
-            {"x": 1375, "y": 35, "title": "Trim Points", "module": "ncnr.sans.mask_1d_data", "text_width": 93},
-            {"x": 705, "y": 153, "title": "config open beam", "module": "ncnr.sans.SuperLoadSANS",
-                "config": {"filelist": [], "do_mon_norm": False}
-            }
+            {"x": 1375, "y": 35, "title": "Trim Points", "module": "ncnr.sans.mask_1d_data", "text_width": 93}
         ],
         "wires":
         [
             {"source": [0, "output"], "target": [1, "rawdata"]},
-            {"source": [1, "sample_scatt"], "target": [4, "subtrahend"]},
-            {"source": [1, "empty_trans"], "target": [2, "empty_beam"]},
-            {"source": [1, "sample_trans"], "target": [2, "in_beam"]},
-            {"source": [1, "sample_trans"], "target": [13, "in_beam"]},
-            {"source": [2, "output"], "target": [5, "factor_param"]},
+            {"source": [1, "sample_scatt"], "target": [2, "subtrahend"]},
+            {"source": [1, "blocked_beam"], "target": [2, "minuend"]},
             {"source": [1, "blocked_beam"], "target": [3, "minuend"]},
-            {"source": [1, "blocked_beam"], "target": [4, "minuend"]},
-            {"source": [3, "output"], "target": [6, "subtrahend"]},
-            {"source": [4, "output"], "target": [5, "data"]},
-            {"source": [5, "output"], "target": [6, "minuend"]},
-            {"source": [6, "output"], "target": [11, "sansdata"]},
-            {"source": [7, "abs"], "target": [9, "data"]},
-            {"source": [8, "output"], "target": [7, "div"]},
-            {"source": [8, "output"], "target": [11, "sensitivity"]},
-            {"source": [9, "output"], "target": [10, "data"]},
-            {"source": [10, "output"], "target": [14, "data"]},
-            {"source": [11, "output"], "target": [7, "sample"]},
-            {"source": [12, "output"], "target": [13, "empty_beam"]},
-            {"source": [13, "output"], "target": [7, "Tsam"]},
-            {"source": [15, "output"], "target": [7, "empty"]}
+            {"source": [1, "empty_scatt"], "target": [3, "subtrahend"]},
+            {"source": [1, "sample_trans"], "target": [4, "in_beam"]},
+            {"source": [1, "empty_trans"], "target": [4, "empty_beam"]},
+            {"source": [1, "sample_trans"], "target": [5, "in_beam"]},
+            {"source": [1, "open_trans"], "target": [5, "empty_beam"]},
+            {"source": [3, "output"], "target": [6, "data"]},
+            {"source": [4, "output"], "target": [6, "factor_param"]},
+            {"source": [2, "output"], "target": [7, "subtrahend"]},
+            {"source": [6, "output"], "target": [7, "minuend"]},
+            {"source": [7, "output"], "target": [9, "sansdata"]},
+            {"source": [8, "output"], "target": [9, "sensitivity"]},
+            {"source": [1, "open_trans"], "target": [10, "empty"]},
+            {"source": [5, "output"], "target": [10, "Tsam"]},
+            {"source": [8, "output"], "target": [10, "div"]},
+            {"source": [9, "output"], "target": [10, "sample"]},
+            {"source": [10, "abs"], "target": [11, "data"]},
+            {"source": [11, "output"], "target": [12, "data"]},
+            {"source": [12, "output"], "target": [13, "data"]},
         ],
         "instrument": "ncnr.sans",
         "version": "1.0"
