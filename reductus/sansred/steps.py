@@ -2100,23 +2100,23 @@ def getPoissonUncertainty(y):
 def compact_sans_reduction(filelist=None, integration_box=None, view_step=10, view_output="output"):
     """Single module to handle all data reduction for a single configuration in a single shot
 
-        **Inputs**
+    **Inputs**
 
-        filelist (fileinfo[]): All data files required to reduce files at a single configuration.
+    filelist (fileinfo[]): All data files required to reduce files at a single configuration.
 
-        integration_box (range:xy): region over which to integrate
+    integration_box (range:xy): region over which to integrate
 
-        view_step (int): What step of the data should be displayed
+    view_step (int): What step of the data should be displayed
 
     view_output (opt:output|sample_scatt|empty_trans|sample_trans|blocked_beam|open_trans|abs):
         What output should be displayed
 
     **Returns**
 
-        output(sans1d[]): A fully reduced set of 1D SANS data set on absolute scale.
+    output(sans1d[]): A fully reduced set of 1D SANS data set on absolute scale.
 
-        | 2026-04-09 Jeff Krzywon initial implementation
-        """
+    | 2026-04-24 Jeff Krzywon initial implementation
+    """
     integration_box = integration_box if integration_box else [58,74,57,72]
     template_def = {
         "name": "loader_template",
