@@ -2097,7 +2097,7 @@ def getPoissonUncertainty(y):
 
 
 @module
-def compact_sans_reduction(filelist=None, integration_box=None, view_step=10):
+def compact_sans_reduction(filelist=None, integration_box=None, view_step=10, view_output="output"):
     """Single module to handle all data reduction for a single configuration in a single shot
 
         **Inputs**
@@ -2108,7 +2108,10 @@ def compact_sans_reduction(filelist=None, integration_box=None, view_step=10):
 
         view_step (int): What step of the data should be displayed
 
-        **Returns**
+    view_output (opt:output|sample_scatt|empty_trans|sample_trans|blocked_beam|open_trans|abs):
+        What output should be displayed
+
+    **Returns**
 
         output(sans1d[]): A fully reduced set of 1D SANS data set on absolute scale.
 
@@ -2189,7 +2192,11 @@ def compact_sans_reduction(filelist=None, integration_box=None, view_step=10):
     config = {"0": {"filelist": filelist}, "8": {"filelist": div_files}}
 
     nodenum = view_step
-    terminal_id = "output"
+    terminal_id = view_output
+    if view_output in ["sample_scatt", "empty_trans", "sample_trans","blocked_beam", "open_trans"]:
+        nodenum = 1
+    if view_output in ["abs"]:
+        nodenum = 10
     target = (nodenum, terminal_id) if nodenum >= 0 else (None, None)
     results = process_template(template, config, target=target)
     data_list = results.values
