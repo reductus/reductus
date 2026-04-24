@@ -73,6 +73,10 @@ export const RangeUi = {
     // create the interactor here, if commanded
     if (this.add_interactors) {
       let chart = plotter.instance.active_plot;
+      if (chart == null) {
+        console.warn("No active chart found, cannot add interactor");
+        return;
+      }
       let x = chart.x();
       let y = chart.y();
       let buffer = 10;
