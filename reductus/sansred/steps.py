@@ -2097,7 +2097,8 @@ def getPoissonUncertainty(y):
 
 
 @module
-def compact_sans_reduction(filelist=None, integration_box=None, view_step=10, view_output="output"):
+def compact_sans_reduction(filelist=None, integration_box=None, view_step=10,
+                           view_output="output", add_scatt=False, add_keyword='sample.labl'):
     """Single module to handle all data reduction for a single configuration in a single shot
 
     **Inputs**
@@ -2110,6 +2111,12 @@ def compact_sans_reduction(filelist=None, integration_box=None, view_step=10, vi
 
     view_output (opt:output|sample_scatt|empty_trans|sample_trans|blocked_beam|open_trans|abs):
         What output should be displayed
+
+    add_scatt {Should scattering files be added together?} (bool): A flag to set whether certain scattering files
+        are added together
+
+    add_keyword {Metadata node for adding data together} (opt:det.des_dis|sample.labl|sample.temp|adam.voltage): If scattering files should be added together,
+        what should the data have in common for adding.
 
     **Returns**
 
@@ -2125,7 +2132,7 @@ def compact_sans_reduction(filelist=None, integration_box=None, view_step=10, vi
         [
             {"x": 10, "y": 5, "title": "all", "module": "ncnr.sans.LoadRawSANS", "config": {"filelist": []}},
             {"x": 10, "y": 65, "title": "sort_data", "module": "ncnr.sans.autosort",
-                "config": {"filelist": [], "subsort": "sample.label", "add_scattering": False}
+                "config": {"filelist": [], "subsort": add_keyword, "add_scattering": add_scatt}
             },
             {"x": 200, "y": 5, "title": "Subtract", "module": "ncnr.sans.subtract"},
             {"x": 200, "y": 65, "title": "Subtract", "module": "ncnr.sans.subtract"},
