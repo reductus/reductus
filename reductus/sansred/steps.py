@@ -1499,10 +1499,11 @@ def correct_detector_sensitivity(sansdata, sensitivity):
 
     output (sans2d): result c in a/b = c
 
-    2017-01-04 unknown
+    2026-04-24 Jeff Krzywon
     """
     res = sansdata.copy()
-    res.data /= sensitivity.data
+    # If no sensitivity file, do not scale the data
+    res.data /= sensitivity.data if sensitivity else 1
 
     return res
 
