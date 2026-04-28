@@ -883,14 +883,14 @@ def oversample_2d(input_array, oversampling):
 
 @nocache
 @module
-def circular_av_new(data, q_min=None, q_max=None, q_step=None, mask_width=3, dQ_method='none'):
+def circular_av_new(data_sets, q_min=None, q_max=None, q_step=None, mask_width=3, dQ_method='none'):
     """
     Using a circular average, it converts data to 1D (Q vs. I)
 
 
     **Inputs**
 
-    data (sans2d): data in
+    data_sets (sans2d[]): data in
 
     q_min (float): minimum Q value for binning (defaults to q_step)
 
@@ -904,109 +904,116 @@ def circular_av_new(data, q_min=None, q_max=None, q_step=None, mask_width=3, dQ_
 
     **Returns**
 
-    nominal_output (sans1d): converted to I vs. nominal Q
+    nominal_output (sans1d[]): converted to I vs. nominal Q
 
-    mean_output (sans1d): converted to I vs. mean Q within integrated region
+    mean_output (sans1d[]): converted to I vs. mean Q within integrated region
 
-    output (sansIQ): canonical I vs Q output for sans data.
+    output (sansIQ[]): canonical I vs Q output for sans data.
 
     | 2019-01-01 Brian Maranville
     | 2019-09-05 Adding mask_width as a temporary way to handle basic masking
     | 2019-12-11 Brian Maranville adding dQ_method opts
     """
 
-    # adding simple width-based mask around the perimeter:
-    mask = np.zeros_like(data.q, dtype=bool)
-    mask_width = abs(mask_width)
-    if (mask_width > 0):
-        mask[mask_width:-mask_width, mask_width:-mask_width] = True
-    else:
-        mask[:] = True
+    nominal_output = []
+    mean_output = []
+    canonical_output = []
 
-    # calculate the change in q that corresponds to a change in pixel of 1
-    if data.qx is None:
-        raise ValueError("Q is not defined - convert pixels to Q first")
+    for data in data_sets:
+        # adding simple width-based mask around the perimeter:
+        mask = np.zeros_like(data.q, dtype=bool)
+        mask_width = abs(mask_width)
+        if (mask_width > 0):
+            mask[mask_width:-mask_width, mask_width:-mask_width] = True
+        else:
+            mask[:] = True
 
-    if q_step is None:
-        q_step = data.qx[1, 0]-data.qx[0, 0] / 1.0
+        # calculate the change in q that corresponds to a change in pixel of 1
+        if data.qx is None:
+            raise ValueError("Q is not defined - convert pixels to Q first")
 
-    if q_min is None:
-        q_min = q_step
-    
-    if q_max is None:
-        q_max = data.q[mask].max()
+        if q_step is None:
+            q_step = data.qx[1, 0]-data.qx[0, 0] / 1.0
 
-    q_bins = np.arange(q_min, q_max+q_step, q_step)
-    Q = (q_bins[:-1] + q_bins[1:])/2.0
+        if q_min is None:
+            q_min = q_step
 
-    oversampling = 3
+        if q_max is None:
+            q_max = data.q[mask].max()
 
-    o_mask = oversample_2d(mask, oversampling)
-    #o_q = oversample_2d(data.q, oversampling)
-    o_qxi, o_qyi = np.indices(o_mask.shape)
-    o_qx_offsets = ((o_qxi % oversampling) + 0.5) / oversampling
-    o_qy_offsets = ((o_qyi % oversampling) + 0.5) / oversampling
-    qx_width = oversample_2d(data.qx_high - data.qx_low, oversampling)
-    qy_width = oversample_2d(data.qy_high - data.qy_low, oversampling)
-    original_lookups = (np.floor_divide(o_qxi, oversampling), np.floor_divide(o_qyi, oversampling))
-    o_qx = data.qx_low[original_lookups] + (qx_width * o_qx_offsets)
-    o_qy = data.qy_low[original_lookups] + (qy_width * o_qy_offsets)
-    o_qz = oversample_2d(data.qz, oversampling)
-    o_q = np.sqrt(o_qx**2 + o_qy**2 + o_qz**2)
-    o_data = oversample_2d(data.data, oversampling) # Uncertainty object...
-    o_meanQ = oversample_2d(data.meanQ, oversampling)
-    o_shadow_factor = oversample_2d(data.shadow_factor, oversampling)
-    o_dq_para = oversample_2d(data.dq_para, oversampling)
+        q_bins = np.arange(q_min, q_max+q_step, q_step)
+        Q = (q_bins[:-1] + q_bins[1:])/2.0
 
-    # dq = data.dq_para if hasattr(data, 'dqpara') else np.ones_like(data.q) * q_step
-    I, _bins_used = np.histogram(o_q[o_mask], bins=q_bins, weights=o_data.x[o_mask])
-    I_norm, _ = np.histogram(o_q[o_mask], bins=q_bins, weights=np.ones_like(o_data.x[o_mask]))
-    I_var, _ = np.histogram(o_q[o_mask], bins=q_bins, weights=o_data.variance[o_mask])
-    #Q_ave, _ = np.histogram(o_q[o_mask], bins=q_bins, weights=o_q[o_mask])
-    #Q_var, _ = np.histogram(data.q, bins=q_bins, weights=data.dq_para**2)
-    Q_mean, _ = np.histogram(o_q[o_mask], bins=q_bins, weights=o_meanQ[o_mask])
-    ShadowFactor, _ = np.histogram(o_q[o_mask], bins=q_bins, weights=o_shadow_factor[o_mask])
+        oversampling = 3
 
-    nonzero_mask = I_norm > 0
+        o_mask = oversample_2d(mask, oversampling)
+        #o_q = oversample_2d(data.q, oversampling)
+        o_qxi, o_qyi = np.indices(o_mask.shape)
+        o_qx_offsets = ((o_qxi % oversampling) + 0.5) / oversampling
+        o_qy_offsets = ((o_qyi % oversampling) + 0.5) / oversampling
+        qx_width = oversample_2d(data.qx_high - data.qx_low, oversampling)
+        qy_width = oversample_2d(data.qy_high - data.qy_low, oversampling)
+        original_lookups = (np.floor_divide(o_qxi, oversampling), np.floor_divide(o_qyi, oversampling))
+        o_qx = data.qx_low[original_lookups] + (qx_width * o_qx_offsets)
+        o_qy = data.qy_low[original_lookups] + (qy_width * o_qy_offsets)
+        o_qz = oversample_2d(data.qz, oversampling)
+        o_q = np.sqrt(o_qx**2 + o_qy**2 + o_qz**2)
+        o_data = oversample_2d(data.data, oversampling) # Uncertainty object...
+        o_meanQ = oversample_2d(data.meanQ, oversampling)
+        o_shadow_factor = oversample_2d(data.shadow_factor, oversampling)
+        o_dq_para = oversample_2d(data.dq_para, oversampling)
 
-    I[nonzero_mask] /= I_norm[nonzero_mask]
-    I_var[nonzero_mask] /= (I_norm[nonzero_mask]**2)
-    Q_mean[nonzero_mask] /= I_norm[nonzero_mask]
-    #Q_ave[nonzero_mask] /= I_norm[nonzero_mask]
-    ShadowFactor[nonzero_mask] /= I_norm[nonzero_mask]
+        # dq = data.dq_para if hasattr(data, 'dqpara') else np.ones_like(data.q) * q_step
+        I, _bins_used = np.histogram(o_q[o_mask], bins=q_bins, weights=o_data.x[o_mask])
+        I_norm, _ = np.histogram(o_q[o_mask], bins=q_bins, weights=np.ones_like(o_data.x[o_mask]))
+        I_var, _ = np.histogram(o_q[o_mask], bins=q_bins, weights=o_data.variance[o_mask])
+        #Q_ave, _ = np.histogram(o_q[o_mask], bins=q_bins, weights=o_q[o_mask])
+        #Q_var, _ = np.histogram(data.q, bins=q_bins, weights=data.dq_para**2)
+        Q_mean, _ = np.histogram(o_q[o_mask], bins=q_bins, weights=o_meanQ[o_mask])
+        ShadowFactor, _ = np.histogram(o_q[o_mask], bins=q_bins, weights=o_shadow_factor[o_mask])
 
-    # calculate Q_var...
-    # remarkably, the variance of a sum of normalized gaussians 
-    # with variances v_i, displaced from the mean center by xc_i
-    # is the sum of (xc_i**2 + v_i).   Gaussians are weird.
+        nonzero_mask = I_norm > 0
 
-    
-    if dQ_method == 'IGOR':
-        Q_mean, Q_mean_error = calculateDQ_IGOR(data, Q)
-    elif dQ_method == 'statistical':
-        # exclude Q_mean_lookups that overflow the length of the calculated Q_mean:
-        Q_lookup = np.digitize(o_q[o_mask], bins=q_bins)
-        Q_lookup_mask = (Q_lookup < len(Q))
-        Q_mean_center = Q_mean[Q_lookup[Q_lookup_mask]]
-        Q_var_contrib = (o_meanQ[o_mask][Q_lookup_mask] - Q_mean_center)**2 + (o_dq_para[o_mask][Q_lookup_mask])**2
-        Q_var, _ = np.histogram(o_meanQ[o_mask][Q_lookup_mask], bins=q_bins, weights=Q_var_contrib)
-        Q_var[nonzero_mask] /= I_norm[nonzero_mask]
-        Q_mean_error = np.sqrt(Q_var)
-    else:
-        # 'none' is the default
-        Q_mean_error = np.zeros_like(Q)
+        I[nonzero_mask] /= I_norm[nonzero_mask]
+        I_var[nonzero_mask] /= (I_norm[nonzero_mask]**2)
+        Q_mean[nonzero_mask] /= I_norm[nonzero_mask]
+        #Q_ave[nonzero_mask] /= I_norm[nonzero_mask]
+        ShadowFactor[nonzero_mask] /= I_norm[nonzero_mask]
 
-    nominal_output = Sans1dData(Q, I, dx=Q_mean_error, dv=I_var, xlabel="Q", vlabel="I",
-                        xunits="inv. A", vunits="neutrons")
-    nominal_output.metadata = deepcopy(data.metadata)
-    nominal_output.metadata['extra_label'] = "_circ"
+        # calculate Q_var...
+        # remarkably, the variance of a sum of normalized gaussians
+        # with variances v_i, displaced from the mean center by xc_i
+        # is the sum of (xc_i**2 + v_i).   Gaussians are weird.
 
-    mean_output = Sans1dData(Q_mean, I, dx=Q_mean_error, dv=I_var, xlabel="Q", vlabel="I",
-                        xunits="inv. A", vunits="neutrons")
-    mean_output.metadata = deepcopy(data.metadata)
-    mean_output.metadata['extra_label'] = "_circ"
 
-    canonical_output = SansIQData(I, np.sqrt(I_var), Q, Q_mean_error, Q_mean, ShadowFactor, metadata=deepcopy(data.metadata))
+        if dQ_method == 'IGOR':
+            Q_mean, Q_mean_error = calculateDQ_IGOR(data, Q)
+        elif dQ_method == 'statistical':
+            # exclude Q_mean_lookups that overflow the length of the calculated Q_mean:
+            Q_lookup = np.digitize(o_q[o_mask], bins=q_bins)
+            Q_lookup_mask = (Q_lookup < len(Q))
+            Q_mean_center = Q_mean[Q_lookup[Q_lookup_mask]]
+            Q_var_contrib = (o_meanQ[o_mask][Q_lookup_mask] - Q_mean_center)**2 + (o_dq_para[o_mask][Q_lookup_mask])**2
+            Q_var, _ = np.histogram(o_meanQ[o_mask][Q_lookup_mask], bins=q_bins, weights=Q_var_contrib)
+            Q_var[nonzero_mask] /= I_norm[nonzero_mask]
+            Q_mean_error = np.sqrt(Q_var)
+        else:
+            # 'none' is the default
+            Q_mean_error = np.zeros_like(Q)
+
+        nominal_output_x = Sans1dData(Q, I, dx=Q_mean_error, dv=I_var, xlabel="Q", vlabel="I",
+                            xunits="inv. A", vunits="neutrons")
+        nominal_output_x.metadata = deepcopy(data.metadata)
+        nominal_output_x.metadata['extra_label'] = "_circ"
+        nominal_output.append(nominal_output_x)
+
+        mean_output_x = Sans1dData(Q_mean, I, dx=Q_mean_error, dv=I_var, xlabel="Q", vlabel="I",
+                            xunits="inv. A", vunits="neutrons")
+        mean_output_x.metadata = deepcopy(data.metadata)
+        mean_output_x.metadata['extra_label'] = "_circ"
+        mean_output.append(mean_output_x)
+
+        canonical_output.append(SansIQData(I, np.sqrt(I_var), Q, Q_mean_error, Q_mean, ShadowFactor, metadata=deepcopy(data.metadata)))
     
     return nominal_output, mean_output, canonical_output
 
