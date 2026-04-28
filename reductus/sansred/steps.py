@@ -2105,7 +2105,8 @@ def getPoissonUncertainty(y):
 
 @module
 def compact_sans_reduction(filelist=None, integration_box=None, view_step=10,
-                           view_output="output", add_scatt=False, add_keyword='sample.labl'):
+                           view_output="output", add_scatt=False, add_keyword='sample.labl',
+                           mask=None):
     """Single module to handle all data reduction for a single configuration in a single shot
 
     **Inputs**
@@ -2125,6 +2126,9 @@ def compact_sans_reduction(filelist=None, integration_box=None, view_step=10,
     add_keyword {Metadata node for adding data together} (opt:det.des_dis|sample.labl|sample.temp|adam.voltage): If scattering files should be added together,
         what should the data have in common for adding.
 
+    mask {The number of points to remove from the data} (range:x): Enter the point number for masking data for all data
+        sets, e.g. 3,37 will keep the 3rd through 37th data points. Defaults to the entire range
+
     **Returns**
 
     output(sans1d[]): A fully reduced set of 1D SANS data set on absolute scale.
@@ -2132,6 +2136,7 @@ def compact_sans_reduction(filelist=None, integration_box=None, view_step=10,
     | 2026-04-24 Jeff Krzywon initial implementation
     """
     integration_box = integration_box if integration_box else [58,74,57,72]
+    data_mask = list(range(int(mask[0]))) + list(range(int(mask[1]), 10000)) if mask else []
     template_def = {
         "name": "loader_template",
         "description": "SANS compact reduction",
@@ -2166,7 +2171,9 @@ def compact_sans_reduction(filelist=None, integration_box=None, view_step=10,
             {"x": 1190, "y": 35, "title": "Circular Av New", "module": "ncnr.sans.circular_av_new",
                 "config": {"dQ_method": "IGOR", "mask_width": 3}
             },
-            {"x": 1375, "y": 35, "title": "Trim Points", "module": "ncnr.sans.mask_1d_data", "text_width": 93}
+            {"x": 1375, "y": 35, "title": "Trim Points", "module": "ncnr.sans.mask_1d_data", "text_width": 93,
+                "config": {"mask_indices": [data_mask]}
+            }
         ],
         "wires":
         [
@@ -2190,7 +2197,7 @@ def compact_sans_reduction(filelist=None, integration_box=None, view_step=10,
             {"source": [8, "output"], "target": [10, "div"]},
             {"source": [9, "output"], "target": [10, "sample"]},
             {"source": [10, "abs"], "target": [11, "data"]},
-            {"source": [11, "output"], "target": [12, "data"]},
+            {"source": [11, "output"], "target": [12, "data_sets"]},
             {"source": [12, "output"], "target": [13, "data"]},
         ],
         "instrument": "ncnr.sans",
@@ -2305,7 +2312,8 @@ def shift_by_factor(data_to_shift: SansIQData | Sans1dData, shifting_factor: flo
 
 
 @module
-def mask_1d_data(data: SansIQData | Sans1dData, mask_indices: list[int] = None) -> SansIQData | Sans1dData:
+def mask_1d_data(data: list[SansIQData | Sans1dData],
+                 mask_indices: list[list[int]] | list[int] | None = None) -> SansIQData | Sans1dData:
     """
     Identify and mask out user-specified points.
 
@@ -2316,7 +2324,7 @@ def mask_1d_data(data: SansIQData | Sans1dData, mask_indices: list[int] = None) 
 
     **Inputs**
 
-    data (sans1d) : background data which may contain specular point
+    data (sans1d[]) : background data which may contain specular point
 
     mask_indices (index[]*) : 0-origin data point indices to mask. For example,
     *mask_indices=[1,4,6]* masks the 2nd, 5th and 7th point respectively. Each
@@ -2324,13 +2332,22 @@ def mask_1d_data(data: SansIQData | Sans1dData, mask_indices: list[int] = None) 
 
     **Returns**
 
-    output (sans1d) : masked data
+    output (sans1d[]) : masked data
 
     | 2025-08-01 Jeff Krzywon: initial port of refl mask_points
     """
-    data = copy(data)
-    data.mask = mask_indices
-    return data.q_cutoff()
+    returns = []
+    if isinstance(mask_indices[0], int):
+        # If a bare list of indices is sent, make into a list of lists
+        mask_indices = [mask_indices]
+    if len(mask_indices) == 1 and isinstance(mask_indices[0], list):
+        # If only a single list of indices is sent, assume it should be applied to all data
+        mask_indices = mask_indices * len(data)
+    for dataset, mask in zip(data, mask_indices):
+        data_set = copy(dataset)
+        data_set.mask = [x for x in mask if x < len(dataset.Q)]
+        returns.append(data_set.q_cutoff())
+    return returns
 
 
 @module
