@@ -2136,7 +2136,7 @@ def compact_sans_reduction(filelist=None, integration_box=None, view_step=10,
     | 2026-04-24 Jeff Krzywon initial implementation
     """
     integration_box = integration_box if integration_box else [58,74,57,72]
-    data_mask = list(range(int(mask[0]))) + list(range(int(mask[1]), 10000)) if mask else []
+    data_mask = list(range(int(mask[0]))) + list(range(int(mask[1]), 10000)) if mask != [0,0] else []
     template_def = {
         "name": "loader_template",
         "description": "SANS compact reduction",
@@ -2337,6 +2337,9 @@ def mask_1d_data(data: list[SansIQData | Sans1dData],
     | 2025-08-01 Jeff Krzywon: initial port of refl mask_points
     """
     returns = []
+    if not mask_indices:
+        # Return early if no masking is to occur
+        return data
     if isinstance(mask_indices[0], int):
         # If a bare list of indices is sent, make into a list of lists
         mask_indices = [mask_indices]
