@@ -87,7 +87,7 @@ def export_to_nxcansas(data: SansIQData, f_path: Path_Like) -> dict:
 
         # Add required information
         nxentry["definition"] = "NXcanSAS"
-        nxentry["run"] = data.metadata.get("run.pointnum", 0)
+        nxentry["run"] = data.metadata.get("run.instrumentScanID", 0)
         nxentry["title"] = data.metadata["sample.description"]
 
         # TODO: Differentiate 1D vs. 2D data here
@@ -123,7 +123,7 @@ def export_to_nxcansas(data: SansIQData, f_path: Path_Like) -> dict:
             'canSAS_class': 'SASsample',
             'NX_class': "NXsample"
         })
-        sample_entry['ID'] = data.metadata.get('sample.name', 'sample')
+        sample_entry['ID'] = data.metadata.get('sample.labl', 'sample')
         sample_attrs = ['thk', 'temp', 'trans']
         sample_nxcansas = ['thickness', 'temperature', 'transmission']
         for key, cansas_key in zip(sample_attrs, sample_nxcansas):
