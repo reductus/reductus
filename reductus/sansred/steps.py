@@ -2107,7 +2107,7 @@ def getPoissonUncertainty(y):
 
 
 @module
-def compact_sans_reduction(filelist=None, integration_box=None, view_step=10,
+def compact_sans_reduction(filelist=None, integration_box=None, view_step=13,
                            view_output="output", add_scatt=False, add_keyword='sample.labl',
                            mask=None):
     """Single module to handle all data reduction for a single configuration in a single shot
