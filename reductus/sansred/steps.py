@@ -7,7 +7,9 @@ Set of reduction steps for SANS reduction.
 
 from __future__ import print_function
 
-from posixpath import basename, join
+import os
+import pathlib
+from posixpath import basename
 from copy import copy, deepcopy
 from io import BytesIO
 from collections import OrderedDict
@@ -19,10 +21,11 @@ from reductus.dataflow.core import Template
 from reductus.dataflow.lib.uncertainty import Uncertainty
 from reductus.dataflow.lib import uncertainty
 
+from .export_sans import export_to_ascii, export_to_csv, export_to_nxcansas
 from .sansdata import RawSANSData, SansData, Sans1dData, SansIQData, Parameters
 from .sans_vaxformat import readNCNRSensitivity
 
-from reductus.vsansred.steps import _s, _b
+from reductus.vsansred.steps import _s
 
 ALL_ACTIONS = []
 IGNORE_CORNER_PIXELS = True
@@ -2445,3 +2448,43 @@ def _get_shifting_factor_between_data(scale_to_data: np.ndarray, data_to_be_scal
     # Sum all values in the sliced section
     # Divide scale_to_data sum by data_to_be_scaled sum
     return (a - b) / npts
+
+
+@module
+def export_data(data, file_path: str | pathlib.Path | os.PathLike = ".", format: str = "ASCII") -> dict:
+    """Export a data file into the chose format.
+
+    :param data: A single data set that will be exported.
+    :param file_path: The directory or the full file path to save the file to.
+    :param format: The file format to export the data to. Options include ASCII, CSV, and NXcanSAS
+    :return: None
+
+    **Inputs**
+
+    data (sans1d): SANS data
+
+    file_path (str): The directory or the full file path to save the file to.
+
+    format (opt:ASCII|CSV|NXcanSAS): The format to output the data to.
+
+    **Returns**
+
+    output (params): The file path the data file was saved to.
+
+    | 2026-04-29 Jeff Krzywon initial implementation
+    """
+
+    if not file_path:
+        raise FileNotFoundError(f"")
+    full_path = pathlib.Path(file_path)
+
+    print(f"DEBUG: format  {format}")
+
+    match format.lower():
+        case "nxcansas":
+            return export_to_nxcansas(data, full_path)
+        case "csv":
+            return export_to_csv(data, file_path)
+        case "ascii" | _:
+            print("Am I getting to the ascii case?")
+            return export_to_ascii(data, file_path)
