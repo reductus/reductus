@@ -924,6 +924,8 @@ def circular_av_new(data_sets, q_min=None, q_max=None, q_step=None, mask_width=3
 
     for data in data_sets:
         # adding simple width-based mask around the perimeter:
+        if data.Tsam:
+            data.metadata["sample.trans"] = data.Tsam
         mask = np.zeros_like(data.q, dtype=bool)
         mask_width = abs(mask_width)
         if (mask_width > 0):
@@ -2478,13 +2480,10 @@ def export_data(data, file_path: str | pathlib.Path | os.PathLike = ".", format:
         raise FileNotFoundError(f"")
     full_path = pathlib.Path(file_path)
 
-    print(f"DEBUG: format  {format}")
-
     match format.lower():
         case "nxcansas":
             return export_to_nxcansas(data, full_path)
         case "csv":
             return export_to_csv(data, file_path)
         case "ascii" | _:
-            print("Am I getting to the ascii case?")
             return export_to_ascii(data, file_path)

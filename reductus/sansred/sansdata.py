@@ -75,7 +75,7 @@ class SansData:
         self.theta = theta
         self.attenuation_corrected = attenuation_corrected
 
-        self.Tsam = None #Tsam and Temp are used to store the transmissions for later use
+        self.Tsam = 1.0 #Tsam and Temp are used to store the transmissions for later use
         self.Temp = None
     # Note that I have not defined an inplace subtraction
     def __sub__(self, other):
@@ -113,6 +113,7 @@ class SansData:
         return result
     def __mul__(self, other):
         result = self.copy()
+        result.Tsam = other
         if isinstance(other, SansData):
             result.data = self.data * other.data
         else:
