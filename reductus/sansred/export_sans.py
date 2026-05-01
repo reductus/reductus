@@ -136,6 +136,59 @@ def export_to_nxcansas(data: SansIQData, f_path: Path_Like) -> dict:
             "NX_class": "NXinstrument",
             "canSAS_class": "SASinstrument"
         })
-        instrument_group['name'] = data.metadata["sample.description"]
+        instrument_group['name'] = data.metadata["run.instrument"]
+
+        # Add source aperture
+        source_aperture = instrument_group.create_group('aperture1')
+        source_aperture.attrs.update({
+            "NX_class": "NXaperture",
+            "canSAS_class": "SASaperture"
+        })
+        source_aperture['shape'] = 'pinhole'
+        source_aperture['x_gap'] = data.metadata.get('resolution.ap1', None)
+        source_aperture['y_gap'] = data.metadata.get('resolution.ap1', None)
+
+        # Add sample aperture
+        sample_aperture = instrument_group.create_group('aperture2')
+        sample_aperture.attrs.update({
+            "NX_class": "NXaperture",
+            "canSAS_class": "SASaperture"
+        })
+        sample_aperture['shape'] = 'pinhole'
+        sample_aperture['x_gap'] = data.metadata.get('resolution.ap2', None)
+        sample_aperture['y_gap'] = data.metadata.get('resolution.ap2', None)
+
+        # Add collimation settings
+        collimation = instrument_group.create_group('collimator')
+        collimation.attrs.update({
+            "NX_class": "NXcollimation",
+            "canSAS_class": "SAScollimation"
+        })
+        collimation['distance'] = data.metadata.get('resolution.ap12dis', None)
+
+        # Add detector settings
+        detector = instrument_group.create_group('detector')
+        detector.attrs.update({
+            "NX_class": "NXdetector",
+            "canSAS_class": "SASdetector"
+        })
+        detector['name'] = 'detector'
+        detector['SDD'] = data.metadata.get('det.dis', None)
+        detector['beam_center_x'] = data.metadata.get('det.beamx', None)
+        detector['beam_center_y'] = data.metadata.get('det.beamy', None)
+        detector['x_pixel_size'] = data.metadata.get('det.pixelsizex', None)
+        detector['y_pixel_size'] = data.metadata.get('det.pixelsizey', None)
+
+        # Add source information
+        source = instrument_group.create_group('source')
+        source.attrs.update({
+            "NX_class": "NXsource",
+            "canSAS_class": "SASource"
+        })
+        source['type'] = 'Reactor Neutron Source'
+        source['incident_wavelength'] = data.metadata.get('resolution.lmda', None)
+        source['incident_wavelength_spread'] = data.metadata.get('resolution.dlmda', None)
+
+        # TODO: Add in the data reduction processes to the file
 
     return {}
