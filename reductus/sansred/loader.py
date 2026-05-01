@@ -4,12 +4,6 @@ SANS data loader
 
 Load SANS NeXus file into :mod:`sansred.sansdata` data structure.
 """
-import io
-from zipfile import ZipFile, is_zipfile
-from collections import OrderedDict
-import h5py
-
-from reductus.dataflow.lib import hzf_readonly_stripped as hzf
 from reductus.dataflow.lib import unit
 from reductus.dataflow.lib.h5_open import h5_open_zip
 
