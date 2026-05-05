@@ -3,7 +3,7 @@
     {
       "x": 10,
       "title": "Single Configuration Data",
-      "module": "ncnr.sans.compact_sans_reduction",
+      "module": "ncnr.sans.single_configuration",
       "config": {
         "auto_box": true
       },
