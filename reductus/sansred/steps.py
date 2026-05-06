@@ -2317,7 +2317,7 @@ def shift_by_factor(data_to_shift: SansIQData | Sans1dData, shifting_factor: flo
 
 @module
 def mask_1d_data(data: list[SansIQData | Sans1dData],
-                 mask_indices: list[list[int]] | list[int] | None = None) -> SansIQData | Sans1dData:
+                 mask_indices: list[list[int]] | list[int] | None = None) -> [SansIQData | Sans1dData]:
     """
     Identify and mask out user-specified points.
 
