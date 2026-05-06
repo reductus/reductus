@@ -2140,7 +2140,7 @@ def single_configuration(filelist=None, integration_box=None, view_step=13, view
     | 2026-04-24 Jeff Krzywon initial implementation
     """
     integration_box = integration_box if integration_box else [58,74,57,72]
-    data_mask = list(range(int(mask[0]))) + list(range(int(mask[1]), 10000)) if mask != [0,0] else []
+    data_mask = list(range(int(mask[0]))) + list(range(int(mask[1]), 10000)) if mask != [0,0] and mask is not None else []
     template_def = {
         "name": "loader_template",
         "description": "SANS compact reduction",
