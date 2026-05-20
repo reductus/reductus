@@ -105,11 +105,11 @@ def export_to_nxcansas(data: SansIQData, f_path: Path_Like) -> dict:
         })
         data_group["Q"] = data.Q
         data_group["Q"].attrs.update({
-            "units": "1/nm",
+            "units": "1/A",
             "resolutions": "dQ"
         })
         data_group["dQ"] = data.dQ
-        data_group["dQ"].attrs["units"] = "1/nm"
+        data_group["dQ"].attrs["units"] = "1/A"
         data_group["Idev"] = data.dI
         data_group["Idev"].attrs["units"] = "1/cm"
         data_group["Qmean"] = data.meanQ
