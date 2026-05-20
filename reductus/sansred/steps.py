@@ -209,7 +209,7 @@ def patch(data, patches=None):
 
 @cache
 @module
-def autosort(rawdata, subsort="sample.labl", add_scattering=True):
+def autosort(rawdata, subsort="sample.labl", add_scattering=True, trans_sort="run.configuration"):
     """
     redirects a batch of files to different outputs based on metadata in the files
 
@@ -221,6 +221,8 @@ def autosort(rawdata, subsort="sample.labl", add_scattering=True):
 
     add_scattering {Add sample scatterings together} (bool): Add sample scatterings, within
     group defined by subsort key
+
+    trans_sort (str): key on which to bundle open beam transmission files within output lists
 
     **Returns**
 
@@ -234,7 +236,9 @@ def autosort(rawdata, subsort="sample.labl", add_scattering=True):
 
     empty_trans (sans2d[]): Empty Cell Transmission
 
-    open_trans (sans2d[]): Open Beam Transmission
+    open_beam_absolute (sans2d[]): Open Beam Transmission used for absolute scaling calculations
+
+    open_beam_trans (sans2d[]): Open Beam Transmission used for transmission calculations
 
     2019-07-24 Brian Maranville
     2026-01-30 Jeff Krzywon
@@ -246,22 +250,25 @@ def autosort(rawdata, subsort="sample.labl", add_scattering=True):
     sample_trans = []
     empty_trans = []
     open_trans = []
+    open_beam_trans = []
+    open_beam_absolute = []
 
     for r in rawdata:
-        purpose = _s(r.metadata['analysis.filepurpose'])
-        intent = _s(r.metadata['analysis.intent'])
-        if intent.lower().strip().startswith('blo'):
+        purpose = _s(r.metadata['analysis.filepurpose']).lower().strip()
+        intent = _s(r.metadata['analysis.intent']).lower().strip()
+        description = _s(r.metadata['sample.labl']).lower().strip()
+        if intent.startswith('blo') or (purpose == 'scattering' and 'block' in description):
             blocked_beam.extend(to_sansdata(r))
-        elif purpose.lower() == 'scattering' and intent.lower() == 'sample':
-            sample_scatt.extend(to_sansdata(r))
-        elif purpose.lower() == 'scattering' and intent.lower().startswith('empty'):
-            empty_scatt.extend(to_sansdata(r))
-        elif purpose.lower() == 'transmission' and intent.lower() == 'sample':
-            sample_trans.extend(to_sansdata(r))
-        elif purpose.lower() == 'transmission' and intent.lower().startswith('empty'):
-            empty_trans.extend(to_sansdata(r))
-        elif intent.lower().strip().startswith('open'):
+        elif intent.startswith('open') or (purpose == 'transmission' and 'open' in description):
             open_trans.extend(to_sansdata(r))
+        elif purpose == 'scattering' and (intent.startswith('empty') or 'empty' in description):
+            empty_scatt.extend(to_sansdata(r))
+        elif purpose == 'transmission' and (intent.startswith('empty') or 'empty' in description):
+            empty_trans.extend(to_sansdata(r))
+        elif purpose == 'scattering' and intent == 'sample':
+            sample_scatt.extend(to_sansdata(r))
+        elif purpose == 'transmission' and intent == 'sample':
+            sample_trans.extend(to_sansdata(r))
 
     def keyFunc(l):
         return l.metadata.get(subsort, 0)
@@ -279,7 +286,16 @@ def autosort(rawdata, subsort="sample.labl", add_scattering=True):
             added_samples[key] = addSimple(added_samples[key])
         sample_scatt = list(added_samples.values())
 
-    return sample_scatt, blocked_beam, empty_scatt, sample_trans, empty_trans, open_trans
+    scatt_config = sample_scatt[0].metadata.get(trans_sort, '').replace(b' Scatt', b'').replace(b' Trans', b'')
+    trans_config = sample_trans[0].metadata.get(trans_sort, '').replace(b' Scatt', b'').replace(b' Trans', b'')
+    for open in open_trans:
+        sort_val = open.metadata.get(trans_sort, '').replace(b' Scatt', b'').replace(b' Trans', b'')
+        if sort_val == scatt_config:
+            open_beam_absolute.append(open)
+        if sort_val == trans_config:
+            open_beam_trans.append(open)
+
+    return sample_scatt, blocked_beam, empty_scatt, sample_trans, empty_trans, open_beam_absolute, open_beam_trans
 
 
 @cache
