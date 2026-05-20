@@ -72,7 +72,7 @@ unit_specifiers = {
     "det.pixeloffsetx": "cm",
     "det.pixelsizey": "cm",
     "det.pixeloffsety": "cm",
-    "sample.thk": "mm",
+    "sample.thk": "cm",
     "resolution.ap1": "cm",
     "resolution.ap2": "cm",
     "resolution.ap2Off": "cm",
