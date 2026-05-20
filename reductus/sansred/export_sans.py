@@ -37,7 +37,6 @@ def export_to_ascii(data, file_path: Path_Like = "", extension: str = ".txt", de
     if not file_path:
         return {}
     # Determine the data type (1D reduced, 2D reduced, 2D pixel space, etc.) and assign headers/locations for each data
-    # TODO: Include all columns in each file
     if isinstance(data, SansData):
         # 2D data can only be output into the .DAT format - do this
         extension = ".dat"
@@ -54,7 +53,6 @@ def export_to_ascii(data, file_path: Path_Like = "", extension: str = ".txt", de
     # Set the file path to a common format
     full_path = _get_full_path(file_path, data, extension)
     transposed_data = list(zip(*columns))
-    print(f"DEBUG: transposed_data: {transposed_data}")
     # Write to the file
     try:
         with open(full_path, "w") as f:
