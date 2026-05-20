@@ -2137,7 +2137,7 @@ def single_configuration(filelist=None, integration_box=None, view_step=13, view
 
     view_step (int): What step of the data should be displayed
 
-    view_output (opt:output|sample_scatt|empty_trans|sample_trans|blocked_beam|open_trans|abs):
+    view_output (opt:output|sample_scatt|empty_trans|sample_trans|blocked_beam|open_beam_trans|open_beam_absolute|abs):
         What output should be displayed
 
     add_scatt {Should scattering files be added together?} (bool): A flag to set whether certain scattering files
@@ -2203,16 +2203,16 @@ def single_configuration(filelist=None, integration_box=None, view_step=13, view
             {"source": [1, "blocked_beam"], "target": [3, "minuend"]},
             {"source": [1, "empty_scatt"], "target": [3, "subtrahend"]},
             {"source": [1, "empty_trans"], "target": [4, "in_beam"]},
-            {"source": [1, "open_trans"], "target": [4, "empty_beam"]},
+            {"source": [1, "open_beam_trans"], "target": [4, "empty_beam"]},
             {"source": [1, "sample_trans"], "target": [5, "in_beam"]},
-            {"source": [1, "open_trans"], "target": [5, "empty_beam"]},
+            {"source": [1, "open_beam_trans"], "target": [5, "empty_beam"]},
             {"source": [3, "output"], "target": [6, "data"]},
             {"source": [4, "output"], "target": [6, "factor_param"]},
             {"source": [2, "output"], "target": [7, "subtrahend"]},
             {"source": [6, "output"], "target": [7, "minuend"]},
             {"source": [7, "output"], "target": [9, "sansdata"]},
             {"source": [8, "output"], "target": [9, "sensitivity"]},
-            {"source": [1, "open_trans"], "target": [10, "empty"]},
+            {"source": [1, "open_beam_absolute"], "target": [10, "empty"]},
             {"source": [5, "output"], "target": [10, "Tsam"]},
             {"source": [8, "output"], "target": [10, "div"]},
             {"source": [9, "output"], "target": [10, "sample"]},
@@ -2232,7 +2232,7 @@ def single_configuration(filelist=None, integration_box=None, view_step=13, view
 
     nodenum = view_step
     terminal_id = view_output
-    if view_output in ["sample_scatt", "empty_trans", "sample_trans","blocked_beam", "open_trans"]:
+    if view_output in ["sample_scatt", "empty_trans", "sample_trans","blocked_beam", "open_beam_absolute", "open_beam_trans"]:
         nodenum = 1
     if view_output in ["abs"]:
         nodenum = 10
