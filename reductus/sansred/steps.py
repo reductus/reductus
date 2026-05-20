@@ -1669,7 +1669,7 @@ def absolute_scaling(empty, sample, Tsam, div, instrument="NG7", integration_box
     print('Tsam_factor: ', Tsam_factor.x)
 
     #-----Using Kappa to Scale data-----#
-    Dsam = sample.metadata['sample.thk']
+    Dsam = sample.metadata['sample.thk'] / 10  # Sample thickness in mm => convert to cm
     ABS = sample.__mul__(1/(kappa*Dsam*Tsam_factor))
 
     params = OrderedDict([
