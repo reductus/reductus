@@ -112,6 +112,7 @@ class SansData:
             result.data = self.data/other
         return result
     def __mul__(self, other):
+        # TODO: Add a separate method to assign the transmission value
         result = self.copy()
         result.Tsam = other
         if isinstance(other, SansData):
@@ -216,11 +217,10 @@ class Sans1dData:
         self.metadata = metadata if metadata is not None else {}
         self.fit_function = fit_function
 
-    def q_cutoff(self, masked_points: list[int] | None = None):
+    def masked(self, masked_points: list[int] | None = None):
         if masked_points is None or len(masked_points) == 0:
             # If no limits have been set, no truncation
             return self
-        new_dx = np.delete(self.dx, masked_points) if isinstance(self.dx, np.ndarray) else self.dx
 
         data = Sans1dData(
             x=np.delete(self.x, masked_points) if self.x is not None else None,

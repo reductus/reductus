@@ -2369,7 +2369,7 @@ def mask_1d_data(data: list[SansIQData | Sans1dData],
     for dataset, mask in zip(data, mask_indices):
         data_set = copy(dataset)
         data_set.mask = [x for x in mask if x < len(dataset.Q)]
-        returns.append(data_set.q_cutoff())
+        returns.append(data_set.masked())
     return returns
 
 
@@ -2397,7 +2397,7 @@ def sort_n_data_sets(data: [SansIQData]):
     scaled_data = SansIQData(np.zeros(0), np.zeros(0), np.zeros(0), np.zeros(0), np.zeros(0), np.zeros(0))
     for datum in data:
         # Get data with the q points cutoff
-        cutoff = datum.q_cutoff()
+        cutoff = datum.masked()
         # Scale the intensity by the scaling factor
         new_data = rescale_1d(cutoff, datum.scaling_factor)
         scaled_data.append_1d_data_set(new_data)
@@ -2474,7 +2474,7 @@ def export_data(data, file_path: str | pathlib.Path | os.PathLike = ".", format:
     :param data: A single data set that will be exported.
     :param file_path: The directory or the full file path to save the file to.
     :param format: The file format to export the data to. Options include ASCII, CSV, and NXcanSAS
-    :return: None
+    :return: A dictionary mapping the file name to the parameters saved.
 
     **Inputs**
 
@@ -2486,7 +2486,7 @@ def export_data(data, file_path: str | pathlib.Path | os.PathLike = ".", format:
 
     **Returns**
 
-    output (params): The file path the data file was saved to.
+    output (params): A map of the file path the data file was saved to.
 
     | 2026-04-29 Jeff Krzywon initial implementation
     """

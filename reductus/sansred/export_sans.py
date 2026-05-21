@@ -19,7 +19,6 @@ def _get_full_path(f_path: Path_Like, data: SansData, ext: str):
         full_path = f_path / file_name
     else:
         full_path = f_path
-    print(f"DEBUG: Full path: {full_path}")
     return full_path
 
 
@@ -29,10 +28,6 @@ def export_to_csv(data, file_path: Path_Like) -> bool:
 
 
 def export_to_ascii(data, file_path: Path_Like = "", extension: str = ".txt", delimiter: str = " ") -> dict:
-    print("Am I getting here?")
-    data_as_str = ''
-    header = ''
-    columns = [[],[],[],[]]
     # Ensure a file path is supplied and construct the path, if needed
     if not file_path:
         return {}
@@ -49,6 +44,9 @@ def export_to_ascii(data, file_path: Path_Like = "", extension: str = ".txt", de
     elif isinstance(data, SansIQData):
         columns = [data.Q, data.I, data.dI, data.dQ]
         header = delimiter.join(['<X>', '<Y>', '<dY>', '<dsigQ>'])
+    else:
+        header = ''
+        columns = [[], [], [], []]
 
     # Set the file path to a common format
     full_path = _get_full_path(file_path, data, extension)
