@@ -293,7 +293,7 @@ class SansIQData:
         self.metadata: dict[str, str | int | float | list] = metadata if metadata is not None else {}
         self._q_mask: list[int] | None = None
 
-    def q_cutoff(self):
+    def masked(self):
         if self._q_mask is None:
             # If no limits have been set, no truncation
             return self
