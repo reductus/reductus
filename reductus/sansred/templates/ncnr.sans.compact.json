@@ -1,0 +1,14 @@
+{
+  "modules": [
+    {
+      "x": 10,
+      "title": "Single Configuration Data",
+      "module": "ncnr.sans.single_configuration",
+      "config": {
+        "auto_box": true
+      },
+      "y": 5
+    }
+  ],
+  "wires": []
+}
