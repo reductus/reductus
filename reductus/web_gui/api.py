@@ -58,14 +58,25 @@ def get_file_metadata(source="ncnr", pathlist=None):
     if pathlist is None:
         pathlist = []
 
-    if source not in [s['name'] for s in fetch.DATA_SOURCES]:
+    source_config = next((s for s in fetch.DATA_SOURCES if s["name"] == source), None)
+
+    if source_config is None:
         raise ValueError("Source '{source}' not in available data sources".format(source=source))
     if source == "local":
         metadata = local_file_metadata(pathlist)
     else:
         import requests
-        url = fetch.FILE_HELPERS[source] #'https://ncnr.nist.gov/ipeek/listftpfiles_json.php'
-        req = requests.post(url, json={"pathlist": pathlist})
+
+        url = source_config.get("file_helper_url", None)
+        if url is None:
+            raise ValueError("Source '{source}' does not have a file_helper_url".format(source=source))
+
+        if source_config.get("file_helper_cert", None) is not None:
+            cert_path = source_config.get("file_helper_cert", None)
+            req = requests.post(url, json={"pathlist": pathlist}, verify=cert_path)
+        else:
+            req = requests.post(url, json={"pathlist": pathlist})
+
         metadata = req.json()
 
     return metadata
