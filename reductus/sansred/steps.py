@@ -23,22 +23,11 @@ from reductus.dataflow.lib import uncertainty
 
 from .export_sans import export_to_ascii, export_to_csv, export_to_nxcansas
 from .sansdata import RawSANSData, SansData, Sans1dData, SansIQData, Parameters
-from .sans_vaxformat import readNCNRSensitivity
 
 from reductus.vsansred.steps import _s
 
 ALL_ACTIONS = []
 IGNORE_CORNER_PIXELS = True
-
-
-# TODO: Define all steps and move ancillary functions to their own python file
-#  - Reduction methods:
-#    - None (output to 1D or 2D in different formats)
-#    - Basic correction to 2D
-#    - Different 1D averaging methods (circular, sector, annular, elliptical, etc)
-#    - Polarization (different cross-sections)
-#  - Resolution types:
-#  - Corrections:
 
 
 def cache(action):
@@ -104,25 +93,25 @@ def LoadDIV(filelist=None, variance=0.0001):
     from .sans_vaxformat import readNCNRSensitivity
 
     output = []
-    if filelist is not None:
-        for fileinfo in filelist:
-            path, mtime, entries = fileinfo['path'], fileinfo.get('mtime', None), fileinfo.get('entries', None)
-            name = basename(path)
-            fid = BytesIO(url_get(fileinfo, mtime_check=False))
-            sens_raw = readNCNRSensitivity(fid)
-            sens = SansData(Uncertainty(sens_raw, sens_raw * variance))
-            sens.metadata = OrderedDict([
-                ("run.filename", name),
-                ("analysis.groupid", -1),
-                ("analysis.intent", "DIV"),
-                ("analysis.filepurpose", "Sensitivity"),
-                ("run.experimentScanID", name), 
-                ("sample.description", "PLEX"),
-                ("entry", "entry"),
-                ("sample.labl", "PLEX"),
-                ("run.configuration", "DIV"),
-            ])
-            output.append(sens)
+    for fileinfo in filelist:
+        path, mtime, entries = fileinfo['path'], fileinfo.get('mtime', None), fileinfo.get('entries', None)
+        name = basename(path)
+        fid = BytesIO(url_get(fileinfo, mtime_check=False))
+        sens_raw = readNCNRSensitivity(fid)
+        detectors = [{"detector": {"data": {"value": Uncertainty(sens_raw, sens_raw * variance)}}}]
+        metadata = OrderedDict([
+            ("run.filename", name),
+            ("analysis.groupid", -1),
+            ("analysis.intent", "DIV"),
+            ("analysis.filepurpose", "Sensitivity"),
+            ("run.experimentScanID", name),
+            ("sample.description", "PLEX"),
+            ("entry", "entry"),
+            ("sample.labl", "PLEX"),
+            ("run.configuration", "DIV"),
+        ])
+        sens = RawSANSData(metadata=metadata, detectors=detectors)
+        output.append(sens)
     return output
 
 @cache
@@ -153,20 +142,7 @@ def LoadRawSANS(filelist=None, check_timestamps=True):
         name = basename(path)
         fid = BytesIO(url_get(fileinfo, mtime_check=check_timestamps))
         if name.upper().endswith(".DIV"):
-            sens_raw = readNCNRSensitivity(fid)
-            detectors = [{"detector": {"data": {"value": Uncertainty(sens_raw, sens_raw * 0.0001)}}}]
-            metadata = OrderedDict([
-                ("run.filename", name),
-                ("analysis.groupid", -1),
-                ("analysis.intent", "DIV"),
-                ("analysis.filepurpose", "Sensitivity"),
-                ("run.experimentScanID", name), 
-                ("sample.description", "PLEX"),
-                ("entry", "entry"),
-                ("sample.labl", "PLEX"),
-                ("run.configuration", "DIV"),
-            ])
-            sens = RawSANSData(metadata=metadata, detectors=detectors)
+            sens = LoadDIV([fileinfo])
             entries = [sens]
         else:
             entries = readSANSNexuz(name, fid)
