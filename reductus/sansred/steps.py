@@ -1270,9 +1270,16 @@ def correct_dead_time(sansdata, deadtime=1.0e-6):
     output (sans2d): corrected for dead time
 
     2010-01-03 Andrew Jackson?
+    2026-05-22 Jeff Krzywon
     """
+    # Always use the in-file deadtime over any hard-coded table
+    if sansdata.metadata.get("det.dead_time", None):
+        deadtime = sansdata.metadata["det.dead_time"]
 
-    dscale = 1.0/(1.0-deadtime*(np.sum(sansdata.data)/sansdata.metadata["run.rtime"]))
+    run_time = sansdata.metadata["run.rtime"]
+    total_counts = np.sum(sansdata.data)
+
+    dscale = 1.0/(1.0-deadtime*(total_counts/run_time))
 
     result = sansdata.copy()
     result.data *= dscale
