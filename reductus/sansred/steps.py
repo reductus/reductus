@@ -2197,7 +2197,12 @@ def single_configuration(filelist=None, integration_box=None, view_step=13, view
         "description": "SANS compact reduction",
         "modules":
         [
-            {"x": 10, "y": 5, "title": "all", "module": "ncnr.sans.LoadRawSANS", "config": {"filelist": []}},
+            {"x": 10, "y": 5, "title": "all", "module": "ncnr.sans.SuperLoadSANS",
+                "config": {
+                    "filelist": [], "do_det_eff": False, "do_deadtime": True, "deadtime": 3.4e-6,
+                    "do_mon_norm": False, "do_atten_correct": False, "mon0": 1e8, "check_timestamps": True
+                }
+             },
             {"x": 10, "y": 65, "title": "sort_data", "module": "ncnr.sans.autosort",
                 "config": {"filelist": [], "subsort": add_keyword, "add_scattering": add_scatt}
             },
