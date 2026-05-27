@@ -215,7 +215,7 @@ def autosort(rawdata, subsort="sample.labl", add_scattering=True, trans_sort="ru
 
     **Inputs**
 
-    rawdata (raw[]): datafiles with metadata to allow sorting
+    rawdata (sans2d[]): datafiles with metadata to allow sorting
 
     subsort (str): key on which to order subitems within output lists
 
@@ -258,17 +258,17 @@ def autosort(rawdata, subsort="sample.labl", add_scattering=True, trans_sort="ru
         intent = _s(r.metadata['analysis.intent']).lower().strip()
         description = _s(r.metadata['sample.labl']).lower().strip()
         if intent.startswith('blo') or (purpose == 'scattering' and 'block' in description):
-            blocked_beam.extend(to_sansdata(r))
+            blocked_beam.append(r)
         elif intent.startswith('open') or (purpose == 'transmission' and 'open' in description):
-            open_trans.extend(to_sansdata(r))
+            open_trans.append(r)
         elif purpose == 'scattering' and (intent.startswith('empty') or 'empty' in description):
-            empty_scatt.extend(to_sansdata(r))
+            empty_scatt.append(r)
         elif purpose == 'transmission' and (intent.startswith('empty') or 'empty' in description):
-            empty_trans.extend(to_sansdata(r))
+            empty_trans.append(r)
         elif purpose == 'scattering' and intent == 'sample':
-            sample_scatt.extend(to_sansdata(r))
+            sample_scatt.append(r)
         elif purpose == 'transmission' and intent == 'sample':
-            sample_trans.extend(to_sansdata(r))
+            sample_trans.append(r)
 
     def keyFunc(l):
         return l.metadata.get(subsort, 0)
