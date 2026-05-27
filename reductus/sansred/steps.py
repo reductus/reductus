@@ -1624,7 +1624,7 @@ def absolute_scaling(empty, sample, Tsam, div, instrument="NG7", integration_box
 
     **Returns**
 
-    abs (sans2d): data on absolute scale
+    output (sans2d): data on absolute scale
 
     params (params): parameter outputs
 
@@ -2148,7 +2148,7 @@ def single_configuration(filelist=None, integration_box=None, view_step=13, view
 
     view_step (int): What step of the data should be displayed
 
-    view_output (opt:output|sample_scatt|empty_trans|sample_trans|blocked_beam|open_beam_trans|open_beam_absolute|abs):
+    view_output (opt:output|sample_scatt|empty_trans|sample_trans|blocked_beam|open_beam_trans|open_beam_absolute):
         What output should be displayed
 
     add_scatt {Should scattering files be added together?} (bool): A flag to set whether certain scattering files
@@ -2232,7 +2232,7 @@ def single_configuration(filelist=None, integration_box=None, view_step=13, view
             {"source": [5, "output"], "target": [10, "Tsam"]},
             {"source": [8, "output"], "target": [10, "div"]},
             {"source": [9, "output"], "target": [10, "sample"]},
-            {"source": [10, "abs"], "target": [11, "data"]},
+            {"source": [10, "output"], "target": [11, "data"]},
             {"source": [11, "output"], "target": [12, "data_sets"]},
             {"source": [12, "output"], "target": [13, "data"]},
         ],
