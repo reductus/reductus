@@ -666,8 +666,8 @@ def _calculate_Q(X, Y, Z, q0):
             = 4 pi/lambda sin^2 theta = |q| sin theta
     """
     r = np.sqrt(X**2+Y**2)
-    theta = np.arctan2(r, Z)/2 #remember to convert Z to cm from meters
-    q = q0*np.sin(theta)
+    theta = 0.5 * r / Z
+    q = q0 * theta
     phi = np.arctan2(Y, X)
     qx = q*np.cos(theta)*np.cos(phi)
     qy = q*np.cos(theta)*np.sin(phi)
