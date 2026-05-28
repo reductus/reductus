@@ -2156,8 +2156,8 @@ def single_configuration(
     add_keyword {Metadata node for adding data together} (opt:det.des_dis|sample.labl|sample.temp|adam.voltage): If scattering files should be added together,
         what should the data have in common for adding.
 
-    mask {The number of points to remove from the data} (range:x): Enter the point number for masking data for all data
-        sets, e.g. 3,37 will keep the 3rd through 37th data points. Defaults to the entire range
+    mask {The number of points to remove from the data} (range:x): Enter the number of points to trim from each end of the data.
+        e.g. 0 and 1 will take a single point from the high-q region of the reduced data. Defaults to the entire range
 
     **Returns**
 
