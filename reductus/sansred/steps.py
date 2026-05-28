@@ -2136,23 +2136,22 @@ def getPoissonUncertainty(y):
 
 
 @module
-def single_configuration(filelist=None, integration_box=None, view_step=13, view_output="output",
-                         add_scatt=False, add_keyword='sample.labl', mask=None):
+def single_configuration(
+        filelist=None, view_step=13, view_output=None, add_scatt=False, add_keyword='sample.labl', mask=None):
     """Single module to handle all data reduction for a single configuration in a single shot
 
     **Inputs**
 
     filelist (fileinfo[]): All data files required to reduce files at a single configuration.
 
-    integration_box (range:xy): region over which to integrate
+    view_step {Reduction step} (int): Walk through each step of the reduction process to see the progress. A future update will remove this in favor
+        of a final report showing the entire reduction process. Currently, there steps 0 through 13 are available.
 
-    view_step (int): What step of the data should be displayed
+    view_output {Display} (opt:Raw Data|Transmission Values|2D Absolute Data|Averaged Data (Unmasked)|Averaged Data (Masked)|Other):
+        What data would you like displayed?
 
-    view_output (opt:output|sample_scatt|empty_trans|sample_trans|blocked_beam|open_beam_trans|open_beam_absolute):
-        What output should be displayed
-
-    add_scatt {Should scattering files be added together?} (bool): A flag to set whether certain scattering files
-        are added together
+    add_scatt {Should scattering files be added together?} (bool): Should scattering files that share a metadata node
+        be added together?
 
     add_keyword {Metadata node for adding data together} (opt:det.des_dis|sample.labl|sample.temp|adam.voltage): If scattering files should be added together,
         what should the data have in common for adding.
@@ -2162,11 +2161,11 @@ def single_configuration(filelist=None, integration_box=None, view_step=13, view
 
     **Returns**
 
-    output(sans1d[]): A fully reduced set of 1D SANS data set on absolute scale.
+    output(sans1d[]): The data selected in the Display combo box.
 
     | 2026-04-24 Jeff Krzywon initial implementation
+    | 2026-05-28 Jeff Krzywon API changes
     """
-    integration_box = integration_box if integration_box else [58,74,57,72]
     data_mask = list(range(int(mask[0]))) + list(range(int(mask[1]), 10000)) if mask != [0,0] and mask is not None else []
     template_def = {
         "name": "loader_template",
@@ -2185,10 +2184,10 @@ def single_configuration(filelist=None, integration_box=None, view_step=13, view
             {"x": 200, "y": 5, "title": "Subtract", "module": "ncnr.sans.subtract"},
             {"x": 200, "y": 65, "title": "Subtract", "module": "ncnr.sans.subtract"},
             {"x": 200, "y": 155, "title": "Gen trans", "module": "ncnr.sans.generate_transmission",
-                "config": {"integration_box": integration_box}
+                "config": {"auto_integrate": True}
             },
             {"x": 685, "y": 95, "title": "Gen trans", "module": "ncnr.sans.generate_transmission",
-                "config": {"integration_box": integration_box}
+                "config": {"auto_integrate": True}
             },
             {"x": 365, "y": 35, "title": "Product", "module": "ncnr.sans.product"},
             {"x": 525, "y": 5, "title": "Subtract", "module": "ncnr.sans.subtract"},
@@ -2199,7 +2198,7 @@ def single_configuration(filelist=None, integration_box=None, view_step=13, view
             },
             {"x": 685, "y": 5, "title": "Div Correction", "module": "ncnr.sans.correct_detector_sensitivity"},
             {"x": 895, "y": 35, "title": "Abs Scale", "module": "ncnr.sans.absolute_scaling",
-                "config": {"integration_box": integration_box}
+                "config": {"auto_box": True}
             },
             {"x": 1045, "y": 35, "title": "Pixelstoq", "module": "ncnr.sans.PixelsToQ",
                 "config": {"correct_solid_angle": True}
@@ -2245,14 +2244,25 @@ def single_configuration(filelist=None, integration_box=None, view_step=13, view
     div_files = [f for f in filelist if f['path'].endswith(".div")]
 
     config = {"0": {"filelist": filelist}, "8": {"filelist": div_files}}
+    terminal_id = "output"
 
-    nodenum = view_step
-    terminal_id = view_output
-    if view_output in ["sample_scatt", "empty_trans", "sample_trans","blocked_beam", "open_beam_absolute", "open_beam_trans"]:
-        nodenum = 1
-    if view_output in ["abs"]:
-        nodenum = 10
-    target = (nodenum, terminal_id) if nodenum >= 0 else (None, None)
+    match view_output:
+        case "Other":
+            if not view_step:
+                raise AttributeError("Selecting Other requires a step to entered")
+            terminal_id = "sample_scatt" if view_step == 1 else "output"
+        case "Raw Data":
+            view_step = 0
+        case "Transmission Values":
+            view_step = 5
+        case "2D Absolute Data":
+            view_step = 10
+        case "Averaged Data (Unmasked)":
+            view_step = 12
+        case "Averaged Data (Masked)":
+            view_step = 13
+
+    target = (view_step, terminal_id) if view_step >= 0 else (None, None)
     results = process_template(template, config, target=target)
     data_list = results.values
     return data_list
