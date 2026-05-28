@@ -1636,13 +1636,11 @@ def absolute_scaling(empty, sample, Tsam, div, instrument="NG7", integration_box
         # data (that is going through reduction), empty beam,
     # div, Transmission of the sample, instrument(NG3.NG5, NG7)
     # ALL from metadata
-    detCnt = empty.metadata['run.detcnt']
-    countTime = empty.metadata['run.rtime']
     monCnt = empty.metadata['run.moncnt']
     sampleOff = empty.metadata["sample.position"]
     sdd = empty.metadata["det.dis"] + sampleOff # already in cm
     pixel = empty.metadata['det.pixelsizex'] # already in cm
-    lambd = wavelength = empty.metadata['resolution.lmda']
+    wavelength = empty.metadata['resolution.lmda']
 
     if not empty.attenuation_corrected:
         attenNo = empty.metadata['run.atten']
