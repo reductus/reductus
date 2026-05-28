@@ -203,11 +203,11 @@ class SansData:
 class Sans1dData:
     properties = ['x', 'v', 'dx', 'dv', 'xlabel', 'vlabel', 'xunits', 'vunits', 'xscale', 'vscale', 'metadata', 'fit_function']
 
-    def __init__(self, x, v, dx=0, dv=0, xlabel="", vlabel="", xunits="", vunits="", xscale="linear", vscale="linear", metadata=None, fit_function=None):
+    def __init__(self, x, v, dx=[0], dv=[0], xlabel="", vlabel="", xunits="", vunits="", xscale="linear", vscale="linear", metadata=None, fit_function=None):
         self.x = x
         self.v = v
-        self.dx = dx
-        self.dv = dv
+        self.dx = np.asarray(dx)
+        self.dv = np.asarray(dv)
         self.xlabel = xlabel
         self.vlabel = vlabel
         self.xunits = xunits
@@ -216,19 +216,29 @@ class Sans1dData:
         self.vscale = vscale
         self.metadata = metadata if metadata is not None else {}
         self.fit_function = fit_function
+        self._q_mask = None
 
     def masked(self, masked_points: list[int] | None = None):
-        if masked_points is None or len(masked_points) == 0:
+        if not self._q_mask and (masked_points is None or len(masked_points) == 0):
             # If no limits have been set, no truncation
             return self
+        self.mask = masked_points
 
         data = Sans1dData(
-            x=np.delete(self.x, masked_points) if self.x is not None else None,
-            v=np.delete(self.v, masked_points) if self.v is not None else None,
-            dx=np.delete(self.dx, masked_points) if self.dx is not None else None,
-            dv=np.delete(self.dv, masked_points)if self.dv is not None else None,
+            x=self.x[np.s_[self._q_mask[0]:self._q_mask[1]]] if self.x is not None else None,
+            v=self.v[np.s_[self._q_mask[0]:self._q_mask[1]]] if self.v is not None else None,
+            dx=self.dx[np.s_[self._q_mask[0]:self._q_mask[1]]] if self.dx is not None else None,
+            dv=self.dv[np.s_[self._q_mask[0]:self._q_mask[1]]]if self.dv is not None else None,
             metadata=self.metadata)
         return data
+
+    @property
+    def mask(self):
+        return self._q_mask
+
+    @mask.setter
+    def mask(self, masked_points: list[int] | None = None):
+        self._q_mask = masked_points
 
     def to_dict(self):
         props = dict([(p, getattr(self, p, None)) for p in self.properties])
@@ -297,12 +307,12 @@ class SansIQData:
         if self._q_mask is None:
             # If no limits have been set, no truncation
             return self
-        data = SansIQData(np.delete(self.I, self._q_mask) if self.I is not None else None,
-                          np.delete(self.dI, self._q_mask) if self.dI is not None else None,
-                          np.delete(self.Q, self._q_mask) if self.Q is not None else None,
-                          np.delete(self.dQ, self._q_mask)if self.dQ is not None else None,
-                          np.delete(self.meanQ, self._q_mask) if self.meanQ is not None else None,
-                          np.delete(self.ShadowFactor, self._q_mask) if self.ShadowFactor is not None else None,
+        data = SansIQData(self.I[np.s_[self._q_mask[0]:self._q_mask[1]]] if self.I is not None else None,
+                          self.dI[np.s_[self._q_mask[0]:self._q_mask[1]]] if self.dI is not None else None,
+                          self.Q[np.s_[self._q_mask[0]:self._q_mask[1]]] if self.Q is not None else None,
+                          self.dQ[np.s_[self._q_mask[0]:self._q_mask[1]]] if self.dQ is not None else None,
+                          self.meanQ[np.s_[self._q_mask[0]:self._q_mask[1]]] if self.meanQ is not None else None,
+                          self.ShadowFactor[np.s_[self._q_mask[0]:self._q_mask[1]]]if self.ShadowFactor is not None else None,
                           self.label,
                           self.metadata)
         return data
@@ -313,9 +323,6 @@ class SansIQData:
 
     @mask.setter
     def mask(self, masked_points: list[int] | None = None):
-        # masked_points should be a list of self.Q indices that are to be excluded from calcaulations
-        if masked_points is not None and min(masked_points) < 0 and max(masked_points) >= len(self.Q):
-            raise ValueError("The masked indices are out of range of the Q data.")
         self._q_mask = masked_points
 
     @property

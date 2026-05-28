@@ -2166,7 +2166,6 @@ def single_configuration(
     | 2026-04-24 Jeff Krzywon initial implementation
     | 2026-05-28 Jeff Krzywon API changes
     """
-    data_mask = list(range(int(mask[0]))) + list(range(int(mask[1]), 10000)) if mask != [0,0] and mask is not None else []
     template_def = {
         "name": "loader_template",
         "description": "SANS compact reduction",
@@ -2207,7 +2206,7 @@ def single_configuration(
                 "config": {"dQ_method": "IGOR", "mask_width": 3}
             },
             {"x": 1375, "y": 35, "title": "Trim Points", "module": "ncnr.sans.mask_1d_data", "text_width": 93,
-                "config": {"mask_indices": [data_mask]}
+                "config": {"mask_indices": [mask]}
             }
         ],
         "wires":
@@ -2359,7 +2358,7 @@ def shift_by_factor(data_to_shift: SansIQData | Sans1dData, shifting_factor: flo
 
 @module
 def mask_1d_data(data: list[SansIQData | Sans1dData],
-                 mask_indices: list[list[int]] | list[int] | None = None) -> [SansIQData | Sans1dData]:
+                 mask_indices: list[list[int]] | list[int] | None = None) -> list[SansIQData | Sans1dData]:
     """
     Identify and mask out user-specified points.
 
@@ -2394,7 +2393,11 @@ def mask_1d_data(data: list[SansIQData | Sans1dData],
         mask_indices = mask_indices * len(data)
     for dataset, mask in zip(data, mask_indices):
         data_set = copy(dataset)
-        data_set.mask = [x for x in mask if x < len(dataset.Q)]
+        if mask[0] and mask[1]:
+            # Both non-zero values => slice
+            data_set.mask = [mask[0] - 1, 0 - mask[1]]
+        else:
+            data_set.mask = None
         returns.append(data_set.masked())
     return returns
 
