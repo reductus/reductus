@@ -203,11 +203,11 @@ class SansData:
 class Sans1dData:
     properties = ['x', 'v', 'dx', 'dv', 'xlabel', 'vlabel', 'xunits', 'vunits', 'xscale', 'vscale', 'metadata', 'fit_function']
 
-    def __init__(self, x, v, dx=[0], dv=[0], xlabel="", vlabel="", xunits="", vunits="", xscale="linear", vscale="linear", metadata=None, fit_function=None):
+    def __init__(self, x, v, dx=None, dv=None, xlabel="", vlabel="", xunits="", vunits="", xscale="linear", vscale="linear", metadata=None, fit_function=None):
         self.x = x
         self.v = v
-        self.dx = np.asarray(dx)
-        self.dv = np.asarray(dv)
+        self.dx = np.asarray(dx) if dx else None
+        self.dv = np.asarray(dv) if dv else None
         self.xlabel = xlabel
         self.vlabel = vlabel
         self.xunits = xunits
