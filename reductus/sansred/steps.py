@@ -2393,9 +2393,9 @@ def mask_1d_data(data: list[SansIQData | Sans1dData],
         data_set = copy(dataset)
         if mask[0] and mask[1]:
             # Both non-zero values => slice
-            data_set.mask = [mask[0] - 1, 0 - mask[1]]
+            data_set.q_slice = [mask[0] - 1, 0 - mask[1]]
         else:
-            data_set.mask = None
+            data_set.q_slice = None
         returns.append(data_set.masked())
     return returns
 

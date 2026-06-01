@@ -216,29 +216,30 @@ class Sans1dData:
         self.vscale = vscale
         self.metadata = metadata if metadata is not None else {}
         self.fit_function = fit_function
-        self._q_mask = None
+        self._q_slice = None
 
     def masked(self, masked_points: list[int] | None = None):
-        if not self._q_mask and (masked_points is None or len(masked_points) == 0):
+        if not self._q_slice and (masked_points is None or len(masked_points) == 0):
             # If no limits have been set, no truncation
             return self
-        self.mask = masked_points
+        self.q_slice = masked_points
 
         data = Sans1dData(
-            x=self.x[np.s_[self._q_mask[0]:self._q_mask[1]]] if self.x is not None else None,
-            v=self.v[np.s_[self._q_mask[0]:self._q_mask[1]]] if self.v is not None else None,
-            dx=self.dx[np.s_[self._q_mask[0]:self._q_mask[1]]] if self.dx is not None else None,
-            dv=self.dv[np.s_[self._q_mask[0]:self._q_mask[1]]]if self.dv is not None else None,
-            metadata=self.metadata)
+            x=copy(self.x[self.q_slice]) if self.x is not None else None,
+            v=copy(self.v[self.q_slice]) if self.v is not None else None,
+            dx=copy(self.dx[self.q_slice]) if self.dx is not None else None,
+            dv=copy(self.dv[self.q_slice]) if self.dv is not None else None,
+            metadata=deepcopy(self.metadata)
+        )
         return data
 
     @property
-    def mask(self):
-        return self._q_mask
+    def q_slice(self):
+        return self._q_slice
 
-    @mask.setter
-    def mask(self, masked_points: list[int] | None = None):
-        self._q_mask = masked_points
+    @q_slice.setter
+    def q_slice(self, masked_points: list[int] | None = None):
+        self._q_slice = slice(masked_points[0], masked_points[1])
 
     def to_dict(self):
         props = dict([(p, getattr(self, p, None)) for p in self.properties])
@@ -301,29 +302,29 @@ class SansIQData:
         self.ShadowFactor: np.ndarray = ShadowFactor if ShadowFactor is not None else np.empty(shape)
         self.label: str = label
         self.metadata: dict[str, str | int | float | list] = metadata if metadata is not None else {}
-        self._q_mask: list[int] | None = None
+        self._q_slice: list[int] | None = None
 
     def masked(self):
-        if self._q_mask is None:
+        if self.q_slice is None:
             # If no limits have been set, no truncation
             return self
-        data = SansIQData(self.I[np.s_[self._q_mask[0]:self._q_mask[1]]] if self.I is not None else None,
-                          self.dI[np.s_[self._q_mask[0]:self._q_mask[1]]] if self.dI is not None else None,
-                          self.Q[np.s_[self._q_mask[0]:self._q_mask[1]]] if self.Q is not None else None,
-                          self.dQ[np.s_[self._q_mask[0]:self._q_mask[1]]] if self.dQ is not None else None,
-                          self.meanQ[np.s_[self._q_mask[0]:self._q_mask[1]]] if self.meanQ is not None else None,
-                          self.ShadowFactor[np.s_[self._q_mask[0]:self._q_mask[1]]]if self.ShadowFactor is not None else None,
-                          self.label,
-                          self.metadata)
+        data = SansIQData(copy(self.I)[self.q_slice] if self.I is not None else None,
+                          copy(self.dI)[self.q_slice] if self.dI is not None else None,
+                          copy(self.Q)[self.q_slice] if self.Q is not None else None,
+                          copy(self.dQ)[self.q_slice] if self.dQ is not None else None,
+                          copy(self.meanQ)[self.q_slice] if self.meanQ is not None else None,
+                          copy(self.ShadowFactor)[self.q_slice]if self.ShadowFactor is not None else None,
+                          copy(self.label),
+                          deepcopy(self.metadata))
         return data
 
     @property
-    def mask(self):
-        return self._q_mask
+    def q_slice(self):
+        return self._q_slice
 
-    @mask.setter
-    def mask(self, masked_points: list[int] | None = None):
-        self._q_mask = masked_points
+    @q_slice.setter
+    def q_slice(self, masked_points: list[int] | None = None):
+        self._q_slice = slice(masked_points[0], masked_points[1])
 
     @property
     def v(self):
