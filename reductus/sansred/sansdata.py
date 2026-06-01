@@ -218,11 +218,18 @@ class Sans1dData:
         self.fit_function = fit_function
         self._q_slice = None
 
-    def masked(self, masked_points: list[int] | None = None):
-        if not self._q_slice and (masked_points is None or len(masked_points) == 0):
+    def masked(self, slice_limits: list[int] | tuple[int] | None = None):
+        """Mask the data using either the defined q_slice or the slice provided.
+
+        :param slice_limits: A list or tuple of the upper and lower indices to slice the data. Only the first two
+            elements will be recognized.
+        :return: A new data set that has the sliced limits removed.
+        """
+        if not self._q_slice and (slice_limits is None or len(slice_limits) == 0):
             # If no limits have been set, no truncation
             return self
-        self.q_slice = masked_points
+        if slice_limits:
+            self.q_slice = slice_limits
 
         data = Sans1dData(
             x=copy(self.x[self.q_slice]) if self.x is not None else None,
