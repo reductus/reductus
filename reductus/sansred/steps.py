@@ -1416,7 +1416,7 @@ def subtract(subtrahend, minuend, align_by='run.configuration'):
         return [(s - m) for s,m in zip(subtrahend, minuend)]
 
 @module
-def product(data, factor_param, align_by="det.des_dis,resolution.lmda,run.guide"):
+def product(data, factor_param, align_by="sample.description,run.configuration,sample.temp,mag.value"):
     """
     Algebraic multiplication of dataset
 
