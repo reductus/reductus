@@ -206,8 +206,8 @@ class Sans1dData:
     def __init__(self, x, v, dx=None, dv=None, xlabel="", vlabel="", xunits="", vunits="", xscale="linear", vscale="linear", metadata=None, fit_function=None):
         self.x = x
         self.v = v
-        self.dx = np.asarray(dx) if dx else None
-        self.dv = np.asarray(dv) if dv else None
+        self.dx = np.asarray(dx) if dx is not None else None
+        self.dv = np.asarray(dv) if dv is not None else None
         self.xlabel = xlabel
         self.vlabel = vlabel
         self.xunits = xunits
