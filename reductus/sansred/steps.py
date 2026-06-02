@@ -2145,7 +2145,7 @@ def single_configuration(
     view_step {Reduction step} (int): Walk through each step of the reduction process to see the progress. A future update will remove this in favor
         of a final report showing the entire reduction process. Currently, there steps 0 through 13 are available.
 
-    view_output {Display} (opt:Raw Data|Transmission Values|2D Absolute Data|Averaged Data (Unmasked)|Averaged Data (Masked)|Other):
+    view_output {Display} (opt:Raw Data|Transmission Values|Absolute Scaling of 2D Data|Circular Averaged Data (Unmasked)|Circular Averaged Data (Masked)|Other):
         What data would you like displayed?
 
     add_scatt {Should scattering files be added together?} (bool): Should scattering files that share a metadata node
@@ -2169,41 +2169,41 @@ def single_configuration(
         "description": "SANS compact reduction",
         "modules":
         [
-            {"x": 10, "y": 5, "title": "all", "module": "ncnr.sans.SuperLoadSANS",
+            {"x": 10, "y": 5, "title": "Raw Data", "module": "ncnr.sans.SuperLoadSANS",
                 "config": {
                     "filelist": [], "do_det_eff": False, "do_deadtime": True, "deadtime": 3.4e-6,
                     "do_mon_norm": False, "do_atten_correct": False, "mon0": 1e8, "check_timestamps": True
                 }
              },
-            {"x": 10, "y": 65, "title": "sort_data", "module": "ncnr.sans.autosort",
+            {"x": 10, "y": 65, "title": "Sorted Data", "module": "ncnr.sans.autosort",
                 "config": {"filelist": [], "subsort": add_keyword, "add_scattering": add_scatt}
             },
-            {"x": 200, "y": 5, "title": "Subtract", "module": "ncnr.sans.subtract"},
-            {"x": 200, "y": 65, "title": "Subtract", "module": "ncnr.sans.subtract"},
-            {"x": 200, "y": 155, "title": "Gen trans", "module": "ncnr.sans.generate_transmission",
+            {"x": 200, "y": 5, "title": "BB Subtract from Sample", "module": "ncnr.sans.subtract"},
+            {"x": 200, "y": 65, "title": "BB Subtract from Empty Cell", "module": "ncnr.sans.subtract"},
+            {"x": 200, "y": 155, "title": "Empty Transmission", "module": "ncnr.sans.generate_transmission",
                 "config": {"auto_integrate": True}
             },
-            {"x": 685, "y": 95, "title": "Gen trans", "module": "ncnr.sans.generate_transmission",
+            {"x": 685, "y": 95, "title": "Transmission Values", "module": "ncnr.sans.generate_transmission",
                 "config": {"auto_integrate": True}
             },
-            {"x": 365, "y": 35, "title": "Product", "module": "ncnr.sans.product"},
-            {"x": 525, "y": 5, "title": "Subtract", "module": "ncnr.sans.subtract"},
-            {"x": 525, "y": 65, "title": "DIV", "module": "ncnr.sans.LoadDIV",
+            {"x": 365, "y": 35, "title": "Scale by Transmission", "module": "ncnr.sans.product"},
+            {"x": 525, "y": 5, "title": "Subrtract Empty Cell from Sample", "module": "ncnr.sans.subtract"},
+            {"x": 525, "y": 65, "title": "Load DIV", "module": "ncnr.sans.LoadDIV",
                 "config": {"filelist": [{
                     "path": "ncnrdata/ancillary/ng7sans/DIV/PLEX_20190719_NG7.DIV", "source": "ncnr",
                     "mtime": 1564154809, "entries": ["entry"]}]},
             },
-            {"x": 685, "y": 5, "title": "Div Correction", "module": "ncnr.sans.correct_detector_sensitivity"},
-            {"x": 895, "y": 35, "title": "Abs Scale", "module": "ncnr.sans.absolute_scaling",
+            {"x": 685, "y": 5, "title": "DIV Correction", "module": "ncnr.sans.correct_detector_sensitivity"},
+            {"x": 895, "y": 35, "title": "Absolute Scaling of 2D Data", "module": "ncnr.sans.absolute_scaling",
                 "config": {"auto_box": True}
             },
-            {"x": 1045, "y": 35, "title": "Pixelstoq", "module": "ncnr.sans.PixelsToQ",
+            {"x": 1045, "y": 35, "title": "Pixel Space to Q Space", "module": "ncnr.sans.PixelsToQ",
                 "config": {"correct_solid_angle": True}
             },
-            {"x": 1190, "y": 35, "title": "Circular Av New", "module": "ncnr.sans.circular_av_new",
+            {"x": 1190, "y": 35, "title": "Circular Averaged Data (Unmasked)", "module": "ncnr.sans.circular_av_new",
                 "config": {"dQ_method": "IGOR", "mask_width": 3}
             },
-            {"x": 1375, "y": 35, "title": "Trim Points", "module": "ncnr.sans.mask_1d_data", "text_width": 93,
+            {"x": 1375, "y": 35, "title": "Circular Averaged Data (Masked)", "module": "ncnr.sans.mask_1d_data", "text_width": 93,
                 "config": {"mask_indices": [mask]}
             }
         ],
@@ -2238,26 +2238,22 @@ def single_configuration(
 
     template = Template(**template_def)
 
-    div_files = [f for f in filelist if f['path'].endswith(".div")]
+    div_files = [f for f in filelist if f['path'].endswith(".div")] if filelist else []
 
     config = {"0": {"filelist": filelist}, "8": {"filelist": div_files}}
     terminal_id = "output"
 
+    output_lookup_table = {value.get("title", "None"):i for i, value in enumerate(template_def.get('modules', [{}]))}
+
     match view_output:
         case "Other":
-            if not view_step:
-                raise AttributeError("Selecting Other requires a step to entered")
+            try:
+                view_step = int(view_step)
+            except ValueError:
+                view_step = 0
             terminal_id = "sample_scatt" if view_step == 1 else "output"
-        case "Raw Data":
-            view_step = 0
-        case "Transmission Values":
-            view_step = 5
-        case "2D Absolute Data":
-            view_step = 10
-        case "Averaged Data (Unmasked)":
-            view_step = 12
-        case "Averaged Data (Masked)":
-            view_step = 13
+        case _:
+            view_step = output_lookup_table[view_output]
 
     target = (view_step, terminal_id) if view_step >= 0 else (None, None)
     results = process_template(template, config, target=target)
