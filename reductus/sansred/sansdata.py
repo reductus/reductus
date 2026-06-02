@@ -229,7 +229,7 @@ class Sans1dData:
             # If no limits have been set, no truncation
             return self
         if slice_limits:
-            self.q_slice = slice_limits
+            self.q_slice = slice(*slice_limits)
 
         data = Sans1dData(
             x=copy(self.x[self.q_slice]) if self.x is not None else None,
