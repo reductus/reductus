@@ -23,22 +23,11 @@ from reductus.dataflow.lib import uncertainty
 
 from .export_sans import export_to_ascii, export_to_csv, export_to_nxcansas
 from .sansdata import RawSANSData, SansData, Sans1dData, SansIQData, Parameters
-from .sans_vaxformat import readNCNRSensitivity
 
 from reductus.vsansred.steps import _s
 
 ALL_ACTIONS = []
 IGNORE_CORNER_PIXELS = True
-
-
-# TODO: Define all steps and move ancillary functions to their own python file
-#  - Reduction methods:
-#    - None (output to 1D or 2D in different formats)
-#    - Basic correction to 2D
-#    - Different 1D averaging methods (circular, sector, annular, elliptical, etc)
-#    - Polarization (different cross-sections)
-#  - Resolution types:
-#  - Corrections:
 
 
 def cache(action):
@@ -104,25 +93,25 @@ def LoadDIV(filelist=None, variance=0.0001):
     from .sans_vaxformat import readNCNRSensitivity
 
     output = []
-    if filelist is not None:
-        for fileinfo in filelist:
-            path, mtime, entries = fileinfo['path'], fileinfo.get('mtime', None), fileinfo.get('entries', None)
-            name = basename(path)
-            fid = BytesIO(url_get(fileinfo, mtime_check=False))
-            sens_raw = readNCNRSensitivity(fid)
-            sens = SansData(Uncertainty(sens_raw, sens_raw * variance))
-            sens.metadata = OrderedDict([
-                ("run.filename", name),
-                ("analysis.groupid", -1),
-                ("analysis.intent", "DIV"),
-                ("analysis.filepurpose", "Sensitivity"),
-                ("run.experimentScanID", name), 
-                ("sample.description", "PLEX"),
-                ("entry", "entry"),
-                ("sample.labl", "PLEX"),
-                ("run.configuration", "DIV"),
-            ])
-            output.append(sens)
+    for fileinfo in filelist:
+        path, mtime, entries = fileinfo['path'], fileinfo.get('mtime', None), fileinfo.get('entries', None)
+        name = basename(path)
+        fid = BytesIO(url_get(fileinfo, mtime_check=False))
+        sens_raw = readNCNRSensitivity(fid)
+        detectors = [{"detector": {"data": {"value": Uncertainty(sens_raw, sens_raw * variance)}}}]
+        metadata = OrderedDict([
+            ("run.filename", name),
+            ("analysis.groupid", -1),
+            ("analysis.intent", "DIV"),
+            ("analysis.filepurpose", "Sensitivity"),
+            ("run.experimentScanID", name),
+            ("sample.description", "PLEX"),
+            ("entry", "entry"),
+            ("sample.labl", "PLEX"),
+            ("run.configuration", "DIV"),
+        ])
+        sens = RawSANSData(metadata=metadata, detectors=detectors)
+        output.append(sens)
     return output
 
 @cache
@@ -153,20 +142,7 @@ def LoadRawSANS(filelist=None, check_timestamps=True):
         name = basename(path)
         fid = BytesIO(url_get(fileinfo, mtime_check=check_timestamps))
         if name.upper().endswith(".DIV"):
-            sens_raw = readNCNRSensitivity(fid)
-            detectors = [{"detector": {"data": {"value": Uncertainty(sens_raw, sens_raw * 0.0001)}}}]
-            metadata = OrderedDict([
-                ("run.filename", name),
-                ("analysis.groupid", -1),
-                ("analysis.intent", "DIV"),
-                ("analysis.filepurpose", "Sensitivity"),
-                ("run.experimentScanID", name), 
-                ("sample.description", "PLEX"),
-                ("entry", "entry"),
-                ("sample.labl", "PLEX"),
-                ("run.configuration", "DIV"),
-            ])
-            sens = RawSANSData(metadata=metadata, detectors=detectors)
+            sens = LoadDIV([fileinfo])
             entries = [sens]
         else:
             entries = readSANSNexuz(name, fid)
@@ -215,7 +191,7 @@ def autosort(rawdata, subsort="sample.labl", add_scattering=True, trans_sort="ru
 
     **Inputs**
 
-    rawdata (raw[]): datafiles with metadata to allow sorting
+    rawdata (sans2d[]): datafiles with metadata to allow sorting
 
     subsort (str): key on which to order subitems within output lists
 
@@ -258,17 +234,17 @@ def autosort(rawdata, subsort="sample.labl", add_scattering=True, trans_sort="ru
         intent = _s(r.metadata['analysis.intent']).lower().strip()
         description = _s(r.metadata['sample.labl']).lower().strip()
         if intent.startswith('blo') or (purpose == 'scattering' and 'block' in description):
-            blocked_beam.extend(to_sansdata(r))
+            blocked_beam.append(r)
         elif intent.startswith('open') or (purpose == 'transmission' and 'open' in description):
-            open_trans.extend(to_sansdata(r))
+            open_trans.append(r)
         elif purpose == 'scattering' and (intent.startswith('empty') or 'empty' in description):
-            empty_scatt.extend(to_sansdata(r))
+            empty_scatt.append(r)
         elif purpose == 'transmission' and (intent.startswith('empty') or 'empty' in description):
-            empty_trans.extend(to_sansdata(r))
+            empty_trans.append(r)
         elif purpose == 'scattering' and intent == 'sample':
-            sample_scatt.extend(to_sansdata(r))
+            sample_scatt.append(r)
         elif purpose == 'transmission' and intent == 'sample':
-            sample_trans.extend(to_sansdata(r))
+            sample_trans.append(r)
 
     def keyFunc(l):
         return l.metadata.get(subsort, 0)
@@ -690,8 +666,8 @@ def _calculate_Q(X, Y, Z, q0):
             = 4 pi/lambda sin^2 theta = |q| sin theta
     """
     r = np.sqrt(X**2+Y**2)
-    theta = np.arctan2(r, Z)/2 #remember to convert Z to cm from meters
-    q = q0*np.sin(theta)
+    theta = 0.5 * r / Z
+    q = q0 * theta
     phi = np.arctan2(Y, X)
     qx = q*np.cos(theta)*np.cos(phi)
     qy = q*np.cos(theta)*np.sin(phi)
@@ -1270,9 +1246,16 @@ def correct_dead_time(sansdata, deadtime=1.0e-6):
     output (sans2d): corrected for dead time
 
     2010-01-03 Andrew Jackson?
+    2026-05-22 Jeff Krzywon
     """
+    # Always use the in-file deadtime over any hard-coded table
+    if sansdata.metadata.get("det.dead_time", None):
+        deadtime = sansdata.metadata["det.dead_time"]
 
-    dscale = 1.0/(1.0-deadtime*(np.sum(sansdata.data)/sansdata.metadata["run.rtime"]))
+    run_time = sansdata.metadata["run.rtime"]
+    total_counts = np.sum(sansdata.data)
+
+    dscale = 1.0/(1.0-deadtime*(total_counts/run_time))
 
     result = sansdata.copy()
     result.data *= dscale
@@ -1433,7 +1416,7 @@ def subtract(subtrahend, minuend, align_by='run.configuration'):
         return [(s - m) for s,m in zip(subtrahend, minuend)]
 
 @module
-def product(data, factor_param, align_by="det.des_dis,resolution.lmda,run.guide"):
+def product(data, factor_param, align_by="sample.description,run.configuration,sample.temp,mag.value"):
     """
     Algebraic multiplication of dataset
 
@@ -1535,12 +1518,15 @@ def correct_detector_sensitivity(sansdata, sensitivity):
 
     return res
 
-def lookup_attenuation(instrument_name, attenNo, wavelength):
-    from .attenuation_constants import attenuation
+def lookup_attenuation(instrument_name, attenNo, wavelength, tables=None):
     if attenNo == 0:
         return {"att": 1.0, "att_err": 0.0}
 
-    ai = attenuation[instrument_name]
+    if tables is not None:
+        ai = tables
+    else:
+        from .attenuation_constants import attenuation
+        ai = attenuation[instrument_name]
     attenNoStr = format(int(attenNo), 'd')
     att = ai['att'][attenNoStr]
     att_err = ai['att_err'][attenNoStr]
@@ -1572,9 +1558,33 @@ def correct_attenuation(sample, instrument="NG7"):
 
     atten_corrected (sans2d): corrected measurement
     """
+    # Default to use the insturment name from the file, rather that the name passed by the method.
+    instrument = sample.metadata.get('instrument.name', instrument).decode("utf-8").split(":")[-1]
     attenNo = sample.metadata['run.atten']
     wavelength = sample.metadata['resolution.lmda']
-    attenuation = lookup_attenuation(instrument, attenNo, wavelength)
+    atten_tables = sample.metadata.get('run.atten_factors', None)
+    atten_error_tables = sample.metadata.get('run.atten_factor_errors', None)
+    full_table = None
+    if atten_tables is not None:
+        wavelengths = []
+        attens = []
+        atten_errors = []
+        full_table = {}
+        for atten_row, error_row in zip(atten_tables, atten_error_tables):
+            try:
+                float(atten_row[0])
+            except (ValueError, TypeError):
+                # Empty or alpha-numeric rows should be skipped
+                continue
+            # The first item is the wavelength
+            wavelengths.append(float(atten_row[0]))
+            # The rest of the items are the scaling factors for this row
+            attens.append([float(x) for x in atten_row[1:]])
+            atten_errors.append([float(x) for x in error_row[1:]])
+            full_table['att'] = attens
+            full_table['att_err'] = atten_errors
+            full_table['lambda'] = wavelengths
+    attenuation = lookup_attenuation(instrument, attenNo, wavelength, full_table)
     att = attenuation['att']
     percent_err = attenuation['att_err']
     att_variance = (att*percent_err/100.0)**2
@@ -1582,6 +1592,7 @@ def correct_attenuation(sample, instrument="NG7"):
     atten_corrected = sample.copy()
     atten_corrected.attenuation_corrected = True
     atten_corrected.data /= denominator
+    print(f"ATTEN FACTOR: {denominator}")
     return atten_corrected
 
 @cache
@@ -1613,7 +1624,7 @@ def absolute_scaling(empty, sample, Tsam, div, instrument="NG7", integration_box
 
     **Returns**
 
-    abs (sans2d): data on absolute scale
+    output (sans2d): data on absolute scale
 
     params (params): parameter outputs
 
@@ -1625,13 +1636,11 @@ def absolute_scaling(empty, sample, Tsam, div, instrument="NG7", integration_box
         # data (that is going through reduction), empty beam,
     # div, Transmission of the sample, instrument(NG3.NG5, NG7)
     # ALL from metadata
-    detCnt = empty.metadata['run.detcnt']
-    countTime = empty.metadata['run.rtime']
     monCnt = empty.metadata['run.moncnt']
     sampleOff = empty.metadata["sample.position"]
     sdd = empty.metadata["det.dis"] + sampleOff # already in cm
     pixel = empty.metadata['det.pixelsizex'] # already in cm
-    lambd = wavelength = empty.metadata['resolution.lmda']
+    wavelength = empty.metadata['resolution.lmda']
 
     if not empty.attenuation_corrected:
         attenNo = empty.metadata['run.atten']
@@ -2125,74 +2134,77 @@ def getPoissonUncertainty(y):
 
 
 @module
-def single_configuration(filelist=None, integration_box=None, view_step=13, view_output="output",
-                         add_scatt=False, add_keyword='sample.labl', mask=None):
+def single_configuration(
+        filelist=None, view_step=13, view_output=None, add_scatt=False, add_keyword='sample.labl', mask=None):
     """Single module to handle all data reduction for a single configuration in a single shot
 
     **Inputs**
 
     filelist (fileinfo[]): All data files required to reduce files at a single configuration.
 
-    integration_box (range:xy): region over which to integrate
+    view_step {Reduction step} (int): Walk through each step of the reduction process to see the progress. A future update will remove this in favor
+        of a final report showing the entire reduction process. Currently, there steps 0 through 13 are available.
 
-    view_step (int): What step of the data should be displayed
+    view_output {Display} (opt:Raw Data|Transmission Values|Absolute Scaling of 2D Data|Circular Averaged Data (Unmasked)|Circular Averaged Data (Masked)|Other):
+        What data would you like displayed?
 
-    view_output (opt:output|sample_scatt|empty_trans|sample_trans|blocked_beam|open_beam_trans|open_beam_absolute|abs):
-        What output should be displayed
-
-    add_scatt {Should scattering files be added together?} (bool): A flag to set whether certain scattering files
-        are added together
+    add_scatt {Should scattering files be added together?} (bool): Should scattering files that share a metadata node
+        be added together?
 
     add_keyword {Metadata node for adding data together} (opt:det.des_dis|sample.labl|sample.temp|adam.voltage): If scattering files should be added together,
         what should the data have in common for adding.
 
-    mask {The number of points to remove from the data} (range:x): Enter the point number for masking data for all data
-        sets, e.g. 3,37 will keep the 3rd through 37th data points. Defaults to the entire range
+    mask {The number of points to remove from the data} (range:x): Enter the number of points to trim from each end of the data.
+        e.g. 0 and 1 will take a single point from the high-q region of the reduced data. Defaults to the entire range
 
     **Returns**
 
-    output(sans1d[]): A fully reduced set of 1D SANS data set on absolute scale.
+    output(sans1d[]): The data selected in the Display combo box.
 
     | 2026-04-24 Jeff Krzywon initial implementation
+    | 2026-05-28 Jeff Krzywon API changes
     """
-    integration_box = integration_box if integration_box else [58,74,57,72]
-    data_mask = list(range(int(mask[0]))) + list(range(int(mask[1]), 10000)) if mask != [0,0] and mask is not None else []
     template_def = {
         "name": "loader_template",
         "description": "SANS compact reduction",
         "modules":
         [
-            {"x": 10, "y": 5, "title": "all", "module": "ncnr.sans.LoadRawSANS", "config": {"filelist": []}},
-            {"x": 10, "y": 65, "title": "sort_data", "module": "ncnr.sans.autosort",
+            {"x": 10, "y": 5, "title": "Raw Data", "module": "ncnr.sans.SuperLoadSANS",
+                "config": {
+                    "filelist": [], "do_det_eff": False, "do_deadtime": True, "deadtime": 3.4e-6,
+                    "do_mon_norm": False, "do_atten_correct": False, "mon0": 1e8, "check_timestamps": True
+                }
+             },
+            {"x": 10, "y": 65, "title": "Sorted Data", "module": "ncnr.sans.autosort",
                 "config": {"filelist": [], "subsort": add_keyword, "add_scattering": add_scatt}
             },
-            {"x": 200, "y": 5, "title": "Subtract", "module": "ncnr.sans.subtract"},
-            {"x": 200, "y": 65, "title": "Subtract", "module": "ncnr.sans.subtract"},
-            {"x": 200, "y": 155, "title": "Gen trans", "module": "ncnr.sans.generate_transmission",
-                "config": {"integration_box": integration_box}
+            {"x": 200, "y": 5, "title": "BB Subtract from Sample", "module": "ncnr.sans.subtract"},
+            {"x": 200, "y": 65, "title": "BB Subtract from Empty Cell", "module": "ncnr.sans.subtract"},
+            {"x": 200, "y": 155, "title": "Empty Transmission", "module": "ncnr.sans.generate_transmission",
+                "config": {"auto_integrate": True}
             },
-            {"x": 685, "y": 95, "title": "Gen trans", "module": "ncnr.sans.generate_transmission",
-                "config": {"integration_box": integration_box}
+            {"x": 685, "y": 95, "title": "Transmission Values", "module": "ncnr.sans.generate_transmission",
+                "config": {"auto_integrate": True}
             },
-            {"x": 365, "y": 35, "title": "Product", "module": "ncnr.sans.product"},
-            {"x": 525, "y": 5, "title": "Subtract", "module": "ncnr.sans.subtract"},
-            {"x": 525, "y": 65, "title": "DIV", "module": "ncnr.sans.LoadDIV",
+            {"x": 365, "y": 35, "title": "Scale by Transmission", "module": "ncnr.sans.product"},
+            {"x": 525, "y": 5, "title": "Subrtract Empty Cell from Sample", "module": "ncnr.sans.subtract"},
+            {"x": 525, "y": 65, "title": "Load DIV", "module": "ncnr.sans.LoadDIV",
                 "config": {"filelist": [{
                     "path": "ncnrdata/ancillary/ng7sans/DIV/PLEX_20190719_NG7.DIV", "source": "ncnr",
                     "mtime": 1564154809, "entries": ["entry"]}]},
             },
-            {"x": 685, "y": 5, "title": "Div Correction", "module": "ncnr.sans.correct_detector_sensitivity"},
-            {"x": 895, "y": 35, "title": "Abs Scale", "module": "ncnr.sans.absolute_scaling",
-                "config": {"integration_box": integration_box}
+            {"x": 685, "y": 5, "title": "DIV Correction", "module": "ncnr.sans.correct_detector_sensitivity"},
+            {"x": 895, "y": 35, "title": "Absolute Scaling of 2D Data", "module": "ncnr.sans.absolute_scaling",
+                "config": {"auto_box": True}
             },
-            {"x": 1045, "y": 35, "title": "Pixelstoq", "module": "ncnr.sans.PixelsToQ",
+            {"x": 1045, "y": 35, "title": "Pixel Space to Q Space", "module": "ncnr.sans.PixelsToQ",
                 "config": {"correct_solid_angle": True}
             },
-            {"x": 1190, "y": 35, "title": "Circular Av New", "module": "ncnr.sans.circular_av_new",
+            {"x": 1190, "y": 35, "title": "Circular Averaged Data (Unmasked)", "module": "ncnr.sans.circular_av_new",
                 "config": {"dQ_method": "IGOR", "mask_width": 3}
             },
-            {"x": 1375, "y": 35, "title": "Trim Points", "module": "ncnr.sans.mask_1d_data", "text_width": 93,
-                "config": {"mask_indices": [data_mask]}
+            {"x": 1375, "y": 35, "title": "Circular Averaged Data (Masked)", "module": "ncnr.sans.mask_1d_data", "text_width": 93,
+                "config": {"mask_indices": [mask]}
             }
         ],
         "wires":
@@ -2216,7 +2228,7 @@ def single_configuration(filelist=None, integration_box=None, view_step=13, view
             {"source": [5, "output"], "target": [10, "Tsam"]},
             {"source": [8, "output"], "target": [10, "div"]},
             {"source": [9, "output"], "target": [10, "sample"]},
-            {"source": [10, "abs"], "target": [11, "data"]},
+            {"source": [10, "output"], "target": [11, "data"]},
             {"source": [11, "output"], "target": [12, "data_sets"]},
             {"source": [12, "output"], "target": [13, "data"]},
         ],
@@ -2226,17 +2238,24 @@ def single_configuration(filelist=None, integration_box=None, view_step=13, view
 
     template = Template(**template_def)
 
-    div_files = [f for f in filelist if f['path'].endswith(".div")]
+    div_files = [f for f in filelist if f['path'].endswith(".div")] if filelist else []
 
     config = {"0": {"filelist": filelist}, "8": {"filelist": div_files}}
+    terminal_id = "output"
 
-    nodenum = view_step
-    terminal_id = view_output
-    if view_output in ["sample_scatt", "empty_trans", "sample_trans","blocked_beam", "open_beam_absolute", "open_beam_trans"]:
-        nodenum = 1
-    if view_output in ["abs"]:
-        nodenum = 10
-    target = (nodenum, terminal_id) if nodenum >= 0 else (None, None)
+    output_lookup_table = {value.get("title", "None"):i for i, value in enumerate(template_def.get('modules', [{}]))}
+
+    match view_output:
+        case "Other":
+            try:
+                view_step = int(view_step)
+            except ValueError:
+                view_step = 0
+            terminal_id = "sample_scatt" if view_step == 1 else "output"
+        case _:
+            view_step = output_lookup_table[view_output]
+
+    target = (view_step, terminal_id) if view_step >= 0 else (None, None)
     results = process_template(template, config, target=target)
     data_list = results.values
     return data_list
@@ -2333,7 +2352,7 @@ def shift_by_factor(data_to_shift: SansIQData | Sans1dData, shifting_factor: flo
 
 @module
 def mask_1d_data(data: list[SansIQData | Sans1dData],
-                 mask_indices: list[list[int]] | list[int] | None = None) -> [SansIQData | Sans1dData]:
+                 mask_indices: list[list[int]] | list[int] | None = None) -> list[SansIQData | Sans1dData]:
     """
     Identify and mask out user-specified points.
 
@@ -2368,7 +2387,11 @@ def mask_1d_data(data: list[SansIQData | Sans1dData],
         mask_indices = mask_indices * len(data)
     for dataset, mask in zip(data, mask_indices):
         data_set = copy(dataset)
-        data_set.mask = [x for x in mask if x < len(dataset.Q)]
+        if mask[0] and mask[1]:
+            # Both non-zero values => slice
+            data_set.q_slice = [mask[0] - 1, 0 - mask[1]]
+        else:
+            data_set.q_slice = None
         returns.append(data_set.masked())
     return returns
 

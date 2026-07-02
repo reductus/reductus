@@ -203,11 +203,11 @@ class SansData:
 class Sans1dData:
     properties = ['x', 'v', 'dx', 'dv', 'xlabel', 'vlabel', 'xunits', 'vunits', 'xscale', 'vscale', 'metadata', 'fit_function']
 
-    def __init__(self, x, v, dx=0, dv=0, xlabel="", vlabel="", xunits="", vunits="", xscale="linear", vscale="linear", metadata=None, fit_function=None):
+    def __init__(self, x, v, dx=None, dv=None, xlabel="", vlabel="", xunits="", vunits="", xscale="linear", vscale="linear", metadata=None, fit_function=None):
         self.x = x
         self.v = v
-        self.dx = dx
-        self.dv = dv
+        self.dx = np.asarray(dx) if dx is not None else None
+        self.dv = np.asarray(dv) if dv is not None else None
         self.xlabel = xlabel
         self.vlabel = vlabel
         self.xunits = xunits
@@ -216,19 +216,37 @@ class Sans1dData:
         self.vscale = vscale
         self.metadata = metadata if metadata is not None else {}
         self.fit_function = fit_function
+        self._q_slice = None
 
-    def masked(self, masked_points: list[int] | None = None):
-        if masked_points is None or len(masked_points) == 0:
+    def masked(self, slice_limits: list[int] | tuple[int] | None = None):
+        """Mask the data using either the defined q_slice or the slice provided.
+
+        :param slice_limits: A list or tuple of the upper and lower indices to slice the data. Only the first two
+            elements will be recognized.
+        :return: A new data set that has the sliced limits removed.
+        """
+        if not self._q_slice and (slice_limits is None or len(slice_limits) == 0):
             # If no limits have been set, no truncation
             return self
+        if slice_limits:
+            self.q_slice = slice(*slice_limits)
 
         data = Sans1dData(
-            x=np.delete(self.x, masked_points) if self.x is not None else None,
-            v=np.delete(self.v, masked_points) if self.v is not None else None,
-            dx=np.delete(self.dx, masked_points) if self.dx is not None else None,
-            dv=np.delete(self.dv, masked_points)if self.dv is not None else None,
-            metadata=self.metadata)
+            x=copy(self.x[self.q_slice]) if self.x is not None else None,
+            v=copy(self.v[self.q_slice]) if self.v is not None else None,
+            dx=copy(self.dx[self.q_slice]) if self.dx is not None else None,
+            dv=copy(self.dv[self.q_slice]) if self.dv is not None else None,
+            metadata=deepcopy(self.metadata)
+        )
         return data
+
+    @property
+    def q_slice(self):
+        return self._q_slice
+
+    @q_slice.setter
+    def q_slice(self, masked_points: list[int] | None = None):
+        self._q_slice = slice(masked_points[0], masked_points[1])
 
     def to_dict(self):
         props = dict([(p, getattr(self, p, None)) for p in self.properties])
@@ -291,32 +309,29 @@ class SansIQData:
         self.ShadowFactor: np.ndarray = ShadowFactor if ShadowFactor is not None else np.empty(shape)
         self.label: str = label
         self.metadata: dict[str, str | int | float | list] = metadata if metadata is not None else {}
-        self._q_mask: list[int] | None = None
+        self._q_slice: list[int] | None = None
 
     def masked(self):
-        if self._q_mask is None:
+        if self.q_slice is None:
             # If no limits have been set, no truncation
             return self
-        data = SansIQData(np.delete(self.I, self._q_mask) if self.I is not None else None,
-                          np.delete(self.dI, self._q_mask) if self.dI is not None else None,
-                          np.delete(self.Q, self._q_mask) if self.Q is not None else None,
-                          np.delete(self.dQ, self._q_mask)if self.dQ is not None else None,
-                          np.delete(self.meanQ, self._q_mask) if self.meanQ is not None else None,
-                          np.delete(self.ShadowFactor, self._q_mask) if self.ShadowFactor is not None else None,
-                          self.label,
-                          self.metadata)
+        data = SansIQData(copy(self.I)[self.q_slice] if self.I is not None else None,
+                          copy(self.dI)[self.q_slice] if self.dI is not None else None,
+                          copy(self.Q)[self.q_slice] if self.Q is not None else None,
+                          copy(self.dQ)[self.q_slice] if self.dQ is not None else None,
+                          copy(self.meanQ)[self.q_slice] if self.meanQ is not None else None,
+                          copy(self.ShadowFactor)[self.q_slice]if self.ShadowFactor is not None else None,
+                          copy(self.label),
+                          deepcopy(self.metadata))
         return data
 
     @property
-    def mask(self):
-        return self._q_mask
+    def q_slice(self):
+        return self._q_slice
 
-    @mask.setter
-    def mask(self, masked_points: list[int] | None = None):
-        # masked_points should be a list of self.Q indices that are to be excluded from calcaulations
-        if masked_points is not None and min(masked_points) < 0 and max(masked_points) >= len(self.Q):
-            raise ValueError("The masked indices are out of range of the Q data.")
-        self._q_mask = masked_points
+    @q_slice.setter
+    def q_slice(self, masked_points: list[int] | None = None):
+        self._q_slice = slice(masked_points[0], masked_points[1])
 
     @property
     def v(self):

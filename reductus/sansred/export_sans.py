@@ -54,7 +54,7 @@ def export_to_ascii(data, file_path: Path_Like = "", extension: str = ".txt", de
     # Write to the file
     try:
         with open(full_path, "w") as f:
-            f.write(header)
+            f.write(header + "\n")
             writer = csv.writer(f, delimiter=delimiter)
             writer.writerows(transposed_data)
     except (PermissionError, OSError, FileExistsError):

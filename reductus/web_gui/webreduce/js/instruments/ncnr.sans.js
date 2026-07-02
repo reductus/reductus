@@ -44,10 +44,9 @@ instrument.files_filter = function(x) {
 
 instrument.load_file = load_sans;
 instrument.default_categories = [
-  [["analysis.filepurpose"]],
-  [["sample.description"]],
+  [["run.configuration"]],
   [["analysis.intent"]],
-  [["run.experimentScanID"]]
+  [["sample.description"]]
 ];
 instrument.categories = structuredClone(instrument.default_categories);
 instrument.decorators = [add_viewer_link, add_counts];

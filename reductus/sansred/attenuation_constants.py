@@ -17,7 +17,7 @@ attenuation = {}
 # 08/27/2019 bbm: modified NGBatt0 so that it is the same length as all the others.
 ngb_source_string = """\
   // new calibrations MAY 2013
-	root:myGlobals:Attenuators:NGBatt0 = {1,1,1,1,1,1,1,1,1,1,1,1}
+	root:myGlobals:Attenuators:NGBatt0 = {1,1,1,1,1,1,1,1,1,1,1,1}	
 	root:myGlobals:Attenuators:NGBatt1 = {0.512,0.474,0.418,0.392,0.354,0.325,0.294,0.27,0.255,0.222,0.185,0.155}
  	root:myGlobals:Attenuators:NGBatt2 = {0.268,0.227,0.184,0.16,0.129,0.108,0.0904,0.0777,0.0689,0.0526,0.0372,0.0263}
   	root:myGlobals:Attenuators:NGBatt3 = {0.135,0.105,0.0769,0.0629,0.0455,0.0342,0.0266,0.0212,0.0178,0.0117,0.007,0.00429}
@@ -41,42 +41,43 @@ ngb_source_string = """\
 	root:myGlobals:Attenuators:NGBatt7_err = {0.693,0.76,0.556,0.607,0.554,0.774,0.516,0.56,0.924,5,5,5}
 	root:myGlobals:Attenuators:NGBatt8_err = {0.771,0.813,0.59,0.657,0.612,0.867,0.892,1.3,5,5,5,5}
 	root:myGlobals:Attenuators:NGBatt9_err = {0.837,0.867,0.632,0.722,0.751,1.21,5,5,5,5,5,5}
-	root:myGlobals:Attenuators:NGBatt10_err = {0.892,0.921,0.715,0.845,1.09,5,5,5,5,5,5,5}
+	root:myGlobals:Attenuators:NGBatt10_err = {0.892,0.921,0.715,0.845,1.09,5,5,5,5,5,5,5}  
 
 """
 
 ngb30_source_string = """\
-     // new calibration done June 2007, John Barker
-     root:myGlobals:Attenuators:ng3att0 = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1 }
-	root:myGlobals:Attenuators:ng3att1 = {0.444784,0.419,0.3935,0.3682,0.3492,0.3132,0.2936,0.2767,0.2477,0.22404}
-	root:myGlobals:Attenuators:ng3att2 = {0.207506,0.1848,0.1629,0.1447,0.1292,0.1056,0.09263,0.08171,0.06656,0.0546552}
-	root:myGlobals:Attenuators:ng3att3 = {0.092412,0.07746,0.06422,0.05379,0.04512,0.03321,0.02707,0.02237,0.01643,0.0121969}
-	root:myGlobals:Attenuators:ng3att4 = {0.0417722,0.03302,0.02567,0.02036,0.01604,0.01067,0.00812,0.006316,0.00419,0.00282411}
-	root:myGlobals:Attenuators:ng3att5 = {0.0187129,0.01397,0.01017,0.007591,0.005668,0.003377,0.002423,0.001771,0.001064,0.000651257}
-	root:myGlobals:Attenuators:ng3att6 = {0.00851048,0.005984,0.004104,0.002888,0.002029,0.001098,0.0007419,0.0005141,0.000272833,0.000150624}
-	root:myGlobals:Attenuators:ng3att7 = {0.00170757,0.001084,0.0006469,0.0004142,0.0002607,0.0001201,7.664e-05,4.06624e-05,1.77379e-05,7.30624e-06}
-	root:myGlobals:Attenuators:ng3att8 = {0.000320057,0.0001918,0.0001025,6.085e-05,3.681e-05,1.835e-05,6.74002e-06,3.25288e-06,1.15321e-06,3.98173e-07}
-	root:myGlobals:Attenuators:ng3att9 = {6.27682e-05,3.69e-05,1.908e-05,1.196e-05,8.738e-06,6.996e-06,6.2901e-07,2.60221e-07,7.49748e-08,2.08029e-08}
-	root:myGlobals:Attenuators:ng3att10 = {1.40323e-05,8.51e-06,5.161e-06,4.4e-06,4.273e-06,1.88799e-07,5.87021e-08,2.08169e-08,4.8744e-09,1.08687e-09}
+	// new calibration for 3A only -- September 2019, John Barker
+	root:myGlobals:Attenuators:ng3att0 = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 }
+	root:myGlobals:Attenuators:ng3att1 = {0.49769,0.444784,0.419,0.3935,0.3682,0.3492,0.3132,0.2936,0.2767,0.2477,0.22404}
+	root:myGlobals:Attenuators:ng3att2 = {0.25729,0.207506,0.1848,0.1629,0.1447,0.1292,0.1056,0.09263,0.08171,0.06656,0.0546552}
+	root:myGlobals:Attenuators:ng3att3 = {0.12823,0.092412,0.07746,0.06422,0.05379,0.04512,0.03321,0.02707,0.02237,0.01643,0.0121969}
+	root:myGlobals:Attenuators:ng3att4 = {0.064491,0.0417722,0.03302,0.02567,0.02036,0.01604,0.01067,0.00812,0.006316,0.00419,0.00282411}
+	root:myGlobals:Attenuators:ng3att5 = {0.032216,0.0187129,0.01397,0.01017,0.007591,0.005668,0.003377,0.002423,0.001771,0.001064,0.000651257}
+	root:myGlobals:Attenuators:ng3att6 = {0.016244,0.00851048,0.005984,0.004104,0.002888,0.002029,0.001098,0.0007419,0.0005141,0.000272833,0.000150624}
+	root:myGlobals:Attenuators:ng3att7 = {0.0041106,0.00170757,0.001084,0.0006469,0.0004142,0.0002607,0.0001201,7.664e-05,4.06624e-05,1.77379e-05,7.30624e-06}
+	root:myGlobals:Attenuators:ng3att8 = {0.001029,0.000320057,0.0001918,0.0001025,6.085e-05,3.681e-05,1.835e-05,6.74002e-06,3.25288e-06,1.15321e-06,3.98173e-07}
+	root:myGlobals:Attenuators:ng3att9 = {0.00026462,5.999e-05,3.3937e-05,1.6241e-05,8.9395e-06,5.1975e-06,2.0337e-06,5.9274e-07,2.6022e-07,7.4975e-08,2.1699e-08}
+	root:myGlobals:Attenuators:ng3att10 = {6.9169e-05,1.1244e-05,6.0046e-06,2.5733e-06,1.3133e-06,7.3386e-07,2.3137e-07,5.2128e-08,2.0817e-08,4.8744e-09,1.1826e-09}
 
-     // percent errors as measured, May 2007 values
-     // zero error for zero attenuators, appropriate average values put in for unknown values
-	root:myGlobals:Attenuators:ng3att0_err = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }
-	root:myGlobals:Attenuators:ng3att1_err = {0.15,0.142,0.154,0.183,0.221,0.328,0.136,0.13,0.163,0.15}
-	root:myGlobals:Attenuators:ng3att2_err = {0.25,0.257,0.285,0.223,0.271,0.405,0.212,0.223,0.227,0.25}
-	root:myGlobals:Attenuators:ng3att3_err = {0.3,0.295,0.329,0.263,0.323,0.495,0.307,0.28,0.277,0.3}
-	root:myGlobals:Attenuators:ng3att4_err = {0.35,0.331,0.374,0.303,0.379,0.598,0.367,0.322,0.33,0.35}
-	root:myGlobals:Attenuators:ng3att5_err = {0.4,0.365,0.418,0.355,0.454,0.745,0.411,0.367,0.485,0.4}
-	root:myGlobals:Attenuators:ng3att6_err = {0.45,0.406,0.473,0.385,0.498,0.838,0.454,0.49,0.5,0.5}
-	root:myGlobals:Attenuators:ng3att7_err = {0.6,0.554,0.692,0.425,0.562,0.991,0.715,0.8,0.8,0.8}
-	root:myGlobals:Attenuators:ng3att8_err = {0.7,0.705,0.927,0.503,0.691,1.27,1,1,1,1}
-	root:myGlobals:Attenuators:ng3att9_err = {1,0.862,1.172,0.799,1.104,1.891,1.5,1.5,1.5,1.5}
-	root:myGlobals:Attenuators:ng3att10_err = {1.5,1.054,1.435,1.354,1.742,2,2,2,2,2}
+    // percent errors as measured, May 2007 values
+    // new calibration for 3A only -- September 2019, John Barker
+    // zero error for zero attenuators, appropriate average values put in for unknown values
+	root:myGlobals:Attenuators:ng3att0_err = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }
+	root:myGlobals:Attenuators:ng3att1_err = {0.655,0.15,0.142,0.154,0.183,0.221,0.328,0.136,0.13,0.163,0.15}
+	root:myGlobals:Attenuators:ng3att2_err = {1.0725,0.25,0.257,0.285,0.223,0.271,0.405,0.212,0.223,0.227,0.25}
+	root:myGlobals:Attenuators:ng3att3_err = {1.6862,0.3,0.295,0.329,0.263,0.323,0.495,0.307,0.28,0.277,0.3}
+	root:myGlobals:Attenuators:ng3att4_err = {1.86,0.35,0.331,0.374,0.303,0.379,0.598,0.367,0.322,0.33,0.35}
+	root:myGlobals:Attenuators:ng3att5_err = {1.9755,0.4,0.365,0.418,0.355,0.454,0.745,0.411,0.367,0.485,0.4}
+	root:myGlobals:Attenuators:ng3att6_err = {2.0725,0.45,0.406,0.473,0.385,0.498,0.838,0.454,0.49,0.5,0.5}
+	root:myGlobals:Attenuators:ng3att7_err = {4.0576,0.6,0.554,0.692,0.425,0.562,0.991,0.715,0.8,0.8,0.8}
+	root:myGlobals:Attenuators:ng3att8_err = {8.1442,0.7,0.705,0.927,0.503,0.691,1.27,1,1,1,1}
+	root:myGlobals:Attenuators:ng3att9_err = {10.361,1,0.862,1.172,0.799,1.104,1.891,1.5,1.5,1.5,1.5}
+	root:myGlobals:Attenuators:ng3att10_err = {10.53,1.5,1.054,1.435,1.354,1.742,2,2,2,2,2}
 """
 
 ng7_source_string = """\
   // New calibration, June 2007, John Barker
-	root:myGlobals:Attenuators:ng7att0 = {1, 1, 1, 1, 1, 1, 1, 1 ,1,1}
+	root:myGlobals:Attenuators:ng7att0 = {1, 1, 1, 1, 1, 1, 1, 1 ,1,1}	
 	root:myGlobals:Attenuators:ng7att1 = {0.448656,0.4192,0.3925,0.3661,0.3458,0.3098,0.2922,0.2738,0.2544,0.251352}
  	root:myGlobals:Attenuators:ng7att2 = {0.217193,0.1898,0.1682,0.148,0.1321,0.1076,0.0957,0.08485,0.07479,0.0735965}
   	root:myGlobals:Attenuators:ng7att3 = {0.098019,0.07877,0.06611,0.05429,0.04548,0.03318,0.02798,0.0234,0.02004,0.0202492}
@@ -100,7 +101,7 @@ ng7_source_string = """\
 	root:myGlobals:Attenuators:ng7att7_err = {0.8,0.697,0.9149,0.583,1.173,2.427,1.242,2,2,2}
 	root:myGlobals:Attenuators:ng7att8_err = {1,0.898,1.24,0.696,1.577,3.412,3,3,3,3}
 	root:myGlobals:Attenuators:ng7att9_err = {1.5,1.113,1.599,1.154,2.324,4.721,5,5,5,5}
-	root:myGlobals:Attenuators:ng7att10_err = {1.5,1.493,5,5,5,5,5,5,5,5}
+	root:myGlobals:Attenuators:ng7att10_err = {1.5,1.493,5,5,5,5,5,5,5,5}  
 """
 
 def compile_source(source, db):
@@ -121,7 +122,7 @@ def compile_source(source, db):
         db[instr]["att_err"][atten] = array(json.loads('[' + att[2] + ']'), dtype="float")
 
 compile_source(ngb30_source_string, attenuation)
-attenuation['NGB30']['lambda'] = array([4, 5, 6, 7, 8, 10, 12, 14, 17, 20], dtype="float")
+attenuation['NGB30']['lambda'] = array([3, 4, 5, 6, 7, 8, 10, 12, 14, 17, 20], dtype="float")
 compile_source(ng7_source_string, attenuation)
 attenuation['NG7']['lambda'] = array([4, 5, 6, 7, 8, 10, 12, 14, 17, 20], dtype="float")
 compile_source(ngb_source_string, attenuation)
