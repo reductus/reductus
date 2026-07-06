@@ -34,10 +34,17 @@ def _s(b):
     else:
         return b
 
+# TODO: Items needed for SANS data
+#  - Differentiate Raw vs Intermediate vs Reduced
+#  - Single class for any data with all others inheriting from
+#  - Method(s) to scale, shift, and mask data
+#  - DIV/mask file handling
+#  - Hold intent (emtpy/BB/open/sample) and measurement type (Scatt/Trans)
+
 class RawSANSData(RawVSANSData):
     suffix = ".sans"
 
-class SansData(object):
+class SansData:
     """SansData object used for storing values from a sample file (not div/mask).
        Stores the array of data as a Uncertainty object (detailed in uncertainty.py)
        Stores all metadata
@@ -68,7 +75,7 @@ class SansData(object):
         self.theta = theta
         self.attenuation_corrected = attenuation_corrected
 
-        self.Tsam = None #Tsam and Temp are used to store the transmissions for later use
+        self.Tsam = 1.0 #Tsam and Temp are used to store the transmissions for later use
         self.Temp = None
     # Note that I have not defined an inplace subtraction
     def __sub__(self, other):
@@ -105,7 +112,9 @@ class SansData(object):
             result.data = self.data/other
         return result
     def __mul__(self, other):
+        # TODO: Add a separate method to assign the transmission value
         result = self.copy()
+        result.Tsam = other
         if isinstance(other, SansData):
             result.data = self.data * other.data
         else:
@@ -190,14 +199,15 @@ class SansData(object):
         metadata.update(_toDictItem(self.metadata, convert_bytes=True))
         return metadata
 
-class Sans1dData(object):
+
+class Sans1dData:
     properties = ['x', 'v', 'dx', 'dv', 'xlabel', 'vlabel', 'xunits', 'vunits', 'xscale', 'vscale', 'metadata', 'fit_function']
 
-    def __init__(self, x, v, dx=0, dv=0, xlabel="", vlabel="", xunits="", vunits="", xscale="linear", vscale="linear", metadata=None, fit_function=None):
+    def __init__(self, x, v, dx=None, dv=None, xlabel="", vlabel="", xunits="", vunits="", xscale="linear", vscale="linear", metadata=None, fit_function=None):
         self.x = x
         self.v = v
-        self.dx = dx
-        self.dv = dv
+        self.dx = np.asarray(dx) if dx is not None else None
+        self.dv = np.asarray(dv) if dv is not None else None
         self.xlabel = xlabel
         self.vlabel = vlabel
         self.xunits = xunits
@@ -206,6 +216,37 @@ class Sans1dData(object):
         self.vscale = vscale
         self.metadata = metadata if metadata is not None else {}
         self.fit_function = fit_function
+        self._q_slice = None
+
+    def masked(self, slice_limits: list[int] | tuple[int] | None = None):
+        """Mask the data using either the defined q_slice or the slice provided.
+
+        :param slice_limits: A list or tuple of the upper and lower indices to slice the data. Only the first two
+            elements will be recognized.
+        :return: A new data set that has the sliced limits removed.
+        """
+        if not self._q_slice and (slice_limits is None or len(slice_limits) == 0):
+            # If no limits have been set, no truncation
+            return self
+        if slice_limits:
+            self.q_slice = slice(*slice_limits)
+
+        data = Sans1dData(
+            x=copy(self.x[self.q_slice]) if self.x is not None else None,
+            v=copy(self.v[self.q_slice]) if self.v is not None else None,
+            dx=copy(self.dx[self.q_slice]) if self.dx is not None else None,
+            dv=copy(self.dv[self.q_slice]) if self.dv is not None else None,
+            metadata=deepcopy(self.metadata)
+        )
+        return data
+
+    @property
+    def q_slice(self):
+        return self._q_slice
+
+    @q_slice.setter
+    def q_slice(self, masked_points: list[int] | None = None):
+        self._q_slice = slice(masked_points[0], masked_points[1])
 
     def to_dict(self):
         props = dict([(p, getattr(self, p, None)) for p in self.properties])
@@ -256,16 +297,57 @@ class Sans1dData(object):
             "value": value.decode('utf-8'),
         }
 
-class SansIQData(object):
+
+class SansIQData:
     def __init__(self, I=None, dI=None, Q=None, dQ=None, meanQ=None, ShadowFactor=None, label='', metadata=None):
-        self.I = I
-        self.dI = dI
-        self.Q = Q
-        self.dQ = dQ
-        self.meanQ = meanQ
-        self.ShadowFactor = ShadowFactor
-        self.label = label
-        self.metadata = metadata if metadata is not None else {}
+        shape = np.shape(Q) if Q is not None else 0
+        self.I: np.ndarray = I if I is not None else np.empty(shape)
+        self.dI: np.ndarray = dI if dI is not None else np.empty(shape)
+        self.Q: np.ndarray = Q if Q is not None else np.empty(shape)
+        self.dQ: np.ndarray = dQ if dQ is not None else np.empty(shape)
+        self.meanQ: np.ndarray = meanQ if meanQ is not None else np.empty(shape)
+        self.ShadowFactor: np.ndarray = ShadowFactor if ShadowFactor is not None else np.empty(shape)
+        self.label: str = label
+        self.metadata: dict[str, str | int | float | list] = metadata if metadata is not None else {}
+        self._q_slice: list[int] | None = None
+
+    def masked(self):
+        if self.q_slice is None:
+            # If no limits have been set, no truncation
+            return self
+        data = SansIQData(copy(self.I)[self.q_slice] if self.I is not None else None,
+                          copy(self.dI)[self.q_slice] if self.dI is not None else None,
+                          copy(self.Q)[self.q_slice] if self.Q is not None else None,
+                          copy(self.dQ)[self.q_slice] if self.dQ is not None else None,
+                          copy(self.meanQ)[self.q_slice] if self.meanQ is not None else None,
+                          copy(self.ShadowFactor)[self.q_slice]if self.ShadowFactor is not None else None,
+                          copy(self.label),
+                          deepcopy(self.metadata))
+        return data
+
+    @property
+    def q_slice(self):
+        return self._q_slice
+
+    @q_slice.setter
+    def q_slice(self, masked_points: list[int] | None = None):
+        self._q_slice = slice(masked_points[0], masked_points[1])
+
+    @property
+    def v(self):
+        return self.I
+
+    @v.setter
+    def v(self, v):
+        self.I = v
+
+    @property
+    def dv(self):
+        return self.dI
+
+    @dv.setter
+    def dv(self, dv):
+        self.dI = dv
     
     def get_plottable(self):
         columns = OrderedDict([
@@ -371,9 +453,44 @@ class SansIQData(object):
             "value": h5_item,
         }
 
-class Parameters(object):
+    def append_1d_data_set(self, data):
+        """Concatenate another data set with the existing one. The resulting data arrays will be sorted """
+        # Create concatenated Q array
+        self.Q = np.concatenate((self.Q, data.Q))
+        # Determine order of Q values based in current index
+        indices = np.argsort(self.Q)
+        # Reorder Q array using the indices
+        self.Q = self.Q[indices]
+        # Concatenate and reorder remaining data arrays if they exist in both data sets
+        self.I = np.concatenate((self.I, data.I))[indices]
+        if self.dI is not None and data.dI is not None:
+            self.dI = np.concatenate((self.dI, data.dI))[indices]
+        if self.dQ is not None and data.dQ is not None:
+            self.dQ = np.concatenate((self.dQ, data.dQ))[indices]
+        if self.meanQ is not None and data.meanQ is not None:
+            self.meanQ = np.concatenate((self.meanQ, data.meanQ))[indices]
+        if self.ShadowFactor is not None and data.ShadowFactor is not None:
+            self.ShadowFactor = np.concatenate((self.ShadowFactor, data.ShadowFactor))[indices]
+
+
+class Parameters:
     def __init__(self, params=None):
         self.params = params
+
+    def __truediv__(self, other):
+        result = self.copy()
+        value = Uncertainty(result.params.get('factor', 1.0), result.params.get('factor_variance', 0.0))
+        if isinstance(other, Parameters):
+            result.data = value/Uncertainty(other.params.get('factor', 1.0), other.params.get('factor_variance', 0.0))
+        else:
+            result.data = value/other
+        return result
+
+    def __copy__(self):
+        return self.copy()
+
+    def copy(self):
+        return Parameters(copy(self.params))
 
     def get_metadata(self):
         return self.params

@@ -13,6 +13,29 @@ let template = `
     
     <div class="offcanvas-body p-0">
       <div class="accordion" id="mainAccordion">
+      
+
+        <!-- Instrument Accordion Item -->
+        <div class="accordion-item">
+          <h2 class="accordion-header">
+            <button class="accordion-button" :class="{ collapsed: !expandInstrument }" type="button" @click="expandInstrument = !expandInstrument" aria-controls="instrumentCollapse">
+              Instrument: <span class="fw-bold ms-2">{{current_instrument}}</span>
+            </button>
+          </h2>
+          <div id="instrumentCollapse" class="accordion-collapse collapse" :class="{ show: expandInstrument }">
+            <div class="accordion-body p-0">
+              <div class="list-group list-group-flush">
+                <div v-for="instrument in instruments" class="list-group-item d-flex justify-content-between align-items-center">
+                  <span>{{instrument}}</span>
+                  <button class="btn btn-primary btn-sm" @click.stop="action('switch_instrument', instrument)">
+                    switch
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- Template Accordion Item -->
         <div class="accordion-item">
           <h2 class="accordion-header">
@@ -127,27 +150,6 @@ let template = `
                       <i class="bi bi-info-circle"></i>
                     </button>
                   </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Instrument Accordion Item -->
-        <div class="accordion-item">
-          <h2 class="accordion-header">
-            <button class="accordion-button" :class="{ collapsed: !expandInstrument }" type="button" @click="expandInstrument = !expandInstrument" aria-controls="instrumentCollapse">
-              Instrument: <span class="fw-bold ms-2">{{current_instrument}}</span>
-            </button>
-          </h2>
-          <div id="instrumentCollapse" class="accordion-collapse collapse" :class="{ show: expandInstrument }">
-            <div class="accordion-body p-0">
-              <div class="list-group list-group-flush">
-                <div v-for="instrument in instruments" class="list-group-item d-flex justify-content-between align-items-center">
-                  <span>{{instrument}}</span>
-                  <button class="btn btn-primary btn-sm" @click.stop="action('switch_instrument', instrument)">
-                    switch
-                  </button>
                 </div>
               </div>
             </div>

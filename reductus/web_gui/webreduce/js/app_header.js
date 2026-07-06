@@ -4,9 +4,9 @@ const template = `
     <div class="container-fluid">
       <div class="d-flex align-items-center">
         <button class="btn btn-link" @click="emitter.emit('toggle-menu', { show: true })" style="padding: 0; margin-right: 1rem;">
-          <i class="mdi mdi-menu" title="MENU" style="font-size: 1.5em;"></i>
+          <i class="bi bi-list" title="MENU" style="font-size: 1.5em;"></i>
         </button>
-        <span style="font-weight: bold; font-size: 1.25em;">
+        <span class="navbar-brand">
           <img src="img/reductus_logo.svg" style="height: 2em; vertical-align: middle; margin-right: 0.5em;"/>Reductus
         </span>
         <a href="https://doi.org/10.1107/S1600576718011974" class="btn btn-sm btn-link">[cite]</a>

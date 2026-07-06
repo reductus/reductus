@@ -7,23 +7,28 @@ Set of reduction steps for SANS reduction.
 
 from __future__ import print_function
 
-from posixpath import basename, join
+import os
+import pathlib
+from posixpath import basename
 from copy import copy, deepcopy
 from io import BytesIO
 from collections import OrderedDict
 
 import numpy as np
 
+from reductus.dataflow.calc import process_template
+from reductus.dataflow.core import Template
 from reductus.dataflow.lib.uncertainty import Uncertainty
 from reductus.dataflow.lib import uncertainty
 
+from .export_sans import export_to_ascii, export_to_csv, export_to_nxcansas
 from .sansdata import RawSANSData, SansData, Sans1dData, SansIQData, Parameters
-from .sans_vaxformat import readNCNRSensitivity
 
-from reductus.vsansred.steps import _s, _b
+from reductus.vsansred.steps import _s
 
 ALL_ACTIONS = []
 IGNORE_CORNER_PIXELS = True
+
 
 def cache(action):
     """
@@ -88,25 +93,25 @@ def LoadDIV(filelist=None, variance=0.0001):
     from .sans_vaxformat import readNCNRSensitivity
 
     output = []
-    if filelist is not None:
-        for fileinfo in filelist:
-            path, mtime, entries = fileinfo['path'], fileinfo.get('mtime', None), fileinfo.get('entries', None)
-            name = basename(path)
-            fid = BytesIO(url_get(fileinfo, mtime_check=False))
-            sens_raw = readNCNRSensitivity(fid)
-            sens = SansData(Uncertainty(sens_raw, sens_raw * variance))
-            sens.metadata = OrderedDict([
-                ("run.filename", name),
-                ("analysis.groupid", -1),
-                ("analysis.intent", "DIV"),
-                ("analysis.filepurpose", "Sensitivity"),
-                ("run.experimentScanID", name), 
-                ("sample.description", "PLEX"),
-                ("entry", "entry"),
-                ("sample.labl", "PLEX"),
-                ("run.configuration", "DIV"),
-            ])
-            output.append(sens)
+    for fileinfo in filelist:
+        path, mtime, entries = fileinfo['path'], fileinfo.get('mtime', None), fileinfo.get('entries', None)
+        name = basename(path)
+        fid = BytesIO(url_get(fileinfo, mtime_check=False))
+        sens_raw = readNCNRSensitivity(fid)
+        detectors = [{"detector": {"data": {"value": Uncertainty(sens_raw, sens_raw * variance)}}}]
+        metadata = OrderedDict([
+            ("run.filename", name),
+            ("analysis.groupid", -1),
+            ("analysis.intent", "DIV"),
+            ("analysis.filepurpose", "Sensitivity"),
+            ("run.experimentScanID", name),
+            ("sample.description", "PLEX"),
+            ("entry", "entry"),
+            ("sample.labl", "PLEX"),
+            ("run.configuration", "DIV"),
+        ])
+        sens = RawSANSData(metadata=metadata, detectors=detectors)
+        output.append(sens)
     return output
 
 @cache
@@ -137,20 +142,7 @@ def LoadRawSANS(filelist=None, check_timestamps=True):
         name = basename(path)
         fid = BytesIO(url_get(fileinfo, mtime_check=check_timestamps))
         if name.upper().endswith(".DIV"):
-            sens_raw = readNCNRSensitivity(fid)
-            detectors = [{"detector": {"data": {"value": Uncertainty(sens_raw, sens_raw * 0.0001)}}}]
-            metadata = OrderedDict([
-                ("run.filename", name),
-                ("analysis.groupid", -1),
-                ("analysis.intent", "DIV"),
-                ("analysis.filepurpose", "Sensitivity"),
-                ("run.experimentScanID", name), 
-                ("sample.description", "PLEX"),
-                ("entry", "entry"),
-                ("sample.labl", "PLEX"),
-                ("run.configuration", "DIV"),
-            ])
-            sens = RawSANSData(metadata=metadata, detectors=detectors)
+            sens = LoadDIV([fileinfo])
             entries = [sens]
         else:
             entries = readSANSNexuz(name, fid)
@@ -193,18 +185,20 @@ def patch(data, patches=None):
 
 @cache
 @module
-def autosort(rawdata, subsort="det.des_dis", add_scattering=True):
+def autosort(rawdata, subsort="sample.labl", add_scattering=True, trans_sort="run.configuration"):
     """
     redirects a batch of files to different outputs based on metadata in the files
 
     **Inputs**
 
-    rawdata (raw[]): datafiles with metadata to allow sorting
+    rawdata (sans2d[]): datafiles with metadata to allow sorting
 
     subsort (str): key on which to order subitems within output lists
 
     add_scattering {Add sample scatterings together} (bool): Add sample scatterings, within
     group defined by subsort key
+
+    trans_sort (str): key on which to bundle open beam transmission files within output lists
 
     **Returns**
 
@@ -218,7 +212,12 @@ def autosort(rawdata, subsort="det.des_dis", add_scattering=True):
 
     empty_trans (sans2d[]): Empty Cell Transmission
 
+    open_beam_absolute (sans2d[]): Open Beam Transmission used for absolute scaling calculations
+
+    open_beam_trans (sans2d[]): Open Beam Transmission used for transmission calculations
+
     2019-07-24 Brian Maranville
+    2026-01-30 Jeff Krzywon
     """
 
     sample_scatt = []
@@ -226,22 +225,26 @@ def autosort(rawdata, subsort="det.des_dis", add_scattering=True):
     empty_scatt = []
     sample_trans = []
     empty_trans = []
-
-    print(rawdata)
+    open_trans = []
+    open_beam_trans = []
+    open_beam_absolute = []
 
     for r in rawdata:
-        purpose = _s(r.metadata['analysis.filepurpose'])
-        intent = _s(r.metadata['analysis.intent'])
-        if intent.lower().strip().startswith('blo'):
-            blocked_beam.extend(to_sansdata(r))
-        elif purpose.lower() == 'scattering' and intent.lower() == 'sample':
-            sample_scatt.extend(to_sansdata(r))
-        elif purpose.lower() == 'scattering' and intent.lower().startswith('empty'):
-            empty_scatt.extend(to_sansdata(r))
-        elif purpose.lower() == 'transmission' and intent.lower() == 'sample':
-            sample_trans.extend(to_sansdata(r))
-        elif purpose.lower() == 'transmission' and intent.lower().startswith('empty'):
-            empty_trans.extend(to_sansdata(r))
+        purpose = _s(r.metadata['analysis.filepurpose']).lower().strip()
+        intent = _s(r.metadata['analysis.intent']).lower().strip()
+        description = _s(r.metadata['sample.labl']).lower().strip()
+        if intent.startswith('blo') or (purpose == 'scattering' and 'block' in description):
+            blocked_beam.append(r)
+        elif intent.startswith('open') or (purpose == 'transmission' and 'open' in description):
+            open_trans.append(r)
+        elif purpose == 'scattering' and (intent.startswith('empty') or 'empty' in description):
+            empty_scatt.append(r)
+        elif purpose == 'transmission' and (intent.startswith('empty') or 'empty' in description):
+            empty_trans.append(r)
+        elif purpose == 'scattering' and intent == 'sample':
+            sample_scatt.append(r)
+        elif purpose == 'transmission' and intent == 'sample':
+            sample_trans.append(r)
 
     def keyFunc(l):
         return l.metadata.get(subsort, 0)
@@ -259,7 +262,16 @@ def autosort(rawdata, subsort="det.des_dis", add_scattering=True):
             added_samples[key] = addSimple(added_samples[key])
         sample_scatt = list(added_samples.values())
 
-    return sample_scatt, blocked_beam, empty_scatt, sample_trans, empty_trans
+    scatt_config = sample_scatt[0].metadata.get(trans_sort, '').replace(b' Scatt', b'').replace(b' Trans', b'')
+    trans_config = sample_trans[0].metadata.get(trans_sort, '').replace(b' Scatt', b'').replace(b' Trans', b'')
+    for open in open_trans:
+        sort_val = open.metadata.get(trans_sort, '').replace(b' Scatt', b'').replace(b' Trans', b'')
+        if sort_val == scatt_config:
+            open_beam_absolute.append(open)
+        if sort_val == trans_config:
+            open_beam_trans.append(open)
+
+    return sample_scatt, blocked_beam, empty_scatt, sample_trans, empty_trans, open_beam_absolute, open_beam_trans
 
 
 @cache
@@ -654,8 +666,8 @@ def _calculate_Q(X, Y, Z, q0):
             = 4 pi/lambda sin^2 theta = |q| sin theta
     """
     r = np.sqrt(X**2+Y**2)
-    theta = np.arctan2(r, Z)/2 #remember to convert Z to cm from meters
-    q = q0*np.sin(theta)
+    theta = 0.5 * r / Z
+    q = q0 * theta
     phi = np.arctan2(Y, X)
     qx = q*np.cos(theta)*np.cos(phi)
     qy = q*np.cos(theta)*np.sin(phi)
@@ -866,14 +878,14 @@ def oversample_2d(input_array, oversampling):
 
 @nocache
 @module
-def circular_av_new(data, q_min=None, q_max=None, q_step=None, mask_width=3, dQ_method='none'):
+def circular_av_new(data_sets, q_min=None, q_max=None, q_step=None, mask_width=3, dQ_method='none'):
     """
     Using a circular average, it converts data to 1D (Q vs. I)
 
 
     **Inputs**
 
-    data (sans2d): data in
+    data_sets (sans2d[]): data in
 
     q_min (float): minimum Q value for binning (defaults to q_step)
 
@@ -887,109 +899,118 @@ def circular_av_new(data, q_min=None, q_max=None, q_step=None, mask_width=3, dQ_
 
     **Returns**
 
-    nominal_output (sans1d): converted to I vs. nominal Q
+    nominal_output (sans1d[]): converted to I vs. nominal Q
 
-    mean_output (sans1d): converted to I vs. mean Q within integrated region
+    mean_output (sans1d[]): converted to I vs. mean Q within integrated region
 
-    output (sansIQ): canonical I vs Q output for sans data.
+    output (sansIQ[]): canonical I vs Q output for sans data.
 
     | 2019-01-01 Brian Maranville
     | 2019-09-05 Adding mask_width as a temporary way to handle basic masking
     | 2019-12-11 Brian Maranville adding dQ_method opts
     """
 
-    # adding simple width-based mask around the perimeter:
-    mask = np.zeros_like(data.q, dtype=bool)
-    mask_width = abs(mask_width)
-    if (mask_width > 0):
-        mask[mask_width:-mask_width, mask_width:-mask_width] = True
-    else:
-        mask[:] = True
+    nominal_output = []
+    mean_output = []
+    canonical_output = []
 
-    # calculate the change in q that corresponds to a change in pixel of 1
-    if data.qx is None:
-        raise ValueError("Q is not defined - convert pixels to Q first")
+    for data in data_sets:
+        # adding simple width-based mask around the perimeter:
+        if data.Tsam:
+            data.metadata["sample.trans"] = data.Tsam
+        mask = np.zeros_like(data.q, dtype=bool)
+        mask_width = abs(mask_width)
+        if (mask_width > 0):
+            mask[mask_width:-mask_width, mask_width:-mask_width] = True
+        else:
+            mask[:] = True
 
-    if q_step is None:
-        q_step = data.qx[1, 0]-data.qx[0, 0] / 1.0
+        # calculate the change in q that corresponds to a change in pixel of 1
+        if data.qx is None:
+            raise ValueError("Q is not defined - convert pixels to Q first")
 
-    if q_min is None:
-        q_min = q_step
-    
-    if q_max is None:
-        q_max = data.q[mask].max()
+        if q_step is None:
+            q_step = data.qx[1, 0]-data.qx[0, 0] / 1.0
 
-    q_bins = np.arange(q_min, q_max+q_step, q_step)
-    Q = (q_bins[:-1] + q_bins[1:])/2.0
+        if q_min is None:
+            q_min = q_step
 
-    oversampling = 3
+        if q_max is None:
+            q_max = data.q[mask].max()
 
-    o_mask = oversample_2d(mask, oversampling)
-    #o_q = oversample_2d(data.q, oversampling)
-    o_qxi, o_qyi = np.indices(o_mask.shape)
-    o_qx_offsets = ((o_qxi % oversampling) + 0.5) / oversampling
-    o_qy_offsets = ((o_qyi % oversampling) + 0.5) / oversampling
-    qx_width = oversample_2d(data.qx_high - data.qx_low, oversampling)
-    qy_width = oversample_2d(data.qy_high - data.qy_low, oversampling)
-    original_lookups = (np.floor_divide(o_qxi, oversampling), np.floor_divide(o_qyi, oversampling))
-    o_qx = data.qx_low[original_lookups] + (qx_width * o_qx_offsets)
-    o_qy = data.qy_low[original_lookups] + (qy_width * o_qy_offsets)
-    o_qz = oversample_2d(data.qz, oversampling)
-    o_q = np.sqrt(o_qx**2 + o_qy**2 + o_qz**2)
-    o_data = oversample_2d(data.data, oversampling) # Uncertainty object...
-    o_meanQ = oversample_2d(data.meanQ, oversampling)
-    o_shadow_factor = oversample_2d(data.shadow_factor, oversampling)
-    o_dq_para = oversample_2d(data.dq_para, oversampling)
+        q_bins = np.arange(q_min, q_max+q_step, q_step)
+        Q = (q_bins[:-1] + q_bins[1:])/2.0
 
-    # dq = data.dq_para if hasattr(data, 'dqpara') else np.ones_like(data.q) * q_step
-    I, _bins_used = np.histogram(o_q[o_mask], bins=q_bins, weights=o_data.x[o_mask])
-    I_norm, _ = np.histogram(o_q[o_mask], bins=q_bins, weights=np.ones_like(o_data.x[o_mask]))
-    I_var, _ = np.histogram(o_q[o_mask], bins=q_bins, weights=o_data.variance[o_mask])
-    #Q_ave, _ = np.histogram(o_q[o_mask], bins=q_bins, weights=o_q[o_mask])
-    #Q_var, _ = np.histogram(data.q, bins=q_bins, weights=data.dq_para**2)
-    Q_mean, _ = np.histogram(o_q[o_mask], bins=q_bins, weights=o_meanQ[o_mask])
-    ShadowFactor, _ = np.histogram(o_q[o_mask], bins=q_bins, weights=o_shadow_factor[o_mask])
+        oversampling = 3
 
-    nonzero_mask = I_norm > 0
+        o_mask = oversample_2d(mask, oversampling)
+        #o_q = oversample_2d(data.q, oversampling)
+        o_qxi, o_qyi = np.indices(o_mask.shape)
+        o_qx_offsets = ((o_qxi % oversampling) + 0.5) / oversampling
+        o_qy_offsets = ((o_qyi % oversampling) + 0.5) / oversampling
+        qx_width = oversample_2d(data.qx_high - data.qx_low, oversampling)
+        qy_width = oversample_2d(data.qy_high - data.qy_low, oversampling)
+        original_lookups = (np.floor_divide(o_qxi, oversampling), np.floor_divide(o_qyi, oversampling))
+        o_qx = data.qx_low[original_lookups] + (qx_width * o_qx_offsets)
+        o_qy = data.qy_low[original_lookups] + (qy_width * o_qy_offsets)
+        o_qz = oversample_2d(data.qz, oversampling)
+        o_q = np.sqrt(o_qx**2 + o_qy**2 + o_qz**2)
+        o_data = oversample_2d(data.data, oversampling) # Uncertainty object...
+        o_meanQ = oversample_2d(data.meanQ, oversampling)
+        o_shadow_factor = oversample_2d(data.shadow_factor, oversampling)
+        o_dq_para = oversample_2d(data.dq_para, oversampling)
 
-    I[nonzero_mask] /= I_norm[nonzero_mask]
-    I_var[nonzero_mask] /= (I_norm[nonzero_mask]**2)
-    Q_mean[nonzero_mask] /= I_norm[nonzero_mask]
-    #Q_ave[nonzero_mask] /= I_norm[nonzero_mask]
-    ShadowFactor[nonzero_mask] /= I_norm[nonzero_mask]
+        # dq = data.dq_para if hasattr(data, 'dqpara') else np.ones_like(data.q) * q_step
+        I, _bins_used = np.histogram(o_q[o_mask], bins=q_bins, weights=o_data.x[o_mask])
+        I_norm, _ = np.histogram(o_q[o_mask], bins=q_bins, weights=np.ones_like(o_data.x[o_mask]))
+        I_var, _ = np.histogram(o_q[o_mask], bins=q_bins, weights=o_data.variance[o_mask])
+        #Q_ave, _ = np.histogram(o_q[o_mask], bins=q_bins, weights=o_q[o_mask])
+        #Q_var, _ = np.histogram(data.q, bins=q_bins, weights=data.dq_para**2)
+        Q_mean, _ = np.histogram(o_q[o_mask], bins=q_bins, weights=o_meanQ[o_mask])
+        ShadowFactor, _ = np.histogram(o_q[o_mask], bins=q_bins, weights=o_shadow_factor[o_mask])
 
-    # calculate Q_var...
-    # remarkably, the variance of a sum of normalized gaussians 
-    # with variances v_i, displaced from the mean center by xc_i
-    # is the sum of (xc_i**2 + v_i).   Gaussians are weird.
+        nonzero_mask = I_norm > 0
 
-    
-    if dQ_method == 'IGOR':
-        Q_mean, Q_mean_error = calculateDQ_IGOR(data, Q)
-    elif dQ_method == 'statistical':
-        # exclude Q_mean_lookups that overflow the length of the calculated Q_mean:
-        Q_lookup = np.digitize(o_q[o_mask], bins=q_bins)
-        Q_lookup_mask = (Q_lookup < len(Q))
-        Q_mean_center = Q_mean[Q_lookup[Q_lookup_mask]]
-        Q_var_contrib = (o_meanQ[o_mask][Q_lookup_mask] - Q_mean_center)**2 + (o_dq_para[o_mask][Q_lookup_mask])**2
-        Q_var, _ = np.histogram(o_meanQ[o_mask][Q_lookup_mask], bins=q_bins, weights=Q_var_contrib)
-        Q_var[nonzero_mask] /= I_norm[nonzero_mask]
-        Q_mean_error = np.sqrt(Q_var)
-    else:
-        # 'none' is the default
-        Q_mean_error = np.zeros_like(Q)
+        I[nonzero_mask] /= I_norm[nonzero_mask]
+        I_var[nonzero_mask] /= (I_norm[nonzero_mask]**2)
+        Q_mean[nonzero_mask] /= I_norm[nonzero_mask]
+        #Q_ave[nonzero_mask] /= I_norm[nonzero_mask]
+        ShadowFactor[nonzero_mask] /= I_norm[nonzero_mask]
 
-    nominal_output = Sans1dData(Q, I, dx=Q_mean_error, dv=I_var, xlabel="Q", vlabel="I",
-                        xunits="inv. A", vunits="neutrons")
-    nominal_output.metadata = deepcopy(data.metadata)
-    nominal_output.metadata['extra_label'] = "_circ"
+        # calculate Q_var...
+        # remarkably, the variance of a sum of normalized gaussians
+        # with variances v_i, displaced from the mean center by xc_i
+        # is the sum of (xc_i**2 + v_i).   Gaussians are weird.
 
-    mean_output = Sans1dData(Q_mean, I, dx=Q_mean_error, dv=I_var, xlabel="Q", vlabel="I",
-                        xunits="inv. A", vunits="neutrons")
-    mean_output.metadata = deepcopy(data.metadata)
-    mean_output.metadata['extra_label'] = "_circ"
 
-    canonical_output = SansIQData(I, np.sqrt(I_var), Q, Q_mean_error, Q_mean, ShadowFactor, metadata=deepcopy(data.metadata))
+        if dQ_method == 'IGOR':
+            Q_mean, Q_mean_error = calculateDQ_IGOR(data, Q)
+        elif dQ_method == 'statistical':
+            # exclude Q_mean_lookups that overflow the length of the calculated Q_mean:
+            Q_lookup = np.digitize(o_q[o_mask], bins=q_bins)
+            Q_lookup_mask = (Q_lookup < len(Q))
+            Q_mean_center = Q_mean[Q_lookup[Q_lookup_mask]]
+            Q_var_contrib = (o_meanQ[o_mask][Q_lookup_mask] - Q_mean_center)**2 + (o_dq_para[o_mask][Q_lookup_mask])**2
+            Q_var, _ = np.histogram(o_meanQ[o_mask][Q_lookup_mask], bins=q_bins, weights=Q_var_contrib)
+            Q_var[nonzero_mask] /= I_norm[nonzero_mask]
+            Q_mean_error = np.sqrt(Q_var)
+        else:
+            # 'none' is the default
+            Q_mean_error = np.zeros_like(Q)
+
+        nominal_output_x = Sans1dData(Q, I, dx=Q_mean_error, dv=I_var, xlabel="Q", vlabel="I",
+                            xunits="inv. A", vunits="neutrons")
+        nominal_output_x.metadata = deepcopy(data.metadata)
+        nominal_output_x.metadata['extra_label'] = "_circ"
+        nominal_output.append(nominal_output_x)
+
+        mean_output_x = Sans1dData(Q_mean, I, dx=Q_mean_error, dv=I_var, xlabel="Q", vlabel="I",
+                            xunits="inv. A", vunits="neutrons")
+        mean_output_x.metadata = deepcopy(data.metadata)
+        mean_output_x.metadata['extra_label'] = "_circ"
+        mean_output.append(mean_output_x)
+
+        canonical_output.append(SansIQData(I, np.sqrt(I_var), Q, Q_mean_error, Q_mean, ShadowFactor, metadata=deepcopy(data.metadata)))
     
     return nominal_output, mean_output, canonical_output
 
@@ -1098,6 +1119,7 @@ def sector_cut(data, sector=[0.0, 90.0], mirror=True):
 
     return nominal_output, mean_output
 
+
 @module
 def rescale_1d(data, scale=1.0, dscale=0.0):
     """
@@ -1116,13 +1138,40 @@ def rescale_1d(data, scale=1.0, dscale=0.0):
     output (sans1d) : scaled data
 
     2016-04-17 Brian Maranville
+    2026-01-07 Jeff Krzywon
     """
     from reductus.dataflow.lib import err1d
 
-    I, varI = err1d.mul(data.v, data.dv, scale, dscale**2)
-    data.v, data.dv = I, varI
+    data.v, data.dv = err1d.mul(data.v, data.dv, scale, dscale**2)
     
     return data
+
+
+@module
+def shift_1d(data, shift=1.0, dshift=0.0):
+    """
+    Shift 1d data by a scale factor
+
+    **Inputs**
+
+    data (sans1d): data in
+
+    shift (float) : amount to shift, one for each dataset
+
+    dshift {Scale err} (float:<0,inf>) : scale uncertainty for gaussian error propagation
+
+    **Returns**
+
+    output (sans1d) : shifted data
+
+    2025-08-05 Jeff Krzywon
+    """
+    from reductus.dataflow.lib import err1d
+
+    data.v, data.dv = err1d.add(data.v, data.dv, shift, dshift**2)
+
+    return data
+
 
 @module
 def correct_detector_efficiency(sansdata):
@@ -1197,9 +1246,16 @@ def correct_dead_time(sansdata, deadtime=1.0e-6):
     output (sans2d): corrected for dead time
 
     2010-01-03 Andrew Jackson?
+    2026-05-22 Jeff Krzywon
     """
+    # Always use the in-file deadtime over any hard-coded table
+    if sansdata.metadata.get("det.dead_time", None):
+        deadtime = sansdata.metadata["det.dead_time"]
 
-    dscale = 1.0/(1.0-deadtime*(np.sum(sansdata.data)/sansdata.metadata["run.rtime"]))
+    run_time = sansdata.metadata["run.rtime"]
+    total_counts = np.sum(sansdata.data)
+
+    dscale = 1.0/(1.0-deadtime*(total_counts/run_time))
 
     result = sansdata.copy()
     result.data *= dscale
@@ -1263,7 +1319,7 @@ def generate_transmission(in_beam, empty_beam, integration_box=[55, 74, 53, 72],
     | 2019-08-22 Adding align_by for inputs, Brian Maranville
     """
     
-    if align_by == "none":
+    if align_by.lower() in ["", "none"]:
         if len(in_beam) != len(empty_beam):
             raise ValueError("number of in_beam must match number of empty_beam when align_by is none")
         output = []
@@ -1275,13 +1331,11 @@ def generate_transmission(in_beam, empty_beam, integration_box=[55, 74, 53, 72],
         output = []
         for ib in in_beam:
             eb = eb_lookup.get(get_compound_key(ib.metadata, align_by), None)
-            if eb is None:
-                raise ValueError("no matching empty was found for configuration: " + get_compound_key(ib.metadata, align_by))
             output.append(_generate_transmission(ib, eb, integration_box=integration_box, auto_integrate=auto_integrate, margin=margin))
         return output        
         
 def _generate_transmission(in_beam, empty_beam, integration_box=None, auto_integrate=True, margin=5):
-    if auto_integrate:
+    if auto_integrate and empty_beam:
         height, x, y, width_x, width_y = moments(empty_beam.data.x)
         center_x = x + 0.5
         center_y = y + 0.5
@@ -1295,7 +1349,7 @@ def _generate_transmission(in_beam, empty_beam, integration_box=None, auto_integ
         xmin, xmax, ymin, ymax = map(int, integration_box)
     
     I_in_beam = np.sum(in_beam.data[xmin:xmax+1, ymin:ymax+1])
-    I_empty_beam = np.sum(empty_beam.data[xmin:xmax+1, ymin:ymax+1])
+    I_empty_beam = np.sum(empty_beam.data[xmin:xmax+1, ymin:ymax+1]) if empty_beam else I_in_beam
 
     ratio = I_in_beam/I_empty_beam
     result = Parameters(OrderedDict([
@@ -1362,7 +1416,7 @@ def subtract(subtrahend, minuend, align_by='run.configuration'):
         return [(s - m) for s,m in zip(subtrahend, minuend)]
 
 @module
-def product(data, factor_param, align_by="det.des_dis,resolution.lmda,run.guide"):
+def product(data, factor_param, align_by="sample.description,run.configuration,sample.temp,mag.value"):
     """
     Algebraic multiplication of dataset
 
@@ -1413,7 +1467,7 @@ def divide(data, factor_param):
     2010-01-01 unknown
     """
     if factor_param is not None:
-        return data.__truediv__(factor_param.params['factor'])
+        return data.__truediv__(Uncertainty(factor_param.params.get('factor', 1.0), factor_param.params.get('factor_variance', 0.0)))
     else:
         return data
 
@@ -1456,19 +1510,23 @@ def correct_detector_sensitivity(sansdata, sensitivity):
 
     output (sans2d): result c in a/b = c
 
-    2017-01-04 unknown
+    2026-04-24 Jeff Krzywon
     """
     res = sansdata.copy()
-    res.data /= sensitivity.data
+    # If no sensitivity file, do not scale the data
+    res.data /= sensitivity.data if sensitivity else 1
 
     return res
 
-def lookup_attenuation(instrument_name, attenNo, wavelength):
-    from .attenuation_constants import attenuation
+def lookup_attenuation(instrument_name, attenNo, wavelength, tables=None):
     if attenNo == 0:
         return {"att": 1.0, "att_err": 0.0}
 
-    ai = attenuation[instrument_name]
+    if tables is not None:
+        ai = tables
+    else:
+        from .attenuation_constants import attenuation
+        ai = attenuation[instrument_name]
     attenNoStr = format(int(attenNo), 'd')
     att = ai['att'][attenNoStr]
     att_err = ai['att_err'][attenNoStr]
@@ -1500,9 +1558,33 @@ def correct_attenuation(sample, instrument="NG7"):
 
     atten_corrected (sans2d): corrected measurement
     """
+    # Default to use the insturment name from the file, rather that the name passed by the method.
+    instrument = sample.metadata.get('instrument.name', instrument).decode("utf-8").split(":")[-1]
     attenNo = sample.metadata['run.atten']
     wavelength = sample.metadata['resolution.lmda']
-    attenuation = lookup_attenuation(instrument, attenNo, wavelength)
+    atten_tables = sample.metadata.get('run.atten_factors', None)
+    atten_error_tables = sample.metadata.get('run.atten_factor_errors', None)
+    full_table = None
+    if atten_tables is not None:
+        wavelengths = []
+        attens = []
+        atten_errors = []
+        full_table = {}
+        for atten_row, error_row in zip(atten_tables, atten_error_tables):
+            try:
+                float(atten_row[0])
+            except (ValueError, TypeError):
+                # Empty or alpha-numeric rows should be skipped
+                continue
+            # The first item is the wavelength
+            wavelengths.append(float(atten_row[0]))
+            # The rest of the items are the scaling factors for this row
+            attens.append([float(x) for x in atten_row[1:]])
+            atten_errors.append([float(x) for x in error_row[1:]])
+            full_table['att'] = attens
+            full_table['att_err'] = atten_errors
+            full_table['lambda'] = wavelengths
+    attenuation = lookup_attenuation(instrument, attenNo, wavelength, full_table)
     att = attenuation['att']
     percent_err = attenuation['att_err']
     att_variance = (att*percent_err/100.0)**2
@@ -1510,6 +1592,7 @@ def correct_attenuation(sample, instrument="NG7"):
     atten_corrected = sample.copy()
     atten_corrected.attenuation_corrected = True
     atten_corrected.data /= denominator
+    print(f"ATTEN FACTOR: {denominator}")
     return atten_corrected
 
 @cache
@@ -1522,13 +1605,13 @@ def absolute_scaling(empty, sample, Tsam, div, instrument="NG7", integration_box
 
     **Inputs**
 
-    empty (sans2d): measurement with no sample in the beam
-
     sample (sans2d): measurement with sample in the beam
+
+    div (sans2d): DIV measurement
 
     Tsam (params): sample transmission
 
-    div (sans2d): DIV measurement
+    empty (sans2d): measurement with no sample in the beam
 
     instrument (opt:NG7|NGB|NGB30): instrument name, should be NG7 or NG3
 
@@ -1541,24 +1624,23 @@ def absolute_scaling(empty, sample, Tsam, div, instrument="NG7", integration_box
 
     **Returns**
 
-    abs (sans2d): data on absolute scale
+    output (sans2d): data on absolute scale
 
     params (params): parameter outputs
 
     | 2017-01-13 Andrew Jackson
     | 2019-07-04 Brian Maranville
     | 2019-07-14 Brian Maranville
+    | 2025-07-17 Jeff Krzywon
     """
         # data (that is going through reduction), empty beam,
     # div, Transmission of the sample, instrument(NG3.NG5, NG7)
     # ALL from metadata
-    detCnt = empty.metadata['run.detcnt']
-    countTime = empty.metadata['run.rtime']
     monCnt = empty.metadata['run.moncnt']
     sampleOff = empty.metadata["sample.position"]
     sdd = empty.metadata["det.dis"] + sampleOff # already in cm
     pixel = empty.metadata['det.pixelsizex'] # already in cm
-    lambd = wavelength = empty.metadata['resolution.lmda']
+    wavelength = empty.metadata['resolution.lmda']
 
     if not empty.attenuation_corrected:
         attenNo = empty.metadata['run.atten']
@@ -1575,7 +1657,10 @@ def absolute_scaling(empty, sample, Tsam, div, instrument="NG7", integration_box
     #-------------------------------------------------------------------------------------#
 
     # Correct empty beam by the sensitivity
-    data = empty.data/div.data
+    if div is not None:
+        data = empty.data/div.data
+    else:
+        data = empty.data
     # Then take the sum in XY box, including stat. error
     if auto_box:
         height, x, y, width_x, width_y = moments(empty.data.x)
@@ -1609,7 +1694,7 @@ def absolute_scaling(empty, sample, Tsam, div, instrument="NG7", integration_box
     print('Tsam_factor: ', Tsam_factor.x)
 
     #-----Using Kappa to Scale data-----#
-    Dsam = sample.metadata['sample.thk']
+    Dsam = sample.metadata['sample.thk'] / 10  # Sample thickness in mm => convert to cm
     ABS = sample.__mul__(1/(kappa*Dsam*Tsam_factor))
 
     params = OrderedDict([
@@ -1688,7 +1773,7 @@ def addSimple(data):
 
 def get_compound_key(data_dict, compound_key, separator=","):
     subkeys = [s.strip() for s in compound_key.split(separator)]
-    key = separator.join([_s(data_dict.get(sk, 'unknown')) for sk in subkeys])
+    key = separator.join([str(data_dict.get(sk, 'unknown')) for sk in subkeys])
     return key
 
 @module
@@ -2046,3 +2131,397 @@ def getPoissonUncertainty(y):
     lo = -0.5+np.sqrt(y+0.25)
     #return {"yupper": y+hi, "ylower": y-lo, "hi": hi, "lo": lo}
     return {"yupper": y+hi, "ylower": y-lo}
+
+
+@module
+def single_configuration(
+        filelist=None, view_step=13, view_output=None, add_scatt=False, add_keyword='sample.labl', mask=None):
+    """Single module to handle all data reduction for a single configuration in a single shot
+
+    **Inputs**
+
+    filelist (fileinfo[]): All data files required to reduce files at a single configuration.
+
+    view_step {Reduction step} (int): Walk through each step of the reduction process to see the progress. A future update will remove this in favor
+        of a final report showing the entire reduction process. Currently, there steps 0 through 13 are available.
+
+    view_output {Display} (opt:Raw Data|Transmission Values|Absolute Scaling of 2D Data|Circular Averaged Data (Unmasked)|Circular Averaged Data (Masked)|Other):
+        What data would you like displayed?
+
+    add_scatt {Should scattering files be added together?} (bool): Should scattering files that share a metadata node
+        be added together?
+
+    add_keyword {Metadata node for adding data together} (opt:det.des_dis|sample.labl|sample.temp|adam.voltage): If scattering files should be added together,
+        what should the data have in common for adding.
+
+    mask {The number of points to remove from the data} (range:x): Enter the number of points to trim from each end of the data.
+        e.g. 0 and 1 will take a single point from the high-q region of the reduced data. Defaults to the entire range
+
+    **Returns**
+
+    output(sans1d[]): The data selected in the Display combo box.
+
+    | 2026-04-24 Jeff Krzywon initial implementation
+    | 2026-05-28 Jeff Krzywon API changes
+    """
+    template_def = {
+        "name": "loader_template",
+        "description": "SANS compact reduction",
+        "modules":
+        [
+            {"x": 10, "y": 5, "title": "Raw Data", "module": "ncnr.sans.SuperLoadSANS",
+                "config": {
+                    "filelist": [], "do_det_eff": False, "do_deadtime": True, "deadtime": 3.4e-6,
+                    "do_mon_norm": False, "do_atten_correct": False, "mon0": 1e8, "check_timestamps": True
+                }
+             },
+            {"x": 10, "y": 65, "title": "Sorted Data", "module": "ncnr.sans.autosort",
+                "config": {"filelist": [], "subsort": add_keyword, "add_scattering": add_scatt}
+            },
+            {"x": 200, "y": 5, "title": "BB Subtract from Sample", "module": "ncnr.sans.subtract"},
+            {"x": 200, "y": 65, "title": "BB Subtract from Empty Cell", "module": "ncnr.sans.subtract"},
+            {"x": 200, "y": 155, "title": "Empty Transmission", "module": "ncnr.sans.generate_transmission",
+                "config": {"auto_integrate": True}
+            },
+            {"x": 685, "y": 95, "title": "Transmission Values", "module": "ncnr.sans.generate_transmission",
+                "config": {"auto_integrate": True}
+            },
+            {"x": 365, "y": 35, "title": "Scale by Transmission", "module": "ncnr.sans.product"},
+            {"x": 525, "y": 5, "title": "Subrtract Empty Cell from Sample", "module": "ncnr.sans.subtract"},
+            {"x": 525, "y": 65, "title": "Load DIV", "module": "ncnr.sans.LoadDIV",
+                "config": {"filelist": [{
+                    "path": "ncnrdata/ancillary/ng7sans/DIV/PLEX_20190719_NG7.DIV", "source": "ncnr",
+                    "mtime": 1564154809, "entries": ["entry"]}]},
+            },
+            {"x": 685, "y": 5, "title": "DIV Correction", "module": "ncnr.sans.correct_detector_sensitivity"},
+            {"x": 895, "y": 35, "title": "Absolute Scaling of 2D Data", "module": "ncnr.sans.absolute_scaling",
+                "config": {"auto_box": True}
+            },
+            {"x": 1045, "y": 35, "title": "Pixel Space to Q Space", "module": "ncnr.sans.PixelsToQ",
+                "config": {"correct_solid_angle": True}
+            },
+            {"x": 1190, "y": 35, "title": "Circular Averaged Data (Unmasked)", "module": "ncnr.sans.circular_av_new",
+                "config": {"dQ_method": "IGOR", "mask_width": 3}
+            },
+            {"x": 1375, "y": 35, "title": "Circular Averaged Data (Masked)", "module": "ncnr.sans.mask_1d_data", "text_width": 93,
+                "config": {"mask_indices": [mask]}
+            }
+        ],
+        "wires":
+        [
+            {"source": [0, "output"], "target": [1, "rawdata"]},
+            {"source": [1, "sample_scatt"], "target": [2, "subtrahend"]},
+            {"source": [1, "blocked_beam"], "target": [2, "minuend"]},
+            {"source": [1, "blocked_beam"], "target": [3, "minuend"]},
+            {"source": [1, "empty_scatt"], "target": [3, "subtrahend"]},
+            {"source": [1, "empty_trans"], "target": [4, "in_beam"]},
+            {"source": [1, "open_beam_trans"], "target": [4, "empty_beam"]},
+            {"source": [1, "sample_trans"], "target": [5, "in_beam"]},
+            {"source": [1, "open_beam_trans"], "target": [5, "empty_beam"]},
+            {"source": [3, "output"], "target": [6, "data"]},
+            {"source": [4, "output"], "target": [6, "factor_param"]},
+            {"source": [2, "output"], "target": [7, "subtrahend"]},
+            {"source": [6, "output"], "target": [7, "minuend"]},
+            {"source": [7, "output"], "target": [9, "sansdata"]},
+            {"source": [8, "output"], "target": [9, "sensitivity"]},
+            {"source": [1, "open_beam_absolute"], "target": [10, "empty"]},
+            {"source": [5, "output"], "target": [10, "Tsam"]},
+            {"source": [8, "output"], "target": [10, "div"]},
+            {"source": [9, "output"], "target": [10, "sample"]},
+            {"source": [10, "output"], "target": [11, "data"]},
+            {"source": [11, "output"], "target": [12, "data_sets"]},
+            {"source": [12, "output"], "target": [13, "data"]},
+        ],
+        "instrument": "ncnr.sans",
+        "version": "1.0"
+    }
+
+    template = Template(**template_def)
+
+    div_files = [f for f in filelist if f['path'].endswith(".div")] if filelist else []
+
+    config = {"0": {"filelist": filelist}, "8": {"filelist": div_files}}
+    terminal_id = "output"
+
+    output_lookup_table = {value.get("title", "None"):i for i, value in enumerate(template_def.get('modules', [{}]))}
+
+    match view_output:
+        case "Other":
+            try:
+                view_step = int(view_step)
+            except ValueError:
+                view_step = 0
+            terminal_id = "sample_scatt" if view_step == 1 else "output"
+        case _:
+            view_step = output_lookup_table[view_output]
+
+    target = (view_step, terminal_id) if view_step >= 0 else (None, None)
+    results = process_template(template, config, target=target)
+    data_list = results.values
+    return data_list
+
+
+@module
+def scale_to_data(data_to_scale: SansIQData | Sans1dData, data_to_scale_by: SansIQData | Sans1dData) -> SansIQData | Sans1dData:
+    """Scale a data set relative to another data set.
+
+    **Inputs**
+
+    data_to_scale (sans1d): SANS 1D to be scaled
+
+    data_to_scale_by (sans1d): SANS 1D the data set should be scaled to
+
+    **Returns**
+
+    output(sans1d): A scaled 1D SANS data set
+
+    | 2025-07-30 Jeff Krzywon initial implementation
+    """
+    scaling_factor = 1.0
+    if data_to_scale_by is not None:
+        scaling_factor = _get_scaling_factor_between_data(data_to_scale, data_to_scale_by)
+    new_data = rescale_1d(data_to_scale, scaling_factor)
+    return new_data
+
+
+@module
+def scale_by_factor(data_to_scale: SansIQData | Sans1dData, scaling_factor: float = 1.0) -> SansIQData | Sans1dData:
+    """Scale a data set relative to another data set.
+
+    **Inputs**
+
+    data_to_scale (sans1d): SANS 1D to be scaled
+
+    scaling_factor (float): The factor to scale a dataset by
+
+    **Returns**
+
+    output(sans1d): A scaled 1D SANS data set
+
+    | 2025-07-30 Jeff Krzywon initial implementation
+    """
+    new_data = rescale_1d(data_to_scale, scaling_factor)
+    return new_data
+
+
+@module
+def shift_to_data(data_to_shift: SansIQData | Sans1dData, data_to_shift_to: SansIQData | Sans1dData) -> SansIQData | Sans1dData:
+    """Scale a data set relative to another data set.
+
+    WARNING: This is, in general, a bad idea. Data should never be scaled, and this is not included in the default
+             protocol. Use at your own risk.
+
+    **Inputs**
+
+    data_to_shift (sans1d): SANS 1D where the intensity is to be shifted by a fixed amount on all Q values
+
+    data_to_shift_to (sans1d): SANS 1D the data set should be shifted to match
+
+    **Returns**
+
+    output(sans1d): A 1D SANS data set that has been shifted
+
+    | 2025-08-05 Jeff Krzywon initial implementation
+    """
+    shifting_factor = 0.0
+    if data_to_shift_to is not None:
+        shifting_factor = _get_shifting_factor_between_data(data_to_shift, data_to_shift_to)
+    new_data = shift_1d(data_to_shift, shifting_factor)
+    return new_data
+
+
+@module
+def shift_by_factor(data_to_shift: SansIQData | Sans1dData, shifting_factor: float = 0.0) -> SansIQData | Sans1dData:
+    """Scale a data set relative to another data set.
+
+    **Inputs**
+
+    data_to_shift (sans1d): SANS 1D to be scaled
+
+    shifting_factor (float): The factor to scale a dataset by
+
+    **Returns**
+
+    output(sans1d): A scaled 1D SANS data set
+
+    | 2025-08-05 Jeff Krzywon initial implementation
+    """
+    new_data = shift_1d(data_to_shift, shifting_factor)
+    return new_data
+
+
+@module
+def mask_1d_data(data: list[SansIQData | Sans1dData],
+                 mask_indices: list[list[int]] | list[int] | None = None) -> list[SansIQData | Sans1dData]:
+    """
+    Identify and mask out user-specified points.
+
+    This defines the *mask* attribute of *data* to include all data
+    except those indicated in *mask_indices*.  Any previous mask is cleared.
+    The masked data are not actually removed from the data, since this
+    operation is done by *join*.
+
+    **Inputs**
+
+    data (sans1d[]) : background data which may contain specular point
+
+    mask_indices (index[]*) : 0-origin data point indices to mask. For example,
+    *mask_indices=[1,4,6]* masks the 2nd, 5th and 7th point respectively. Each
+    dataset should have its own mask.
+
+    **Returns**
+
+    output (sans1d[]) : masked data
+
+    | 2025-08-01 Jeff Krzywon: initial port of refl mask_points
+    """
+    returns = []
+    if not mask_indices:
+        # Return early if no masking is to occur
+        return data
+    if isinstance(mask_indices[0], int):
+        # If a bare list of indices is sent, make into a list of lists
+        mask_indices = [mask_indices]
+    if len(mask_indices) == 1 and isinstance(mask_indices[0], list):
+        # If only a single list of indices is sent, assume it should be applied to all data
+        mask_indices = mask_indices * len(data)
+    for dataset, mask in zip(data, mask_indices):
+        data_set = copy(dataset)
+        if mask[0] and mask[1]:
+            # Both non-zero values => slice
+            data_set.q_slice = [mask[0] - 1, 0 - mask[1]]
+        else:
+            data_set.q_slice = None
+        returns.append(data_set.masked())
+    return returns
+
+
+@module
+def sort_n_data_sets(data: [SansIQData]):
+    """A module that allows the user to combine multiple reduced 1D data sets together. This is a similar process to the
+    NSORT function in the Igor Pro macros. This will optionally scale each data set by a defined amount and then exclude
+    a number of points from each end of the data set. The primary reason for performing this task is to combine multiple
+    instrument configurations together that were measured at the same sample condition.
+
+    :param data: A list of reduced data sets that will be combined.
+    :return: A single data set with all the other data sets scaled, and q cutoff points removed.
+
+    **Inputs**
+
+    data (sans1d[]): SANS 1D data reduced data
+
+    **Returns**
+
+    output (sans1d): A combined reduced data set with all points stitched together into a single data object
+
+    | 2025-07-29 Jeff Krzywon initial implementation
+    """
+    # Create a data object, so we aren't modifying the underlying data that will be displayed
+    scaled_data = SansIQData(np.zeros(0), np.zeros(0), np.zeros(0), np.zeros(0), np.zeros(0), np.zeros(0))
+    for datum in data:
+        # Get data with the q points cutoff
+        cutoff = datum.masked()
+        # Scale the intensity by the scaling factor
+        new_data = rescale_1d(cutoff, datum.scaling_factor)
+        scaled_data.append_1d_data_set(new_data)
+    return scaled_data
+
+
+def _find_nearest(array: np.ndarray, value: float) -> float:
+    """Find the value in an array closest to the seek value.
+
+    :param array: A numpy array of numerical values any dimension.
+    :param value: The value to compare to the array used to find the closest array value.
+    :return: The array value closest to the seek value.
+    """
+    array = np.asarray(array)
+    idx = (np.abs(array - value)).argmin()
+    return array[idx]
+
+
+def _get_scaling_factor_between_data(scale_to_data: np.ndarray, data_to_be_scaled: np.ndarray) -> float:
+    """Find the overlap region between two numerical arrays, and find the ratio of the sum of values in the overlap
+    region.
+
+    :param scale_to_data: A numerical array
+    """
+
+    if min(data_to_be_scaled) > min(scale_to_data):
+        # Overlap is on the high-Q end of the data to be scaled
+        scale_to_upper_index = np.where(scale_to_data == _find_nearest(scale_to_data, np.max(data_to_be_scaled)))[0]
+        scaled_lower_index = np.where(data_to_be_scaled == _find_nearest(data_to_be_scaled, np.min(scale_to_data)))[0]
+        numerator = np.sum(data_to_be_scaled[scaled_lower_index:])
+        denominator = np.sum(scale_to_data[:scale_to_upper_index])
+    else:
+        # Overlap is on the low-Q end of the data to be scaled
+        scaled_upper_index = np.where(scale_to_data == _find_nearest(scale_to_data, np.min(data_to_be_scaled)))[0]
+        scale_to_lower_index = np.where(data_to_be_scaled == _find_nearest(data_to_be_scaled, np.max(scale_to_data)))[0]
+        numerator = np.sum(data_to_be_scaled[:scaled_upper_index])
+        denominator = np.sum(scale_to_data[scale_to_lower_index:])
+    # Slice data at limits after determining if you slice the upper or lower section
+    # Sum all values in the sliced section
+    # Divide scale_to_data sum by data_to_be_scaled sum
+    return numerator / denominator
+
+
+def _get_shifting_factor_between_data(scale_to_data: np.ndarray, data_to_be_scaled: np.ndarray) -> float:
+    """Find the overlap region between two numerical arrays, and average difference between the regions
+
+    :param scale_to_data: A numerical array
+    """
+
+    if min(data_to_be_scaled) > min(scale_to_data):
+        # Overlap is on the high-Q end of the data to be scaled
+        scale_to_upper_index = np.where(scale_to_data == _find_nearest(scale_to_data, np.max(data_to_be_scaled)))[0]
+        scaled_lower_index = np.where(data_to_be_scaled == _find_nearest(data_to_be_scaled, np.min(scale_to_data)))[0]
+        a = np.sum(data_to_be_scaled[scaled_lower_index:])
+        b = np.sum(scale_to_data[:scale_to_upper_index])
+        npts = len(data_to_be_scaled) - scaled_lower_index
+    else:
+        # Overlap is on the low-Q end of the data to be scaled
+        scaled_upper_index = np.where(scale_to_data == _find_nearest(scale_to_data, np.min(data_to_be_scaled)))[0]
+        scale_to_lower_index = np.where(data_to_be_scaled == _find_nearest(data_to_be_scaled, np.max(scale_to_data)))[0]
+        a = np.sum(data_to_be_scaled[:scaled_upper_index])
+        b = np.sum(scale_to_data[scale_to_lower_index:])
+        npts = scaled_upper_index
+    # Slice data at limits after determining if you slice the upper or lower section
+    # Sum all values in the sliced section
+    # Divide scale_to_data sum by data_to_be_scaled sum
+    return (a - b) / npts
+
+
+@module
+def export_data(data, file_path: str | pathlib.Path | os.PathLike = ".", format: str = "ASCII") -> dict:
+    """Export a data file into the chose format.
+
+    :param data: A single data set that will be exported.
+    :param file_path: The directory or the full file path to save the file to.
+    :param format: The file format to export the data to. Options include ASCII, CSV, and NXcanSAS
+    :return: A dictionary mapping the file name to the parameters saved.
+
+    **Inputs**
+
+    data (sans1d): SANS data
+
+    file_path (str): The directory or the full file path to save the file to.
+
+    format (opt:ASCII|CSV|NXcanSAS): The format to output the data to.
+
+    **Returns**
+
+    output (params): A map of the file path the data file was saved to.
+
+    | 2026-04-29 Jeff Krzywon initial implementation
+    """
+
+    if not file_path:
+        raise FileNotFoundError(f"")
+    full_path = pathlib.Path(file_path)
+
+    match format.lower():
+        case "nxcansas":
+            return export_to_nxcansas(data, full_path)
+        case "csv":
+            return export_to_csv(data, file_path)
+        case "ascii" | _:
+            return export_to_ascii(data, file_path)

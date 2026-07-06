@@ -40,7 +40,10 @@ sudo systemctl enable reductus
 sudo systemctl start reductus
 
 # copy the config.py from server...
-cp $PROVISION_DIR/config.py $REDUCTUS_HOME/configurations/config.py
+cp $PROVISION_DIR/config.py $REDUCTUS_HOME/reductus/configurations/config.py
+
+# copy the certificat bundle
+cp $PROVISION_DIR/NIST_bundle.pem $REDUCTUS_WORK_DIR/NIST_bundle.pem
 
 # set up vhosts file...
 sudo cp $PROVISION_DIR/reductus.conf /etc/apache2/sites-available/reductus.conf

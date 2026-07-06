@@ -43,7 +43,8 @@ config = {
             "name": "ncnr",
             "url": "https://www.ncnr.nist.gov/pub/",
             "start_path": "ncnrdata",
-            "file_helper_url": "http://10.201.1.148/ncnrdata/listftpfiles_pg.php"
+            "file_helper_url": "http://10.201.1.148/ncnrdata/listftpfiles_pg.php",
+            "file_helper_cert": "/home/ubuntu/reductus-work/NIST_bundle.pem"
         },
     ],
     "startup_banner": {
