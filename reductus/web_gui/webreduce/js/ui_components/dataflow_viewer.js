@@ -56,6 +56,10 @@ let dataflow_template = /*html*/`
     </button>
   </div>
 
+  <div v-if="template_data.name != ''" id="template-title">
+    <span class="bold">Active Template:</span> {{template_data.name}}<span v-if="template_data.modified == true"> (modified)</span>
+  </div>
+
   <svg class="dataflow editor" ref="svg">
     <defs>
       <filter id="glow" filterUnits="objectBoundingBox" x="-50%" y="-50%" width="200%" height="200%">
@@ -273,7 +277,9 @@ export const DataflowViewer = {
     instrument_def: {},
     template_data: {
       modules: [],
-      wires: []
+      wires: [],
+      name: "",
+      modified: false
     },
     active_help_tab: 'editing',
     menu: {
@@ -472,10 +478,12 @@ export const DataflowViewer = {
         x: this.menu.x,
         y: this.menu.y
       });
+      this.template_data.modified = true;
       this.menu.visible = false;
     },
     remove_wire(index) {
       this.template_data.wires.splice(index, 1);
+      this.template_data.modified = true;
       this.on_change();
     },
     remove_module(index) {
@@ -527,6 +535,7 @@ export const DataflowViewer = {
       }
 
       //console.log(JSON.stringify(this.template_data.wires, null, 2));
+      this.template_data.modified = true;
       this.on_change();
     },
     copy_module(index) {
@@ -557,6 +566,7 @@ export const DataflowViewer = {
       if (new_title != null) {
         module.title = new_title;
       }
+      this.template_data.modified = true;
       this.$nextTick(() => this.$refs.modules[index].set_display_width());
     },
     show_help() {
