@@ -76,7 +76,8 @@ def check_datasource(source):
     else:
         source_url = ""
         raise RuntimeError("Must have url specified for data source: " + source + " in config.")
-    return source_url
+    source_cert = datasource.get("cert", None)
+    return source_url, source_cert
 
 
 def url_get(fileinfo, mtime_check=True):
@@ -101,12 +102,12 @@ def url_get(fileinfo, mtime_check=True):
             print("getting " + path + " from cache!")
         else:
             name = basename(path)
-            source_url = check_datasource(source)
+            source_url, source_cert = check_datasource(source)
             full_url = join(source_url, urllib.parse.quote(path.strip(sep), safe='/:'))
             print("loading", full_url, name)
             req = None  # Need placeholder for req in case requests.get fails.
             try:
-                req = requests.get(full_url)
+                req = requests.get(full_url, verify=source_cert)
                 req.raise_for_status()
                 url_mtime = req.headers.get('last-modified', None)
                 url_time_struct = time.strptime(url_mtime, '%a, %d %b %Y %H:%M:%S %Z')
