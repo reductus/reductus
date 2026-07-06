@@ -41,10 +41,11 @@ config = {
     "data_sources": [
         {
             "name": "ncnr",
-            "url": "https://www.ncnr.nist.gov/pub/",
+            "url": "https://awswebster.ncnr.nist.gov/pub/",
+            "cert": "/home/bbm/reductus-work/NIST_bundle.pem",
             "start_path": "ncnrdata",
-            "file_helper_url": "http://10.201.1.148/ncnrdata/listftpfiles_pg.php",
-            "file_helper_cert": "/home/ubuntu/reductus-work/NIST_bundle.pem"
+            "file_helper_url": "https://awswebster.ncnr.nist.gov/ncnrdata/listftpfiles_pg.php",
+            "file_helper_cert": "/home/bbm/reductus-work/NIST_bundle.pem"
         },
     ],
     "startup_banner": {
