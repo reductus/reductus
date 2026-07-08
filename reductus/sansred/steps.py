@@ -312,8 +312,10 @@ def autosort(rawdata, subsort="sample.labl", add_scattering=True, trans_sort="ru
             added_samples[key] = addSimple(added_samples[key])
         sample_scatt = list(added_samples.values())
 
-    scatt_config = sample_scatt[0].metadata.get(trans_sort, '').replace(b' Scatt', b'').replace(b' Trans', b'')
-    trans_config = sample_trans[0].metadata.get(trans_sort, '').replace(b' Scatt', b'').replace(b' Trans', b'')
+    reference_scatt = sample_scatt[0] if sample_scatt else (UU_scatt[0] if UU_scatt else None)
+    reference_trans = sample_trans[0] if sample_trans else None
+    scatt_config = reference_scatt.metadata.get(trans_sort, '').replace(b' Scatt', b'').replace(b' Trans', b'') if reference_scatt else None
+    trans_config = reference_trans.metadata.get(trans_sort, '').replace(b' Scatt', b'').replace(b' Trans', b'') if reference_trans else None
     for open in open_trans:
         sort_val = open.metadata.get(trans_sort, '').replace(b' Scatt', b'').replace(b' Trans', b'')
         if sort_val == scatt_config:
