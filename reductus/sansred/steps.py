@@ -216,6 +216,26 @@ def autosort(rawdata, subsort="sample.labl", add_scattering=True, trans_sort="ru
 
     open_beam_trans (sans2d[]): Open Beam Transmission used for transmission calculations
 
+    UU_scatt (sans2d[]): Sample Scattering for up-up polarized state
+
+    UD_scatt (sans2d[]): Sample Scattering for up-down polarized state
+
+    DU_scatt (sans2d[]): Sample Scattering for down-up polarized state
+
+    DD_scatt (sans2d[]): Sample Scattering for down-down polarized state
+
+    UU_trans (sans2d[]): Sample transmission for up-up polarized state (use to determine pol. efficiency)
+
+    UD_trans (sans2d[]): Sample transmission for up-down polarized state (use to determine pol. efficiency)
+
+    DU_trans (sans2d[]): Sample transmission for down-up polarized state (use to determine pol. efficiency)
+
+    DD_trans (sans2d[]): Sample transmission for down-down polarized state (use to determine pol. efficiency)
+
+    He3in_trans (sans2d[]): open transmission for unpolarized beam with analyzer in (use to determine He3 cell decay)
+
+    He3out_trans (sans2d[]): open transmission for unpolarized beam with analyzer out (use to determine He3 cell decay)
+
     2019-07-24 Brian Maranville
     2026-01-30 Jeff Krzywon
     """
@@ -228,6 +248,16 @@ def autosort(rawdata, subsort="sample.labl", add_scattering=True, trans_sort="ru
     open_trans = []
     open_beam_trans = []
     open_beam_absolute = []
+    UU_scatt = []
+    UD_scatt = []
+    DU_scatt = []
+    DD_scatt = []
+    UU_trans = []
+    UD_trans = []
+    DU_trans = []
+    DD_trans = []
+    He3in_trans = []
+    He3out_trans = []
 
     for r in rawdata:
         purpose = _s(r.metadata['analysis.filepurpose']).lower().strip()
@@ -241,6 +271,26 @@ def autosort(rawdata, subsort="sample.labl", add_scattering=True, trans_sort="ru
             empty_scatt.append(r)
         elif purpose == 'transmission' and (intent.startswith('empty') or 'empty' in description):
             empty_trans.append(r)
+        elif purpose == 'scattering' and intent == 'uu':
+            UU_scatt.append(r)
+        elif purpose == 'scattering' and intent == 'ud':
+            UD_scatt.append(r)
+        elif purpose == 'scattering' and intent == 'du':
+            DU_scatt.append(r)
+        elif purpose == 'scattering' and intent == 'dd':
+            DD_scatt.append(r)
+        elif purpose == 'transmission' and intent == 'uu':
+            UU_trans.append(r)
+        elif purpose == 'transmission' and intent == 'ud':
+            UD_trans.append(r)
+        elif purpose == 'transmission' and intent == 'du':
+            DU_trans.append(r)
+        elif purpose == 'transmission' and intent == 'dd':
+            DD_trans.append(r)
+        elif purpose == 'he3' and intent == '3hein':
+            He3in_trans.append(r)
+        elif purpose == 'he3' and intent == '3heout':
+            He3out_trans.append(r)
         elif purpose == 'scattering' and intent == 'sample':
             sample_scatt.append(r)
         elif purpose == 'transmission' and intent == 'sample':
@@ -249,7 +299,7 @@ def autosort(rawdata, subsort="sample.labl", add_scattering=True, trans_sort="ru
     def keyFunc(l):
         return l.metadata.get(subsort, 0)
 
-    for output in [sample_scatt, blocked_beam, empty_scatt, sample_trans, empty_trans]:
+    for output in [sample_scatt, blocked_beam, empty_scatt, sample_trans, empty_trans, UU_scatt, UD_scatt, DU_scatt, DD_scatt, UU_trans, UD_trans, DU_trans, DD_trans, He3in_trans, He3out_trans]:
         output.sort(key=keyFunc)
     
     if add_scattering:
@@ -271,7 +321,7 @@ def autosort(rawdata, subsort="sample.labl", add_scattering=True, trans_sort="ru
         if sort_val == trans_config:
             open_beam_trans.append(open)
 
-    return sample_scatt, blocked_beam, empty_scatt, sample_trans, empty_trans, open_beam_absolute, open_beam_trans
+    return sample_scatt, blocked_beam, empty_scatt, sample_trans, empty_trans, open_beam_absolute, open_beam_trans, UU_scatt, UD_scatt, DU_scatt, DD_scatt, UU_trans, UD_trans, DU_trans, DD_trans, He3in_trans, He3out_trans
 
 
 @cache
@@ -715,7 +765,7 @@ def PixelsToQ(data, beam_center=[None,None], correct_solid_angle=True):
     sx = data.metadata['det.pixelsizex'] # cm
     sy = data.metadata['det.pixelsizey']
     sx3 = 1000.0 # constant, = 10000(mm) = 1000 cm; not in the nexus file for some reason.
-    sy3 = 1000.0 # (cm) also not in the nexus file 
+    sy3 = 1000.0 # (cm) also not in the nexus file
     # centers of pixels:
     dxbm = sx3*np.tan((x0-xcenter)*sx/sx3)
     dybm = sy3*np.tan((y0-ycenter)*sy/sy3)
@@ -723,7 +773,7 @@ def PixelsToQ(data, beam_center=[None,None], correct_solid_angle=True):
     X = sx3*np.tan((x-xcenter)*sx/sx3) - dxbm # in mm in nexus, but converted by loader
     Y = sy3*np.tan((y-ycenter)*sy/sy3) - dybm
     r, theta, q, phi, qx, qy, qz = _calculate_Q(X, Y, Z, q0)
-    
+
     if correct_solid_angle:
         """
         rad = sqrt(dtdis2 + xd^2 + yd^2)
