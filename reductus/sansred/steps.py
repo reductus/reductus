@@ -318,9 +318,9 @@ def autosort(rawdata, subsort="sample.labl", add_scattering=True, trans_sort="ru
     trans_config = reference_trans.metadata.get(trans_sort, '').replace(b' Scatt', b'').replace(b' Trans', b'') if reference_trans else None
     for open in open_trans:
         sort_val = open.metadata.get(trans_sort, '').replace(b' Scatt', b'').replace(b' Trans', b'')
-        if sort_val == scatt_config:
+        if scatt_config and sort_val == scatt_config:
             open_beam_absolute.append(open)
-        if sort_val == trans_config:
+        if trans_config and sort_val == trans_config:
             open_beam_trans.append(open)
 
     return sample_scatt, blocked_beam, empty_scatt, sample_trans, empty_trans, open_beam_absolute, open_beam_trans, UU_scatt, UD_scatt, DU_scatt, DD_scatt, UU_trans, UD_trans, DU_trans, DD_trans, He3in_trans, He3out_trans
