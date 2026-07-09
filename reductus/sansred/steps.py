@@ -2595,6 +2595,8 @@ def calculate_analyzer_properties(rho0, delta_t, gamma, mu):
         rho3He (float): The 3He polarization at given time
 
         Pol_eff (floaT): The analyzer efficiency at given time
+
+    | 2026-07-08 Jonathan Gaudet
     """
     rho3He = rho0 * np.exp(-delta_t/gamma)
     Pol_eff = np.tanh(mu*rho3He)
@@ -2614,6 +2616,8 @@ def cell_decay(data, trans_in, trans_out):
 
     **Returns**
         result(params): provide initial time of the He3 cell (t0), the time constant gamma, and initial polarization of the cell rho0
+
+    | 2026-07-09 Jonathan Gaudet
     """
 
     opacity1ang = float(_s(data.metadata['analyzer.opacity1ang']))
@@ -2642,3 +2646,70 @@ def cell_decay(data, trans_in, trans_out):
         ("time_constant", gamma)]))
 
     return result
+
+@module
+def fit_He3_par(filelist=None, add_scatt=False, add_keyword='sample.labl'):
+    """Single module to fit the He3 decay parameter for the analyzer cell of a single instrument and sample configuration
+       Currently not very flexible. It needs as many transmission files for He3in than for He3out.
+
+        **Inputs**
+
+        filelist (fileinfo[]): all data files, but will only use He3in, Heout, and blocked beam
+
+        add_scatt {Should scattering files be added together?} (bool): Should scattering files that share a metadata node
+        be added together?
+
+        add_keyword {Metadata node for adding data together} (opt:det.des_dis|sample.labl|sample.temp|adam.voltage): If scattering files should be added together,
+        what should the data have in common for adding.
+
+        **Returns**
+
+        result(params): provide initial time of the He3 cell (t0), the time constant gamma, and initial polarization of the cell rho0
+
+        | 2026-07-09 Jonathan Gaudet
+        """
+    template_def = {
+        "name": "loader_template",
+        "description": "SANS full pol reduction",
+        "modules":
+            [
+                {"x": 3, "y": 10, "title": "Raw Data", "module": "ncnr.sans.SuperLoadSANS",
+                 "config": {
+                     "filelist": [], "do_det_eff": False, "do_deadtime": True, "deadtime": 3.4e-6,
+                     "do_mon_norm": False, "do_atten_correct": False, "mon0": 1e8, "check_timestamps": True
+                 }
+                 },
+                {"x": 180, "y": 10, "title": "Sorted Data", "module": "ncnr.sans.autosort",
+                 "config": {"filelist": [], "subsort": add_keyword, "add_scattering": add_scatt}
+                 },
+                {"x": 350, "y": 7, "title": "BB Subtract from He3 in", "module": "ncnr.sans.subtract"},
+                {"x": 350, "y": 90, "title": "BB Subtract from He3 out", "module": "ncnr.sans.subtract"},
+                {"x": 590, "y": 10, "title": "transmission He3 in", "module": "ncnr.sans.transmissionDecay"},
+                {"x": 590, "y": 90, "title": "Transmission He3 out", "module": "ncnr.sans.transmissionDecay"},
+                {"x": 890, "y": 10, "title": "Cell fit", "module": "ncnr.sans.cell_decay"},
+            ],
+        "wires":
+            [
+                {"source": [0, "output"], "target": [1, "rawdata"]},
+                {"source": [1, "He3in_trans"], "target": [2, "subtrahend"]},
+                {"source": [1, "blocked_beam"], "target": [2, "minuend"]},
+                {"source": [1, "He3out_trans"], "target": [3, "subtrahend"]},
+                {"source": [1, "blocked_beam"], "target": [3, "minuend"]},
+                {"source": [2, "output"], "target": [4, "data"]},
+                {"source": [3, "output"], "target": [5, "data"]},
+                {"source": [1, "He3in_trans"], "target": [6, "data"]},
+                {"source": [4, "sum"], "target": [6, "trans_in"]},
+                {"source": [5, "sum"], "target": [6, "trans_out"]},
+            ],
+        "instrument": "ncnr.sans",
+        "version": "1.0"
+    }
+
+    template = Template(**template_def)
+
+    config = {"0": {"filelist": filelist}}
+    terminal_id = "output"
+
+    results = process_template(template, config, target=target)
+    data_list = results.values
+    return data_list
