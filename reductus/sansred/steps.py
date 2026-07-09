@@ -2599,13 +2599,13 @@ def calculate_analyzer_properties(rho0, delta_t, gamma, mu):
     return rho3He, Pol_eff
 
 @module
-def fit_analyzer_cell_decay(data, transHeIn, transHeout):
+def fit_analyzer_cell_decay(data, trans_in, trans_out):
     """Intend to perform fit of the 3He analyzer cell initial 3He polarization (rho0) and the time constant (gamma) for Pol. SANS
 
     **Inputs**
         data (sans2d[]): SANS data with metadata needed to read the Transmission (T_E) and opacity (mu) of the He3 cell
-        TransHeIn (sans1d[]): Transmission vs time for the HeIn cell
-        TransHeout (sans1d[]): Transmission vs time for the Heout cell
+        trans_in (sans1d[]): Transmission vs time for the HeIn cell
+        trans_out (sans1d[]): Transmission vs time for the Heout cell
 
     **Returns**
         gamma (float): fitted time constant of the He3 cell analyzer in seconds???
