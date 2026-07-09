@@ -2613,19 +2613,19 @@ def fit_analyzer_cell_decay(data, trans_in, trans_out):
         t0 (float): time at which rho=rho0 in second????
     """
 
-    opacity1A = float(_s(data.metadata['analyzer.opacity1ang']))
+    opacity1ang = float(_s(data.metadata['analyzer.opacity1ang']))
     wavelength = float(_s(data.metadata['resolution.dlmda']))
-    mu = opacity1A * wavelength
-    T_E = float(_s(data.metadata['analyzer.GlassTransmission']))
+    mu = opacity1ang * wavelength
+    trans_glass = float(_s(data.metadata['analyzer.GlassTransmission']))
 
     time = trans_in.x
     t0 = time[0]
     time = time - t0
-    transHE_in = trans_in.y
-    transHE_out = trans_out.y
-    trans_unpol = transHE_in / transHE_out
+    transmission_in = trans_in.y
+    transmission_out = trans_out.y
+    trans_unpolarized = transmission_in / transmission_out
 
-    rho = (1/mu) * np.acosh(trans_unpol/(T_E * np.exp(-mu)))
+    rho = (1/mu) * np.acosh(trans_unpolarized/(trans_glass * np.exp(-mu)))
 
     fit = lambda t, rho0, gamma: calculate_analyzer_properties(rho0, t, gamma, mu)[0]
 
