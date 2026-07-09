@@ -2577,3 +2577,20 @@ def export_data(data, file_path: str | pathlib.Path | os.PathLike = ".", format:
             return export_to_csv(data, file_path)
         case "ascii" | _:
             return export_to_ascii(data, file_path)
+def calculate_analyzer_properties(rho0, deltaT, Gamma, mu):
+    """Calculate analyzer efficiency (Pol_eff) and 3He polarization (rho3He) at a given time t.
+
+    **Inputs**
+        mu (float): cell opacity
+        rho0 (float): initial 3He polarization
+        Gamma (float):
+        deltaT (float): time difference from time for which rho_0 was determined ()
+
+    **Returns**
+        rho3He (float): The 3He polarization at given time
+        Pol_eff (floaT): The analyzer efficiency at given time
+    """
+    rho3He = rho0 * np.exp(-deltaT/Gamma)
+    Pol_eff = np.tanh(mu*rho3He)
+
+    return rho3He, Pol_eff
