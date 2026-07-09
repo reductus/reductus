@@ -2614,7 +2614,7 @@ def fit_analyzer_cell_decay(data, trans_in, trans_out):
     """
 
     opacity1ang = float(_s(data.metadata['analyzer.opacity1ang']))
-    wavelength = float(_s(data.metadata['resolution.dlmda']))
+    wavelength = float(_s(data.metadata['resolution.lmda']))
     mu = opacity1ang * wavelength
     trans_glass = float(_s(data.metadata['analyzer.GlassTransmission']))
 
