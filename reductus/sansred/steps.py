@@ -15,7 +15,6 @@ from io import BytesIO
 from collections import OrderedDict
 
 import numpy as np
-from scipy.optimize import curve_fit
 
 from reductus.dataflow.calc import process_template
 from reductus.dataflow.core import Template
@@ -2585,12 +2584,16 @@ def calculate_analyzer_properties(rho0, delta_t, gamma, mu):
 
     **Inputs**
         mu (float): cell opacity
+
         rho0 (float): initial 3He polarization
+
         Gamma (float):
+
         deltaT (float): time difference from time for which rho_0 was determined ()
 
     **Returns**
         rho3He (float): The 3He polarization at given time
+
         Pol_eff (floaT): The analyzer efficiency at given time
     """
     rho3He = rho0 * np.exp(-delta_t/gamma)
@@ -2599,18 +2602,18 @@ def calculate_analyzer_properties(rho0, delta_t, gamma, mu):
     return rho3He, Pol_eff
 
 @module
-def fit_analyzer_cell_decay(data, trans_in, trans_out):
+def cell_decay(data, trans_in, trans_out):
     """Intend to perform fit of the 3He analyzer cell initial 3He polarization (rho0) and the time constant (gamma) for Pol. SANS
 
     **Inputs**
-        data (sans2d[]): SANS data with metadata needed to read the Transmission (T_E) and opacity (mu) of the He3 cell
-        trans_in (sans1d[]): Transmission vs time for the HeIn cell
-        trans_out (sans1d[]): Transmission vs time for the Heout cell
+        data (sans2d): SANS data with metadata needed to read the Transmission (T_E) and opacity (mu) of the He3 cell
+
+        trans_in (sans1d): Transmission vs time for the HeIn cell
+
+        trans_out (sans1d): Transmission vs time for the Heout cell
 
     **Returns**
-        gamma (float): fitted time constant of the He3 cell analyzer in seconds???
-        rho0  (float): fitted initial 3He polarization of the analyzer cell
-        t0 (float): time at which rho=rho0 in second????
+        result(params): provide initial time of the He3 cell (t0), the time constant gamma, and initial polarization of the cell rho0
     """
 
     opacity1ang = float(_s(data.metadata['analyzer.opacity1ang']))
@@ -2626,12 +2629,16 @@ def fit_analyzer_cell_decay(data, trans_in, trans_out):
     trans_unpolarized = transmission_in / transmission_out
 
     rho = (1/mu) * np.acosh(trans_unpolarized/(trans_glass * np.exp(-mu)))
+    ln_rho = np.log(rho)
 
-    fit = lambda t, rho0, gamma: calculate_analyzer_properties(rho0, t, gamma, mu)[0]
+    slope, intercept = np.polyfit(time, ln_rho, deg=1)
 
-    init_param = [rho[0],200.0 * 3600.0]
+    gamma = -1.0 / slope if slope!=0 else 0
+    rho0 = np.exp(intercept)
 
-    popt, pcov = curve_fit(fit, time, rho, p0=init_param)
-    rho0, gamma = popt
+    result = Parameters(OrderedDict([
+        ("init_time", t0),
+        ("init_rho", rho0),
+        ("time_constant", gamma)]))
 
-    return rho0, gamma, t0
+    return result

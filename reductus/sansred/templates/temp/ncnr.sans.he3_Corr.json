@@ -1,0 +1,148 @@
+{
+  "modules": [
+    {
+      "module": "ncnr.sans.subtract",
+      "title": "Subtract",
+      "x": 354,
+      "y": 7
+    },
+    {
+      "module": "ncnr.sans.subtract",
+      "title": "Subtract",
+      "x": 352,
+      "y": 89
+    },
+    {
+      "module": "ncnr.sans.transmissionDecay",
+      "title": "Transmissiondecay",
+      "x": 578,
+      "y": 10.984375
+    },
+    {
+      "module": "ncnr.sans.transmissionDecay",
+      "title": "Transmissiondecay",
+      "x": 592,
+      "y": 92.984375
+    },
+    {
+      "module": "ncnr.sans.cell_decay",
+      "title": "Cell Decay",
+      "x": 894,
+      "y": 8.984375
+    },
+    {
+      "module": "ncnr.sans.SuperLoadSANS",
+      "title": "Superloadsans",
+      "x": 3,
+      "y": 16.984375
+    },
+    {
+      "module": "ncnr.sans.autosort",
+      "title": "Autosort",
+      "x": 186,
+      "y": 9.984375
+    }
+  ],
+  "wires": [
+    {
+      "source": [
+        0,
+        "output"
+      ],
+      "target": [
+        2,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        1,
+        "output"
+      ],
+      "target": [
+        3,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        2,
+        "sum"
+      ],
+      "target": [
+        4,
+        "trans_in"
+      ]
+    },
+    {
+      "source": [
+        3,
+        "sum"
+      ],
+      "target": [
+        4,
+        "trans_out"
+      ]
+    },
+    {
+      "source": [
+        6,
+        "He3in_trans"
+      ],
+      "target": [
+        0,
+        "subtrahend"
+      ]
+    },
+    {
+      "source": [
+        6,
+        "He3out_trans"
+      ],
+      "target": [
+        1,
+        "subtrahend"
+      ]
+    },
+    {
+      "source": [
+        6,
+        "He3in_trans"
+      ],
+      "target": [
+        4,
+        "data"
+      ]
+    },
+    {
+      "source": [
+        6,
+        "blocked_beam"
+      ],
+      "target": [
+        0,
+        "minuend"
+      ]
+    },
+    {
+      "source": [
+        6,
+        "blocked_beam"
+      ],
+      "target": [
+        1,
+        "minuend"
+      ]
+    },
+    {
+      "source": [
+        5,
+        "output"
+      ],
+      "target": [
+        6,
+        "rawdata"
+      ]
+    }
+  ]
+}
