@@ -15,6 +15,7 @@ from io import BytesIO
 from collections import OrderedDict
 
 import numpy as np
+from scipy.optimize import curve_fit
 
 from reductus.dataflow.calc import process_template
 from reductus.dataflow.core import Template
@@ -2577,6 +2578,8 @@ def export_data(data, file_path: str | pathlib.Path | os.PathLike = ".", format:
             return export_to_csv(data, file_path)
         case "ascii" | _:
             return export_to_ascii(data, file_path)
+
+
 def calculate_analyzer_properties(rho0, deltaT, Gamma, mu):
     """Calculate analyzer efficiency (Pol_eff) and 3He polarization (rho3He) at a given time t.
 
@@ -2594,3 +2597,41 @@ def calculate_analyzer_properties(rho0, deltaT, Gamma, mu):
     Pol_eff = np.tanh(mu*rho3He)
 
     return rho3He, Pol_eff
+
+@module
+def fit_analyzer_cell_decay(data, TransHeIn, TransHeout):
+    """Intend to perform fit of the 3He analyzer cell initial 3He polarization (rho0) and the time constant (gamma) for Pol. SANS
+
+    **Inputs**
+        data (sans2d): SANS data with metadata needed to read the Transmission (T_E) and opacity (mu) of the He3 cell
+        TransHeIn (sans1d): Transmission vs time for the HeIn cell
+        TransHeout (sans1d): Transmission vs time for the Heout cell
+
+    **Returns**
+        gamma (float): fitted time constant of the He3 cell analyzer in seconds???
+        rho0  (float): fitted initial 3He polarization of the analyzer cell
+        t0 (float): time at which rho=rho0 in second????
+    """
+
+    opacity1A = float(_s(data.metadata['DAS_logs.backPolarization.opacityAt1Ang']))
+    wavelength = float(_s(data.metadata['DAS_logs.wavelength.wavelength']))
+    mu = opacity1A * wavelength
+    T_E = float(_s(data.metadata['DAS_logs.backPolarization.glassTransmission']))
+
+    time = TransHeIn.x
+    t0 = time[0]
+    time = time - t0
+    trans_in = TransHeIn.y
+    trans_out = TransHeout.y
+    trans_unpol = trans_in / trans_out
+
+    rho = (1/mu) * np.acosh(trans_unpol/(T_E * np.exp(-mu)))
+
+    fit = lambda t, rho0, gamma: calculate_analyzer_properties(rho0, t, gamma, mu)[0]
+
+    init_param = [rho[0],200.0 * 3600.0]
+
+    popt, pcov = curve_fit(fit, time, rho, p0=init_param)
+    rho0, gamma = popt
+
+    return rho0, gamma, t0
