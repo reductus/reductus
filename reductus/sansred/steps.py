@@ -2618,12 +2618,12 @@ def fit_analyzer_cell_decay(data, trans_in, trans_out):
     mu = opacity1A * wavelength
     T_E = float(_s(data.metadata['analyzer.GlassTransmission']))
 
-    time = transHeIn.x
+    time = trans_in.x
     t0 = time[0]
     time = time - t0
-    trans_in = transHeIn.y
-    trans_out = transHeout.y
-    trans_unpol = trans_in / trans_out
+    transHE_in = trans_in.y
+    transHE_out = trans_out.y
+    trans_unpol = transHE_in / transHE_out
 
     rho = (1/mu) * np.acosh(trans_unpol/(T_E * np.exp(-mu)))
 
