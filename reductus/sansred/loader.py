@@ -34,6 +34,8 @@ metadata_lookup = {
     "mag.value": "DAS_logs/mag/value",
     "polarization.front": "DAS_logs/frontPolarization/direction",
     "polarization.back": "DAS_logs/backPolarization/direction",
+    "analyzer.GlassTransmission": "DAS_logs/backPolarization/glassTransmission",
+    "analyzer.opacity1ang": "DAS_logs/backPolarization/opacityAt1Ang",
     "polarization.backname": "DAS_logs/backPolarization/name",
     "resolution.lmda": "instrument/monochromator/wavelength",
     "resolution.dlmda": "instrument/monochromator/wavelength_error",

@@ -2580,7 +2580,7 @@ def export_data(data, file_path: str | pathlib.Path | os.PathLike = ".", format:
             return export_to_ascii(data, file_path)
 
 
-def calculate_analyzer_properties(rho0, deltaT, Gamma, mu):
+def calculate_analyzer_properties(rho0, delta_t, gamma, mu):
     """Calculate analyzer efficiency (Pol_eff) and 3He polarization (rho3He) at a given time t.
 
     **Inputs**
@@ -2593,19 +2593,19 @@ def calculate_analyzer_properties(rho0, deltaT, Gamma, mu):
         rho3He (float): The 3He polarization at given time
         Pol_eff (floaT): The analyzer efficiency at given time
     """
-    rho3He = rho0 * np.exp(-deltaT/Gamma)
+    rho3He = rho0 * np.exp(-delta_t/gamma)
     Pol_eff = np.tanh(mu*rho3He)
 
     return rho3He, Pol_eff
 
 @module
-def fit_analyzer_cell_decay(data, TransHeIn, TransHeout):
+def fit_analyzer_cell_decay(data, transHeIn, transHeout):
     """Intend to perform fit of the 3He analyzer cell initial 3He polarization (rho0) and the time constant (gamma) for Pol. SANS
 
     **Inputs**
-        data (sans2d): SANS data with metadata needed to read the Transmission (T_E) and opacity (mu) of the He3 cell
-        TransHeIn (sans1d): Transmission vs time for the HeIn cell
-        TransHeout (sans1d): Transmission vs time for the Heout cell
+        data (sans2d[]): SANS data with metadata needed to read the Transmission (T_E) and opacity (mu) of the He3 cell
+        TransHeIn (sans1d[]): Transmission vs time for the HeIn cell
+        TransHeout (sans1d[]): Transmission vs time for the Heout cell
 
     **Returns**
         gamma (float): fitted time constant of the He3 cell analyzer in seconds???
@@ -2613,16 +2613,16 @@ def fit_analyzer_cell_decay(data, TransHeIn, TransHeout):
         t0 (float): time at which rho=rho0 in second????
     """
 
-    opacity1A = float(_s(data.metadata['DAS_logs.backPolarization.opacityAt1Ang']))
-    wavelength = float(_s(data.metadata['DAS_logs.wavelength.wavelength']))
+    opacity1A = float(_s(data.metadata['analyzer.opacity1ang']))
+    wavelength = float(_s(data.metadata['resolution.dlmda']))
     mu = opacity1A * wavelength
-    T_E = float(_s(data.metadata['DAS_logs.backPolarization.glassTransmission']))
+    T_E = float(_s(data.metadata['analyzer.GlassTransmission']))
 
-    time = TransHeIn.x
+    time = transHeIn.x
     t0 = time[0]
     time = time - t0
-    trans_in = TransHeIn.y
-    trans_out = TransHeout.y
+    trans_in = transHeIn.y
+    trans_out = transHeout.y
     trans_unpol = trans_in / trans_out
 
     rho = (1/mu) * np.acosh(trans_unpol/(T_E * np.exp(-mu)))
