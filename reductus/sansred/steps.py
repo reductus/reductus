@@ -2631,8 +2631,8 @@ def cell_decay(data, trans_in, trans_out):
     time = trans_in.x
     t0 = time[0]
     time = time - t0
-    transmission_in = trans_in.y
-    transmission_out = trans_out.y
+    transmission_in = trans_in.v
+    transmission_out = trans_out.v
     trans_unpolarized = transmission_in / transmission_out
 
     rho = (1/mu) * np.acosh(trans_unpolarized/(trans_glass * np.exp(-mu)))
