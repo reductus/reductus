@@ -2693,27 +2693,19 @@ def flipper_sm_efficiency(trans_uu,trans_ud,trans_du,trans_dd,trans_he_in,trans_
     ratio_uu_ud = generate_transmission(trans_uu_bgd,trans_ud_bgd)
     ratio_dd_du = generate_transmission(trans_dd_bgd,trans_du_bgd)
 
-    import iso8601
 
-    start_time_uu = iso8601.parse_date(_s(trans_uu.metadata['start_time']))
-    end_time_uu = iso8601.parse_date(_s(trans_uu.metadata['end_time']))
-    avg_time_uu = (end_time_uu - start_time_uu) / 2.0 + start_time_uu
-    time_uu = avg_time_uu.timestamp() - param_he.params.init_time
 
-    start_time_ud = iso8601.parse_date(_s(trans_ud.metadata['start_time']))
-    end_time_ud = iso8601.parse_date(_s(trans_ud.metadata['end_time']))
-    avg_time_ud = (end_time_ud - start_time_ud ) / 2.0 + start_time_ud
-    time_ud = avg_time_ud.timestamp() - param_he.params.init_time
+    def get_avg_run_time(data):
+        import iso8601
+        t_start = iso8601.parse_date(data.metadata['start_time']).timestamp()
+        t_end = iso8601.parse_date(data.metadata['end_time']).timestamp()
+        return (t_end + t_start) / 2
 
-    start_time_du = iso8601.parse_date(_s(trans_du.metadata['start_time']))
-    end_time_du = iso8601.parse_date(_s(trans_du.metadata['end_time']))
-    avg_time_du = (end_time_du - start_time_du) / 2.0 + start_time_du
-    time_du = avg_time_du.timestamp() - param_he.params.init_time
+    time_uu = get_avg_run_time(trans_uu)-param_he.params.init_time
+    time_ud = get_avg_run_time(trans_ud) - param_he.params.init_time
+    time_du = get_avg_run_time(trans_du) - param_he.params.init_time
+    time_dd = get_avg_run_time(trans_dd) - param_he.params.init_time
 
-    start_time_dd = iso8601.parse_date(_s(trans_dd.metadata['start_time']))
-    end_time_dd = iso8601.parse_date(_s(trans_dd.metadata['end_time']))
-    avg_time_dd = (end_time_dd - start_time_dd) / 2.0 + start_time_dd
-    time_dd = avg_time_dd.timestamp() - param_he.params.init_time
 
     opacity1ang = float(_s(trans_uu.metadata['analyzer.opacity1ang']))
     wavelength = float(_s(trans_uu.metadata['resolution.lmda']))
