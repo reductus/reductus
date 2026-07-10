@@ -2694,22 +2694,22 @@ def flipper_sm_efficiency(trans_uu,trans_ud,trans_du,trans_dd,trans_he_in,trans_
 
     start_time_uu = iso8601.parse_date(_s(trans_uu.metadata['start_time']))
     end_time_uu = iso8601.parse_date(_s(trans_uu.metadata['end_time']))
-    avg_time_uu = (end_time - start_time) / 2.0 + start_time
+    avg_time_uu = (end_time_uu - start_time_uu) / 2.0 + start_time
     time_uu = avg_time_uu - param_he.init_time
 
     start_time_ud = iso8601.parse_date(_s(trans_ud.metadata['start_time']))
     end_time_ud = iso8601.parse_date(_s(trans_ud.metadata['end_time']))
-    avg_time_ud = (end_time - start_time) / 2.0 + start_time
+    avg_time_ud = (end_time_ud - start_time_ud ) / 2.0 + start_time
     time_ud = avg_time_ud - param_he.init_time
 
     start_time_du = iso8601.parse_date(_s(trans_du.metadata['start_time']))
     end_time_du = iso8601.parse_date(_s(trans_du.metadata['end_time']))
-    avg_time_du = (end_time - start_time) / 2.0 + start_time
+    avg_time_du = (end_time_du - start_time_du) / 2.0 + start_time
     time_du = avg_time_du - param_he.init_time
 
     start_time_dd = iso8601.parse_date(_s(trans_dd.metadata['start_time']))
     end_time_dd = iso8601.parse_date(_s(trans_dd.metadata['end_time']))
-    avg_time_dd = (end_time - start_time) / 2.0 + start_time
+    avg_time_dd = (end_time_dd - start_time_dd) / 2.0 + start_time
     time_dd = avg_time_dd - param_he.init_time
 
     opacity1ang = float(_s(data.metadata['analyzer.opacity1ang']))
