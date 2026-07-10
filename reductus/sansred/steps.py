@@ -2696,32 +2696,32 @@ def flipper_sm_efficiency(trans_uu,trans_ud,trans_du,trans_dd,trans_he_in,trans_
     start_time_uu = iso8601.parse_date(_s(trans_uu.metadata['start_time']))
     end_time_uu = iso8601.parse_date(_s(trans_uu.metadata['end_time']))
     avg_time_uu = (end_time_uu - start_time_uu) / 2.0 + start_time_uu
-    time_uu = avg_time_uu - param_he.init_time
+    time_uu = avg_time_uu - param_he.params.init_time
 
     start_time_ud = iso8601.parse_date(_s(trans_ud.metadata['start_time']))
     end_time_ud = iso8601.parse_date(_s(trans_ud.metadata['end_time']))
     avg_time_ud = (end_time_ud - start_time_ud ) / 2.0 + start_time_ud
-    time_ud = avg_time_ud - param_he.init_time
+    time_ud = avg_time_ud - param_he.params.init_time
 
     start_time_du = iso8601.parse_date(_s(trans_du.metadata['start_time']))
     end_time_du = iso8601.parse_date(_s(trans_du.metadata['end_time']))
     avg_time_du = (end_time_du - start_time_du) / 2.0 + start_time_du
-    time_du = avg_time_du - param_he.init_time
+    time_du = avg_time_du - param_he.params.init_time
 
     start_time_dd = iso8601.parse_date(_s(trans_dd.metadata['start_time']))
     end_time_dd = iso8601.parse_date(_s(trans_dd.metadata['end_time']))
     avg_time_dd = (end_time_dd - start_time_dd) / 2.0 + start_time_dd
-    time_dd = avg_time_dd - param_he.init_time
+    time_dd = avg_time_dd - param_he.params.init_time
 
     opacity1ang = float(_s(trans_uu.metadata['analyzer.opacity1ang']))
     wavelength = float(_s(trans_uu.metadata['resolution.lmda']))
     mu = opacity1ang * wavelength
     trans_glass = float(_s(trans_uu.metadata['analyzer.GlassTransmission']))
 
-    rhot_uu, pol_uu, t_uu = calculate_analyzer_properties(param_he.init_rho, time_uu, param_he.time_constant, mu, trans_glass)
-    rhot_ud, pol_ud, t_ud = calculate_analyzer_properties(param_he.init_rho, time_ud, param_he.time_constant, mu, trans_glass)
-    rhot_du, pol_du, t_du = calculate_analyzer_properties(param_he.init_rho, time_du, param_he.time_constant, mu, trans_glass)
-    rhot_dd, pol_dd, t_dd = calculate_analyzer_properties(param_he.init_rho, time_dd, param_he.time_constant, mu, trans_glass)
+    rhot_uu, pol_uu, t_uu = calculate_analyzer_properties(param_he.params.init_rho, time_uu, param_he.params.time_constant, mu, trans_glass)
+    rhot_ud, pol_ud, t_ud = calculate_analyzer_properties(param_he.params.init_rho, time_ud, param_he.params.time_constant, mu, trans_glass)
+    rhot_du, pol_du, t_du = calculate_analyzer_properties(param_he.params.init_rho, time_du, param_he.params.time_constant, mu, trans_glass)
+    rhot_dd, pol_dd, t_dd = calculate_analyzer_properties(param_he.params.init_rho, time_dd, param_he.params.time_constant, mu, trans_glass)
 
     ratio_1 = ratio_uu_ud * (t_ud / t_uu)
     ratio_2 = ratio_dd_du * (t_du / t_dd)
