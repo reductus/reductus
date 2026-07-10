@@ -2733,6 +2733,8 @@ def flipper_sm_efficiency(trans_uu,trans_ud,trans_du,trans_dd,trans_he_in,trans_
 
     result = Parameters(OrderedDict([
         ("eff_sm_up", p_sm),
-        ("eff_sm_down", p_sm_f)]))
+        ("eff_sm_down", p_sm_f),
+        ("rho_0", param_he.params.init_rho),
+        ("gamma",param_he.params.time_cnstant)]))
 
     return result
