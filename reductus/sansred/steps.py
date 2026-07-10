@@ -2693,7 +2693,7 @@ def flipper_sm_efficiency(trans_uu,trans_ud,trans_du,trans_dd,trans_he_in,trans_
     ratio_uu_ud = generate_transmission(trans_uu_bgd,trans_ud_bgd)
     ratio_dd_du = generate_transmission(trans_dd_bgd,trans_du_bgd)
 
-    time_uu = get_avg_run_time(trans_uu)-param_he.params.init_time
+    time_uu = get_avg_run_time(trans_uu) - param_he.params.init_time
     time_ud = get_avg_run_time(trans_ud) - param_he.params.init_time
     time_du = get_avg_run_time(trans_du) - param_he.params.init_time
     time_dd = get_avg_run_time(trans_dd) - param_he.params.init_time
@@ -2718,7 +2718,8 @@ def flipper_sm_efficiency(trans_uu,trans_ud,trans_du,trans_dd,trans_he_in,trans_
         ("eff_sm_up", p_sm),
         ("eff_sm_down", p_sm_f),
         ("rho_0", param_he.params.init_rho),
-        ("gamma",param_he.params.time_cnstant)]))
+        ("gamma",param_he.params.time_cnstant),
+        ("t0_cell",param_he.params.init_time)]))
 
     return result
 
@@ -2729,10 +2730,11 @@ def get_avg_run_time(data):
 
         data (sans2d)  : scattering file
 
-        ***Outputs***
+        ***Returns***
 
-        avg time (params)
+        avg time (params) : avg time of the scan run in hours
 
+    | 2026-07-10 Jonathan Gaudet
     """
     import iso8601
 
@@ -2740,3 +2742,81 @@ def get_avg_run_time(data):
     t_end = iso8601.parse_date(data.metadata['end_time']).timestamp()
 
     return (t_end + t_start) / 2
+
+@module
+def spin_leakage_corr(data_uu, data_ud, data_du, data_dd, blocked_beam, p_sm, p_sm_f, gamma, rho0, t0_cell):
+    """function that provides spin leakage correlation to the 4 polarized cross-sections of a pol. sans experiment
+
+        **Inputs**
+
+        uu_corr(sans2d)  : scattering uu file
+
+        ud_corr(sans2d)  : scattering ud file
+
+        du_corr(sans2d)  : scattering du file
+
+        dd_corr(sans2d)  : scattering dd file
+
+        blocked_beam(sans2d)  : blocked beam scattering file
+
+        p_sm(float) : polarizer efficiency (spin up)
+
+        p_sm_f(float) : polarizer+flipper efficiency (spin down)
+
+        gamma(float) : decay time of the He3 cell in hours
+
+        rho0(float) : initial polarization of the He3 cell at time=t0
+
+        t0_cell(float) : timestamp of the initial He3 transmission measurement
+
+        **Returns**
+
+        uu_corr(sans2d)  : correct scattering uu file
+
+        ud_corr(sans2d)  : corrected scattering ud file
+
+        du_corr(sans2d)  : corrected scattering du file
+
+        dd_corr(sans2d)  : corrected scattering dd file
+
+        | 2026-07-10 Jonathan Gaudet
+        """
+
+    opacity1ang = float(_s(data_uu.metadata['analyzer.opacity1ang']))
+    wavelength = float(_s(data_uu.metadata['resolution.lmda']))
+    mu = opacity1ang * wavelength
+    trans_glass = float(_s(data_uu.metadata['analyzer.GlassTransmission']))
+
+    epsilon_uu = (1 + p_sm) / 2
+    epsilon_ud = (1 - p_sm) / 2
+    epsilon_dd = (1 + p_sm_f) / 2
+    epsilon_du = (1 - p_sm_f) / 2
+
+    time_scans = (get_avg_run_time(data_uu) + get_avg_run_time(data_ud) + get_avg_run_time(data_du) + get_avg_run_time(data_dd)) / 4
+    time_avg = time_scans - t0_cell
+
+    rho3he, pol_eff, t_unpolarized = calculate_analyzer_properties(rho0, time_avg, gamma, mu, trans_glass)
+
+    t_maj  = trans_glass * np.exp(- mu * (1 - rho3he))
+    t_min = trans_glass * np.exp(-mu * (1 + rho3he))
+
+    matrix_corr = set_pol_corr_matrix(epsilon_uu,epsilon_ud,epsilon_dd,epsilon_du,t_maj,t_min)
+
+    "need to do multiplication of matrix here now"
+
+
+    return uu_corr, ud_corr, du_corr, dd_corr
+
+def set_pol_corr_matrix(eps_uu, eps_ud, eps_dd, eps_du, tmaj, tmin):
+    """"""
+
+    matrix_corr = np.array([
+                   [eps_uu * tmaj, eps_uu * tmin, eps_ud * tmaj, eps_ud * tmin],
+                   [eps_uu * tmin, eps_uu * tmaj, eps_ud * tmin, eps_ud * tmaj],
+                   [eps_du * tmaj, eps_du * tmin, eps_dd * tmaj, eps_dd * tmin],
+                   [eps_du * tmin, eps_du * tmaj, eps_dd * tmin, eps_dd * tmaj]
+                ])
+
+    inv_corr_matrix = np.linalg.inv(matrix_corr)
+
+    return inv_corr_matrix
