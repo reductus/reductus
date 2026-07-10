@@ -2579,7 +2579,7 @@ def export_data(data, file_path: str | pathlib.Path | os.PathLike = ".", format:
             return export_to_ascii(data, file_path)
 
 
-def calculate_analyzer_properties(rho0, delta_t, gamma, mu):
+def calculate_analyzer_properties(rho0, delta_t, gamma, mu, t_glass):
     """Calculate analyzer efficiency (Pol_eff) and 3He polarization (rho3He) at a given time t.
 
     **Inputs**
@@ -2591,17 +2591,20 @@ def calculate_analyzer_properties(rho0, delta_t, gamma, mu):
 
         deltaT (float): time difference from time for which rho_0 was determined ()
 
-    **Returns**
-        rho3He (float): The 3He polarization at given time
+        t_glass (float) : transmission of the empty glass cell
 
-        Pol_eff (floaT): The analyzer efficiency at given time
+    **Returns**
+        rho3he (float): The 3He polarization at given time
+
+        pol_eff (floaT): The analyzer efficiency at given time
 
     | 2026-07-08 Jonathan Gaudet
     """
-    rho3He = rho0 * np.exp(-delta_t/gamma)
-    Pol_eff = np.tanh(mu*rho3He)
+    rho3he = rho0 * np.exp(-delta_t/gamma)
+    pol_eff = np.tanh(mu*rho3he)
+    t_unpolarized = t_glass * np.exp(-mu) * np.cosh(mu*rho3he)
 
-    return rho3He, Pol_eff
+    return rho3he, pol_eff, t_unpolarized
 
 @module
 def cell_decay(data, trans_in, trans_out):
@@ -2713,3 +2716,87 @@ def fit_He3_par(filelist=None, add_scatt=False, add_keyword='sample.labl'):
     results = process_template(template, config, target=target)
     data_list = results.values
     return data_list
+
+def flipper_sm_efficiency(trans_uu,trans_ud,trans_du,trans_dd,trans_he_in,trans_he_out,blocked_beam):
+    """function that calculates the polarization efficiency of the supermirror (p_sm) and of the supermirror+flipper (p_sm+f)
+
+            **Inputs**
+
+            trans_uu (sans2d) : transmission data file for up-up
+
+            trans_ud (sans2d) : transmission data file for up-down
+
+            trans_du (sans2d) : transmission data file for down-up
+
+            trans_dd (sans2d) : transmission data file for down-down
+
+            trans_he_in (sans2d[]) : transmission data files for unpolarized incoming with analyzer in
+
+            trans_he_out (sans2d[]) : transmission data files for unpolarized incoming with analyzer out
+
+            block_beam (sans2d)  : transmission block beam
+
+            **Returns**
+
+            result(params): polarization efficiency of the supper-mirror (p_sm) and sm+flipper (p_sm_f)
+
+            | 2026-07-10 Jonathan Gaudet
+            """
+
+    trans_uu_bgd = subtract(trans_uu, blocked_beam)
+    trans_ud_bgd = subtract(trans_ud, blocked_beam)
+    trans_du_bgd = subtract(trans_du, blocked_beam)
+    trans_dd_bgd = subtract(trans_dd, blocked_beam)
+    trans_he_in_bgd = subtract(trans_he_in, blocked_beam)
+    trans_he_out_bgd = subtract(trans_he_out, blocked_beam)
+
+    he_in = transmissionDecay(trans_he_in_bgd)
+    he_out = transmissionDecay(trans_he_out_bgd)
+
+
+    param_he = cell_decay(trans_he_in,he_in,he_out)
+
+    ratio_uu_ud = generate_transmission(trans_uu_bgd,trans_ud_bgd)
+    ratio_dd_du = generate_transmission(trans_dd_bgd,trans_du_bgd)
+
+    start_time_uu = iso8601.parse_date(_s(trans_uu.metadata['start_time']))
+    end_time_uu = iso8601.parse_date(_s(trans_uu.metadata['end_time']))
+    avg_time_uu = (end_time - start_time) / 2.0 + start_time
+    time_uu = avg_time_uu - param_he.init_time
+
+    start_time_ud = iso8601.parse_date(_s(trans_ud.metadata['start_time']))
+    end_time_ud = iso8601.parse_date(_s(trans_ud.metadata['end_time']))
+    avg_time_ud = (end_time - start_time) / 2.0 + start_time
+    time_ud = avg_time_ud - param_he.init_time
+
+    start_time_du = iso8601.parse_date(_s(trans_du.metadata['start_time']))
+    end_time_du = iso8601.parse_date(_s(trans_du.metadata['end_time']))
+    avg_time_du = (end_time - start_time) / 2.0 + start_time
+    time_du = avg_time_du - param_he.init_time
+
+    start_time_dd = iso8601.parse_date(_s(trans_dd.metadata['start_time']))
+    end_time_dd = iso8601.parse_date(_s(trans_dd.metadata['end_time']))
+    avg_time_dd = (end_time - start_time) / 2.0 + start_time
+    time_dd = avg_time_dd - param_he.init_time
+
+    opacity1ang = float(_s(data.metadata['analyzer.opacity1ang']))
+    wavelength = float(_s(data.metadata['resolution.lmda']))
+    mu = opacity1ang * wavelength
+    trans_glass = float(_s(data.metadata['analyzer.GlassTransmission']))
+
+    rhot_uu, pol_uu, t_uu = calculate_analyzer_properties(param_he.init_rho, time_uu, param_he.time_constant, mu, trans_glass)
+    rhot_ud, pol_ud, t_ud = calculate_analyzer_properties(param_he.init_rho, time_ud, param_he.time_constant, mu, trans_glass)
+    rhot_du, pol_du, t_du = calculate_analyzer_properties(param_he.init_rho, time_du, param_he.time_constant, mu, trans_glass)
+    rhot_dd, pol_dd, t_dd = calculate_analyzer_properties(param_he.init_rho, time_dd, param_he.time_constant, mu, trans_glass)
+
+    ratio_1 = ratio_uu_ud * (t_ud / t_uu)
+    ratio_2 = ratio_dd_du * (t_du / t_dd)
+
+    p_sm = (ratio_1 - 1) / (pol_uu + (ratio_1 * pol_ud))
+    p_sm_f = (ratio_2 - 1) / (pol_dd + (ratio_2 * pol_du))
+
+    result = Parameters(OrderedDict([
+        ("eff_sm_up", p_sm),
+        ("eff_sm_down", p_sm_f)]))
+
+    return result
