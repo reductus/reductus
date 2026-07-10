@@ -2693,19 +2693,10 @@ def flipper_sm_efficiency(trans_uu,trans_ud,trans_du,trans_dd,trans_he_in,trans_
     ratio_uu_ud = generate_transmission(trans_uu_bgd,trans_ud_bgd)
     ratio_dd_du = generate_transmission(trans_dd_bgd,trans_du_bgd)
 
-
-
-    def get_avg_run_time(data):
-        import iso8601
-        t_start = iso8601.parse_date(data.metadata['start_time']).timestamp()
-        t_end = iso8601.parse_date(data.metadata['end_time']).timestamp()
-        return (t_end + t_start) / 2
-
     time_uu = get_avg_run_time(trans_uu)-param_he.params.init_time
     time_ud = get_avg_run_time(trans_ud) - param_he.params.init_time
     time_du = get_avg_run_time(trans_du) - param_he.params.init_time
     time_dd = get_avg_run_time(trans_dd) - param_he.params.init_time
-
 
     opacity1ang = float(_s(trans_uu.metadata['analyzer.opacity1ang']))
     wavelength = float(_s(trans_uu.metadata['resolution.lmda']))
@@ -2730,3 +2721,22 @@ def flipper_sm_efficiency(trans_uu,trans_ud,trans_du,trans_dd,trans_he_in,trans_
         ("gamma",param_he.params.time_cnstant)]))
 
     return result
+
+def get_avg_run_time(data):
+    """function that provide average timestamp of a scan run
+
+        ***Inputs***
+
+        data (sans2d)  : scattering file
+
+        ***Outputs***
+
+        avg time (params)
+
+    """
+    import iso8601
+
+    t_start = iso8601.parse_date(data.metadata['start_time']).timestamp()
+    t_end = iso8601.parse_date(data.metadata['end_time']).timestamp()
+
+    return (t_end + t_start) / 2
