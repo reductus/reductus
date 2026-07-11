@@ -2792,8 +2792,8 @@ def spin_leakage_corr(data_uu, data_ud, data_du, data_dd, blocked_beam, p_sm, p_
     epsilon_dd = (1 + p_sm_f) / 2
     epsilon_du = (1 - p_sm_f) / 2
 
-    time_scans = (get_avg_run_time(data_uu) + get_avg_run_time(data_ud) + get_avg_run_time(data_du) + get_avg_run_time(data_dd)) / 4
-    time_avg = time_scans - t0_cell
+    time_avg = (get_avg_run_time(data_uu) + get_avg_run_time(data_ud) + get_avg_run_time(data_du) + get_avg_run_time(data_dd)) / 4
+    time_avg = time_avg - t0_cell
 
     rho3he, pol_eff, t_unpolarized = calculate_analyzer_properties(rho0, time_avg, gamma, mu, trans_glass)
 
@@ -2802,10 +2802,21 @@ def spin_leakage_corr(data_uu, data_ud, data_du, data_dd, blocked_beam, p_sm, p_
 
     matrix_corr = set_pol_corr_matrix(epsilon_uu,epsilon_ud,epsilon_dd,epsilon_du,t_maj,t_min)
 
-    "need to do multiplication of matrix here now"
+    data_uu = subtract(data_uu,blocked_beam)
+    data_ud = subtract(data_ud,blocked_beam)
+    data_du = subtract(data_du,blocked_beam)
+    data_dd = subtract(data_dd,blocked_beam)
 
+    int_obs = np.array([
+        data_uu.data,
+        data_ud.data,
+        data_du.data,
+        data_dd.data
+    ])
 
-    return uu_corr, ud_corr, du_corr, dd_corr
+    int_corr = np.einsum('ij,jhw->ihw', matrix_corr, int_obs)
+
+    return int_corr[0], int_corr[1], int_corr[2], int_corr[3]
 
 def set_pol_corr_matrix(eps_uu, eps_ud, eps_dd, eps_du, tmaj, tmin):
     """"""
