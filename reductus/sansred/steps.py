@@ -2053,11 +2053,8 @@ def transmissionDecay(data, slicebox=[None,None,None,None], autosort=True):
         box_sum = sumBox(dataset, xmin, xmax, ymin, ymax)
         sums.append(box_sum.x)
         sums_variance.append(box_sum.variance)
-        """start_time = iso8601.parse_date(_s(dataset.metadata['start_time']))
-        end_time = iso8601.parse_date(_s(dataset.metadata['end_time']))"""
         start_time = datetime.fromisoformat(_s(dataset.metadata['start_time'])).timestamp()
         end_time = datetime.fromisoformat(_s(dataset.metadata['end_time'])).timestamp()
-        """avg_time = (end_time - start_time)/2.0 + start_time"""
         avg_time = (start_time + end_time) / 2.0
         times.append(avg_time)
     
