@@ -2628,7 +2628,7 @@ def cell_decay(data, trans_in, trans_out):
     mu = opacity1ang * wavelength
     trans_glass = float(_s(data.metadata['analyzer.GlassTransmission']))
 
-    time = trans_in.x
+    time = (trans_in.x + trans_out.x) / 2
     t0 = time[0]
     time = time - t0
     transmission_in = trans_in.v
