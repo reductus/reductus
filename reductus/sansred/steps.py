@@ -2736,10 +2736,10 @@ def get_avg_run_time(data):
 
     | 2026-07-10 Jonathan Gaudet
     """
-    import iso8601
+    from datetime import datetime
 
-    t_start = iso8601.parse_date(data.metadata['start_time']).timestamp()
-    t_end = iso8601.parse_date(data.metadata['end_time']).timestamp()
+    t_start = datetime.fromisoformat(_s(data.metadata['start_time'])).timestamp()
+    t_end = datetime.fromisoformat(_s(data.metadata['end_time'])).timestamp()
 
     return (t_end + t_start) / 2
 
