@@ -2041,7 +2041,7 @@ def transmissionDecay(data, slicebox=[None,None,None,None], autosort=True):
 
     2018-04-24 Brian Maranville
     """
-    import datetime, iso8601
+    from datetime import datetime
     if slicebox is None:
         slicebox = [None, None, None, None]
     xmin, xmax, ymin, ymax = slicebox
@@ -2053,10 +2053,13 @@ def transmissionDecay(data, slicebox=[None,None,None,None], autosort=True):
         box_sum = sumBox(dataset, xmin, xmax, ymin, ymax)
         sums.append(box_sum.x)
         sums_variance.append(box_sum.variance)
-        start_time = iso8601.parse_date(_s(dataset.metadata['start_time']))
-        end_time = iso8601.parse_date(_s(dataset.metadata['end_time']))
-        avg_time = (end_time - start_time)/2.0 + start_time
-        times.append(avg_time.timestamp())
+        """start_time = iso8601.parse_date(_s(dataset.metadata['start_time']))
+        end_time = iso8601.parse_date(_s(dataset.metadata['end_time']))"""
+        start_time = datetime.fromisoformat(_s(dataset.metadata['start_time'])).timestamp()
+        end_time = datetime.fromisoformat(_s(dataset.metadata['end_time'])).timestamp()
+        """avg_time = (end_time - start_time)/2.0 + start_time"""
+        avg_time = (start_time + end_time) / 2.0
+        times.append(avg_time)
     
     xdata = np.array(times)
     dxdata = np.zeros_like(xdata)
@@ -2745,39 +2748,39 @@ def get_avg_run_time(data):
 
 @module
 def spin_leakage_corr(data_uu, data_ud, data_du, data_dd, blocked_beam, p_sm, p_sm_f, gamma, rho0, t0_cell):
-    """function that provides spin leakage correlation to the 4 polarized cross-sections of a pol. sans experiment
+    """function that provides spin leakage correction to the 4 polarized cross-sections of a pol. sans experiment
 
         **Inputs**
 
-        uu_corr(sans2d)  : scattering uu file
+        data_uu(sans2d)  : scattering uu file
 
-        ud_corr(sans2d)  : scattering ud file
+        data_ud(sans2d)  : scattering ud file
 
-        du_corr(sans2d)  : scattering du file
+        data_du(sans2d)  : scattering du file
 
-        dd_corr(sans2d)  : scattering dd file
+        data_dd(sans2d)  : scattering dd file
 
         blocked_beam(sans2d)  : blocked beam scattering file
 
-        p_sm(float) : polarizer efficiency (spin up)
+        p_sm(params) : polarizer efficiency (spin up)
 
-        p_sm_f(float) : polarizer+flipper efficiency (spin down)
+        p_sm_f(params) : polarizer+flipper efficiency (spin down)
 
-        gamma(float) : decay time of the He3 cell in hours
+        gamma(params) : decay time of the He3 cell in hours
 
-        rho0(float) : initial polarization of the He3 cell at time=t0
+        rho0(params) : initial polarization of the He3 cell at time=t0
 
-        t0_cell(float) : timestamp of the initial He3 transmission measurement
+        t0_cell(params) : timestamp of the initial He3 transmission measurement
 
         **Returns**
 
-        uu_corr(sans2d)  : correct scattering uu file
+        data_corr_uu(sans2d)  : correct scattering uu file
 
-        ud_corr(sans2d)  : corrected scattering ud file
+        data_corr_ud(sans2d) : corrected scattering ud file
 
-        du_corr(sans2d)  : corrected scattering du file
+        data_corr_du(sans2d) : corrected scattering du file
 
-        dd_corr(sans2d)  : corrected scattering dd file
+        data_corr_dd(sans2d) : corrected scattering dd file
 
         | 2026-07-10 Jonathan Gaudet
         """
@@ -2816,7 +2819,12 @@ def spin_leakage_corr(data_uu, data_ud, data_du, data_dd, blocked_beam, p_sm, p_
 
     int_corr = np.einsum('ij,jhw->ihw', matrix_corr, int_obs)
 
-    return int_corr[0], int_corr[1], int_corr[2], int_corr[3]
+    data_corr_uu = int_corr[0]
+    data_corr_ud = int_corr[1]
+    data_corr_du = int_corr[2]
+    data_corr_dd = int_corr[3]
+
+    return data_corr_uu, data_corr_ud, data_corr_du, data_corr_dd
 
 def set_pol_corr_matrix(eps_uu, eps_ud, eps_dd, eps_du, tmaj, tmin):
     """"""
