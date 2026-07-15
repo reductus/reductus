@@ -218,6 +218,60 @@ class Sans1dData:
         self.fit_function = fit_function
         self._q_slice = None
 
+    def __add__(self, other):
+        result = self.copy()
+        if isinstance(other, Sans1dData):
+            result.v = self.v + other.v
+            if self.dv is not None and other.dv is not None:
+                result.dv = np.sqrt(self.dv**2 + other.dv**2)
+            elif self.dv is not None:
+                result.dv = copy(self.dv)
+            elif other.dv is not None:
+                result.dv = copy(other.dv)
+        else:
+            result.v = self.v + other
+            if self.dv is not None:
+                result.dv = copy(self.dv)
+        return result
+
+    def __truediv__(self, other):
+        result = self.copy()
+        if isinstance(other, Sans1dData):
+            result.v = self.v/other.v
+            if self.dv is not None and other.dv is not None:
+                term1 = (self.dv**2)/(other.v**2)
+                term2 = ( self.v**2 * other.dv**2 ) /( other.v**4)
+                result.dv = np.sqrt(term1+term2)
+            elif self.dv is not None:
+                result.dv = np.abs(self.dv / other.v)
+            elif other.dv is not None:
+                result.dv = np.abs(result.v * (other.dv / other.v))
+        else:
+            result.v = self.v/other
+            if self.dv is not None:
+                result.dv = copy(self.dv)/abs(other)
+
+        return result
+
+    def copy(self):
+        return Sans1dData(
+            x=copy(self.x),
+            v=copy(self.v),
+            dx=copy(self.dx) if self.dx is not None else None,
+            dv=copy(self.dv) if self.dv is not None else None,
+            xlabel=self.xlabel,
+            vlabel=self.vlabel,
+            xunits=self.xunits,
+            vunits=self.vunits,
+            xscale=self.xscale,
+            vscale=self.vscale,
+            metadata=deepcopy(self.metadata),
+            fit_function=deepcopy(self.fit_function)
+        )
+
+    def __copy__(self):
+        return self.copy()
+
     def masked(self, slice_limits: list[int] | tuple[int] | None = None):
         """Mask the data using either the defined q_slice or the slice provided.
 
