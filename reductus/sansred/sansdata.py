@@ -261,20 +261,34 @@ class Sans1dData:
 
     def __truediv__(self, other):
         result = self.copy()
+
+
         if isinstance(other, Sans1dData):
-            result.v = self.v/other.v
-            if self.dv is not None and other.dv is not None:
-                term1 = (self.dv**2)/(other.v**2)
-                term2 = ( self.v**2 * other.dv**2 ) /( other.v**4)
-                result.dv = np.sqrt(term1+term2)
-            elif self.dv is not None:
-                result.dv = np.abs(self.dv / other.v)
-            elif other.dv is not None:
-                result.dv = np.abs(result.v * (other.dv / other.v))
+            with np.errstate(divide='ignore', invalid='ignore'):
+                result.v = self.v/other.v
+
+                if self.dv is not None and other.dv is not None:
+                    term1 = (self.dv**2)/(other.v**2)
+                    term2 = ( self.v**2 * other.dv**2 ) /( other.v**4)
+                    result.dv = np.sqrt(term1+term2)
+                elif self.dv is not None:
+                    result.dv = np.abs(self.dv / other.v)
+                elif other.dv is not None:
+                    result.dv = np.abs(result.v * (other.dv / other.v))
+
+            result.v = np.nan_to_num(result.v,nan=0.0, posinf=0.0, neginf=0.0)
+            if result.dv is not None:
+                result.dv = np.nan_to_num(result.dv, nan=0.0, posinf=0.0, neginf=0.0)
+
         else:
-            result.v = self.v/other
-            if self.dv is not None:
-                result.dv = copy(self.dv)/abs(other)
+            with np.errstate(divide='ignore', invalid='ignore'):
+                result.v = self.v/other
+                if self.dv is not None:
+                    result.dv = copy(self.dv)/abs(other)
+
+            result.v = np.nan_to_num(result.v, nan=0.0, posinf=0.0, neginf=0.0)
+            if result.dv is not None:
+                result.dv = np.nan_to_num(result.dv, nan=0.0, posinf=0.0, neginf=0.0)
 
         return result
 
