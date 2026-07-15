@@ -2830,3 +2830,55 @@ def set_pol_corr_matrix(eps_uu, eps_ud, eps_dd, eps_du, tmaj, tmin):
     inv_corr_matrix = np.linalg.inv(matrix_corr)
 
     return inv_corr_matrix
+
+@module
+def extract_mag_nuc_components(data_uu, data_ud, data_du, data_dd):
+    """
+    given the 4 spin-leakage corrected full pol crossections in pixels space, this routine extracts the nuclear and magnetic scattering components. 
+    The magnetic components are separated in parallel and perpendicular to an applied (or only guide) field direction, which is assumed to be the x-axis,
+    lying horizontally within the detector. Uses PixelstoQ and Div routines. AngleWidth is a free parameter??
+    
+    **Inputs**
+
+    data_uu(sans2d)  : scattering uu file
+
+    data_ud(sans2d)  : scattering ud file
+
+    data_du(sans2d)  : scattering du file
+
+    data_dd(sans2d)  : scattering dd file
+
+    **Returns**
+
+    nuclear(sans1d)  : 1D I vs Q nuclear scattering (N^2)
+
+    mag_par(sans1d) : 1D I vs Q magnetic parallel to field scattering component (M_par^2)
+
+    mag_perp(sans1d) : 1D I vs Q magnetic perpendicular to field scattering component (M_perp^2)
+
+    | 2026-07-15 Jonathan Gaudet
+    """
+
+    data_uu_q = PixelsToQ(data_uu, [None,None],True)
+    data_ud_q = PixelsToQ(data_ud, [None,None], True)
+    data_du_q = PixelsToQ(data_du, [None,None], True)
+    data_dd_q = PixelsToQ(data_dd, [None,None], True)
+
+    nuc1_nom, nuc1_mean = sector_cut(data_uu_q,[0,30])
+    nuc2_nom, nuc2_mean = sector_cut(data_dd_q,[0,30])
+
+    nuclear = (nuc1_mean + nuc2_mean)/2
+
+    mperp1_nom, mperp1_mean = sector_cut(data_ud_q,[0,30])
+    mperp2_nom, mperp2_mean = sector_cut(data_du_q, [0, 30])
+    mperp3_nom, mperp3_mean = sector_cut(data_ud_q, [90, 30])
+    mperp4_nom, mperp4_mean = sector_cut(data_du_q, [90, 30])
+
+    mag_perp = (mperp1_mean + mperp2_mean + mperp3_mean + mperp4_mean) / 6
+
+    mpar1_nom, mpar1_mean = sector_cut(data_uu_q, [90, 30])
+    mpar2_nom, mpar2_mean = sector_cut(data_dd_q, [90, 30])
+
+    mag_par = ((mpar2_mean - mpar1_mean)**2 )/ (16 * nuclear)
+
+    return nuclear, mag_par, mag_perp
