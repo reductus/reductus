@@ -216,25 +216,25 @@ def autosort(rawdata, subsort="sample.labl", add_scattering=True, trans_sort="ru
 
     open_beam_trans (sans2d[]): Open Beam Transmission used for transmission calculations
 
-    UU_scatt (sans2d[]): Sample Scattering for up-up polarized state
+    uu_scatt (sans2d[]): Sample Scattering for up-up polarized state
 
-    UD_scatt (sans2d[]): Sample Scattering for up-down polarized state
+    ud_scatt (sans2d[]): Sample Scattering for up-down polarized state
 
-    DU_scatt (sans2d[]): Sample Scattering for down-up polarized state
+    du_scatt (sans2d[]): Sample Scattering for down-up polarized state
 
-    DD_scatt (sans2d[]): Sample Scattering for down-down polarized state
+    dd_scatt (sans2d[]): Sample Scattering for down-down polarized state
 
-    UU_trans (sans2d[]): Sample transmission for up-up polarized state (use to determine pol. efficiency)
+    uu_trans (sans2d[]): Sample transmission for up-up polarized state (use to determine pol. efficiency)
 
-    UD_trans (sans2d[]): Sample transmission for up-down polarized state (use to determine pol. efficiency)
+    ud_trans (sans2d[]): Sample transmission for up-down polarized state (use to determine pol. efficiency)
 
-    DU_trans (sans2d[]): Sample transmission for down-up polarized state (use to determine pol. efficiency)
+    du_trans (sans2d[]): Sample transmission for down-up polarized state (use to determine pol. efficiency)
 
-    DD_trans (sans2d[]): Sample transmission for down-down polarized state (use to determine pol. efficiency)
+    dd_trans (sans2d[]): Sample transmission for down-down polarized state (use to determine pol. efficiency)
 
-    He3in_trans (sans2d[]): open transmission for unpolarized beam with analyzer in (use to determine He3 cell decay)
+    he3in_trans (sans2d[]): open transmission for unpolarized beam with analyzer in (use to determine He3 cell decay)
 
-    He3out_trans (sans2d[]): open transmission for unpolarized beam with analyzer out (use to determine He3 cell decay)
+    he3out_trans (sans2d[]): open transmission for unpolarized beam with analyzer out (use to determine He3 cell decay)
 
     2019-07-24 Brian Maranville
     2026-01-30 Jeff Krzywon
@@ -248,16 +248,16 @@ def autosort(rawdata, subsort="sample.labl", add_scattering=True, trans_sort="ru
     open_trans = []
     open_beam_trans = []
     open_beam_absolute = []
-    UU_scatt = []
-    UD_scatt = []
-    DU_scatt = []
-    DD_scatt = []
-    UU_trans = []
-    UD_trans = []
-    DU_trans = []
-    DD_trans = []
-    He3in_trans = []
-    He3out_trans = []
+    uu_scatt = []
+    ud_scatt = []
+    du_scatt = []
+    dd_scatt = []
+    uu_trans = []
+    ud_trans = []
+    du_trans = []
+    dd_trans = []
+    he3in_trans = []
+    he3out_trans = []
 
     for r in rawdata:
         purpose = _s(r.metadata['analysis.filepurpose']).lower().strip()
@@ -272,25 +272,25 @@ def autosort(rawdata, subsort="sample.labl", add_scattering=True, trans_sort="ru
         elif purpose == 'transmission' and (intent.startswith('empty') or 'empty' in description):
             empty_trans.append(r)
         elif purpose == 'scattering' and intent == 'uu':
-            UU_scatt.append(r)
+            uu_scatt.append(r)
         elif purpose == 'scattering' and intent == 'ud':
-            UD_scatt.append(r)
+            ud_scatt.append(r)
         elif purpose == 'scattering' and intent == 'du':
-            DU_scatt.append(r)
+            du_scatt.append(r)
         elif purpose == 'scattering' and intent == 'dd':
-            DD_scatt.append(r)
+            dd_scatt.append(r)
         elif purpose == 'transmission' and intent == 'uu':
-            UU_trans.append(r)
+            uu_trans.append(r)
         elif purpose == 'transmission' and intent == 'ud':
-            UD_trans.append(r)
+            ud_trans.append(r)
         elif purpose == 'transmission' and intent == 'du':
-            DU_trans.append(r)
+            du_trans.append(r)
         elif purpose == 'transmission' and intent == 'dd':
-            DD_trans.append(r)
+            dd_trans.append(r)
         elif purpose == 'he3' and intent == '3hein':
-            He3in_trans.append(r)
+            he3in_trans.append(r)
         elif purpose == 'he3' and intent == '3heout':
-            He3out_trans.append(r)
+            he3out_trans.append(r)
         elif purpose == 'scattering' and intent == 'sample':
             sample_scatt.append(r)
         elif purpose == 'transmission' and intent == 'sample':
@@ -299,7 +299,7 @@ def autosort(rawdata, subsort="sample.labl", add_scattering=True, trans_sort="ru
     def keyFunc(l):
         return l.metadata.get(subsort, 0)
 
-    for output in [sample_scatt, blocked_beam, empty_scatt, sample_trans, empty_trans, UU_scatt, UD_scatt, DU_scatt, DD_scatt, UU_trans, UD_trans, DU_trans, DD_trans, He3in_trans, He3out_trans]:
+    for output in [sample_scatt, blocked_beam, empty_scatt, sample_trans, empty_trans, uu_scatt, ud_scatt, du_scatt, dd_scatt, uu_trans, ud_trans, du_trans, dd_trans, he3in_trans, he3out_trans]:
         output.sort(key=keyFunc)
     
     if add_scattering:
@@ -312,7 +312,7 @@ def autosort(rawdata, subsort="sample.labl", add_scattering=True, trans_sort="ru
             added_samples[key] = addSimple(added_samples[key])
         sample_scatt = list(added_samples.values())
 
-    reference_scatt = sample_scatt[0] if sample_scatt else (UU_scatt[0] if UU_scatt else None)
+    reference_scatt = sample_scatt[0] if sample_scatt else (uu_scatt[0] if uu_scatt else None)
     reference_trans = sample_trans[0] if sample_trans else None
     scatt_config = reference_scatt.metadata.get(trans_sort, '').replace(b' Scatt', b'').replace(b' Trans', b'') if reference_scatt else None
     trans_config = reference_trans.metadata.get(trans_sort, '').replace(b' Scatt', b'').replace(b' Trans', b'') if reference_trans else None
@@ -323,7 +323,7 @@ def autosort(rawdata, subsort="sample.labl", add_scattering=True, trans_sort="ru
         if trans_config and sort_val == trans_config:
             open_beam_trans.append(open)
 
-    return sample_scatt, blocked_beam, empty_scatt, sample_trans, empty_trans, open_beam_absolute, open_beam_trans, UU_scatt, UD_scatt, DU_scatt, DD_scatt, UU_trans, UD_trans, DU_trans, DD_trans, He3in_trans, He3out_trans
+    return sample_scatt, blocked_beam, empty_scatt, sample_trans, empty_trans, open_beam_absolute, open_beam_trans, uu_scatt, ud_scatt, du_scatt, dd_scatt, uu_trans, ud_trans, du_trans, dd_trans, he3in_trans, he3out_trans
 
 
 @cache
@@ -2596,7 +2596,7 @@ def calculate_analyzer_properties(rho0, delta_t, gamma, mu, t_glass):
     **Returns**
         rho3he (float): The 3He polarization at given time
 
-        pol_eff (floaT): The analyzer efficiency at given time
+        pol_eff (float): The analyzer efficiency at given time
 
     | 2026-07-08 Jonathan Gaudet
     """
@@ -2618,7 +2618,8 @@ def cell_decay(data, trans_in, trans_out):
         trans_out (sans1d): Transmission vs time for the Heout cell
 
     **Returns**
-        result(params): provide initial time of the He3 cell (t0), the time constant gamma, and initial polarization of the cell rho0
+        result(params): provide initial time of the He3 cell (t0 in sec), the time constant gamma (in sec) , and initial polarization of the cell rho0
+
 
     | 2026-07-09 Jonathan Gaudet
     """
@@ -2651,65 +2652,61 @@ def cell_decay(data, trans_in, trans_out):
     return result
 
 @module
-def flipper_sm_efficiency(trans_uu,trans_ud,trans_du,trans_dd,trans_he_in,trans_he_out,blocked_beam):
-    """function that calculates the polarization efficiency of the supermirror (p_sm) and of the supermirror+flipper (p_sm+f)
+def flipper_sm_efficiency(trans_uu, trans_ud, trans_du, trans_dd, trans_he_in, trans_he_out, block_beam):
+    """function calculates flipper and super-mirror efficiency
 
-            **Inputs**
+    **Inputs**
+    trans_uu (sans2d): Transmission up-up
 
-            trans_uu (sans2d) : transmission data file for up-up
+    trans_ud (sans2d): Transmission up-down
 
-            trans_ud (sans2d) : transmission data file for up-down
+    trans_du (sans2d): Transmission down-up
 
-            trans_du (sans2d) : transmission data file for down-up
+    trans_dd (sans2d): Transmission down-down
 
-            trans_dd (sans2d) : transmission data file for down-down
+    trans_he_in (sans2d[]): Transmission helium cell in at different times
 
-            trans_he_in (sans2d[]) : transmission data files for unpolarized incoming with analyzer in
+    trans_he_out (sans2d[]): Transmission helium cell out at different times
 
-            trans_he_out (sans2d[]) : transmission data files for unpolarized incoming with analyzer out
+    block_beam (sans2d): block beam transmission
 
-            blocked_beam (sans2d)  : transmission block beam
+    **Returns**
 
-            **Returns**
+    result(params): output parameters
+    """
 
-            result(params): polarization efficiency of the supper-mirror (p_sm) and sm+flipper (p_sm_f)
-
-            | 2026-07-10 Jonathan Gaudet
-            """
-
-    trans_uu_bgd = subtract(trans_uu, blocked_beam)
-    trans_ud_bgd = subtract(trans_ud, blocked_beam)
-    trans_du_bgd = subtract(trans_du, blocked_beam)
-    trans_dd_bgd = subtract(trans_dd, blocked_beam)
-    trans_he_in_bgd = subtract(trans_he_in, blocked_beam)
-    trans_he_out_bgd = subtract(trans_he_out, blocked_beam)
+    trans_uu_bgd = subtract([trans_uu], [block_beam])[0]
+    trans_ud_bgd = subtract([trans_ud], [block_beam])[0]
+    trans_du_bgd = subtract([trans_du], [block_beam])[0]
+    trans_dd_bgd = subtract([trans_dd], [block_beam])[0]
+    trans_he_in_bgd = subtract(trans_he_in, [block_beam])
+    trans_he_out_bgd = subtract(trans_he_out, [block_beam])
 
     he_in = transmissionDecay(trans_he_in_bgd)
     he_out = transmissionDecay(trans_he_out_bgd)
 
+    param_he = cell_decay(trans_he_in[0],he_in,he_out)
 
-    param_he = cell_decay(trans_he_in,he_in,he_out)
+    ratio_uu_ud = generate_transmission([trans_uu_bgd],[trans_ud_bgd])[0]
+    ratio_dd_du = generate_transmission([trans_dd_bgd],[trans_du_bgd])[0]
 
-    ratio_uu_ud = generate_transmission(trans_uu_bgd,trans_ud_bgd)
-    ratio_dd_du = generate_transmission(trans_dd_bgd,trans_du_bgd)
-
-    time_uu = get_avg_run_time(trans_uu) - param_he.params.init_time
-    time_ud = get_avg_run_time(trans_ud) - param_he.params.init_time
-    time_du = get_avg_run_time(trans_du) - param_he.params.init_time
-    time_dd = get_avg_run_time(trans_dd) - param_he.params.init_time
+    time_uu = get_avg_run_time(trans_uu) - param_he.params['init_time']
+    time_ud = get_avg_run_time(trans_ud) - param_he.params['init_time']
+    time_du = get_avg_run_time(trans_du) - param_he.params['init_time']
+    time_dd = get_avg_run_time(trans_dd) - param_he.params['init_time']
 
     opacity1ang = float(_s(trans_uu.metadata['analyzer.opacity1ang']))
     wavelength = float(_s(trans_uu.metadata['resolution.lmda']))
     mu = opacity1ang * wavelength
     trans_glass = float(_s(trans_uu.metadata['analyzer.GlassTransmission']))
 
-    rhot_uu, pol_uu, t_uu = calculate_analyzer_properties(param_he.params.init_rho, time_uu, param_he.params.time_constant, mu, trans_glass)
-    rhot_ud, pol_ud, t_ud = calculate_analyzer_properties(param_he.params.init_rho, time_ud, param_he.params.time_constant, mu, trans_glass)
-    rhot_du, pol_du, t_du = calculate_analyzer_properties(param_he.params.init_rho, time_du, param_he.params.time_constant, mu, trans_glass)
-    rhot_dd, pol_dd, t_dd = calculate_analyzer_properties(param_he.params.init_rho, time_dd, param_he.params.time_constant, mu, trans_glass)
+    rhot_uu, pol_uu, t_uu = calculate_analyzer_properties(param_he.params['init_rho'], time_uu, param_he.params['time_constant'], mu, trans_glass)
+    rhot_ud, pol_ud, t_ud = calculate_analyzer_properties(param_he.params['init_rho'], time_ud, param_he.params['time_constant'], mu, trans_glass)
+    rhot_du, pol_du, t_du = calculate_analyzer_properties(param_he.params['init_rho'], time_du, param_he.params['time_constant'], mu, trans_glass)
+    rhot_dd, pol_dd, t_dd = calculate_analyzer_properties(param_he.params['init_rho'], time_dd, param_he.params['time_constant'], mu, trans_glass)
 
-    ratio_1 = ratio_uu_ud * (t_ud / t_uu)
-    ratio_2 = ratio_dd_du * (t_du / t_dd)
+    ratio_1 = ratio_uu_ud.params['factor'] * (t_ud / t_uu)
+    ratio_2 = ratio_dd_du.params['factor'] * (t_du / t_dd)
 
     p_sm = (ratio_1 - 1) / (pol_uu + (ratio_1 * pol_ud))
     p_sm_f = (ratio_2 - 1) / (pol_dd + (ratio_2 * pol_du))
@@ -2717,9 +2714,10 @@ def flipper_sm_efficiency(trans_uu,trans_ud,trans_du,trans_dd,trans_he_in,trans_
     result = Parameters(OrderedDict([
         ("eff_sm_up", p_sm),
         ("eff_sm_down", p_sm_f),
-        ("rho_0", param_he.params.init_rho),
-        ("gamma",param_he.params.time_cnstant),
-        ("t0_cell",param_he.params.init_time)]))
+        ("rho_0", param_he.params['init_rho']),
+        ("gamma",param_he.params['time_constant']),
+        ("t0_cell",param_he.params['init_time'])
+    ]))
 
     return result
 
@@ -2744,7 +2742,7 @@ def get_avg_run_time(data):
     return (t_end + t_start) / 2
 
 @module
-def spin_leakage_corr(data_uu, data_ud, data_du, data_dd, blocked_beam, p_sm, p_sm_f, gamma, rho0, t0_cell):
+def spin_leakage_corr(data_uu, data_ud, data_du, data_dd, blocked_beam, flipper_par):
     """function that provides spin leakage correction to the 4 polarized cross-sections of a pol. sans experiment
 
         **Inputs**
@@ -2759,15 +2757,7 @@ def spin_leakage_corr(data_uu, data_ud, data_du, data_dd, blocked_beam, p_sm, p_
 
         blocked_beam(sans2d)  : blocked beam scattering file
 
-        p_sm(params) : polarizer efficiency (spin up)
-
-        p_sm_f(params) : polarizer+flipper efficiency (spin down)
-
-        gamma(params) : decay time of the He3 cell in hours
-
-        rho0(params) : initial polarization of the He3 cell at time=t0
-
-        t0_cell(params) : timestamp of the initial He3 transmission measurement
+        flipper_par(params) : dictionary object containing eff_sm_up, eff_sm_down, gamma,rho0 and t0_cell (see flipper_sm_efficiency method)
 
         **Returns**
 
@@ -2781,6 +2771,12 @@ def spin_leakage_corr(data_uu, data_ud, data_du, data_dd, blocked_beam, p_sm, p_
 
         | 2026-07-10 Jonathan Gaudet
         """
+
+    p_sm = flipper_par.params['eff_sm_up']
+    p_sm_f = flipper_par.params['eff_sm_down']
+    rho0 = flipper_par.params['rho_0']
+    gamma = flipper_par.params['gamma']
+    t0_cell = flipper_par.params['t0_cell']
 
     opacity1ang = float(_s(data_uu.metadata['analyzer.opacity1ang']))
     wavelength = float(_s(data_uu.metadata['resolution.lmda']))
@@ -2802,24 +2798,24 @@ def spin_leakage_corr(data_uu, data_ud, data_du, data_dd, blocked_beam, p_sm, p_
 
     matrix_corr = set_pol_corr_matrix(epsilon_uu,epsilon_ud,epsilon_dd,epsilon_du,t_maj,t_min)
 
-    data_uu = subtract(data_uu,blocked_beam)
-    data_ud = subtract(data_ud,blocked_beam)
-    data_du = subtract(data_du,blocked_beam)
-    data_dd = subtract(data_dd,blocked_beam)
+    data_corr_uu = subtract([data_uu],[blocked_beam])[0]
+    data_corr_ud = subtract([data_ud],[blocked_beam])[0]
+    data_corr_du = subtract([data_du],[blocked_beam])[0]
+    data_corr_dd = subtract([data_dd],[blocked_beam])[0]
 
     int_obs = np.array([
-        data_uu.data,
-        data_ud.data,
-        data_du.data,
-        data_dd.data
+        data_corr_uu.data,
+        data_corr_ud.data,
+        data_corr_du.data,
+        data_corr_dd.data
     ])
 
-    int_corr = np.einsum('ij,jhw->ihw', matrix_corr, int_obs)
+    int_corr = np.einsum('ij,jk->ik', matrix_corr, int_obs)
 
-    data_corr_uu = int_corr[0]
-    data_corr_ud = int_corr[1]
-    data_corr_du = int_corr[2]
-    data_corr_dd = int_corr[3]
+    data_corr_uu.data = int_corr[0]
+    data_corr_ud.data = int_corr[1]
+    data_corr_du.data = int_corr[2]
+    data_corr_dd.data = int_corr[3]
 
     return data_corr_uu, data_corr_ud, data_corr_du, data_corr_dd
 
