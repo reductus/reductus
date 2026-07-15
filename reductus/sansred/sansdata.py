@@ -278,6 +278,15 @@ class Sans1dData:
 
         return result
 
+    def __pow__(self, power):
+        result = self.copy()
+        result.v = self.v ** power
+
+        if self.dv is not None:
+            result.dv = np.abs(power * (self.v**(power-1)) * self.dv)
+
+        return result
+
     def copy(self):
         return Sans1dData(
             x=copy(self.x),
