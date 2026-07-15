@@ -155,6 +155,8 @@ def sector_cut_antialiased(shape, center, inner_radius, outer_radius, start_angl
                 mirror=True, background_value=0.0, mask_value=1.0,
                 oversampling=8):
     # type: (Tuple[int, int], Tuple[float, float], float, float, float, float, int)  -> numpy.ndarray
+
+    from PIL import Image, ImageDraw
     """
     Takes the following:
 
