@@ -1093,7 +1093,7 @@ def sector_cut(data, sector=[0.0, 90.0], mirror=True):
     """
     from .draw_annulus_aa import sector_cut_antialiased
 
-    if sector is None:
+    if (sector is None) or (None in sector):
         sector = [0.0, 90.0]
 
     #annular_mask_antialiased(shape, center, inner_radius, outer_radius,
