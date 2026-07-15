@@ -234,6 +234,31 @@ class Sans1dData:
                 result.dv = copy(self.dv)
         return result
 
+    def __sub__(self, other):
+        result = self.copy()
+        if isinstance(other, Sans1dData):
+            result.v = self.v - other.v
+            if self.dv is not None and other.dv is not None:
+                result.dv = np.sqrt(self.dv**2 + other.dv**2)
+            elif self.dv is not None:
+                result.dv = copy(self.dv)
+            elif other.dv is not None:
+                result.dv = copy(other.dv)
+        else:
+            result.v = self.v - other
+            if self.dv is not None:
+                result.dv = copy(self.dv)
+        return result
+
+    def __rsub__(self, other):
+        result = self.copy()
+
+        result.v = other- self.v
+
+        if self.dv is not None:
+            result.dv = copy(self.dv)
+        return result
+
     def __truediv__(self, other):
         result = self.copy()
         if isinstance(other, Sans1dData):
