@@ -287,6 +287,25 @@ class Sans1dData:
 
         return result
 
+    def __mul__(self, other):
+        result = self.copy()
+        if isinstance(other, Sans1dData):
+            result.v = self.v * other.v
+            if self.dv is not None and other.dv is not None:
+                result.dv = np.sqrt((other.v * self.dv) ** 2 + (self.v * other.dv) ** 2)
+            elif self.dv is not None:
+                result.dv = np.abs(other.v * self.dv)
+            elif other.dv is not None:
+                result.dv = np.abs(self.v * other.dv)
+        else:
+            result.v = self.v * other
+            if self.dv is not None:
+                result.dv = copy(self.dv) * abs(other)
+        return result
+
+    def __rmul__(self, other):
+        return self.__mul__(other)
+
     def copy(self):
         return Sans1dData(
             x=copy(self.x),
