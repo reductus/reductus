@@ -2239,7 +2239,7 @@ def single_configuration(
                 "config": {"auto_integrate": True}
             },
             {"x": 365, "y": 35, "title": "Scale by Transmission", "module": "ncnr.sans.product"},
-            {"x": 525, "y": 5, "title": "Subrtract Empty Cell from Sample", "module": "ncnr.sans.subtract"},
+            {"x": 525, "y": 5, "title": "Subtract Empty Cell from Sample", "module": "ncnr.sans.subtract"},
             {"x": 525, "y": 65, "title": "Load DIV", "module": "ncnr.sans.LoadDIV",
                 "config": {"filelist": [{
                     "path": "ncnrdata/ancillary/ng7sans/DIV/PLEX_20190719_NG7.DIV", "source": "ncnr",
@@ -2803,14 +2803,12 @@ def spin_leakage_corr(data_uu, data_ud, data_du, data_dd, blocked_beam, flipper_
     data_corr_du = subtract([data_du],[blocked_beam])[0]
     data_corr_dd = subtract([data_dd],[blocked_beam])[0]
 
-    int_obs = np.array([
-        data_corr_uu.data,
-        data_corr_ud.data,
-        data_corr_du.data,
-        data_corr_dd.data
-    ])
+    int_obs = [data_corr_uu.data,data_corr_ud.data,data_corr_du.data,data_corr_dd.data]
 
-    int_corr = np.einsum('ij,jk->ik', matrix_corr, int_obs)
+    int_corr =[
+        sum(matrix_corr[i, j] * int_obs[j] for j in range(4))
+        for i in range(4)
+    ]
 
     data_corr_uu.data = int_corr[0]
     data_corr_ud.data = int_corr[1]
@@ -2820,7 +2818,7 @@ def spin_leakage_corr(data_uu, data_ud, data_du, data_dd, blocked_beam, flipper_
     return data_corr_uu, data_corr_ud, data_corr_du, data_corr_dd
 
 def set_pol_corr_matrix(eps_uu, eps_ud, eps_dd, eps_du, tmaj, tmin):
-    """"""
+    """function returning matrix applied to correct for spin leakage at a fixed time"""
 
     matrix_corr = np.array([
                    [eps_uu * tmaj, eps_uu * tmin, eps_ud * tmaj, eps_ud * tmin],
