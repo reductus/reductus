@@ -7,6 +7,7 @@ Set of reduction steps for SANS reduction.
 
 from __future__ import print_function
 
+import datetime
 import os
 import pathlib
 from posixpath import basename
@@ -16,6 +17,7 @@ from collections import OrderedDict
 
 import numpy as np
 
+from reductus import __version__ as reductus_version
 from reductus.dataflow.calc import process_template
 from reductus.dataflow.core import Template
 from reductus.dataflow.lib.uncertainty import Uncertainty
@@ -149,6 +151,23 @@ def LoadRawSANS(filelist=None, check_timestamps=True):
         
         data.extend(entries)
 
+    return data
+
+def addProcess(data, name, description, terms, notes):
+    if not data.metadata.get('process', None):
+        data.metadata['process'] = []
+    index = len(data.metadata["process"]) if data.metadata["process"] else 1
+    process = {
+        "program": "reductus",
+        "sequence_index": index,
+        "version": reductus_version,
+        "date": datetime.datetime.now().astimezone().isoformat(),
+        "name": name,
+        "description": description,
+        "term": terms,
+        "note": notes,
+    }
+    data.metadata["process"].append(process)
     return data
 
 @cache
