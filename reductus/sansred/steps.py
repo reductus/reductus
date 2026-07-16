@@ -238,6 +238,7 @@ def autosort(rawdata, subsort="sample.labl", add_scattering=True, trans_sort="ru
 
     2019-07-24 Brian Maranville
     2026-01-30 Jeff Krzywon
+    2026-07-16 Jonathan Gaudet
     """
 
     sample_scatt = []
@@ -1609,9 +1610,11 @@ def correct_attenuation(sample, instrument="NG7"):
     **Returns**
 
     atten_corrected (sans2d): corrected measurement
+    | 2026-07-16 Jonathan Gaudet
     """
     # Default to use the insturment name from the file, rather that the name passed by the method.
-    instrument = sample.metadata.get('instrument.name', instrument).decode("utf-8").split(":")[-1]
+    if sample.metadata['instrument.name'] is not None:
+        instrument = sample.metadata.get('instrument.name', instrument).decode("utf-8").split(":")[-1]
     attenNo = sample.metadata['run.atten']
     wavelength = sample.metadata['resolution.lmda']
     atten_tables = sample.metadata.get('run.atten_factors', None)
@@ -2040,6 +2043,7 @@ def transmissionDecay(data, slicebox=[None,None,None,None], autosort=True):
     sum (sans1d) : integrated counts vs. middle of count time (average of start and end times)
 
     2018-04-24 Brian Maranville
+    2026-07-16 Jonathan Gaudet
     """
     from datetime import datetime
     if slicebox is None:
@@ -2598,7 +2602,7 @@ def calculate_analyzer_properties(rho0, delta_t, gamma, mu, t_glass):
 
         pol_eff (float): The analyzer efficiency at given time
 
-    | 2026-07-08 Jonathan Gaudet
+    | 2026-07-16 Jonathan Gaudet
     """
     rho3he = rho0 * np.exp(-delta_t/gamma)
     pol_eff = np.tanh(mu*rho3he)
@@ -2621,7 +2625,7 @@ def cell_decay(data, trans_in, trans_out):
         result(params): provide initial time of the He3 cell (t0 in sec), the time constant gamma (in sec) , and initial polarization of the cell rho0
 
 
-    | 2026-07-09 Jonathan Gaudet
+    | 2026-07-16 Jonathan Gaudet
     """
 
     opacity1ang = float(_s(data.metadata['analyzer.opacity1ang']))
@@ -2673,6 +2677,8 @@ def flipper_sm_efficiency(trans_uu, trans_ud, trans_du, trans_dd, trans_he_in, t
     **Returns**
 
     result(params): output parameters
+
+    | 2026-07-16 Jonathan Gaudet
     """
 
     trans_uu_bgd = subtract([trans_uu], [block_beam])[0]
@@ -2732,7 +2738,7 @@ def get_avg_run_time(data):
 
         avg time (params) : avg time of the scan run in hours
 
-    | 2026-07-10 Jonathan Gaudet
+    |      2026-07-16 Jonathan Gaudet
     """
     from datetime import datetime
 
@@ -2769,7 +2775,7 @@ def spin_leakage_corr(data_uu, data_ud, data_du, data_dd, blocked_beam, flipper_
 
         data_corr_dd(sans2d) : corrected scattering dd file
 
-        | 2026-07-10 Jonathan Gaudet
+        | 2026-07-16 Jonathan Gaudet
         """
 
     p_sm = flipper_par.params['eff_sm_up']
@@ -2818,7 +2824,8 @@ def spin_leakage_corr(data_uu, data_ud, data_du, data_dd, blocked_beam, flipper_
     return data_corr_uu, data_corr_ud, data_corr_du, data_corr_dd
 
 def set_pol_corr_matrix(eps_uu, eps_ud, eps_dd, eps_du, tmaj, tmin):
-    """function returning matrix applied to correct for spin leakage at a fixed time"""
+    """function returning matrix applied to correct for spin leakage at a fixed time
+       2026-07-16 Jonathan Gaudet"""
 
     matrix_corr = np.array([
                    [eps_uu * tmaj, eps_uu * tmin, eps_ud * tmaj, eps_ud * tmin],
@@ -2855,8 +2862,7 @@ def extract_mag_nuc_components(data_uu, data_ud, data_du, data_dd):
     mag_par(sans1d) : 1D I vs Q magnetic parallel to field scattering component (M_par^2)
 
     mag_perp(sans1d) : 1D I vs Q magnetic perpendicular to field scattering component (M_perp^2)
-
-    | 2026-07-15 Jonathan Gaudet
+      2026-07-16 Jonathan Gaudet
     """
 
     data_uu_q = PixelsToQ(data_uu, [None,None],True)
@@ -2879,6 +2885,6 @@ def extract_mag_nuc_components(data_uu, data_ud, data_du, data_dd):
     mpar1_nom, mpar1_mean = sector_cut(data_uu_q, [90, 30])
     mpar2_nom, mpar2_mean = sector_cut(data_dd_q, [90, 30])
 
-    mag_par = ((mpar2_mean - mpar1_mean)**2 )/ (16 * nuclear)
+    mag_par = ( (mpar2_mean - mpar1_mean)**2 )/ (16 * nuclear)
 
     return nuclear, mag_par, mag_perp
