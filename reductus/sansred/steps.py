@@ -1278,6 +1278,7 @@ def correct_dead_time(sansdata, deadtime=1.0e-6):
 
     result = sansdata.copy()
     result.data *= dscale
+    result = addProcess(result, "Dead time correction", "Correcting counts for the detector dead time", {"deadtime": }, notes)
     return result
 
 @module
