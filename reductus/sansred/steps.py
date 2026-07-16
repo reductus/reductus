@@ -2583,6 +2583,43 @@ def export_data(data, file_path: str | pathlib.Path | os.PathLike = ".", format:
             return export_to_ascii(data, file_path)
 
 
+@module
+def export_data_2D(data, file_path: str | pathlib.Path | os.PathLike = ".", format: str = "ASCII") -> dict:
+    """Export a 2D data file into the chose format.
+
+    :param data: A single data set that will be exported.
+    :param file_path: The directory or the full file path to save the file to.
+    :param format: The file format to export the data to. Options include ASCII, CSV, and NXcanSAS
+    :return: A dictionary mapping the file name to the parameters saved.
+
+    **Inputs**
+
+    data (sans2d): SANS data
+
+    file_path (str): The directory or the full file path to save the file to.
+
+    format (opt:ASCII|CSV|NXcanSAS): The format to output the data to.
+
+    **Returns**
+
+    output (params): A map of the file path the data file was saved to.
+
+    | 2026-07-16 Jonathan Gaudet
+    """
+
+    if not file_path:
+        raise FileNotFoundError(f"")
+    full_path = pathlib.Path(file_path)
+
+    match format.lower():
+        case "nxcansas":
+            return export_to_nxcansas(data, full_path)
+        case "csv":
+            return export_to_csv(data, file_path)
+        case "ascii" | _:
+            return export_to_ascii(data, file_path)
+
+
 def calculate_analyzer_properties(rho0, delta_t, gamma, mu, t_glass):
     """Calculate analyzer efficiency (Pol_eff) and 3He polarization (rho3He) at a given time t.
 
