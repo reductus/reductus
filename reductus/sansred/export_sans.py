@@ -35,8 +35,20 @@ def export_to_ascii(data, file_path: Path_Like = "", extension: str = ".txt", de
     if isinstance(data, SansData):
         # 2D data can only be output into the .DAT format - do this
         extension = ".dat"
-        columns = [data.qx, data.qy, data.data, np.sqrt(data.data)]
+
         delimiter = " "
+
+        grid_x, grid_y = np.meshgrid(data.qx,data.qy)
+        intensity = data.data.x
+        error = data.data.dx
+
+        flatten_qx = grid_x.ravel()
+        flatten_qy = grid_y.ravel()
+        flatten_intensity = intensity.ravel()
+        flatten_error = error.ravel()
+
+        columns = [flatten_qx, flatten_qy, flatten_intensity, flatten_error]
+
         header = 'Data columns are Qx - Qy - I(Qx,Qy) - err(I) - Qz - SigmaQ_parall - SigmaQ_perp - fSubS(beam stop shadow)'
     elif isinstance(data, Sans1dData):
         columns = [data.x, data.v, data.dv, data.dx]
