@@ -75,7 +75,8 @@ def export_to_ascii(data, file_path: Path_Like = "", extension: str = ".txt", de
 
 
 def export_to_nxcansas(data: SansIQData, f_path: Path_Like) -> dict:
-    # TODO: Allow for 2D data to be exported
+    #TODO: 2D is now exportable but uncertainties on Qx and Qy are not implemented. Qz either. Probably other attributes??
+
     # Ensure data is in Q-space (reduced data only!) and if it is 1D or 2D data
     if not isinstance(data, (SansIQData, SansData)):
         return {}
