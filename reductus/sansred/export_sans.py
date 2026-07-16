@@ -77,7 +77,7 @@ def export_to_ascii(data, file_path: Path_Like = "", extension: str = ".txt", de
 def export_to_nxcansas(data: SansIQData, f_path: Path_Like) -> dict:
     # TODO: Allow for 2D data to be exported
     # Ensure data is in Q-space (reduced data only!) and if it is 1D or 2D data
-    if not isinstance(data, SansIQData):
+    if not isinstance(data, (SansIQData, SansData)):
         return {}
 
     full_path = _get_full_path(f_path, data, '.h5')
