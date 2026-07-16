@@ -78,7 +78,10 @@ def export_to_nxcansas(data: SansIQData, f_path: Path_Like) -> dict:
     #TODO: 2D is now exportable but uncertainties on Qx and Qy are not implemented. Qz either. Probably other attributes??
 
     # Ensure data is in Q-space (reduced data only!) and if it is 1D or 2D data
-    if not isinstance(data, (SansIQData, SansData)):
+    is_valid_1d = isinstance(data, SansIQData)
+    is_valid_2d = isinstance(data, SansData) and data.qx is not None and data.qy is not None
+
+    if not (is_valid_1d or is_valid_2d):
         return {}
 
     full_path = _get_full_path(f_path, data, '.h5')
