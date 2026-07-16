@@ -98,32 +98,62 @@ def export_to_nxcansas(data: SansIQData, f_path: Path_Like) -> dict:
         nxentry["run"] = data.metadata.get("run.instrumentScanID", 0)
         nxentry["title"] = data.metadata["sample.description"]
 
-        # TODO: Differentiate 1D vs. 2D data here
-        # Add data
         data_group = nxentry.create_group("data")
-        data_group.attrs.update({
-            "NX_class": "NXdata",
-            "canSAS_class": "SASdata",
-            "signal": "I",
-            "I_axes": "Q",
-            "Q_indices": [0]
-        })
-        data_group["I"] = data.I
-        data_group["I"].attrs.update({
-            "units": "1/cm",
-            "uncertainties": "Idev"
-        })
-        data_group["Q"] = data.Q
-        data_group["Q"].attrs.update({
-            "units": "1/A",
-            "resolutions": "dQ"
-        })
-        data_group["dQ"] = data.dQ
-        data_group["dQ"].attrs["units"] = "1/A"
-        data_group["Idev"] = data.dI
-        data_group["Idev"].attrs["units"] = "1/cm"
-        data_group["Qmean"] = data.meanQ
-        data_group["ShadowFactor"] = data.ShadowFactor
+
+        if isinstance(data, SansData):
+            # Add 2D data
+            data_group.attrs.update({
+                "NX_class": "NXdata",
+                "canSAS_class": "SASdata",
+                "signal": "I",
+                #convention is vertical-horizontal axes
+                "I_axes": "Qy,Qx",
+                #Indicate it is 2D
+                "Q_indices": [0, 1]
+            })
+
+            data_group["I"] = data.data.x
+            data_group["I"].attrs.update({
+                "units": "1/cm",
+                "uncertainties": "Idev"
+            })
+
+            data_group["Idev"] = data.data.dx
+            data_group["Idev"].attrs["units"] = "1/cm"
+
+            data_group["Qx"] = data.qx
+            data_group["Qx"].attrs["units"] = "1/A"
+
+            data_group["Qy"] = data.qy
+            data_group["Qy"].attrs["units"] = "1/A"
+
+            # TO DO: add uncertainties on Qx and Qy. Not computed yet.
+
+        elif isinstance(data, SansIQData):
+            data_group.attrs.update({
+                "NX_class": "NXdata",
+                "canSAS_class": "SASdata",
+                "signal": "I",
+                "I_axes": "Q",
+                "Q_indices": [0]
+            })
+
+            data_group["I"] = data.I
+            data_group["I"].attrs.update({
+                "units": "1/cm",
+                "uncertainties": "Idev"
+            })
+            data_group["Q"] = data.Q
+            data_group["Q"].attrs.update({
+                "units": "1/A",
+                "resolutions": "dQ"
+            })
+            data_group["dQ"] = data.dQ
+            data_group["dQ"].attrs["units"] = "1/A"
+            data_group["Idev"] = data.dI
+            data_group["Idev"].attrs["units"] = "1/cm"
+            data_group["Qmean"] = data.meanQ
+            data_group["ShadowFactor"] = data.ShadowFactor
 
         # Add sample information
         sample_entry = nxentry.create_group('sassample')
