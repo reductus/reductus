@@ -772,3 +772,27 @@ editor.load_metadata = async function(files_metadata, datasource, path) {
   }
   return file_objs;
 }
+
+editor.make_link = async function() {
+  // Build the base URL without existing search parameters
+  const url = new URL(window.location.origin + window.location.pathname);
+
+  // Append the current state parameters using the editor's internal state
+  url.searchParams.set('instrument', this._instrument_id);
+  url.searchParams.set('template', JSON.stringify(this._active_template));
+
+  if (this?.instance?.selected?.terminals?.length > 0) {
+    let [node, terminal] = this.instance.selected.terminals[0];
+    url.searchParams.set('node', node);
+    url.searchParams.set('terminal', terminal);
+  }
+
+  // Write to the clipboard (this will throw an error if it fails)
+  try {
+    await navigator.clipboard.writeText(url.href);
+  }
+  catch(e) {
+    console.error("could not copy to clipboard");
+  }
+  return url.href;
+};
