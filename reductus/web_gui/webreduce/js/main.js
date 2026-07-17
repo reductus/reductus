@@ -32,16 +32,6 @@ var statusline_log = function (message) {
 
 app.statusline_log = statusline_log;
 
-function getUrlVars() {
-  var vars = [], hash;
-  var hashes = window.location.href.slice(window.location.href.indexOf('?') + 1).split('&');
-  for (var i = 0; i < hashes.length; i++) {
-    hash = hashes[i].split('=');
-    vars.push(hash);
-  }
-  return vars;
-}
-
 app.callbacks = {};
 app.callbacks.resize_center = function () { };
 
@@ -86,35 +76,29 @@ window.onpopstate = async function (e) {
   // called by load on Safari with null state, so be sure to skip it.
   //if (e.state) {
   let datasources = app._datasources || {};
-  let url_vars = getUrlVars();
+  // Parse the query string safely
+  let url_vars = new URLSearchParams(window.location.search);
+  // Read parameters from the hash fragment
+  let hash_vars = new URLSearchParams(window.location.hash.substring(1));
+
   let source = (datasources[0] || {}).name;
   let start_path = "";
   let instrument = app._instruments[0];
 
-  let template_param = null;
-  let active_node = null;
-  let active_terminal = null;
+  // Extract standard parameters
+  if (url_vars.has('instrument')) {
+    instrument = url_vars.get('instrument');
+  }
+  if (url_vars.has('source')) {
+    source = url_vars.get('source');
+  }
+  if (url_vars.has('pathlist') && url_vars.get('pathlist').length > 0) {
+    start_path = url_vars.get('pathlist');
+  }
 
-  url_vars.forEach(function (v, i) {
-    if (v[0] == 'pathlist' && v[1] && v[1].length) {
-      start_path = v[1];
-    }
-    else if (v[0] == 'source' && v[1]) {
-      source = v[1];
-    }
-    else if (v[0] == 'instrument' && v[1]) {
-      instrument = v[1];
-    }
-    else if (v[0] == 'template' && v[1]) {
-      template_param = v[1];
-    }
-    else if (v[0] == 'node' && v[1]) {
-      active_node = parseInt(v[1], 10);
-    }
-    else if (v[0] == 'terminal' && v[1]) {
-      active_terminal = v[1];
-    }
-  });
+  let template_param = hash_vars.get('template');
+  let active_node = hash_vars.has('node') ? parseInt(hash_vars.get('node'), 10) : null;
+  let active_terminal = hash_vars.get('terminal');
 
   app.current_instrument = instrument;
   await editor.switch_instrument(instrument);
@@ -126,17 +110,15 @@ window.onpopstate = async function (e) {
   // If a template is provided in the URL, decode, parse, and load it
   if (template_param) {
     try {
-      let decoded_template = decodeURIComponent(template_param);
-      let template_obj = JSON.parse(decoded_template);
+      // let decoded_template = decodeURIComponent(template_param);
+      let template_obj = JSON.parse(template_param);
 
       // Pass the node and terminal into the loader
       editor.load_template(template_obj, active_node, active_terminal, instrument);
 
-      // Clean up the URL to remove the long template parameters
+      // Clean up the URL to remove the hash
       let clean_url = new URL(window.location.href);
-      clean_url.searchParams.delete('template');
-      clean_url.searchParams.delete('node');
-      clean_url.searchParams.delete('terminal');
+      clean_url.hash = ""; 
       window.history.replaceState({}, "", clean_url.href);
 
     } catch (err) {
