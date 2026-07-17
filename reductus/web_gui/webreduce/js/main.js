@@ -91,6 +91,10 @@ window.onpopstate = async function (e) {
   let start_path = "";
   let instrument = app._instruments[0];
 
+  let template_param = null;
+  let active_node = null;
+  let active_terminal = null;
+
   url_vars.forEach(function (v, i) {
     if (v[0] == 'pathlist' && v[1] && v[1].length) {
       start_path = v[1];
@@ -101,15 +105,49 @@ window.onpopstate = async function (e) {
     else if (v[0] == 'instrument' && v[1]) {
       instrument = v[1];
     }
-  })
+    else if (v[0] == 'template' && v[1]) {
+      template_param = v[1];
+    }
+    else if (v[0] == 'node' && v[1]) {
+      active_node = parseInt(v[1], 10);
+    }
+    else if (v[0] == 'terminal' && v[1]) {
+      active_terminal = v[1];
+    }
+  });
 
   app.current_instrument = instrument;
   await editor.switch_instrument(instrument);
   editor.load_stashes();
 
-  console.log("adding datasource:", source, " at path:", start_path);
+  // Clear any existing datasources from the file browser UI
+  app.filebrowser_instance.datasources.splice(0, app.filebrowser_instance.datasources.length);
 
-  add_datasource(source, start_path);
+  // If a template is provided in the URL, decode, parse, and load it
+  if (template_param) {
+    try {
+      let decoded_template = decodeURIComponent(template_param);
+      let template_obj = JSON.parse(decoded_template);
+
+      // Pass the node and terminal into the loader
+      editor.load_template(template_obj, active_node, active_terminal, instrument);
+
+      // Clean up the URL to remove the long template parameters
+      let clean_url = new URL(window.location.href);
+      clean_url.searchParams.delete('template');
+      clean_url.searchParams.delete('node');
+      clean_url.searchParams.delete('terminal');
+      window.history.replaceState({}, "", clean_url.href);
+
+    } catch (err) {
+      console.error("Failed to parse template from URL parameter:", err);
+      add_datasource(source, start_path); // Fallback on error
+    }
+  } else {
+    // No template in URL: load the default or URL-specified single source
+    console.log("adding datasource:", source, " at path:", start_path);
+    add_datasource(source, start_path);
+  }
 }
 
 function add_datasource(sourcename, start_path_in="") {
@@ -215,13 +253,6 @@ async function initialize_app() {
     emitter: emitter
   }).mount(document.getElementById("filebrowser"));
   app.filebrowser_instance = filebrowser_instance;
-  
-  // Initialize file browser with default datasource
-  if (app._datasources && app._datasources.length > 0) {
-    const defaultDatasource = app._datasources[0];
-    const defaultPath = [];
-    await filebrowser_instance.addDataSource(defaultDatasource.name, defaultPath);
-  }
   
   const filebrowser_actions = {
     remove_stash(stashname) {
