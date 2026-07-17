@@ -2639,7 +2639,7 @@ def calculate_analyzer_properties(rho0, delta_t, gamma, mu, t_glass):
 
         pol_eff (float): The analyzer efficiency at given time
 
-    | 2026-07-16 Jonathan Gaudet
+    | 2026-07-17 Jonathan Gaudet
     """
     rho3he = rho0 * np.exp(-delta_t/gamma)
     pol_eff = np.tanh(mu*rho3he)
@@ -2659,10 +2659,10 @@ def cell_decay(data, trans_in, trans_out):
         trans_out (sans1d): Transmission vs time for the Heout cell
 
     **Returns**
-        result(params): provide initial time of the He3 cell (t0 in sec), the time constant gamma (in sec) , and initial polarization of the cell rho0
+        result(params): provide initial time of the He3 cell (t0 in hours), the time constant gamma (in hours) , and initial polarization of the cell rho0
+        plots(sans1d[]): theoretical and dta apoints for the he3 cell decay
 
-
-    | 2026-07-16 Jonathan Gaudet
+    | 2026-07-17 Jonathan Gaudet
     """
 
     opacity1ang = float(_s(data.metadata['analyzer.opacity1ang']))
@@ -2670,9 +2670,9 @@ def cell_decay(data, trans_in, trans_out):
     mu = opacity1ang * wavelength
     trans_glass = float(_s(data.metadata['analyzer.GlassTransmission']))
 
-    time = (trans_in.x + trans_out.x) / 2
-    t0 = time[0]
-    time = time - t0
+    time_absolute = ((trans_in.x + trans_out.x) / 2 ) / 3600
+    t0 = time_absolute[0]
+    time_relative = time_absolute - t0
     transmission_in = trans_in.v
     transmission_out = trans_out.v
     trans_unpolarized = transmission_in / transmission_out
@@ -2680,17 +2680,82 @@ def cell_decay(data, trans_in, trans_out):
     rho = (1/mu) * np.acosh(trans_unpolarized/(trans_glass * np.exp(-mu)))
     ln_rho = np.log(rho)
 
-    slope, intercept = np.polyfit(time, ln_rho, deg=1)
+    slope, intercept = np.polyfit(time_relative, ln_rho, deg=1)
 
     gamma = -1.0 / slope if slope!=0 else 0
     rho0 = np.exp(intercept)
+
+    # Create a list of time points for the theoretical curve calculation ad calculate the decay for those points
+    fit_time_relative = np.linspace(time_relative[0], time_relative[-1], 200)
+    fit_time_absolute = fit_time_relative + t0
+
+    #avoid error if fitted gamma is 0
+    if gamma != 0:
+        rho_fit = rho0 * np.exp(-fit_time_relative / gamma)
+    else:
+        rho_fit = np.ones_like(fit_time_relative) * rho0
+
+    # Map back to unpolarized transmission space
+    trans_fit = trans_glass * np.exp(-mu) * np.cosh(mu * rho_fit)
+
+    #Create uncertainty arrays to initialize sans1d object
+    exp_dx = np.zeros_like(time_relative)
+    exp_dv = np.zeros_like(rho)
+
+    fit_dx = np.zeros_like(fit_time_relative)
+    fit_dv = np.zeros_like(rho_fit)
+
+    #Copy the metadata to create sans1d object for both fit and data time decay so it can be visualized as output
+    metadata_exp = data.metadata.copy()
+    metadata_exp.update({
+        "title": "Measured He3 Transmission",
+        "name": "Experimental Points",
+        "entry": "experiment"
+    })
+
+    metadata_fit = data.metadata.copy()
+    metadata_fit.update({
+        "title": "Theoretical Decay Fit",
+        "name": "Exponential Fit",
+        "entry": "fit"
+    })
+
+    #Set sans1d object for data points
+    exp_plot = Sans1dData(
+        x=time_relative,
+        v=rho, #trans_unpolarized
+        dx=exp_dx,
+        dv=exp_dv,
+        xlabel="Time (Hrs)",
+        vlabel="3He polarization (rho)",
+        xunits="hours",
+        vunits="ratio",
+        xscale="linear",
+        vscale="linear",
+        metadata=metadata_exp
+    )
+
+    #set sans1d object for theoreticla curve fitted
+    fit_plot = Sans1dData(
+        x=fit_time_relative,
+        v=rho_fit, #trans_fit
+        dx=fit_dx,
+        dv=fit_dv,
+        xlabel="Time (Hrs)",
+        vlabel="3He polarization (rho)",
+        xunits="hours",
+        vunits="ratio",
+        xscale="linear",
+        vscale="linear",
+        metadata=metadata_fit
+    )
 
     result = Parameters(OrderedDict([
         ("init_time", t0),
         ("init_rho", rho0),
         ("time_constant", gamma)]))
 
-    return result
+    return result, [exp_plot, fit_plot]
 
 @module
 def flipper_sm_efficiency(trans_uu, trans_ud, trans_du, trans_dd, trans_he_in, trans_he_out, block_beam):
@@ -2715,7 +2780,9 @@ def flipper_sm_efficiency(trans_uu, trans_ud, trans_du, trans_dd, trans_he_in, t
 
     result(params): output parameters
 
-    | 2026-07-16 Jonathan Gaudet
+    curves_decay(sans1d[]): theoretical and data points for the He3 cell time decay
+
+    | 2026-07-17 Jonathan Gaudet
     """
 
     trans_uu_bgd = subtract([trans_uu], [block_beam])[0]
@@ -2728,7 +2795,7 @@ def flipper_sm_efficiency(trans_uu, trans_ud, trans_du, trans_dd, trans_he_in, t
     he_in = transmissionDecay(trans_he_in_bgd)
     he_out = transmissionDecay(trans_he_out_bgd)
 
-    param_he = cell_decay(trans_he_in[0],he_in,he_out)
+    param_he, curves_decay = cell_decay(trans_he_in[0],he_in, he_out)
 
     ratio_uu_ud = generate_transmission([trans_uu_bgd],[trans_ud_bgd])[0]
     ratio_dd_du = generate_transmission([trans_dd_bgd],[trans_du_bgd])[0]
@@ -2762,7 +2829,7 @@ def flipper_sm_efficiency(trans_uu, trans_ud, trans_du, trans_dd, trans_he_in, t
         ("t0_cell",param_he.params['init_time'])
     ]))
 
-    return result
+    return result, curves_decay
 
 def get_avg_run_time(data):
     """function that provide average timestamp of a scan run
@@ -2775,14 +2842,14 @@ def get_avg_run_time(data):
 
         avg time (params) : avg time of the scan run in hours
 
-    |      2026-07-16 Jonathan Gaudet
+    |      2026-07-17 Jonathan Gaudet
     """
     from datetime import datetime
 
     t_start = datetime.fromisoformat(_s(data.metadata['start_time'])).timestamp()
     t_end = datetime.fromisoformat(_s(data.metadata['end_time'])).timestamp()
 
-    return (t_end + t_start) / 2
+    return ((t_end + t_start) / 2) / 3600.0
 
 @module
 def spin_leakage_corr(data_uu, data_ud, data_du, data_dd, blocked_beam, flipper_par):
@@ -2898,8 +2965,11 @@ def extract_mag_nuc_components(data_uu, data_ud, data_du, data_dd):
 
     mag_par(sans1d) : 1D I vs Q magnetic parallel to field scattering component (M_par^2)
 
+    mag_par_diag(sans1d) : 1D I vs Q magnetic parallel to field scattering component (M_par^2)
+
     mag_perp(sans1d) : 1D I vs Q magnetic perpendicular to field scattering component (M_perp^2)
-      2026-07-16 Jonathan Gaudet
+
+    2026-07-19 Jonathan Gaudet
     """
 
     data_uu_q = PixelsToQ(data_uu, [None,None],True)
@@ -2924,4 +2994,11 @@ def extract_mag_nuc_components(data_uu, data_ud, data_du, data_dd):
 
     mag_par = ( (mpar2_mean - mpar1_mean)**2 )/ (16 * nuclear)
 
-    return nuclear, mag_par, mag_perp
+    mpar1_diag_nom, mpar1_diag_mean = sector_cut(data_ud_q,[45,30])
+    mpar2_diag_nom, mpar2_diag_mean = sector_cut(data_du_q, [45, 30])
+    mpar3_diag_nom, mpar3_diag_mean = sector_cut(data_ud_q, [135, 30])
+    mpar4_diag_nom, mpar4_diag_mean = sector_cut(data_du_q, [135, 30])
+
+    mag_par_diag = ( mpar1_diag_mean + mpar2_diag_mean + mpar3_diag_mean + mpar4_diag_mean ) - ( 5 * mag_perp )
+
+    return nuclear, mag_par, mag_par_diag, mag_perp
