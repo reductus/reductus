@@ -779,13 +779,18 @@ editor.make_link = async function() {
 
   // Append the current state parameters using the editor's internal state
   url.searchParams.set('instrument', this._instrument_id);
-  url.searchParams.set('template', JSON.stringify(this._active_template));
+
+  // Put the heavy template data in the hash fragment so the server ignores it
+  const hashParams = new URLSearchParams();
+  hashParams.set('template', JSON.stringify(this._active_template));
 
   if (this?.instance?.selected?.terminals?.length > 0) {
     let [node, terminal] = this.instance.selected.terminals[0];
-    url.searchParams.set('node', node);
-    url.searchParams.set('terminal', terminal);
+    hashParams.set('node', node);
+    hashParams.set('terminal', terminal);
   }
+
+  url.hash = hashParams.toString();
 
   // Write to the clipboard (this will throw an error if it fails)
   try {
