@@ -2589,3 +2589,40 @@ def export_data(data, file_path: str | pathlib.Path | os.PathLike = ".", format:
             return export_to_csv(data, file_path)
         case "ascii" | _:
             return export_to_ascii(data, file_path)
+
+
+@module
+def view_metadata(data) -> list:
+    """View the file metadata dictionary.
+
+    **Inputs**
+
+    data (sans1d[]): SANS data with metadata
+
+    **Returns**
+
+    output (params[]): A list of the metadata dictionaries
+
+    | 2026-07-21 Jeff Krzywon initial implementation
+    """
+    if not isinstance(data, list):
+        data = [data]
+
+    return [Parameters(sanitize_metadata(data_set.metadata)) for data_set in data if data_set is not None]
+
+
+def sanitize_metadata(obj):
+    """Recursively convert dictionary values into serializable Python primitives."""
+    if isinstance(obj, dict):
+        return {str(k): sanitize_metadata(v) for k, v in obj.items()}
+    elif isinstance(obj, (list, tuple)):
+        return [sanitize_metadata(v) for v in obj]
+    elif isinstance(obj, np.ndarray):
+        return obj.tolist()
+    elif isinstance(obj, np.number):
+        return obj.item()
+    elif isinstance(obj, (str, int, float, bool, type(None))):
+        return obj
+    else:
+        # Convert custom objects like SansData, datetime, etc. to strings
+        return str(obj)
