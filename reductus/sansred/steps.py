@@ -153,7 +153,7 @@ def LoadRawSANS(filelist=None, check_timestamps=True):
 
     return data
 
-def addProcess(data, name, description, terms, notes):
+def addProcess(data, name, description, terms, notes=None):
     if not data.metadata.get('process', None):
         data.metadata['process'] = []
     index = len(data.metadata["process"]) + 1
