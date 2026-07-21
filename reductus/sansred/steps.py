@@ -794,6 +794,12 @@ def PixelsToQ(data, beam_center=[None,None], correct_solid_angle=True):
 
     calculateDQ(res)
     calculateMeanQ(res)
+    params_used = {
+        'det.beamx': x0, 'det.beamy': y0,
+        'det.pixelsizex': sx, 'det.pixelsizey': sy,
+        "wavelength": wavelength, "L2": Z
+    }
+    res = addProcess(res, "PixelToQSpace", "Calculate the Q-space using pixel space", params_used)
     return res
 
 @cache
@@ -1266,6 +1272,7 @@ def correct_dead_time(sansdata, deadtime=1.0e-6):
 
     2010-01-03 Andrew Jackson?
     2026-05-22 Jeff Krzywon
+    2026-07-21 Jeff Krzywon adding process metadata
     """
     # Always use the in-file deadtime over any hard-coded table
     if sansdata.metadata.get("det.dead_time", None):
@@ -1278,7 +1285,7 @@ def correct_dead_time(sansdata, deadtime=1.0e-6):
 
     result = sansdata.copy()
     result.data *= dscale
-    result = addProcess(result, "Dead time correction", "Correcting counts for the detector dead time", {"deadtime": }, notes)
+    result = addProcess(result, "Dead time correction", "Correcting counts for the detector dead time", {"deadtime": deadtime})
     return result
 
 @module
@@ -1297,10 +1304,13 @@ def monitor_normalize(sansdata, mon0=1e8):
     output (sans2d): corrected for dead time
 
     2010-01-01 Andrew Jackson?
+    2026-07-21 Jeff Krzywon adding process metadata
     """
     monitor = sansdata.metadata['run.moncnt']
     res = sansdata.copy()
     res.data *= mon0/monitor
+    res = addProcess(res, "Monitor Normalization", "Normalize the counts to the monitor count rate.",
+                        {"monitor counts": monitor, "normalization constant": mon0, "normalization": mon0 / monitor})
     return res
 
 @module
@@ -1422,18 +1432,25 @@ def subtract(subtrahend, minuend, align_by='run.configuration'):
 
     | 2010-01-01 unknown
     | 2019-08-14 Brian Maranville adding group by config
+    | 2026-07-21 Jeff Krzywon adding process metadata
     """
 
     if not minuend or len(minuend) == 0:
         return subtrahend
     elif len(minuend) == 1:
-        return [s - minuend[0] for s in subtrahend]
+        return [addProcess(s, "Subtraction", "Subtract from the data.", {"subtracted": minuend[0].metadata.get("run.filename",
+                                                                                                      "File")}) - minuend[0]
+                for s in subtrahend]
     elif align_by.lower() != "none":
         # make lookup:
         align_lookup = dict([(get_compound_key(m.metadata, align_by), m) for m in minuend])
-        return [(s - align_lookup[get_compound_key(s.metadata, align_by)]) for s in subtrahend]
+        return [
+            (addProcess(s, "Subtraction", "Subtract from the data.", {"subtracted": minuend.metadata.get("run.filename", "File")})
+             - align_lookup[get_compound_key(s.metadata, align_by)]) for s in subtrahend]
     else:
-        return [(s - m) for s,m in zip(subtrahend, minuend)]
+        return [(addProcess(s, "Subtraction", "Subtract from the data.", {"subtracted": m.metadata.get("run.filename",
+                                                                                                       "File")}) - m)
+                for s,m in zip(subtrahend, minuend)]
 
 @module
 def product(data, factor_param, align_by="sample.description,run.configuration,sample.temp,mag.value"):
@@ -1455,19 +1472,22 @@ def product(data, factor_param, align_by="sample.description,run.configuration,s
 
     | 2010-01-02 unknown
     | 2019-07-27 Brian Maranville
+    | 2026-07-21 Jeff Krzywon adding process metadata
     """
     # follow broadcast rules:
     if not factor_param or len(factor_param) == 0:
         return data
     elif len(factor_param) == 1:
         f = factor_param[0]
-        return [(d * Uncertainty(f.params.get('factor', 1.0), f.params.get('factor_variance', 0.0))) for d in data]
+        f_unc = Uncertainty(f.params.get('factor', 1.0), f.params.get('factor_variance', 0.0))
+        return [(addProcess(d, "Product", "Data multiplied by some value.", {"factor": f_unc.x, "variance": f_unc.dx}) * f_unc) for d in data]
     elif align_by.lower() != "none":
         # make lookup:
         align_lookup = dict([(get_compound_key(f.params, align_by), Uncertainty(f.params.get('factor', 1.0), f.params.get('factor_variance', 0.0))) for f in factor_param])
-        return [(d * align_lookup[get_compound_key(d.metadata, align_by)]) for d in data]
+        return [(addProcess(d, "Product", "Data multiplied by some value.", {"factor": f.x, "variance": f.dx}) * align_lookup[get_compound_key(d.metadata, align_by)]) for d in data]
     else:
-        return [d * Uncertainty(f.params.get('factor', 1.0), f.params.get('factor_variance', 0.0)) for d,f in zip(data, factor_param)]
+        return [addProcess(d, "Product", "Data multiplied by some value.", {"factor": f.params.get('factor', 1.0), "variance": f.params.get(
+            'factor_variance', 0.0)}) * Uncertainty(f.params.get('factor', 1.0), f.params.get('factor_variance', 0.0)) for d,f in zip(data, factor_param)]
 
 @module
 def divide(data, factor_param):
@@ -1531,11 +1551,19 @@ def correct_detector_sensitivity(sansdata, sensitivity):
     output (sans2d): result c in a/b = c
 
     2026-04-24 Jeff Krzywon
+    2026-07-21 Jeff Krzywon adding process metadata
     """
     res = sansdata.copy()
     # If no sensitivity file, do not scale the data
-    res.data /= sensitivity.data if sensitivity else 1
-
+    denom = sensitivity.data if sensitivity is not None else 1
+    res.data /= denom
+    if sensitivity:
+        res = addProcess(
+            res,
+            "Detector Sensitivity",
+            "Correct for the pixel-to-pixel detector sensitivity.",
+            {"sensitivity": denom, "div file": sensitivity.metadata['"run.filename"']}
+        )
     return res
 
 def lookup_attenuation(instrument_name, attenNo, wavelength, tables=None):
@@ -1577,6 +1605,8 @@ def correct_attenuation(sample, instrument="NG7"):
     **Returns**
 
     atten_corrected (sans2d): corrected measurement
+
+    | 2026-07-21 Jeff Krzywon adding process metadata
     """
     # Default to use the insturment name from the file, rather that the name passed by the method.
     instrument = sample.metadata.get('instrument.name', instrument).decode("utf-8").split(":")[-1]
@@ -1613,6 +1643,9 @@ def correct_attenuation(sample, instrument="NG7"):
     atten_corrected.attenuation_corrected = True
     atten_corrected.data /= denominator
     print(f"ATTEN FACTOR: {denominator}")
+
+    atten_corrected = addProcess(atten_corrected, "Attenuation", "Correct for the instrument attenuation.",
+                     {"attenuators": attenNo, "attenuation factor": att})
     return atten_corrected
 
 @cache
@@ -1725,6 +1758,8 @@ def absolute_scaling(empty, sample, Tsam, div, instrument="NG7", integration_box
         ("Dsam", Dsam),
         ("box_used", {"xmin": xmin, "xmax": xmax, "ymin": ymin, "ymax": ymax})
     ])
+
+    ABS = addProcess(ABS, "Absolute Scaling", "Parameters used for absolute scaling.", params)
     #------------------------------------
     return ABS, Parameters(params)
 
@@ -1781,14 +1816,23 @@ def addSimple(data):
     sum (sans2d): sum of inputs
 
     2017-06-29  Brian Maranville
+    2026-07-21 Jeff Krzywon adding process metadata
     """
 
     output = data[0].copy()
+    params = {}
     for d in data[1:]:
         output.data += d.data
         output.metadata['run.moncnt'] += d.metadata['run.moncnt']
         output.metadata['run.rtime'] += d.metadata['run.rtime']
         output.metadata['run.detcnt'] += d.metadata['run.detcnt']
+        param = {
+            "run.moncnt": d.metadata['run.moncnt'],
+            "run.rtime": d.metadata['run.rtime'],
+            "run.detcnt": d.metadata['run.detcnt']
+        }
+        params[d.metadata['run.filename']] = param
+    output = addProcess(output, "Data Summation", "A number of data sets were added to the current one.", params)
     return output
 
 def get_compound_key(data_dict, compound_key, separator=","):
