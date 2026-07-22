@@ -179,12 +179,25 @@ def export_to_nxcansas(data: SansIQData, f_path: Path_Like) -> dict:
         source = instrument_group.create_group('source')
         source.attrs.update({
             "NX_class": "NXsource",
-            "canSAS_class": "SASource"
+            "canSAS_class": "SASsource"
         })
         source['type'] = 'Reactor Neutron Source'
         source['incident_wavelength'] = data.metadata.get('resolution.lmda', None)
         source['incident_wavelength_spread'] = data.metadata.get('resolution.dlmda', None)
 
-        # TODO: Add in the data reduction processes to the file
+        for i, process in enumerate(data.metadata.get('process', [])):
+            proc_entry = nxentry.create_group(f'process{i + 1}')
+            proc_entry.attrs.update({
+                "NX_class": "NXprocess",
+                "canSAS_class": "SASprocess"
+            })
+            proc_entry['name'] = process.get("name", "")
+            proc_entry['date'] = process.get("date", "")
+            proc_entry['description'] = process.get("description", "")
+            for term_name, term in process.get("term", {}).items():
+                print(term_name, term)
+                proc_entry[term_name] = str(term)
+            proc_entry['software'] = process.get("program", "")
+            proc_entry['software_version'] = process.get('version', '')
 
     return {}
