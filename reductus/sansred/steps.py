@@ -896,6 +896,8 @@ def circular_av(data):
     mean_output.metadata = deepcopy(data.metadata)
     mean_output.metadata['extra_label'] = "_circ"
 
+    nominal_output = addProcess(nominal_output, "CircularAverage", "Perform the circular average", {})
+
     return nominal_output, mean_output
 
 def oversample_2d(input_array, oversampling):
@@ -1027,6 +1029,7 @@ def circular_av_new(data_sets, q_min=None, q_max=None, q_step=None, mask_width=3
                             xunits="inv. A", vunits="neutrons")
         nominal_output_x.metadata = deepcopy(data.metadata)
         nominal_output_x.metadata['extra_label'] = "_circ"
+        nominal_output_x = addProcess(nominal_output_x, "CircularAverage", "Perform the circular average", {})
         nominal_output.append(nominal_output_x)
 
         mean_output_x = Sans1dData(Q_mean, I, dx=Q_mean_error, dv=I_var, xlabel="Q", vlabel="I",
@@ -1036,6 +1039,7 @@ def circular_av_new(data_sets, q_min=None, q_max=None, q_step=None, mask_width=3
         mean_output.append(mean_output_x)
 
         canonical_output.append(SansIQData(I, np.sqrt(I_var), Q, Q_mean_error, Q_mean, ShadowFactor, metadata=deepcopy(data.metadata)))
+
     
     return nominal_output, mean_output, canonical_output
 
@@ -2456,6 +2460,7 @@ def mask_1d_data(data: list[SansIQData | Sans1dData],
             data_set.q_slice = [mask[0] - 1, 0 - mask[1]]
         else:
             data_set.q_slice = None
+        data_set = addProcess(data_set, "Mask points", "A number of points were removed from the ends of the data.", {"front": mask[0], "back": mask[1]})
         returns.append(data_set.masked())
     return returns
 
