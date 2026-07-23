@@ -185,8 +185,9 @@ def export_to_nxcansas(data: SansIQData, f_path: Path_Like) -> dict:
         source['incident_wavelength'] = data.metadata.get('resolution.lmda', None)
         source['incident_wavelength_spread'] = data.metadata.get('resolution.dlmda', None)
 
-        for i, process in enumerate(data.metadata.get('process', [])):
-            proc_entry = nxentry.create_group(f'process{i + 1}')
+        for process in data.metadata.get('process', []):
+            i = process.get("sequence_index", 0) + 1
+            proc_entry = nxentry.create_group(f'process{i}')
             proc_entry.attrs.update({
                 "NX_class": "NXprocess",
                 "canSAS_class": "SASprocess"
@@ -194,6 +195,7 @@ def export_to_nxcansas(data: SansIQData, f_path: Path_Like) -> dict:
             proc_entry['name'] = process.get("name", "")
             proc_entry['date'] = process.get("date", "")
             proc_entry['description'] = process.get("description", "")
+            proc_entry['sequence_index'] = i
             params_entry = proc_entry.create_group('parameters')
             params_entry.attrs.update({
                 "NX_class": "NXparameters",
