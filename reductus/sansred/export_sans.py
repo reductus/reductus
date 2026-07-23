@@ -199,5 +199,7 @@ def export_to_nxcansas(data: SansIQData, f_path: Path_Like) -> dict:
                 proc_entry[term_name] = str(term)
             proc_entry['software'] = process.get("program", "")
             proc_entry['software_version'] = process.get('version', '')
+            proc_entry['program'] = process.get("program", "")
+            proc_entry['version'] = process.get('version', '')
 
     return {}
