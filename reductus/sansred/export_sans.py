@@ -194,11 +194,12 @@ def export_to_nxcansas(data: SansIQData, f_path: Path_Like) -> dict:
             proc_entry['name'] = process.get("name", "")
             proc_entry['date'] = process.get("date", "")
             proc_entry['description'] = process.get("description", "")
+            params_entry = proc_entry.create_group('parameters')
+            params_entry.attrs.update({
+                "NX_class": "NXparameters",
+            })
             for term_name, term in process.get("term", {}).items():
-                print(term_name, term)
-                proc_entry[term_name] = str(term)
-            proc_entry['software'] = process.get("program", "")
-            proc_entry['software_version'] = process.get('version', '')
+                params_entry[term_name] = str(term)
             proc_entry['program'] = process.get("program", "")
             proc_entry['version'] = process.get('version', '')
 
