@@ -154,9 +154,10 @@ def LoadRawSANS(filelist=None, check_timestamps=True):
     return data
 
 def addProcess(data, name, description, terms, notes=None):
-    if not data.metadata.get('process', None):
-        data.metadata['process'] = []
-    index = len(data.metadata["process"]) + 1
+    data_modded = data.copy()
+    if not data_modded.metadata.get('process', None):
+        data_modded.metadata['process'] = []
+    index = len(data_modded.metadata["process"]) + 1
     process = {
         "program": "reductus",
         "sequence_index": index,
@@ -167,8 +168,8 @@ def addProcess(data, name, description, terms, notes=None):
         "term": terms,
         "note": notes,
     }
-    data.metadata["process"].append(process)
-    return data
+    data_modded.metadata["process"].append(process)
+    return data_modded
 
 @cache
 @module
