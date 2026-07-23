@@ -1560,14 +1560,13 @@ def correct_detector_sensitivity(sansdata, sensitivity):
     """
     res = sansdata.copy()
     # If no sensitivity file, do not scale the data
-    denom = sensitivity.data if sensitivity is not None else 1
-    res.data /= denom
     if sensitivity:
+        res.data /= sensitivity.data
         res = addProcess(
             res,
             "Detector Sensitivity",
             "Correct for the pixel-to-pixel detector sensitivity.",
-            {"sensitivity": denom, "div file": sensitivity.metadata['"run.filename"']}
+            {"sensitivity": sensitivity.data, "div file": sensitivity.metadata['"run.filename"']}
         )
     return res
 
