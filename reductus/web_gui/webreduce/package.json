@@ -44,6 +44,7 @@
   },
   "devDependencies": {
     "comlink": "^4.4.2",
+    "esbuild": "^0.28.1",
     "vite": "^8.0.2"
   }
 }

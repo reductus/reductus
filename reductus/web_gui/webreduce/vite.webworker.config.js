@@ -1,4 +1,5 @@
 import { defineConfig } from 'vite';
+// vue plugin isn't needed for Vue components defined in vanilla JS form
 // import vue from '@vitejs/plugin-vue';
 import path from 'path';
 import fs from 'fs';
