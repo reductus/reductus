@@ -4,6 +4,8 @@ from io import BytesIO
 import sys
 import numpy as np
 
+from .vsansdata import VSansData
+
 from reductus.dataflow.lib.uncertainty import Uncertainty
 
 # Action names
@@ -670,11 +672,11 @@ def calculate_XY(raw_data, solid_angle_correction=True):
             if 'linear_data_error' in det and 'value' in det['linear_data_error']:
                 data_variance = np.sqrt(det['linear_data_error']['value'])
             else:
-                data_variance = data
+                data_variance = data.copy()
             udata = Uncertainty(data, data_variance)
 
         else:
-            
+
             orientation = det['tube_orientation']['value'][0].decode().upper()
             coeffs = det['spatial_calibration']['value']
             lateral_offset = 0
@@ -684,7 +686,7 @@ def calculate_XY(raw_data, solid_angle_correction=True):
             panel_gap = det['panel_gap']['value'][0]/10.0 # mm to cm
             if (orientation == "VERTICAL"):
                 x_pixel_size = det['x_pixel_size']['value'][0] / 10.0 # mm to cm
-                y_pixel_size = coeffs[1][0] / 10.0 # mm to cm 
+                y_pixel_size = coeffs[1][0] / 10.0 # mm to cm
                 lateral_offset = det['lateral_offset']['value'][0] # # already cm
 
             else:
@@ -697,42 +699,42 @@ def calculate_XY(raw_data, solid_angle_correction=True):
             if 'linear_data_error' in det and 'value' in det['linear_data_error']:
                 data_variance = np.sqrt(det['linear_data_error']['value'])
             else:
-                data_variance = data
+                data_variance = data.copy()
             udata = Uncertainty(data, data_variance)
             position_key = sn[-1]
             if position_key == 'T':
-                # FROM IGOR: (q,p = 0 for lower-left pixel) 
+                # FROM IGOR: (q,p = 0 for lower-left pixel)
                 # if(cmpstr("T",detStr[1]) == 0)
-                #   data_realDistY[][] = tube_width*(q+1/2) + offset + gap/2		
+                #   data_realDistY[][] = tube_width*(q+1/2) + offset + gap/2
                 #   data_realDistX[][] = coefW[0][q] + coefW[1][q]*p + coefW[2][q]*p*p
                 realDistX =  coeffs[0][0]/10.0 # to cm
                 realDistY =  0.5 * y_pixel_size + vertical_offset + panel_gap/2.0
-            
+
             elif position_key == 'B':
-                # FROM IGOR: (q,p = 0 for lower-left pixel) 
+                # FROM IGOR: (q,p = 0 for lower-left pixel)
                 # if(cmpstr("B",detStr[1]) == 0)
                 #   data_realDistY[][] = offset - (dimY - q - 1/2)*tube_width - gap/2
                 #   data_realDistX[][] = coefW[0][q] + coefW[1][q]*p + coefW[2][q]*p*p
                 realDistX =  coeffs[0][0]/10.0
                 realDistY =  vertical_offset - (dimY - 0.5)*y_pixel_size - panel_gap/2.0
-                
+
             elif position_key == 'L':
-                # FROM IGOR: (q,p = 0 for lower-left pixel) 
+                # FROM IGOR: (q,p = 0 for lower-left pixel)
                 # if(cmpstr("L",detStr[1]) == 0)
                 #   data_realDistY[][] = coefW[0][p] + coefW[1][p]*q + coefW[2][p]*q*q
                 #   data_realDistX[][] = offset - (dimX - p - 1/2)*tube_width - gap/2
                 realDistX =  lateral_offset - (dimX - 0.5)*x_pixel_size - panel_gap/2.0
                 realDistY =  coeffs[0][0]/10.0
-                
+
             elif position_key == 'R':
-                # FROM IGOR: (q,p = 0 for lower-left pixel) 
+                # FROM IGOR: (q,p = 0 for lower-left pixel)
                 #   data_realDistY[][] = coefW[0][p] + coefW[1][p]*q + coefW[2][p]*q*q
                 #   data_realDistX[][] = tube_width*(p+1/2) + offset + gap/2
                 realDistX =  x_pixel_size*(0.5) + lateral_offset + panel_gap/2.0
                 realDistY =  coeffs[0][0]/10.0
 
         #x_pos = size_x/2.0 # place panel with lower-right corner at center of view
-        #y_pos = size_y/2.0 # 
+        #y_pos = size_y/2.0 #
         x0_pos = realDistX - beam_center_x # then move it the 'real' distance away from the origin,
         y0_pos = realDistY - beam_center_y # which is the beam center
 
@@ -835,6 +837,34 @@ def monitor_normalize(qdata, mon0=1e8):
     umon = Uncertainty(monitor, monitor)
     for d in output.detectors:
         output.detectors[d]['data'] *= mon0/umon
+    return output
+
+@module
+def monitor_normalize_raw(rawdata, mon0=1e8):
+    """"
+    Given a SansData object, normalize the data to the provided monitor
+
+    **Inputs**
+
+    rawdata (raw): data in
+
+    mon0 (float): provided monitor
+
+    **Returns**
+
+    output (raw): corrected for monitor counts
+    2026-08-18  Jonathan Gaudet
+    """
+    output = deepcopy(rawdata)
+
+    monitor = float(output.metadata['run.moncnt'])
+    scale_factor = mon0 / monitor
+
+    for det_name, det in output.detectors.items():
+        data = np.array(det["data"]["value"], dtype=float) * scale_factor
+        det["data"]["value"] = data
+
+
     return output
 
 @cache
@@ -1212,3 +1242,458 @@ def top_bottom_shadow(realspace_data, width=3, inplace=True):
             det['shadow_mask'] = shadow_mask
     
     return rd
+
+def get_panel_data(data_obj, PANEL_KEY):
+
+    detectors = data_obj.detectors
+    det_map = {k.lower(): v for k, v in detectors.items()}
+
+    if PANEL_KEY.lower() in det_map:
+        det = det_map[PANEL_KEY.lower()]
+    else:
+        raise KeyError(
+            f"Panel '{PANEL_KEY}' not found in detectors. Available: {list(detectors.keys())}"
+        )
+
+    panel_udata = det["data"] if isinstance(det, dict) else det.data
+    raw_array = (
+        panel_udata.x if hasattr(panel_udata, "x") else panel_udata
+    )
+
+    return panel_udata, raw_array
+
+def get_panel_data_raw(rawdata, PANEL_KEY):
+    """Extract value and error arrays from a raw dataset panel and wrap in Uncertainty."""
+    det = rawdata.detectors[PANEL_KEY]
+    vals = np.array(det["data"]["value"], dtype=float)
+
+    if "linear_data_error" in det and "value" in det["linear_data_error"]:
+        vars_ = np.array(det["linear_data_error"]["value"], dtype=float)
+    else:
+        vars_ = np.copy(vals)  # Poisson error variance = N
+
+    return Uncertainty(vals, vars_), vals
+
+
+@module
+def calculate_vsans_transmission(in_beam, empty_beam, margin=5, PANEL_KEY = "detector_B"):
+    """
+    Calculate the overlap shadow from upstream panels on VSANS detectors
+    Outputs will still be realspace data, but with shadow_mask updated to
+    include these overlap regions
+
+     **Inputs**
+
+    in_beam (raw): in_beam real spac, X, Y coordiantes
+
+    empty_beam (raw): empty_beam real spac, X, Y coordinates
+
+    margin {Box margin, width = 4*gauss_width + 2*margin:} (int): Extra margin
+    to add to automatically calculated peak width in x and y
+
+    PANEL_KEY (str): detector choice for transmission
+
+    **Returns**
+
+    output (params[]): calculated transmission for the integration area
+
+    2026-08-13 Jonathan Gaudet
+    """
+    from collections import OrderedDict
+    import numpy as np
+    from .vsansdata import Parameters
+
+    in_udata, in_array = get_panel_data_raw(in_beam, PANEL_KEY)
+    empty_udata, empty_array = get_panel_data_raw(empty_beam, PANEL_KEY)
+
+    # find beamstop
+    _, x, y, width_x, width_y = moments(empty_array)
+    center_x = x + 0.5
+    center_y = y + 0.5
+
+    xmin = int(max(0, np.floor(center_x - width_x * 2.0) - margin))
+    xmax = int(
+        min(
+            empty_array.shape[0] - 1, np.ceil(center_x + width_x * 2.0) + margin
+        )
+    )
+    ymin = int(max(0, np.floor(center_y - width_y * 2.0) - margin))
+    ymax = int(
+        min(
+            empty_array.shape[1] - 1, np.ceil(center_y + width_y * 2.0) + margin
+        )
+    )
+
+    # 3. Sum Intensity inside ROI
+    I_in_beam = np.sum(in_udata[xmin: xmax + 1, ymin: ymax + 1])
+    I_empty_beam = np.sum(empty_udata[xmin: xmax + 1, ymin: ymax + 1])
+
+    # 4. Calculate Ratio (T = I_in / I_empty)
+    ratio = I_in_beam / I_empty_beam
+
+    # Extract scalar values from Uncertainty or float
+    ratio_val = float(ratio.x) if hasattr(ratio, "x") else float(ratio)
+    ratio_var = (
+        float(ratio.variance) if hasattr(ratio, "variance") else 0.0
+    )
+    ratio_err = np.sqrt(ratio_var)
+
+    # 5. Build and return Parameters object
+    params_dict = OrderedDict(
+        [
+            ("factor", ratio_val),
+            ("factor_variance", ratio_var),
+            ("factor_err", ratio_err),
+            ("panel_used", PANEL_KEY),
+            (
+                "run.configuration",
+                in_beam.metadata.get("run.configuration", ""),
+            ),
+            (
+                "sample.description",
+                in_beam.metadata.get("sample.description", ""),
+            ),
+            ("det.des_dis", in_beam.metadata.get("det.des_dis", 0.0)),
+            ("resolution.lmda", in_beam.metadata.get("resolution.lmda", 0.0)),
+            ("run.guide", in_beam.metadata.get("run.guide", "")),
+            (
+                "box_used",
+                {"xmin": xmin, "xmax": xmax, "ymin": ymin, "ymax": ymax},
+            ),
+        ]
+    )
+
+    result = Parameters(params=params_dict)
+    output = [result]
+
+    return output
+
+def moments(data):
+    """Returns (height, x, y, width_x, width_y)
+    the gaussian parameters of a 2D distribution by calculating its
+    moments """
+    total = data.sum()
+    X, Y = np.indices(data.shape)
+    x = (X*data).sum()/total
+    y = (Y*data).sum()/total
+    col = data[:, int(round(y))]
+    width_x = np.sqrt(np.abs((np.arange(col.size)-x)**2*col).sum()/col.sum())
+    row = data[int(round(x)), :]
+    width_y = np.sqrt(np.abs((np.arange(row.size)-y)**2*row).sum()/row.sum())
+    height = data.max()
+    return height, x, y, width_x, width_y
+
+@module
+def subtract_raw(sample, background):
+    """
+     Algebraic subtraction of two single dataset pixel by pixel
+
+     **Inputs**
+
+     sample (raw): a in (a-b) = c
+
+     background (raw): b in (a-b) = c, defaults to zero
+
+     **Returns**
+
+     output (raw): c in (a-b) = c
+
+     | 2026-08-19 Jonathan Gaudet
+     """
+
+    if sample is None:
+        return None
+
+    if background is None:
+        return deepcopy(sample)
+
+    output = deepcopy(sample)
+
+    for det_name, det in output.detectors.items():
+        if det_name in background.detectors:
+            bg_det = background.detectors[det_name]
+
+            sample_vals = np.array(det["data"]["value"], dtype=float)
+            bg_vals = np.array(bg_det["data"]["value"], dtype=float)
+
+            det["data"]["value"] = sample_vals - bg_vals
+
+    return output
+
+@module
+def multiply_raw(sample, factor_param):
+    """
+     Algebraic subtraction of two single dataset pixel by pixel
+
+     **Inputs**
+
+     sample (raw): matrix to multiply, defaults to 1.0
+
+     factor_param (params[]?): factor to multiply matrix to
+
+     **Returns**
+
+     output (raw): factor * sample
+
+     | 2026-08-19 Jonathan Gaudet
+     """
+    if sample is None:
+        return None
+
+    if not factor_param:
+        return deepcopy(sample)
+
+    output=deepcopy(sample)
+
+    # 1. Extract factor and variance from parameter object
+    p_obj = factor_param[0]
+    params = getattr(p_obj, "params", p_obj) if p_obj is not None else {}
+
+    val = float(params.get("factor", 1.0))
+    var = float(params.get("factor_variance", 0.0))
+
+    # 2. Multiply raw arrays and propagate errors for each detector panel
+    for det_name, det in output.detectors.items():
+        if "data" in det and "value" in det["data"]:
+            vals = np.array(det["data"]["value"], dtype=float)
+
+            if "linear_data_error" in det and "value" in det["linear_data_error"]:
+                vars_ = np.array(det["linear_data_error"]["value"], dtype=float)
+            else:
+                vars_ = np.copy(vals)
+
+            net_vars = (val ** 2) * vars_ + (vals ** 2) * var
+
+            det["data"]["value"] = vals * val
+
+            if "linear_data_error" not in det:
+                det["linear_data_error"] = {}
+
+            det["linear_data_error"]["value"] = np.copy(net_vars)
+
+    return output
+
+@module
+def absolute_scaling(sample, open_beam, trans_sample, margin=5, PANEL_KEY='detector_B'):
+    """
+     perform absolute scaling of a particular data, which is assumed to have an empty already subtracted. 
+     Both sample and open_beam should be already on the same monitor count.
+     Open_beam is also assumed to be corrected for attenuation.
+     Open beam should remain the raw and not pixel space unless you do not correct for solid angle.
+
+      **Inputs**
+
+     sample (realspace): in_beam real spac, X, Y coordiantes
+
+     open_beam (raw): empty_beam real spac, X, Y coordinates
+
+     trans_sample (params[]?): parameter dictionnary for transmission of the sample
+
+     margin {Box margin, width = 4*gauss_width + 2*margin:} (int): Extra margin
+     to add to automatically calculated peak width in x and y
+
+     PANEL_KEY (str): detector panel to do absolute scaling (transmission of open beam)
+
+     **Returns**
+
+     abs_data (realspace): calculated transmission for the integration area
+
+     2026-08-18 Jonathan Gaudet
+    """
+
+    if sample is None:
+        return None
+
+    if open_beam is None:
+        return sample
+
+    p_obj = trans_sample[0]
+    params = getattr(p_obj, "params", p_obj) if p_obj is not None else {}
+
+    T_sample = float(params.get("factor", 1.0))
+    #T_sample_var = float(params.get("factor_variance", 0.0))
+
+    #Extract panel data and find direct beam center and its bounds
+    open_udata, open_array = get_panel_data_raw(open_beam, PANEL_KEY)
+
+    _, x, y, width_x, width_y = moments(open_array)
+    center_x = x + 0.5
+    center_y = y + 0.5
+
+    xmin = int(max(0, np.floor(center_x - width_x * 2.0) - margin))
+    xmax = int(
+        min(
+            open_array.shape[0] - 1, np.ceil(center_x + width_x * 2.0) + margin
+        )
+    )
+    ymin = int(max(0, np.floor(center_y - width_y * 2.0) - margin))
+    ymax = int(
+        min(
+            open_array.shape[1] - 1, np.ceil(center_y + width_y * 2.0) + margin
+        )
+    )
+
+    #integratation
+    flux_slice = open_udata[xmin: xmax + 1, ymin: ymax + 1]
+    flux = np.sum(flux_slice)
+
+    if hasattr(flux, "x"):
+        flux_val = float(flux.x)
+        flux_var = float(getattr(flux, "variance", flux_val))
+    else:
+        flux_val = float(flux)
+        flux_var = flux_val  # Poisson estimate if variance absent
+
+    if flux_val <= 0:
+        raise ValueError("Integrated open beam flux must be greater than zero.")
+
+    # 3.meta data for calculating pixel size
+    #det = sample.detectors[PANEL_KEY]
+    #z_offset = det.get("setback", {"value": [0.0]})["value"][0]
+    #sdd = det["distance"]["value"][0] + z_offset
+    #x_pixel_size = det["x_pixel_size"]["value"][0]/10 # mm to cm
+    #y_pixel_size = det["y_pixel_size"]["value"][0]/10 # mm to cm
+
+    # solid angle of a single pixel: omega = (dx * dy) / Sdd^2
+    # This already applied in calculate_XY
+    #omega_pixel = (x_pixel_size * y_pixel_size) / (sdd ** 2)
+
+    # sample thickness
+    raw_thk = sample.metadata.get("sample.thk", 1.0) #already converted in cm
+    dsam_cm = (float(raw_thk) if raw_thk else 1.0)
+
+    if dsam_cm <= 0:
+        dsam_cm = 0.1  # Default to 1 mm if input thickness = 0
+
+    # Compute kappa (flux * solid_angle) with Uncertainty
+    u_flux = Uncertainty(flux_val, flux_var)
+    u_kappa = u_flux
+    # absolute scaling factor
+    u_factor_abs = 1.0 / (u_kappa * dsam_cm * T_sample)
+
+    # multiply data by scaling factor
+    abs_data = sample * u_factor_abs
+
+    return abs_data
+
+@cache
+@module
+def correct_attenuation(sample):
+    """
+    Divide by the attenuation factor from the lookup tables for the VSANS instrument
+
+    **Inputs**
+
+    sample (raw): VSANS measurement dataset
+
+    **Returns**
+
+    result (raw): attenuation-corrected measurement
+
+    | 2026-08-17 Jonathan Gaudet
+    """
+    if sample is None:
+        return None
+
+    result = deepcopy(sample)
+    attenNo = int(sample.metadata.get("run.atten", 0))
+
+    #shortcut if attenuator = 0
+    if attenNo == 0:
+        result.metadata.update({"run.attenuation_factor": 1.0, "run.attenuation_err": 0.0})
+        return result
+
+    #read attenuator table
+    table = sample.metadata["run.attenuatortable"]
+    wavelength = float(sample.metadata["resolution.lmda"])
+
+    table_arr = np.asarray(table, dtype=float)
+    w_key = table_arr[:, 0]
+
+    att_curve = table_arr[:, attenNo+1]
+
+    # Interpolate attenuation factor and its error
+    att = float(np.interp(wavelength, w_key, att_curve))
+
+    scale_factor = 1.0 / att
+
+    # Apply inverse scale factor to detector panels
+    for det_name, det in result.detectors.items():
+        if "data" in det and "value" in det["data"]:
+            det["data"]["value"] = det["data"]["value"] * scale_factor
+
+
+    return result
+
+
+@module
+def correct_dead_time(sample):
+    """
+    Correct for the detector recovery time after each detected event
+    (suppresses counts as count rate increases)
+
+    **Inputs**
+
+    sample (raw): data in
+
+    **Returns**
+
+    result (raw): corrected for dead time
+
+    2026-08-14 Jonathan Gaudet
+    """
+    from .vsansdata import short_detectors
+
+    if sample is None:
+        return None
+
+    result = sample.copy()
+
+    # Safely extract run time (seconds)
+    rtime = result.metadata["run.rtime"]
+    run_time = float(rtime["value"] if isinstance(rtime, dict) else rtime)
+
+
+    for sn in short_detectors:
+        detname = f"detector_{sn}"
+        if detname not in result.detectors:
+            continue
+
+        det = result.detectors[detname]
+        deadtime = det["dead_time"]["value"]
+        data = det["data"]["value"]
+
+        if sn =="B":
+            total_counts = np.sum(data)
+            panel_count_rate = total_counts / run_time
+
+            tau_r = deadtime[0] * panel_count_rate
+
+            dscale = 1.0 / (1.0 - tau_r)
+            det["data"]["value"] = data * dscale
+
+        else:
+
+            tube_orientation = det['tube_orientation']['value'][0].decode().upper()
+            dimX = int(det['pixel_num_x']['value'][0])
+            dimY = int(det['pixel_num_y']['value'][0])
+
+            if tube_orientation == "VERTICAL":
+                for t in range(dimX):
+                    tube_sum = np.sum(data[t,:])
+                    tau_r = deadtime[t] * (tube_sum/ run_time)
+                    dscale = 1.0 / (1.0 - tau_r)
+                    data[t,:] = data[t,:] * dscale
+
+
+
+            else:
+                for t in range(dimY):
+                    tube_sum = np.sum(data[:,t])
+                    tau_r = deadtime[t] * (tube_sum/ run_time)
+                    dscale = 1.0 / (1.0 - tau_r)
+                    data[:,t] = data[:,t] * dscale
+
+
+
+    return result

@@ -42,6 +42,12 @@ class RawVSANSData(object):
         self.metadata['name'] = metadata['run.filename']
         self.detectors = detectors
 
+    def copy(self):
+        return self.__class__(deepcopy(self.metadata), deepcopy(self.detectors))
+
+    def __copy__(self):
+        return self.copy()
+
     def todict(self):
         return _toDictItem(self.metadata)
 
@@ -106,6 +112,52 @@ class VSansData(object):
 
     def __copy__(self):
         return self.copy()
+
+    def __sub__(self, other):
+
+        result = self.copy()
+
+        for sn in short_detectors:
+            detname = "detector_{short_name}".format(short_name=sn)
+            if detname in result.detectors and detname in other.detectors:
+                result.detectors[detname]["data"] = (
+                        result.detectors[detname]["data"]
+                        - other.detectors[detname]["data"]
+                )
+
+        return result
+
+    def __mul__(self, other):
+        result = self.copy()
+
+        if hasattr(other, "x"):
+            val = float(other.x)
+            var = float(getattr(other, "variance", 0.0))
+        elif hasattr(other, "value"):
+            val = float(other.value)
+            var = float(getattr(other, "variance", 0.0))
+        elif isinstance(other, (int, float)):
+            val = float(other)
+            var = 0.0
+        else:
+            return NotImplemented
+
+        for detname, det in result.detectors.items():
+            if "data" in det:
+                data_old = det["data"]
+                det["data"] = data_old * val
+
+                if "err" in det:
+                    err_old = det["err"]
+                    det["err"] = np.sqrt((val * err_old) ** 2 + (data_old ** 2) * var)
+                elif "variance" in det:
+                    var_old = det["variance"]
+                    det["variance"] = (val ** 2) * var_old + (data_old ** 2) * var
+
+        return result
+
+    def __rmul__(self, other):
+        return self.__mul__(other)
 
     #def __str__(self):
         #return self.data.x.__str__()
