@@ -1249,7 +1249,7 @@ def correct_dead_time(sansdata, deadtime=1.0e-6):
     2026-05-22 Jeff Krzywon
     """
     # Always use the in-file deadtime over any hard-coded table
-    if sansdata.metadata.get("det.dead_time", None):
+    if sansdata.metadata.get("det.dead_time", None) is not None:
         deadtime = sansdata.metadata["det.dead_time"]
 
     run_time = sansdata.metadata["run.rtime"]
