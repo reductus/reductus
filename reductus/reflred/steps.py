@@ -206,9 +206,11 @@ def monitor_dead_time(data, dead_time, nonparalyzing=0.0, paralyzing=0.0):
                                 tau_P=dead_time.tau_P)
     elif data.monitor.deadtime is not None and np.isfinite(data.monitor.deadtime).all():
         try:
+            # length 2
             tau_NP, tau_P = data.monitor.deadtime
         except Exception:
-            tau_NP, tau_P = data.monitor.deadtime[0], 0.0
+            # length 1 or scalar
+            tau_NP, tau_P = np.asarray(data.monitor.deadtime).item(), 0.0
         apply_monitor_dead_time(data, tau_NP=tau_NP, tau_P=tau_P)
     else:
         pass  # no deadtime correction parameters available.
@@ -255,9 +257,11 @@ def detector_dead_time(data, dead_time, nonparalyzing=0.0, paralyzing=0.0):
                                  tau_P=dead_time.tau_P)
     elif data.detector.deadtime is not None and not np.all(np.isnan(data.detector.deadtime)):
         try:
+            # length 2
             tau_NP, tau_P = data.detector.deadtime
         except Exception:
-            tau_NP, tau_P = data.detector.deadtime[0], 0.0
+            # length 1 or scalar
+            tau_NP, tau_P = np.asarray(data.detector.deadtime).item(), 0.0
         data.detector = copy(data.detector)
         apply_detector_dead_time(data, tau_NP=tau_NP, tau_P=tau_P)
     else:
