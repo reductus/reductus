@@ -1675,8 +1675,9 @@ def correct_dead_time(sample):
         else:
 
             tube_orientation = det['tube_orientation']['value'][0].decode().upper()
-            dimX = int(det['pixel_num_x']['value'][0])
-            dimY = int(det['pixel_num_y']['value'][0])
+            dimX, dimY = data.shape[-2:]
+            #dimX = int(det['pixel_num_x']['value'][0])
+            #dimY = int(det['pixel_num_y']['value'][0])
 
             if tube_orientation == "VERTICAL":
                 for t in range(dimX):
