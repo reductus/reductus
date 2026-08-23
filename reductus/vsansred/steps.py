@@ -640,7 +640,9 @@ def calculate_XY(raw_data, solid_angle_correction=True):
         detname = 'detector_{short_name}'.format(short_name=sn)
         det = deepcopy(raw_data.detectors[detname])
 
-        data = det['data']['value']
+        data = det.get('data', {}).get('value', None)
+        if data is None:
+            continue
         dimX, dimY = data.shape[-2:]
         expected_dimX = int(det['pixel_num_x']['value'][0])
         expected_dimY = int(det['pixel_num_y']['value'][0])
