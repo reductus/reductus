@@ -1439,23 +1439,30 @@ def subtract(subtrahend, minuend, align_by='run.configuration'):
     | 2019-08-14 Brian Maranville adding group by config
     | 2026-07-21 Jeff Krzywon adding process metadata
     """
-
+    def process_subrtraction(s, m):
+        return addProcess(s,
+                            "Subtraction",
+                            "Subtract from the data.",
+                            {"subtracted":
+                                {
+                                    "filename": m.metadata.get("run.filename", "File"),
+                                    "process": m.metadata.get("process", {})
+                                }
+                            }
+                            )
     if not minuend or len(minuend) == 0:
         return subtrahend
     elif len(minuend) == 1:
-        return [addProcess(s, "Subtraction", "Subtract from the data.", {"subtracted": minuend[0].metadata.get("run.filename",
-                                                                                                      "File")}) - minuend[0]
-                for s in subtrahend]
+        return [process_subrtraction(s, minuend[0]) - minuend[0] for s in subtrahend]
     elif align_by.lower() != "none":
         # make lookup:
         align_lookup = dict([(get_compound_key(m.metadata, align_by), m) for m in minuend])
-        return [
-            (addProcess(s, "Subtraction", "Subtract from the data.", {"subtracted": minuend.metadata.get("run.filename", "File")})
-             - align_lookup[get_compound_key(s.metadata, align_by)]) for s in subtrahend]
+        return [process_subrtraction(s, align_lookup[get_compound_key(s.metadata, align_by)])
+                    - align_lookup[get_compound_key(s.metadata, align_by)]
+                    for s in subtrahend
+                ]
     else:
-        return [(addProcess(s, "Subtraction", "Subtract from the data.", {"subtracted": m.metadata.get("run.filename",
-                                                                                                       "File")}) - m)
-                for s,m in zip(subtrahend, minuend)]
+        return [process_subrtraction(s, m) - m for s,m in zip(subtrahend, minuend)]
 
 @module
 def product(data, factor_param, align_by="sample.description,run.configuration,sample.temp,mag.value"):
