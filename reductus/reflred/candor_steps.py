@@ -2,8 +2,11 @@
 from copy import copy
 
 import numpy as np
+from typing import TYPE_CHECKING
 
 from reductus.dataflow.automod import cache, nocache, module, copy_module
+if TYPE_CHECKING:
+    from reductus.reflred.candor import Candor
 # Note: do not load symbols from .steps directly into the file scope
 # or they will be defined twice as reduction modules.
 from . import steps
@@ -168,7 +171,11 @@ def select_channel(data, channel_select=None):
     """
 
     if channel_select is not None:
+        if data.detector.mask is not None:
+            raise ValueError("Cannot use channel_select if channel_mask is already applied")
         data = copy(data)
+        data.detector.mask = np.zeros(data.detector.counts.shape[1], dtype=bool)
+        data.detector.mask[channel_select] = True
         data.detector = copy(data.detector)
         data.detector.counts = data.detector.counts[:, channel_select, :]
         data.detector.counts_variance = data.detector.counts_variance[:, channel_select, :]
@@ -375,7 +382,7 @@ def recalibrate_wavelength(data, wavelengths=(), wavelength_resolutions=()):
     return data
 
 @module("candor")
-def attenuation(data, transmission=None, transmission_err=None, target_value=None):
+def attenuation(data: "Candor", transmission=None, transmission_err=None, target_value=None):
     r"""
     Correct for wavelength-dependent attenuation from built-in attenuators
 
@@ -434,22 +441,13 @@ def attenuation(data, transmission=None, transmission_err=None, target_value=Non
         else:
             datt = (trans_err[ai-1][None,:,None]) * att**2
 
-        if data._v is not None:
-            v = data._v[matching]
-            if data._dv is not None:
-                dv = data._dv[matching]
-            else:
-                dv = np.zeros_like(v)
-            new_dv = np.sqrt(dv**2 * att**2 + datt**2 * v**2)
-            data._dv[matching] = new_dv
-            data._v[matching] *= att
-
-        else:
-            v = data.detector.counts[matching]
-            var_v = data.detector.counts_variance[matching]
-            new_var = var_v * att**2 + datt**2 * v**2
-            data.detector.counts_variance[matching] = new_var
-            data.detector.counts[matching] *= att
+        v = data.detector.counts[matching]
+        var_v = data.detector.counts_variance[matching]
+        masked_att = att[:, data.detector.mask] if data.detector.mask is not None else att
+        masked_datt = datt[:, data.detector.mask] if data.detector.mask is not None else datt
+        new_var = var_v * masked_att**2 + masked_datt**2 * v**2
+        data.detector.counts_variance[matching] = new_var
+        data.detector.counts[matching] *= masked_att
 
     return data
 
