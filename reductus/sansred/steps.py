@@ -1439,7 +1439,7 @@ def subtract(subtrahend, minuend, align_by='run.configuration'):
     | 2019-08-14 Brian Maranville adding group by config
     | 2026-07-21 Jeff Krzywon adding process metadata
     """
-    def process_subrtraction(s, m):
+    def process_subtraction(s, m):
         return addProcess(s,
                             "Subtraction",
                             "Subtract from the data.",
@@ -1453,16 +1453,16 @@ def subtract(subtrahend, minuend, align_by='run.configuration'):
     if not minuend or len(minuend) == 0:
         return subtrahend
     elif len(minuend) == 1:
-        return [process_subrtraction(s, minuend[0]) - minuend[0] for s in subtrahend]
+        return [process_subtraction(s, minuend[0]) - minuend[0] for s in subtrahend]
     elif align_by.lower() != "none":
         # make lookup:
         align_lookup = dict([(get_compound_key(m.metadata, align_by), m) for m in minuend])
-        return [process_subrtraction(s, align_lookup[get_compound_key(s.metadata, align_by)])
+        return [process_subtraction(s, align_lookup[get_compound_key(s.metadata, align_by)])
                     - align_lookup[get_compound_key(s.metadata, align_by)]
                     for s in subtrahend
                 ]
     else:
-        return [process_subrtraction(s, m) - m for s,m in zip(subtrahend, minuend)]
+        return [process_subtraction(s, m) - m for s,m in zip(subtrahend, minuend)]
 
 @module
 def product(data, factor_param, align_by="sample.description,run.configuration,sample.temp,mag.value"):
@@ -1486,6 +1486,7 @@ def product(data, factor_param, align_by="sample.description,run.configuration,s
     | 2019-07-27 Brian Maranville
     | 2026-07-21 Jeff Krzywon adding process metadata
     """
+    # TODO: Do the same here as in subtraction
     # follow broadcast rules:
     if not factor_param or len(factor_param) == 0:
         return data
