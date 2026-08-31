@@ -1486,21 +1486,28 @@ def product(data, factor_param, align_by="sample.description,run.configuration,s
     | 2019-07-27 Brian Maranville
     | 2026-07-21 Jeff Krzywon adding process metadata
     """
-    # TODO: Do the same here as in subtraction
+    def process_product(d, f):
+        return addProcess(d,
+                          "Product",
+                          "Data multiplied by some value.",
+                          {
+                              "scale_factor": f.params.get('factor', 1.0),
+                              "variance": f.params.get('factor_variance', 0.0)
+                          }
+                      )
     # follow broadcast rules:
     if not factor_param or len(factor_param) == 0:
         return data
     elif len(factor_param) == 1:
         f = factor_param[0]
         f_unc = Uncertainty(f.params.get('factor', 1.0), f.params.get('factor_variance', 0.0))
-        return [(addProcess(d, "Product", "Data multiplied by some value.", {"factor": f_unc.x, "variance": f_unc.dx}) * f_unc) for d in data]
+        return [process_product(d, f_unc) * f_unc for d in data]
     elif align_by.lower() != "none":
         # make lookup:
         align_lookup = dict([(get_compound_key(f.params, align_by), Uncertainty(f.params.get('factor', 1.0), f.params.get('factor_variance', 0.0))) for f in factor_param])
-        return [(addProcess(d, "Product", "Data multiplied by some value.", {"factor": f.x, "variance": f.dx}) * align_lookup[get_compound_key(d.metadata, align_by)]) for d in data]
+        return [process_product(d, align_lookup[get_compound_key(d.metadata, align_by)]) * align_lookup[get_compound_key(d.metadata, align_by)] for d in data]
     else:
-        return [addProcess(d, "Product", "Data multiplied by some value.", {"factor": f.params.get('factor', 1.0), "variance": f.params.get(
-            'factor_variance', 0.0)}) * Uncertainty(f.params.get('factor', 1.0), f.params.get('factor_variance', 0.0)) for d,f in zip(data, factor_param)]
+        return [process_product(d, f) * Uncertainty(f.params.get('factor', 1.0), f.params.get('factor_variance', 0.0)) for d,f in zip(data, factor_param)]
 
 @module
 def divide(data, factor_param):
