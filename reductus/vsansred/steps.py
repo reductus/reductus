@@ -1537,6 +1537,12 @@ def absolute_scaling(sample, open_beam, trans_sample, margin=5, PANEL_KEY='detec
     flux_slice = open_udata[xmin: xmax + 1, ymin: ymax + 1]
     flux = np.sum(flux_slice)
 
+    print("\n" + "=" * 40)
+    print("       DIRECT BEAM FLUX DIAGNOSTICS")
+    print("=" * 40)
+    print(f"Raw flux object type : {type(flux)}")
+    print(f"Raw flux object repr : {flux}")
+
     if hasattr(flux, "x"):
         flux_val = float(flux.x)
         flux_var = float(getattr(flux, "variance", flux_val))
@@ -1569,6 +1575,16 @@ def absolute_scaling(sample, open_beam, trans_sample, margin=5, PANEL_KEY='detec
     u_flux = Uncertainty(flux_val, flux_var)
     u_kappa = u_flux
     # absolute scaling factor
+
+    print("\n=== KAPPA DIAGNOSTICS ===")
+    print(f"u_kappa value (flux): {u_kappa.x:.6e}")
+    print(f"u_kappa std dev     : {np.sqrt(u_kappa.variance):.6e}")
+    print(f"dsam_cm             : {dsam_cm:.4f}")
+    print(f"T_sample            : {T_sample:.4f}")
+    print(f"Total Denominator   : {(u_kappa.x * dsam_cm * T_sample):.6e}")
+    print(f"u_factor_abs        : {1.0 / (u_kappa.x * dsam_cm * T_sample):.6e}")
+    print("=========================\n")
+
     u_factor_abs = 1.0 / (u_kappa * dsam_cm * T_sample)
 
     # multiply data by scaling factor
@@ -1698,3 +1714,46 @@ def correct_dead_time(sample):
 
 
     return result
+
+@module
+def sum_raw(data):
+    """
+        Naive addition of counts and monitor from different datasets,
+        assuming all datasets were taken under identical conditions
+        (except for count time)
+
+        Just adds together count time, counts and monitor.
+
+        Use metadata from first dataset for output.
+
+        **Inputs**
+
+        data (raw[]): measurements to be added together
+
+        **Returns**
+
+        sum (raw): sum of inputs
+
+        2026-08-31  Jonathan Gaudet
+        """
+
+    if not data:
+        return None
+
+    output = deepcopy(data[0])
+
+    for d in data[1:]:
+        # Sum detector panel values pixel by pixel
+        for det_name, det in output.detectors.items():
+            if det_name in d.detectors:
+                target_vals = np.array(det["data"]["value"], dtype=float)
+                source_vals = np.array(d.detectors[det_name]["data"]["value"], dtype=float)
+
+                det["data"]["value"] = target_vals + source_vals
+
+        # Sum monitor and runtime metadata
+        for key in ["run.moncnt", "run.rtime", "run.detcnt"]:
+            if key in output.metadata and key in d.metadata:
+                output.metadata[key] += d.metadata[key]
+
+    return output
