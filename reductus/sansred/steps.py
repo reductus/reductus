@@ -1280,7 +1280,7 @@ def correct_dead_time(sansdata, deadtime=1.0e-6):
     2026-07-21 Jeff Krzywon adding process metadata
     """
     # Always use the in-file deadtime over any hard-coded table
-    if sansdata.metadata.get("det.dead_time", None):
+    if sansdata.metadata.get("det.dead_time", None) is not None:
         deadtime = sansdata.metadata["det.dead_time"]
 
     run_time = sansdata.metadata["run.rtime"]
@@ -2297,8 +2297,8 @@ def single_configuration(
             {"source": [1, "blocked_beam"], "target": [2, "minuend"]},
             {"source": [1, "blocked_beam"], "target": [3, "minuend"]},
             {"source": [1, "empty_scatt"], "target": [3, "subtrahend"]},
-            {"source": [1, "empty_trans"], "target": [4, "in_beam"]},
-            {"source": [1, "open_beam_trans"], "target": [4, "empty_beam"]},
+            {"source": [1, "sample_trans"], "target": [4, "in_beam"]},
+            {"source": [1, "empty_trans"], "target": [4, "empty_beam"]},
             {"source": [1, "sample_trans"], "target": [5, "in_beam"]},
             {"source": [1, "open_beam_trans"], "target": [5, "empty_beam"]},
             {"source": [3, "output"], "target": [6, "data"]},

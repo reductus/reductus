@@ -8,7 +8,8 @@ import {instruments} from './instruments/index.js';
 import * as zip from '@zip.js/zip.js';
 import * as Vue from 'vue';
 import { Cache } from './idb_cache.js';
-import sha1 from 'sha1';
+import { sha1 } from '@noble/hashes/legacy.js';
+import { bytesToHex } from '@noble/hashes/utils.js';
 import {filebrowser} from './filebrowser.js';
 //import {make_fieldUI} from './fieldUI.js';
 import { plotter  } from './plot.js';
@@ -365,7 +366,9 @@ editor.get_cached_timestamps = function() {
 
 async function digestMessage(message, algorithm="SHA-1") {
   // only SHA-1 is support in this implementation
-  return sha1(message);
+  const msgUint8 = new TextEncoder().encode(message);
+  const key = bytesToHex(sha1(msgUint8));
+  return key;
 }
 
 editor.get_signature = async function(params) {
@@ -772,3 +775,32 @@ editor.load_metadata = async function(files_metadata, datasource, path) {
   }
   return file_objs;
 }
+
+editor.make_link = async function() {
+  // Build the base URL without existing search parameters
+  const url = new URL(window.location.origin + window.location.pathname);
+
+  // Append the current state parameters using the editor's internal state
+  url.searchParams.set('instrument', this._instrument_id);
+
+  // Put the heavy template data in the hash fragment so the server ignores it
+  const hashParams = new URLSearchParams();
+  hashParams.set('template', JSON.stringify(this._active_template));
+
+  if (this?.instance?.selected?.terminals?.length > 0) {
+    let [node, terminal] = this.instance.selected.terminals[0];
+    hashParams.set('node', node);
+    hashParams.set('terminal', terminal);
+  }
+
+  url.hash = hashParams.toString();
+
+  // Write to the clipboard (this will throw an error if it fails)
+  try {
+    await navigator.clipboard.writeText(url.href);
+  }
+  catch(e) {
+    console.error("could not copy to clipboard");
+  }
+  return url.href;
+};
