@@ -18,6 +18,9 @@ metadata_lookup = {
     "analysis.groupid": "DAS_logs/trajectoryData/groupid",
     "analysis.intent": "DAS_logs/trajectoryData/intent",
     "analysis.filepurpose": "DAS_logs/trajectoryData/filePurpose",
+    "analysis.blocked_beam": "DAS_logs/sample/reduction.blocked_beam_reference",
+    "analysis.empty_cell": "DAS_logs/sample/reduction.empty_cell_reference",
+    "analysis.open_beam": "DAS_logs/sample/reduction.open_beam_reference",
     "det.beamx": "instrument/detector/beam_center_x",
     "det.beamy": "instrument/detector/beam_center_y",
     "det.bstop": "DAS_logs/beamStop/diameter",
@@ -39,13 +42,16 @@ metadata_lookup = {
     "resolution.dlmda": "instrument/monochromator/wavelength_error",
     "resolution.ap1": "DAS_logs/geometry/sourceAperture",
     "resolution.ap2": "DAS_logs/geometry/externalSampleAperture",
+    "resolution.ap2shape": "DAS_logs/geometry/externalSampleApertureShape",
+    "resolution.ap2height": "DAS_logs/geometry/externalSampleApertureHeight",
+    "resolution.ap2width": "DAS_logs/geometry/externalSampleApertureWidth",
     "resolution.ap2Off": "instrument/sample_aperture/distance",
     "resolution.ap12dis": "DAS_logs/geometry/sourceApertureToSampleAperture",
     "rfflipperpowersupply.voltage": "DAS_logs/RFFlipperPowerSupply/actualVoltage/average_value",
     "rfflipperpowersupply.frequency": "DAS_logs/RFFlipperPowerSupply/frequency",
     "run.atten": "DAS_logs/counter/actualAttenuatorsDropped",
-    "run.atten_factors": "DAS_logs/attenuator/index_table",
-    "run.atten_factor_errors": "DAS_logs/attenuator/index_error_table",
+    "run.atten_factors": "instrument/attenuator/index_table",
+    "run.atten_factor_errors": "instrument/attenuator/index_error_table",
     "run.configuration": "DAS_logs/configuration/key",
     "run.filename": "DAS_logs/trajectoryData/fileName",
     "run.guide": "DAS_logs/guide/guide",
@@ -59,6 +65,7 @@ metadata_lookup = {
     "run.detcnt": "control/detector_counts",
     "run.rtime": "control/count_time",
     "run.moncnt": "control/monitor_counts",
+    "run.monitor_normalization_factor": "instrument/beam_monitor_norm/saved_count",
     "sample.description": "DAS_logs/sample/description",
     "sample.labl": "DAS_logs/sample/description",
     "sample.thk": "DAS_logs/sample/thickness",
@@ -66,9 +73,19 @@ metadata_lookup = {
     "sample.name": "DAS_logs/sample/name",
     "sample.temp": "DAS_logs/temp/primaryNode/average_value",
     "sample.position": "DAS_logs/geometry/samplePositionOffset",
+    "sample.localID": "DAS_logs/sample/localID",
     "sample.GroupID": "DAS_logs/sample/UUID",
     "start_time": "start_time",
     "waveformgenerator.frequency": "DAS_logs/waveformGenerator/frequency",
+}
+
+# Data objects have changed over time, including what data is included in them. This map is for locations used pre-2020
+alternate_metadata_lookup = {
+    "analysis.intent": "DAS_logs/sample/reduction.intent",
+    "det.bstop": "DAS_logs/beamStop/size",
+    "run.atten_factors": "DAS_logs/attenuator/index_table",
+    "run.atten_factor_errors": "DAS_logs/attenuator/index_error_table",
+    "sample.GroupID": "DAS_logs/sample/group_id",
 }
 
 unit_specifiers = {
@@ -112,27 +129,33 @@ def data_as(field, units):
         value = converter(field[()], units)
         return value
 
+def process_metadata(entry, metadata):
+    """Directly modify the metadata passed to the method, using known secondary data locations
+
+    :param entry: A loaded h5py data object
+    :param metadata: A metadata dictionary from HDF5
+    """
+    # hack to remove configuration from sample label (it is still stored in run.configuration)
+    metadata['sample.description'] = _s(metadata["sample.labl"]).replace(_s(metadata["run.configuration"]), "")
+    for k, v in alternate_metadata_lookup.items():
+        if not metadata.get(k):
+            metadata.update(load_metadata(entry, 1, 0, metadata_lookup={k: v},
+                                          unit_specifiers=unit_specifiers))
+
 def readSANSNexuz(input_file, file_obj=None, metadata_lookup=metadata_lookup):
     """
     Load all entries from the NeXus file into sans data sets.
     """
     datasets = []
     file = h5_open_zip(input_file, file_obj)
-    for entryname, entry in file.items():        
-        multiplicity = 1
-        for i in range(multiplicity):
-            metadata = load_metadata(entry, multiplicity, i, metadata_lookup=metadata_lookup, unit_specifiers=unit_specifiers)
-            #print(metadata)
-            detector_keys = ['detector']
-            detectors = dict([(k, load_detector(entry['instrument'][k])) for k in detector_keys])
-            metadata['entry'] = entryname
-            # hack to remove configuration from sample label (it is still stored in run.configuration)
-            metadata['sample.description'] = _s(metadata["sample.labl"]).replace(_s(metadata["run.configuration"]), "")
-            if metadata['det.bstop'] is None:
-                # fall back to old 'size' field
-                metadata.update(load_metadata(entry, 1, 0, metadata_lookup={"det.bstop": "DAS_logs/beamStop/size"}, unit_specifiers=unit_specifiers))
-            dataset = RawSANSData(metadata=metadata, detectors=detectors)
-            datasets.append(dataset)            
+    for entryname, entry in file.items():
+        metadata = load_metadata(entry, 1, 0, metadata_lookup=metadata_lookup, unit_specifiers=unit_specifiers)
+        metadata['entry'] = entryname
+        process_metadata(entry, metadata)
+        detector_keys = ['detector']
+        detectors = dict([(k, load_detector(entry['instrument'][k])) for k in detector_keys])
+        dataset = RawSANSData(metadata=metadata, detectors=detectors)
+        datasets.append(dataset)
 
     return datasets
 
