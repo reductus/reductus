@@ -61,6 +61,7 @@ from .lib.iso8601 import seconds_since_epoch
 DATA_SOURCES = []
 FILE_HELPERS = []
 DEFAULT_DATA_SOURCE = "ncnr"
+DEFAULT_MTIME_CHECK = True
 
 
 def check_datasource(source):
@@ -79,7 +80,7 @@ def check_datasource(source):
     return source_url
 
 
-def url_get(fileinfo, mtime_check=True):
+def url_get(fileinfo, mtime_check=DEFAULT_MTIME_CHECK):
     source = fileinfo.get("source", DEFAULT_DATA_SOURCE)
     path, mtime, entries = fileinfo['path'], fileinfo.get('mtime', None), fileinfo.get('entries', None)
     isLocal = (source == 'local')
