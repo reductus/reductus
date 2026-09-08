@@ -247,7 +247,7 @@ editor.stash_data = function(suggested_name) {
   }
   
   let [node, terminal] = editor.instance.selected.terminals[0];
-  let template = editor.instance.template_data;
+  let template = Vue.toRaw(editor.instance.template_data);
   let instrument_id = editor._instrument_id;
   let template_copy = structuredClone(template);
   var subroutine = {};
