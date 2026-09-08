@@ -82,6 +82,8 @@ def check_datasource(source):
 
 def url_get(fileinfo, mtime_check=DEFAULT_MTIME_CHECK):
     source = fileinfo.get("source", DEFAULT_DATA_SOURCE)
+    source_config = next((x for x in DATA_SOURCES if x['name'] == source), {})
+
     path, mtime, entries = fileinfo['path'], fileinfo.get('mtime', None), fileinfo.get('entries', None)
     isLocal = (source == 'local')
 
@@ -107,7 +109,8 @@ def url_get(fileinfo, mtime_check=DEFAULT_MTIME_CHECK):
             print("loading", full_url, name)
             req = None  # Need placeholder for req in case requests.get fails.
             try:
-                req = requests.get(full_url)
+                cert = source_config.get("cert", None)
+                req = requests.get(full_url, verify=cert)
                 req.raise_for_status()
                 url_mtime = req.headers.get('last-modified', None)
                 url_time_struct = time.strptime(url_mtime, '%a, %d %b %Y %H:%M:%S %Z')
