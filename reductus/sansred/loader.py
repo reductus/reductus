@@ -81,7 +81,7 @@ metadata_lookup = {
 
 # Data objects have changed over time, including what data is included in them. This map is for locations used pre-2020
 alternate_metadata_lookup = {
-    "analysis.intent": "DAS_logs/sample/reduction.intent",
+    "analysis.intent": "reduction/intent",
     "det.bstop": "DAS_logs/beamStop/size",
     "run.atten_factors": "DAS_logs/attenuator/index_table",
     "run.atten_factor_errors": "DAS_logs/attenuator/index_error_table",
