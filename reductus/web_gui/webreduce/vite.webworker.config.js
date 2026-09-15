@@ -52,7 +52,7 @@ export default defineConfig({
     // Enable source maps for debugging, similar to the esbuild script
     sourcemap: true,
     // Minify the output for production (esbuild does this by default)
-    minify: 'esbuild',
+    minify: true,
     target: 'es2020',
   },
   worker: {
