@@ -138,7 +138,7 @@ def process_metadata(entry, metadata):
     # hack to remove configuration from sample label (it is still stored in run.configuration)
     metadata['sample.description'] = _s(metadata["sample.labl"]).replace(_s(metadata["run.configuration"]), "")
     for k, v in alternate_metadata_lookup.items():
-        if not metadata.get(v, None):
+        if metadata.get(v, None) is None:
             metadata.update(load_metadata(entry, 1, 0, metadata_lookup={k: v},
                                           unit_specifiers=unit_specifiers))
 
