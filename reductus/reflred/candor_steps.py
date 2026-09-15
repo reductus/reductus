@@ -302,7 +302,7 @@ def spectral_efficiency(data, spectrum=()):
     r"""
     Correct for the relative intensity in the different detector channels
     across the detector banks.  This correction depends on a number of
-    factors including the distribution of wavelenths from the source,
+    factors including the distribution of wavelengths from the source,
     any wavelength selection filters in the path, the relative angles
     of the analyzer leaves, and the efficiency of the detector in each
     channel.
@@ -334,7 +334,7 @@ def spectral_efficiency(data, spectrum=()):
     data = copy(data)
     data.detector = copy(data.detector)
     data.detector.counts = data.detector.counts / spectrum
-    data.detector.counts_variance = data.detector.counts_variance / spectrum
+    data.detector.counts_variance = data.detector.counts_variance / spectrum ** 2
     return data
 
 
