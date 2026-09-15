@@ -2,6 +2,7 @@ from posixpath import basename, join
 from copy import copy, deepcopy
 from io import BytesIO
 import sys
+import warnings
 import numpy as np
 
 from reductus.dataflow.lib.uncertainty import Uncertainty
@@ -639,8 +640,17 @@ def calculate_XY(raw_data, solid_angle_correction=True):
         detname = 'detector_{short_name}'.format(short_name=sn)
         det = deepcopy(raw_data.detectors[detname])
 
-        dimX = int(det['pixel_num_x']['value'][0])
-        dimY = int(det['pixel_num_y']['value'][0])
+        data = det.get('data', {}).get('value', None)
+        if data is None:
+            continue
+        dimX, dimY = data.shape[-2:]
+        expected_dimX = int(det['pixel_num_x']['value'][0])
+        expected_dimY = int(det['pixel_num_y']['value'][0])
+        if dimX != expected_dimX:
+            warnings.warn(f"shape[0] of loaded array ({dimX}) does not match expected shape ({expected_dimX})")
+        if dimY != expected_dimY:
+            warnings.warn(f"shape[1] of loaded array ({dimY}) does not match expected shape ({expected_dimY})")
+
         z_offset = det.get('setback', {"value": [0.0]})['value'][0]
         z = det['distance']['value'][0] + z_offset
 
@@ -666,7 +676,6 @@ def calculate_XY(raw_data, solid_angle_correction=True):
             realDistX =  0.5 * x_pixel_size
             realDistY =  0.5 * y_pixel_size
 
-            data = det['data']['value']
             if 'linear_data_error' in det and 'value' in det['linear_data_error']:
                 data_variance = np.sqrt(det['linear_data_error']['value'])
             else:
@@ -693,7 +702,6 @@ def calculate_XY(raw_data, solid_angle_correction=True):
                 vertical_offset = det['vertical_offset']['value'][0] # already cm
 
             #solid_angle_correction = z*z / 1e6
-            data = det['data']['value']
             if 'linear_data_error' in det and 'value' in det['linear_data_error']:
                 data_variance = np.sqrt(det['linear_data_error']['value'])
             else:

@@ -1,7 +1,7 @@
 from os.path import basename
 from io import BytesIO
 
-from reductus.dataflow.fetch import url_get
+from reductus.dataflow.fetch import url_get, DEFAULT_MTIME_CHECK
 
 
 def load_from_string(filename, data, entries=None, loader=None):
@@ -12,7 +12,7 @@ def load_from_string(filename, data, entries=None, loader=None):
         entries = loader(filename, fd, entries=entries)
     return entries
 
-def url_load(fileinfo, check_timestamps=True, loader=None):
+def url_load(fileinfo, check_timestamps=DEFAULT_MTIME_CHECK, loader=None):
     path, entries = fileinfo['path'], fileinfo.get('entries', None)
     filename = basename(path)
     content = url_get(fileinfo, mtime_check=check_timestamps)
@@ -32,16 +32,14 @@ def url_load(fileinfo, check_timestamps=True, loader=None):
         return load_from_string(filename, content, entries=entries,
                                 loader=nexusref.load_entries)
 
-def url_load_list(files=None, check_timestamps=True, loader=None):
+def url_load_list(files=None, check_timestamps=DEFAULT_MTIME_CHECK, loader=None):
     if files is None:
         return []
-    result = [
-        entry
-        for fileinfo in files
-        for entry in url_load(
-            fileinfo, check_timestamps=check_timestamps, loader=loader,
-            )
-        ]
+    result = []
+    for fileinfo in files:
+        for entry in url_load(fileinfo, check_timestamps=check_timestamps, loader=loader):
+            result.append(entry)
+
     return result
 
 def setup_fetch():

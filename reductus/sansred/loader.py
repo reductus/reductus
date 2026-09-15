@@ -20,7 +20,7 @@ metadata_lookup = {
     "analysis.filepurpose": "DAS_logs/trajectoryData/filePurpose",
     "det.beamx": "instrument/detector/beam_center_x",
     "det.beamy": "instrument/detector/beam_center_y",
-    "det.bstop": "DAS_logs/beamStop/size",
+    "det.bstop": "DAS_logs/beamStop/diameter",
     "det.dead_time": "instrument/detector/dead_time",
     "det.des_dis": "DAS_logs/detectorPosition/desiredSoftPosition",
     "det.dis": "DAS_logs/detectorPosition/softPosition",
@@ -128,6 +128,9 @@ def readSANSNexuz(input_file, file_obj=None, metadata_lookup=metadata_lookup):
             metadata['entry'] = entryname
             # hack to remove configuration from sample label (it is still stored in run.configuration)
             metadata['sample.description'] = _s(metadata["sample.labl"]).replace(_s(metadata["run.configuration"]), "")
+            if metadata['det.bstop'] is None:
+                # fall back to old 'size' field
+                metadata.update(load_metadata(entry, 1, 0, metadata_lookup={"det.bstop": "DAS_logs/beamStop/size"}, unit_specifiers=unit_specifiers))
             dataset = RawSANSData(metadata=metadata, detectors=detectors)
             datasets.append(dataset)            
 

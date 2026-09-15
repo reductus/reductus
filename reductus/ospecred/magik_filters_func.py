@@ -1082,8 +1082,8 @@ def loadMAGIKPSD_helper(file_obj, name, path, collapse=True, collapse_axis='y', 
             mon =  entry['DAS_logs']['counter']['liveMonitor'][()]
             count_time = entry['DAS_logs']['counter']['liveTime'][()]
             if ndims == 2:
-                mon.shape = (1,) + mon.shape # broadcast the monitor over the other dimension
-                count_time.shape = (1,) + count_time.shape
+                mon = mon[newaxis, ...] # broadcast the monitor over the other dimension
+                count_time = count_time[newaxis, ...]
             counts = counts_value
             if transpose == True: counts = counts.swapaxes(0,1)
             if flip == True: counts = flipud(counts)
@@ -1135,8 +1135,8 @@ def loadMAGIKPSD_helper(file_obj, name, path, collapse=True, collapse_axis='y', 
                 mon =  entry['DAS_logs']['counter']['liveMonitor'][()]
                 count_time = entry['DAS_logs']['counter']['liveTime'][()]
                 if ndims == 3:
-                    mon.shape = (1,) + mon.shape # broadcast the monitor over the other dimension
-                    count_time.shape = (1,) + count_time.shape
+                    mon = mon[newaxis, ...] # broadcast the monitor over the other dimension
+                    count_time = count_time[newaxis, ...]
                 axis_to_sum = 2 if collapse_axis == 'y' else 1
                 counts = sum(counts_value, axis=axis_to_sum)
                 if transpose == True: counts = counts.swapaxes(0,1)

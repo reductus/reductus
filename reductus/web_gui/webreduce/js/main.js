@@ -32,16 +32,6 @@ var statusline_log = function (message) {
 
 app.statusline_log = statusline_log;
 
-function getUrlVars() {
-  var vars = [], hash;
-  var hashes = window.location.href.slice(window.location.href.indexOf('?') + 1).split('&');
-  for (var i = 0; i < hashes.length; i++) {
-    hash = hashes[i].split('=');
-    vars.push(hash);
-  }
-  return vars;
-}
-
 app.callbacks = {};
 app.callbacks.resize_center = function () { };
 
@@ -86,30 +76,60 @@ window.onpopstate = async function (e) {
   // called by load on Safari with null state, so be sure to skip it.
   //if (e.state) {
   let datasources = app._datasources || {};
-  let url_vars = getUrlVars();
+  // Parse the query string safely
+  let url_vars = new URLSearchParams(window.location.search);
+  // Read parameters from the hash fragment
+  let hash_vars = new URLSearchParams(window.location.hash.substring(1));
+
   let source = (datasources[0] || {}).name;
   let start_path = "";
   let instrument = app._instruments[0];
 
-  url_vars.forEach(function (v, i) {
-    if (v[0] == 'pathlist' && v[1] && v[1].length) {
-      start_path = v[1];
-    }
-    else if (v[0] == 'source' && v[1]) {
-      source = v[1];
-    }
-    else if (v[0] == 'instrument' && v[1]) {
-      instrument = v[1];
-    }
-  })
+  // Extract standard parameters
+  if (url_vars.has('instrument')) {
+    instrument = url_vars.get('instrument');
+  }
+  if (url_vars.has('source')) {
+    source = url_vars.get('source');
+  }
+  if (url_vars.has('pathlist') && url_vars.get('pathlist').length > 0) {
+    start_path = url_vars.get('pathlist');
+  }
+
+  let template_param = hash_vars.get('template');
+  let active_node = hash_vars.has('node') ? parseInt(hash_vars.get('node'), 10) : null;
+  let active_terminal = hash_vars.get('terminal');
 
   app.current_instrument = instrument;
   await editor.switch_instrument(instrument);
   editor.load_stashes();
 
-  console.log("adding datasource:", source, " at path:", start_path);
+  // Clear any existing datasources from the file browser UI
+  app.filebrowser_instance.datasources.splice(0, app.filebrowser_instance.datasources.length);
 
-  add_datasource(source, start_path);
+  // If a template is provided in the URL, decode, parse, and load it
+  if (template_param) {
+    try {
+      // let decoded_template = decodeURIComponent(template_param);
+      let template_obj = JSON.parse(template_param);
+
+      // Pass the node and terminal into the loader
+      editor.load_template(template_obj, active_node, active_terminal, instrument);
+
+      // Clean up the URL to remove the hash
+      let clean_url = new URL(window.location.href);
+      clean_url.hash = ""; 
+      window.history.replaceState({}, "", clean_url.href);
+
+    } catch (err) {
+      console.error("Failed to parse template from URL parameter:", err);
+      add_datasource(source, start_path); // Fallback on error
+    }
+  } else {
+    // No template in URL: load the default or URL-specified single source
+    console.log("adding datasource:", source, " at path:", start_path);
+    add_datasource(source, start_path);
+  }
 }
 
 function add_datasource(sourcename, start_path_in="") {
@@ -215,13 +235,6 @@ async function initialize_app() {
     emitter: emitter
   }).mount(document.getElementById("filebrowser"));
   app.filebrowser_instance = filebrowser_instance;
-  
-  // Initialize file browser with default datasource
-  if (app._datasources && app._datasources.length > 0) {
-    const defaultDatasource = app._datasources[0];
-    const defaultPath = [];
-    await filebrowser_instance.addDataSource(defaultDatasource.name, defaultPath);
-  }
   
   const filebrowser_actions = {
     remove_stash(stashname) {

@@ -6,9 +6,10 @@ export { server_api };
 let remoteApi;
 
 server_api.__init__ = async function(header_instance) {
-  const worker = new Worker("./worker.js", {
-    type: "module"
-  });
+  const worker = new Worker(
+    new URL('./worker.js', import.meta.url),
+    { type: 'module' } // Essential if your worker uses 'import' statements
+  );
   // Wrap the worker with Comlink
   remoteApi = Comlink.wrap(worker);
   
@@ -34,7 +35,8 @@ const makeApiCall = (methodName) => {
 // Define the methods listed in your original "toWrap" array
 const methods = [
   "find_calculated", "get_instrument", "calc_terminal", 
-  "list_datasources", "list_instruments", "get_file_metadata"
+  "list_datasources", "list_instruments", "get_file_metadata",
+  "get_startup_banner"
 ];
 
 methods.forEach(method => {
