@@ -1383,7 +1383,7 @@ def smooth_slits(datasets, degree=1, span=2, dx=0.01):
 
 
 @module
-def abinitio_footprint(data, Io=1., width=None, offset=0.):
+def abinitio_footprint(data, Io=1., width=None, offset=0., use_detector_angle=False):
     """
     Apply an *ab initio* footprint correction to the data.
 
@@ -1409,11 +1409,15 @@ def abinitio_footprint(data, Io=1., width=None, offset=0.):
     offset (float:mm) : offset of the center of rotation of the sample in
     the direction of the beam, toward the detector.
 
+    use_detector_angle (bool) : use detector_angle/2.0 instead of sample angle
+    for footprint calculation.  Useful for background scans.
+
     **Returns**
 
     outputs (refldata): footprint-corrected data
 
     2016-09-02 Paul Kienzle
+    2026-09-16 Brian Maranville add use_detector_angle
     """
     from .footprint import apply_abinitio_footprint
 
