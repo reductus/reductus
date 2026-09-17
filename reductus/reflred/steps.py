@@ -1422,7 +1422,7 @@ def abinitio_footprint(data, Io=1., width=None, offset=0., use_detector_angle=Fa
     from .footprint import apply_abinitio_footprint
 
     data = copy(data)
-    apply_abinitio_footprint(data, Io, width, offset)
+    apply_abinitio_footprint(data, Io, width, offset, use_detector_angle=use_detector_angle)
     return data
 
 @module

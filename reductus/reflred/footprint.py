@@ -104,10 +104,10 @@ def apply_measured_footprint(data, measured_footprint):
     _apply_footprint(data, footprint)
 
 
-def apply_abinitio_footprint(data, Io, width, offset, use_twotheta=False):
+def apply_abinitio_footprint(data, Io, width, offset, use_detector_angle=False):
     slit1 = (data.slit1.distance, data.slit1.x, data.slit1.y)
     slit2 = (data.slit2.distance, data.slit2.x, data.slit2.y)
-    if use_twotheta:
+    if use_detector_angle:
         theta = data.detector.angle_x / 2.0
     else:
         theta = data.sample.angle_x
