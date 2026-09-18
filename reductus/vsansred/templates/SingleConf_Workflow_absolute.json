@@ -1,0 +1,680 @@
+{
+  "wires": [
+    {
+      "source": [
+        1,
+        "output"
+      ],
+      "target": [
+        6,
+        "sample"
+      ]
+    },
+    {
+      "source": [
+        2,
+        "output"
+      ],
+      "target": [
+        7,
+        "sample"
+      ]
+    },
+    {
+      "source": [
+        3,
+        "output"
+      ],
+      "target": [
+        8,
+        "sample"
+      ]
+    },
+    {
+      "source": [
+        4,
+        "output"
+      ],
+      "target": [
+        9,
+        "sample"
+      ]
+    },
+    {
+      "source": [
+        5,
+        "output"
+      ],
+      "target": [
+        10,
+        "sample"
+      ]
+    },
+    {
+      "source": [
+        11,
+        "result"
+      ],
+      "target": [
+        12,
+        "rawdata"
+      ]
+    },
+    {
+      "source": [
+        15,
+        "output"
+      ],
+      "target": [
+        18,
+        "in_beam"
+      ]
+    },
+    {
+      "source": [
+        16,
+        "output"
+      ],
+      "target": [
+        18,
+        "empty_beam"
+      ]
+    },
+    {
+      "source": [
+        18,
+        "output"
+      ],
+      "target": [
+        22,
+        "factor_param"
+      ]
+    },
+    {
+      "source": [
+        13,
+        "output"
+      ],
+      "target": [
+        20,
+        "sample"
+      ]
+    },
+    {
+      "source": [
+        14,
+        "output"
+      ],
+      "target": [
+        20,
+        "background"
+      ]
+    },
+    {
+      "source": [
+        14,
+        "output"
+      ],
+      "target": [
+        19,
+        "background"
+      ]
+    },
+    {
+      "source": [
+        12,
+        "output"
+      ],
+      "target": [
+        19,
+        "sample"
+      ]
+    },
+    {
+      "source": [
+        19,
+        "output"
+      ],
+      "target": [
+        21,
+        "sample"
+      ]
+    },
+    {
+      "source": [
+        20,
+        "output"
+      ],
+      "target": [
+        22,
+        "sample"
+      ]
+    },
+    {
+      "source": [
+        22,
+        "output"
+      ],
+      "target": [
+        21,
+        "background"
+      ]
+    },
+    {
+      "source": [
+        15,
+        "output"
+      ],
+      "target": [
+        23,
+        "in_beam"
+      ]
+    },
+    {
+      "source": [
+        17,
+        "output"
+      ],
+      "target": [
+        23,
+        "empty_beam"
+      ]
+    },
+    {
+      "source": [
+        21,
+        "output"
+      ],
+      "target": [
+        24,
+        "raw_data"
+      ]
+    },
+    {
+      "source": [
+        24,
+        "realspace_data"
+      ],
+      "target": [
+        25,
+        "sample"
+      ]
+    },
+    {
+      "source": [
+        23,
+        "output"
+      ],
+      "target": [
+        25,
+        "trans_sample"
+      ]
+    },
+    {
+      "source": [
+        17,
+        "output"
+      ],
+      "target": [
+        25,
+        "open_beam"
+      ]
+    },
+    {
+      "source": [
+        25,
+        "abs_data"
+      ],
+      "target": [
+        26,
+        "realspace_data"
+      ]
+    },
+    {
+      "source": [
+        26,
+        "QxQy_data"
+      ],
+      "target": [
+        27,
+        "realspace_data"
+      ]
+    },
+    {
+      "source": [
+        27,
+        "shadowed"
+      ],
+      "target": [
+        28,
+        "realspace_data"
+      ]
+    },
+    {
+      "source": [
+        28,
+        "shadowed"
+      ],
+      "target": [
+        29,
+        "qspace_data"
+      ]
+    },
+    {
+      "source": [
+        0,
+        "output"
+      ],
+      "target": [
+        31,
+        "sample"
+      ]
+    },
+    {
+      "source": [
+        31,
+        "result"
+      ],
+      "target": [
+        11,
+        "sample"
+      ]
+    },
+    {
+      "source": [
+        6,
+        "result"
+      ],
+      "target": [
+        30,
+        "sample"
+      ]
+    },
+    {
+      "source": [
+        30,
+        "result"
+      ],
+      "target": [
+        13,
+        "rawdata"
+      ]
+    },
+    {
+      "source": [
+        7,
+        "result"
+      ],
+      "target": [
+        32,
+        "sample"
+      ]
+    },
+    {
+      "source": [
+        32,
+        "result"
+      ],
+      "target": [
+        14,
+        "rawdata"
+      ]
+    },
+    {
+      "source": [
+        8,
+        "result"
+      ],
+      "target": [
+        33,
+        "sample"
+      ]
+    },
+    {
+      "source": [
+        33,
+        "result"
+      ],
+      "target": [
+        15,
+        "rawdata"
+      ]
+    },
+    {
+      "source": [
+        9,
+        "result"
+      ],
+      "target": [
+        34,
+        "sample"
+      ]
+    },
+    {
+      "source": [
+        34,
+        "result"
+      ],
+      "target": [
+        16,
+        "rawdata"
+      ]
+    },
+    {
+      "source": [
+        10,
+        "result"
+      ],
+      "target": [
+        35,
+        "sample"
+      ]
+    },
+    {
+      "source": [
+        35,
+        "result"
+      ],
+      "target": [
+        17,
+        "rawdata"
+      ]
+    }
+  ],
+  "modules": [
+    {
+      "module": "ncnr.vsans._LoadVSANS",
+      "title": "Scatt.Sample",
+      "x": 197,
+      "y": 52,
+      "text_width": 100,
+      "config": {
+        "filelist": [
+          {
+            "source": "local",
+            "path": "/Users/jng7/Desktop/V-SANS-Standard/IGOR_patched/sans72419.nxs.ngv",
+            "mtime": 1787247454,
+            "entries": [
+              "entry"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "module": "ncnr.vsans._LoadVSANS",
+      "title": "Scatt. Empty",
+      "x": 192,
+      "y": 96,
+      "text_width": 97,
+      "config": {
+        "filelist": [
+          {
+            "source": "local",
+            "path": "/Users/jng7/Desktop/V-SANS-Standard/IGOR_patched/sans72420.nxs.ngv",
+            "mtime": 1787163571,
+            "entries": [
+              "entry"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "module": "ncnr.vsans._LoadVSANS",
+      "title": "Blocked Beam",
+      "x": 198,
+      "y": 137,
+      "text_width": 109,
+      "config": {
+        "filelist": [
+          {
+            "source": "local",
+            "path": "/Users/jng7/Desktop/V-SANS-Standard/IGOR_patched/sans72431.nxs.ngv",
+            "mtime": 1787163571,
+            "entries": [
+              "entry"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "module": "ncnr.vsans._LoadVSANS",
+      "title": "Trans. Sample",
+      "x": 202,
+      "y": 220,
+      "text_width": 106,
+      "config": {
+        "filelist": [
+          {
+            "source": "local",
+            "path": "/Users/jng7/Desktop/V-SANS-Standard/IGOR_patched/sans72427.nxs.ngv",
+            "mtime": 1787163571,
+            "entries": [
+              "entry"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "module": "ncnr.vsans._LoadVSANS",
+      "title": "Trans. Empty",
+      "x": 205,
+      "y": 259,
+      "text_width": 99,
+      "config": {
+        "filelist": [
+          {
+            "source": "local",
+            "path": "/Users/jng7/Desktop/V-SANS-Standard/IGOR_patched/sans72429.nxs.ngv",
+            "mtime": 1787163571,
+            "entries": [
+              "entry"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "module": "ncnr.vsans.LoadVSANS",
+      "title": "Open Beam",
+      "x": 202,
+      "y": 297,
+      "text_width": 93,
+      "config": {
+        "filelist": [
+          {
+            "source": "local",
+            "path": "/Users/jng7/Desktop/V-SANS-Standard/IGOR_patched/sans72426.nxs.ngv",
+            "mtime": 1787247356,
+            "entries": [
+              "entry"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "module": "ncnr.vsans.correct_dead_time",
+      "title": "Correct Dead Time",
+      "x": 367,
+      "y": 97
+    },
+    {
+      "module": "ncnr.vsans.correct_dead_time",
+      "title": "Correct Dead Time",
+      "x": 369,
+      "y": 139
+    },
+    {
+      "module": "ncnr.vsans.correct_dead_time",
+      "title": "Correct Dead Time",
+      "x": 364,
+      "y": 226
+    },
+    {
+      "module": "ncnr.vsans.correct_dead_time",
+      "title": "Correct Dead Time",
+      "x": 369,
+      "y": 252
+    },
+    {
+      "module": "ncnr.vsans.correct_dead_time",
+      "title": "Correct Dead Time",
+      "x": 368,
+      "y": 294
+    },
+    {
+      "module": "ncnr.vsans.correct_attenuation",
+      "title": "Correct Attenuation",
+      "x": 517,
+      "y": 56
+    },
+    {
+      "module": "ncnr.vsans.monitor_normalize_raw",
+      "title": "Monitor Normalize Raw",
+      "x": 669,
+      "y": 58
+    },
+    {
+      "module": "ncnr.vsans.monitor_normalize_raw",
+      "title": "Monitor Normalize Raw",
+      "x": 669,
+      "y": 104
+    },
+    {
+      "module": "ncnr.vsans.monitor_normalize_raw",
+      "title": "Monitor Normalize Raw",
+      "x": 666,
+      "y": 147
+    },
+    {
+      "module": "ncnr.vsans.monitor_normalize_raw",
+      "title": "Monitor Normalize Raw",
+      "x": 669,
+      "y": 224
+    },
+    {
+      "module": "ncnr.vsans.monitor_normalize_raw",
+      "title": "Monitor Normalize Raw",
+      "x": 665,
+      "y": 257
+    },
+    {
+      "module": "ncnr.vsans.monitor_normalize_raw",
+      "title": "Monitor Normalize Raw",
+      "x": 667,
+      "y": 301
+    },
+    {
+      "module": "ncnr.vsans.calculate_vsans_transmission",
+      "title": "Calculate Vsans Transmission",
+      "x": 883,
+      "y": 219
+    },
+    {
+      "module": "ncnr.vsans.subtract_raw",
+      "title": "Subtract Raw",
+      "x": 879,
+      "y": 60
+    },
+    {
+      "module": "ncnr.vsans.subtract_raw",
+      "title": "Subtract Raw",
+      "x": 884,
+      "y": 133
+    },
+    {
+      "module": "ncnr.vsans.subtract_raw",
+      "title": "Subtract Raw",
+      "x": 1190,
+      "y": 74
+    },
+    {
+      "module": "ncnr.vsans.multiply_raw",
+      "title": "Multiply Raw",
+      "x": 1026,
+      "y": 87
+    },
+    {
+      "module": "ncnr.vsans.calculate_vsans_transmission",
+      "title": "Calculate Vsans Transmission",
+      "x": 1029,
+      "y": 272
+    },
+    {
+      "module": "ncnr.vsans.calculate_XY",
+      "title": "Calculate Xy",
+      "x": 1332,
+      "y": 66
+    },
+    {
+      "module": "ncnr.vsans.absolute_scaling",
+      "title": "Absolute Scaling",
+      "x": 1451,
+      "y": 148
+    },
+    {
+      "module": "ncnr.vsans.calculate_Q",
+      "title": "Calculate Q",
+      "x": 1583,
+      "y": 82
+    },
+    {
+      "module": "ncnr.vsans.geometric_shadow",
+      "title": "Geometric Shadow",
+      "x": 1653,
+      "y": 137
+    },
+    {
+      "module": "ncnr.vsans.top_bottom_shadow",
+      "title": "Top Bottom Shadow",
+      "x": 1661,
+      "y": 196
+    },
+    {
+      "module": "ncnr.vsans.circular_av_new",
+      "title": "Circular Av New",
+      "x": 1664,
+      "y": 261
+    },
+    {
+      "module": "ncnr.vsans.correct_attenuation",
+      "title": "Correct Attenuation",
+      "x": 515,
+      "y": 93
+    },
+    {
+      "module": "ncnr.vsans.correct_dead_time",
+      "title": "Correct Dead Time",
+      "x": 370,
+      "y": 56
+    },
+    {
+      "module": "ncnr.vsans.correct_attenuation",
+      "title": "Correct Attenuation",
+      "x": 519,
+      "y": 140
+    },
+    {
+      "module": "ncnr.vsans.correct_attenuation",
+      "title": "Correct Attenuation",
+      "x": 515,
+      "y": 223
+    },
+    {
+      "module": "ncnr.vsans.correct_attenuation",
+      "title": "Correct Attenuation",
+      "x": 525,
+      "y": 266
+    },
+    {
+      "module": "ncnr.vsans.correct_attenuation",
+      "title": "Correct Attenuation",
+      "x": 519,
+      "y": 313
+    }
+  ]
+}
