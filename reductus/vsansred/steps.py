@@ -861,6 +861,8 @@ def monitor_normalize_raw(rawdata, mon0=1e8):
     scale_factor = mon0 / monitor
 
     for det_name, det in output.detectors.items():
+        if "data" not in det:
+            continue
         data = np.array(det["data"]["value"], dtype=float) * scale_factor
         det["data"]["value"] = data
 
@@ -1278,9 +1280,8 @@ def get_panel_data_raw(rawdata, PANEL_KEY):
 @module
 def calculate_vsans_transmission(in_beam, empty_beam, margin=5, PANEL_KEY = "detector_B"):
     """
-    Calculate the overlap shadow from upstream panels on VSANS detectors
-    Outputs will still be realspace data, but with shadow_mask updated to
-    include these overlap regions
+    Calculate transmission from two data sets given the input detector (panel_key). It uses the moments routine to extract the integrated box (ROI).
+    Then it calculates the sum of intensity inside that box for both in_beam and empty_beam, and divides the value of in_beam by empty_beam.
 
      **Inputs**
 
@@ -1306,7 +1307,7 @@ def calculate_vsans_transmission(in_beam, empty_beam, margin=5, PANEL_KEY = "det
     in_udata, in_array = get_panel_data_raw(in_beam, PANEL_KEY)
     empty_udata, empty_array = get_panel_data_raw(empty_beam, PANEL_KEY)
 
-    # find beamstop
+    # find ROI using same routine as SANS
     _, x, y, width_x, width_y = moments(empty_array)
     center_x = x + 0.5
     center_y = y + 0.5
@@ -1324,11 +1325,11 @@ def calculate_vsans_transmission(in_beam, empty_beam, margin=5, PANEL_KEY = "det
         )
     )
 
-    # 3. Sum Intensity inside ROI
+    # Sum the intensities pixel inside the ROI
     I_in_beam = np.sum(in_udata[xmin: xmax + 1, ymin: ymax + 1])
     I_empty_beam = np.sum(empty_udata[xmin: xmax + 1, ymin: ymax + 1])
 
-    # 4. Calculate Ratio (T = I_in / I_empty)
+    # Calculate transmission
     ratio = I_in_beam / I_empty_beam
 
     # Extract scalar values from Uncertainty or float
@@ -1371,7 +1372,7 @@ def calculate_vsans_transmission(in_beam, empty_beam, margin=5, PANEL_KEY = "det
 def moments(data):
     """Returns (height, x, y, width_x, width_y)
     the gaussian parameters of a 2D distribution by calculating its
-    moments """
+    moments. Copied from sans steps """
     total = data.sum()
     X, Y = np.indices(data.shape)
     x = (X*data).sum()/total
@@ -1386,7 +1387,7 @@ def moments(data):
 @module
 def subtract_raw(sample, background):
     """
-     Algebraic subtraction of two single dataset pixel by pixel
+     Algebraic subtraction of two single dataset pixel by pixel. Assumed to be normalized by monitor prior!!!!
 
      **Inputs**
 
@@ -1413,8 +1414,12 @@ def subtract_raw(sample, background):
         if det_name in background.detectors:
             bg_det = background.detectors[det_name]
 
+            if "data" not in det or "data" not in bg_det:
+                continue
+
             sample_vals = np.array(det["data"]["value"], dtype=float)
             bg_vals = np.array(bg_det["data"]["value"], dtype=float)
+
 
             det["data"]["value"] = sample_vals - bg_vals
 
@@ -1423,7 +1428,7 @@ def subtract_raw(sample, background):
 @module
 def multiply_raw(sample, factor_param):
     """
-     Algebraic subtraction of two single dataset pixel by pixel
+     Algebraic subtraction of two single dataset pixel by pixel. Assumed to be normalized by monitor prior!!!!
 
      **Inputs**
 
@@ -1676,7 +1681,13 @@ def correct_dead_time(sample):
             continue
 
         det = result.detectors[detname]
+
+        if "data" not in det or "dead_time" not in det:
+            continue
+
+
         deadtime = det["dead_time"]["value"]
+
         data = det["data"]["value"]
 
         if sn =="B":
@@ -1745,11 +1756,13 @@ def sum_raw(data):
     for d in data[1:]:
         # Sum detector panel values pixel by pixel
         for det_name, det in output.detectors.items():
-            if det_name in d.detectors:
-                target_vals = np.array(det["data"]["value"], dtype=float)
-                source_vals = np.array(d.detectors[det_name]["data"]["value"], dtype=float)
+            if det_name in d.detectors and "data" in det and "data" in d.detectors[det_name]:
+                target_data = det["data"]
+                source_data = d.detectors[det_name]["data"]
 
-                det["data"]["value"] = target_vals + source_vals
+                #needed if one detector is off (such as the back detector)
+                if "value" in target_data and "value" in source_data:
+                    target_data["value"] = np.asarray(target_data["value"], dtype=float) + np.asarray(source_data["value"], dtype=float)
 
         # Sum monitor and runtime metadata
         for key in ["run.moncnt", "run.rtime", "run.detcnt"]:
