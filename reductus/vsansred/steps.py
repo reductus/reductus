@@ -1760,7 +1760,7 @@ def calculate_analyzer_properties(rho0, delta_t, gamma, mu, t_glass):
 
         pol_eff (float): The analyzer efficiency at given time
 
-    | 2026-07-17 Jonathan Gaudet
+    | 2026-09-23 Jonathan Gaudet
     """
     rho3he = rho0 * np.exp(-delta_t/gamma)
     pol_eff = np.tanh(mu*rho3he)
@@ -1867,7 +1867,7 @@ def get_avg_run_time(data):
 
         avg time (params) : avg time of the scan run in hours
 
-    |      2026-07-17 Jonathan Gaudet
+    |      2026-09-23 Jonathan Gaudet
     """
     from datetime import datetime
 
@@ -1875,3 +1875,122 @@ def get_avg_run_time(data):
     t_end = datetime.fromisoformat(_s(data.metadata['end_time'])).timestamp()
 
     return ((t_end + t_start) / 2) / 3600.0
+
+@module
+def spin_leakage_corr(data_uu, data_ud, data_du, data_dd, blocked_beam, flipper_par, helium_par):
+    """function that provides spin leakage correction to the 4 polarized cross-sections of a pol. sans experiment
+
+        **Inputs**
+
+        data_uu(raw)  : scattering uu file
+
+        data_ud(raw)  : scattering ud file
+
+        data_du(raw)  : scattering du file
+
+        data_dd(raw)  : scattering dd file
+
+        blocked_beam(raw)  : blocked beam scattering file
+
+        flipper_par(params) : dictionary object containing eff_sm_up, eff_sm_down, gamma,rho0 and t0_cell (see flipper_sm_efficiency method)
+
+        helium_par(params) : dictionary object containing 3He cell parameters obtained from he3_transmission
+
+        **Returns**
+
+        data_corr_uu(raw)  : correct scattering uu file
+
+        data_corr_ud(raw) : corrected scattering ud file
+
+        data_corr_du(raw) : corrected scattering du file
+
+        data_corr_dd(raw) : corrected scattering dd file
+
+        | 2026-09-23 Jonathan Gaudet
+        """
+
+    flipper_obj = flipper_par[0] if isinstance(flipper_par, list) else flipper_par
+    p_sm = flipper_obj.params['eff_sm_up']
+    p_sm_f = flipper_obj.params['eff_sm_down']
+
+    # 2. Extract He3 cell parameters from helium_par
+    cell = helium_par[0]['cells']
+    cell_info = list(cell.values())[0]
+    rho0 = cell_info['P0']
+    gamma = cell_info['Gamma']
+
+    # Convert Insert_time into hours
+    t0_cell = (cell_info['Insert_time'] / 1000.0) / 3600.0
+
+    opacity1ang = float(_s(data_uu.metadata['analyzer.opacity1ang']))
+    wavelength = float(_s(data_uu.metadata['resolution.lmda']))
+    mu = opacity1ang * wavelength
+    trans_glass = float(_s(data_uu.metadata['analyzer.GlassTransmission']))
+
+    epsilon_uu = (1 + p_sm) / 2.0
+    epsilon_ud = (1 - p_sm) / 2.0
+    epsilon_dd = (1 + p_sm_f) / 2.0
+    epsilon_du = (1 - p_sm_f) / 2.0
+
+    time_avg = (get_avg_run_time(data_uu) + get_avg_run_time(data_ud) + get_avg_run_time(data_du) + get_avg_run_time(data_dd)) / 4.0
+    time_avg = time_avg - t0_cell
+
+    rho3he, pol_eff, t_unpolarized = calculate_analyzer_properties(rho0, time_avg, gamma, mu, trans_glass)
+
+    t_maj  = trans_glass * np.exp(- mu * (1.0 - rho3he))
+    t_min = trans_glass * np.exp(-mu * (1.0 + rho3he))
+
+    matrix_corr = set_pol_corr_matrix(epsilon_uu,epsilon_ud,epsilon_dd,epsilon_du,t_maj,t_min)
+
+
+    data_corr_uu = subtract_raw(data_uu, blocked_beam)
+    data_corr_ud = subtract_raw(data_ud, blocked_beam)
+    data_corr_du = subtract_raw(data_du, blocked_beam)
+    data_corr_dd = subtract_raw(data_dd, blocked_beam)
+
+    corr_datasets = [data_corr_uu, data_corr_ud, data_corr_du, data_corr_dd]
+
+    # 9. Iterate over all detector panels in VSANS datasets
+    for det_name, det_info in data_corr_uu.detectors.items():
+        all_present = all(
+            det_name in d.detectors and
+            "data" in d.detectors[det_name] and
+            "value" in d.detectors[det_name]["data"]
+            for d in corr_datasets
+        )
+
+        if not all_present:
+            continue
+
+        # Extract panel pixel intensity arrays for each cross-section
+        int_obs = [
+            np.asarray(d.detectors[det_name]["data"]["value"], dtype=float)
+            for d in corr_datasets
+        ]
+
+        # Calculate corrected intensities using list comprehension
+        int_corr = [
+            sum(matrix_corr[i, j] * int_obs[j] for j in range(4))
+            for i in range(4)
+        ]
+
+        # Assign corrected panel data back to each VSANS cross-section
+        for idx, d in enumerate(corr_datasets):
+            d.detectors[det_name]["data"]["value"] = int_corr[idx]
+
+    return data_corr_uu, data_corr_ud, data_corr_du, data_corr_dd
+
+def set_pol_corr_matrix(eps_uu, eps_ud, eps_dd, eps_du, tmaj, tmin):
+    """function returning matrix applied to correct for spin leakage at a fixed time
+       2026-09-23 Jonathan Gaudet"""
+
+    matrix_corr = np.array([
+                   [eps_uu * tmaj, eps_uu * tmin, eps_ud * tmaj, eps_ud * tmin],
+                   [eps_uu * tmin, eps_uu * tmaj, eps_ud * tmin, eps_ud * tmaj],
+                   [eps_du * tmaj, eps_du * tmin, eps_dd * tmaj, eps_dd * tmin],
+                   [eps_du * tmin, eps_du * tmaj, eps_dd * tmin, eps_dd * tmaj]
+                ])
+
+    inv_corr_matrix = np.linalg.inv(matrix_corr)
+
+    return inv_corr_matrix
