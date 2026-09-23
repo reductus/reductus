@@ -129,19 +129,6 @@ def data_as(field, units):
         value = converter(field[()], units)
         return value
 
-def process_metadata(entry, metadata):
-    """Directly modify the metadata passed to the method, using known secondary data locations
-
-    :param entry: A loaded h5py data object
-    :param metadata: A metadata dictionary from HDF5
-    """
-    # hack to remove configuration from sample label (it is still stored in run.configuration)
-    metadata['sample.description'] = _s(metadata["sample.labl"]).replace(_s(metadata["run.configuration"]), "")
-    for k, v in alternate_metadata_lookup.items():
-        if metadata.get(v, None) is None:
-            metadata.update(load_metadata(entry, 1, 0, metadata_lookup={k: v},
-                                          unit_specifiers=unit_specifiers))
-
 def readSANSNexuz(input_file, file_obj=None, metadata_lookup=metadata_lookup):
     """
     Load all entries from the NeXus file into sans data sets.
@@ -151,7 +138,7 @@ def readSANSNexuz(input_file, file_obj=None, metadata_lookup=metadata_lookup):
     for entryname, entry in file.items():
         metadata = load_metadata(entry, 1, 0, metadata_lookup=metadata_lookup, unit_specifiers=unit_specifiers)
         metadata['entry'] = entryname
-        process_metadata(entry, metadata)
+        metadata['sample.description'] = _s(metadata["sample.labl"]).replace(_s(metadata["run.configuration"]), "")
         detector_keys = ['detector']
         detectors = dict([(k, load_detector(entry['instrument'][k])) for k in detector_keys])
         dataset = RawSANSData(metadata=metadata, detectors=detectors)
