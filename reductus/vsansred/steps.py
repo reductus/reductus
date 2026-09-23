@@ -1741,6 +1741,33 @@ def sum_raw(data):
 
     return output
 
+def calculate_analyzer_properties(rho0, delta_t, gamma, mu, t_glass):
+    """Calculate analyzer efficiency (Pol_eff) and 3He polarization (rho3He) at a given time t.
+
+    **Inputs**
+        mu (float): cell opacity
+
+        rho0 (float): initial 3He polarization
+
+        Gamma (float):
+
+        deltaT (float): time difference from time for which rho_0 was determined ()
+
+        t_glass (float) : transmission of the empty glass cell
+
+    **Returns**
+        rho3he (float): The 3He polarization at given time
+
+        pol_eff (float): The analyzer efficiency at given time
+
+    | 2026-07-17 Jonathan Gaudet
+    """
+    rho3he = rho0 * np.exp(-delta_t/gamma)
+    pol_eff = np.tanh(mu*rho3he)
+    t_unpolarized = t_glass * np.exp(-mu) * np.cosh(mu*rho3he)
+
+    return rho3he, pol_eff, t_unpolarized
+
 
 @module
 def flipper_sm_efficiency(trans_uu, trans_ud, trans_du, trans_dd, helium_par, block_beam):
