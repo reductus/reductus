@@ -1770,7 +1770,7 @@ def calculate_analyzer_properties(rho0, delta_t, gamma, mu, t_glass):
 
 
 @module
-def flipper_sm_efficiency(trans_uu, trans_ud, trans_du, trans_dd, helium_par, block_beam):
+def flipper_sm_efficiency(trans_uu, trans_ud, trans_du, trans_dd, helium_par, block_beam, panel_key="detector_MR"):
     """function calculates flipper and super-mirror efficiency
 
     **Inputs**
@@ -1804,8 +1804,8 @@ def flipper_sm_efficiency(trans_uu, trans_ud, trans_du, trans_dd, helium_par, bl
 
 
     # Generate transmission between uu/ud and dd/du to use to determine Psm and Psm_f
-    ratio_uu_ud = calculate_vsans_transmission(trans_uu_bgd, trans_ud_bgd, margin=5, PANEL_KEY="detector_MR")
-    ratio_dd_du = calculate_vsans_transmission(trans_dd_bgd, trans_du_bgd, margin=5, PANEL_KEY="detector_MR")
+    ratio_uu_ud = calculate_vsans_transmission(trans_uu_bgd, trans_ud_bgd, margin=5, PANEL_KEY=panel_key)
+    ratio_dd_du = calculate_vsans_transmission(trans_dd_bgd, trans_du_bgd, margin=5, PANEL_KEY=panel_key)
 
     #extract the dictionary parameters for the cell (assumed only 1)
     cell = helium_par[0]['cells']
@@ -1835,8 +1835,8 @@ def flipper_sm_efficiency(trans_uu, trans_ud, trans_du, trans_dd, helium_par, bl
     rhot_du, pol_du, t_du = calculate_analyzer_properties(init_rho, time_du, gamma, mu, trans_glass)
     rhot_dd, pol_dd, t_dd = calculate_analyzer_properties(init_rho, time_dd, gamma, mu, trans_glass)
 
-    ratio_1 = ratio_uu_ud.params['factor'] * (t_ud / t_uu)
-    ratio_2 = ratio_dd_du.params['factor'] * (t_du / t_dd)
+    ratio_1 = ratio_uu_ud[0].params['factor'] * (t_ud / t_uu)
+    ratio_2 = ratio_dd_du[0].params['factor'] * (t_du / t_dd)
 
     p_sm = (ratio_1 - 1) / (pol_uu + (ratio_1 * pol_ud))
     p_sm_f = (ratio_2 - 1) / (pol_dd + (ratio_2 * pol_du))
