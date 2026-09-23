@@ -223,7 +223,8 @@ def readVSANSNexuz(input_file, file_obj=None, metadata_lookup=metadata_lookup, l
         
         multiplicity = 1
         for i in range(multiplicity):
-            metadata = load_metadata(entry, multiplicity, i, metadata_lookup=metadata_lookup, unit_specifiers=unit_specifiers)
+            metadata = load_metadata(entry, multiplicity, i,
+                                     metadata_lookup_table=metadata_lookup, unit_specifiers_table=unit_specifiers)
             #print(metadata)
             detector_keys = [n for n in entry['instrument'] if n.startswith('detector_')]
             detectors = dict([(k, load_detector(entry['instrument'][k], load_data=load_data)) for k in detector_keys])
