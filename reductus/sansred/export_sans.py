@@ -179,7 +179,7 @@ def export_to_nxcansas(data: SansIQData, f_path: Path_Like) -> dict:
         source = instrument_group.create_group('source')
         source.attrs.update({
             "NX_class": "NXsource",
-            "canSAS_class": "SASource"
+            "canSAS_class": "SASsource"
         })
         source['type'] = 'Reactor Neutron Source'
         source['incident_wavelength'] = data.metadata.get('resolution.lmda', None)
