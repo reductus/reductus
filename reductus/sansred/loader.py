@@ -127,8 +127,9 @@ def readSANSNexuz(input_file, file_obj=None, metadata_lookup=metadata_lookup):
     datasets = []
     file = h5_open_zip(input_file, file_obj)
     for entryname, entry in file.items():
-        metadata = load_metadata(entry, 1, 0,
-                                 metadata_lookup_table=metadata_lookup, unit_specifiers_table=unit_specifiers)
+        metadata = load_metadata(
+            entry, 1, 0, metadata_lookup_table=metadata_lookup, unit_specifiers_table=unit_specifiers
+        )
         metadata['entry'] = entryname
         metadata['sample.description'] = _s(metadata["sample.labl"]).replace(_s(metadata["run.configuration"]), "")
         detector_keys = ['detector']
