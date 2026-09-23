@@ -163,26 +163,45 @@ def load_detector(dobj, load_data=True):
             detector[k]['attrs']['dtype'] = subobj.dtype.name
     return detector
 
-def load_metadata(entry, multiplicity=1, i=1, metadata_lookup=metadata_lookup, unit_specifiers=unit_specifiers):
+def load_metadata(
+        entry: h5py.Group,
+        multiplicity: int = 1,
+        i: int = 1,
+        metadata_lookup_table: dict[str, tuple[str] | str] = metadata_lookup,
+        unit_specifiers_table: dict[str, str] = unit_specifiers
+):
+    """
+    Find all metadata in an HDF5 group/entry using metadata_lookup for the potential locations and its local key.
+
+    :param entry: An HDF5 entry as loaded by h5py. This can be any level, so long as the metadata map is relative.
+    :param multiplicity: Look for metadata values of length multiplicity and convert them to scalar values.
+    :param i: The array index to look for scalar quantities that are in arrays.
+    :param metadata_lookup_table: A dictionary mapping local metadata keys to a tuple of potential HDF5 locations.
+    :param unit_specifiers_table: A dictionary mapping local metadata keys to units the value should scale to.
+    """
     metadata = OrderedDict()
-    for mkey in metadata_lookup:
-        field = entry.get(metadata_lookup[mkey], None)
-        if field is not None:
-            if mkey in unit_specifiers:
-                field = data_as(field, unit_specifiers[mkey])
-            else:
-                field = field[()]
-            if field.dtype.kind == 'f':
-                field = field.astype("float")
-            elif field.dtype.kind == 'i':
-                field = field.astype("int")
-        
-            if len(field) == multiplicity:
-                metadata[mkey] = field[i]
+    for mkey, locales in metadata_lookup_table.items():
+        # As the location changes in the raw data, the locales change. Step through all.
+        if not isinstance(locales, tuple):
+            locales = (locales,)
+        for locale in locales:
+            field = entry.get(locale, None)
+            if field is not None:
+                if mkey in unit_specifiers_table:
+                    field = data_as(field, unit_specifiers_table[mkey])
+                else:
+                    field = field[()]
+                if field.dtype.kind == 'f':
+                    field = field.astype("float")
+                elif field.dtype.kind == 'i':
+                    field = field.astype("int")
+
+                if len(field) == multiplicity:
+                    metadata[mkey] = field[i]
+                else:
+                    metadata[mkey] = field
             else:
                 metadata[mkey] = field
-        else:
-            metadata[mkey] = field
     return metadata
 
 def readVSANSNexuz(input_file, file_obj=None, metadata_lookup=metadata_lookup, load_data=True):
