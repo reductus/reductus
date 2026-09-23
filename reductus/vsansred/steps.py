@@ -1558,17 +1558,6 @@ def absolute_scaling(sample, open_beam, trans_sample, margin=5, PANEL_KEY='detec
     if flux_val <= 0:
         raise ValueError("Integrated open beam flux must be greater than zero.")
 
-    # 3.meta data for calculating pixel size
-    #det = sample.detectors[PANEL_KEY]
-    #z_offset = det.get("setback", {"value": [0.0]})["value"][0]
-    #sdd = det["distance"]["value"][0] + z_offset
-    #x_pixel_size = det["x_pixel_size"]["value"][0]/10 # mm to cm
-    #y_pixel_size = det["y_pixel_size"]["value"][0]/10 # mm to cm
-
-    # solid angle of a single pixel: omega = (dx * dy) / Sdd^2
-    # This already applied in calculate_XY
-    #omega_pixel = (x_pixel_size * y_pixel_size) / (sdd ** 2)
-
     # sample thickness
     raw_thk = sample.metadata.get("sample.thk", 1.0) #already converted in cm
     dsam_cm = (float(raw_thk) if raw_thk else 1.0)
@@ -1670,7 +1659,7 @@ def correct_dead_time(sample):
 
     result = sample.copy()
 
-    # Safely extract run time (seconds)
+    # extract counting time (seconds)
     rtime = result.metadata["run.rtime"]
     run_time = float(rtime["value"] if isinstance(rtime, dict) else rtime)
 
@@ -1703,8 +1692,6 @@ def correct_dead_time(sample):
 
             tube_orientation = det['tube_orientation']['value'][0].decode().upper()
             dimX, dimY = data.shape[-2:]
-            #dimX = int(det['pixel_num_x']['value'][0])
-            #dimY = int(det['pixel_num_y']['value'][0])
 
             if tube_orientation == "VERTICAL":
                 for t in range(dimX):
