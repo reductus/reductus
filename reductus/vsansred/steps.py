@@ -1786,6 +1786,8 @@ def flipper_sm_efficiency(trans_uu, trans_ud, trans_du, trans_dd, helium_par, bl
 
     block_beam (raw): block beam transmission
 
+    panel_key (string): detector panel choice
+
     **Returns**
 
     result(params): output parameters
