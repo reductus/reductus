@@ -1542,12 +1542,6 @@ def absolute_scaling(sample, open_beam, trans_sample, margin=5, PANEL_KEY='detec
     flux_slice = open_udata[xmin: xmax + 1, ymin: ymax + 1]
     flux = np.sum(flux_slice)
 
-    print("\n" + "=" * 40)
-    print("       DIRECT BEAM FLUX DIAGNOSTICS")
-    print("=" * 40)
-    print(f"Raw flux object type : {type(flux)}")
-    print(f"Raw flux object repr : {flux}")
-
     if hasattr(flux, "x"):
         flux_val = float(flux.x)
         flux_var = float(getattr(flux, "variance", flux_val))
@@ -1568,17 +1562,6 @@ def absolute_scaling(sample, open_beam, trans_sample, margin=5, PANEL_KEY='detec
     # Compute kappa (flux * solid_angle) with Uncertainty
     u_flux = Uncertainty(flux_val, flux_var)
     u_kappa = u_flux
-    # absolute scaling factor
-
-    print("\n=== KAPPA DIAGNOSTICS ===")
-    print(f"u_kappa value (flux): {u_kappa.x:.6e}")
-    print(f"u_kappa std dev     : {np.sqrt(u_kappa.variance):.6e}")
-    print(f"dsam_cm             : {dsam_cm:.4f}")
-    print(f"T_sample            : {T_sample:.4f}")
-    print(f"Total Denominator   : {(u_kappa.x * dsam_cm * T_sample):.6e}")
-    print(f"u_factor_abs        : {1.0 / (u_kappa.x * dsam_cm * T_sample):.6e}")
-    print("=========================\n")
-
     u_factor_abs = 1.0 / (u_kappa * dsam_cm * T_sample)
 
     # multiply data by scaling factor
@@ -1757,3 +1740,109 @@ def sum_raw(data):
                 output.metadata[key] += d.metadata[key]
 
     return output
+
+
+@module
+def flipper_sm_efficiency(trans_uu, trans_ud, trans_du, trans_dd, helium_par, block_beam):
+    """function calculates flipper and super-mirror efficiency
+
+    **Inputs**
+    trans_uu (raw): Transmission up-up
+
+    trans_ud (raw): Transmission up-down
+
+    trans_du (raw): Transmission down-up
+
+    trans_dd (raw): Transmission down-down
+
+    helium_par (params): List of parameters related to the He3 cells time decay (given by He_3Transmission routine)
+
+    block_beam (raw): block beam transmission
+
+    **Returns**
+
+    result(params): output parameters
+
+    | 2026-09-23 Jonathan Gaudet
+    """
+
+    from collections import OrderedDict
+    from .vsansdata import Parameters
+
+    # Subtract blocked beam to all data
+    trans_uu_bgd = subtract_raw(trans_uu, block_beam)
+    trans_ud_bgd = subtract_raw(trans_ud, block_beam)
+    trans_du_bgd = subtract_raw(trans_du, block_beam)
+    trans_dd_bgd = subtract_raw(trans_dd, block_beam)
+
+
+    # Generate transmission between uu/ud and dd/du to use to determine Psm and Psm_f
+    ratio_uu_ud = calculate_vsans_transmission(trans_uu_bgd, trans_ud_bgd, margin=5, PANEL_KEY="detector_MR")
+    ratio_dd_du = calculate_vsans_transmission(trans_dd_bgd, trans_du_bgd, margin=5, PANEL_KEY="detector_MR")
+
+    #extract the dictionary parameters for the cell (assumed only 1)
+    cell = helium_par[0]['cells']
+    cell_info = list(cell.values())[0]
+    init_rho = cell_info['P0']
+    gamma = cell_info['Gamma']
+
+    #read the time that rho_0 was determined for the Cell and convert into hours
+    #TO DO: fix this - time is an issue here
+    init_time = (cell_info['Insert_time'] / 1000.0) / 3600.0
+
+    # Calculate average time of a run relative to the initial He3 cell measurement (t0)
+    time_uu = get_avg_run_time(trans_uu) - init_time
+    time_ud = get_avg_run_time(trans_ud) - init_time
+    time_du = get_avg_run_time(trans_du) - init_time
+    time_dd = get_avg_run_time(trans_dd) - init_time
+
+    # extract He3 cell parameters
+    opacity1ang = float(_s(trans_uu.metadata['analyzer.opacity1ang']))
+    wavelength = float(_s(trans_uu.metadata['resolution.lmda']))
+    mu = opacity1ang * wavelength
+    trans_glass = float(_s(trans_uu.metadata['analyzer.GlassTransmission']))
+
+
+    rhot_uu, pol_uu, t_uu = calculate_analyzer_properties(init_rho, time_uu, gamma, mu, trans_glass)
+    rhot_ud, pol_ud, t_ud = calculate_analyzer_properties(init_rho, time_ud, gamma, mu, trans_glass)
+    rhot_du, pol_du, t_du = calculate_analyzer_properties(init_rho, time_du, gamma, mu, trans_glass)
+    rhot_dd, pol_dd, t_dd = calculate_analyzer_properties(init_rho, time_dd, gamma, mu, trans_glass)
+
+    ratio_1 = ratio_uu_ud.params['factor'] * (t_ud / t_uu)
+    ratio_2 = ratio_dd_du.params['factor'] * (t_du / t_dd)
+
+    p_sm = (ratio_1 - 1) / (pol_uu + (ratio_1 * pol_ud))
+    p_sm_f = (ratio_2 - 1) / (pol_dd + (ratio_2 * pol_du))
+
+    params_dict = OrderedDict(
+        [
+            ("eff_sm_up", p_sm),
+            ("eff_sm_down", p_sm_f)
+        ]
+    )
+
+    result = Parameters(params=params_dict)
+    output = [result]
+
+    return output
+
+
+def get_avg_run_time(data):
+    """function that provide average timestamp of a scan run
+
+        ***Inputs***
+
+        data (raw)  : scattering file
+
+        ***Returns***
+
+        avg time (params) : avg time of the scan run in hours
+
+    |      2026-07-17 Jonathan Gaudet
+    """
+    from datetime import datetime
+
+    t_start = datetime.fromisoformat(_s(data.metadata['start_time'])).timestamp()
+    t_end = datetime.fromisoformat(_s(data.metadata['end_time'])).timestamp()
+
+    return ((t_end + t_start) / 2) / 3600.0
