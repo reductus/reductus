@@ -16,14 +16,14 @@ metadata_lookup = {
     "acamplitude.voltage": "DAS_logs/acAmplitude/voltage",
     "adam.voltage": "DAS_logs/adam4021/voltage",
     "analysis.groupid": "DAS_logs/trajectoryData/groupid",
-    "analysis.intent": "DAS_logs/trajectoryData/intent",
+    "analysis.intent": ("DAS_logs/trajectoryData/intent", "reduction/intent"),
     "analysis.filepurpose": "DAS_logs/trajectoryData/filePurpose",
     "analysis.blocked_beam": "DAS_logs/sample/reduction.blocked_beam_reference",
     "analysis.empty_cell": "DAS_logs/sample/reduction.empty_cell_reference",
     "analysis.open_beam": "DAS_logs/sample/reduction.open_beam_reference",
     "det.beamx": "instrument/detector/beam_center_x",
     "det.beamy": "instrument/detector/beam_center_y",
-    "det.bstop": "DAS_logs/beamStop/diameter",
+    "det.bstop": ("DAS_logs/beamStop/diameter", "DAS_logs/beamStop/size"),
     "det.dead_time": "instrument/detector/dead_time",
     "det.des_dis": "DAS_logs/detectorPosition/desiredSoftPosition",
     "det.dis": "DAS_logs/detectorPosition/softPosition",
@@ -50,8 +50,8 @@ metadata_lookup = {
     "rfflipperpowersupply.voltage": "DAS_logs/RFFlipperPowerSupply/actualVoltage/average_value",
     "rfflipperpowersupply.frequency": "DAS_logs/RFFlipperPowerSupply/frequency",
     "run.atten": "DAS_logs/counter/actualAttenuatorsDropped",
-    "run.atten_factors": "instrument/attenuator/index_table",
-    "run.atten_factor_errors": "instrument/attenuator/index_error_table",
+    "run.atten_factors": ("instrument/attenuator/index_table", "DAS_logs/attenuator/index_table"),
+    "run.atten_factor_errors": ("instrument/attenuator/index_error_table", "DAS_logs/attenuator/index_error_table"),
     "run.configuration": "DAS_logs/configuration/key",
     "run.filename": "DAS_logs/trajectoryData/fileName",
     "run.guide": "DAS_logs/guide/guide",
@@ -74,18 +74,9 @@ metadata_lookup = {
     "sample.temp": "DAS_logs/temp/primaryNode/average_value",
     "sample.position": "DAS_logs/geometry/samplePositionOffset",
     "sample.localID": "DAS_logs/sample/localID",
-    "sample.GroupID": "DAS_logs/sample/UUID",
+    "sample.GroupID": ("DAS_logs/sample/UUID", "DAS_logs/sample/group_id"),
     "start_time": "start_time",
     "waveformgenerator.frequency": "DAS_logs/waveformGenerator/frequency",
-}
-
-# Data objects have changed over time, including what data is included in them. This map is for locations used pre-2020
-alternate_metadata_lookup = {
-    "analysis.intent": "reduction/intent",
-    "det.bstop": "DAS_logs/beamStop/size",
-    "run.atten_factors": "DAS_logs/attenuator/index_table",
-    "run.atten_factor_errors": "DAS_logs/attenuator/index_error_table",
-    "sample.GroupID": "DAS_logs/sample/group_id",
 }
 
 unit_specifiers = {
