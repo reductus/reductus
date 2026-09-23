@@ -226,15 +226,14 @@ def _eval_node(node_id, module, inputs, template_fields, user_fields):
         elif len(values) == 1:
             fields[name] = values * bundle_length
         else:
-            raise ValueError("Need one value of %s for each dataset in %s"
-                             % (name, node_id))
+            raise ValueError(f"Need one value of {name} for each dataset in {node_id}")
         #print "fields", node_id, name, values
 
     # validate input terminals
     for par in module.inputs:
         name = par["id"]
         values = inputs[name]
-        #print("inputs", node_id, name, values)
+        # print("inputs", node_id, name, len(values), bundle_length, values)
         # for value in values: _check_datatype(par, value)
         if len(values) == 0:
             # If no inputs, then either send an empty list or None, depending
@@ -246,8 +245,8 @@ def _eval_node(node_id, module, inputs, template_fields, user_fields):
             fields[name] = values
         elif len(values) == 1:
             fields[name] = values*bundle_length
-        else:
-            raise ValueError("Need one value of %s for each dataset"%name)
+        elif bundle_length != 0:
+            raise ValueError(f"Need one value of {name} for each dataset")
 
     # Allocate slots for results
     outputs = dict((terminal["id"], []) for terminal in module.outputs)
