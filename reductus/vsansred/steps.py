@@ -1747,7 +1747,7 @@ def calculate_analyzer_properties(rho0, delta_t, gamma, mu, t_glass):
     **Inputs**
         mu (float): cell opacity
 
-        rho0 (float): initial 3He polarization
+        rho0 (float): initial 3He polarization at insertion time of the cell
 
         Gamma (float):
 
@@ -1760,11 +1760,12 @@ def calculate_analyzer_properties(rho0, delta_t, gamma, mu, t_glass):
 
         pol_eff (float): The analyzer efficiency at given time
 
+        t_unpolarized (float): Transmission of the cell for unpolarized beam
     | 2026-09-23 Jonathan Gaudet
     """
-    rho3he = rho0 * np.exp(-delta_t/gamma)
-    pol_eff = np.tanh(mu*rho3he)
-    t_unpolarized = t_glass * np.exp(-mu) * np.cosh(mu*rho3he)
+    rho3he = rho0 * np.exp(-delta_t / gamma)
+    pol_eff = np.tanh(mu * rho3he)
+    t_unpolarized = t_glass * np.exp(-mu) * np.cosh(mu * rho3he)
 
     return rho3he, pol_eff, t_unpolarized
 
@@ -1786,13 +1787,13 @@ def flipper_sm_efficiency(trans_uu, trans_ud, trans_du, trans_dd, helium_par, bl
 
     block_beam (raw): block beam transmission
 
-    panel_key (string): detector panel choice
+    panel_key (str): detector panel choice
 
     **Returns**
 
     result(params): output parameters
 
-    | 2026-09-23 Jonathan Gaudet
+    | 2026-09-24 Jonathan Gaudet
     """
 
     from collections import OrderedDict
@@ -1810,13 +1811,12 @@ def flipper_sm_efficiency(trans_uu, trans_ud, trans_du, trans_dd, helium_par, bl
     ratio_dd_du = calculate_vsans_transmission(trans_dd_bgd, trans_du_bgd, margin=5, PANEL_KEY=panel_key)
 
     #extract the dictionary parameters for the cell (assumed only 1)
-    cell = helium_par[0]['cells']
-    cell_info = list(cell.values())[0]
+    cells_dict = helium_par.params['cells']
+    cell_info = list(cells_dict.values())[0]
     init_rho = cell_info['P0']
     gamma = cell_info['Gamma']
 
     #read the time that rho_0 was determined for the Cell and convert into hours
-    #TO DO: fix this - time is an issue here
     init_time = (cell_info['Insert_time'] / 1000.0) / 3600.0
 
     # Calculate average time of a run relative to the initial He3 cell measurement (t0)
@@ -1826,16 +1826,17 @@ def flipper_sm_efficiency(trans_uu, trans_ud, trans_du, trans_dd, helium_par, bl
     time_dd = get_avg_run_time(trans_dd) - init_time
 
     # extract He3 cell parameters
-    opacity1ang = float(_s(trans_uu.metadata['analyzer.opacity1ang']))
+    opacity1ang = float(_s(trans_uu.metadata['he3_back.opacity']))
     wavelength = float(_s(trans_uu.metadata['resolution.lmda']))
     mu = opacity1ang * wavelength
-    trans_glass = float(_s(trans_uu.metadata['analyzer.GlassTransmission']))
+    trans_glass = float(_s(trans_uu.metadata['he3_back.te']))
 
 
     rhot_uu, pol_uu, t_uu = calculate_analyzer_properties(init_rho, time_uu, gamma, mu, trans_glass)
     rhot_ud, pol_ud, t_ud = calculate_analyzer_properties(init_rho, time_ud, gamma, mu, trans_glass)
     rhot_du, pol_du, t_du = calculate_analyzer_properties(init_rho, time_du, gamma, mu, trans_glass)
     rhot_dd, pol_dd, t_dd = calculate_analyzer_properties(init_rho, time_dd, gamma, mu, trans_glass)
+
 
     ratio_1 = ratio_uu_ud[0].params['factor'] * (t_ud / t_uu)
     ratio_2 = ratio_dd_du[0].params['factor'] * (t_du / t_dd)
@@ -1850,8 +1851,8 @@ def flipper_sm_efficiency(trans_uu, trans_ud, trans_du, trans_dd, helium_par, bl
         ]
     )
 
-    result = Parameters(params=params_dict)
-    output = [result]
+    output = Parameters(params=params_dict)
+
 
     return output
 
@@ -1994,3 +1995,84 @@ def set_pol_corr_matrix(eps_uu, eps_ud, eps_dd, eps_du, tmaj, tmin):
     inv_corr_matrix = np.linalg.inv(matrix_corr)
 
     return inv_corr_matrix
+
+
+@module
+def extract_mag_nuc_components(data_uu, data_ud, data_du, data_dd, angle_width=30.0):
+    # TODO: absolute scaling to add
+    """
+    given the 4 spin-leakage corrected full pol crossections in pixels space, this routine extracts the nuclear and magnetic scattering components.
+    The magnetic components are separated in parallel and perpendicular to an applied (or only guide) field direction, which is assumed to be the x-axis,
+    lying horizontally within the detector. Uses PixelstoQ and Div routines. AngleWidth is a free parameter??
+
+    **Inputs**
+
+    data_uu(realspace)  : scattering uu file
+
+    data_ud(realspace)  : scattering ud file
+
+    data_du(realspace)  : scattering du file
+
+    data_dd(realspace)  : scattering dd file
+
+    angle_width (float) : angular width (in degrees) of the sector cuts performed to extract Mpar, Mperp, and N^2
+
+    **Returns**
+
+    nuclear(qspace)  : 1D I vs Q nuclear scattering (N^2)
+
+    mag_par(qspace) : 1D I vs Q magnetic parallel to field scattering component (M_par^2)
+
+    mag_par_diag(qspace) : 1D I vs Q magnetic parallel to field scattering component (M_par^2)
+
+    mag_perp(qspace) : 1D I vs Q magnetic perpendicular to field scattering component (M_perp^2)
+
+    2026-09-23 Jonathan Gaudet
+    """
+
+    data_uu_xy = calculate_XY(data_uu, True)
+    data_ud_xy = calculate_XY(data_ud, True)
+    data_du_xy = calculate_XY(data_du, True)
+    data_dd_xy = calculate_XY(data_dd, True)
+
+    data_uu_xy_sha = geometric_shadow(data_uu_xy, border_width=4.0, inplace=False)
+    data_ud_xy_sha = geometric_shadow(data_ud_xy, border_width=4.0, inplace=False)
+    data_du_xy_sha = geometric_shadow(data_du_xy, border_width=4.0, inplace=False)
+    data_dd_xy_sha = geometric_shadow(data_dd_xy, border_width=4.0, inplace=False)
+
+    data_uu_xy_sha2 = top_bottom_shadow(data_uu_xy_sha, width=3, inplace=True)
+    data_ud_xy_sha2 = top_bottom_shadow(data_ud_xy_sha, width=3, inplace=True)
+    data_du_xy_sha2 = top_bottom_shadow(data_du_xy_sha, width=3, inplace=True)
+    data_dd_xy_sha2 = top_bottom_shadow(data_dd_xy_sha, width=3, inplace=True)
+
+    data_uu_q = calculate_Q(data_uu_xy_sha2)
+    data_ud_q = calculate_Q(data_ud_xy_sha2)
+    data_du_q = calculate_Q(data_du_xy_sha2)
+    data_dd_q = calculate_Q(data_dd_xy_sha2)
+
+
+    nuc1_nom, nuc1_mean = sector_cut(data_uu_q, [0.0, angle_width])
+    nuc2_nom, nuc2_mean = sector_cut(data_dd_q, [0.0, angle_width])
+
+    nuclear = (nuc1_mean + nuc2_mean) / 2.0
+
+    mperp1_nom, mperp1_mean = sector_cut(data_ud_q, [0.0, angle_width])
+    mperp2_nom, mperp2_mean = sector_cut(data_du_q, [0.0, angle_width])
+    mperp3_nom, mperp3_mean = sector_cut(data_ud_q, [90.0, angle_width])
+    mperp4_nom, mperp4_mean = sector_cut(data_du_q, [90.0, angle_width])
+
+    mag_perp = (mperp1_mean + mperp2_mean + mperp3_mean + mperp4_mean) / 6.0
+
+    mpar1_nom, mpar1_mean = sector_cut(data_uu_q, [90.0, angle_width])
+    mpar2_nom, mpar2_mean = sector_cut(data_dd_q, [90.0, angle_width])
+
+    mag_par = ((mpar2_mean - mpar1_mean) ** 2) / (16.0 * nuclear)
+
+    mpar1_diag_nom, mpar1_diag_mean = sector_cut(data_ud_q, [45.0, angle_width])
+    mpar2_diag_nom, mpar2_diag_mean = sector_cut(data_du_q, [45.0, angle_width])
+    mpar3_diag_nom, mpar3_diag_mean = sector_cut(data_ud_q, [135.0, angle_width])
+    mpar4_diag_nom, mpar4_diag_mean = sector_cut(data_du_q, [135.0, angle_width])
+
+    mag_par_diag = (mpar1_diag_mean + mpar2_diag_mean + mpar3_diag_mean + mpar4_diag_mean) - (5.0 * mag_perp)
+
+    return nuclear, mag_par, mag_par_diag, mag_perp
