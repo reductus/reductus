@@ -1841,8 +1841,8 @@ def flipper_sm_efficiency(trans_uu, trans_ud, trans_du, trans_dd, helium_par, bl
     ratio_1 = ratio_uu_ud[0].params['factor'] * (t_ud / t_uu)
     ratio_2 = ratio_dd_du[0].params['factor'] * (t_du / t_dd)
 
-    p_sm = (ratio_1 - 1) / (pol_uu + (ratio_1 * pol_ud))
-    p_sm_f = (ratio_2 - 1) / (pol_dd + (ratio_2 * pol_du))
+    p_sm = (ratio_1 - 1.0) / (pol_uu + (ratio_1 * pol_ud))
+    p_sm_f = (ratio_2 - 1.0) / (pol_dd + (ratio_2 * pol_du))
 
     params_dict = OrderedDict(
         [
@@ -1915,7 +1915,7 @@ def spin_leakage_corr(data_uu, data_ud, data_du, data_dd, blocked_beam, flipper_
     p_sm_f = flipper_obj.params['eff_sm_down']
 
     # 2. Extract He3 cell parameters from helium_par
-    cell = helium_par[0]['cells']
+    cell = helium_par.params['cells']
     cell_info = list(cell.values())[0]
     rho0 = cell_info['P0']
     gamma = cell_info['Gamma']
