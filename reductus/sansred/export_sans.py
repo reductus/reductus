@@ -7,6 +7,7 @@ from io import BytesIO
 import h5py
 import numpy as np
 
+from reductus.dataflow.lib.uncertainty import Uncertainty
 from reductus.sansred.sansdata import Sans1dData, SansIQData, SansData
 
 Path_Like = os.path, pathlib.Path, str
@@ -86,32 +87,63 @@ def export_to_nxcansas(data: SansIQData, f_path: Path_Like) -> dict:
         nxentry["run"] = data.metadata.get("run.instrumentScanID", 0)
         nxentry["title"] = data.metadata["sample.description"]
 
-        # TODO: Differentiate 1D vs. 2D data here
         # Add data
         data_group = nxentry.create_group("data")
-        data_group.attrs.update({
-            "NX_class": "NXdata",
-            "canSAS_class": "SASdata",
-            "signal": "I",
-            "I_axes": "Q",
-            "Q_indices": [0]
-        })
-        data_group["I"] = data.I
-        data_group["I"].attrs.update({
-            "units": "1/cm",
-            "uncertainties": "Idev"
-        })
-        data_group["Q"] = data.Q
-        data_group["Q"].attrs.update({
-            "units": "1/A",
-            "resolutions": "dQ"
-        })
-        data_group["dQ"] = data.dQ
-        data_group["dQ"].attrs["units"] = "1/A"
-        data_group["Idev"] = data.dI
-        data_group["Idev"].attrs["units"] = "1/cm"
-        data_group["Qmean"] = data.meanQ
-        data_group["ShadowFactor"] = data.ShadowFactor
+        if isinstance(data, SansData):
+            data_group.attrs.update({
+                "NX_class": "NXdata",
+                "canSAS_class": "SASdata",
+                "signal": "I",
+                "I_axes": "Qx, Qy",
+                "Q_indices": [0,1]
+            })
+            if isinstance(data.data, Uncertainty):
+                data_group["I"] = data.data.x
+                data_group["Idev"] = data.data.dx
+            else:
+                data_group["I"] = data.data
+            data_group["I"].attrs.update({
+                "units": "1/cm",
+                "uncertainties": "Idev"
+            })
+            data_group["Q"] = [data.qx, data.qy]
+            if hasattr(data, "qz"):
+                data_group["Q"].append(data.qz)
+                data_group.attrs["I_axes"] = "Qx, Qy, Qz"
+                data_group.attrs["Q_indices"] = [0, 1, 2]
+            data_group["Q"].attrs.update({
+                "units": "1/A",
+                "resolutions": "dQ"
+            })
+            data_group["dQ"] = [data.dq_perp, data.dq_para]
+            data_group["dQ"].attrs["units"] = "1/A"
+            data_group["Idev"].attrs["units"] = "1/cm"
+            data_group["Qmean"] = data.meanQ
+            data_group["ShadowFactor"] = data.shadow_factor
+        else:
+            data_group.attrs.update({
+                "NX_class": "NXdata",
+                "canSAS_class": "SASdata",
+                "signal": "I",
+                "I_axes": "Q",
+                "Q_indices": [0]
+            })
+            data_group["I"] = data.I
+            data_group["I"].attrs.update({
+                "units": "1/cm",
+                "uncertainties": "Idev"
+            })
+            data_group["Q"] = data.Q
+            data_group["Q"].attrs.update({
+                "units": "1/A",
+                "resolutions": "dQ"
+            })
+            data_group["dQ"] = data.dQ
+            data_group["dQ"].attrs["units"] = "1/A"
+            data_group["Idev"] = data.dI
+            data_group["Idev"].attrs["units"] = "1/cm"
+            data_group["Qmean"] = data.meanQ
+            data_group["ShadowFactor"] = data.ShadowFactor
 
         # Add sample information
         sample_entry = nxentry.create_group('sassample')
