@@ -2,7 +2,7 @@ import csv
 import pathlib
 import os
 
-from io import BytesIO
+from collections import OrderedDict
 
 import h5py
 import numpy as np
@@ -30,6 +30,7 @@ def export_to_csv(data, file_path: Path_Like) -> bool:
 
 def export_to_ascii(data, file_path: Path_Like = "", extension: str = ".txt", delimiter: str = " ") -> dict:
     # Ensure a file path is supplied and construct the path, if needed
+    success = True
     if not file_path:
         return {}
     # Determine the data type (1D reduced, 2D reduced, 2D pixel space, etc.) and assign headers/locations for each data
@@ -64,9 +65,8 @@ def export_to_ascii(data, file_path: Path_Like = "", extension: str = ".txt", de
 
 
 def export_to_nxcansas(data: SansIQData, f_path: Path_Like) -> dict:
-    # TODO: Allow for 2D data to be exported
     # Ensure data is in Q-space (reduced data only!) and if it is 1D or 2D data
-    if not isinstance(data, SansIQData):
+    if not isinstance(data, (SansIQData, SansData)):
         return {}
 
     full_path = _get_full_path(f_path, data, '.h5')
