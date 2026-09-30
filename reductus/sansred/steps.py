@@ -2406,11 +2406,7 @@ def mask_1d_data(data: list[SansIQData | Sans1dData],
         mask_indices = mask_indices * len(data)
     for dataset, mask in zip(data, mask_indices):
         data_set = copy(dataset)
-        if mask[0] and mask[1]:
-            # Both non-zero values => slice
-            data_set.q_slice = [mask[0] - 1, 0 - mask[1]]
-        else:
-            data_set.q_slice = None
+        data_set.q_slice = [mask[0] - 1 if mask[0] else 1, 0 - mask[1] if mask[1] else -1]
         returns.append(data_set.masked())
     return returns
 
