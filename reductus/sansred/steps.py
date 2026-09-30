@@ -1423,7 +1423,7 @@ def subtract(subtrahend, minuend, align_by='run.configuration'):
         return [(s - m) for s,m in itertools.zip_longest(subtrahend, minuend, fillvalue=minuend[-1])]
 
 @module
-def product(data, factor_param, align_by="sample.description,run.configuration,sample.temp,mag.value"):
+def product(data, factor_param, align_by="sample.description"):
     """
     Algebraic multiplication of dataset
 
@@ -2186,22 +2186,22 @@ def single_configuration(
                 "config": {"filelist": [], "subsort": add_keyword, "add_scattering": add_scatt}
             },
             {"x": 200, "y": 5, "title": "BB Subtract from Sample", "module": "ncnr.sans.subtract",
-                "config": {"align_by": "analysis.blocked_beam,run.configuration"}
+                "config": {"align_by": "analysis.blocked_beam, run.configuration"}
             },
             {"x": 200, "y": 65, "title": "BB Subtract from Empty Cell", "module": "ncnr.sans.subtract",
-                "config": {"align_by": "analysis.blocked_beam,run.configuration"}
+                "config": {"align_by": "analysis.blocked_beam, run.configuration"}
             },
             {"x": 200, "y": 155, "title": "Empty Transmission", "module": "ncnr.sans.generate_transmission",
-                "config": {"auto_integrate": True, "align_by": "analysis.open_beam,run.configuration"}
+                "config": {"auto_integrate": True, "align_by": "analysis.open_beam, run.configuration"}
             },
             {"x": 685, "y": 95, "title": "Transmission Values", "module": "ncnr.sans.generate_transmission",
-                "config": {"auto_integrate": True, "align_by": "analysis.open_beam,run.configuration"}
+                "config": {"auto_integrate": True, "align_by": "analysis.open_beam, run.configuration"}
             },
             {"x": 365, "y": 35, "title": "Scale by Transmission", "module": "ncnr.sans.product",
-                "config": {"align_by": "sample.uuid,sample.groupID,sample.description"} # TODO: Finish me
+                "config": {"align_by": "sample.GroupID"}
             },
             {"x": 525, "y": 5, "title": "Subtract Empty Cell from Sample", "module": "ncnr.sans.subtract",
-                "config": {"align_by": "analysis.empty_cell,run.configuration"}
+                "config": {"align_by": "analysis.empty_cell, run.configuration"}
             },
             {"x": 525, "y": 65, "title": "Load DIV", "module": "ncnr.sans.LoadDIV",
                 "config": {"filelist": [{
