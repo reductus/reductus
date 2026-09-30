@@ -921,8 +921,6 @@ def circular_av_new(data_sets, q_min=None, q_max=None, q_step=None, mask_width=3
 
     for data in data_sets:
         # adding simple width-based mask around the perimeter:
-        if data.Tsam:
-            data.metadata["sample.trans"] = data.Tsam
         mask = np.zeros_like(data.q, dtype=bool)
         mask_width = abs(mask_width)
         if (mask_width > 0):
@@ -1707,6 +1705,7 @@ def absolute_scaling(empty, sample, Tsam, div, instrument="NG7", integration_box
     #-----Using Kappa to Scale data-----#
     Dsam = sample.metadata['sample.thk'] / 10  # Sample thickness in mm => convert to cm
     ABS = sample.__mul__(1/(kappa*Dsam*Tsam_factor))
+    ABS.metadata['sample.trans'] = str(Tsam_factor)
 
     params = OrderedDict([
         ("DETCNT", detCnt.x),
