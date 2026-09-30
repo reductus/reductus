@@ -130,6 +130,17 @@ def readSANSNexuz(input_file, file_obj=None, metadata_lookup=metadata_lookup):
         metadata = load_metadata(
             entry, 1, 0, metadata_lookup_table=metadata_lookup, unit_specifiers_table=unit_specifiers
         )
+        # For easy matching, map the file ID to the file type for files used in reduction.
+        #  This will allow an easy mapping of the blocked_beam to the sample without modifying other code sections.
+        match metadata.get('analysis.intent', None):
+            case 'Blocked Beam':
+                metadata['analysis.blocked_beam'] = metadata['sample.localID']
+            case 'Empty Cell':
+                metadata['analysis.empty_cell'] = metadata['sample.localID']
+            case 'Open Beam':
+                metadata['analysis.open_beam'] = metadata['sample.localID']
+            case _:
+                pass
         metadata['entry'] = entryname
         metadata['sample.description'] = _s(metadata["sample.labl"]).replace(_s(metadata["run.configuration"]), "")
         detector_keys = ['detector']
