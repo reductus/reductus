@@ -166,7 +166,7 @@ def load_detector(dobj, load_data=True):
 def load_metadata(
         entry: h5py.Group,
         multiplicity: int = 1,
-        i: int = 1,
+        i: int = 0,
         metadata_lookup_table: dict[str, tuple[str] | str] = metadata_lookup,
         unit_specifiers_table: dict[str, str] = unit_specifiers
 ):
@@ -191,17 +191,24 @@ def load_metadata(
                     field = data_as(field, unit_specifiers_table[mkey])
                 else:
                     field = field[()]
+
+                if len(field) == multiplicity:
+                    field = field[i]
+                else:
+                    field = field
+
                 if field.dtype.kind == 'f':
                     field = field.astype("float")
                 elif field.dtype.kind == 'i':
                     field = field.astype("int")
+                elif field.dtype.kind == 'b' or isinstance(field, np.bytes_):
+                    field = field.decode("utf-8")
 
-                if len(field) == multiplicity:
-                    metadata[mkey] = field[i]
-                else:
-                    metadata[mkey] = field
-            else:
                 metadata[mkey] = field
+                # Break out of inner loop when a value is assigned
+                break
+            else:
+                metadata[mkey] = metadata.get(mkey, None)
     return metadata
 
 def readVSANSNexuz(input_file, file_obj=None, metadata_lookup=metadata_lookup, load_data=True):
