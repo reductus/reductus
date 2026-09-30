@@ -16,7 +16,7 @@ Path_Like = os.path, pathlib.Path, str
 def _get_full_path(f_path: Path_Like, data: SansData, ext: str):
     f_path = pathlib.Path(f_path)
     if f_path.is_dir():
-        file_name = data.metadata.get("run.filename", b"default_name").decode('UTF-8') + ext
+        file_name = data.metadata.get("run.filename", "default_name") + ext
         full_path = f_path / file_name
     else:
         full_path = f_path
