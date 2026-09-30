@@ -112,9 +112,7 @@ class SansData:
             result.data = self.data/other
         return result
     def __mul__(self, other):
-        # TODO: Add a separate method to assign the transmission value
         result = self.copy()
-        result.Tsam = other
         if isinstance(other, SansData):
             result.data = self.data * other.data
         else:
