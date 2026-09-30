@@ -263,13 +263,17 @@ def autosort(rawdata, subsort="sample.labl", add_scattering=True, trans_sort="ru
             added_samples[key] = addSimple(added_samples[key])
         sample_scatt = list(added_samples.values())
 
-    scatt_config = sample_scatt[0].metadata.get(trans_sort, '').replace(b' Scatt', b'').replace(b' Trans', b'')
-    trans_config = sample_trans[0].metadata.get(trans_sort, '').replace(b' Scatt', b'').replace(b' Trans', b'')
+    scatt_configs = set([
+        sample_i.metadata.get(trans_sort, '').replace('Scatt', '').replace('Trans', '').strip()
+        for sample_i in sample_scatt])
+    trans_configs = set([
+        sample_i.metadata.get(trans_sort, '').replace('Scatt', '').replace('Trans', '').strip()
+        for sample_i in sample_trans])
     for open in open_trans:
-        sort_val = open.metadata.get(trans_sort, '').replace(b' Scatt', b'').replace(b' Trans', b'')
-        if sort_val == scatt_config:
+        sort_val = open.metadata.get(trans_sort, '').replace('Scatt', '').replace('Trans', '').strip()
+        if sort_val in scatt_configs:
             open_beam_absolute.append(open)
-        if sort_val == trans_config:
+        if sort_val in trans_configs:
             open_beam_trans.append(open)
 
     return sample_scatt, blocked_beam, empty_scatt, sample_trans, empty_trans, open_beam_absolute, open_beam_trans
