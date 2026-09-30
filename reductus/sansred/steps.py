@@ -7,6 +7,7 @@ Set of reduction steps for SANS reduction.
 
 from __future__ import print_function
 
+import itertools
 import os
 import pathlib
 from posixpath import basename
@@ -262,13 +263,17 @@ def autosort(rawdata, subsort="sample.labl", add_scattering=True, trans_sort="ru
             added_samples[key] = addSimple(added_samples[key])
         sample_scatt = list(added_samples.values())
 
-    scatt_config = sample_scatt[0].metadata.get(trans_sort, '').replace(b' Scatt', b'').replace(b' Trans', b'')
-    trans_config = sample_trans[0].metadata.get(trans_sort, '').replace(b' Scatt', b'').replace(b' Trans', b'')
+    scatt_configs = set([
+        sample_i.metadata.get(trans_sort, '').replace('Scatt', '').replace('Trans', '').strip()
+        for sample_i in sample_scatt])
+    trans_configs = set([
+        sample_i.metadata.get(trans_sort, '').replace('Scatt', '').replace('Trans', '').strip()
+        for sample_i in sample_trans])
     for open in open_trans:
-        sort_val = open.metadata.get(trans_sort, '').replace(b' Scatt', b'').replace(b' Trans', b'')
-        if sort_val == scatt_config:
+        sort_val = open.metadata.get(trans_sort, '').replace('Scatt', '').replace('Trans', '').strip()
+        if sort_val in scatt_configs:
             open_beam_absolute.append(open)
-        if sort_val == trans_config:
+        if sort_val in trans_configs:
             open_beam_trans.append(open)
 
     return sample_scatt, blocked_beam, empty_scatt, sample_trans, empty_trans, open_beam_absolute, open_beam_trans
@@ -916,8 +921,6 @@ def circular_av_new(data_sets, q_min=None, q_max=None, q_step=None, mask_width=3
 
     for data in data_sets:
         # adding simple width-based mask around the perimeter:
-        if data.Tsam:
-            data.metadata["sample.trans"] = data.Tsam
         mask = np.zeros_like(data.q, dtype=bool)
         mask_width = abs(mask_width)
         if (mask_width > 0):
@@ -1358,6 +1361,12 @@ def _generate_transmission(in_beam, empty_beam, integration_box=None, auto_integ
         ("factor_err", np.sqrt(ratio.variance)),
         ("run.configuration", in_beam.metadata['run.configuration']),
         ("sample.description", in_beam.metadata['sample.description']),
+        ('sample.GroupID', in_beam.metadata['sample.GroupID']),
+        ('sample.localID', in_beam.metadata['sample.localID']),
+        ('reduction.openbeam.description', empty_beam.metadata['sample.description'] if empty_beam else "None"),
+        ('reduction.openbeam.filename', empty_beam.metadata['run.filename'] if empty_beam else "None"),
+        ('reduction.openbeam.GroupID', empty_beam.metadata['sample.GroupID'] if empty_beam else "None"),
+        ('reduction.openbeam.localID', empty_beam.metadata['sample.localID'] if empty_beam else "None"),
         ("det.des_dis", in_beam.metadata['det.des_dis']),
         ("resolution.lmda", in_beam.metadata['resolution.lmda']),
         ("run.guide", in_beam.metadata['run.guide']),
@@ -1413,10 +1422,10 @@ def subtract(subtrahend, minuend, align_by='run.configuration'):
         align_lookup = dict([(get_compound_key(m.metadata, align_by), m) for m in minuend])
         return [(s - align_lookup[get_compound_key(s.metadata, align_by)]) for s in subtrahend]
     else:
-        return [(s - m) for s,m in zip(subtrahend, minuend)]
+        return [(s - m) for s,m in itertools.zip_longest(subtrahend, minuend, fillvalue=minuend[-1])]
 
 @module
-def product(data, factor_param, align_by="sample.description,run.configuration,sample.temp,mag.value"):
+def product(data, factor_param, align_by="sample.description"):
     """
     Algebraic multiplication of dataset
 
@@ -1696,6 +1705,7 @@ def absolute_scaling(empty, sample, Tsam, div, instrument="NG7", integration_box
     #-----Using Kappa to Scale data-----#
     Dsam = sample.metadata['sample.thk'] / 10  # Sample thickness in mm => convert to cm
     ABS = sample.__mul__(1/(kappa*Dsam*Tsam_factor))
+    ABS.metadata['sample.trans'] = str(Tsam_factor)
 
     params = OrderedDict([
         ("DETCNT", detCnt.x),
@@ -2178,16 +2188,24 @@ def single_configuration(
             {"x": 10, "y": 65, "title": "Sorted Data", "module": "ncnr.sans.autosort",
                 "config": {"filelist": [], "subsort": add_keyword, "add_scattering": add_scatt}
             },
-            {"x": 200, "y": 5, "title": "BB Subtract from Sample", "module": "ncnr.sans.subtract"},
-            {"x": 200, "y": 65, "title": "BB Subtract from Empty Cell", "module": "ncnr.sans.subtract"},
+            {"x": 200, "y": 5, "title": "BB Subtract from Sample", "module": "ncnr.sans.subtract",
+                "config": {"align_by": "run.configuration"}
+            },
+            {"x": 200, "y": 65, "title": "BB Subtract from Empty Cell", "module": "ncnr.sans.subtract",
+                "config": {"align_by": "run.configuration"}
+            },
             {"x": 200, "y": 155, "title": "Empty Transmission", "module": "ncnr.sans.generate_transmission",
-                "config": {"auto_integrate": True}
+                "config": {"auto_integrate": True, "align_by": "run.configuration"}
             },
             {"x": 685, "y": 95, "title": "Transmission Values", "module": "ncnr.sans.generate_transmission",
-                "config": {"auto_integrate": True}
+                "config": {"auto_integrate": True, "align_by": "run.configuration"}
             },
-            {"x": 365, "y": 35, "title": "Scale by Transmission", "module": "ncnr.sans.product"},
-            {"x": 525, "y": 5, "title": "Subrtract Empty Cell from Sample", "module": "ncnr.sans.subtract"},
+            {"x": 365, "y": 35, "title": "Scale by Transmission", "module": "ncnr.sans.product",
+                "config": {"align_by": "sample.GroupID"}
+            },
+            {"x": 525, "y": 5, "title": "Subtract Empty Cell from Sample", "module": "ncnr.sans.subtract",
+                "config": {"align_by": "run.configuration"}
+            },
             {"x": 525, "y": 65, "title": "Load DIV", "module": "ncnr.sans.LoadDIV",
                 "config": {"filelist": [{
                     "path": "ncnrdata/ancillary/ng7sans/DIV/PLEX_20190719_NG7.DIV", "source": "ncnr",
@@ -2214,8 +2232,8 @@ def single_configuration(
             {"source": [1, "blocked_beam"], "target": [2, "minuend"]},
             {"source": [1, "blocked_beam"], "target": [3, "minuend"]},
             {"source": [1, "empty_scatt"], "target": [3, "subtrahend"]},
-            {"source": [1, "sample_trans"], "target": [4, "in_beam"]},
-            {"source": [1, "empty_trans"], "target": [4, "empty_beam"]},
+            {"source": [1, "empty_trans"], "target": [4, "in_beam"]},
+            {"source": [1, "open_beam_trans"], "target": [4, "empty_beam"]},
             {"source": [1, "sample_trans"], "target": [5, "in_beam"]},
             {"source": [1, "open_beam_trans"], "target": [5, "empty_beam"]},
             {"source": [3, "output"], "target": [6, "data"]},
@@ -2387,11 +2405,7 @@ def mask_1d_data(data: list[SansIQData | Sans1dData],
         mask_indices = mask_indices * len(data)
     for dataset, mask in zip(data, mask_indices):
         data_set = copy(dataset)
-        if mask[0] and mask[1]:
-            # Both non-zero values => slice
-            data_set.q_slice = [mask[0] - 1, 0 - mask[1]]
-        else:
-            data_set.q_slice = None
+        data_set.q_slice = [mask[0] - 1 if mask[0] else 1, 0 - mask[1] if mask[1] else -1]
         returns.append(data_set.masked())
     return returns
 
