@@ -1910,9 +1910,8 @@ def spin_leakage_corr(data_uu, data_ud, data_du, data_dd, blocked_beam, flipper_
         | 2026-09-23 Jonathan Gaudet
         """
 
-    flipper_obj = flipper_par[0] if isinstance(flipper_par, list) else flipper_par
-    p_sm = flipper_obj.params['eff_sm_up']
-    p_sm_f = flipper_obj.params['eff_sm_down']
+    p_sm = flipper_par.params['eff_sm_up']
+    p_sm_f = flipper_par.params['eff_sm_down']
 
     # 2. Extract He3 cell parameters from helium_par
     cell = helium_par.params['cells']
@@ -1923,15 +1922,15 @@ def spin_leakage_corr(data_uu, data_ud, data_du, data_dd, blocked_beam, flipper_
     # Convert Insert_time into hours
     t0_cell = (cell_info['Insert_time'] / 1000.0) / 3600.0
 
-    opacity1ang = float(_s(data_uu.metadata['analyzer.opacity1ang']))
+    opacity1ang = float(_s(data_uu.metadata['he3_back.opacity']))
     wavelength = float(_s(data_uu.metadata['resolution.lmda']))
     mu = opacity1ang * wavelength
-    trans_glass = float(_s(data_uu.metadata['analyzer.GlassTransmission']))
+    trans_glass = float(_s(data_uu.metadata['he3_back.te']))
 
-    epsilon_uu = (1 + p_sm) / 2.0
-    epsilon_ud = (1 - p_sm) / 2.0
-    epsilon_dd = (1 + p_sm_f) / 2.0
-    epsilon_du = (1 - p_sm_f) / 2.0
+    epsilon_uu = (1.0 + p_sm) / 2.0
+    epsilon_ud = (1.0 - p_sm) / 2.0
+    epsilon_dd = (1.0 + p_sm_f) / 2.0
+    epsilon_du = (1.0 - p_sm_f) / 2.0
 
     time_avg = (get_avg_run_time(data_uu) + get_avg_run_time(data_ud) + get_avg_run_time(data_du) + get_avg_run_time(data_dd)) / 4.0
     time_avg = time_avg - t0_cell
@@ -1990,15 +1989,15 @@ def set_pol_corr_matrix(eps_uu, eps_ud, eps_dd, eps_du, tmaj, tmin):
                    [eps_uu * tmin, eps_uu * tmaj, eps_ud * tmin, eps_ud * tmaj],
                    [eps_du * tmaj, eps_du * tmin, eps_dd * tmaj, eps_dd * tmin],
                    [eps_du * tmin, eps_du * tmaj, eps_dd * tmin, eps_dd * tmaj]
-                ])
+                ], dtype=float)
 
-    inv_corr_matrix = np.linalg.inv(matrix_corr)
+    det = np.linalg.det(matrix_corr)
 
-    return inv_corr_matrix
+    return np.linalg.inv(matrix_corr)
 
 
 @module
-def extract_mag_nuc_components(data_uu, data_ud, data_du, data_dd, angle_width=30.0):
+def extract_mag_nuc_components(data_uu, data_ud, data_du, data_dd, angle_width=30.0, q_step=0.001):
     # TODO: absolute scaling to add
     """
     given the 4 spin-leakage corrected full pol crossections in pixels space, this routine extracts the nuclear and magnetic scattering components.
@@ -2017,15 +2016,15 @@ def extract_mag_nuc_components(data_uu, data_ud, data_du, data_dd, angle_width=3
 
     angle_width (float) : angular width (in degrees) of the sector cuts performed to extract Mpar, Mperp, and N^2
 
+    q_step (float): step size in Q of the 1D intensity vs Q cuts obtained for different scattering components
+
     **Returns**
 
-    nuclear(qspace)  : 1D I vs Q nuclear scattering (N^2)
+    nuclear(v1d[])  : 1D I vs Q nuclear scattering (N^2)
 
-    mag_par(qspace) : 1D I vs Q magnetic parallel to field scattering component (M_par^2)
+    mag_par(v1d[]) : 1D I vs Q magnetic parallel to field scattering component (M_par^2)
 
-    mag_par_diag(qspace) : 1D I vs Q magnetic parallel to field scattering component (M_par^2)
-
-    mag_perp(qspace) : 1D I vs Q magnetic perpendicular to field scattering component (M_perp^2)
+    mag_perp(v1d[]) : 1D I vs Q magnetic perpendicular to field scattering component (M_perp^2)
 
     2026-09-23 Jonathan Gaudet
     """
@@ -2050,29 +2049,216 @@ def extract_mag_nuc_components(data_uu, data_ud, data_du, data_dd, angle_width=3
     data_du_q = calculate_Q(data_du_xy_sha2)
     data_dd_q = calculate_Q(data_dd_xy_sha2)
 
+    nuc1_mean_mask = sector_cut(data_uu_q.copy(), [0.0, angle_width], mirror=False)
+    nuc2_mean_mask = sector_cut(data_dd_q.copy(), [0.0, angle_width], mirror=False)
 
-    nuc1_nom, nuc1_mean = sector_cut(data_uu_q, [0.0, angle_width])
-    nuc2_nom, nuc2_mean = sector_cut(data_dd_q, [0.0, angle_width])
+    nuc1_mean = circular_av_new(nuc1_mean_mask)
+    nuc2_mean = circular_av_new(nuc2_mean_mask)
 
-    nuclear = (nuc1_mean + nuc2_mean) / 2.0
+    mperp1_mean_mask = sector_cut(data_ud_q.copy(), [0.0, angle_width], mirror=False)
+    mperp2_mean_mask = sector_cut(data_du_q.copy(), [0.0, angle_width], mirror=False)
+    mperp3_mean_mask = sector_cut(data_ud_q.copy(), [90.0, angle_width], mirror=False)
+    mperp4_mean_mask = sector_cut(data_du_q.copy(), [90.0, angle_width], mirror=False)
 
-    mperp1_nom, mperp1_mean = sector_cut(data_ud_q, [0.0, angle_width])
-    mperp2_nom, mperp2_mean = sector_cut(data_du_q, [0.0, angle_width])
-    mperp3_nom, mperp3_mean = sector_cut(data_ud_q, [90.0, angle_width])
-    mperp4_nom, mperp4_mean = sector_cut(data_du_q, [90.0, angle_width])
+    mperp1_v1d = circular_av_new(mperp1_mean_mask)
+    mperp2_v1d = circular_av_new(mperp2_mean_mask)
+    mperp3_v1d = circular_av_new(mperp3_mean_mask)
+    mperp4_v1d = circular_av_new(mperp4_mean_mask)
 
-    mag_perp = (mperp1_mean + mperp2_mean + mperp3_mean + mperp4_mean) / 6.0
+    mpar1_mean = circular_av_new(sector_cut(data_uu_q.copy(), [90.0, angle_width]))
+    mpar2_mean = circular_av_new(sector_cut(data_dd_q.copy(), [90.0, angle_width]))
 
-    mpar1_nom, mpar1_mean = sector_cut(data_uu_q, [90.0, angle_width])
-    mpar2_nom, mpar2_mean = sector_cut(data_dd_q, [90.0, angle_width])
 
-    mag_par = ((mpar2_mean - mpar1_mean) ** 2) / (16.0 * nuclear)
+    # Determine global Q range across all cuts to guarantee matching array shapes
+    all_cuts = [
+        nuc1_mean,
+        nuc2_mean,
+        mperp1_v1d,
+        mperp2_v1d,
+        mperp3_v1d,
+        mperp4_v1d,
+        mpar1_mean,
+        mpar2_mean,
+    ]
+    q_all, _, _ = v1d_list_to_point_cloud(
+        [item for cut in all_cuts for item in cut]
+    )
 
-    mpar1_diag_nom, mpar1_diag_mean = sector_cut(data_ud_q, [45.0, angle_width])
-    mpar2_diag_nom, mpar2_diag_mean = sector_cut(data_du_q, [45.0, angle_width])
-    mpar3_diag_nom, mpar3_diag_mean = sector_cut(data_ud_q, [135.0, angle_width])
-    mpar4_diag_nom, mpar4_diag_mean = sector_cut(data_du_q, [135.0, angle_width])
+    q_min = q_all.min()
+    q_max = q_all.max()
 
-    mag_par_diag = (mpar1_diag_mean + mpar2_diag_mean + mpar3_diag_mean + mpar4_diag_mean) - (5.0 * mag_perp)
+    nuclear = combine_sector_cuts_to_1d(
+        [nuc1_mean, nuc2_mean],
+        q_min=q_min,
+        q_max=q_max,
+        q_step=q_step,
+        title="Nuclear (N^2)",
+    )
 
-    return nuclear, mag_par, mag_par_diag, mag_perp
+    mag_perp = combine_sector_cuts_to_1d(
+        [mperp1_v1d, mperp2_v1d, mperp3_v1d, mperp4_v1d],
+        scales=[0.5, 0.5, 1, 1],
+        q_min=q_min,
+        q_max=q_max,
+        q_step=q_step,
+        title="Magnetic Perpendicular (M_perp^2)",
+    )
+
+    uu_90_1d = combine_sector_cuts_to_1d(
+        [mpar1_mean],
+        scales=[1.0],
+        q_min=q_min,
+        q_max=q_max,
+        q_step=q_step,
+        title="UU 90 deg",
+    )
+    dd_90_1d = combine_sector_cuts_to_1d(
+        [mpar2_mean],
+        scales=[1.0],
+        q_min=q_min,
+        q_max=q_max,
+        q_step=q_step,
+        title="DD 90 deg",
+    )
+
+    #Calculate mag_par
+    mag_par = compute_mag_cross_term(uu_90_1d, dd_90_1d, nuclear)
+
+    return nuclear, mag_par, mag_perp
+
+def v1d_list_to_point_cloud(v1d_list, scale=1.0):
+    """
+    Loops through each detector panel in circular_av_new output,
+    applies a scalar multiplier to intensity and variance, and returns flat 1D arrays.
+    """
+    q_pts, i_pts, var_pts = [], [], []
+
+    for panel in v1d_list:
+        q = panel.x
+        i = panel.v * scale
+        var = ((panel.dv) ** 2) * (scale ** 2)  # Var(c*I) = c^2 * Var(I)
+
+        valid = np.isfinite(q) & np.isfinite(i) & np.isfinite(var) & (var > 0)
+
+        q_pts.append(q[valid])
+        i_pts.append(i[valid])
+        var_pts.append(var[valid])
+
+    return np.concatenate(q_pts), np.concatenate(i_pts), np.concatenate(var_pts)
+
+def bin_data_cloud(
+    q_cloud,
+    i_cloud,
+    var_cloud,
+    q_min=None,
+    q_max=None,
+    q_step=0.001,
+    num_bins=100,
+):
+    q_min = q_cloud.min() if q_min is None else q_min
+    q_max = q_cloud.max() if q_max is None else q_max
+
+    bin_edges = np.arange(q_min, q_max + q_step, q_step)
+    q_centers = 0.5 * (bin_edges[:-1] + bin_edges[1:])
+
+    weights = 1.0 / var_cloud
+
+    weighted_i_sum, _ = np.histogram(
+        q_cloud, bins=bin_edges, weights=i_cloud * weights
+    )
+    weight_sum, _ = np.histogram(q_cloud, bins=bin_edges, weights=weights)
+
+    nonzero = weight_sum > 0
+
+    i_binned = np.full_like(q_centers, np.nan)
+    di_binned = np.full_like(q_centers, np.nan)
+
+    i_binned[nonzero] = weighted_i_sum[nonzero] / weight_sum[nonzero]
+    di_binned[nonzero] = np.sqrt(1.0 / weight_sum[nonzero])
+
+    # RETURN THE FULL ALIGNED GRID (Do not drop NaNs here!)
+    return q_centers, i_binned, di_binned
+
+def combine_sector_cuts_to_1d(
+    v1d_cuts_list,
+    scales=None,
+    q_min=None,
+    q_max=None,
+    q_step=0.001,
+    title="Combined",
+):
+    if scales is None:
+        scales = [1.0] * len(v1d_cuts_list)
+
+    q_clouds, i_clouds, var_clouds = [], [], []
+
+    for v1d_list, scale in zip(v1d_cuts_list, scales):
+        q_c, i_c, var_c = v1d_list_to_point_cloud(v1d_list, scale=scale)
+        q_clouds.append(q_c)
+        i_clouds.append(i_c)
+        var_clouds.append(var_c)
+
+    q_master = np.concatenate(q_clouds)
+    i_master = np.concatenate(i_clouds)
+    var_master = np.concatenate(var_clouds)
+
+    q_final, i_final, di_final = bin_data_cloud(
+        q_master, i_master, var_master, q_min=q_min, q_max=q_max, q_step=q_step
+    )
+
+    template_panel = v1d_cuts_list[0][0]
+    result = template_panel._copy_with(i_final, di_final)
+    result.x = q_final
+    result.dx = np.zeros_like(q_final)
+    result.metadata["title"] = title
+
+    return [result]
+
+def compute_mag_cross_term(uu_90_1d, dd_90_1d, nuclear_1d):
+    uu_obj = uu_90_1d[0]
+    dd_obj = dd_90_1d[0]
+    nuc_obj = nuclear_1d[0]
+
+    A = np.asarray(dd_obj.v)
+    var_A = np.asarray(dd_obj.dv) ** 2
+
+    B = np.asarray(uu_obj.v)
+    var_B = np.asarray(uu_obj.dv) ** 2
+
+    N = np.asarray(nuc_obj.v)
+    var_N = np.asarray(nuc_obj.dv) ** 2
+
+
+    diff = A - B
+    num = diff**2
+    den = 16.0 * N
+
+    # Filter invalid/NaN points across A, B, and N simultaneously
+    valid = (N > 0) & np.isfinite(A) & np.isfinite(B) & np.isfinite(N)
+
+    y = np.full_like(A, np.nan)
+    dy = np.full_like(A, np.nan)
+
+    y[valid] = num[valid] / den[valid]
+
+    diff_sq = diff[valid] ** 2
+    nonzero_diff = diff_sq > 0
+
+    rel_var_num = np.zeros_like(diff_sq)
+    rel_var_num[nonzero_diff] = (
+        4.0 * (var_A[valid][nonzero_diff] + var_B[valid][nonzero_diff])
+    ) / diff_sq[nonzero_diff]
+
+    rel_var_den = var_N[valid] / (N[valid] ** 2)
+
+    dy[valid] = y[valid] * np.sqrt(rel_var_num + rel_var_den)
+
+    # Clean up NaNs from final result array before returning
+    final_mask = np.isfinite(y)
+
+    res_obj = nuc_obj._copy_with(y[final_mask], dy[final_mask])
+    res_obj.x = nuc_obj.x[final_mask]
+    res_obj.dx = np.zeros_like(res_obj.x)
+    res_obj.metadata["title"] = "Magnetic Cross-Term (M_cross^2)"
+
+    return [res_obj]

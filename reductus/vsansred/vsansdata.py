@@ -445,6 +445,75 @@ class VSans1dData(object):
             "value": value.decode('utf-8'),
         }
 
+    def _copy_with(self, new_v, new_dv):
+        return VSans1dData(
+            x=self.x,
+            v=new_v,
+            dx=self.dx,
+            dv=new_dv,
+            xlabel=self.xlabel,
+            vlabel=self.vlabel,
+            xunits=self.xunits,
+            vunits=self.vunits,
+            xscale=self.xscale,
+            vscale=self.vscale,
+            metadata=self.metadata,
+            fit_function=self.fit_function
+        )
+
+    def __add__(self, other):
+        if isinstance(other, VSans1dData):
+            return self._copy_with(self.v + other.v, np.sqrt(self.dv ** 2 + other.dv ** 2))
+        return self._copy_with(self.v + other, self.dv)
+
+    def __radd__(self, other):
+        return self.__add__(other)
+
+    def __sub__(self, other):
+        if isinstance(other, VSans1dData):
+            return self._copy_with(self.v - other.v, np.sqrt(self.dv ** 2 + other.dv ** 2))
+        return self._copy_with(self.v - other, self.dv)
+
+    def __rsub__(self, other):
+        return self._copy_with(other - self.v, self.dv)
+
+    def __mul__(self, other):
+        if isinstance(other, VSans1dData):
+            new_v = self.v * other.v
+            rel_err_self = np.where(self.v != 0, self.dv / self.v, 0.0)
+            rel_err_other = np.where(other.v != 0, other.dv / other.v, 0.0)
+            new_dv = np.abs(new_v) * np.sqrt(rel_err_self ** 2 + rel_err_other ** 2)
+            return self._copy_with(new_v, new_dv)
+        return self._copy_with(self.v * other, self.dv * abs(other))
+
+    def __rmul__(self, other):
+        return self.__mul__(other)
+
+    def __truediv__(self, other):
+        if isinstance(other, VSans1dData):
+            with np.errstate(divide='ignore', invalid='ignore'):
+                new_v = np.where(other.v != 0, self.v / other.v, 0.0)
+                rel_err_self = np.where(self.v != 0, self.dv / self.v, 0.0)
+                rel_err_other = np.where(other.v != 0, other.dv / other.v, 0.0)
+                new_dv = np.abs(new_v) * np.sqrt(rel_err_self ** 2 + rel_err_other ** 2)
+                new_dv = np.nan_to_num(new_dv, nan=0.0, posinf=0.0, neginf=0.0)
+            return self._copy_with(new_v, new_dv)
+        return self._copy_with(self.v / other, self.dv / abs(other))
+
+    def __rtruediv__(self, other):
+        with np.errstate(divide='ignore', invalid='ignore'):
+            new_v = np.where(self.v != 0, other / self.v, 0.0)
+            rel_err = np.where(self.v != 0, self.dv / self.v, 0.0)
+            new_dv = np.abs(new_v) * rel_err
+            new_dv = np.nan_to_num(new_dv, nan=0.0, posinf=0.0, neginf=0.0)
+        return self._copy_with(new_v, new_dv)
+
+    def __pow__(self, power):
+        new_v = self.v ** power
+        new_dv = np.abs(power * (self.v ** (power - 1)) * self.dv)
+        new_dv = np.nan_to_num(new_dv, nan=0.0, posinf=0.0, neginf=0.0)
+        return self._copy_with(new_v, new_dv)
+
 class Sans1dData(object):
     properties = ['x', 'v', 'dx', 'dv', 'xlabel', 'vlabel', 'xunits', 'vunits', 'xscale', 'vscale', 'metadata', 'fit_function']
 
