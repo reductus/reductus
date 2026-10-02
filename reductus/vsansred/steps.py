@@ -2294,3 +2294,326 @@ def compute_mag_cross_term(uu_90_1d, dd_90_1d, nuclear_1d):
     res_obj.metadata["title"] = "Magnetic Cross-Term (M_cross^2)"
 
     return [res_obj]
+
+
+from scipy.interpolate import griddata
+
+
+def export_vsans_2d_matrix_grid(sans_qspace, num_points=128, file_suffix=".2d.dat"):
+    """
+    Grids multi-detector VSansDataQSpace data into a single uniform 2D matrix (Qx, Qy, I, dI)
+    compatible with SasView 2D ASCII format, explicitly applying detector masks.
+
+    Unsampled or masked areas are assigned NaN.
+    """
+    qx_all = []
+    qy_all = []
+    i_all = []
+    var_all = []
+
+    # 1. Gather pixel values from all detector panels
+    for detname, det in sans_qspace.detectors.items():
+        if "data" not in det or "Qx" not in det or "Qy" not in det:
+            continue
+
+        qx_panel = det["Qx"].ravel('C')
+        qy_panel = det["Qy"].ravel('C')
+        i_panel = det["data"].x.ravel('C')
+        var_panel = det["data"].variance.ravel('C')
+
+        # Start with standard validity check (finite values)
+        valid = np.isfinite(i_panel) & np.isfinite(qx_panel) & np.isfinite(qy_panel)
+
+        # --- MASK CHECKING ---
+        # 1) Check for shadow/detector mask in detector dict
+        if 'shadow_mask' in det:
+            mask = det['shadow_mask'].astype(bool).ravel('C')
+            valid &= ~mask  # Exclude masked pixels (where mask is True)
+        elif 'mask' in det:
+            mask = det['mask'].astype(bool).ravel('C')
+            valid &= ~mask
+
+        # 2) Check for mask inside the Uncertainty object if present
+        if hasattr(det['data'], 'mask') and det['data'].mask is not None:
+            unc_mask = np.asarray(det['data'].mask).astype(bool).ravel('C')
+            valid &= ~unc_mask
+        # ----------------------
+
+        qx_all.append(qx_panel[valid])
+        qy_all.append(qy_panel[valid])
+        i_all.append(i_panel[valid])
+        var_all.append(var_panel[valid])
+
+    if not qx_all:
+        raise ValueError("No valid unmasked detector data found to export.")
+
+    qx_pts = np.concatenate(qx_all)
+    qy_pts = np.concatenate(qy_all)
+    i_pts = np.concatenate(i_all)
+    err_pts = np.sqrt(np.maximum(0, np.concatenate(var_all)))
+
+    # 2. Define uniform 2D Qx, Qy grid boundaries
+    qx_min, qx_max = np.min(qx_pts), np.max(qx_pts)
+    qy_min, qy_max = np.min(qy_pts), np.max(qy_pts)
+
+    qx_1d = np.linspace(qx_min, qx_max, num_points)
+    qy_1d = np.linspace(qy_min, qy_max, num_points)
+    grid_qx, grid_qy = np.meshgrid(qx_1d, qy_1d)
+
+    # 3. Interpolate Intensity and Error onto 2D Grid
+    # Linear interpolation leaves unmeasured/masked regions as NaN
+    grid_i = griddata((qx_pts, qy_pts), i_pts, (grid_qx, grid_qy), method='linear', fill_value=np.nan)
+    grid_di = griddata((qx_pts, qy_pts), err_pts, (grid_qx, grid_qy), method='linear', fill_value=np.nan)
+
+    # 4. Format header and data matrix for SasView
+    filename = str(sans_qspace.metadata.get("run.filename", "vsans_2d"))
+    title = str(sans_qspace.metadata.get("sample.description", "VSANS 2D Grid"))
+
+    lines = [
+        f"ASCII DATA 2D - {title}",
+        f"DATA FOR {filename}",
+        f"Qx_min = {qx_min:.6e}, Qx_max = {qx_max:.6e}",
+        f"Qy_min = {qy_min:.6e}, Qy_max = {qy_max:.6e}",
+        f"Qx_bins = {num_points}, Qy_bins = {num_points}",
+        "Qx (1/A)   Qy (1/A)   I (1/cm)   dI (1/cm)"
+    ]
+
+    for row in range(num_points):
+        for col in range(num_points):
+            qx_val = grid_qx[row, col]
+            qy_val = grid_qy[row, col]
+            val_i = grid_i[row, col]
+            val_di = grid_di[row, col]
+
+            s_i = f"{val_i:.6e}" if np.isfinite(val_i) else "NaN"
+            s_di = f"{val_di:.6e}" if np.isfinite(val_di) else "NaN"
+
+            lines.append(f"{qx_val:14.6e} {qy_val:14.6e} {s_i:>14} {s_di:>14}")
+
+    content = "\n".join(lines)
+
+    return {
+        "name": filename,
+        "entry": str(sans_qspace.metadata.get("entry", "entry")),
+        "file_suffix": file_suffix,
+        "value": content,
+    }
+
+
+@module
+def export_vsans_2d_matrix_grid(data, num_points=128, output_dir=None, filename_out="vsans_2d_reduced.dat"):
+    """
+    Grids multi-detector VSansDataQSpace data into a single uniform 2D matrix (Qx, Qy, I, dI)
+    compatible with SasView 2D ASCII format using direct index mapping and bincounting
+    (matching Reductus mag_extract_components pattern).
+
+    **Inputs**
+
+    data(qspace)  : data 2D to output
+
+    num_points(int) : number of points to output
+
+    output_dir(str) : output directory
+
+    filename_out(str) : optional file path/name to save the output directly to disk
+
+    **Returns**
+
+    result(params): output parameters
+
+    2026-09-23 Jonathan Gaudet
+    """
+
+    from collections import OrderedDict
+    import numpy as np
+    from .vsansdata import Parameters, short_detectors
+    import os
+
+    sans_qspace = data
+    qx_all = []
+    qy_all = []
+    i_all = []
+    var_all = []
+
+    # 1. Collect valid data using Reductus short_detectors & shadow_mask convention
+    for sn in short_detectors:
+        detname = f'detector_{sn}'
+        if detname not in sans_qspace.detectors:
+            continue
+
+        det = sans_qspace.detectors[detname]
+        if "data" not in det or "Qx" not in det or "Qy" not in det:
+            continue
+
+        qx_panel = det["Qx"].ravel('C')
+        qy_panel = det["Qy"].ravel('C')
+        i_panel = det["data"].x.ravel('C')
+        var_panel = det["data"].variance.ravel('C')
+
+        # Reductus shadow_mask: True = VALID/UNMASKED DATA, False = MASKED
+        if 'shadow_mask' in det and det['shadow_mask'] is not None:
+            valid_mask = np.asarray(det['shadow_mask']).astype(bool).ravel('C')
+        elif 'mask' in det and det['mask'] is not None:
+            # Fallback for standard boolean mask arrays (where True = masked)
+            valid_mask = ~np.asarray(det['mask']).astype(bool).ravel('C')
+        else:
+            valid_mask = np.ones_like(i_panel, dtype=bool)
+
+        # Baseline finite check + Reductus valid_mask
+        valid = valid_mask & np.isfinite(i_panel) & np.isfinite(qx_panel) & np.isfinite(qy_panel)
+
+        # Check secondary data-level numpy boolean mask if present
+        if hasattr(det['data'], 'mask') and det['data'].mask is not None:
+            valid &= ~np.asarray(det['data'].mask).astype(bool).ravel('C')
+
+        qx_all.append(qx_panel[valid])
+        qy_all.append(qy_panel[valid])
+        i_all.append(i_panel[valid])
+        var_all.append(var_panel[valid])
+
+    if not qx_all:
+        raise ValueError("No valid unmasked detector data found to export.")
+
+    qx_pts = np.concatenate(qx_all)
+    qy_pts = np.concatenate(qy_all)
+    i_pts = np.concatenate(i_all)
+    var_pts = np.concatenate(var_all)
+
+    # 2. Setup grid extents using nan-safe min/max
+    qx_min, qx_max = np.nanmin(qx_pts), np.nanmax(qx_pts)
+    qy_min, qy_max = np.nanmin(qy_pts), np.nanmax(qy_pts)
+
+    if not (np.isfinite(qx_min) and np.isfinite(qx_max) and np.isfinite(qy_min) and np.isfinite(qy_max)):
+        raise ValueError("Calculated Q grid extents contain NaN/Inf. Check detector Qx/Qy arrays.")
+
+    dqx = (qx_max - qx_min) / num_points
+    dqy = (qy_max - qy_min) / num_points
+
+    # 3. Calculate discrete bin indices
+    ix = np.floor((qx_pts - qx_min) / dqx).astype(int)
+    iy = np.floor((qy_pts - qy_min) / dqy).astype(int)
+
+    ix = np.clip(ix, 0, num_points - 1)
+    iy = np.clip(iy, 0, num_points - 1)
+
+    flat_indices = iy * num_points + ix
+    total_bins = num_points * num_points
+
+    # 4. Perform vector bincounting
+    counts = np.bincount(flat_indices, minlength=total_bins)
+    i_sum = np.bincount(flat_indices, weights=i_pts, minlength=total_bins)
+    var_sum = np.bincount(flat_indices, weights=var_pts, minlength=total_bins)
+
+    # 5. Compute mean intensity and uncertainty with 0.0 default initialization
+    grid_i_flat = np.zeros(total_bins, dtype=float)
+    grid_di_flat = np.zeros(total_bins, dtype=float)
+
+    valid_bins = counts > 0
+    grid_i_flat[valid_bins] = i_sum[valid_bins] / counts[valid_bins]
+
+    # Safe square root for variance propagation
+    safe_var = np.maximum(0.0, var_sum[valid_bins])
+    grid_di_flat[valid_bins] = np.sqrt(safe_var) / counts[valid_bins]
+
+    grid_i = grid_i_flat.reshape((num_points, num_points))
+    grid_di = grid_di_flat.reshape((num_points, num_points))
+
+    # Grid coordinate centers
+    qx_centers = qx_min + (np.arange(num_points) + 0.5) * dqx
+    qy_centers = qy_min + (np.arange(num_points) + 0.5) * dqy
+    grid_qx, grid_qy = np.meshgrid(qx_centers, qy_centers)
+
+    # 6. Format standard NIST 2D ASCII text output with absolute NaN protection
+    filename = str(sans_qspace.metadata.get("run.filename", "vsans_2d"))
+    title = str(sans_qspace.metadata.get("sample.description", "VSANS 2D Grid"))
+
+    lines = [
+        f"FILE: {filename}   CREATED: XXXX-XX-XX",
+        f"LABEL: {title}",
+        "MON CNT    LAMBDA (A)   DET_OFF(cm)   DET_DIST(cm)   TRANS   THICK(cm)",
+        "1e+08      6.0          0.0           100.0          1.0     0.1",
+        "BCENT(X,Y)(cm)   A1(mm)   A2(mm)   A1A2DIST(m)   DL/L   BSTOP(mm)",
+        "0.0   0.0   10.0 mm   10.0   1.0   0.12   50",
+        f"SAM: {filename}",
+        "BGD: none",
+        "EMP: none",
+        "DIV: none",
+        "MASK: none",
+        "ABS Parameters (3-6): TSTAND=1;DSTAND=1;IZERO=1e+08;XSECT=1;SDEV=1e+05;",
+        "Average Choices: AVTYPE=QxQy_ASCII;SAVE=Yes;NAME=Auto;PLOT=Yes;BINTYPE=F1-M1-B;",
+        "Collimation type: pinhole",
+        "Panel=FL",
+        f"NumXPixels={num_points}",
+        "XPixelSize_mm=8.0",
+        f"NumYPixels={num_points}",
+        "YPixelSize_mm=8.0",
+        "Duration (s)=1800",
+        "reserved for future file definition changes",
+        "reserved for future file definition changes",
+        "reserved for future file definition changes",
+        "reserved for future file definition changes",
+        "reserved for future file definition changes",
+        "reserved for future file definition changes",
+        "*** Data written from ABS folder and may not be a fully corrected data file ***",
+        "Data columns are Qx - Qy - I(Qx,Qy) - err(I) - Qz - SigmaQ_parall - SigmaQ_perp - fSubS(beam stop shadow) - Mask",
+        "The 2D error need to be checked",
+        "ASCII data created XXXX-XX-XX",
+        ""
+    ]
+
+    for row in range(num_points):
+        for col in range(num_points):
+            qx_val = grid_qx[row, col]
+            qy_val = grid_qy[row, col]
+            val_i = grid_i[row, col]
+            val_di = grid_di[row, col]
+            bin_idx = row * num_points + col
+
+            # Strictly sanitize Qx and Qy
+            if not np.isfinite(qx_val):
+                qx_val = 0.0
+            if not np.isfinite(qy_val):
+                qy_val = 0.0
+
+            # Set Column 8 (fSubS) and Column 9 (Mask) per SasView convention
+            if counts[bin_idx] > 0 and np.isfinite(val_i) and np.isfinite(val_di):
+                fSubS_flag = 1.0  # 1.0 = Clear / Unshadowed pixel
+                mask_flag = 0  # 0 = Valid / Unmasked pixel in SasView
+            else:
+                val_i = 0.0
+                val_di = 0.0
+                fSubS_flag = 0.0  # 0.0 = Shadowed / Ignored pixel
+                mask_flag = 1  # 1 = Masked pixel in SasView
+
+            # Columns: Qx | Qy | I | dI | Qz | SigmaQ_parall (0.0) | SigmaQ_perp (0.0) | fSubS | Mask
+            lines.append(
+                f"{qx_val:.8e}\t{qy_val:.8e}\t{val_i:.8e}\t{val_di:.8e}\t0.0\t0.00000000e+00\t0.00000000e+00\t{fSubS_flag:.1f}\t{mask_flag}"
+            )
+
+    content = "\n".join(lines)
+
+    params_dict = OrderedDict(
+        [
+            ("name", _s(sans_qspace.metadata.get("name", filename))),
+            ("entry", _s(sans_qspace.metadata.get("entry", "entry"))),
+            ("file_suffix", ".2d.dat")
+        ]
+    )
+
+    output = Parameters(params=params_dict)
+
+    # 7. File path resolution and directory auto-creation
+    if filename_out:
+        if output_dir:
+            os.makedirs(output_dir, exist_ok=True)
+            full_path = os.path.join(output_dir, os.path.basename(filename_out))
+        else:
+            full_path = filename_out
+            parent_dir = os.path.dirname(full_path)
+            if parent_dir:
+                os.makedirs(parent_dir, exist_ok=True)
+
+        with open(full_path, "w") as f:
+            f.write(content)
+
+    return output
