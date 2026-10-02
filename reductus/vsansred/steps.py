@@ -2044,6 +2044,14 @@ def extract_mag_nuc_components(data_uu, data_ud, data_du, data_dd, angle_width=3
 
     **Returns**
 
+    data_uu_q (qspace): QxQy data files after spin leakage correction for Up-Up
+
+    data_ud_q (qspace): QxQy data files after spin leakage correction for Up-Up
+
+    data_du_q (qspace): QxQy data files after spin leakage correction for Up-Up
+
+    data_dd_q (qspace): QxQy data files after spin leakage correction for Up-Up
+
     nuclear(v1d[])  : 1D I vs Q nuclear scattering (N^2)
 
     mag_par(v1d[]) : 1D I vs Q magnetic parallel to field scattering component (M_par^2)
@@ -2148,7 +2156,7 @@ def extract_mag_nuc_components(data_uu, data_ud, data_du, data_dd, angle_width=3
     #Calculate mag_par
     mag_par = compute_mag_cross_term(uu_90_1d, dd_90_1d, nuclear)
 
-    return nuclear, mag_par, mag_perp
+    return data_uu_q, data_ud_q, data_du_q, data_dd_q, nuclear, mag_par, mag_perp
 
 def v1d_list_to_point_cloud(v1d_list, scale=1.0):
     """
