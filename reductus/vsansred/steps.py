@@ -122,7 +122,7 @@ def _LoadVSANS(filelist=None, check_timestamps=True):
 
 @nocache
 @module
-def LoadVSANS(filelist=None, check_timestamps=True, load_data=True):
+def LoadVSANS(filelist=None, check_timestamps=True, load_data=True, apply_attenuation=False, apply_monitor_norm=False,apply_dead_time=False,mon0=1e8):
     """
     loads a data file into a VSansData obj and returns that. (uses cached values)
 
@@ -133,6 +133,14 @@ def LoadVSANS(filelist=None, check_timestamps=True, load_data=True):
     check_timestamps (bool): verify that timestamps on file match request
 
     load_data (bool): include the data in the load
+
+    apply_attenuation (bool): whether to apply attenuation correction
+
+    apply_monitor_norm (bool): whether to normalize data to monitor counts
+
+    apply_dead_time (bool): whether to apply dead time correction
+
+    mon0 (float): target monitor value for normalization (default: 1e8)
 
     **Returns**
 
@@ -163,7 +171,23 @@ def LoadVSANS(filelist=None, check_timestamps=True, load_data=True):
         nodenum = 0
         terminal_id = "output"
         retval = process_template(template, config, target=(nodenum, terminal_id))
-        output.extend(retval.values)
+
+        loaded_entries = retval.values
+
+        for sample in loaded_entries:
+            if load_data and sample is not None:
+                if apply_dead_time:
+                    sample = correct_dead_time(sample)
+
+                if apply_attenuation:
+                    sample = correct_attenuation(sample)
+
+                if apply_monitor_norm:
+                    target_mon0 = 1e8 if mon0 is None else float(mon0)
+                    sample = monitor_normalize_raw(sample, mon0=target_mon0)
+
+            output.append(sample)
+
 
     return output
 
