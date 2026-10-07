@@ -30,7 +30,6 @@ def export_to_csv(data, file_path: Path_Like) -> bool:
 
 def export_to_ascii(data, file_path: Path_Like = "", extension: str = ".txt", delimiter: str = " ") -> dict:
     # Ensure a file path is supplied and construct the path, if needed
-    success = True
     if not file_path:
         return {}
     # Determine the data type (1D reduced, 2D reduced, 2D pixel space, etc.) and assign headers/locations for each data
