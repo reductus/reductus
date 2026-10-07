@@ -4,18 +4,15 @@ VSANS data loader
 
 Load VSANS NeXus file into :mod:`vsansred.vsansdata` data structure.
 """
-import io
-from zipfile import ZipFile, is_zipfile
 from collections import OrderedDict
 import datetime
 import h5py
 import numpy as np
 
-from reductus.dataflow.lib import hzf_readonly_stripped as hzf
 from reductus.dataflow.lib import unit
 from reductus.dataflow.lib.h5_open import h5_open_zip
 
-from .vsansdata import VSansData, RawVSANSData, _s, _b
+from .vsansdata import RawVSANSData
 
 metadata_lookup = OrderedDict([
     #"det.dis", "DAS_logs/detectorPosition/softPosition",
