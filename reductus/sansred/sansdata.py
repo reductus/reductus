@@ -28,12 +28,6 @@ def _b(s):
     else:
         return s
 
-def _s(b):
-    if IS_PY3:
-        return b.decode('utf-8') if hasattr(b, 'decode') else b
-    else:
-        return b
-
 # TODO: Items needed for SANS data
 #  - Differentiate Raw vs Intermediate vs Reduced
 #  - Single class for any data with all others inheriting from
@@ -163,7 +157,7 @@ class SansData:
             'entry': self.metadata['entry'],
             'type': '2d',
             'z':  [data.flatten().tolist()],
-            'title': _s(self.metadata['run.filename'])+': ' + _s(self.metadata['sample.labl']),
+            'title': f'{self.metadata['run.filename']}:  {self.metadata['sample.labl']}',
             #'metadata': self.metadata,
             'options': {
                 'fixedAspect': {
@@ -408,8 +402,8 @@ class SansIQData:
             value = fid.read()
 
         return {
-            "name": _s(self.metadata.get("name", "default_name")),
-            "entry": _s(self.metadata.get("entry", "default_entry")),
+            "name": self.metadata.get("name", "default_name"),
+            "entry": self.metadata.get("entry", "default_entry"),
             "file_suffix": ".sansIQ.dat",
             "value": value.decode('utf-8'),
         }
@@ -445,8 +439,8 @@ class SansIQData:
         datagroup["Q"].attrs["units"] = "1/nm"
 
         return {
-            "name": _s(self.metadata.get("name", "default_name")),
-            "entry": _s(self.metadata.get("entry", "default_entry")),
+            "name": self.metadata.get("name", "default_name"),
+            "entry": self.metadata.get("entry", "default_entry"),
             "file_suffix": ".sansIQ.nx.h5",
             "value": h5_item,
         }

@@ -8,7 +8,6 @@ from reductus.dataflow.lib import unit
 from reductus.dataflow.lib.h5_open import h5_open_zip
 
 from reductus.vsansred.loader import load_detector, load_metadata
-from reductus.vsansred.steps import _s, _b
 
 from .sansdata import SansData, RawSANSData
 
@@ -142,7 +141,7 @@ def readSANSNexuz(input_file, file_obj=None, metadata_lookup=metadata_lookup):
             case _:
                 pass
         metadata['entry'] = entryname
-        metadata['sample.description'] = _s(metadata["sample.labl"]).replace(_s(metadata["run.configuration"]), "")
+        metadata['sample.description'] = metadata["sample.labl"].replace(metadata["run.configuration"], "")
         detector_keys = ['detector']
         detectors = dict([(k, load_detector(entry['instrument'][k])) for k in detector_keys])
         dataset = RawSANSData(metadata=metadata, detectors=detectors)

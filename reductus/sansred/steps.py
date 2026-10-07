@@ -25,8 +25,6 @@ from reductus.dataflow.lib import uncertainty
 from .export_sans import export_to_ascii, export_to_csv, export_to_nxcansas
 from .sansdata import RawSANSData, SansData, Sans1dData, SansIQData, Parameters
 
-from reductus.vsansred.steps import _s
-
 ALL_ACTIONS = []
 IGNORE_CORNER_PIXELS = True
 
@@ -178,7 +176,7 @@ def patch(data, patches=None):
 
     key="run.filename"
 
-    master = OrderedDict([(_s(d.metadata[key]), d.metadata) for d in data])
+    master = OrderedDict([(d.metadata[key], d.metadata) for d in data])
     to_apply = JsonPatch(patches)
     to_apply.apply(master, in_place=True)
 
@@ -602,7 +600,7 @@ def calculateDQ_IGOR(data, inQ, del_r=None):
     LP = 1.0/( 1.0/L1 + 1.0/L2)
     v_lambda = labmdaWidth**2/6.0
 
-    if 'LENS' in _s(data.metadata['run.guide'].upper()):
+    if 'LENS' in data.metadata['run.guide'].upper():
         # NOTE: this might need adjustment.  Ticket #677 filed in trac to change to:
         # v_b = 0.25*(S1*L2/L1)**2 +0.25*(2/3)*(labmdaWidth)**2*(S2*L2/LP)**2	
         v_b = 0.25*(S1*L2/L1)**2 +0.25*(2/3)*(labmdaWidth/lambda0)**2*(S2*L2/LP)**2		# correction to 2nd term
