@@ -2709,7 +2709,7 @@ def export_vsans_1d(data_list, save_path=None, filename="output.dat"):
 
     combined_1d (v1d) : Single combined VSans1dData object
 
-    2026-09-23 Jonathan Gaudet
+    2026-10-07 Jonathan Gaudet
     """
 
     import os
