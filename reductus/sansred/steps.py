@@ -2186,24 +2186,16 @@ def single_configuration(
             {"x": 10, "y": 65, "title": "Sorted Data", "module": "ncnr.sans.autosort",
                 "config": {"filelist": [], "subsort": add_keyword, "add_scattering": add_scatt}
             },
-            {"x": 200, "y": 5, "title": "BB Subtract from Sample", "module": "ncnr.sans.subtract",
-                "config": {"align_by": "run.configuration"}
-            },
-            {"x": 200, "y": 65, "title": "BB Subtract from Empty Cell", "module": "ncnr.sans.subtract",
-                "config": {"align_by": "run.configuration"}
-            },
+            {"x": 200, "y": 5, "title": "BB Subtract from Sample", "module": "ncnr.sans.subtract"},
+            {"x": 200, "y": 65, "title": "BB Subtract from Empty Cell", "module": "ncnr.sans.subtract"},
             {"x": 200, "y": 155, "title": "Empty Transmission", "module": "ncnr.sans.generate_transmission",
                 "config": {"auto_integrate": True, "align_by": "run.configuration"}
             },
             {"x": 685, "y": 95, "title": "Transmission Values", "module": "ncnr.sans.generate_transmission",
                 "config": {"auto_integrate": True, "align_by": "run.configuration"}
             },
-            {"x": 365, "y": 35, "title": "Scale by Transmission", "module": "ncnr.sans.product",
-                "config": {"align_by": "sample.GroupID"}
-            },
-            {"x": 525, "y": 5, "title": "Subtract Empty Cell from Sample", "module": "ncnr.sans.subtract",
-                "config": {"align_by": "run.configuration"}
-            },
+            {"x": 365, "y": 35, "title": "Scale by Transmission", "module": "ncnr.sans.product",},
+            {"x": 525, "y": 5, "title": "Subtract Empty Cell from Sample", "module": "ncnr.sans.subtract"},
             {"x": 525, "y": 65, "title": "Load DIV", "module": "ncnr.sans.LoadDIV",
                 "config": {"filelist": [{
                     "path": "ncnrdata/ancillary/ng7sans/DIV/PLEX_20190719_NG7.DIV", "source": "ncnr",
@@ -2213,7 +2205,7 @@ def single_configuration(
             {"x": 895, "y": 35, "title": "Absolute Scaling of 2D Data", "module": "ncnr.sans.absolute_scaling",
                 "config": {"auto_box": True}
             },
-            {"x": 1045, "y": 35, "title": "Pixel Space to Q Space", "module": "ncnr.sans.PixelsToQ",
+            {"x": 1045, "y": 35, "title": "2D Q Space", "module": "ncnr.sans.PixelsToQ",
                 "config": {"correct_solid_angle": True}
             },
             {"x": 1190, "y": 35, "title": "Circular Averaged Data (Unmasked)", "module": "ncnr.sans.circular_av_new",
@@ -2230,9 +2222,9 @@ def single_configuration(
             {"source": [1, "blocked_beam"], "target": [2, "minuend"]},
             {"source": [1, "blocked_beam"], "target": [3, "minuend"]},
             {"source": [1, "empty_scatt"], "target": [3, "subtrahend"]},
-            {"source": [1, "empty_trans"], "target": [4, "in_beam"]},
-            {"source": [1, "open_beam_trans"], "target": [4, "empty_beam"]},
-            {"source": [1, "sample_trans"], "target": [5, "in_beam"]},
+            {"source": [1, "sample_trans"], "target": [4, "in_beam"]},
+            {"source": [1, "empty_trans"], "target": [4, "empty_beam"]},
+            {"source": [1, "empty_trans"], "target": [5, "in_beam"]},
             {"source": [1, "open_beam_trans"], "target": [5, "empty_beam"]},
             {"source": [3, "output"], "target": [6, "data"]},
             {"source": [4, "output"], "target": [6, "factor_param"]},

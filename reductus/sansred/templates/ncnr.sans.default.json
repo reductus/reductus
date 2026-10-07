@@ -216,7 +216,7 @@
     {
       "source": [
         1,
-        "empty_trans"
+        "sample_trans"
       ],
       "target": [
         4,
@@ -226,7 +226,7 @@
     {
       "source": [
         1,
-        "open_beam_trans"
+        "empty_trans"
       ],
       "target": [
         4,
@@ -236,7 +236,7 @@
     {
       "source": [
         1,
-        "sample_trans"
+        "empty_trans"
       ],
       "target": [
         5,
