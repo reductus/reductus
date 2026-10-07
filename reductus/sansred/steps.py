@@ -2143,7 +2143,7 @@ def getPoissonUncertainty(y):
 
 @module
 def single_configuration(
-        filelist=None, view_step=13, view_output=None, add_scatt=False, add_keyword='sample.labl', mask=None):
+        filelist=None, view_step=13, view_output="Circular Averaged Data (Unmasked)", add_scatt=False, add_keyword='sample.labl', mask=None):
     """Single module to handle all data reduction for a single configuration in a single shot
 
     **Inputs**
@@ -2153,7 +2153,7 @@ def single_configuration(
     view_step {Reduction step} (int): Walk through each step of the reduction process to see the progress. A future update will remove this in favor
         of a final report showing the entire reduction process. Currently, there steps 0 through 13 are available.
 
-    view_output {Display} (opt:Raw Data|Transmission Values|Absolute Scaling of 2D Data|Circular Averaged Data (Unmasked)|Circular Averaged Data (Masked)|Other):
+    view_output {Display} (opt:Raw Data|Transmission Values|Absolute Scaling of 2D Data|2D Q Space|Circular Averaged Data (Unmasked)|Circular Averaged Data (Masked)|Other):
         What data would you like displayed?
 
     add_scatt {Should scattering files be added together?} (bool): Should scattering files that share a metadata node
