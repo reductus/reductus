@@ -229,9 +229,9 @@ def autosort(rawdata, subsort="sample.labl", add_scattering=True, trans_sort="ru
     open_beam_absolute = []
 
     for r in rawdata:
-        purpose = _s(r.metadata['analysis.filepurpose']).lower().strip()
-        intent = _s(r.metadata['analysis.intent']).lower().strip()
-        description = _s(r.metadata['sample.labl']).lower().strip()
+        purpose = r.metadata['analysis.filepurpose'].lower().strip()
+        intent = r.metadata['analysis.intent'].lower().strip()
+        description = r.metadata['sample.labl'].lower().strip()
         if intent.startswith('blo') or (purpose == 'scattering' and 'block' in description):
             blocked_beam.append(r)
         elif intent.startswith('open') or (purpose == 'transmission' and 'open' in description):
