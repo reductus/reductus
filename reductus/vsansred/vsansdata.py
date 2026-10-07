@@ -478,5 +478,5 @@ class Metadata(OrderedDict):
             "name": getattr(self, "name", "default_name"),
             "entry": getattr(self, "entry", "default_entry"),
             "file_suffix": ".vsans.metadata.json",
-            "value": output,
+            "value": value,
         }
