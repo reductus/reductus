@@ -194,8 +194,6 @@ def load_metadata(
 
                 if len(field) == multiplicity:
                     field = field[i]
-                else:
-                    field = field
 
                 if field.dtype.kind == 'f':
                     field = field.astype("float")
