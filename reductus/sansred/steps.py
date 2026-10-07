@@ -1420,7 +1420,7 @@ def subtract(subtrahend, minuend, align_by='run.configuration'):
         align_lookup = dict([(get_compound_key(m.metadata, align_by), m) for m in minuend])
         return [(s - align_lookup[get_compound_key(s.metadata, align_by)]) for s in subtrahend]
     else:
-        return [(s - m) for s,m in itertools.zip_longest(subtrahend, minuend, fillvalue=minuend[-1])]
+        return [(s - m) for s,m in itertools.zip_longest(subtrahend, minuend, fillvalue=0.0)]
 
 @module
 def product(data, factor_param, align_by="sample.description"):
