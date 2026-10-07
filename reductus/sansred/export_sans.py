@@ -152,10 +152,11 @@ def export_to_nxcansas(data: SansIQData, f_path: Path_Like) -> dict:
         })
         sample_entry['ID'] = data.metadata.get('sample.labl', 'sample')
         sample_attrs = ['thk', 'temp', 'trans']
+        sample_units = ['mm', 'K', '%']
         sample_nxcansas = ['thickness', 'temperature', 'transmission']
-        for key, cansas_key in zip(sample_attrs, sample_nxcansas):
+        for key, cansas_key, unit in zip(sample_attrs, sample_nxcansas, sample_units):
             if (value := data.metadata.get(f'sample.{key}', None)) is not None:
-                sample_entry.create_dataset(cansas_key, data=value)
+                sample_entry.create_dataset(cansas_key, data=value, attrs={"units": unit})
 
         # Add instrument
         instrument_group = nxentry.create_group("instrument")
