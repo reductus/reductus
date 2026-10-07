@@ -1907,13 +1907,13 @@ def spin_leakage_corr(data_uu, data_ud, data_du, data_dd, blocked_beam, flipper_
 
         **Inputs**
 
-        data_uu(raw)  : scattering uu file
+        data_uu(raw[])  : scattering uu file(s)
 
-        data_ud(raw)  : scattering ud file
+        data_ud(raw[])  : scattering ud file(s)
 
-        data_du(raw)  : scattering du file
+        data_du(raw[])  : scattering du file(s)
 
-        data_dd(raw)  : scattering dd file
+        data_dd(raw[])  : scattering dd file(s)
 
         blocked_beam(raw)  : blocked beam scattering file
 
@@ -1923,86 +1923,114 @@ def spin_leakage_corr(data_uu, data_ud, data_du, data_dd, blocked_beam, flipper_
 
         **Returns**
 
-        data_corr_uu(raw)  : correct scattering uu file
+        corr_uu(raw)  : correct scattering uu file
 
-        data_corr_ud(raw) : corrected scattering ud file
+        corr_ud(raw) : corrected scattering ud file
 
-        data_corr_du(raw) : corrected scattering du file
+        corr_du(raw) : corrected scattering du file
 
-        data_corr_dd(raw) : corrected scattering dd file
+        corr_dd(raw) : corrected scattering dd file
 
-        | 2026-09-23 Jonathan Gaudet
+        | 2026-10-07 Jonathan Gaudet
         """
+
+    # check that all list lengths are identical, which is what is assumed here for the workflow
+    if not (len(data_uu) == len(data_ud) == len(data_du) == len(data_dd)):
+        raise ValueError(
+            f"Input dataset list lengths must match! Got lengths: "
+            f"uu={len(data_uu)}, ud={len(data_ud)}, du={len(data_du)}, dd={len(data_dd)}"
+        )
 
     p_sm = flipper_par.params['eff_sm_up']
     p_sm_f = flipper_par.params['eff_sm_down']
-
-    # 2. Extract He3 cell parameters from helium_par
-    cell = helium_par.params['cells']
-    cell_info = list(cell.values())[0]
-    rho0 = cell_info['P0']
-    gamma = cell_info['Gamma']
-
-    # Convert Insert_time into hours
-    t0_cell = (cell_info['Insert_time'] / 1000.0) / 3600.0
-
-    opacity1ang = float(_s(data_uu.metadata['he3_back.opacity']))
-    wavelength = float(_s(data_uu.metadata['resolution.lmda']))
-    mu = opacity1ang * wavelength
-    trans_glass = float(_s(data_uu.metadata['he3_back.te']))
 
     epsilon_uu = (1.0 + p_sm) / 2.0
     epsilon_ud = (1.0 - p_sm) / 2.0
     epsilon_dd = (1.0 + p_sm_f) / 2.0
     epsilon_du = (1.0 - p_sm_f) / 2.0
 
-    time_avg = (get_avg_run_time(data_uu) + get_avg_run_time(data_ud) + get_avg_run_time(data_du) + get_avg_run_time(data_dd)) / 4.0
-    time_avg = time_avg - t0_cell
-
-    rho3he, pol_eff, t_unpolarized = calculate_analyzer_properties(rho0, time_avg, gamma, mu, trans_glass)
-
-    t_maj  = trans_glass * np.exp(- mu * (1.0 - rho3he))
-    t_min = trans_glass * np.exp(-mu * (1.0 + rho3he))
-
-    matrix_corr = set_pol_corr_matrix(epsilon_uu,epsilon_ud,epsilon_dd,epsilon_du,t_maj,t_min)
+    # 2. Extract He3 cell parameters from helium_par, which doesn't change with time
+    cell = helium_par.params['cells']
+    cell_info = list(cell.values())[0]
+    rho0 = cell_info['P0']
+    gamma = cell_info['Gamma']
+    t0_cell = (cell_info['Insert_time'] / 1000.0) / 3600.0
 
 
-    data_corr_uu = subtract_raw(data_uu, blocked_beam)
-    data_corr_ud = subtract_raw(data_ud, blocked_beam)
-    data_corr_du = subtract_raw(data_du, blocked_beam)
-    data_corr_dd = subtract_raw(data_dd, blocked_beam)
+    opacity1ang = float(_s(data_uu[0].metadata['he3_back.opacity']))
+    wavelength = float(_s(data_uu[0].metadata['resolution.lmda']))
+    mu = opacity1ang * wavelength
+    trans_glass = float(_s(data_uu[0].metadata['he3_back.te']))
 
-    corr_datasets = [data_corr_uu, data_corr_ud, data_corr_du, data_corr_dd]
+    corr_uu_list = []
+    corr_ud_list = []
+    corr_du_list = []
+    corr_dd_list = []
 
-    # 9. Iterate over all detector panels in VSANS datasets
-    for det_name, det_info in data_corr_uu.detectors.items():
-        all_present = all(
-            det_name in d.detectors and
-            "data" in d.detectors[det_name] and
-            "value" in d.detectors[det_name]["data"]
-            for d in corr_datasets
-        )
+    for i in range(len(data_uu)):
+        curr_uu = data_uu[i]
+        curr_ud = data_ud[i]
+        curr_du = data_du[i]
+        curr_dd = data_dd[i]
 
-        if not all_present:
-            continue
+        time_avg = (get_avg_run_time(curr_uu) + get_avg_run_time(curr_ud) + get_avg_run_time(curr_du) + get_avg_run_time(curr_dd)) / 4.0
+        time_avg = time_avg - t0_cell
 
-        # Extract panel pixel intensity arrays for each cross-section
-        int_obs = [
-            np.asarray(d.detectors[det_name]["data"]["value"], dtype=float)
-            for d in corr_datasets
-        ]
+        rho3he, pol_eff, t_unpolarized = calculate_analyzer_properties(rho0, time_avg, gamma, mu, trans_glass)
 
-        # Calculate corrected intensities using list comprehension
-        int_corr = [
-            sum(matrix_corr[i, j] * int_obs[j] for j in range(4))
-            for i in range(4)
-        ]
+        t_maj  = trans_glass * np.exp(- mu * (1.0 - rho3he))
+        t_min = trans_glass * np.exp(-mu * (1.0 + rho3he))
 
-        # Assign corrected panel data back to each VSANS cross-section
-        for idx, d in enumerate(corr_datasets):
-            d.detectors[det_name]["data"]["value"] = int_corr[idx]
+        matrix_corr = set_pol_corr_matrix(epsilon_uu,epsilon_ud,epsilon_dd,epsilon_du,t_maj,t_min)
 
-    return data_corr_uu, data_corr_ud, data_corr_du, data_corr_dd
+
+        d_corr_uu = subtract_raw(curr_uu, blocked_beam)
+        d_corr_ud = subtract_raw(curr_ud, blocked_beam)
+        d_corr_du = subtract_raw(curr_du, blocked_beam)
+        d_corr_dd = subtract_raw(curr_dd, blocked_beam)
+
+        corr_datasets = [d_corr_uu, d_corr_ud, d_corr_du, d_corr_dd]
+
+        #Looping over all detector panels in VSANS datasets
+        for det_name, det_info in d_corr_uu.detectors.items():
+            all_present = all(
+                det_name in d.detectors and
+                "data" in d.detectors[det_name] and
+                "value" in d.detectors[det_name]["data"]
+                for d in corr_datasets
+            )
+
+            if not all_present:
+                continue
+
+            # Extract panel pixel intensity arrays for each cross-section
+            int_obs = [
+                np.asarray(d.detectors[det_name]["data"]["value"], dtype=float)
+                for d in corr_datasets
+            ]
+
+            # Calculate corrected intensities from the spin leakage correction matrix
+            int_corr = [
+                sum(matrix_corr[k, j] * int_obs[j] for j in range(4))
+                for k in range(4)
+            ]
+
+            # Assign corrected panel data back to each VSANS cross-section
+            for idx, d in enumerate(corr_datasets):
+                d.detectors[det_name]["data"]["value"] = int_corr[idx]
+
+        corr_uu_list.append(d_corr_uu)
+        corr_ud_list.append(d_corr_ud)
+        corr_du_list.append(d_corr_du)
+        corr_dd_list.append(d_corr_dd)
+
+    # Average time runs for each corrected cross-section
+    corr_uu = average_raw(corr_uu_list)
+    corr_ud = average_raw(corr_ud_list)
+    corr_du = average_raw(corr_du_list)
+    corr_dd = average_raw(corr_dd_list)
+
+    return corr_uu, corr_ud, corr_du, corr_dd
 
 def set_pol_corr_matrix(eps_uu, eps_ud, eps_dd, eps_du, tmaj, tmin):
     """function returning matrix applied to correct for spin leakage at a fixed time
@@ -2615,5 +2643,49 @@ def export_vsans_2d_matrix_grid(data, num_points=128, output_dir=None, filename_
 
         with open(full_path, "w") as f:
             f.write(content)
+
+    return output
+
+
+def average_raw(data_list):
+    """
+    Averages normalized SANS datasets across multiple time runs and propagates
+    uncertainties (errors) in quadrature.
+    """
+    if not data_list:
+        return None
+
+    # Use the first dataset as a base template for metadata and structure
+    output = deepcopy(data_list[0])
+    num_runs = len(data_list)
+
+    if num_runs == 1:
+        return output
+
+    # Average intensity values across detector panels
+    for det_name, det in output.detectors.items():
+        if "data" in det and "value" in det["data"]:
+            # Stack intensity arrays: shape (N_runs, panel_pixels)
+            values_stack = np.array([
+                d.detectors[det_name]["data"]["value"]
+                for d in data_list
+            ], dtype=float)
+
+            # Compute mean intensity
+            det["data"]["value"] = np.mean(values_stack, axis=0)
+
+            # Propagate errors if present: sigma_avg = sqrt(sum(sigma_i^2)) / N
+            if "error" in det["data"]:
+                errors_stack = np.array([
+                    d.detectors[det_name]["data"]["error"]
+                    for d in data_list
+                ], dtype=float)
+                det["data"]["error"] = np.sqrt(np.sum(errors_stack ** 2, axis=0)) / num_runs
+
+    # Average monitor count and run time metadata
+    for key in ["run.moncnt", "run.rtime", "run.detcnt"]:
+        if key in output.metadata:
+            total_val = sum(d.metadata.get(key, 0.0) for d in data_list)
+            output.metadata[key] = total_val / num_runs
 
     return output
