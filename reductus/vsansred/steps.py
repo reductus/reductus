@@ -2689,3 +2689,85 @@ def average_raw(data_list):
             output.metadata[key] = total_val / num_runs
 
     return output
+
+@module
+def export_vsans_1d(data_list, save_path=None, filename="output.dat"):
+    """
+    Combines multi-detector VSANS 1D datasets into a single Q-sorted 1D
+    profile (Q, I, dI, dQ) preserving overlapping Q points for overplotting,
+    and optionally exports to disk in a SasView-compatible ASCII format.
+
+    **Inputs**
+
+    data_list (v1d[]) : List of VSans1dData objects (one per detector panel)
+
+    save_path (str)   : Optional output directory path
+
+    filename (str)    : Optional file name. If None, derives from dataset metadata.
+
+    **Returns**
+
+    combined_1d (v1d) : Single combined VSans1dData object
+
+    2026-09-23 Jonathan Gaudet
+    """
+
+    import os
+    from .vsansdata import VSans1dData
+
+    valid_data = [d for d in data_list if len(d.x) > 0]
+    if not valid_data:
+        return None
+
+    # 1. Combine all arrays from every detector panel
+    all_q = np.concatenate([d.x for d in valid_data])
+    all_v = np.concatenate([d.v for d in valid_data])
+    all_dv = np.concatenate([d.dv for d in valid_data])
+    all_dx = np.concatenate([d.dx for d in valid_data])
+
+    # 2. Sort by Q so the output profile is monotonically increasing in Q
+    sort_idx = np.argsort(all_q)
+    sorted_q = all_q[sort_idx]
+    sorted_v = all_v[sort_idx]
+    sorted_dv = all_dv[sort_idx]
+    sorted_dx = all_dx[sort_idx]
+
+    # 3. Preserve base metadata
+    merged_meta = valid_data[0].metadata.copy() if valid_data[0].metadata else {}
+    merged_meta['title'] = "Overplotted Detectors"
+
+    combined_1d = VSans1dData(
+        x=sorted_q,
+        v=sorted_v,
+        dx=sorted_dx,
+        dv=sorted_dv,
+        xlabel=valid_data[0].xlabel,
+        vlabel=valid_data[0].vlabel,
+        xunits=valid_data[0].xunits,
+        vunits=valid_data[0].vunits,
+        xscale=valid_data[0].xscale,
+        vscale=valid_data[0].vscale,
+        metadata=merged_meta
+    )
+
+    # 4. Save to directory if a save_path is provided
+    if save_path is not None:
+        os.makedirs(save_path, exist_ok=True)
+
+        # Fallback if an empty string or None is passed
+        out_filename = filename if filename else "output.dat"
+
+        # Ensure the filename ends with .dat if no extension was provided
+        base, ext = os.path.splitext(out_filename)
+        if not ext:
+            out_filename = f"{base}.dat"
+
+        full_filepath = os.path.join(save_path, out_filename)
+
+        # Get exported dictionary payload from VSans1dData method
+        export_dict = combined_1d.to_column_text()
+
+        with open(full_filepath, "w", encoding="utf-8") as f:
+            f.write(export_dict["value"])
+
+    return combined_1d
