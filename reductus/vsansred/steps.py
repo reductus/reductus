@@ -1308,10 +1308,14 @@ def get_panel_data_raw(rawdata, PANEL_KEY):
     det = rawdata.detectors[PANEL_KEY]
     vals = np.array(det["data"]["value"], dtype=float)
 
-    if "linear_data_error" in det and "value" in det["linear_data_error"]:
+    if "variance" in det["data"] and det["data"]["variance"] is not None:
+        vars_ = np.array(det["data"]["variance"], dtype=float)
+    elif "linear_data_error" in det and "value" in det["linear_data_error"]:
         vars_ = np.array(det["linear_data_error"]["value"], dtype=float)
     else:
         vars_ = np.copy(vals)  # Poisson error variance = N
+
+    det["data"]["variance"] = vars_
 
     return Uncertainty(vals, vars_), vals
 
@@ -1337,7 +1341,7 @@ def calculate_vsans_transmission(in_beam, empty_beam, margin=5, PANEL_KEY = "det
 
     output (params[]): calculated transmission for the integration area
 
-    2026-08-13 Jonathan Gaudet
+    2026-10-08 Jonathan Gaudet
     """
     from collections import OrderedDict
     import numpy as np
@@ -1372,13 +1376,23 @@ def calculate_vsans_transmission(in_beam, empty_beam, margin=5, PANEL_KEY = "det
     ratio = I_in_beam / I_empty_beam
 
     # Extract scalar values from Uncertainty or float
-    ratio_val = float(ratio.x) if hasattr(ratio, "x") else float(ratio)
-    ratio_var = (
-        float(ratio.variance) if hasattr(ratio, "variance") else 0.0
-    )
+    ratio_val = float(getattr(ratio, "x", ratio))
+    ratio_var = float(getattr(ratio, "variance", 0.0))
+
+    #if ratio is not calculated as uncertainty object, then calculate variance properly here
+    if not hasattr(ratio, "variance"):
+        in_v = float(getattr(I_in_beam, "x", I_in_beam))
+        empty_v = float(getattr(I_empty_beam, "x", I_empty_beam))
+        in_var = float(getattr(I_in_beam, "variance", in_v))
+        empty_var = float(getattr(I_empty_beam, "variance", empty_v))
+
+        if in_v > 0 and empty_v > 0:
+            ratio_var = (ratio_val ** 2) * ((in_var / (in_v ** 2)) + (empty_var / (empty_v ** 2)))
+
+
     ratio_err = np.sqrt(ratio_var)
 
-    # 5. Build and return Parameters object
+    # Build and return Parameters object
     params_dict = OrderedDict(
         [
             ("factor", ratio_val),
@@ -1557,11 +1571,16 @@ def absolute_scaling(sample, open_beam, trans_sample, margin=5, PANEL_KEY='detec
     if open_beam is None:
         return sample
 
+
+    #extract transmission and variance from parameter list/dict
     p_obj = trans_sample[0]
     params = getattr(p_obj, "params", p_obj) if p_obj is not None else {}
 
     T_sample = float(params.get("factor", 1.0))
-    #T_sample_var = float(params.get("factor_variance", 0.0))
+    T_sample_var = float(params.get("factor_variance", 0.0))
+
+    if T_sample <= 0:
+        raise ValueError(f"Sample transmission factor must be positive, got {T_sample}")
 
     #Extract panel data and find direct beam center and its bounds
     open_udata, open_array = get_panel_data_raw(open_beam, PANEL_KEY)
@@ -1604,10 +1623,12 @@ def absolute_scaling(sample, open_beam, trans_sample, margin=5, PANEL_KEY='detec
     if dsam_cm <= 0:
         dsam_cm = 0.1  # Default to 1 mm if input thickness = 0
 
-    # Compute flux with Uncertainty
+    # Compute flux and transmission with Uncertainty
     u_flux = Uncertainty(flux_val, flux_var)
-    u_kappa = u_flux
-    u_factor_abs = 1.0 / (u_kappa * dsam_cm * T_sample)
+    u_trans = Uncertainty(T_sample, T_sample_var)
+
+    #Compute scaling factor (no error on sample thick)
+    u_factor_abs = 1.0 / (u_flux * dsam_cm * u_trans)
 
     # multiply data by scaling factor
     abs_data = sample * u_factor_abs
