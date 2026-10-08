@@ -696,7 +696,6 @@ def calculate_XY(raw_data, solid_angle_correction=True):
             data = det['data']['value']
             if 'variance' in det['data']:
                 data_variance = det['data']['variance']
-                print(f"[TEST SUCCESS] 'variance' FOUND in det['data'] for detector '{sn}'!")
             elif 'linear_data_error' in det and 'value' in det['linear_data_error']:
                 data_variance = det['linear_data_error']['value']  #it was np.sqrt here before, but not correct?
             else:
@@ -726,7 +725,6 @@ def calculate_XY(raw_data, solid_angle_correction=True):
             data = det['data']['value']
             if 'variance' in det['data']:
                 data_variance = det['data']['variance']
-                print(f"[TEST SUCCESS] 'variance' FOUND in det['data'] for detector '{sn}'!")
             elif 'linear_data_error' in det and 'value' in det['linear_data_error']:
                 data_variance = det['linear_data_error']['value']  # it was np.sqrt here before, but not correct?
             else:
