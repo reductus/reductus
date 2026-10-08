@@ -115,7 +115,7 @@ unit_specifiers = {
 def process_sourceAperture(field, units):
     import numpy as np
     def handler(v):
-        if _s(v) == 'OUT':
+        if v == 'OUT':
             return v
         else:
             return float(v.split()[0])
@@ -123,7 +123,7 @@ def process_sourceAperture(field, units):
     value = handle_values(field[()])
     units_from = ""
     v0 = field[0].split()
-    if _s(value[0]) == 'OUT':
+    if value[0] == 'OUT':
         return value
     if len(v0) > 1:
         units_from = v0[1]
