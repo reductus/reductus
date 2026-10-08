@@ -1457,10 +1457,20 @@ def subtract_raw(sample, background):
                 continue
 
             sample_vals = np.array(det["data"]["value"], dtype=float)
+            if "variance" in det["data"] and det["data"]["variance"] is not None:
+                sample_var = np.array(det["data"]["variance"], dtype=float)
+            else:
+                sample_var = np.copy(sample_vals)
+
             bg_vals = np.array(bg_det["data"]["value"], dtype=float)
+            if "variance" in bg_det["data"] and bg_det["data"]["variance"] is not None:
+                bg_var = np.array(bg_det["data"]["variance"], dtype=float)
+            else:
+                bg_var = np.copy(bg_vals)
 
 
             det["data"]["value"] = sample_vals - bg_vals
+            det["data"]["variance"] = sample_var + bg_var
 
     return output
 
@@ -1489,31 +1499,27 @@ def multiply_raw(sample, factor_param):
 
     output=deepcopy(sample)
 
-    # 1. Extract factor and variance from parameter object
+    #Extract factor and variance from parameter object
     p_obj = factor_param[0]
     params = getattr(p_obj, "params", p_obj) if p_obj is not None else {}
 
     val = float(params.get("factor", 1.0))
-    var = float(params.get("factor_variance", 0.0))
+    var_k = float(params.get("factor_variance", 0.0))
 
-    # 2. Multiply raw arrays and propagate errors for each detector panel
+    # Multiply raw arrays and propagate variance for each detector panel
     for det_name, det in output.detectors.items():
         if "data" in det and "value" in det["data"]:
             vals = np.array(det["data"]["value"], dtype=float)
 
-            if "linear_data_error" in det and "value" in det["linear_data_error"]:
-                vars_ = np.array(det["linear_data_error"]["value"], dtype=float)
+            if "variance" in det["data"] and det["data"]["variance"] is not None:
+                sample_var = np.array(det["data"]["variance"], dtype=float)
             else:
-                vars_ = np.copy(vals)
+                sample_var = np.copy(vals)
 
-            net_vars = (val ** 2) * vars_ + (vals ** 2) * var
+            net_vars = (val ** 2) * sample_var + (vals ** 2) * var_k
 
             det["data"]["value"] = vals * val
-
-            if "linear_data_error" not in det:
-                det["linear_data_error"] = {}
-
-            det["linear_data_error"]["value"] = np.copy(net_vars)
+            det["data"]["variance"] = net_vars
 
     return output
 
@@ -1780,6 +1786,17 @@ def sum_raw(data):
 
     output = deepcopy(data[0])
 
+    #Set or read variance for both data[0].
+    for det_name, det in output.detectors.items():
+        if "data" in det and "value" in det["data"]:
+            vals = np.array(det["data"]["value"], dtype=float)
+            det["data"]["value"] = vals
+
+            if "variance" in det["data"] and det["data"]["variance"] is not None:
+                det["data"]["variance"] = np.array(det["data"]["variance"], dtype=float)
+            else:
+                det["data"]["variance"] = np.copy(vals)
+
     for d in data[1:]:
         # Sum detector panel values pixel by pixel
         for det_name, det in output.detectors.items():
@@ -1789,7 +1806,17 @@ def sum_raw(data):
 
                 #needed if one detector is off (such as the back detector)
                 if "value" in target_data and "value" in source_data:
-                    target_data["value"] = np.asarray(target_data["value"], dtype=float) + np.asarray(source_data["value"], dtype=float)
+                    #get data and variance
+                    s_vals = np.array(source_data["value"], dtype=float)
+
+                    if "variance" in source_data and source_data["variance"] is not None:
+                        s_var = np.array(source_data["variance"], dtype=float)
+                    else:
+                        s_var = np.copy(s_vals)
+
+                    #Add intensities and variances
+                    target_data["value"] += s_vals
+                    target_data["variance"] += s_var
 
         # Sum monitor and runtime metadata
         for key in ["run.moncnt", "run.rtime", "run.detcnt"]:
