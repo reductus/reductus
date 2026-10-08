@@ -654,6 +654,7 @@ def calculate_XY(raw_data, solid_angle_correction=True):
     | 2019-09-19 Added monitor normalization
     | 2019-09-22 Separated monitor and dOmega norm
     | 2020-10-02 Brian Maranville ignore back detector when data missing
+    | 2026-10-08 Jonathan Gaudet adapted how to read variance if set prior to calculate_xy
     """
     from .vsansdata import VSansDataRealSpace, short_detectors
     from collections import OrderedDict
@@ -693,8 +694,11 @@ def calculate_XY(raw_data, solid_angle_correction=True):
             realDistY =  0.5 * y_pixel_size
 
             data = det['data']['value']
-            if 'linear_data_error' in det and 'value' in det['linear_data_error']:
-                data_variance = np.sqrt(det['linear_data_error']['value'])
+            if 'variance' in det['data']:
+                data_variance = det['data']['variance']
+                print(f"[TEST SUCCESS] 'variance' FOUND in det['data'] for detector '{sn}'!")
+            elif 'linear_data_error' in det and 'value' in det['linear_data_error']:
+                data_variance = det['linear_data_error']['value']  #it was np.sqrt here before, but not correct?
             else:
                 data_variance = data.copy()
             udata = Uncertainty(data, data_variance)
@@ -720,8 +724,11 @@ def calculate_XY(raw_data, solid_angle_correction=True):
 
             #solid_angle_correction = z*z / 1e6
             data = det['data']['value']
-            if 'linear_data_error' in det and 'value' in det['linear_data_error']:
-                data_variance = np.sqrt(det['linear_data_error']['value'])
+            if 'variance' in det['data']:
+                data_variance = det['data']['variance']
+                print(f"[TEST SUCCESS] 'variance' FOUND in det['data'] for detector '{sn}'!")
+            elif 'linear_data_error' in det and 'value' in det['linear_data_error']:
+                data_variance = det['linear_data_error']['value']  # it was np.sqrt here before, but not correct?
             else:
                 data_variance = data.copy()
             udata = Uncertainty(data, data_variance)
@@ -877,7 +884,7 @@ def monitor_normalize_raw(rawdata, mon0=1e8):
     **Returns**
 
     output (raw): corrected for monitor counts
-    2026-08-18  Jonathan Gaudet
+    2026-10-08  Jonathan Gaudet
     """
     output = deepcopy(rawdata)
 
@@ -887,9 +894,19 @@ def monitor_normalize_raw(rawdata, mon0=1e8):
     for det_name, det in output.detectors.items():
         if "data" not in det:
             continue
-        data = np.array(det["data"]["value"], dtype=float) * scale_factor
-        det["data"]["value"] = data
 
+        #Read detector counts of that detector
+        raw_counts = np.array(det["data"]["value"], dtype=float)
+
+        #Read variance or create if not set
+        if "variance" in det["data"] and det["data"]["variance"] is not None:
+            raw_variance = np.array(det["data"]["variance"], dtype=float)
+        else:
+            raw_variance = np.copy(raw_counts)
+
+        #normalizing intensity
+        det["data"]["value"] = raw_counts * scale_factor
+        det["data"]["variance"] = raw_variance * (scale_factor ** 2)
 
     return output
 
@@ -1583,7 +1600,7 @@ def absolute_scaling(sample, open_beam, trans_sample, margin=5, PANEL_KEY='detec
     if dsam_cm <= 0:
         dsam_cm = 0.1  # Default to 1 mm if input thickness = 0
 
-    # Compute kappa (flux * solid_angle) with Uncertainty
+    # Compute flux with Uncertainty
     u_flux = Uncertainty(flux_val, flux_var)
     u_kappa = u_flux
     u_factor_abs = 1.0 / (u_kappa * dsam_cm * T_sample)
@@ -1607,7 +1624,7 @@ def correct_attenuation(sample):
 
     result (raw): attenuation-corrected measurement
 
-    | 2026-08-17 Jonathan Gaudet
+    | 2026-10-08 Jonathan Gaudet
     """
     if sample is None:
         return None
@@ -1637,8 +1654,16 @@ def correct_attenuation(sample):
     # Apply inverse scale factor to detector panels
     for det_name, det in result.detectors.items():
         if "data" in det and "value" in det["data"]:
-            det["data"]["value"] = det["data"]["value"] * scale_factor
+            data = np.array(det["data"]["value"], dtype=float)
 
+            #Read if variance was added if not create it so uncertainty can be propagated
+            if "variance" in det["data"] and det["data"]["variance"] is not None:
+                var = np.array(det["data"]["variance"], dtype=float)
+            else:
+                var = np.copy(data)
+
+            det["data"]["value"] = data * scale_factor
+            det["data"]["variance"] = var * (scale_factor ** 2)
 
     return result
 
@@ -1684,7 +1709,13 @@ def correct_dead_time(sample):
 
         deadtime = det["dead_time"]["value"]
 
-        data = det["data"]["value"]
+        data = np.array(det["data"]["value"], dtype=float)
+
+        #Read or set variance so it can be propagated properly before calculate_XY
+        if "variance" in det["data"] and det["data"]["variance"] is not None:
+            var = np.array(det["data"]["variance"], dtype=float)
+        else:
+            var = np.copy(data)
 
         if sn =="B":
             total_counts = np.sum(data)
@@ -1694,6 +1725,7 @@ def correct_dead_time(sample):
 
             dscale = 1.0 / (1.0 - tau_r)
             det["data"]["value"] = data * dscale
+            det["data"]["variance"] = var * (dscale ** 2)
 
         else:
 
@@ -1706,6 +1738,7 @@ def correct_dead_time(sample):
                     tau_r = deadtime[t] * (tube_sum/ run_time)
                     dscale = 1.0 / (1.0 - tau_r)
                     data[t,:] = data[t,:] * dscale
+                    var[t, :] = var[t, :] * (dscale ** 2)
 
 
 
@@ -1715,8 +1748,10 @@ def correct_dead_time(sample):
                     tau_r = deadtime[t] * (tube_sum/ run_time)
                     dscale = 1.0 / (1.0 - tau_r)
                     data[:,t] = data[:,t] * dscale
+                    var[:, t] = var[:, t] * (dscale ** 2)
 
-
+            det["data"]["value"] = data
+            det["data"]["variance"] = var
 
     return result
 
