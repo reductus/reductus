@@ -1284,6 +1284,61 @@ def top_bottom_shadow(realspace_data, width=3, inplace=True):
     
     return rd
 
+@cache
+@module
+def mask_edge_detectors(realspace_data, bin_edge=3, inplace=True):
+    """
+    Masks outer edge pixels (top, bottom, left, right) of all detector panels
+
+     **Inputs**
+
+    realspace_data (realspace): datafiles in qspace X,Y coordinates
+
+    bin_edge (int): Number of edge pixels to mask
+
+    inplace (bool): do the calculation in-place, modifying the input dataset
+
+    **Returns**
+
+    shadowed (realspace): datafiles in qspace X,Y coordinates with updated
+        shadow mask
+
+    2026-10-08 Jonathan Gaudet
+    """
+    rd = realspace_data if inplace else deepcopy(realspace_data)
+
+    if bin_edge <= 0:
+        return rd
+
+    for detname, det in rd.detectors.items():
+        # Get or initialize existing shadow mask
+        data_shape = det['data'].x.shape
+        shadow_mask = det.get('shadow_mask', np.ones(data_shape, dtype=bool))
+
+        # Adjust for oversampling so bin_edge corresponds to physical pixel units
+        oversampling = det.get('oversampling', 1)
+        effective_edge = int(bin_edge * oversampling)
+
+        dimX, dimY = data_shape
+
+        # Prevent index overflow if edge width exceeds panel size
+        edge_x = min(effective_edge, dimX // 2)
+        edge_y = min(effective_edge, dimY // 2)
+
+        if edge_x > 0:
+            # Mask Left & Right edges (X-axis boundary)
+            shadow_mask[:edge_x, :] = False
+            shadow_mask[-edge_x:, :] = False
+
+        if edge_y > 0:
+            # Mask Bottom & Top edges (Y-axis boundary)
+            shadow_mask[:, :edge_y] = False
+            shadow_mask[:, -edge_y:] = False
+
+        det['shadow_mask'] = shadow_mask
+
+    return rd
+
 def get_panel_data(data_obj, PANEL_KEY):
 
     detectors = data_obj.detectors
