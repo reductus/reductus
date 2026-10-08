@@ -1423,7 +1423,7 @@ def subtract(subtrahend, minuend, align_by='run.configuration'):
         return [(s - m) for s,m in itertools.zip_longest(subtrahend, minuend, fillvalue=0.0)]
 
 @module
-def product(data, factor_param, align_by="sample.description"):
+def product(data, factor_param, align_by="none"):
     """
     Algebraic multiplication of dataset
 
@@ -1446,10 +1446,21 @@ def product(data, factor_param, align_by="sample.description"):
     # follow broadcast rules:
     if not factor_param or len(factor_param) == 0:
         return data
-    elif len(factor_param) == 1:
-        f = factor_param[0]
-        return [(d * Uncertainty(f.params.get('factor', 1.0), f.params.get('factor_variance', 0.0))) for d in data]
-    elif align_by.lower() != "none":
+
+    # Make lists of factors and data match in length
+    if len(factor_param) == 1:
+        # Scaling multiple empty cells by a single transmission
+        factor_param = factor_param * len(data)
+    elif len(data) == 1:
+        # Scaling an empty cell by multiple transmission values
+        data = data*len(factor_param)
+    elif len(data) // len(factor_param) == 0 or len(factor_param) // len(data) == 0:
+        # Scaling multiple empty cells by multiple transmission values,
+        large, small = (data, factor_param) if len(data) > len(factor_param) else (factor_param, data)
+        small = small * int(len(large) / len(small))
+        data, factor_param = (large, small) if len(data) > len(factor_param) else (small, large)
+
+    if align_by.lower() != "none":
         # make lookup:
         align_lookup = dict([(get_compound_key(f.params, align_by), Uncertainty(f.params.get('factor', 1.0), f.params.get('factor_variance', 0.0))) for f in factor_param])
         return [(d * align_lookup[get_compound_key(d.metadata, align_by)]) for d in data]
