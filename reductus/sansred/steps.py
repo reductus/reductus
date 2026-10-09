@@ -2412,7 +2412,7 @@ def mask_1d_data(data: list[SansIQData | Sans1dData],
 
 
 @module
-def sort_n_data_sets(data: [SansIQData]):
+def sort_n_data_sets(data: list[SansIQData], align_by: str | None = None) -> list[SansIQData]:
     """A module that allows the user to combine multiple reduced 1D data sets together. This is a similar process to the
     NSORT function in the Igor Pro macros. This will optionally scale each data set by a defined amount and then exclude
     a number of points from each end of the data set. The primary reason for performing this task is to combine multiple
@@ -2425,21 +2425,32 @@ def sort_n_data_sets(data: [SansIQData]):
 
     data (sans1d[]): SANS 1D data reduced data
 
+    align_by (str): for multiple inputs, multiply data that matches factor_param with this metadata value
+
     **Returns**
 
-    output (sans1d): A combined reduced data set with all points stitched together into a single data object
+    output (sans1d[]): A combined reduced data set with all points stitched together into a single data object
 
     | 2025-07-29 Jeff Krzywon initial implementation
     """
     # Create a data object, so we aren't modifying the underlying data that will be displayed
-    scaled_data = SansIQData(np.zeros(0), np.zeros(0), np.zeros(0), np.zeros(0), np.zeros(0), np.zeros(0))
+    if not align_by:
+        align_by = 'sample.GroupID,'
+    sorted_data = {}
+    # Sort data by alignment (usually data ID, but other times, this could be temperature, pressure, etc.)
     for datum in data:
         # Get data with the q points cutoff
+        key = get_compound_key(datum.metadata, align_by)
         cutoff = datum.masked()
         # Scale the intensity by the scaling factor
-        new_data = rescale_1d(cutoff, datum.scaling_factor)
-        scaled_data.append_1d_data_set(new_data)
-    return scaled_data
+        if hasattr(datum, 'scaling_factor'):
+            new_data = rescale_1d(cutoff, datum.scaling_factor)
+        else:
+            new_data = cutoff
+        if key not in sorted_data.keys():
+            sorted_data[key] = SansIQData(np.zeros(0), np.zeros(0), np.zeros(0), np.zeros(0), np.zeros(0), np.zeros(0))
+        sorted_data[key].append_1d_data_set(new_data)
+    return list(sorted_data.values())
 
 
 def _find_nearest(array: np.ndarray, value: float) -> float:
