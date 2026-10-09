@@ -5,8 +5,6 @@ SANS reduction steps
 Set of reduction steps for SANS reduction.
 """
 
-from __future__ import print_function
-
 import itertools
 import os
 import pathlib
@@ -2235,7 +2233,7 @@ def single_configuration(
             {"source": [1, "empty_scatt"], "target": [3, "subtrahend"]},
             {"source": [1, "sample_trans"], "target": [4, "in_beam"]},
             {"source": [1, "empty_trans"], "target": [4, "empty_beam"]},
-            {"source": [1, "empty_trans"], "target": [5, "in_beam"]},
+            {"source": [1, "sample_trans"], "target": [5, "in_beam"]},
             {"source": [1, "open_beam_trans"], "target": [5, "empty_beam"]},
             {"source": [3, "output"], "target": [6, "data"]},
             {"source": [4, "output"], "target": [6, "factor_param"]},
