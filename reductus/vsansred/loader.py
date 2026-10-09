@@ -4,18 +4,15 @@ VSANS data loader
 
 Load VSANS NeXus file into :mod:`vsansred.vsansdata` data structure.
 """
-import io
-from zipfile import ZipFile, is_zipfile
 from collections import OrderedDict
 import datetime
 import h5py
 import numpy as np
 
-from reductus.dataflow.lib import hzf_readonly_stripped as hzf
 from reductus.dataflow.lib import unit
 from reductus.dataflow.lib.h5_open import h5_open_zip
 
-from .vsansdata import VSansData, RawVSANSData, _s, _b
+from .vsansdata import RawVSANSData
 
 metadata_lookup = OrderedDict([
     #"det.dis", "DAS_logs/detectorPosition/softPosition",
@@ -118,7 +115,7 @@ unit_specifiers = {
 def process_sourceAperture(field, units):
     import numpy as np
     def handler(v):
-        if _s(v) == 'OUT':
+        if v == 'OUT':
             return v
         else:
             return float(v.split()[0])
@@ -126,7 +123,7 @@ def process_sourceAperture(field, units):
     value = handle_values(field[()])
     units_from = ""
     v0 = field[0].split()
-    if _s(value[0]) == 'OUT':
+    if value[0] == 'OUT':
         return value
     if len(v0) > 1:
         units_from = v0[1]
@@ -166,7 +163,7 @@ def load_detector(dobj, load_data=True):
 def load_metadata(
         entry: h5py.Group,
         multiplicity: int = 1,
-        i: int = 1,
+        i: int = 0,
         metadata_lookup_table: dict[str, tuple[str] | str] = metadata_lookup,
         unit_specifiers_table: dict[str, str] = unit_specifiers
 ):
@@ -191,17 +188,22 @@ def load_metadata(
                     field = data_as(field, unit_specifiers_table[mkey])
                 else:
                     field = field[()]
+
+                if len(field) == multiplicity:
+                    field = field[i]
+
                 if field.dtype.kind == 'f':
                     field = field.astype("float")
                 elif field.dtype.kind == 'i':
                     field = field.astype("int")
+                elif field.dtype.kind == 'b' or isinstance(field, np.bytes_):
+                    field = field.decode("utf-8")
 
-                if len(field) == multiplicity:
-                    metadata[mkey] = field[i]
-                else:
-                    metadata[mkey] = field
-            else:
                 metadata[mkey] = field
+                # Break out of inner loop when a value is assigned
+                break
+            else:
+                metadata[mkey] = metadata.get(mkey, None)
     return metadata
 
 def readVSANSNexuz(input_file, file_obj=None, metadata_lookup=metadata_lookup, load_data=True):
@@ -223,8 +225,9 @@ def readVSANSNexuz(input_file, file_obj=None, metadata_lookup=metadata_lookup, l
         
         multiplicity = 1
         for i in range(multiplicity):
-            metadata = load_metadata(entry, multiplicity, i,
-                                     metadata_lookup_table=metadata_lookup, unit_specifiers_table=unit_specifiers)
+            metadata = load_metadata(
+                entry, multiplicity, i, metadata_lookup_table=metadata_lookup, unit_specifiers_table=unit_specifiers
+            )
             #print(metadata)
             detector_keys = [n for n in entry['instrument'] if n.startswith('detector_')]
             detectors = dict([(k, load_detector(entry['instrument'][k], load_data=load_data)) for k in detector_keys])
