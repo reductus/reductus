@@ -61,7 +61,7 @@ metadata_lookup = OrderedDict([
     ("sample.temp", "DAS_logs/temp/primaryNode/average_value"),
     ("sample_des.temp", "DAS_logs/temp/desiredPrimaryNode"),
     ("resolution.ap1", "DAS_logs/geometry/sourceAperture"),
-    ("resolution.ap2", "instrument/sample_aperture/size"),
+    ("resolution.ap2", "DAS_logs/geometry/externalSampleAperture"),
     ("resolution.ap12dis", "instrument/source_aperture/distance"),
     ("resolution.guide", "DAS_logs/guide/guide"),
     ("sample.position", "instrument/sample_aperture/distance"),

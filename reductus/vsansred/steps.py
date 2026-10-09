@@ -966,6 +966,18 @@ def calculate_Q(realspace_data):
     wavelength = metadata['resolution.lmda']
     delta_wavelength = metadata['resolution.dlmda']
     new_detectors = OrderedDict()
+
+    #gravitational constant drop
+    g_const = 3.072e-9
+
+    k0= ( 2.0 * np.pi ) / wavelength
+
+    sigma_rel_lambda = delta_wavelength / (2.0 * np.sqrt(2.0 * np.log(2.0)))
+
+    L1 = metadata['resolution.ap12dis']  # Source to sample aperture distance (cm)
+    R1 = metadata['resolution.ap1'] / 2.0  # Source aperture radius (cm)
+    R2 = metadata['resolution.ap2'] / 2.0
+
     #print(r.detectors)
     for sn in short_detectors:
         detname = 'detector_{short_name}'.format(short_name=sn)
@@ -975,7 +987,11 @@ def calculate_Q(realspace_data):
         X = det['X']
         Y = det['Y']
         z = det['Z']
+        dX = det['dX']
+        dY = det['dY']
+
         r = np.sqrt(X**2+Y**2)
+
         theta = np.arctan2(r, z)/2 #remember to convert L2 to cm from meters
         q = (4*np.pi/wavelength)*np.sin(theta)
         phi = np.arctan2(Y, X)
@@ -984,10 +1000,34 @@ def calculate_Q(realspace_data):
         qx = q * np.cos(theta) * np.cos(phi)
         qy = q * np.cos(theta) * np.sin(phi)
         qz = q * np.sin(theta)
+
+        #wavelength spread on Q-resolution
+        var_Qx_wv = (qx * sigma_rel_lambda) ** 2
+        var_Qy_wv = (qy * sigma_rel_lambda) ** 2
+
+        # Pixel size contribution to Q-resolution
+        k_spatial = (k0 / z) ** 2
+        var_Qx_det = k_spatial * ((dX ** 2) / 12.0)
+        var_Qy_det = k_spatial * ((dY ** 2) / 12.0)
+
+        # gravity effect on Q-resolution
+        dy_gravity = g_const * (wavelength ** 2) * z * (z + L1)
+        var_Qy_gravity = k_spatial * (2.0 * dy_gravity * sigma_rel_lambda) ** 2
+
+        #collimation effect (pin-hople) on Q-resolution
+        var_beam_spatial = (R1 ** 2) / (4.0 * L1 ** 2) + (R2 ** 2 / 4.0) * ((1.0 / L1) + (1.0 / z)) ** 2
+        var_Q_div = (k0 ** 2) * var_beam_spatial
+
+        # Combine resolution effects
+        dqx = np.sqrt(var_Qx_det + var_Qx_wv + var_Q_div)
+        dqy = np.sqrt(var_Qy_det + var_Qy_wv + var_Qy_gravity + var_Q_div)
+
         det['Qx'] = qx
         det['Qy'] = qy
         det['Qz'] = qz
         det['Q'] = q
+        det['dQx'] = dqx
+        det['dQy'] = dqy
         new_detectors[detname] = det
 
     output = VSansDataQSpace(metadata=metadata, detectors=new_detectors)
@@ -1014,6 +1054,7 @@ def circular_av_new(qspace_data, q_min=None, q_max=None, q_step=None):
     I_Q (v1d[]): VSANS 1d data
 
     | 2019-10-29 Brian Maranville
+    | 2026-10-09 Jonathan Gaudet First shot at adding Q-resolution
     """
     from .vsansdata import short_detectors, VSans1dData
 
@@ -1032,9 +1073,16 @@ def circular_av_new(qspace_data, q_min=None, q_max=None, q_step=None):
 
         q_bins = np.arange(my_q_min, my_q_max+my_q_step, my_q_step)
         Q = (q_bins[:-1] + q_bins[1:])/2.0
-        dx = np.zeros_like(Q)
 
         mask = det.get('shadow_mask', np.ones_like(det['Q'], dtype=bool))
+
+        #Add info on Qs for Q-resolution calculation
+        Qx = det['Qx'][mask]
+        Qy = det['Qy'][mask]
+        dQx = det['dQx'][mask]
+        dQy = det['dQy'][mask]
+        Q_pixel = det['Q'][mask]
+        var_dQ = ((Qx * dQx) ** 2 + (Qy * dQy) ** 2) / (Q_pixel ** 2)
 
         # dq = data.dq_para if hasattr(data, 'dqpara') else np.ones_like(data.q) * q_step
         I, _bins_used = np.histogram(det['Q'][mask], bins=q_bins, weights=(det['data'].x)[mask])
@@ -1053,6 +1101,11 @@ def circular_av_new(qspace_data, q_min=None, q_max=None, q_step=None):
         I_var[nonzero_mask] /= (I_norm[nonzero_mask]**2)
         #Q_mean[Q_mean_norm > 0] /= Q_mean_norm[Q_mean_norm > 0]
         #ShadowFactor[Q_mean_norm > 0] /= Q_mean_norm[Q_mean_norm > 0]
+
+        #set Q-resolution
+        dQ_var_sum, _ = np.histogram(det['Q'][mask], bins=q_bins, weights=var_dQ)
+        dx = np.zeros_like(Q)
+        dx[nonzero_mask] = np.sqrt(dQ_var_sum[nonzero_mask] / I_norm[nonzero_mask])
 
         # calculate Q_var...
         # remarkably, the variance of a sum of normalized gaussians 
