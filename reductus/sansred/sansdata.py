@@ -6,7 +6,6 @@ Internal data representation for SANS data.
 """
 
 import sys
-import datetime
 from copy import copy, deepcopy
 import json
 from io import BytesIO
@@ -463,6 +462,87 @@ class SansIQData:
             self.meanQ = np.concatenate((self.meanQ, data.meanQ))[indices]
         if self.ShadowFactor is not None and data.ShadowFactor is not None:
             self.ShadowFactor = np.concatenate((self.ShadowFactor, data.ShadowFactor))[indices]
+
+    def append_metadata(self, meta_external: dict, meta_internal: dict | None = None):
+        """
+        Recursively merges an external metadata dictionary.
+
+        Behavior:
+        - Keys unique to one dictionary are copied as-is.
+        - Nested dictionaries are recursively merged.
+        - Identical scalar/array values are preserved as single values.
+        - Differing values or lists are merged into a deduplicated list.
+        """
+        if not meta_internal:
+            meta_internal = deepcopy(self.metadata)
+        # If either dictionary is empty of None, use the otehr and return early.
+        if not meta_external:
+            self.metadata = deepcopy(meta_internal or {})
+            return
+        if not meta_internal:
+            self.metadata = deepcopy(meta_external or {})
+            return
+
+        merged = {}
+        all_keys = set(meta_external.keys()).union(meta_external.keys())
+
+        for key in all_keys:
+            if key not in meta_external:
+                merged[key] = deepcopy(meta_internal[key])
+            elif key not in meta_internal:
+                merged[key] = deepcopy(meta_external[key])
+            else:
+                v1 = meta_internal[key]
+                v2 = meta_external[key]
+
+                # Recursive merge for nested metadata dictionaries
+                if isinstance(v1, dict) and isinstance(v2, dict):
+                    print(f'Merging dictionaries {v1} and {v2}')
+                    merged[key] = self.append_metadata(v1, v2)
+                    print(f'    Result: {merged[key]}')
+                # Check for exact equality (handles NumPy arrays safely)
+                elif self._values_equal(v1, v2):
+                    print(f'Values {v1} and {v2} are equal')
+                    merged[key] = deepcopy(v1)
+                # Combine differing scalars or sequences into a single list
+                else:
+                    print(f'Combining {v1} and {v2}')
+                    merged[key] = self._combine_metadata_values(v1, v2)
+                    print(f'    Result: {merged[key]}')
+
+        self.metadata = merged
+
+    @staticmethod
+    def _values_equal(v1, v2) -> bool:
+        """Safely compare metadata values, including NumPy arrays and unhashable types."""
+        if type(v1) != type(v2):
+            return False
+        if isinstance(v1, np.ndarray):
+            return np.array_equal(v1, v2)
+        try:
+            return bool(v1 == v2)
+        except Exception:
+            return False
+
+    def _combine_metadata_values(self, v1, v2):
+        """Combines two metadata values/lists into an ordered, deduplicated list."""
+
+        def _to_flat_list(val):
+            if isinstance(val, (list, tuple)):
+                return list(val)
+            elif isinstance(val, np.ndarray):
+                return val.tolist()
+            else:
+                return [val]
+
+        combined = []
+        for item in _to_flat_list(v1) + _to_flat_list(v2):
+            # Append only if not already present (preserving order)
+            if not any(self._values_equal(item, existing) for existing in combined):
+                combined.append(deepcopy(item))
+
+        # Collapse back to scalar if only 1 unique element remains
+        return combined[0] if len(combined) == 1 else combined
 
 
 class Parameters:
