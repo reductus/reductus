@@ -2450,6 +2450,7 @@ def sort_n_data_sets(data: list[SansIQData], align_by: str | None = None) -> lis
         if key not in sorted_data.keys():
             sorted_data[key] = SansIQData(np.zeros(0), np.zeros(0), np.zeros(0), np.zeros(0), np.zeros(0), np.zeros(0))
         sorted_data[key].append_1d_data_set(new_data)
+        sorted_data[key].append_metadata(datum.metadata)
     return list(sorted_data.values())
 
 
