@@ -497,18 +497,13 @@ class SansIQData:
 
                 # Recursive merge for nested metadata dictionaries
                 if isinstance(v1, dict) and isinstance(v2, dict):
-                    print(f'Merging dictionaries {v1} and {v2}')
                     merged[key] = self.append_metadata(v1, v2)
-                    print(f'    Result: {merged[key]}')
                 # Check for exact equality (handles NumPy arrays safely)
                 elif self._values_equal(v1, v2):
-                    print(f'Values {v1} and {v2} are equal')
                     merged[key] = deepcopy(v1)
                 # Combine differing scalars or sequences into a single list
                 else:
-                    print(f'Combining {v1} and {v2}')
                     merged[key] = self._combine_metadata_values(v1, v2)
-                    print(f'    Result: {merged[key]}')
 
         self.metadata = merged
 
