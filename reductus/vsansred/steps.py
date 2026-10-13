@@ -946,18 +946,21 @@ def correct_detector_sensitivity(data, sensitivity, exclude_back_detector=True):
 
 @nocache
 @module   
-def calculate_Q(realspace_data):
+def calculate_Q(realspace_data, solid_angle_shadow=True):
     """
     Calculates Q values (Qx, Qy) from realspace coordinates and wavelength
      **Inputs**
 
     realspace_data (realspace): datafiles in realspace X,Y coordinates
 
+    solid_angle_shadow (bool): Divide by solid angle shadow
+
     **Returns**
 
     QxQy_data (qspace): datafiles with Q information
 
     2018-04-27 Brian Maranville
+    2023-10-13 Jonathan Gaudet - added Q-resolution and shadow effect on solid angle correction
     """
     from .vsansdata import VSansDataQSpace, short_detectors
     from collections import OrderedDict
@@ -967,8 +970,8 @@ def calculate_Q(realspace_data):
     delta_wavelength = metadata['resolution.dlmda']
     new_detectors = OrderedDict()
 
-    #gravitational constant drop
-    g_const = 3.072e-9
+    #gravitational constant drop (g*m^2/2*h^2) in Ang^-2*cm^-2
+    g_const = 3.1331e-9
 
     k0= ( 2.0 * np.pi ) / wavelength
 
@@ -992,8 +995,9 @@ def calculate_Q(realspace_data):
 
         r = np.sqrt(X**2+Y**2)
 
-        theta = np.arctan2(r, z)/2 #remember to convert L2 to cm from meters
-        q = (4*np.pi/wavelength)*np.sin(theta)
+        twotheta = np.arctan2(r, z)
+        theta = twotheta/2.0 #remember to convert L2 to cm from meters
+        q = (4.0 * np.pi /wavelength)*np.sin(theta)
         phi = np.arctan2(Y, X)
         # need to add qz... and qx and qy are really e.g. q*cos(theta)*sin(alpha)...
         # qz = q * sin(theta)
@@ -1029,6 +1033,25 @@ def calculate_Q(realspace_data):
         det['dQx'] = dqx
         det['dQy'] = dqy
         new_detectors[detname] = det
+
+        if solid_angle_shadow:
+            if sn == "B":
+                solid_angle_corr = np.cos(twotheta)**3
+                det['data'] /= solid_angle_corr
+            else:
+                orientation = det['tube_orientation']['value'][0].decode().upper()
+
+                if (orientation == "VERTICAL"):
+                    cos_theta_y = z / np.sqrt(Y**2 + z**2)
+                    solid_angle_corr = ( np.cos(twotheta)**2 ) * cos_theta_y
+                    det['data'] /= solid_angle_corr
+
+                elif (orientation == "HORIZONTAL"):
+                    cos_theta_x = z / np.sqrt(X**2 + z**2)
+                    solid_angle_corr = (np.cos(twotheta) ** 2) * cos_theta_x
+                    det['data'] /= solid_angle_corr
+
+
 
     output = VSansDataQSpace(metadata=metadata, detectors=new_detectors)
     return output
@@ -2293,10 +2316,10 @@ def extract_mag_nuc_components(data_uu, data_ud, data_du, data_dd, angle_width=3
     data_du_xy_sha2 = top_bottom_shadow(data_du_xy_sha, width=3, inplace=True)
     data_dd_xy_sha2 = top_bottom_shadow(data_dd_xy_sha, width=3, inplace=True)
 
-    data_uu_q = calculate_Q(data_uu_xy_sha2)
-    data_ud_q = calculate_Q(data_ud_xy_sha2)
-    data_du_q = calculate_Q(data_du_xy_sha2)
-    data_dd_q = calculate_Q(data_dd_xy_sha2)
+    data_uu_q = calculate_Q(data_uu_xy_sha2, solid_angle_shadow=True)
+    data_ud_q = calculate_Q(data_ud_xy_sha2, solid_angle_shadow=True)
+    data_du_q = calculate_Q(data_du_xy_sha2, solid_angle_shadow=True)
+    data_dd_q = calculate_Q(data_dd_xy_sha2, solid_angle_shadow=True)
 
     nuc1_mean_mask = sector_cut(data_uu_q.copy(), [0.0, angle_width], mirror=False)
     nuc2_mean_mask = sector_cut(data_dd_q.copy(), [0.0, angle_width], mirror=False)

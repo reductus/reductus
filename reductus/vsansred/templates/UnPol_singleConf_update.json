@@ -1,0 +1,418 @@
+{
+  "wires": [
+    {
+      "source": [
+        0,
+        "output"
+      ],
+      "target": [
+        4,
+        "factor_param"
+      ]
+    },
+    {
+      "source": [
+        1,
+        "output"
+      ],
+      "target": [
+        3,
+        "sample"
+      ]
+    },
+    {
+      "source": [
+        2,
+        "output"
+      ],
+      "target": [
+        4,
+        "sample"
+      ]
+    },
+    {
+      "source": [
+        4,
+        "output"
+      ],
+      "target": [
+        3,
+        "background"
+      ]
+    },
+    {
+      "source": [
+        3,
+        "output"
+      ],
+      "target": [
+        6,
+        "raw_data"
+      ]
+    },
+    {
+      "source": [
+        6,
+        "realspace_data"
+      ],
+      "target": [
+        7,
+        "sample"
+      ]
+    },
+    {
+      "source": [
+        5,
+        "output"
+      ],
+      "target": [
+        7,
+        "trans_sample"
+      ]
+    },
+    {
+      "source": [
+        7,
+        "abs_data"
+      ],
+      "target": [
+        8,
+        "realspace_data"
+      ]
+    },
+    {
+      "source": [
+        8,
+        "QxQy_data"
+      ],
+      "target": [
+        9,
+        "realspace_data"
+      ]
+    },
+    {
+      "source": [
+        11,
+        "output"
+      ],
+      "target": [
+        1,
+        "sample"
+      ]
+    },
+    {
+      "source": [
+        12,
+        "output"
+      ],
+      "target": [
+        2,
+        "sample"
+      ]
+    },
+    {
+      "source": [
+        13,
+        "output"
+      ],
+      "target": [
+        2,
+        "background"
+      ]
+    },
+    {
+      "source": [
+        13,
+        "output"
+      ],
+      "target": [
+        1,
+        "background"
+      ]
+    },
+    {
+      "source": [
+        14,
+        "output"
+      ],
+      "target": [
+        0,
+        "in_beam"
+      ]
+    },
+    {
+      "source": [
+        14,
+        "output"
+      ],
+      "target": [
+        5,
+        "in_beam"
+      ]
+    },
+    {
+      "source": [
+        15,
+        "output"
+      ],
+      "target": [
+        0,
+        "empty_beam"
+      ]
+    },
+    {
+      "source": [
+        16,
+        "output"
+      ],
+      "target": [
+        5,
+        "empty_beam"
+      ]
+    },
+    {
+      "source": [
+        16,
+        "output"
+      ],
+      "target": [
+        7,
+        "open_beam"
+      ]
+    },
+    {
+      "source": [
+        10,
+        "I_Q"
+      ],
+      "target": [
+        17,
+        "data_list"
+      ]
+    },
+    {
+      "source": [
+        9,
+        "shadowed"
+      ],
+      "target": [
+        10,
+        "qspace_data"
+      ]
+    }
+  ],
+  "modules": [
+    {
+      "module": "ncnr.vsans.calculate_vsans_transmission",
+      "title": "Calculate Vsans Transmission",
+      "x": 663,
+      "y": 199,
+      "text_width": 213
+    },
+    {
+      "module": "ncnr.vsans.subtract_raw",
+      "title": "Subtract Raw",
+      "x": 669,
+      "y": 40,
+      "text_width": 103
+    },
+    {
+      "module": "ncnr.vsans.subtract_raw",
+      "title": "Subtract Raw",
+      "x": 664,
+      "y": 113,
+      "text_width": 103
+    },
+    {
+      "module": "ncnr.vsans.subtract_raw",
+      "title": "Subtract Raw",
+      "x": 1100,
+      "y": 54,
+      "text_width": 103
+    },
+    {
+      "module": "ncnr.vsans.multiply_raw",
+      "title": "Multiply Raw",
+      "x": 936,
+      "y": 97,
+      "text_width": 102
+    },
+    {
+      "module": "ncnr.vsans.calculate_vsans_transmission",
+      "title": "Calculate Vsans Transmission",
+      "x": 659,
+      "y": 272,
+      "text_width": 213
+    },
+    {
+      "module": "ncnr.vsans.calculate_XY",
+      "title": "Calculate Xy",
+      "x": 1272,
+      "y": 56,
+      "text_width": 96
+    },
+    {
+      "module": "ncnr.vsans.absolute_scaling",
+      "title": "Absolute Scaling",
+      "x": 1421,
+      "y": 148,
+      "text_width": 128
+    },
+    {
+      "module": "ncnr.vsans.calculate_Q",
+      "title": "Calculate Q",
+      "x": 1583,
+      "y": 82,
+      "text_width": 92
+    },
+    {
+      "module": "ncnr.vsans.geometric_shadow",
+      "title": "Geometric Shadow",
+      "x": 1653,
+      "y": 137,
+      "text_width": 144
+    },
+    {
+      "module": "ncnr.vsans.circular_av_new",
+      "title": "Circular Av New",
+      "x": 1674,
+      "y": 221,
+      "text_width": 122
+    },
+    {
+      "module": "ncnr.vsans.LoadVSANS",
+      "title": "Scatt. Sample",
+      "x": 343,
+      "y": 58,
+      "config": {
+        "filelist": [
+          {
+            "source": "local",
+            "path": "/Users/jng7/Desktop/V-SANS-Standard/IGOR_patched/sans72419.nxs.ngv",
+            "mtime": 1787247454,
+            "entries": [
+              "entry"
+            ]
+          }
+        ],
+        "apply_attenuation": true,
+        "apply_monitor_norm": true,
+        "apply_dead_time": true
+      },
+      "text_width": 105
+    },
+    {
+      "module": "ncnr.vsans.LoadVSANS",
+      "title": "Scatt. Empty",
+      "x": 342,
+      "y": 103,
+      "text_width": 97,
+      "config": {
+        "filelist": [
+          {
+            "source": "local",
+            "path": "/Users/jng7/Desktop/V-SANS-Standard/IGOR_patched/sans72420.nxs.ngv",
+            "mtime": 1787163571,
+            "entries": [
+              "entry"
+            ]
+          }
+        ],
+        "apply_attenuation": true,
+        "apply_monitor_norm": true,
+        "apply_dead_time": true
+      }
+    },
+    {
+      "module": "ncnr.vsans.LoadVSANS",
+      "title": "Blocked Beam",
+      "x": 344,
+      "y": 141,
+      "text_width": 109,
+      "config": {
+        "filelist": [
+          {
+            "source": "local",
+            "path": "/Users/jng7/Desktop/V-SANS-Standard/IGOR_patched/sans72431.nxs.ngv",
+            "mtime": 1787163571,
+            "entries": [
+              "entry"
+            ]
+          }
+        ],
+        "apply_attenuation": true,
+        "apply_monitor_norm": true,
+        "apply_dead_time": true
+      }
+    },
+    {
+      "module": "ncnr.vsans.LoadVSANS",
+      "title": "Trans. Sample",
+      "x": 350,
+      "y": 210,
+      "config": {
+        "apply_attenuation": true,
+        "apply_monitor_norm": true,
+        "apply_dead_time": true,
+        "filelist": [
+          {
+            "source": "local",
+            "path": "/Users/jng7/Desktop/V-SANS-Standard/IGOR_patched/sans72427.nxs.ngv",
+            "mtime": 1787163571,
+            "entries": [
+              "entry"
+            ]
+          }
+        ]
+      },
+      "text_width": 106
+    },
+    {
+      "module": "ncnr.vsans.LoadVSANS",
+      "title": "Trans. Empty Cell",
+      "x": 339,
+      "y": 265,
+      "text_width": 129,
+      "config": {
+        "filelist": [
+          {
+            "source": "local",
+            "path": "/Users/jng7/Desktop/V-SANS-Standard/IGOR_patched/sans72429.nxs.ngv",
+            "mtime": 1787163571,
+            "entries": [
+              "entry"
+            ]
+          }
+        ],
+        "apply_attenuation": true,
+        "apply_monitor_norm": true,
+        "apply_dead_time": true
+      }
+    },
+    {
+      "module": "ncnr.vsans.LoadVSANS",
+      "title": "Open Beam",
+      "x": 362,
+      "y": 342,
+      "config": {
+        "filelist": [
+          {
+            "source": "local",
+            "path": "/Users/jng7/Desktop/V-SANS-Standard/IGOR_patched/sans72426.nxs.ngv",
+            "mtime": 1788186533,
+            "entries": [
+              "entry"
+            ]
+          }
+        ]
+      },
+      "text_width": 93
+    },
+    {
+      "module": "ncnr.vsans.export_vsans_1d",
+      "title": "Export Vsans 1d",
+      "x": 1692,
+      "y": 303
+    }
+  ]
+}
