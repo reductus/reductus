@@ -5,8 +5,7 @@ SANS reduction steps
 Set of reduction steps for SANS reduction.
 """
 
-from __future__ import print_function
-
+import itertools
 import os
 import pathlib
 from posixpath import basename
@@ -23,8 +22,6 @@ from reductus.dataflow.lib import uncertainty
 
 from .export_sans import export_to_ascii, export_to_csv, export_to_nxcansas
 from .sansdata import RawSANSData, SansData, Sans1dData, SansIQData, Parameters
-
-from reductus.vsansred.steps import _s
 
 ALL_ACTIONS = []
 IGNORE_CORNER_PIXELS = True
@@ -177,7 +174,7 @@ def patch(data, patches=None):
 
     key="run.filename"
 
-    master = OrderedDict([(_s(d.metadata[key]), d.metadata) for d in data])
+    master = OrderedDict([(d.metadata[key], d.metadata) for d in data])
     to_apply = JsonPatch(patches)
     to_apply.apply(master, in_place=True)
 
@@ -230,9 +227,9 @@ def autosort(rawdata, subsort="sample.labl", add_scattering=True, trans_sort="ru
     open_beam_absolute = []
 
     for r in rawdata:
-        purpose = _s(r.metadata['analysis.filepurpose']).lower().strip()
-        intent = _s(r.metadata['analysis.intent']).lower().strip()
-        description = _s(r.metadata['sample.labl']).lower().strip()
+        purpose = r.metadata['analysis.filepurpose'].lower().strip()
+        intent = r.metadata['analysis.intent'].lower().strip()
+        description = r.metadata['sample.labl'].lower().strip()
         if intent.startswith('blo') or (purpose == 'scattering' and 'block' in description):
             blocked_beam.append(r)
         elif intent.startswith('open') or (purpose == 'transmission' and 'open' in description):
@@ -262,13 +259,17 @@ def autosort(rawdata, subsort="sample.labl", add_scattering=True, trans_sort="ru
             added_samples[key] = addSimple(added_samples[key])
         sample_scatt = list(added_samples.values())
 
-    scatt_config = sample_scatt[0].metadata.get(trans_sort, '').replace(b' Scatt', b'').replace(b' Trans', b'')
-    trans_config = sample_trans[0].metadata.get(trans_sort, '').replace(b' Scatt', b'').replace(b' Trans', b'')
+    scatt_configs = set([
+        sample_i.metadata.get(trans_sort, '').replace('Scatt', '').replace('Trans', '').strip()
+        for sample_i in sample_scatt])
+    trans_configs = set([
+        sample_i.metadata.get(trans_sort, '').replace('Scatt', '').replace('Trans', '').strip()
+        for sample_i in sample_trans])
     for open in open_trans:
-        sort_val = open.metadata.get(trans_sort, '').replace(b' Scatt', b'').replace(b' Trans', b'')
-        if sort_val == scatt_config:
+        sort_val = open.metadata.get(trans_sort, '').replace('Scatt', '').replace('Trans', '').strip()
+        if sort_val in scatt_configs:
             open_beam_absolute.append(open)
-        if sort_val == trans_config:
+        if sort_val in trans_configs:
             open_beam_trans.append(open)
 
     return sample_scatt, blocked_beam, empty_scatt, sample_trans, empty_trans, open_beam_absolute, open_beam_trans
@@ -597,7 +598,7 @@ def calculateDQ_IGOR(data, inQ, del_r=None):
     LP = 1.0/( 1.0/L1 + 1.0/L2)
     v_lambda = labmdaWidth**2/6.0
 
-    if 'LENS' in _s(data.metadata['run.guide'].upper()):
+    if 'LENS' in data.metadata['run.guide'].upper():
         # NOTE: this might need adjustment.  Ticket #677 filed in trac to change to:
         # v_b = 0.25*(S1*L2/L1)**2 +0.25*(2/3)*(labmdaWidth)**2*(S2*L2/LP)**2	
         v_b = 0.25*(S1*L2/L1)**2 +0.25*(2/3)*(labmdaWidth/lambda0)**2*(S2*L2/LP)**2		# correction to 2nd term
@@ -916,8 +917,6 @@ def circular_av_new(data_sets, q_min=None, q_max=None, q_step=None, mask_width=3
 
     for data in data_sets:
         # adding simple width-based mask around the perimeter:
-        if data.Tsam:
-            data.metadata["sample.trans"] = data.Tsam
         mask = np.zeros_like(data.q, dtype=bool)
         mask_width = abs(mask_width)
         if (mask_width > 0):
@@ -1358,6 +1357,12 @@ def _generate_transmission(in_beam, empty_beam, integration_box=None, auto_integ
         ("factor_err", np.sqrt(ratio.variance)),
         ("run.configuration", in_beam.metadata['run.configuration']),
         ("sample.description", in_beam.metadata['sample.description']),
+        ('sample.GroupID', in_beam.metadata['sample.GroupID']),
+        ('sample.localID', in_beam.metadata['sample.localID']),
+        ('reduction.openbeam.description', empty_beam.metadata['sample.description'] if empty_beam else "None"),
+        ('reduction.openbeam.filename', empty_beam.metadata['run.filename'] if empty_beam else "None"),
+        ('reduction.openbeam.GroupID', empty_beam.metadata['sample.GroupID'] if empty_beam else "None"),
+        ('reduction.openbeam.localID', empty_beam.metadata['sample.localID'] if empty_beam else "None"),
         ("det.des_dis", in_beam.metadata['det.des_dis']),
         ("resolution.lmda", in_beam.metadata['resolution.lmda']),
         ("run.guide", in_beam.metadata['run.guide']),
@@ -1413,10 +1418,10 @@ def subtract(subtrahend, minuend, align_by='run.configuration'):
         align_lookup = dict([(get_compound_key(m.metadata, align_by), m) for m in minuend])
         return [(s - align_lookup[get_compound_key(s.metadata, align_by)]) for s in subtrahend]
     else:
-        return [(s - m) for s,m in zip(subtrahend, minuend)]
+        return [(s - m) for s,m in itertools.zip_longest(subtrahend, minuend, fillvalue=0.0)]
 
 @module
-def product(data, factor_param, align_by="sample.description,run.configuration,sample.temp,mag.value"):
+def product(data, factor_param, align_by="none"):
     """
     Algebraic multiplication of dataset
 
@@ -1439,10 +1444,21 @@ def product(data, factor_param, align_by="sample.description,run.configuration,s
     # follow broadcast rules:
     if not factor_param or len(factor_param) == 0:
         return data
-    elif len(factor_param) == 1:
-        f = factor_param[0]
-        return [(d * Uncertainty(f.params.get('factor', 1.0), f.params.get('factor_variance', 0.0))) for d in data]
-    elif align_by.lower() != "none":
+
+    # Make lists of factors and data match in length
+    if len(factor_param) == 1:
+        # Scaling multiple empty cells by a single transmission
+        factor_param = factor_param * len(data)
+    elif len(data) == 1:
+        # Scaling an empty cell by multiple transmission values
+        data = data*len(factor_param)
+    elif len(data) // len(factor_param) == 0 or len(factor_param) // len(data) == 0:
+        # Scaling multiple empty cells by multiple transmission values,
+        large, small = (data, factor_param) if len(data) > len(factor_param) else (factor_param, data)
+        small = small * int(len(large) / len(small))
+        data, factor_param = (large, small) if len(data) > len(factor_param) else (small, large)
+
+    if align_by.lower() != "none":
         # make lookup:
         align_lookup = dict([(get_compound_key(f.params, align_by), Uncertainty(f.params.get('factor', 1.0), f.params.get('factor_variance', 0.0))) for f in factor_param])
         return [(d * align_lookup[get_compound_key(d.metadata, align_by)]) for d in data]
@@ -1696,6 +1712,7 @@ def absolute_scaling(empty, sample, Tsam, div, instrument="NG7", integration_box
     #-----Using Kappa to Scale data-----#
     Dsam = sample.metadata['sample.thk'] / 10  # Sample thickness in mm => convert to cm
     ABS = sample.__mul__(1/(kappa*Dsam*Tsam_factor))
+    ABS.metadata['sample.trans'] = f"{Tsam_factor.x:.3f} ({Tsam_factor.variance})"
 
     params = OrderedDict([
         ("DETCNT", detCnt.x),
@@ -2135,7 +2152,7 @@ def getPoissonUncertainty(y):
 
 @module
 def single_configuration(
-        filelist=None, view_step=13, view_output=None, add_scatt=False, add_keyword='sample.labl', mask=None):
+        filelist=None, view_step=13, view_output="Circular Averaged Data (Unmasked)", add_scatt=False, add_keyword='sample.labl', mask=None):
     """Single module to handle all data reduction for a single configuration in a single shot
 
     **Inputs**
@@ -2145,7 +2162,7 @@ def single_configuration(
     view_step {Reduction step} (int): Walk through each step of the reduction process to see the progress. A future update will remove this in favor
         of a final report showing the entire reduction process. Currently, there steps 0 through 13 are available.
 
-    view_output {Display} (opt:Raw Data|Transmission Values|Absolute Scaling of 2D Data|Circular Averaged Data (Unmasked)|Circular Averaged Data (Masked)|Other):
+    view_output {Display} (opt:Raw Data|Transmission Values|Absolute Scaling of 2D Data|2D Q Space|Circular Averaged Data (Unmasked)|Circular Averaged Data (Masked)|Other):
         What data would you like displayed?
 
     add_scatt {Should scattering files be added together?} (bool): Should scattering files that share a metadata node
@@ -2181,13 +2198,13 @@ def single_configuration(
             {"x": 200, "y": 5, "title": "BB Subtract from Sample", "module": "ncnr.sans.subtract"},
             {"x": 200, "y": 65, "title": "BB Subtract from Empty Cell", "module": "ncnr.sans.subtract"},
             {"x": 200, "y": 155, "title": "Empty Transmission", "module": "ncnr.sans.generate_transmission",
-                "config": {"auto_integrate": True}
+                "config": {"auto_integrate": True, "align_by": "run.configuration"}
             },
             {"x": 685, "y": 95, "title": "Transmission Values", "module": "ncnr.sans.generate_transmission",
-                "config": {"auto_integrate": True}
+                "config": {"auto_integrate": True, "align_by": "run.configuration"}
             },
-            {"x": 365, "y": 35, "title": "Scale by Transmission", "module": "ncnr.sans.product"},
-            {"x": 525, "y": 5, "title": "Subrtract Empty Cell from Sample", "module": "ncnr.sans.subtract"},
+            {"x": 365, "y": 35, "title": "Scale by Transmission", "module": "ncnr.sans.product",},
+            {"x": 525, "y": 5, "title": "Subtract Empty Cell from Sample", "module": "ncnr.sans.subtract"},
             {"x": 525, "y": 65, "title": "Load DIV", "module": "ncnr.sans.LoadDIV",
                 "config": {"filelist": [{
                     "path": "ncnrdata/ancillary/ng7sans/DIV/PLEX_20190719_NG7.DIV", "source": "ncnr",
@@ -2197,7 +2214,7 @@ def single_configuration(
             {"x": 895, "y": 35, "title": "Absolute Scaling of 2D Data", "module": "ncnr.sans.absolute_scaling",
                 "config": {"auto_box": True}
             },
-            {"x": 1045, "y": 35, "title": "Pixel Space to Q Space", "module": "ncnr.sans.PixelsToQ",
+            {"x": 1045, "y": 35, "title": "2D Q Space", "module": "ncnr.sans.PixelsToQ",
                 "config": {"correct_solid_angle": True}
             },
             {"x": 1190, "y": 35, "title": "Circular Averaged Data (Unmasked)", "module": "ncnr.sans.circular_av_new",
@@ -2387,17 +2404,13 @@ def mask_1d_data(data: list[SansIQData | Sans1dData],
         mask_indices = mask_indices * len(data)
     for dataset, mask in zip(data, mask_indices):
         data_set = copy(dataset)
-        if mask[0] and mask[1]:
-            # Both non-zero values => slice
-            data_set.q_slice = [mask[0] - 1, 0 - mask[1]]
-        else:
-            data_set.q_slice = None
+        data_set.q_slice = [mask[0] - 1 if mask[0] else 1, 0 - mask[1] if mask[1] else -1]
         returns.append(data_set.masked())
     return returns
 
 
 @module
-def sort_n_data_sets(data: [SansIQData]):
+def sort_n_data_sets(data: list[SansIQData], align_by: str | None = None) -> list[SansIQData]:
     """A module that allows the user to combine multiple reduced 1D data sets together. This is a similar process to the
     NSORT function in the Igor Pro macros. This will optionally scale each data set by a defined amount and then exclude
     a number of points from each end of the data set. The primary reason for performing this task is to combine multiple
@@ -2410,21 +2423,33 @@ def sort_n_data_sets(data: [SansIQData]):
 
     data (sans1d[]): SANS 1D data reduced data
 
+    align_by (str): for multiple inputs, multiply data that matches factor_param with this metadata value
+
     **Returns**
 
-    output (sans1d): A combined reduced data set with all points stitched together into a single data object
+    output (sans1d[]): A combined reduced data set with all points stitched together into a single data object
 
     | 2025-07-29 Jeff Krzywon initial implementation
     """
     # Create a data object, so we aren't modifying the underlying data that will be displayed
-    scaled_data = SansIQData(np.zeros(0), np.zeros(0), np.zeros(0), np.zeros(0), np.zeros(0), np.zeros(0))
+    if not align_by:
+        align_by = 'sample.GroupID,'
+    sorted_data = {}
+    # Sort data by alignment (usually data ID, but other times, this could be temperature, pressure, etc.)
     for datum in data:
         # Get data with the q points cutoff
+        key = get_compound_key(datum.metadata, align_by)
         cutoff = datum.masked()
         # Scale the intensity by the scaling factor
-        new_data = rescale_1d(cutoff, datum.scaling_factor)
-        scaled_data.append_1d_data_set(new_data)
-    return scaled_data
+        if hasattr(datum, 'scaling_factor'):
+            new_data = rescale_1d(cutoff, datum.scaling_factor)
+        else:
+            new_data = cutoff
+        if key not in sorted_data.keys():
+            sorted_data[key] = SansIQData(np.zeros(0), np.zeros(0), np.zeros(0), np.zeros(0), np.zeros(0), np.zeros(0))
+        sorted_data[key].append_1d_data_set(new_data)
+        sorted_data[key].append_metadata(datum.metadata)
+    return list(sorted_data.values())
 
 
 def _find_nearest(array: np.ndarray, value: float) -> float:
