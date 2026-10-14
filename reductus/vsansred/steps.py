@@ -1041,12 +1041,12 @@ def calculate_Q(realspace_data, solid_angle_shadow=True):
             else:
                 orientation = det['tube_orientation']['value'][0].decode().upper()
 
-                if (orientation == "VERTICAL"):
+                if orientation == "VERTICAL":
                     cos_theta_y = z / np.sqrt(Y**2 + z**2)
                     solid_angle_corr = ( np.cos(twotheta)**2 ) * cos_theta_y
                     det['data'] /= solid_angle_corr
 
-                elif (orientation == "HORIZONTAL"):
+                elif orientation == "HORIZONTAL":
                     cos_theta_x = z / np.sqrt(X**2 + z**2)
                     solid_angle_corr = (np.cos(twotheta) ** 2) * cos_theta_x
                     det['data'] /= solid_angle_corr
@@ -2535,111 +2535,6 @@ def compute_mag_cross_term(uu_90_1d, dd_90_1d, nuclear_1d):
 
     return [res_obj]
 
-
-from scipy.interpolate import griddata
-
-
-def export_vsans_2d_matrix_grid(sans_qspace, num_points=128, file_suffix=".2d.dat"):
-    """
-    Grids multi-detector VSansDataQSpace data into a single uniform 2D matrix (Qx, Qy, I, dI)
-    compatible with SasView 2D ASCII format, explicitly applying detector masks.
-
-    Unsampled or masked areas are assigned NaN.
-    """
-    qx_all = []
-    qy_all = []
-    i_all = []
-    var_all = []
-
-    # 1. Gather pixel values from all detector panels
-    for detname, det in sans_qspace.detectors.items():
-        if "data" not in det or "Qx" not in det or "Qy" not in det:
-            continue
-
-        qx_panel = det["Qx"].ravel('C')
-        qy_panel = det["Qy"].ravel('C')
-        i_panel = det["data"].x.ravel('C')
-        var_panel = det["data"].variance.ravel('C')
-
-        # Start with standard validity check (finite values)
-        valid = np.isfinite(i_panel) & np.isfinite(qx_panel) & np.isfinite(qy_panel)
-
-        # --- MASK CHECKING ---
-        # 1) Check for shadow/detector mask in detector dict
-        if 'shadow_mask' in det:
-            mask = det['shadow_mask'].astype(bool).ravel('C')
-            valid &= ~mask  # Exclude masked pixels (where mask is True)
-        elif 'mask' in det:
-            mask = det['mask'].astype(bool).ravel('C')
-            valid &= ~mask
-
-        # 2) Check for mask inside the Uncertainty object if present
-        if hasattr(det['data'], 'mask') and det['data'].mask is not None:
-            unc_mask = np.asarray(det['data'].mask).astype(bool).ravel('C')
-            valid &= ~unc_mask
-        # ----------------------
-
-        qx_all.append(qx_panel[valid])
-        qy_all.append(qy_panel[valid])
-        i_all.append(i_panel[valid])
-        var_all.append(var_panel[valid])
-
-    if not qx_all:
-        raise ValueError("No valid unmasked detector data found to export.")
-
-    qx_pts = np.concatenate(qx_all)
-    qy_pts = np.concatenate(qy_all)
-    i_pts = np.concatenate(i_all)
-    err_pts = np.sqrt(np.maximum(0, np.concatenate(var_all)))
-
-    # 2. Define uniform 2D Qx, Qy grid boundaries
-    qx_min, qx_max = np.min(qx_pts), np.max(qx_pts)
-    qy_min, qy_max = np.min(qy_pts), np.max(qy_pts)
-
-    qx_1d = np.linspace(qx_min, qx_max, num_points)
-    qy_1d = np.linspace(qy_min, qy_max, num_points)
-    grid_qx, grid_qy = np.meshgrid(qx_1d, qy_1d)
-
-    # 3. Interpolate Intensity and Error onto 2D Grid
-    # Linear interpolation leaves unmeasured/masked regions as NaN
-    grid_i = griddata((qx_pts, qy_pts), i_pts, (grid_qx, grid_qy), method='linear', fill_value=np.nan)
-    grid_di = griddata((qx_pts, qy_pts), err_pts, (grid_qx, grid_qy), method='linear', fill_value=np.nan)
-
-    # 4. Format header and data matrix for SasView
-    filename = str(sans_qspace.metadata.get("run.filename", "vsans_2d"))
-    title = str(sans_qspace.metadata.get("sample.description", "VSANS 2D Grid"))
-
-    lines = [
-        f"ASCII DATA 2D - {title}",
-        f"DATA FOR {filename}",
-        f"Qx_min = {qx_min:.6e}, Qx_max = {qx_max:.6e}",
-        f"Qy_min = {qy_min:.6e}, Qy_max = {qy_max:.6e}",
-        f"Qx_bins = {num_points}, Qy_bins = {num_points}",
-        "Qx (1/A)   Qy (1/A)   I (1/cm)   dI (1/cm)"
-    ]
-
-    for row in range(num_points):
-        for col in range(num_points):
-            qx_val = grid_qx[row, col]
-            qy_val = grid_qy[row, col]
-            val_i = grid_i[row, col]
-            val_di = grid_di[row, col]
-
-            s_i = f"{val_i:.6e}" if np.isfinite(val_i) else "NaN"
-            s_di = f"{val_di:.6e}" if np.isfinite(val_di) else "NaN"
-
-            lines.append(f"{qx_val:14.6e} {qy_val:14.6e} {s_i:>14} {s_di:>14}")
-
-    content = "\n".join(lines)
-
-    return {
-        "name": filename,
-        "entry": str(sans_qspace.metadata.get("entry", "entry")),
-        "file_suffix": file_suffix,
-        "value": content,
-    }
-
-
 @module
 def export_vsans_2d_matrix_grid(data, num_points=128, output_dir=None, filename_out="vsans_2d_reduced.dat"):
     """
@@ -2923,19 +2818,35 @@ def export_vsans_1d(data_list, save_path=None, filename="output.dat"):
 
     2026-10-07 Jonathan Gaudet
     """
-
     import os
+    import numpy as np
     from .vsansdata import VSans1dData
 
     valid_data = [d for d in data_list if len(d.x) > 0]
     if not valid_data:
         return None
 
-    # 1. Combine all arrays from every detector panel
-    all_q = np.concatenate([d.x for d in valid_data])
-    all_v = np.concatenate([d.v for d in valid_data])
-    all_dv = np.concatenate([d.dv for d in valid_data])
-    all_dx = np.concatenate([d.dx for d in valid_data])
+    # Filtering out Q-bins without valid measurement points (d.dv > 0)
+    filtered_data = []
+    for d in valid_data:
+        # Mask out empty bins where variance/uncertainty is zero (uncounted bins)
+        mask = d.dv > 0
+        if np.any(mask):
+            filtered_data.append({
+                'x': d.x[mask],
+                'v': d.v[mask],
+                'dv': d.dv[mask],
+                'dx': d.dx[mask]
+            })
+
+    if not filtered_data:
+        return None
+
+    # 1. Combine all dictionary arrays from every detector panel
+    all_q = np.concatenate([d['x'] for d in filtered_data])
+    all_v = np.concatenate([d['v'] for d in filtered_data])
+    all_dv = np.concatenate([d['dv'] for d in filtered_data])
+    all_dx = np.concatenate([d['dx'] for d in filtered_data])
 
     # 2. Sort by Q so the output profile is monotonically increasing in Q
     sort_idx = np.argsort(all_q)
