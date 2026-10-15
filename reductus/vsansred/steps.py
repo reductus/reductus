@@ -1472,9 +1472,8 @@ def calculate_vsans_transmission(in_beam, empty_beam, margin=5, PANEL_KEY = "det
 
     output (params[]): calculated transmission for the integration area
 
-    2026-10-08 Jonathan Gaudet
+    2026-10-15 Jonathan Gaudet
     """
-    from collections import OrderedDict
     import numpy as np
     from .vsansdata import Parameters
 
@@ -1524,29 +1523,18 @@ def calculate_vsans_transmission(in_beam, empty_beam, margin=5, PANEL_KEY = "det
     ratio_err = np.sqrt(ratio_var)
 
     # Build and return Parameters object
-    params_dict = OrderedDict(
-        [
-            ("factor", ratio_val),
-            ("factor_variance", ratio_var),
-            ("factor_err", ratio_err),
-            ("panel_used", PANEL_KEY),
-            (
-                "run.configuration",
-                in_beam.metadata.get("run.configuration", ""),
-            ),
-            (
-                "sample.description",
-                in_beam.metadata.get("sample.description", ""),
-            ),
-            ("det.des_dis", in_beam.metadata.get("det.des_dis", 0.0)),
-            ("resolution.lmda", in_beam.metadata.get("resolution.lmda", 0.0)),
-            ("run.guide", in_beam.metadata.get("run.guide", "")),
-            (
-                "box_used",
-                {"xmin": xmin, "xmax": xmax, "ymin": ymin, "ymax": ymax},
-            ),
-        ]
-    )
+    params_dict = {
+            "factor": ratio_val,
+            "factor_variance": ratio_var,
+            "factor_err": ratio_err,
+            "panel_used": PANEL_KEY,
+            "run.configuration": in_beam.metadata.get("run.configuration", ""),
+            "sample.description": in_beam.metadata.get("sample.description", ""),
+            "det.des_dis": in_beam.metadata.get("det.des_dis", 0.0),
+            "resolution.lmda": in_beam.metadata.get("resolution.lmda", 0.0),
+            "run.guide": in_beam.metadata.get("run.guide", ""),
+            "box_used": {"xmin": xmin, "xmax": xmax, "ymin": ymin, "ymax": ymax},
+    }
 
     result = Parameters(params=params_dict)
     output = [result]
@@ -2027,12 +2015,11 @@ def flipper_sm_efficiency(trans_uu, trans_ud, trans_du, trans_dd, helium_par, bl
 
     **Returns**
 
-    result(params): output parameters
+    result (params): output parameters
 
-    | 2026-09-24 Jonathan Gaudet
+    | 2026-10-15 Jonathan Gaudet
     """
 
-    from collections import OrderedDict
     from .vsansdata import Parameters
 
     # Subtract blocked beam to all data
@@ -2080,12 +2067,10 @@ def flipper_sm_efficiency(trans_uu, trans_ud, trans_du, trans_dd, helium_par, bl
     p_sm = (ratio_1 - 1.0) / (pol_uu + (ratio_1 * pol_ud))
     p_sm_f = (ratio_2 - 1.0) / (pol_dd + (ratio_2 * pol_du))
 
-    params_dict = OrderedDict(
-        [
-            ("eff_sm_up", p_sm),
-            ("eff_sm_down", p_sm_f)
-        ]
-    )
+    params_dict = {
+            "eff_sm_up": p_sm,
+            "eff_sm_down": p_sm_f,
+    }
 
     output = Parameters(params=params_dict)
 
@@ -2556,10 +2541,9 @@ def export_vsans_2d_matrix_grid(data, num_points=128, output_dir=None, filename_
 
     result(params): output parameters
 
-    2026-09-23 Jonathan Gaudet
+    2026-10-15 Jonathan Gaudet
     """
 
-    from collections import OrderedDict
     import numpy as np
     from .vsansdata import Parameters, short_detectors
     import os
@@ -2727,13 +2711,11 @@ def export_vsans_2d_matrix_grid(data, num_points=128, output_dir=None, filename_
 
     content = "\n".join(lines)
 
-    params_dict = OrderedDict(
-        [
-            ("name", _s(sans_qspace.metadata.get("name", filename))),
-            ("entry", _s(sans_qspace.metadata.get("entry", "entry"))),
-            ("file_suffix", ".2d.dat")
-        ]
-    )
+    params_dict = {
+            "name": _s(sans_qspace.metadata.get("name", filename)),
+            "entry": _s(sans_qspace.metadata.get("entry", "entry")),
+            "file_suffix": ".2d.dat"
+    }
 
     output = Parameters(params=params_dict)
 
