@@ -1503,24 +1503,14 @@ def calculate_vsans_transmission(in_beam, empty_beam, margin=5, PANEL_KEY = "det
     I_empty_beam = np.sum(empty_udata[xmin: xmax + 1, ymin: ymax + 1])
 
     # Calculate transmission
+    if not hasattr(I_in_beam, 'variance'):
+        I_in_beam = Uncertainty(I_in_beam, variance=I_in_beam)
+    if not hasattr(I_empty_beam, 'variance'):
+        I_empty_beam = Uncertainty(I_empty_beam, variance=I_empty_beam)
+
     ratio = I_in_beam / I_empty_beam
+    ratio_val, ratio_var, ratio_err = ratio.x, ratio.variance, ratio.dx
 
-    # Extract scalar values from Uncertainty or float
-    ratio_val = float(getattr(ratio, "x", ratio))
-    ratio_var = float(getattr(ratio, "variance", 0.0))
-
-    #if ratio is not calculated as uncertainty object, then calculate variance properly here
-    if not hasattr(ratio, "variance"):
-        in_v = float(getattr(I_in_beam, "x", I_in_beam))
-        empty_v = float(getattr(I_empty_beam, "x", I_empty_beam))
-        in_var = float(getattr(I_in_beam, "variance", in_v))
-        empty_var = float(getattr(I_empty_beam, "variance", empty_v))
-
-        if in_v > 0 and empty_v > 0:
-            ratio_var = (ratio_val ** 2) * ((in_var / (in_v ** 2)) + (empty_var / (empty_v ** 2)))
-
-
-    ratio_err = np.sqrt(ratio_var)
 
     # Build and return Parameters object
     params_dict = {
