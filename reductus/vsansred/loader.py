@@ -113,7 +113,15 @@ unit_specifiers = {
     "det.pixeloffsety": "cm",
     "sample.thk": "cm",
     "resolution.ap1": "cm",
-    "resolution.ap2": "cm"
+    "resolution.ap2": "cm",
+    "resolution.ap12dis": "cm",
+    "f_det.beamx" : "cm",
+    "f_det.beamy" : "cm",
+    "f_det.dis" : "cm",
+    "m_det.beamx" : "cm",
+    "m_det.beamy" : "cm",
+    "m_det.dis" : "cm"
+
 }
 
 def process_sourceAperture(field, units):
