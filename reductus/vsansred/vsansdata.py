@@ -492,20 +492,16 @@ class VSans1dData(object):
     def __truediv__(self, other):
         if isinstance(other, VSans1dData):
             with np.errstate(divide='ignore', invalid='ignore'):
-                new_v = np.where(other.v != 0, self.v / other.v, 0.0)
-                rel_err_self = np.where(self.v != 0, self.dv / self.v, 0.0)
-                rel_err_other = np.where(other.v != 0, other.dv / other.v, 0.0)
-                new_dv = np.abs(new_v) * np.sqrt(rel_err_self ** 2 + rel_err_other ** 2)
-                new_dv = np.nan_to_num(new_dv, nan=0.0, posinf=0.0, neginf=0.0)
+                new_v = np.nan_to_num(self.v / other.v, nan=0.0, posinf=0.0, neginf=0.0)
+                rel_err = np.sqrt((self.dv / self.v) ** 2 + (other.dv / other.v) ** 2)
+                new_dv = np.nan_to_num(np.abs(new_v) * rel_err, nan=0.0, posinf=0.0, neginf=0.0)
             return self._copy_with(new_v, new_dv)
         return self._copy_with(self.v / other, self.dv / abs(other))
 
     def __rtruediv__(self, other):
         with np.errstate(divide='ignore', invalid='ignore'):
-            new_v = np.where(self.v != 0, other / self.v, 0.0)
-            rel_err = np.where(self.v != 0, self.dv / self.v, 0.0)
-            new_dv = np.abs(new_v) * rel_err
-            new_dv = np.nan_to_num(new_dv, nan=0.0, posinf=0.0, neginf=0.0)
+            new_v = np.nan_to_num(other / self.v, nan=0.0, posinf=0.0, neginf=0.0)
+            new_dv = np.nan_to_num(np.abs(new_v) * (self.dv / self.v), nan=0.0, posinf=0.0, neginf=0.0)
         return self._copy_with(new_v, new_dv)
 
     def __pow__(self, power):
