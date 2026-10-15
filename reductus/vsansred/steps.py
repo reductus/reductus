@@ -1622,7 +1622,7 @@ def subtract_raw(sample, background):
 @module
 def multiply_raw(sample, factor_param):
     """
-     Algebraic subtraction of two single dataset pixel by pixel. Assumed to be normalized by monitor prior!!!!
+     Algebraic multiplication of two single dataset pixel by pixel. Assumed to be normalized by monitor prior!!!!
 
      **Inputs**
 
