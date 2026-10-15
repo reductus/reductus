@@ -1561,8 +1561,9 @@ def subtract_raw(sample, background):
 
      output (raw): c in (a-b) = c
 
-     | 2026-08-19 Jonathan Gaudet
+     | 2026-10-15 Jonathan Gaudet
      """
+    from reductus.dataflow.lib.err1d import sub
 
     if sample is None:
         return None
@@ -1591,16 +1592,17 @@ def subtract_raw(sample, background):
             else:
                 bg_var = np.copy(bg_vals)
 
+            subtraction, sub_var = sub(sample_vals,sample_var,bg_vals,bg_var)
 
-            det["data"]["value"] = sample_vals - bg_vals
-            det["data"]["variance"] = sample_var + bg_var
+            det["data"]["value"] = subtraction
+            det["data"]["variance"] = sub_var
 
     return output
 
 @module
 def multiply_raw(sample, factor_param):
     """
-     Algebraic multiplication of two single dataset pixel by pixel. Assumed to be normalized by monitor prior!!!!
+     Algebraic multiplication of a matrix by a constant. Assumed to be normalized by monitor prior!!!!
 
      **Inputs**
 
@@ -1612,8 +1614,11 @@ def multiply_raw(sample, factor_param):
 
      output (raw): factor * sample
 
-     | 2026-08-19 Jonathan Gaudet
+     | 2026-10-15 Jonathan Gaudet
      """
+
+    from reductus.dataflow.lib.err1d import mul
+
     if sample is None:
         return None
 
@@ -1639,9 +1644,8 @@ def multiply_raw(sample, factor_param):
             else:
                 sample_var = np.copy(vals)
 
-            net_vars = (val ** 2) * sample_var + (vals ** 2) * var_k
-
-            det["data"]["value"] = vals * val
+            product, net_vars = mul(vals, sample_var, val, var_k)
+            det["data"]["value"] = product
             det["data"]["variance"] = net_vars
 
     return output
@@ -1760,6 +1764,8 @@ def correct_attenuation(sample):
 
     | 2026-10-08 Jonathan Gaudet
     """
+    from reductus.dataflow.lib.err1d import mul
+
     if sample is None:
         return None
 
@@ -1796,8 +1802,9 @@ def correct_attenuation(sample):
             else:
                 var = np.copy(data)
 
-            det["data"]["value"] = data * scale_factor
-            det["data"]["variance"] = var * (scale_factor ** 2)
+            multiplication, var_multi = mul(data,var,scale_factor,0.0)
+            det["data"]["value"] = multiplication
+            det["data"]["variance"] = var_multi
 
     return result
 
