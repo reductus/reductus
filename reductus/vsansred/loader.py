@@ -243,7 +243,7 @@ def readVSANSNexuz(input_file, file_obj=None, metadata_lookup=metadata_lookup, l
             detectors = dict([(k, load_detector(entry['instrument'][k], load_data=load_data)) for k in detector_keys])
             metadata['entry'] = entryname
             if metadata.get('sample.labl', None) is not None and metadata.get('run.configuration', None) is not None:
-                metadata['sample.description'] = _s(metadata["sample.labl"]).replace(_s(metadata["run.configuration"]), "")
+                metadata['sample.description'] = metadata["sample.labl"].replace(metadata["run.configuration"], "")
             if metadata.get('run.filename', None) is None:
                 metadata['run.filename'] = input_file
             dataset = RawVSANSData(metadata=metadata, detectors=detectors)
