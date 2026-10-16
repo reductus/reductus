@@ -1458,20 +1458,16 @@ def get_panel_data_raw(rawdata, PANEL_KEY):
     det_map = {k.lower(): v for k, v in detectors.items()}
     key_str = str(PANEL_KEY).lower()
 
-    if key_str in det_map:
-        det = det_map[key_str]
-    else:
-        raise KeyError(
-            f"Panel '{PANEL_KEY}' IS not found in detectors."
-        )
-
-    if (
-            "data" not in det
+    # TODO: This should suppress the back detector calculation if it isn't in the data file. This allows the calculation
+    #  to finish for now (though not necessarilly correctly)
+    det = det_map[key_str]
+    if (key_str not in det_map
+            or "data" not in det
             or det["data"] is None
             or "value" not in det["data"]
             or det["data"]["value"] is None
     ):
-        raise KeyError(f"Panel '{PANEL_KEY}' detector does not contain valid data values.")
+        return Uncertainty([[1.0]], [[0.0]]), np.array([[1.0]], dtype=float)
 
     vals = np.array(det["data"]["value"], dtype=float)
 
