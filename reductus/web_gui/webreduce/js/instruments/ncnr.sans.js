@@ -46,7 +46,7 @@ instrument.load_file = load_sans;
 instrument.default_categories = [
   [["run.configuration"]],
   [["analysis.intent"]],
-  [["sample.description"]]
+  [["sample.name"]]
 ];
 instrument.categories = structuredClone(instrument.default_categories);
 instrument.decorators = [add_viewer_link, add_counts];

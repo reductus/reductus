@@ -8,7 +8,6 @@ from reductus.dataflow.lib import unit
 from reductus.dataflow.lib.h5_open import h5_open_zip
 
 from reductus.vsansred.loader import load_detector, load_metadata
-from reductus.vsansred.steps import _s, _b
 
 from .sansdata import SansData, RawSANSData
 
@@ -16,11 +15,14 @@ metadata_lookup = {
     "acamplitude.voltage": "DAS_logs/acAmplitude/voltage",
     "adam.voltage": "DAS_logs/adam4021/voltage",
     "analysis.groupid": "DAS_logs/trajectoryData/groupid",
-    "analysis.intent": "DAS_logs/trajectoryData/intent",
+    "analysis.intent": ("DAS_logs/trajectoryData/intent", "reduction/intent"),
     "analysis.filepurpose": "DAS_logs/trajectoryData/filePurpose",
+    "analysis.blocked_beam": "DAS_logs/sample/reduction.blocked_beam_reference",
+    "analysis.empty_cell": "DAS_logs/sample/reduction.empty_cell_reference",
+    "analysis.open_beam": "DAS_logs/sample/reduction.open_beam_reference",
     "det.beamx": "instrument/detector/beam_center_x",
     "det.beamy": "instrument/detector/beam_center_y",
-    "det.bstop": "DAS_logs/beamStop/size",
+    "det.bstop": ("DAS_logs/beamStop/diameter", "DAS_logs/beamStop/size"),
     "det.dead_time": "instrument/detector/dead_time",
     "det.des_dis": "DAS_logs/detectorPosition/desiredSoftPosition",
     "det.dis": "DAS_logs/detectorPosition/softPosition",
@@ -39,13 +41,16 @@ metadata_lookup = {
     "resolution.dlmda": "instrument/monochromator/wavelength_error",
     "resolution.ap1": "DAS_logs/geometry/sourceAperture",
     "resolution.ap2": "DAS_logs/geometry/externalSampleAperture",
+    "resolution.ap2shape": "DAS_logs/geometry/externalSampleApertureShape",
+    "resolution.ap2height": "DAS_logs/geometry/externalSampleApertureHeight",
+    "resolution.ap2width": "DAS_logs/geometry/externalSampleApertureWidth",
     "resolution.ap2Off": "instrument/sample_aperture/distance",
     "resolution.ap12dis": "DAS_logs/geometry/sourceApertureToSampleAperture",
     "rfflipperpowersupply.voltage": "DAS_logs/RFFlipperPowerSupply/actualVoltage/average_value",
     "rfflipperpowersupply.frequency": "DAS_logs/RFFlipperPowerSupply/frequency",
     "run.atten": "DAS_logs/counter/actualAttenuatorsDropped",
-    "run.atten_factors": "DAS_logs/attenuator/index_table",
-    "run.atten_factor_errors": "DAS_logs/attenuator/index_error_table",
+    "run.atten_factors": ("instrument/attenuator/index_table", "DAS_logs/attenuator/index_table"),
+    "run.atten_factor_errors": ("instrument/attenuator/index_error_table", "DAS_logs/attenuator/index_error_table"),
     "run.configuration": "DAS_logs/configuration/key",
     "run.filename": "DAS_logs/trajectoryData/fileName",
     "run.guide": "DAS_logs/guide/guide",
@@ -59,6 +64,7 @@ metadata_lookup = {
     "run.detcnt": "control/detector_counts",
     "run.rtime": "control/count_time",
     "run.moncnt": "control/monitor_counts",
+    "run.monitor_normalization_factor": "instrument/beam_monitor_norm/saved_count",
     "sample.description": "DAS_logs/sample/description",
     "sample.labl": "DAS_logs/sample/description",
     "sample.thk": "DAS_logs/sample/thickness",
@@ -66,7 +72,8 @@ metadata_lookup = {
     "sample.name": "DAS_logs/sample/name",
     "sample.temp": "DAS_logs/temp/primaryNode/average_value",
     "sample.position": "DAS_logs/geometry/samplePositionOffset",
-    "sample.GroupID": "DAS_logs/sample/UUID",
+    "sample.localID": "DAS_logs/sample/localID",
+    "sample.GroupID": ("DAS_logs/sample/UUID", "DAS_logs/sample/group_id"),
     "start_time": "start_time",
     "waveformgenerator.frequency": "DAS_logs/waveformGenerator/frequency",
 }
@@ -118,18 +125,27 @@ def readSANSNexuz(input_file, file_obj=None, metadata_lookup=metadata_lookup):
     """
     datasets = []
     file = h5_open_zip(input_file, file_obj)
-    for entryname, entry in file.items():        
-        multiplicity = 1
-        for i in range(multiplicity):
-            metadata = load_metadata(entry, multiplicity, i, metadata_lookup=metadata_lookup, unit_specifiers=unit_specifiers)
-            #print(metadata)
-            detector_keys = ['detector']
-            detectors = dict([(k, load_detector(entry['instrument'][k])) for k in detector_keys])
-            metadata['entry'] = entryname
-            # hack to remove configuration from sample label (it is still stored in run.configuration)
-            metadata['sample.description'] = _s(metadata["sample.labl"]).replace(_s(metadata["run.configuration"]), "")
-            dataset = RawSANSData(metadata=metadata, detectors=detectors)
-            datasets.append(dataset)            
+    for entryname, entry in file.items():
+        metadata = load_metadata(
+            entry, 1, 0, metadata_lookup_table=metadata_lookup, unit_specifiers_table=unit_specifiers
+        )
+        # For easy matching, map the file ID to the file type for files used in reduction.
+        #  This will allow an easy mapping of the blocked_beam to the sample without modifying other code sections.
+        match metadata.get('analysis.intent', None):
+            case 'Blocked Beam':
+                metadata['analysis.blocked_beam'] = metadata['sample.localID']
+            case 'Empty Cell':
+                metadata['analysis.empty_cell'] = metadata['sample.localID']
+            case 'Open Beam':
+                metadata['analysis.open_beam'] = metadata['sample.localID']
+            case _:
+                pass
+        metadata['entry'] = entryname
+        metadata['sample.description'] = metadata["sample.labl"].replace(metadata["run.configuration"], "")
+        detector_keys = ['detector']
+        detectors = dict([(k, load_detector(entry['instrument'][k])) for k in detector_keys])
+        dataset = RawSANSData(metadata=metadata, detectors=detectors)
+        datasets.append(dataset)
 
     return datasets
 

@@ -585,6 +585,7 @@ export const DataflowViewer = {
       this.on_change();
     },
     mousedown: function (ev) {
+      this.menu.visible = false;
       document.addEventListener('mouseup', this.mouseup);
       document.addEventListener('mousemove', this.mousemove);
       let d = this.drag;

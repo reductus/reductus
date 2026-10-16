@@ -128,8 +128,8 @@ def LoadMAGIKPSD(filename, path="", friendly_name="", collapse_y=True, auto_PolS
             mon =  entry['DAS_logs']['counter']['liveMonitor'][()]
             count_time = entry['DAS_logs']['counter']['liveTime'][()]
             if ndims == 2:
-                mon.shape = (1,) + mon.shape # broadcast the monitor over the other dimension
-                count_time.shape = (1,) + count_time.shape
+                mon = mon[newaxis, ...] # broadcast the monitor over the other dimension
+                count_time = count_time[newaxis, ...]
             counts = counts_value
             if transpose == True: counts = counts.swapaxes(0,1)
             if flip == True: counts = flipud(counts)
@@ -160,8 +160,8 @@ def LoadMAGIKPSD(filename, path="", friendly_name="", collapse_y=True, auto_PolS
                 mon =  entry['DAS_logs']['counter']['liveMonitor'][()]
                 count_time = entry['DAS_logs']['counter']['liveTime'][()]
                 if ndims == 3:
-                    mon.shape = (1,) + mon.shape # broadcast the monitor over the other dimension
-                    count_time.shape = (1,) + count_time.shape
+                    mon = mon[newaxis, ...] # broadcast the monitor over the other dimension
+                    count_time = count_time[newaxis, ...]
                 counts = numpy.sum(counts_value, axis=2)
                 if transpose == True: counts = counts.swapaxes(0,1)
                 if flip == True: counts = flipud(counts)
@@ -269,8 +269,8 @@ def LoadICPData(filename, path="", friendly_name="", auto_PolState=False, PolSta
         mon = file_obj.monitor.counts
         count_time = file_obj.monitor.count_time
         if ndims == 2:
-            mon.shape = (1,) + mon.shape # broadcast the monitor over the other dimension
-            count_time.shape = (1,) + count_time.shape
+            mon = mon[newaxis, ...] # broadcast the monitor over the other dimension
+            count_time = count_time[newaxis, ...]
         counts = file_obj.detector.counts
         if transpose == True: counts = counts.swapaxes(0,1)
         if flip == True: counts = flipud(counts)

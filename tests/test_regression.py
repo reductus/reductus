@@ -24,15 +24,15 @@ except ImportError:
 def get_regression_files():
     REGRESSION_PATH = abspath(joinpath(dirname(__file__), 'regression_files'))
     if exists(REGRESSION_PATH):
-        data_files = (
+        data_files = [
             path
             for f in listdir(REGRESSION_PATH)
             # CRUFT: assignment expressions require python 3.8
             #if isfile(path := joinpath(REGRESSION_PATH, f))
             for path in [joinpath(REGRESSION_PATH, f)]
-            if isfile(path))
+            if isfile(path)]
     else:
-        data_files = ()
+        data_files = []
     return data_files
 
 @parametrize("path", get_regression_files())

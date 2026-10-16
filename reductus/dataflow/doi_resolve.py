@@ -1,6 +1,6 @@
-from __future__ import print_function
-
+import json
 import re
+
 
 try:
     import urllib.request as urllib2
@@ -24,10 +24,15 @@ def unescape(s):
     return re.sub("%([0-9A-Fa-f][0-9A-Fa-f])", lambda m: chr(int(m.group(1), 16)), s)
 
 def get_target(doi=NCNR_DATA_DOI):
-    # an easier way to get the target value... not tested extensively
-    url = "https://dx.doi.org/%s" % (doi,)
-    file_pointer = urllib2.urlopen(url)
-    return file_pointer.url
+    # use the handles API
+    handle_server = "https://doi.org/api/handles"
+    handle_lookup = f"{handle_server}/{doi}"
+    response = urllib2.urlopen(handle_lookup)
+    data = json.loads(response.read().decode("utf-8"))
+    for value in data["values"]:
+        if value["type"] == "URL":
+            return value["data"]["value"]
+    raise ValueError(f"Could not find target for doi {doi}")
 
 if __name__ == '__main__':
     m = get_DOI_metadata()

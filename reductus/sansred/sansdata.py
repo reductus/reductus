@@ -6,7 +6,6 @@ Internal data representation for SANS data.
 """
 
 import sys
-import datetime
 from copy import copy, deepcopy
 import json
 from io import BytesIO
@@ -27,12 +26,6 @@ def _b(s):
         return s.encode('utf-8')
     else:
         return s
-
-def _s(b):
-    if IS_PY3:
-        return b.decode('utf-8') if hasattr(b, 'decode') else b
-    else:
-        return b
 
 # TODO: Items needed for SANS data
 #  - Differentiate Raw vs Intermediate vs Reduced
@@ -112,9 +105,7 @@ class SansData:
             result.data = self.data/other
         return result
     def __mul__(self, other):
-        # TODO: Add a separate method to assign the transmission value
         result = self.copy()
-        result.Tsam = other
         if isinstance(other, SansData):
             result.data = self.data * other.data
         else:
@@ -165,7 +156,7 @@ class SansData:
             'entry': self.metadata['entry'],
             'type': '2d',
             'z':  [data.flatten().tolist()],
-            'title': _s(self.metadata['run.filename'])+': ' + _s(self.metadata['sample.labl']),
+            'title': f'{self.metadata['run.filename']}:  {self.metadata['sample.labl']}',
             #'metadata': self.metadata,
             'options': {
                 'fixedAspect': {
@@ -410,8 +401,8 @@ class SansIQData:
             value = fid.read()
 
         return {
-            "name": _s(self.metadata.get("name", "default_name")),
-            "entry": _s(self.metadata.get("entry", "default_entry")),
+            "name": self.metadata.get("name", "default_name"),
+            "entry": self.metadata.get("entry", "default_entry"),
             "file_suffix": ".sansIQ.dat",
             "value": value.decode('utf-8'),
         }
@@ -447,8 +438,8 @@ class SansIQData:
         datagroup["Q"].attrs["units"] = "1/nm"
 
         return {
-            "name": _s(self.metadata.get("name", "default_name")),
-            "entry": _s(self.metadata.get("entry", "default_entry")),
+            "name": self.metadata.get("name", "default_name"),
+            "entry": self.metadata.get("entry", "default_entry"),
             "file_suffix": ".sansIQ.nx.h5",
             "value": h5_item,
         }
@@ -471,6 +462,82 @@ class SansIQData:
             self.meanQ = np.concatenate((self.meanQ, data.meanQ))[indices]
         if self.ShadowFactor is not None and data.ShadowFactor is not None:
             self.ShadowFactor = np.concatenate((self.ShadowFactor, data.ShadowFactor))[indices]
+
+    def append_metadata(self, meta_external: dict, meta_internal: dict | None = None):
+        """
+        Recursively merges an external metadata dictionary.
+
+        Behavior:
+        - Keys unique to one dictionary are copied as-is.
+        - Nested dictionaries are recursively merged.
+        - Identical scalar/array values are preserved as single values.
+        - Differing values or lists are merged into a deduplicated list.
+        """
+        if not meta_internal:
+            meta_internal = deepcopy(self.metadata)
+        # If either dictionary is empty of None, use the otehr and return early.
+        if not meta_external:
+            self.metadata = deepcopy(meta_internal or {})
+            return
+        if not meta_internal:
+            self.metadata = deepcopy(meta_external or {})
+            return
+
+        merged = {}
+        all_keys = set(meta_external.keys()).union(meta_external.keys())
+
+        for key in all_keys:
+            if key not in meta_external:
+                merged[key] = deepcopy(meta_internal[key])
+            elif key not in meta_internal:
+                merged[key] = deepcopy(meta_external[key])
+            else:
+                v1 = meta_internal[key]
+                v2 = meta_external[key]
+
+                # Recursive merge for nested metadata dictionaries
+                if isinstance(v1, dict) and isinstance(v2, dict):
+                    merged[key] = self.append_metadata(v1, v2)
+                # Check for exact equality (handles NumPy arrays safely)
+                elif self._values_equal(v1, v2):
+                    merged[key] = deepcopy(v1)
+                # Combine differing scalars or sequences into a single list
+                else:
+                    merged[key] = self._combine_metadata_values(v1, v2)
+
+        self.metadata = merged
+
+    @staticmethod
+    def _values_equal(v1, v2) -> bool:
+        """Safely compare metadata values, including NumPy arrays and unhashable types."""
+        if type(v1) != type(v2):
+            return False
+        if isinstance(v1, np.ndarray):
+            return np.array_equal(v1, v2)
+        try:
+            return bool(v1 == v2)
+        except Exception:
+            return False
+
+    def _combine_metadata_values(self, v1, v2):
+        """Combines two metadata values/lists into an ordered, deduplicated list."""
+
+        def _to_flat_list(val):
+            if isinstance(val, (list, tuple)):
+                return list(val)
+            elif isinstance(val, np.ndarray):
+                return val.tolist()
+            else:
+                return [val]
+
+        combined = []
+        for item in _to_flat_list(v1) + _to_flat_list(v2):
+            # Append only if not already present (preserving order)
+            if not any(self._values_equal(item, existing) for existing in combined):
+                combined.append(deepcopy(item))
+
+        # Collapse back to scalar if only 1 unique element remains
+        return combined[0] if len(combined) == 1 else combined
 
 
 class Parameters:

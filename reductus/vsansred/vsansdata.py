@@ -29,12 +29,6 @@ def _b(s):
     else:
         return s
 
-def _s(b):
-    if IS_PY3:
-        return b.decode('utf-8') if hasattr(b, 'decode') else b
-    else:
-        return b
-
 class RawVSANSData(object):
     suffix = ".vsans"
     def __init__(self, metadata, detectors=None):
@@ -66,8 +60,8 @@ class RawVSANSData(object):
     def to_column_text(self):
         output = json.dumps(_toDictItem(self.metadata, convert_bytes=True))
         return {
-            "name": _s(self.metadata.get("name", "default_name")),
-            "entry": _s(self.metadata.get("entry", "default_entry")),
+            "name": self.metadata.get("name", "default_name"),
+            "entry": self.metadata.get("entry", "default_entry"),
             "file_suffix": self.suffix + "metadata.json",
             "value": output,
         }
@@ -299,8 +293,8 @@ class VSansDataQSpace(VSansData):
             value = fid.read()
 
         return {
-            "name": _s(self.metadata["run.filename"]),
-            "entry": _s(self.metadata.get("entry", "default_entry")),
+            "name": self.metadata["run.filename"],
+            "entry": self.metadata.get("entry", "default_entry"),
             "file_suffix": ".vsans2d.dat",
             "value": value.decode(),
         }
@@ -377,8 +371,8 @@ class VSansDataQSpace(VSansData):
         datagroup["Q"].attrs["units"] = "1/nm"
 
         return {
-            "name": _s(self.metadata.get("name", "default_name")),
-            "entry": _s(self.metadata.get("entry", "default_entry")),
+            "name": self.metadata.get("name", "default_name"),
+            "entry": self.metadata.get("entry", "default_entry"),
             "file_suffix": ".sansIQ.nx.h5",
             "value": h5_item,
         }
@@ -601,5 +595,5 @@ class Metadata(OrderedDict):
             "name": getattr(self, "name", "default_name"),
             "entry": getattr(self, "entry", "default_entry"),
             "file_suffix": ".vsans.metadata.json",
-            "value": output,
+            "value": value,
         }

@@ -4,18 +4,15 @@ VSANS data loader
 
 Load VSANS NeXus file into :mod:`vsansred.vsansdata` data structure.
 """
-import io
-from zipfile import ZipFile, is_zipfile
 from collections import OrderedDict
 import datetime
 import h5py
 import numpy as np
 
-from reductus.dataflow.lib import hzf_readonly_stripped as hzf
 from reductus.dataflow.lib import unit
 from reductus.dataflow.lib.h5_open import h5_open_zip
 
-from .vsansdata import VSansData, RawVSANSData, _s, _b
+from .vsansdata import RawVSANSData
 
 metadata_lookup = OrderedDict([
     #"det.dis", "DAS_logs/detectorPosition/softPosition",
@@ -128,7 +125,7 @@ unit_specifiers = {
 def process_sourceAperture(field, units):
     import numpy as np
     def handler(v):
-        if _s(v) == 'OUT':
+        if v == 'OUT':
             return v
         else:
             return float(v.split()[0])
@@ -136,7 +133,7 @@ def process_sourceAperture(field, units):
     value = handle_values(field[()])
     units_from = ""
     v0 = field[0].split()
-    if _s(value[0]) == 'OUT':
+    if value[0] == 'OUT':
         return value
     if len(v0) > 1:
         units_from = v0[1]
@@ -173,26 +170,50 @@ def load_detector(dobj, load_data=True):
             detector[k]['attrs']['dtype'] = subobj.dtype.name
     return detector
 
-def load_metadata(entry, multiplicity=1, i=1, metadata_lookup=metadata_lookup, unit_specifiers=unit_specifiers):
+def load_metadata(
+        entry: h5py.Group,
+        multiplicity: int = 1,
+        i: int = 0,
+        metadata_lookup_table: dict[str, tuple[str] | str] = metadata_lookup,
+        unit_specifiers_table: dict[str, str] = unit_specifiers
+):
+    """
+    Find all metadata in an HDF5 group/entry using metadata_lookup for the potential locations and its local key.
+
+    :param entry: An HDF5 entry as loaded by h5py. This can be any level, so long as the metadata map is relative.
+    :param multiplicity: Look for metadata values of length multiplicity and convert them to scalar values.
+    :param i: The array index to look for scalar quantities that are in arrays.
+    :param metadata_lookup_table: A dictionary mapping local metadata keys to a tuple of potential HDF5 locations.
+    :param unit_specifiers_table: A dictionary mapping local metadata keys to units the value should scale to.
+    """
     metadata = OrderedDict()
-    for mkey in metadata_lookup:
-        field = entry.get(metadata_lookup[mkey], None)
-        if field is not None:
-            if mkey in unit_specifiers:
-                field = data_as(field, unit_specifiers[mkey])
-            else:
-                field = field[()]
-            if field.dtype.kind == 'f':
-                field = field.astype("float")
-            elif field.dtype.kind == 'i':
-                field = field.astype("int")
-        
-            if len(field) == multiplicity:
-                metadata[mkey] = field[i]
-            else:
+    for mkey, locales in metadata_lookup_table.items():
+        # As the location changes in the raw data, the locales change. Step through all.
+        if not isinstance(locales, tuple):
+            locales = (locales,)
+        for locale in locales:
+            field = entry.get(locale, None)
+            if field is not None:
+                if mkey in unit_specifiers_table:
+                    field = data_as(field, unit_specifiers_table[mkey])
+                else:
+                    field = field[()]
+
+                if len(field) == multiplicity:
+                    field = field[i]
+
+                if field.dtype.kind == 'f':
+                    field = field.astype("float")
+                elif field.dtype.kind == 'i':
+                    field = field.astype("int")
+                elif field.dtype.kind == 'b' or isinstance(field, np.bytes_):
+                    field = field.decode("utf-8")
+
                 metadata[mkey] = field
-        else:
-            metadata[mkey] = field
+                # Break out of inner loop when a value is assigned
+                break
+            else:
+                metadata[mkey] = metadata.get(mkey, None)
     return metadata
 
 def readVSANSNexuz(input_file, file_obj=None, metadata_lookup=metadata_lookup, load_data=True):
@@ -214,7 +235,9 @@ def readVSANSNexuz(input_file, file_obj=None, metadata_lookup=metadata_lookup, l
         
         multiplicity = 1
         for i in range(multiplicity):
-            metadata = load_metadata(entry, multiplicity, i, metadata_lookup=metadata_lookup, unit_specifiers=unit_specifiers)
+            metadata = load_metadata(
+                entry, multiplicity, i, metadata_lookup_table=metadata_lookup, unit_specifiers_table=unit_specifiers
+            )
             #print(metadata)
             detector_keys = [n for n in entry['instrument'] if n.startswith('detector_')]
             detectors = dict([(k, load_detector(entry['instrument'][k], load_data=load_data)) for k in detector_keys])
