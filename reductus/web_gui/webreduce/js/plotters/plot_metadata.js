@@ -24,7 +24,7 @@ let template = `
           :contenteditable="editing && col != key_col"
           @blur="onInput(row, col, $event.target.innerText)"
           :title="pretty(row[col])"
-        >{{pretty(patched(row, col) || row[col])}}</td>
+        ><div class="metadata-entry">{{pretty(patched(row, col) || row[col])}}</div></td>
       </tr>
     </tbody>
   </table>
@@ -107,7 +107,6 @@ export function show_plots_metadata(plotdata, plot_controls, target, old_plot) {
   target.classList.remove("plot");
   let container = document.createElement("div");
   container.classList.add("metadata-table");
-  container.style.overflowX = "scroll";
   target.appendChild(container);
 
   let metadata_table = Vue.createApp(MetadataTable, {
