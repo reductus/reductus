@@ -1,5 +1,6 @@
 table.metadata {
     border-collapse: collapse;
+    overflow: scroll;
 }
 
 table.metadata th, table.metadata td {
