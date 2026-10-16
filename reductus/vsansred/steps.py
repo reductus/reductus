@@ -1438,7 +1438,17 @@ def get_panel_data(data_obj, PANEL_KEY):
 
 def get_panel_data_raw(rawdata, PANEL_KEY):
     """Extract value and error arrays from a raw dataset panel and wrap in Uncertainty."""
-    det = rawdata.detectors[PANEL_KEY]
+    detectors = rawdata.detectors
+    det_map = {k.lower(): v for k, v in detectors.items()}
+    key_str = str(PANEL_KEY).lower()
+
+    if key_str in det_map:
+        det = det_map[key_str]
+    else:
+        raise KeyError(
+            f"Panel '{PANEL_KEY}' IS not found in detectors."
+        )
+
     vals = np.array(det["data"]["value"], dtype=float)
 
     if "variance" in det["data"] and det["data"]["variance"] is not None:
