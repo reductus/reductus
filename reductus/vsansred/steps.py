@@ -1618,13 +1618,13 @@ def multiply_raw(sample, factor_param):
 
      **Inputs**
 
-     sample (raw): matrix to multiply, defaults to 1.0
+     sample (raw): matrix to multiply
 
      factor_param (params[]?): factor to multiply matrix to
 
      **Returns**
 
-     output (raw): factor * sample
+     output (raw): output matrix M = factor * sample
 
      | 2026-10-15 Jonathan Gaudet
      """
