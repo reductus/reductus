@@ -1420,8 +1420,10 @@ def get_panel_data(data_obj, PANEL_KEY):
     detectors = data_obj.detectors
     det_map = {k.lower(): v for k, v in detectors.items()}
 
-    if PANEL_KEY.lower() in det_map:
-        det = det_map[PANEL_KEY.lower()]
+    key_str = str(PANEL_KEY).lower()
+
+    if key_str in det_map:
+        det = det_map[key_str]
     else:
         raise KeyError(
             f"Panel '{PANEL_KEY}' not found in detectors. Available: {list(detectors.keys())}"
