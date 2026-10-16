@@ -10,6 +10,9 @@ table.metadata th, table.metadata td {
 table.metadata th {
     color: white;
     background-color: lightslategrey;
+    position: sticky;
+    top: 0;
+    z-index: 1;
 }
 
 table.metadata tr:nth-child(even){background-color: #f2f2f2;}
