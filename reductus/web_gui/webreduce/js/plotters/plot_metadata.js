@@ -24,7 +24,7 @@ let template = `
           :contenteditable="editing && col != key_col"
           @blur="onInput(row, col, $event.target.innerText)"
           :title="pretty(row[col])"
-        ><div class="metadata-entry">{{pretty(patched(row, col) || row[col])}}</div</td>
+        ><div class="metadata-entry">{{pretty(patched(row, col) || row[col])}}</div></td>
       </tr>
     </tbody>
   </table>
