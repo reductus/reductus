@@ -1779,17 +1779,31 @@ def correct_attenuation(sample):
 
     #read attenuator table
     table = sample.metadata["run.attenuatortable"]
+    table_error = sample.metadata["run.attenuatortableerrors"]
     wavelength = float(sample.metadata["resolution.lmda"])
 
     table_arr = np.asarray(table, dtype=float)
+    table_arr_err = np.asarray(table_error, dtype=float)
+
     w_key = table_arr[:, 0]
+    w_key_err = table_arr_err[:, 0]
 
     att_curve = table_arr[:, attenNo+1]
+    att_curve_err = table_arr_err[:, attenNo + 1]
 
     # Interpolate attenuation factor and its error
     att = float(np.interp(wavelength, w_key, att_curve))
+    att_error = float(np.interp(wavelength, w_key_err, att_curve_err))
+    var_att_error = att_error**2
 
     scale_factor = 1.0 / att
+    var_scale = var_att_error / (att ** 4)
+
+    # record attenuation factor applied
+    result.metadata.update({
+        "run.attenuation_factor": att,
+        "run.attenuation_err": att_error,
+    })
 
     # Apply inverse scale factor to detector panels
     for det_name, det in result.detectors.items():
@@ -1802,7 +1816,7 @@ def correct_attenuation(sample):
             else:
                 var = np.copy(data)
 
-            multiplication, var_multi = mul(data,var,scale_factor,0.0)
+            multiplication, var_multi = mul(data,var,scale_factor,var_scale)
             det["data"]["value"] = multiplication
             det["data"]["variance"] = var_multi
 

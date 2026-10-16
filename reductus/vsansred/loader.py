@@ -54,6 +54,7 @@ metadata_lookup = OrderedDict([
     ("run.moncnt", "control/monitor_counts"),
     ("run.atten", "instrument/attenuator/num_atten_dropped"),
     ("run.attenuatortable", "instrument/attenuator/index_table"),
+    ("run.attenuatortableerrors", "instrument/attenuator/index_error_table"),
     ("analysis.groupid", "DAS_logs/trajectoryData/groupid"),
     ("run.configuration", "DAS_logs/configuration/key"),
     ("sample.thk", "DAS_logs/sample/thickness"),
