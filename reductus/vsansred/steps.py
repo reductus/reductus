@@ -1429,7 +1429,13 @@ def get_panel_data(data_obj, PANEL_KEY):
             f"Panel '{PANEL_KEY}' not found in detectors. Available: {list(detectors.keys())}"
         )
 
-    panel_udata = det["data"] if isinstance(det, dict) else det.data
+    if isinstance(det, dict) and "data" in det and det["data"] is not None:
+        panel_udata = det["data"]
+    elif hasattr(det, "data") and det.data is not None:
+        panel_udata = det.data
+    else:
+        raise KeyError(f"Panel '{PANEL_KEY}' does not contain valid panel data.")
+
     raw_array = (
         panel_udata.x if hasattr(panel_udata, "x") else panel_udata
     )
@@ -1448,6 +1454,14 @@ def get_panel_data_raw(rawdata, PANEL_KEY):
         raise KeyError(
             f"Panel '{PANEL_KEY}' IS not found in detectors."
         )
+
+    if (
+            "data" not in det
+            or det["data"] is None
+            or "value" not in det["data"]
+            or det["data"]["value"] is None
+    ):
+        raise KeyError(f"Panel '{PANEL_KEY}' detector does not contain valid data values.")
 
     vals = np.array(det["data"]["value"], dtype=float)
 
