@@ -196,6 +196,16 @@
         "shadowed"
       ],
       "target": [
+        18,
+        "realspace_data"
+      ]
+    },
+    {
+      "source": [
+        18,
+        "shadowed"
+      ],
+      "target": [
         10,
         "qspace_data"
       ]
@@ -254,22 +264,22 @@
     {
       "module": "ncnr.vsans.absolute_scaling",
       "title": "Absolute Scaling",
-      "x": 1421,
-      "y": 148,
+      "x": 1381,
+      "y": 138,
       "text_width": 128
     },
     {
       "module": "ncnr.vsans.calculate_Q",
       "title": "Calculate Q",
-      "x": 1583,
-      "y": 82,
+      "x": 1603,
+      "y": 32,
       "text_width": 92
     },
     {
       "module": "ncnr.vsans.geometric_shadow",
       "title": "Geometric Shadow",
-      "x": 1653,
-      "y": 137,
+      "x": 1663,
+      "y": 87,
       "text_width": 144
     },
     {
@@ -363,6 +373,12 @@
       "x": 1692,
       "y": 303,
       "text_width": 122
+    },
+    {
+      "module": "ncnr.vsans.mask_edge_detectors",
+      "title": "Mask Edge Detectors",
+      "x": 1682,
+      "y": 150
     }
   ]
 }
