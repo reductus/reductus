@@ -50,6 +50,8 @@ metadata_lookup = OrderedDict([
     ("run.rtime", "control/count_time"),
     ("run.moncnt", "control/monitor_counts"),
     ("run.atten", "instrument/attenuator/num_atten_dropped"),
+    ("run.attenuatortable", "instrument/attenuator/index_table"),
+    ("run.attenuatortableerrors", ("instrument/attenuator/index_error_table", "DAS_logs/attenuator/index_error_table")),
     ("analysis.groupid", "DAS_logs/trajectoryData/groupid"),
     ("run.configuration", "DAS_logs/configuration/key"),
     ("sample.thk", "DAS_logs/sample/thickness"),
@@ -57,7 +59,7 @@ metadata_lookup = OrderedDict([
     ("sample.temp", "DAS_logs/temp/primaryNode/average_value"),
     ("sample_des.temp", "DAS_logs/temp/desiredPrimaryNode"),
     ("resolution.ap1", "DAS_logs/geometry/sourceAperture"),
-    ("resolution.ap2", "instrument/sample_aperture/size"),
+    ("resolution.ap2", ("DAS_logs/geometry/externalSampleAperture","instrument/sample_aperture/size")),
     ("resolution.ap12dis", "instrument/source_aperture/distance"),
     ("resolution.guide", "DAS_logs/guide/guide"),
     ("sample.position", "instrument/sample_aperture/distance"),
@@ -109,7 +111,15 @@ unit_specifiers = {
     "det.pixeloffsety": "cm",
     "sample.thk": "cm",
     "resolution.ap1": "cm",
-    "resolution.ap2": "cm"
+    "resolution.ap2": "cm",
+    "resolution.ap12dis": "cm",
+    "f_det.beamx" : "cm",
+    "f_det.beamy" : "cm",
+    "f_det.dis" : "cm",
+    "m_det.beamx" : "cm",
+    "m_det.beamy" : "cm",
+    "m_det.dis" : "cm"
+
 }
 
 def process_sourceAperture(field, units):
@@ -233,7 +243,7 @@ def readVSANSNexuz(input_file, file_obj=None, metadata_lookup=metadata_lookup, l
             detectors = dict([(k, load_detector(entry['instrument'][k], load_data=load_data)) for k in detector_keys])
             metadata['entry'] = entryname
             if metadata.get('sample.labl', None) is not None and metadata.get('run.configuration', None) is not None:
-                metadata['sample.description'] = _s(metadata["sample.labl"]).replace(_s(metadata["run.configuration"]), "")
+                metadata['sample.description'] = metadata["sample.labl"].replace(metadata["run.configuration"], "")
             if metadata.get('run.filename', None) is None:
                 metadata['run.filename'] = input_file
             dataset = RawVSANSData(metadata=metadata, detectors=detectors)

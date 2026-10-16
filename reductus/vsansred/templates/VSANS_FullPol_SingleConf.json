@@ -1,0 +1,354 @@
+{
+  "wires": [
+    {
+      "source": [
+        1,
+        "output"
+      ],
+      "target": [
+        0,
+        "he3data"
+      ]
+    },
+    {
+      "source": [
+        0,
+        "mappings"
+      ],
+      "target": [
+        7,
+        "helium_par"
+      ]
+    },
+    {
+      "source": [
+        7,
+        "result"
+      ],
+      "target": [
+        13,
+        "flipper_par"
+      ]
+    },
+    {
+      "source": [
+        0,
+        "mappings"
+      ],
+      "target": [
+        13,
+        "helium_par"
+      ]
+    },
+    {
+      "source": [
+        2,
+        "output"
+      ],
+      "target": [
+        7,
+        "trans_dd"
+      ]
+    },
+    {
+      "source": [
+        3,
+        "output"
+      ],
+      "target": [
+        7,
+        "trans_du"
+      ]
+    },
+    {
+      "source": [
+        4,
+        "output"
+      ],
+      "target": [
+        7,
+        "trans_ud"
+      ]
+    },
+    {
+      "source": [
+        5,
+        "output"
+      ],
+      "target": [
+        7,
+        "trans_uu"
+      ]
+    },
+    {
+      "source": [
+        6,
+        "output"
+      ],
+      "target": [
+        7,
+        "block_beam"
+      ]
+    },
+    {
+      "source": [
+        8,
+        "output"
+      ],
+      "target": [
+        13,
+        "data_dd"
+      ]
+    },
+    {
+      "source": [
+        9,
+        "output"
+      ],
+      "target": [
+        13,
+        "data_du"
+      ]
+    },
+    {
+      "source": [
+        10,
+        "output"
+      ],
+      "target": [
+        13,
+        "data_ud"
+      ]
+    },
+    {
+      "source": [
+        11,
+        "output"
+      ],
+      "target": [
+        13,
+        "data_uu"
+      ]
+    },
+    {
+      "source": [
+        12,
+        "output"
+      ],
+      "target": [
+        13,
+        "blocked_beam"
+      ]
+    },
+    {
+      "source": [
+        13,
+        "corr_uu"
+      ],
+      "target": [
+        14,
+        "data_uu"
+      ]
+    },
+    {
+      "source": [
+        13,
+        "corr_ud"
+      ],
+      "target": [
+        14,
+        "data_ud"
+      ]
+    },
+    {
+      "source": [
+        13,
+        "corr_du"
+      ],
+      "target": [
+        14,
+        "data_du"
+      ]
+    },
+    {
+      "source": [
+        13,
+        "corr_dd"
+      ],
+      "target": [
+        14,
+        "data_dd"
+      ]
+    }
+  ],
+  "modules": [
+    {
+      "module": "ncnr.vsans.He3_transmission",
+      "title": "He3 Transmission",
+      "x": 270,
+      "y": 355,
+      "text_width": 133
+    },
+    {
+      "module": "ncnr.vsans.LoadVSANSHe3Parallel",
+      "title": "Loadvsanshe3parallel",
+      "x": 55,
+      "y": 345,
+      "text_width": 160,
+      "config": {
+        "filelist": []
+      }
+    },
+    {
+      "module": "ncnr.vsans.LoadVSANS",
+      "title": "Trans. DD",
+      "x": 85,
+      "y": 157,
+      "config": {
+        "filelist": [],
+        "apply_attenuation": true,
+        "apply_monitor_norm": true,
+        "apply_dead_time": true
+      },
+      "text_width": 77
+    },
+    {
+      "module": "ncnr.vsans.LoadVSANS",
+      "title": "Trans. DU",
+      "x": 91,
+      "y": 122,
+      "config": {
+        "filelist": [],
+        "apply_attenuation": true,
+        "apply_monitor_norm": true,
+        "apply_dead_time": true
+      },
+      "text_width": 77
+    },
+    {
+      "module": "ncnr.vsans.LoadVSANS",
+      "title": "Trans. UD",
+      "x": 88,
+      "y": 87,
+      "config": {
+        "filelist": [],
+        "apply_attenuation": true,
+        "apply_monitor_norm": true,
+        "apply_dead_time": true
+      },
+      "text_width": 77
+    },
+    {
+      "module": "ncnr.vsans.LoadVSANS",
+      "title": "Trans. UU",
+      "x": 85,
+      "y": 52,
+      "config": {
+        "filelist": [],
+        "apply_attenuation": true,
+        "apply_monitor_norm": true,
+        "apply_dead_time": true
+      },
+      "text_width": 76
+    },
+    {
+      "module": "ncnr.vsans.LoadVSANS",
+      "title": "Blocked. Trans.",
+      "x": 85,
+      "y": 191,
+      "config": {
+        "filelist": [],
+        "apply_attenuation": true,
+        "apply_monitor_norm": true,
+        "apply_dead_time": true
+      },
+      "text_width": 113
+    },
+    {
+      "module": "ncnr.vsans.flipper_sm_efficiency",
+      "title": "Flipper Sm Efficiency",
+      "x": 541,
+      "y": 205,
+      "text_width": 155
+    },
+    {
+      "module": "ncnr.vsans.LoadVSANS",
+      "title": "Scatt. DD",
+      "x": 533,
+      "y": 125,
+      "text_width": 75,
+      "config": {
+        "filelist": [],
+        "apply_attenuation": true,
+        "apply_monitor_norm": true,
+        "apply_dead_time": true
+      }
+    },
+    {
+      "module": "ncnr.vsans.LoadVSANS",
+      "title": "Scatt. DU",
+      "x": 534,
+      "y": 84,
+      "text_width": 75,
+      "config": {
+        "filelist": [],
+        "apply_attenuation": true,
+        "apply_monitor_norm": true,
+        "apply_dead_time": true
+      }
+    },
+    {
+      "module": "ncnr.vsans.LoadVSANS",
+      "title": "Scatt. UD",
+      "x": 534,
+      "y": 48,
+      "text_width": 75,
+      "config": {
+        "filelist": [],
+        "apply_attenuation": true,
+        "apply_monitor_norm": true,
+        "apply_dead_time": true
+      }
+    },
+    {
+      "module": "ncnr.vsans.LoadVSANS",
+      "title": "Scatt. UU",
+      "x": 539,
+      "y": 11,
+      "text_width": 75,
+      "config": {
+        "filelist": [],
+        "apply_attenuation": true,
+        "apply_monitor_norm": true,
+        "apply_dead_time": true
+      }
+    },
+    {
+      "module": "ncnr.vsans.LoadVSANS",
+      "title": "Blocked Scatt.",
+      "x": 530,
+      "y": 163,
+      "text_width": 108,
+      "config": {
+        "filelist": [],
+        "apply_attenuation": true,
+        "apply_monitor_norm": true,
+        "apply_dead_time": true
+      }
+    },
+    {
+      "module": "ncnr.vsans.spin_leakage_corr",
+      "title": "Spin Leakage Corr",
+      "x": 861,
+      "y": 29,
+      "text_width": 138
+    },
+    {
+      "module": "ncnr.vsans.extract_mag_nuc_components",
+      "title": "Extract Mag Nuc Components",
+      "x": 1268,
+      "y": 109,
+      "text_width": 222
+    }
+  ]
+}

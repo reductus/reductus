@@ -36,6 +36,12 @@ class RawVSANSData(object):
         self.metadata['name'] = metadata['run.filename']
         self.detectors = detectors
 
+    def copy(self):
+        return self.__class__(deepcopy(self.metadata), deepcopy(self.detectors))
+
+    def __copy__(self):
+        return self.copy()
+
     def todict(self):
         return _toDictItem(self.metadata)
 
@@ -100,6 +106,52 @@ class VSansData(object):
 
     def __copy__(self):
         return self.copy()
+
+    def __sub__(self, other):
+
+        result = self.copy()
+
+        for sn in short_detectors:
+            detname = "detector_{short_name}".format(short_name=sn)
+            if detname in result.detectors and detname in other.detectors:
+                result.detectors[detname]["data"] = (
+                        result.detectors[detname]["data"]
+                        - other.detectors[detname]["data"]
+                )
+
+        return result
+
+    def __mul__(self, other):
+        result = self.copy()
+
+        if hasattr(other, "x"):
+            val = float(other.x)
+            var = float(getattr(other, "variance", 0.0))
+        elif hasattr(other, "value"):
+            val = float(other.value)
+            var = float(getattr(other, "variance", 0.0))
+        elif isinstance(other, (int, float)):
+            val = float(other)
+            var = 0.0
+        else:
+            return NotImplemented
+
+        for detname, det in result.detectors.items():
+            if "data" in det:
+                data_old = det["data"]
+                det["data"] = data_old * val
+
+                if "err" in det:
+                    err_old = det["err"]
+                    det["err"] = np.sqrt((val * err_old) ** 2 + (data_old ** 2) * var)
+                elif "variance" in det:
+                    var_old = det["variance"]
+                    det["variance"] = (val ** 2) * var_old + (data_old ** 2) * var
+
+        return result
+
+    def __rmul__(self, other):
+        return self.__mul__(other)
 
     #def __str__(self):
         #return self.data.x.__str__()
@@ -386,6 +438,71 @@ class VSans1dData(object):
             "file_suffix": ".vsans1d.dat",
             "value": value.decode('utf-8'),
         }
+
+    def _copy_with(self, new_v, new_dv):
+        return VSans1dData(
+            x=self.x,
+            v=new_v,
+            dx=self.dx,
+            dv=new_dv,
+            xlabel=self.xlabel,
+            vlabel=self.vlabel,
+            xunits=self.xunits,
+            vunits=self.vunits,
+            xscale=self.xscale,
+            vscale=self.vscale,
+            metadata=self.metadata,
+            fit_function=self.fit_function
+        )
+
+    def __add__(self, other):
+        if isinstance(other, VSans1dData):
+            return self._copy_with(self.v + other.v, np.sqrt(self.dv ** 2 + other.dv ** 2))
+        return self._copy_with(self.v + other, self.dv)
+
+    def __radd__(self, other):
+        return self.__add__(other)
+
+    def __sub__(self, other):
+        if isinstance(other, VSans1dData):
+            return self._copy_with(self.v - other.v, np.sqrt(self.dv ** 2 + other.dv ** 2))
+        return self._copy_with(self.v - other, self.dv)
+
+    def __rsub__(self, other):
+        return self._copy_with(other - self.v, self.dv)
+
+    def __mul__(self, other):
+        if isinstance(other, VSans1dData):
+            new_v = self.v * other.v
+            rel_err_self = np.where(self.v != 0, self.dv / self.v, 0.0)
+            rel_err_other = np.where(other.v != 0, other.dv / other.v, 0.0)
+            new_dv = np.abs(new_v) * np.sqrt(rel_err_self ** 2 + rel_err_other ** 2)
+            return self._copy_with(new_v, new_dv)
+        return self._copy_with(self.v * other, self.dv * abs(other))
+
+    def __rmul__(self, other):
+        return self.__mul__(other)
+
+    def __truediv__(self, other):
+        if isinstance(other, VSans1dData):
+            with np.errstate(divide='ignore', invalid='ignore'):
+                new_v = np.nan_to_num(self.v / other.v, nan=0.0, posinf=0.0, neginf=0.0)
+                rel_err = np.sqrt((self.dv / self.v) ** 2 + (other.dv / other.v) ** 2)
+                new_dv = np.nan_to_num(np.abs(new_v) * rel_err, nan=0.0, posinf=0.0, neginf=0.0)
+            return self._copy_with(new_v, new_dv)
+        return self._copy_with(self.v / other, self.dv / abs(other))
+
+    def __rtruediv__(self, other):
+        with np.errstate(divide='ignore', invalid='ignore'):
+            new_v = np.nan_to_num(other / self.v, nan=0.0, posinf=0.0, neginf=0.0)
+            new_dv = np.nan_to_num(np.abs(new_v) * (self.dv / self.v), nan=0.0, posinf=0.0, neginf=0.0)
+        return self._copy_with(new_v, new_dv)
+
+    def __pow__(self, power):
+        new_v = self.v ** power
+        new_dv = np.abs(power * (self.v ** (power - 1)) * self.dv)
+        new_dv = np.nan_to_num(new_dv, nan=0.0, posinf=0.0, neginf=0.0)
+        return self._copy_with(new_v, new_dv)
 
 class Sans1dData(object):
     properties = ['x', 'v', 'dx', 'dv', 'xlabel', 'vlabel', 'xunits', 'vunits', 'xscale', 'vscale', 'metadata', 'fit_function']
