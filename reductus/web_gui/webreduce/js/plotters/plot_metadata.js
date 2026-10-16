@@ -107,7 +107,6 @@ export function show_plots_metadata(plotdata, plot_controls, target, old_plot) {
   target.classList.remove("plot");
   let container = document.createElement("div");
   container.classList.add("metadata-table");
-  container.style.overflowX = "scroll";
   target.appendChild(container);
 
   let metadata_table = Vue.createApp(MetadataTable, {
