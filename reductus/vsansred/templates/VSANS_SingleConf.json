@@ -285,16 +285,7 @@
       "x": 343,
       "y": 58,
       "config": {
-        "filelist": [
-          {
-            "source": "local",
-            "path": "/Users/jng7/Desktop/V-SANS-Standard/IGOR_patched/sans72419.nxs.ngv",
-            "mtime": 1787247454,
-            "entries": [
-              "entry"
-            ]
-          }
-        ],
+        "filelist": [],
         "apply_attenuation": true,
         "apply_monitor_norm": true,
         "apply_dead_time": true
@@ -308,16 +299,7 @@
       "y": 103,
       "text_width": 97,
       "config": {
-        "filelist": [
-          {
-            "source": "local",
-            "path": "/Users/jng7/Desktop/V-SANS-Standard/IGOR_patched/sans72420.nxs.ngv",
-            "mtime": 1787163571,
-            "entries": [
-              "entry"
-            ]
-          }
-        ],
+        "filelist": [],
         "apply_attenuation": true,
         "apply_monitor_norm": true,
         "apply_dead_time": true
@@ -330,16 +312,7 @@
       "y": 141,
       "text_width": 109,
       "config": {
-        "filelist": [
-          {
-            "source": "local",
-            "path": "/Users/jng7/Desktop/V-SANS-Standard/IGOR_patched/sans72431.nxs.ngv",
-            "mtime": 1787163571,
-            "entries": [
-              "entry"
-            ]
-          }
-        ],
+        "filelist": [],
         "apply_attenuation": true,
         "apply_monitor_norm": true,
         "apply_dead_time": true
@@ -354,16 +327,7 @@
         "apply_attenuation": true,
         "apply_monitor_norm": true,
         "apply_dead_time": true,
-        "filelist": [
-          {
-            "source": "local",
-            "path": "/Users/jng7/Desktop/V-SANS-Standard/IGOR_patched/sans72427.nxs.ngv",
-            "mtime": 1787163571,
-            "entries": [
-              "entry"
-            ]
-          }
-        ]
+        "filelist": []
       },
       "text_width": 106
     },
@@ -374,16 +338,7 @@
       "y": 265,
       "text_width": 129,
       "config": {
-        "filelist": [
-          {
-            "source": "local",
-            "path": "/Users/jng7/Desktop/V-SANS-Standard/IGOR_patched/sans72429.nxs.ngv",
-            "mtime": 1787163571,
-            "entries": [
-              "entry"
-            ]
-          }
-        ],
+        "filelist": [],
         "apply_attenuation": true,
         "apply_monitor_norm": true,
         "apply_dead_time": true
@@ -395,16 +350,10 @@
       "x": 362,
       "y": 342,
       "config": {
-        "filelist": [
-          {
-            "source": "local",
-            "path": "/Users/jng7/Desktop/V-SANS-Standard/IGOR_patched/sans72426.nxs.ngv",
-            "mtime": 1788186533,
-            "entries": [
-              "entry"
-            ]
-          }
-        ]
+        "filelist": [],
+        "apply_attenuation": true,
+        "apply_monitor_norm": true,
+        "apply_dead_time": true
       },
       "text_width": 93
     },
@@ -412,7 +361,8 @@
       "module": "ncnr.vsans.export_vsans_1d",
       "title": "Export Vsans 1d",
       "x": 1692,
-      "y": 303
+      "y": 303,
+      "text_width": 122
     }
   ]
 }

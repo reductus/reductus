@@ -196,120 +196,7 @@
       "y": 345,
       "text_width": 160,
       "config": {
-        "filelist": [
-          {
-            "source": "ncnr",
-            "path": "ncnrdata/vsans/202009/27168/data/sans67521.nxs.ngv",
-            "mtime": 1600900470,
-            "entries": [
-              "entry"
-            ]
-          },
-          {
-            "source": "ncnr",
-            "path": "ncnrdata/vsans/202009/27168/data/sans67520.nxs.ngv",
-            "mtime": 1600900327,
-            "entries": [
-              "entry"
-            ]
-          },
-          {
-            "source": "ncnr",
-            "path": "ncnrdata/vsans/202009/27168/data/sans67543.nxs.ngv",
-            "mtime": 1600918523,
-            "entries": [
-              "entry"
-            ]
-          },
-          {
-            "source": "ncnr",
-            "path": "ncnrdata/vsans/202009/27168/data/sans67567.nxs.ngv",
-            "mtime": 1600952265,
-            "entries": [
-              "entry"
-            ]
-          },
-          {
-            "source": "ncnr",
-            "path": "ncnrdata/vsans/202009/27168/data/sans67542.nxs.ngv",
-            "mtime": 1600918380,
-            "entries": [
-              "entry"
-            ]
-          },
-          {
-            "source": "ncnr",
-            "path": "ncnrdata/vsans/202009/27168/data/sans67566.nxs.ngv",
-            "mtime": 1600952122,
-            "entries": [
-              "entry"
-            ]
-          },
-          {
-            "source": "ncnr",
-            "path": "ncnrdata/vsans/202009/27168/data/sans67608.nxs.ngv",
-            "mtime": 1600978551,
-            "entries": [
-              "entry"
-            ]
-          },
-          {
-            "source": "ncnr",
-            "path": "ncnrdata/vsans/202009/27168/data/sans67607.nxs.ngv",
-            "mtime": 1600978408,
-            "entries": [
-              "entry"
-            ]
-          },
-          {
-            "source": "ncnr",
-            "path": "ncnrdata/vsans/202009/27168/data/sans67621.nxs.ngv",
-            "mtime": 1600984076,
-            "entries": [
-              "entry"
-            ]
-          },
-          {
-            "source": "ncnr",
-            "path": "ncnrdata/vsans/202009/27168/data/sans67620.nxs.ngv",
-            "mtime": 1600983934,
-            "entries": [
-              "entry"
-            ]
-          },
-          {
-            "source": "ncnr",
-            "path": "ncnrdata/vsans/202009/27168/data/sans67634.nxs.ngv",
-            "mtime": 1600989602,
-            "entries": [
-              "entry"
-            ]
-          },
-          {
-            "source": "ncnr",
-            "path": "ncnrdata/vsans/202009/27168/data/sans67633.nxs.ngv",
-            "mtime": 1600989458,
-            "entries": [
-              "entry"
-            ]
-          },
-          {
-            "source": "ncnr",
-            "path": "ncnrdata/vsans/202009/27168/data/sans67638.nxs.ngv",
-            "mtime": 1600990830,
-            "entries": [
-              "entry"
-            ]
-          },
-          {
-            "source": "ncnr",
-            "path": "ncnrdata/vsans/202009/27168/data/sans67637.nxs.ngv",
-            "mtime": 1600990686,
-            "entries": [
-              "entry"
-            ]
-          }
-        ]
+        "filelist": []
       }
     },
     {
@@ -318,16 +205,7 @@
       "x": 85,
       "y": 157,
       "config": {
-        "filelist": [
-          {
-            "source": "ncnr",
-            "path": "ncnrdata/vsans/202009/27168/data/sans67580.nxs.ngv",
-            "mtime": 1600964046,
-            "entries": [
-              "entry"
-            ]
-          }
-        ],
+        "filelist": [],
         "apply_attenuation": true,
         "apply_monitor_norm": true,
         "apply_dead_time": true
@@ -340,16 +218,7 @@
       "x": 91,
       "y": 122,
       "config": {
-        "filelist": [
-          {
-            "source": "ncnr",
-            "path": "ncnrdata/vsans/202009/27168/data/sans67579.nxs.ngv",
-            "mtime": 1600963934,
-            "entries": [
-              "entry"
-            ]
-          }
-        ],
+        "filelist": [],
         "apply_attenuation": true,
         "apply_monitor_norm": true,
         "apply_dead_time": true
@@ -362,16 +231,7 @@
       "x": 88,
       "y": 87,
       "config": {
-        "filelist": [
-          {
-            "source": "ncnr",
-            "path": "ncnrdata/vsans/202009/27168/data/sans67581.nxs.ngv",
-            "mtime": 1600964157,
-            "entries": [
-              "entry"
-            ]
-          }
-        ],
+        "filelist": [],
         "apply_attenuation": true,
         "apply_monitor_norm": true,
         "apply_dead_time": true
@@ -384,16 +244,7 @@
       "x": 85,
       "y": 52,
       "config": {
-        "filelist": [
-          {
-            "source": "ncnr",
-            "path": "ncnrdata/vsans/202009/27168/data/sans67578.nxs.ngv",
-            "mtime": 1600963824,
-            "entries": [
-              "entry"
-            ]
-          }
-        ],
+        "filelist": [],
         "apply_attenuation": true,
         "apply_monitor_norm": true,
         "apply_dead_time": true
@@ -406,16 +257,7 @@
       "x": 85,
       "y": 191,
       "config": {
-        "filelist": [
-          {
-            "source": "ncnr",
-            "path": "ncnrdata/vsans/202009/27168/data/sans67504.nxs.ngv",
-            "mtime": 1600891954,
-            "entries": [
-              "entry"
-            ]
-          }
-        ],
+        "filelist": [],
         "apply_attenuation": true,
         "apply_monitor_norm": true,
         "apply_dead_time": true
@@ -436,16 +278,7 @@
       "y": 125,
       "text_width": 75,
       "config": {
-        "filelist": [
-          {
-            "source": "ncnr",
-            "path": "ncnrdata/vsans/202009/27168/data/sans67629.nxs.ngv",
-            "mtime": 1600987607,
-            "entries": [
-              "entry"
-            ]
-          }
-        ],
+        "filelist": [],
         "apply_attenuation": true,
         "apply_monitor_norm": true,
         "apply_dead_time": true
@@ -458,16 +291,7 @@
       "y": 84,
       "text_width": 75,
       "config": {
-        "filelist": [
-          {
-            "source": "ncnr",
-            "path": "ncnrdata/vsans/202009/27168/data/sans67628.nxs.ngv",
-            "mtime": 1600986697,
-            "entries": [
-              "entry"
-            ]
-          }
-        ],
+        "filelist": [],
         "apply_attenuation": true,
         "apply_monitor_norm": true,
         "apply_dead_time": true
@@ -480,16 +304,7 @@
       "y": 48,
       "text_width": 75,
       "config": {
-        "filelist": [
-          {
-            "source": "ncnr",
-            "path": "ncnrdata/vsans/202009/27168/data/sans67630.nxs.ngv",
-            "mtime": 1600988518,
-            "entries": [
-              "entry"
-            ]
-          }
-        ],
+        "filelist": [],
         "apply_attenuation": true,
         "apply_monitor_norm": true,
         "apply_dead_time": true
@@ -502,16 +317,7 @@
       "y": 11,
       "text_width": 75,
       "config": {
-        "filelist": [
-          {
-            "source": "ncnr",
-            "path": "ncnrdata/vsans/202009/27168/data/sans67627.nxs.ngv",
-            "mtime": 1600985786,
-            "entries": [
-              "entry"
-            ]
-          }
-        ],
+        "filelist": [],
         "apply_attenuation": true,
         "apply_monitor_norm": true,
         "apply_dead_time": true
@@ -524,16 +330,7 @@
       "y": 163,
       "text_width": 108,
       "config": {
-        "filelist": [
-          {
-            "source": "ncnr",
-            "path": "ncnrdata/vsans/202009/27168/data/sans67684.nxs.ngv",
-            "mtime": 1601054702,
-            "entries": [
-              "entry"
-            ]
-          }
-        ],
+        "filelist": [],
         "apply_attenuation": true,
         "apply_monitor_norm": true,
         "apply_dead_time": true
