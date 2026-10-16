@@ -2564,7 +2564,7 @@ def export_vsans_2d_matrix_grid(data, num_points=128, output_dir=None, filename_
 
     result(params): output parameters
 
-    2026-10-15 Jonathan Gaudet
+    2026-10-16 Jonathan Gaudet
     """
 
     import numpy as np
@@ -2602,7 +2602,13 @@ def export_vsans_2d_matrix_grid(data, num_points=128, output_dir=None, filename_
             valid_mask = np.ones_like(i_panel, dtype=bool)
 
         # Baseline finite check + Reductus valid_mask
-        valid = valid_mask & np.isfinite(i_panel) & np.isfinite(qx_panel) & np.isfinite(qy_panel)
+        valid = (
+                valid_mask
+                & (i_panel > 0.0)
+                & np.isfinite(i_panel)
+                & np.isfinite(qx_panel)
+                & np.isfinite(qy_panel)
+        )
 
         # Check secondary data-level numpy boolean mask if present
         if hasattr(det['data'], 'mask') and det['data'].mask is not None:
@@ -2638,7 +2644,7 @@ def export_vsans_2d_matrix_grid(data, num_points=128, output_dir=None, filename_
     ix = np.clip(ix, 0, num_points - 1)
     iy = np.clip(iy, 0, num_points - 1)
 
-    flat_indices = iy * num_points + ix
+    flat_indices = ix * num_points + iy
     total_bins = num_points * num_points
 
     # 4. Perform vector bincounting
@@ -2650,20 +2656,48 @@ def export_vsans_2d_matrix_grid(data, num_points=128, output_dir=None, filename_
     grid_i_flat = np.zeros(total_bins, dtype=float)
     grid_di_flat = np.zeros(total_bins, dtype=float)
 
-    valid_bins = counts > 0
-    grid_i_flat[valid_bins] = i_sum[valid_bins] / counts[valid_bins]
+    has_counts = counts > 0
+    grid_i_flat[has_counts] = i_sum[has_counts] / counts[has_counts]
 
     # Safe square root for variance propagation
-    safe_var = np.maximum(0.0, var_sum[valid_bins])
-    grid_di_flat[valid_bins] = np.sqrt(safe_var) / counts[valid_bins]
-
-    grid_i = grid_i_flat.reshape((num_points, num_points))
-    grid_di = grid_di_flat.reshape((num_points, num_points))
+    safe_var = np.maximum(0.0, var_sum[has_counts])
+    grid_di_flat[has_counts] = np.sqrt(safe_var) / counts[has_counts]
 
     # Grid coordinate centers
     qx_centers = qx_min + (np.arange(num_points) + 0.5) * dqx
     qy_centers = qy_min + (np.arange(num_points) + 0.5) * dqy
-    grid_qx, grid_qy = np.meshgrid(qx_centers, qy_centers)
+    grid_qx, grid_qy = np.meshgrid(qx_centers, qy_centers, indexing='ij')
+
+    grid_qx_flat = grid_qx.ravel('C')
+    grid_qy_flat = grid_qy.ravel('C')
+
+    is_valid_point = (counts > 0) & (grid_i_flat > 0.0) & np.isfinite(grid_i_flat) & np.isfinite(grid_di_flat)
+
+    grid_i_flat[~is_valid_point] = 0.0
+    grid_di_flat[~is_valid_point] = 0.0
+
+    fSubS_flags = np.where(is_valid_point, 1.0, 0.0)
+    mask_flags = np.where(is_valid_point, 0, 1)
+    zeros = np.zeros(total_bins, dtype=float)
+
+    # Stack columns: Qx, Qy, I, dI, Qz (0.0), SigmaQ_parall (0.0), SigmaQ_perp (0.0), fSubS, Mask
+    data_matrix = np.column_stack((
+        grid_qx_flat,
+        grid_qy_flat,
+        grid_i_flat,
+        grid_di_flat,
+        zeros,
+        zeros,
+        zeros,
+        fSubS_flags,
+        mask_flags,
+    ))
+
+    # Format data rows cleanly using vector string mapping
+    formatted_data_rows = [
+        f"{r[0]:.8e}\t{r[1]:.8e}\t{r[2]:.8e}\t{r[3]:.8e}\t{r[4]:.1f}\t{r[5]:.8e}\t{r[6]:.8e}\t{r[7]:.1f}\t{int(r[8])}"
+        for r in data_matrix
+    ]
 
     # 6. Format standard NIST 2D ASCII text output with absolute NaN protection
     filename = str(sans_qspace.metadata.get("run.filename", "vsans_2d"))
@@ -2703,36 +2737,7 @@ def export_vsans_2d_matrix_grid(data, num_points=128, output_dir=None, filename_
         ""
     ]
 
-    for row in range(num_points):
-        for col in range(num_points):
-            qx_val = grid_qx[row, col]
-            qy_val = grid_qy[row, col]
-            val_i = grid_i[row, col]
-            val_di = grid_di[row, col]
-            bin_idx = row * num_points + col
-
-            # Strictly sanitize Qx and Qy
-            if not np.isfinite(qx_val):
-                qx_val = 0.0
-            if not np.isfinite(qy_val):
-                qy_val = 0.0
-
-            # Set Column 8 (fSubS) and Column 9 (Mask) per SasView convention
-            if counts[bin_idx] > 0 and np.isfinite(val_i) and np.isfinite(val_di):
-                fSubS_flag = 1.0  # 1.0 = Clear / Unshadowed pixel
-                mask_flag = 0  # 0 = Valid / Unmasked pixel in SasView
-            else:
-                val_i = 0.0
-                val_di = 0.0
-                fSubS_flag = 0.0  # 0.0 = Shadowed / Ignored pixel
-                mask_flag = 1  # 1 = Masked pixel in SasView
-
-            # Columns: Qx | Qy | I | dI | Qz | SigmaQ_parall (0.0) | SigmaQ_perp (0.0) | fSubS | Mask
-            lines.append(
-                f"{qx_val:.8e}\t{qy_val:.8e}\t{val_i:.8e}\t{val_di:.8e}\t0.0\t0.00000000e+00\t0.00000000e+00\t{fSubS_flag:.1f}\t{mask_flag}"
-            )
-
-    content = "\n".join(lines)
+    content = "\n".join(lines + formatted_data_rows)
 
     params_dict = {
             "name": _s(sans_qspace.metadata.get("name", filename)),
