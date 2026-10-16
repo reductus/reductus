@@ -20,6 +20,10 @@ table.metadata tr:nth-child(even){background-color: #f2f2f2;}
 table.metadata tr.active {
     background-color: yellow;
 }
+.metadata-entry {
+    max-height: 100px;
+    overflow: hidden;
+}
 
 table.metadata td.dirty {
     background-color: orange;
