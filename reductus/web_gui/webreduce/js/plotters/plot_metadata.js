@@ -6,7 +6,7 @@ let template = `
   <table class="metadata">
     <thead>
       <tr>
-        <th v-for="col in cols" :key="col">{{col}}</th>
+        <th v-for="col in cols" :key="col"><div class="metadata-entry metadata-header">{{headerLabel(col)}}</div></th>
       </tr>
     </thead>
     <tbody>
@@ -61,6 +61,10 @@ const MetadataTable = {
     }
   },
   methods: {
+    headerLabel(col) {
+      // put each part of a dotted metadata key (e.g. "run.configuration") on its own line
+      return String(col).replaceAll('.', '\n');
+    },
     pretty(value) {
       if (value && value.toPrecision) {
         return value.toPrecision(this.precision);

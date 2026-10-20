@@ -16,6 +16,11 @@ table.metadata th {
     z-index: 1;
 }
 
+table.metadata th .metadata-header {
+    /* show the line breaks inserted in place of the periods in the header names */
+    white-space: pre-line;
+}
+
 table.metadata tr:nth-child(even){background-color: #f2f2f2;}
 
 table.metadata tr.active {
