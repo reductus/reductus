@@ -1815,6 +1815,20 @@ def addSimple(data):
     """
 
     output = data[0].copy()
+    if len(data) > 1 and all('run.savmon' in d.metadata for d in data):
+        # Data already monitor normalized: re-weight by the true monitors so the
+        # result is the summed counts normalized to the total monitor, as
+        # IGOR Add_raw_to_work does (sum raw, then scale to 1e8 / total monitor).
+        total_mon = sum(d.metadata['run.savmon'] for d in data)
+        output.data = data[0].data * (data[0].metadata['run.savmon']/total_mon)
+        output.metadata['run.detcnt'] = data[0].metadata['run.detcnt'] * data[0].metadata['run.savmon']
+        for d in data[1:]:
+            output.data += d.data * (d.metadata['run.savmon']/total_mon)
+            output.metadata['run.rtime'] += d.metadata['run.rtime']
+            output.metadata['run.detcnt'] += d.metadata['run.detcnt'] * d.metadata['run.savmon']
+        output.metadata['run.detcnt'] /= total_mon
+        output.metadata['run.savmon'] = total_mon
+        return output
     for d in data[1:]:
         output.data += d.data
         output.metadata['run.moncnt'] += d.metadata['run.moncnt']
