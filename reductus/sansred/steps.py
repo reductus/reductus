@@ -538,7 +538,7 @@ def calculateMeanQ(data):
     return data
 
 
-def calculateDQ_IGOR(data, inQ, del_r=None):
+def calculateDQ_IGOR(data, inQ, del_r=None, return_fsubs=False):
     """
     Add the dQ column to the data, based on slit apertures and gravity
     r_dist is the real-space distance from ctr of detector to QxQy pixel location
@@ -644,6 +644,8 @@ def calculateDQ_IGOR(data, inQ, del_r=None):
     QBar = (4.0*np.pi/lambda0)*np.sin(0.5*np.arctan(rm/L2))
     SigmaQ = QBar*np.sqrt(v_r/rmd**2 + v_lambda)
 
+    if return_fsubs:
+        return QBar, SigmaQ, fSubS
     return QBar, SigmaQ
 
 def _calculate_Q(X, Y, Z, q0):
