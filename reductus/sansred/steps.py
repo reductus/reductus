@@ -1286,11 +1286,19 @@ def monitor_normalize(sansdata, mon0=1e8):
 
     output (sans2d): corrected for dead time
 
-    2010-01-01 Andrew Jackson?
+    | 2010-01-01 Andrew Jackson?
+    | 2026-10-20 Jeff Krzywon update monitor metadata like IGOR Raw_to_work
     """
     monitor = sansdata.metadata['run.moncnt']
     res = sansdata.copy()
     res.data *= mon0/monitor
+    # As in IGOR Raw_to_work: the true monitor is kept (run.savmon) and the
+    # monitor count becomes the normalization value.  Downstream steps that use
+    # run.moncnt (absolute_scaling, addSimple) then see consistent values.
+    res.metadata['run.savmon'] = monitor
+    res.metadata['run.moncnt'] = mon0
+    if res.metadata.get('run.detcnt', None) is not None:
+        res.metadata['run.detcnt'] = res.metadata['run.detcnt']*mon0/monitor
     return res
 
 @module
