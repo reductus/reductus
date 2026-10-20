@@ -669,10 +669,14 @@ def _calculate_Q(X, Y, Z, q0):
             = |q| cos theta sin phi
         q_z = 2 pi/lambda (1 - cos 2theta)
             = 4 pi/lambda sin^2 theta = |q| sin theta
+
+    Matches IGOR (CircSectAve.ipf): theta = 0.5*atan(r/sdd), q = 4 pi/lambda sin(theta).
+    The previous small-angle form (theta = 0.5*r/Z, q = q0*theta) overestimated
+    q by several percent at large r, shifting pixels into the wrong Q bins.
     """
     r = np.sqrt(X**2+Y**2)
-    theta = 0.5 * r / Z
-    q = q0 * theta
+    theta = 0.5 * np.arctan2(r, Z)
+    q = q0 * np.sin(theta)
     phi = np.arctan2(Y, X)
     qx = q*np.cos(theta)*np.cos(phi)
     qy = q*np.cos(theta)*np.sin(phi)
