@@ -608,7 +608,9 @@ def calculateDQ_IGOR(data, inQ, del_r=None, return_fsubs=False):
     v_d = (DDet/2.3548)**2 + del_r**2/12.0	# the 2.3548 is a conversion from FWHM->Gauss, see https://mathworld.wolfram.com/GaussianFunction.html
     vz = vz_1 / lambda0
     yg = 0.5*G*L2*(L1+L2)/vz**2
-    v_g = 2.0*(2.0*yg**2*v_lambda)					# factor of 2 correction, B. Hammouda, 2007
+    # IGOR getResolution: the 2007 factor-of-2 correction (B. Hammouda) was
+    # removed in 2022 (JGB), so v_g = 2*yg^2*v_lambda
+    v_g = (2.0*yg**2*v_lambda)
 
     r0 = L2*np.tan(2.0*np.arcsin(lambda0*inQ/(4.0*np.pi) ))
     delta = 0.5*(BS_prime - r0)**2/v_d
