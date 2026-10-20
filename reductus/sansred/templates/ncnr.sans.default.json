@@ -1,6 +1,6 @@
 {
-  "name": "Default Template",
-  "description": "SANS extended reduction",
+  "name": "Default SANS reduction for a single configuration",
+  "description": "SANS full reduction",
   "modules": [
     {
       "x": 10,
@@ -9,97 +9,72 @@
       "module": "ncnr.sans.SuperLoadSANS",
       "config": {
         "filelist": [],
-        "do_det_eff": false,
+        "do_det_eff": true,
         "do_deadtime": true,
-        "deadtime": 0.0000034,
-        "do_mon_norm": false,
-        "do_atten_correct": false,
-        "mon0": 100000000,
+        "deadtime": 3.4e-6,
+        "do_mon_norm": true,
+        "do_atten_correct": true,
+        "mon0": 1e8,
         "check_timestamps": true
-      },
-      "text_width": 77
+      }
     },
     {
-      "x": 150,
-      "y": 5,
+      "x": 10,
+      "y": 65,
       "title": "Sorted Data",
       "module": "ncnr.sans.autosort",
       "config": {
-        "filelist": []
-      },
-      "text_width": 94
+        "filelist": [],
+        "add_scattering": false
+      }
     },
     {
-      "x": 320,
+      "x": 200,
       "y": 5,
       "title": "BB Subtract from Sample",
-      "module": "ncnr.sans.subtract",
-      "config": {
-        "align_by": "run.configuration"
-      },
-      "text_width": 186
+      "module": "ncnr.sans.subtract"
     },
     {
-      "x": 320,
+      "x": 200,
       "y": 65,
       "title": "BB Subtract from Empty Cell",
-      "module": "ncnr.sans.subtract",
-      "config": {
-        "align_by": "run.configuration"
-      },
-      "text_width": 209
+      "module": "ncnr.sans.subtract"
     },
     {
-      "x": 320,
-      "y": 125,
+      "x": 200,
+      "y": 155,
       "title": "Empty Transmission",
       "module": "ncnr.sans.generate_transmission",
       "config": {
         "auto_integrate": true,
         "align_by": "run.configuration"
-      },
-      "text_width": 149
+      }
     },
     {
-      "x": 625,
+      "x": 685,
       "y": 95,
       "title": "Transmission Values",
       "module": "ncnr.sans.generate_transmission",
       "config": {
         "auto_integrate": true,
-        "align_by": "run.configuration",
-        "integration_box": [
-          59.53488372093023,
-          null,
-          60.46511627906977,
-          75.34883720930232
-        ]
-      },
-      "text_width": 150
+        "align_by": "run.configuration"
+      }
     },
     {
-      "x": 625,
+      "x": 365,
       "y": 35,
       "title": "Scale by Transmission",
-      "module": "ncnr.sans.product",
-      "config": {
-        "align_by": "sample.GroupID"
-      },
-      "text_width": 162
+      "module": "ncnr.sans.product"
     },
     {
-      "x": 835,
+      "x": 525,
       "y": 5,
       "title": "Subtract Empty Cell from Sample",
-      "module": "ncnr.sans.subtract",
-      "config": {
-        "align_by": "analysis.empty_cell, run.configuration"
-      },
-      "text_width": 243
+      "module": "ncnr.sans.subtract"
     },
     {
-      "x": 995,
-      "y": 55,
+      "x": 525,
+      "y": 65,
       "title": "Load DIV",
       "module": "ncnr.sans.LoadDIV",
       "config": {
@@ -113,53 +88,71 @@
             ]
           }
         ]
-      },
-      "text_width": 75
+      }
     },
     {
-      "x": 1135,
+      "x": 685,
       "y": 5,
       "title": "DIV Correction",
-      "module": "ncnr.sans.correct_detector_sensitivity",
-      "text_width": 114
+      "module": "ncnr.sans.correct_detector_sensitivity"
     },
     {
-      "x": 1315,
-      "y": 5,
+      "x": 895,
+      "y": 35,
       "title": "Absolute Scaling of 2D Data",
       "module": "ncnr.sans.absolute_scaling",
       "config": {
-        "auto_box": "True"
-      },
-      "text_width": 209
+        "auto_box": true
+      }
     },
     {
-      "x": 1605,
-      "y": 5,
-      "title": "Pixel Space to Q Space",
+      "x": 1045,
+      "y": 35,
+      "title": "2D Q Space",
       "module": "ncnr.sans.PixelsToQ",
       "config": {
-        "correct_solid_angle": "True"
-      },
-      "text_width": 170
+        "correct_solid_angle": true
+      }
     },
     {
-      "x": 1310,
-      "y": 175,
+      "x": 1190,
+      "y": 35,
       "title": "Circular Averaged Data (Unmasked)",
       "module": "ncnr.sans.circular_av_new",
       "config": {
         "dQ_method": "IGOR",
-        "mask_width": 3
-      },
-      "text_width": 261
+        "mask_width": 3,
+        "bin_method": "IGOR"
+      }
     },
     {
-      "x": 1625,
-      "y": 235,
+      "x": 1375,
+      "y": 35,
       "title": "Circular Averaged Data (Masked)",
       "module": "ncnr.sans.mask_1d_data",
-      "text_width": 241
+      "text_width": 93
+    },
+    {
+      "x": 200,
+      "y": 245,
+      "title": "Empty Cell Transmission",
+      "module": "ncnr.sans.generate_transmission",
+      "config": {
+        "auto_integrate": true,
+        "align_by": "run.configuration"
+      }
+    },
+    {
+      "x": 100,
+      "y": 5,
+      "title": "Large Angle Trans. Sample",
+      "module": "ncnr.sans.correct_large_angle_transmission"
+    },
+    {
+      "x": 100,
+      "y": 65,
+      "title": "Large Angle Trans. Empty Cell",
+      "module": "ncnr.sans.correct_large_angle_transmission"
     }
   ],
   "wires": [
@@ -177,6 +170,26 @@
       "source": [
         1,
         "sample_scatt"
+      ],
+      "target": [
+        15,
+        "sansdata"
+      ]
+    },
+    {
+      "source": [
+        5,
+        "output"
+      ],
+      "target": [
+        15,
+        "trans"
+      ]
+    },
+    {
+      "source": [
+        15,
+        "output"
       ],
       "target": [
         2,
@@ -206,7 +219,47 @@
     {
       "source": [
         1,
+        "empty_trans"
+      ],
+      "target": [
+        14,
+        "in_beam"
+      ]
+    },
+    {
+      "source": [
+        1,
+        "open_beam_trans"
+      ],
+      "target": [
+        14,
+        "empty_beam"
+      ]
+    },
+    {
+      "source": [
+        1,
         "empty_scatt"
+      ],
+      "target": [
+        16,
+        "sansdata"
+      ]
+    },
+    {
+      "source": [
+        14,
+        "output"
+      ],
+      "target": [
+        16,
+        "trans"
+      ]
+    },
+    {
+      "source": [
+        16,
+        "output"
       ],
       "target": [
         3,
@@ -255,26 +308,6 @@
     },
     {
       "source": [
-        1,
-        "open_beam_absolute"
-      ],
-      "target": [
-        10,
-        "empty"
-      ]
-    },
-    {
-      "source": [
-        2,
-        "output"
-      ],
-      "target": [
-        7,
-        "subtrahend"
-      ]
-    },
-    {
-      "source": [
         3,
         "output"
       ],
@@ -295,12 +328,12 @@
     },
     {
       "source": [
-        5,
+        2,
         "output"
       ],
       "target": [
-        10,
-        "Tsam"
+        7,
+        "subtrahend"
       ]
     },
     {
@@ -331,6 +364,26 @@
       "target": [
         9,
         "sensitivity"
+      ]
+    },
+    {
+      "source": [
+        1,
+        "open_beam_absolute"
+      ],
+      "target": [
+        10,
+        "empty"
+      ]
+    },
+    {
+      "source": [
+        5,
+        "output"
+      ],
+      "target": [
+        10,
+        "Tsam"
       ]
     },
     {
@@ -383,5 +436,7 @@
         "data"
       ]
     }
-  ]
+  ],
+  "instrument": "ncnr.sans",
+  "version": "1.0"
 }
