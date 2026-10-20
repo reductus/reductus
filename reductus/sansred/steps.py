@@ -1694,13 +1694,9 @@ def absolute_scaling(empty, sample, Tsam, div, instrument="NG7", integration_box
     wavelength = empty.metadata['resolution.lmda']
 
     if not empty.attenuation_corrected:
-        attenNo = empty.metadata['run.atten']
-        # Need attenTrans - AttenuationFactor - need to know whether NG3, NG5 or NG7 (acctStr)
-        attenuation = lookup_attenuation(instrument, attenNo, wavelength)
-        att = attenuation['att']
-        percent_err = attenuation['att_err']
-        att_variance = (att*percent_err/100.0)**2
-        attenTrans = Uncertainty(att, att_variance)
+        # Same lookup as correct_attenuation (file tables / instrument from file),
+        # so the open beam is not looked up in the wrong (default NG7) table.
+        attenTrans = _attenuation_factor(empty, instrument)
     else:
         # If empty is already corrected for attenuation, don't do it here:
         attenTrans = Uncertainty(1.0, 0.0)
@@ -1732,20 +1728,23 @@ def absolute_scaling(empty, sample, Tsam, div, instrument="NG7", integration_box
     print('monCnt: ', monCnt)
 
     #------End Result-------#
-    # This assumes that the data is has not been normalized at all.
-    # Thus either fix this or pass un-normalized data.
-    # Compute kappa = incident intensity * solid angle of the pixel
-    kappa = detCnt / attenTrans * 1.0e8 / monCnt * (pixel/sdd)**2
+    # Compute kappa = incident intensity * solid angle of the pixel, per
+    # sample monitor count.  IGOR (ProtocolAsPanel.ipf) uses
+    #     kappa = detCnt/attenTrans * 1e8/monCnt * (pixel/sdd)^2
+    # because the sample work file is always normalized to 1e8 monitor.  Use
+    # the sample's own monitor value instead of the literal 1e8, so the result
+    # equals IGOR for monitor-normalized data (run.moncnt == 1e8) and is still
+    # correct for data that were not normalized.  monitor_normalize updates
+    # run.moncnt, so a normalized open beam is not normalized twice.
+    sample_mon = sample.metadata['run.moncnt']
+    kappa = detCnt / attenTrans * sample_mon / monCnt * (pixel/sdd)**2
     print("Kappa: ", kappa.x, "+/-", np.sqrt(kappa.variance))
-
-    #utc_datetime = date.datetime.utcnow()
-    #print(utc_datetime.strftime("%Y-%m-%d %H:%M:%S"))
 
     Tsam_factor = Uncertainty(Tsam.params['factor'], Tsam.params['factor_variance'])
     print('Tsam_factor: ', Tsam_factor.x)
 
     #-----Using Kappa to Scale data-----#
-    Dsam = sample.metadata['sample.thk'] / 10  # Sample thickness in mm => convert to cm
+    Dsam = sample.metadata['sample.thk'] * 10  # Sample thickness in mm => convert to cm
     ABS = sample.__mul__(1/(kappa*Dsam*Tsam_factor))
     ABS.metadata['sample.trans'] = f"{Tsam_factor.x:.3f} ({Tsam_factor.variance})"
 
