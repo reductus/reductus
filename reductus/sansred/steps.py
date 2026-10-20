@@ -888,9 +888,87 @@ def circular_av(data):
 def oversample_2d(input_array, oversampling):
     return np.repeat(np.repeat(input_array, oversampling, 0), oversampling, 1)
 
+def _circular_average_igor(data, mask, bin_width=1):
+    """
+    Direct port of CircularAverageTo1D() / IncrementPixel() from IGOR
+    CircSectAve.ipf (circular average only).
+
+    Annuli are uniform in real-space radius on the detector (width
+    bin_width * pixel size), not uniform in Q.  Pixels within rcentr = 100 mm
+    of the beam center are split into 3x3 sub-pixels, all others are kept
+    whole.  Errors are the standard error of the mean of the pixel values in
+    each annulus, as in IGOR.
+
+    Returns Q, I, sigma_I, ncells, ddr (bin width in cm) and the per-sub-pixel
+    (bin index, weight, pixel index) used, so other pixel quantities can be
+    averaged in the same way.
+    """
+    sx = data.metadata['det.pixelsizex'] # cm
+    sy = data.metadata['det.pixelsizey'] # cm
+    ddr = bin_width * sx                 # annulus width (cm)
+    rcentr = 10.0                        # 100 mm, in cm
+    dtdist = data.Z                      # sample-detector distance (cm)
+    wavelength = data.metadata['resolution.lmda']
+
+    # beam-center-relative pixel positions (non-linear corrected), cm
+    dx = data.X
+    dy = data.Y
+    pix = data.data.x
+    npix = pix.size
+    pixel_index = np.arange(npix).reshape(pix.shape)
+
+    use = mask.astype(bool)
+    r_pix = np.sqrt(dx**2 + dy**2)
+    whole = use & (r_pix > rcentr)
+    split = use & (r_pix <= rcentr)
+
+    # whole pixels: weight 1
+    r_list = [r_pix[whole]]
+    w_list = [np.ones(np.count_nonzero(whole))]
+    p_list = [pixel_index[whole]]
+    # split pixels: 3x3 sub-pixels at offsets (ll - 2)*s/3, weight 1/9
+    for ll in (1, 2, 3):
+        for kk in (1, 2, 3):
+            dxx = dx[split] + (ll - 2)*sx/3.0
+            dyy = dy[split] + (kk - 2)*sy/3.0
+            r_list.append(np.sqrt(dxx**2 + dyy**2))
+            w_list.append(np.full(dxx.shape, 1.0/9.0))
+            p_list.append(pixel_index[split])
+    r_sub = np.concatenate(r_list)
+    w_sub = np.concatenate(w_list)
+    p_sub = np.concatenate(p_list)
+
+    # ir = trunc(r/ddr) + 1 in IGOR (1-based); 0-based bin index here
+    bins = np.trunc(r_sub/ddr).astype(int)
+    nq = bins.max() + 1 if bins.size else 0
+
+    vals = pix.ravel()[p_sub]
+    aveint = np.bincount(bins, weights=vals*w_sub, minlength=nq)
+    dsq = np.bincount(bins, weights=vals*vals*w_sub, minlength=nq)
+    ncells = np.bincount(bins, weights=w_sub, minlength=nq)
+
+    large_num = 1.0
+    I = np.zeros(nq)
+    sigave = np.full(nq, large_num)
+    has = ncells > 0
+    I[has] = aveint[has]/ncells[has]
+    many = ncells > 1
+    var = np.zeros(nq)
+    var[many] = dsq[many]/ncells[many] - I[many]**2
+    good = many & (var > 0)
+    sigave[good] = np.sqrt(var[good]/(ncells[good] - 1))
+
+    kk = np.arange(1, nq + 1)
+    rr = (2*kk - 1)*ddr/2.0
+    theta = 0.5*np.arctan(rr/dtdist)
+    Q = (4*np.pi/wavelength)*np.sin(theta)
+
+    return Q, I, sigave, ncells, ddr, (bins, w_sub, p_sub)
+
+
 @nocache
 @module
-def circular_av_new(data_sets, q_min=None, q_max=None, q_step=None, mask_width=3, dQ_method='none'):
+def circular_av_new(data_sets, q_min=None, q_max=None, q_step=None, mask_width=3, dQ_method='none', bin_method='IGOR', bin_width=1):
     """
     Using a circular average, it converts data to 1D (Q vs. I)
 
@@ -899,15 +977,22 @@ def circular_av_new(data_sets, q_min=None, q_max=None, q_step=None, mask_width=3
 
     data_sets (sans2d[]): data in
 
-    q_min (float): minimum Q value for binning (defaults to q_step)
+    q_min (float): minimum Q value for binning (defaults to q_step; reductus binning only)
 
-    q_max (float): maxiumum Q value for binning (defaults to max of q values in data)
+    q_max (float): maxiumum Q value for binning (defaults to max of q values in data; reductus binning only)
 
-    q_step (float): step size for Q bins (defaults to minimum qx step)
+    q_step (float): step size for Q bins (defaults to minimum qx step; reductus binning only)
 
     mask_width (int): number of pixels to mask around the perimeter of the detector
 
     dQ_method (opt:none|IGOR|statistical) : method for calculating dQ
+
+    bin_method (opt:IGOR|reductus) : IGOR uses annuli of constant width in detector
+        radius with 3x3 sub-pixels within 100 mm of the beam center and standard error
+        of the mean uncertainties (same as CircSectAve.ipf); reductus uses bins of
+        constant width in Q with 3x3 oversampling of every pixel and propagated uncertainties
+
+    bin_width (int): width of the annuli in pixels (IGOR binning only)
 
     **Returns**
 
@@ -920,6 +1005,7 @@ def circular_av_new(data_sets, q_min=None, q_max=None, q_step=None, mask_width=3
     | 2019-01-01 Brian Maranville
     | 2019-09-05 Adding mask_width as a temporary way to handle basic masking
     | 2019-12-11 Brian Maranville adding dQ_method opts
+    | 2026-10-20 Jeff Krzywon adding IGOR binning, fixed oversampled variance
     """
 
     nominal_output = []
@@ -939,74 +1025,29 @@ def circular_av_new(data_sets, q_min=None, q_max=None, q_step=None, mask_width=3
         if data.qx is None:
             raise ValueError("Q is not defined - convert pixels to Q first")
 
-        if q_step is None:
-            q_step = data.qx[1, 0]-data.qx[0, 0] / 1.0
-
-        if q_min is None:
-            q_min = q_step
-
-        if q_max is None:
-            q_max = data.q[mask].max()
-
-        q_bins = np.arange(q_min, q_max+q_step, q_step)
-        Q = (q_bins[:-1] + q_bins[1:])/2.0
-
-        oversampling = 3
-
-        o_mask = oversample_2d(mask, oversampling)
-        #o_q = oversample_2d(data.q, oversampling)
-        o_qxi, o_qyi = np.indices(o_mask.shape)
-        o_qx_offsets = ((o_qxi % oversampling) + 0.5) / oversampling
-        o_qy_offsets = ((o_qyi % oversampling) + 0.5) / oversampling
-        qx_width = oversample_2d(data.qx_high - data.qx_low, oversampling)
-        qy_width = oversample_2d(data.qy_high - data.qy_low, oversampling)
-        original_lookups = (np.floor_divide(o_qxi, oversampling), np.floor_divide(o_qyi, oversampling))
-        o_qx = data.qx_low[original_lookups] + (qx_width * o_qx_offsets)
-        o_qy = data.qy_low[original_lookups] + (qy_width * o_qy_offsets)
-        o_qz = oversample_2d(data.qz, oversampling)
-        o_q = np.sqrt(o_qx**2 + o_qy**2 + o_qz**2)
-        o_data = oversample_2d(data.data, oversampling) # Uncertainty object...
-        o_meanQ = oversample_2d(data.meanQ, oversampling)
-        o_shadow_factor = oversample_2d(data.shadow_factor, oversampling)
-        o_dq_para = oversample_2d(data.dq_para, oversampling)
-
-        # dq = data.dq_para if hasattr(data, 'dqpara') else np.ones_like(data.q) * q_step
-        I, _bins_used = np.histogram(o_q[o_mask], bins=q_bins, weights=o_data.x[o_mask])
-        I_norm, _ = np.histogram(o_q[o_mask], bins=q_bins, weights=np.ones_like(o_data.x[o_mask]))
-        I_var, _ = np.histogram(o_q[o_mask], bins=q_bins, weights=o_data.variance[o_mask])
-        #Q_ave, _ = np.histogram(o_q[o_mask], bins=q_bins, weights=o_q[o_mask])
-        #Q_var, _ = np.histogram(data.q, bins=q_bins, weights=data.dq_para**2)
-        Q_mean, _ = np.histogram(o_q[o_mask], bins=q_bins, weights=o_meanQ[o_mask])
-        ShadowFactor, _ = np.histogram(o_q[o_mask], bins=q_bins, weights=o_shadow_factor[o_mask])
-
-        nonzero_mask = I_norm > 0
-
-        I[nonzero_mask] /= I_norm[nonzero_mask]
-        I_var[nonzero_mask] /= (I_norm[nonzero_mask]**2)
-        Q_mean[nonzero_mask] /= I_norm[nonzero_mask]
-        #Q_ave[nonzero_mask] /= I_norm[nonzero_mask]
-        ShadowFactor[nonzero_mask] /= I_norm[nonzero_mask]
-
-        # calculate Q_var...
-        # remarkably, the variance of a sum of normalized gaussians
-        # with variances v_i, displaced from the mean center by xc_i
-        # is the sum of (xc_i**2 + v_i).   Gaussians are weird.
-
-
-        if dQ_method == 'IGOR':
-            Q_mean, Q_mean_error = calculateDQ_IGOR(data, Q)
-        elif dQ_method == 'statistical':
-            # exclude Q_mean_lookups that overflow the length of the calculated Q_mean:
-            Q_lookup = np.digitize(o_q[o_mask], bins=q_bins)
-            Q_lookup_mask = (Q_lookup < len(Q))
-            Q_mean_center = Q_mean[Q_lookup[Q_lookup_mask]]
-            Q_var_contrib = (o_meanQ[o_mask][Q_lookup_mask] - Q_mean_center)**2 + (o_dq_para[o_mask][Q_lookup_mask])**2
-            Q_var, _ = np.histogram(o_meanQ[o_mask][Q_lookup_mask], bins=q_bins, weights=Q_var_contrib)
-            Q_var[nonzero_mask] /= I_norm[nonzero_mask]
-            Q_mean_error = np.sqrt(Q_var)
+        if bin_method == 'IGOR':
+            Q, I, I_sigma, ncells, ddr, (bins, w_sub, p_sub) = _circular_average_igor(data, mask, bin_width=bin_width)
+            I_var = I_sigma**2
+            nq = len(Q)
+            nonzero_mask = ncells > 0
+            def bin_average(pixel_values):
+                v = np.bincount(bins, weights=pixel_values.ravel()[p_sub]*w_sub, minlength=nq)
+                v[nonzero_mask] /= ncells[nonzero_mask]
+                return v
+            Q_mean = bin_average(data.meanQ)
+            ShadowFactor = bin_average(data.shadow_factor)
+            if dQ_method == 'IGOR':
+                Q_mean, Q_mean_error, ShadowFactor = calculateDQ_IGOR(data, Q, del_r=ddr, return_fsubs=True)
+            elif dQ_method == 'statistical':
+                Q_var_contrib = (data.meanQ.ravel()[p_sub] - Q_mean[bins])**2 + data.dq_para.ravel()[p_sub]**2
+                Q_var = np.bincount(bins, weights=Q_var_contrib*w_sub, minlength=nq)
+                Q_var[nonzero_mask] /= ncells[nonzero_mask]
+                Q_mean_error = np.sqrt(Q_var)
+            else:
+                Q_mean_error = np.zeros_like(Q)
         else:
-            # 'none' is the default
-            Q_mean_error = np.zeros_like(Q)
+            Q, I, I_var, Q_mean, Q_mean_error, ShadowFactor = _circular_average_oversampled(
+                data, mask, q_min=q_min, q_max=q_max, q_step=q_step, dQ_method=dQ_method)
 
         nominal_output_x = Sans1dData(Q, I, dx=Q_mean_error, dv=I_var, xlabel="Q", vlabel="I",
                             xunits="inv. A", vunits="neutrons")
@@ -1021,8 +1062,85 @@ def circular_av_new(data_sets, q_min=None, q_max=None, q_step=None, mask_width=3
         mean_output.append(mean_output_x)
 
         canonical_output.append(SansIQData(I, np.sqrt(I_var), Q, Q_mean_error, Q_mean, ShadowFactor, metadata=deepcopy(data.metadata)))
-    
+
     return nominal_output, mean_output, canonical_output
+
+
+def _circular_average_oversampled(data, mask, q_min=None, q_max=None, q_step=None, dQ_method='none'):
+    """ Original reductus circular average: constant-width Q bins, 3x3 oversampling of every pixel """
+    if q_step is None:
+        q_step = data.qx[1, 0]-data.qx[0, 0] / 1.0
+
+    if q_min is None:
+        q_min = q_step
+
+    if q_max is None:
+        q_max = data.q[mask].max()
+
+    q_bins = np.arange(q_min, q_max+q_step, q_step)
+    Q = (q_bins[:-1] + q_bins[1:])/2.0
+
+    oversampling = 3
+
+    o_mask = oversample_2d(mask, oversampling)
+    o_qxi, o_qyi = np.indices(o_mask.shape)
+    o_qx_offsets = ((o_qxi % oversampling) + 0.5) / oversampling
+    o_qy_offsets = ((o_qyi % oversampling) + 0.5) / oversampling
+    qx_width = oversample_2d(data.qx_high - data.qx_low, oversampling)
+    qy_width = oversample_2d(data.qy_high - data.qy_low, oversampling)
+    original_lookups = (np.floor_divide(o_qxi, oversampling), np.floor_divide(o_qyi, oversampling))
+    o_qx = data.qx_low[original_lookups] + (qx_width * o_qx_offsets)
+    o_qy = data.qy_low[original_lookups] + (qy_width * o_qy_offsets)
+    o_qz = oversample_2d(data.qz, oversampling)
+    o_q = np.sqrt(o_qx**2 + o_qy**2 + o_qz**2)
+    o_data = oversample_2d(data.data, oversampling) # Uncertainty object...
+    o_meanQ = oversample_2d(data.meanQ, oversampling)
+    o_shadow_factor = oversample_2d(data.shadow_factor, oversampling)
+    o_dq_para = oversample_2d(data.dq_para, oversampling)
+    o_pixel = oversample_2d(np.arange(data.data.x.size).reshape(data.data.x.shape), oversampling)
+
+    I, _bins_used = np.histogram(o_q[o_mask], bins=q_bins, weights=o_data.x[o_mask])
+    I_norm, _ = np.histogram(o_q[o_mask], bins=q_bins, weights=np.ones_like(o_data.x[o_mask]))
+    Q_mean, _ = np.histogram(o_q[o_mask], bins=q_bins, weights=o_meanQ[o_mask])
+    ShadowFactor, _ = np.histogram(o_q[o_mask], bins=q_bins, weights=o_shadow_factor[o_mask])
+
+    # Variance: the sub-pixels of one pixel are fully correlated, so each pixel
+    # contributes (number of its sub-pixels in the bin)^2 * variance, not
+    # (number of sub-pixels) * variance (which underestimated the variance by
+    # up to oversampling**2).
+    nbins = len(Q)
+    in_range = (o_q[o_mask] >= q_bins[0]) & (o_q[o_mask] <= q_bins[-1])
+    b = np.clip(np.digitize(o_q[o_mask][in_range], q_bins) - 1, 0, nbins - 1)
+    p = o_pixel[o_mask][in_range]
+    npix = data.data.x.size
+    pairs, counts = np.unique(b.astype(np.int64)*npix + p, return_counts=True)
+    I_var = np.bincount(pairs // npix, weights=(counts.astype(float)**2)*data.data.variance.ravel()[pairs % npix],
+                        minlength=nbins)
+
+    nonzero_mask = I_norm > 0
+
+    I[nonzero_mask] /= I_norm[nonzero_mask]
+    I_var[nonzero_mask] /= (I_norm[nonzero_mask]**2)
+    Q_mean[nonzero_mask] /= I_norm[nonzero_mask]
+    ShadowFactor[nonzero_mask] /= I_norm[nonzero_mask]
+
+    if dQ_method == 'IGOR':
+        Q_mean, Q_mean_error, ShadowFactor = calculateDQ_IGOR(data, Q, return_fsubs=True)
+    elif dQ_method == 'statistical':
+        # exclude Q_mean_lookups that overflow the length of the calculated Q_mean:
+        Q_lookup = np.digitize(o_q[o_mask], bins=q_bins)
+        Q_lookup_mask = (Q_lookup < len(Q))
+        Q_mean_center = Q_mean[Q_lookup[Q_lookup_mask]]
+        Q_var_contrib = (o_meanQ[o_mask][Q_lookup_mask] - Q_mean_center)**2 + (o_dq_para[o_mask][Q_lookup_mask])**2
+        Q_var, _ = np.histogram(o_meanQ[o_mask][Q_lookup_mask], bins=q_bins, weights=Q_var_contrib)
+        Q_var[nonzero_mask] /= I_norm[nonzero_mask]
+        Q_mean_error = np.sqrt(Q_var)
+    else:
+        # 'none' is the default
+        Q_mean_error = np.zeros_like(Q)
+
+    return Q, I, I_var, Q_mean, Q_mean_error, ShadowFactor
+
 
 @cache
 @module
@@ -1221,7 +1339,10 @@ def correct_detector_efficiency(sansdata):
     X = sx3*np.tan((x-xcenter)*sx/sx3) - dxbm # in mm in nexus, but converted by loader
     Y = sy3*np.tan((y-ycenter)*sy/sy3) - dybm
     r = np.sqrt(X**2+Y**2)
-    theta_det = np.arctan2(r, Z)/2
+    # IGOR DetEffCorr (WorkFileUtils.ipf) uses the full scattering angle,
+    # theta = atan(r/sdd), i.e. the angle of incidence on the detector face,
+    # not the half-angle.
+    theta_det = np.arctan2(r, Z)
 
     stAl = 0.00967*lambd*0.8 # dimensionless, constants from JGB memo
     stHe = 0.146*lambd*2.5
@@ -1232,12 +1353,105 @@ def correct_detector_efficiency(sansdata):
     res = sansdata.copy()
     res.data = res.data/ff
 
-    # note that the theta calculated for this correction is based on the
-    # center of the detector and NOT the center of the beam. Thus leave
-    # the q-relevant theta alone.
+    # the angle used for this correction is relative to the beam center;
+    # leave the q-relevant theta alone.
     res.theta = copy(sansdata.theta)
 
     return res
+
+
+def _beam_relative_coordinates(sansdata):
+    """
+    Pixel-center positions (cm) relative to the beam center, including the
+    IGOR non-linear (tan) detector correction, plus the sample-detector distance.
+    Same geometry as IGOR DetCorr: xd = dc_fx(i) - dc_fx(x0).
+    """
+    Z = sansdata.metadata["det.dis"] + sansdata.metadata["sample.position"]
+    shape = sansdata.data.x.shape
+    x0 = sansdata.metadata['det.beamx']
+    y0 = sansdata.metadata['det.beamy']
+    xcenter, ycenter = [(dd + 1.0)/2.0 for dd in shape]
+    x, y = np.indices(shape) + 1.0
+    sx = sansdata.metadata['det.pixelsizex']
+    sy = sansdata.metadata['det.pixelsizey']
+    sx3 = sy3 = 1000.0 # cm
+    X = sx3*np.tan((x-xcenter)*sx/sx3) - sx3*np.tan((x0-xcenter)*sx/sx3)
+    Y = sy3*np.tan((y-ycenter)*sy/sy3) - sy3*np.tan((y0-ycenter)*sy/sy3)
+    return X, Y, Z
+
+
+def _pair_data_with_params(data, factor_param, align_by="none"):
+    """
+    Broadcast/align a list of datasets with a list of parameter sets,
+    following the same rules as :func:`product`.  Returns a list of
+    (data, params) tuples; params is None when no factor is given.
+    """
+    if not factor_param:
+        return [(d, None) for d in data]
+    if len(factor_param) == 1:
+        factor_param = factor_param * len(data)
+    elif len(data) == 1:
+        data = data * len(factor_param)
+    if align_by.lower() != "none":
+        lookup = dict([(get_compound_key(f.params, align_by), f) for f in factor_param])
+        return [(d, lookup.get(get_compound_key(d.metadata, align_by), None)) for d in data]
+    # never drop data when the lists differ in length; unmatched data are left uncorrected
+    return [(d, f) for d, f in itertools.zip_longest(data, factor_param[:len(data)]) if d is not None]
+
+
+@module
+def correct_large_angle_transmission(sansdata, trans, align_by="none"):
+    """
+    Correct for the longer path length through the sample at large
+    scattering angles (angle-dependent transmission).  Direct port of
+    LargeAngleTransmissionCorr() in IGOR WorkFileUtils.ipf, which IGOR
+    applies by default to SAM and EMP (but not BGD) as they are loaded
+    into a work file.
+
+    **Inputs**
+
+    sansdata (sans2d[]): data in
+
+    trans (params[]?): transmission of the data (sample or empty cell
+    relative to open beam). No correction is applied when missing.
+
+    align_by (str): for multiple inputs, match data and transmission by this
+    metadata value (use "none" to align by position in the list)
+
+    **Returns**
+
+    output (sans2d[]): corrected data
+
+    | 2026-10-20 Jeff Krzywon port of IGOR LargeAngleTransmissionCorr
+    """
+    output = []
+    for d, t in _pair_data_with_params(sansdata, trans, align_by=align_by):
+        if t is None:
+            output.append(d)
+            continue
+        T = float(t.params.get('factor', 1.0))
+        T_err = np.sqrt(float(t.params.get('factor_variance', 0.0)))
+        if T <= 0:
+            T = 1.0  # IGOR resets a zero transmission to 1
+        X, Y, Z = _beam_relative_coordinates(d)
+        cos_th = np.cos(np.arctan2(np.sqrt(X**2 + Y**2), Z))
+        uval = -np.log(T)
+        arg = (1.0 - cos_th)/cos_th
+        if uval < 0.01:
+            correction = 1.0 - 0.5*uval*arg
+        else:
+            with np.errstate(divide='ignore', invalid='ignore'):
+                exact = -np.expm1(-uval*arg)/(uval*arg)
+            correction = np.where(cos_th > 0.99, 1.0 - 0.5*uval*arg, exact)
+        if T == 1.0:
+            corr_err = np.zeros_like(correction)
+        else:
+            corr_err = np.abs((1.0/T)*(arg/2 - arg**2/3*uval + arg**3/8*uval**2 - arg**4/30*uval**3))*T_err
+        res = d.copy()
+        res.data = res.data / Uncertainty(correction, corr_err**2)
+        output.append(res)
+    return output
+
 
 @module
 def correct_dead_time(sansdata, deadtime=1.0e-6):
@@ -1263,7 +1477,9 @@ def correct_dead_time(sansdata, deadtime=1.0e-6):
         deadtime = sansdata.metadata["det.dead_time"]
 
     run_time = sansdata.metadata["run.rtime"]
-    total_counts = np.sum(sansdata.data)
+    # use plain counts: IGOR treats the dead time scale as exact; summing the
+    # Uncertainty object would make dscale an Uncertainty and inflate the variance
+    total_counts = np.sum(sansdata.data.x)
 
     dscale = 1.0/(1.0-deadtime*(total_counts/run_time))
 
