@@ -1593,18 +1593,31 @@ def correct_attenuation(sample, instrument="NG7"):
 
     atten_corrected (sans2d): corrected measurement
     """
-    # Default to use the insturment name from the file, rather that the name passed by the method.
-    instrument = sample.metadata.get('instrument.name', instrument).split(":")[-1]
-    attenNo = sample.metadata['run.atten']
-    wavelength = sample.metadata['resolution.lmda']
-    atten_tables = sample.metadata.get('run.atten_factors', None)
-    atten_error_tables = sample.metadata.get('run.atten_factor_errors', None)
+    denominator = _attenuation_factor(sample, instrument)
+    atten_corrected = sample.copy()
+    atten_corrected.attenuation_corrected = True
+    atten_corrected.data /= denominator
+    return atten_corrected
+
+
+def _attenuation_factor(data, instrument="NG7"):
+    """
+    Attenuation factor (as an Uncertainty) for a dataset, using the tables
+    stored in the data file when present, otherwise the built-in tables for
+    the instrument named in the file (falling back to *instrument*).
+    """
+    # Default to use the instrument name from the file, rather that the name passed by the method.
+    instrument = data.metadata.get('instrument.name', instrument) or instrument
+    instrument = str(instrument).split(":")[-1]
+    attenNo = int(round(float(data.metadata['run.atten'])))
+    wavelength = data.metadata['resolution.lmda']
+    atten_tables = data.metadata.get('run.atten_factors', None)
+    atten_error_tables = data.metadata.get('run.atten_factor_errors', None)
     full_table = None
-    if atten_tables is not None:
+    if atten_tables is not None and atten_error_tables is not None:
         wavelengths = []
         attens = []
         atten_errors = []
-        full_table = {}
         for atten_row, error_row in zip(atten_tables, atten_error_tables):
             try:
                 float(atten_row[0])
@@ -1613,22 +1626,25 @@ def correct_attenuation(sample, instrument="NG7"):
                 continue
             # The first item is the wavelength
             wavelengths.append(float(atten_row[0]))
-            # The rest of the items are the scaling factors for this row
+            # The rest of the items are the factors for attenuator 0, 1, 2, ...
             attens.append([float(x) for x in atten_row[1:]])
             atten_errors.append([float(x) for x in error_row[1:]])
-            full_table['att'] = attens
-            full_table['att_err'] = atten_errors
-            full_table['lambda'] = wavelengths
+        if wavelengths:
+            # lookup_attenuation expects {attenNo string: column vs. wavelength}
+            # (previously the row-major list was indexed by a string, which fails
+            # for any attenuator other than 0)
+            attens = np.asarray(attens, dtype=float)
+            atten_errors = np.asarray(atten_errors, dtype=float)
+            full_table = {
+                'lambda': np.asarray(wavelengths, dtype=float),
+                'att': dict((str(i), attens[:, i]) for i in range(attens.shape[1])),
+                'att_err': dict((str(i), atten_errors[:, i]) for i in range(atten_errors.shape[1])),
+            }
     attenuation = lookup_attenuation(instrument, attenNo, wavelength, full_table)
     att = attenuation['att']
     percent_err = attenuation['att_err']
     att_variance = (att*percent_err/100.0)**2
-    denominator = Uncertainty(att, att_variance)
-    atten_corrected = sample.copy()
-    atten_corrected.attenuation_corrected = True
-    atten_corrected.data /= denominator
-    print(f"ATTEN FACTOR: {denominator}")
-    return atten_corrected
+    return Uncertainty(att, att_variance)
 
 @cache
 @module
