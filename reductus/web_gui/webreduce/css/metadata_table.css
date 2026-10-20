@@ -5,6 +5,7 @@ table.metadata {
 
 table.metadata th, table.metadata td {
     border: 1px solid blue;
+    margin: 0.5em;
 }
 
 table.metadata th {
@@ -23,6 +24,7 @@ table.metadata tr.active {
 .metadata-entry {
     max-height: 100px;
     overflow: hidden;
+    margin: 0.5em;
 }
 
 table.metadata td.dirty {
