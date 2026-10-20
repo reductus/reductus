@@ -1575,7 +1575,7 @@ def correct_attenuation(sample, instrument="NG7"):
     atten_corrected (sans2d): corrected measurement
     """
     # Default to use the insturment name from the file, rather that the name passed by the method.
-    instrument = sample.metadata.get('instrument.name', instrument).decode("utf-8").split(":")[-1]
+    instrument = sample.metadata.get('instrument.name', instrument).split(":")[-1]
     attenNo = sample.metadata['run.atten']
     wavelength = sample.metadata['resolution.lmda']
     atten_tables = sample.metadata.get('run.atten_factors', None)
