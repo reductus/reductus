@@ -732,7 +732,10 @@ def PixelsToQ(data, beam_center=[None,None], correct_solid_angle=True):
     X = sx3*np.tan((x-xcenter)*sx/sx3) - dxbm # in mm in nexus, but converted by loader
     Y = sy3*np.tan((y-ycenter)*sy/sy3) - dybm
     r, theta, q, phi, qx, qy, qz = _calculate_Q(X, Y, Z, q0)
-    
+
+    # work on a copy: the input may be a cached result shared with other nodes
+    res = data.copy()
+
     if correct_solid_angle:
         """
         rad = sqrt(dtdis2 + xd^2 + yd^2)
@@ -744,8 +747,9 @@ def PixelsToQ(data, beam_center=[None,None], correct_solid_angle=True):
         """
         xx = (np.cos((x-xcenter)*sx/sx3))**2
         yy = (np.cos((y-ycenter)*sy/sy3))**2
-        #data.data.x = data.data.x / (np.cos(theta)**3)
-        data.data.x = data.data.x * xx * yy / (np.cos(2*theta)**3)
+        # cos(2 theta) = sdd/rad, so 1/cos(2 theta)^3 == (rad/sdd)^3 as in IGOR DetCorr.
+        # Scale the uncertainty too (IGOR scales data_err by the same factor).
+        res.data = res.data * (xx * yy / (np.cos(2*theta)**3))
 
     # bin corners:
     X_low = sx3*np.tan((x - 0.5 - xcenter)*sx/sx3) - dxbm # in mm in nexus, but converted by loader
@@ -756,7 +760,6 @@ def PixelsToQ(data, beam_center=[None,None], correct_solid_angle=True):
     r_low, theta_low, q_low, phi_low, qx_low, qy_low, qz_low = _calculate_Q(X_low, Y_low, Z, q0)
     r_high, theta_high, q_high, phi_high, qx_high, qy_high, qz_high = _calculate_Q(X_high, Y_high, Z, q0)
 
-    res = data.copy()
     #Adding res.q
     res.q = q
     res.qx = qx
