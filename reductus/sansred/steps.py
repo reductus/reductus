@@ -2228,6 +2228,7 @@ def single_configuration(
 
     | 2026-04-24 Jeff Krzywon initial implementation
     | 2026-05-28 Jeff Krzywon API changes
+    | 2026-10-20 Jeff Krzywon match IGOR: monitor normalization, attenuation, detector efficiency and large-angle T
     """
     template_def = {
         "name": "loader_template",
@@ -2236,8 +2237,8 @@ def single_configuration(
         [
             {"x": 10, "y": 5, "title": "Raw Data", "module": "ncnr.sans.SuperLoadSANS",
                 "config": {
-                    "filelist": [], "do_det_eff": False, "do_deadtime": True, "deadtime": 3.4e-6,
-                    "do_mon_norm": False, "do_atten_correct": False, "mon0": 1e8, "check_timestamps": True
+                    "filelist": [], "do_det_eff": True, "do_deadtime": True, "deadtime": 3.4e-6,
+                    "do_mon_norm": True, "do_atten_correct": True, "mon0": 1e8, "check_timestamps": True
                 }
              },
             {"x": 10, "y": 65, "title": "Sorted Data", "module": "ncnr.sans.autosort",
@@ -2266,19 +2267,32 @@ def single_configuration(
                 "config": {"correct_solid_angle": True}
             },
             {"x": 1190, "y": 35, "title": "Circular Averaged Data (Unmasked)", "module": "ncnr.sans.circular_av_new",
-                "config": {"dQ_method": "IGOR", "mask_width": 3}
+                "config": {"dQ_method": "IGOR", "mask_width": 3, "bin_method": "IGOR"}
             },
             {"x": 1375, "y": 35, "title": "Circular Averaged Data (Masked)", "module": "ncnr.sans.mask_1d_data", "text_width": 93,
                 "config": {"mask_indices": [mask]}
-            }
+            },
+            {"x": 200, "y": 245, "title": "Empty Cell Transmission", "module": "ncnr.sans.generate_transmission",
+                "config": {"auto_integrate": True, "align_by": "run.configuration"}
+            },
+            {"x": 100, "y": 5, "title": "Large Angle Trans. Sample", "module": "ncnr.sans.correct_large_angle_transmission"},
+            {"x": 100, "y": 65, "title": "Large Angle Trans. Empty Cell", "module": "ncnr.sans.correct_large_angle_transmission"},
         ],
         "wires":
         [
             {"source": [0, "output"], "target": [1, "rawdata"]},
-            {"source": [1, "sample_scatt"], "target": [2, "subtrahend"]},
+            # IGOR applies the large-angle transmission correction to SAM and EMP
+            # (with their own transmissions), but not to BGD, before subtracting
+            {"source": [1, "sample_scatt"], "target": [15, "sansdata"]},
+            {"source": [5, "output"], "target": [15, "trans"]},
+            {"source": [15, "output"], "target": [2, "subtrahend"]},
             {"source": [1, "blocked_beam"], "target": [2, "minuend"]},
             {"source": [1, "blocked_beam"], "target": [3, "minuend"]},
-            {"source": [1, "empty_scatt"], "target": [3, "subtrahend"]},
+            {"source": [1, "empty_trans"], "target": [14, "in_beam"]},
+            {"source": [1, "open_beam_trans"], "target": [14, "empty_beam"]},
+            {"source": [1, "empty_scatt"], "target": [16, "sansdata"]},
+            {"source": [14, "output"], "target": [16, "trans"]},
+            {"source": [16, "output"], "target": [3, "subtrahend"]},
             {"source": [1, "sample_trans"], "target": [4, "in_beam"]},
             {"source": [1, "empty_trans"], "target": [4, "empty_beam"]},
             {"source": [1, "sample_trans"], "target": [5, "in_beam"]},
