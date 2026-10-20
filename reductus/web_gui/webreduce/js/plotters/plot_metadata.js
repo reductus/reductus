@@ -69,8 +69,10 @@ const MetadataTable = {
       if (value && value.toPrecision) {
         return value.toPrecision(this.precision);
       }
+      else if (typeof value === "object") {
+        return JSON.stringify(value, null, 1); }
       else {
-        return value;
+        return String(value);
       }
     },
     onInput(row, col, value) {
