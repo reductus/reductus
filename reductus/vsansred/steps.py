@@ -2163,7 +2163,7 @@ def spin_leakage_corr(data_uu, data_ud, data_du, data_dd, blocked_beam, flipper_
 
         blocked_beam(raw)  : blocked beam scattering file
 
-        flipper_par(params) : dictionary object containing eff_sm_up, eff_sm_down, gamma,rho0 and t0_cell (see flipper_sm_efficiency method)
+        flipper_par(params) : dictionary object containing P_sm_up, P_sm_down, gamma,rho0 and t0_cell (see flipper_sm_efficiency method)
 
         helium_par(params) : dictionary object containing 3He cell parameters obtained from he3_transmission
 
@@ -2187,8 +2187,8 @@ def spin_leakage_corr(data_uu, data_ud, data_du, data_dd, blocked_beam, flipper_
             f"uu={len(data_uu)}, ud={len(data_ud)}, du={len(data_du)}, dd={len(data_dd)}"
         )
 
-    p_sm = flipper_par.params['eff_sm_up']
-    p_sm_f = flipper_par.params['eff_sm_down']
+    p_sm = flipper_par.params['P_sm_up']
+    p_sm_f = flipper_par.params['P_sm_down']
 
     epsilon_uu = (1.0 + p_sm) / 2.0
     epsilon_ud = (1.0 - p_sm) / 2.0
