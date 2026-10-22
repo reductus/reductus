@@ -538,7 +538,7 @@ def calculateMeanQ(data):
     return data
 
 
-def calculateDQ_IGOR(data, inQ, del_r=None, return_fsubs=False):
+def calculateDQ_IGOR(data, inQ, del_r=None):
     """
     Add the dQ column to the data, based on slit apertures and gravity
     r_dist is the real-space distance from ctr of detector to QxQy pixel location
@@ -646,9 +646,7 @@ def calculateDQ_IGOR(data, inQ, del_r=None, return_fsubs=False):
     QBar = (4.0*np.pi/lambda0)*np.sin(0.5*np.arctan(rm/L2))
     SigmaQ = QBar*np.sqrt(v_r/rmd**2 + v_lambda)
 
-    if return_fsubs:
-        return QBar, SigmaQ, fSubS
-    return QBar, SigmaQ
+    return QBar, SigmaQ, fSubS
 
 def _calculate_Q(X, Y, Z, q0):
     r"""
@@ -1037,7 +1035,7 @@ def circular_av_new(data_sets, q_min=None, q_max=None, q_step=None, mask_width=3
             Q_mean = bin_average(data.meanQ)
             ShadowFactor = bin_average(data.shadow_factor)
             if dQ_method == 'IGOR':
-                Q_mean, Q_mean_error, ShadowFactor = calculateDQ_IGOR(data, Q, del_r=ddr, return_fsubs=True)
+                Q_mean, Q_mean_error, ShadowFactor = calculateDQ_IGOR(data, Q, del_r=ddr)
             elif dQ_method == 'statistical':
                 Q_var_contrib = (data.meanQ.ravel()[p_sub] - Q_mean[bins])**2 + data.dq_para.ravel()[p_sub]**2
                 Q_var = np.bincount(bins, weights=Q_var_contrib*w_sub, minlength=nq)
@@ -1125,7 +1123,7 @@ def _circular_average_oversampled(data, mask, q_min=None, q_max=None, q_step=Non
     ShadowFactor[nonzero_mask] /= I_norm[nonzero_mask]
 
     if dQ_method == 'IGOR':
-        Q_mean, Q_mean_error, ShadowFactor = calculateDQ_IGOR(data, Q, return_fsubs=True)
+        Q_mean, Q_mean_error, ShadowFactor = calculateDQ_IGOR(data, Q)
     elif dQ_method == 'statistical':
         # exclude Q_mean_lookups that overflow the length of the calculated Q_mean:
         Q_lookup = np.digitize(o_q[o_mask], bins=q_bins)
