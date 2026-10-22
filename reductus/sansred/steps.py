@@ -925,10 +925,10 @@ def _circular_average_igor(data, mask, bin_width=1):
     w_list = [np.ones(np.count_nonzero(whole))]
     p_list = [pixel_index[whole]]
     # split pixels: 3x3 sub-pixels at offsets (ll - 2)*s/3, weight 1/9
-    for ll in (1, 2, 3):
-        for kk in (1, 2, 3):
-            dxx = dx[split] + (ll - 2)*sx/3.0
-            dyy = dy[split] + (kk - 2)*sy/3.0
+    for ll in (-1, 0, 1):
+        for kk in (-1, 0, 1):
+            dxx = dx[split] + ll*sx/3.0
+            dyy = dy[split] + kk*sy/3.0
             r_list.append(np.sqrt(dxx**2 + dyy**2))
             w_list.append(np.full(dxx.shape, 1.0/9.0))
             p_list.append(pixel_index[split])
