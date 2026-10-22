@@ -2187,13 +2187,13 @@ def spin_leakage_corr(data_uu, data_ud, data_du, data_dd, blocked_beam, flipper_
             f"uu={len(data_uu)}, ud={len(data_ud)}, du={len(data_du)}, dd={len(data_dd)}"
         )
 
-    p_sm = flipper_par.params['P_sm_up']
-    p_sm_f = flipper_par.params['P_sm_down']
+    p_sm_f = flipper_par.params['P_sm_up']
+    p_sm = flipper_par.params['P_sm_down']
 
-    epsilon_uu = (1.0 + p_sm) / 2.0
-    epsilon_ud = (1.0 - p_sm) / 2.0
-    epsilon_dd = (1.0 + p_sm_f) / 2.0
-    epsilon_du = (1.0 - p_sm_f) / 2.0
+    epsilon_uu = (1.0 + p_sm_f) / 2.0
+    epsilon_ud = (1.0 - p_sm_f) / 2.0
+    epsilon_dd = (1.0 + p_sm) / 2.0
+    epsilon_du = (1.0 - p_sm) / 2.0
 
     # 2. Extract He3 cell parameters from helium_par, which doesn't change with time
     cell = helium_par.params['cells']
