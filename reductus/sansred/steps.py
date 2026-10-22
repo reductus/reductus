@@ -1958,7 +1958,9 @@ def absolute_scaling(empty, sample, Tsam, div, instrument="NG7", integration_box
     print('Tsam_factor: ', Tsam_factor.x)
 
     #-----Using Kappa to Scale data-----#
-    Dsam = sample.metadata['sample.thk'] * 10  # Sample thickness in mm => convert to cm
+    # This is scaled by a factor of ten for now. This is not necessarily correct, but scales the data properly, compared
+    # to Igor. I am keeping the multiple of 10 for now. TODO: Find the real factor of ten.
+    Dsam = sample.metadata['sample.thk'] * 10
     ABS = sample.__mul__(1/(kappa*Dsam*Tsam_factor))
     ABS.metadata['sample.trans'] = f"{Tsam_factor.x:.3f} ({Tsam_factor.variance})"
 
