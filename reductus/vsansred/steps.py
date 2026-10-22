@@ -2065,11 +2065,17 @@ def flipper_sm_efficiency(trans_uu, trans_ud, trans_du, trans_dd, helium_par, bl
 
     from .vsansdata import Parameters
 
+    #Extract appropriate block beam for each transmission data
+    bb_uu = _get_block_beam_pol(trans_uu, block_beam)
+    bb_ud = _get_block_beam_pol(trans_ud, block_beam)
+    bb_du = _get_block_beam_pol(trans_du, block_beam)
+    bb_dd = _get_block_beam_pol(trans_dd, block_beam)
+
     # Subtract blocked beam to all data
-    trans_uu_bgd = subtract_raw(trans_uu, block_beam)
-    trans_ud_bgd = subtract_raw(trans_ud, block_beam)
-    trans_du_bgd = subtract_raw(trans_du, block_beam)
-    trans_dd_bgd = subtract_raw(trans_dd, block_beam)
+    trans_uu_bgd = subtract_raw(trans_uu, bb_uu)
+    trans_ud_bgd = subtract_raw(trans_ud, bb_ud)
+    trans_du_bgd = subtract_raw(trans_du, bb_du)
+    trans_dd_bgd = subtract_raw(trans_dd, bb_dd)
 
 
     # Generate transmission between uu/ud and dd/du to use to determine Psm and Psm_f
@@ -2924,3 +2930,62 @@ def export_vsans_1d(data_list, save_path=None, filename="output.dat"):
             f.write(export_dict["value"])
 
     return combined_1d
+
+def _get_block_beam_pol(poldata, block_beam_input):
+    "Routine that extract appropriate block beam for input Poldata"
+
+    # if no file then return
+    if not isinstance(block_beam_input, (list, tuple)):
+        return block_beam_input
+
+    # if only one input for block beam then associate to the pol data file right away
+    if len(block_beam_input) == 1:
+        return block_beam_input[0]
+
+    # Extract incoming and outgoing spin states for pol data
+    spin_in = poldata.metadata.get('polarization.front', None)
+    spin_out = poldata.metadata.get('polarization.back', None)
+
+    target_in = str(spin_in).strip().lower()[0] if spin_in else None
+    target_out = str(spin_out).strip().lower()[0] if spin_out else None
+
+    #loop over the list of block beam
+    for bb in block_beam_input:
+        bb_in = bb.metadata.get('polarization.front', None)
+        bb_out = bb.metadata.get('polarization.back', None)
+
+        bb_in_str = str(bb_in).strip().lower()[0] if bb_in else None
+        bb_out_str = str(bb_out).strip().lower()[0] if bb_out else None
+
+        #look for perfect match if so then allocate
+        if bb_in_str == target_in and bb_out_str == target_out:
+            return bb
+
+    # if no perfect match then the best is to associate a Non-Spin-flip state data with a Non-spin-flip state BB such as UU with DD
+    if target_in == target_out:
+        for bb in block_beam_input:
+            bb_in = bb.metadata.get('polarization.front', None)
+            bb_out = bb.metadata.get('polarization.back', None)
+
+            bb_in_str = str(bb_in).strip().lower()[0] if bb_in else None
+            bb_out_str = str(bb_out).strip().lower()[0] if bb_out else None
+
+            if bb_in_str == bb_out_str:
+                return bb
+
+    # if no perfect match then the best is to associate a Spin-flip state data with a spin-flip state BB such as DU with UD
+    elif target_in != target_out:
+        for bb in block_beam_input:
+            bb_in = bb.metadata.get('polarization.front', None)
+            bb_out = bb.metadata.get('polarization.back', None)
+
+            bb_in_str = str(bb_in).strip().lower()[0] if bb_in else None
+            bb_out_str = str(bb_out).strip().lower()[0] if bb_out else None
+
+            if bb_in_str != bb_out_str:
+                return bb
+
+
+
+    # Return the first blocked beam within the list if metadata is missing or unmatched
+    return block_beam_input[0]
