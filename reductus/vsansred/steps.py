@@ -2111,8 +2111,8 @@ def flipper_sm_efficiency(trans_uu, trans_ud, trans_du, trans_dd, helium_par, bl
     p_sm_f = (ratio_2 - 1.0) / (pol_dd + (ratio_2 * pol_du))
 
     params_dict = {
-            "eff_sm_up": p_sm,
-            "eff_sm_down": p_sm_f,
+            "P_sm_up": p_sm,
+            "P_sm_down": p_sm_f,
     }
 
     output = Parameters(params=params_dict)
