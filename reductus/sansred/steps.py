@@ -930,8 +930,8 @@ def _circular_average_igor(data, mask, bin_width=1):
             dxx = dx[split] + ll*sx/3.0
             dyy = dy[split] + kk*sy/3.0
             r_list.append(np.sqrt(dxx**2 + dyy**2))
-            w_list.append(np.full(dxx.shape, 1.0/9.0))
-            p_list.append(pixel_index[split])
+    p_list.extend([pixel_index[split]] * 9)
+    w_list.extend([np.full_like(p_list[-1], 1.0 / 9.0)] * 9)
     r_sub = np.concatenate(r_list)
     w_sub = np.concatenate(w_list)
     p_sub = np.concatenate(p_list)
