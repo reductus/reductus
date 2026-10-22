@@ -2161,7 +2161,7 @@ def spin_leakage_corr(data_uu, data_ud, data_du, data_dd, blocked_beam, flipper_
 
         data_dd(raw[])  : scattering dd file(s)
 
-        blocked_beam(raw)  : blocked beam scattering file
+        blocked_beam(raw[])  : blocked beam scattering file
 
         flipper_par(params) : dictionary object containing P_sm_up, P_sm_down, gamma,rho0 and t0_cell (see flipper_sm_efficiency method)
 
@@ -2229,11 +2229,17 @@ def spin_leakage_corr(data_uu, data_ud, data_du, data_dd, blocked_beam, flipper_
 
         matrix_corr = set_pol_corr_matrix(epsilon_uu,epsilon_ud,epsilon_dd,epsilon_du,t_maj,t_min)
 
+        # Extract appropriate block beam for each transmission data
+        bb_uu = _get_block_beam_pol(curr_uu, blocked_beam)
+        bb_ud = _get_block_beam_pol(curr_ud, blocked_beam)
+        bb_du = _get_block_beam_pol(curr_du, blocked_beam)
+        bb_dd = _get_block_beam_pol(curr_dd, blocked_beam)
 
-        d_corr_uu = subtract_raw(curr_uu, blocked_beam)
-        d_corr_ud = subtract_raw(curr_ud, blocked_beam)
-        d_corr_du = subtract_raw(curr_du, blocked_beam)
-        d_corr_dd = subtract_raw(curr_dd, blocked_beam)
+
+        d_corr_uu = subtract_raw(curr_uu, bb_uu)
+        d_corr_ud = subtract_raw(curr_ud, bb_ud)
+        d_corr_du = subtract_raw(curr_du, bb_du)
+        d_corr_dd = subtract_raw(curr_dd, bb_dd)
 
         corr_datasets = [d_corr_uu, d_corr_ud, d_corr_du, d_corr_dd]
 
