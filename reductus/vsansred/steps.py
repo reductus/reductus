@@ -2052,7 +2052,7 @@ def flipper_sm_efficiency(trans_uu, trans_ud, trans_du, trans_dd, helium_par, bl
 
     helium_par (params): List of parameters related to the He3 cells time decay (given by He_3Transmission routine)
 
-    block_beam (raw): block beam transmission
+    block_beam (raw[]): block beam transmission
 
     panel_key (str): detector panel choice
 
