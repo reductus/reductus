@@ -2295,8 +2295,6 @@ def set_pol_corr_matrix(eps_uu, eps_ud, eps_dd, eps_du, tmaj, tmin):
                    [eps_du * tmin, eps_du * tmaj, eps_dd * tmin, eps_dd * tmaj]
                 ], dtype=float)
 
-    det = np.linalg.det(matrix_corr)
-
     return np.linalg.inv(matrix_corr)
 
 
