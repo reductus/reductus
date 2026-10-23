@@ -2936,7 +2936,10 @@ def export_vsans_1d(data_list, save_path=None, filename="output.dat"):
     return combined_1d
 
 def _get_block_beam_pol(poldata, block_beam_input):
-    "Routine that extract appropriate block beam for input Poldata"
+    """Routine that extract appropriate block beam for input Poldata, which is assumed to be associated to
+      a single magnetic cross-section so either UU, UD, DU, or DD. First choice is the front and back selected spin state for BB is identical to the data,
+      the 2nd choice is if data measures a spin-flip (SF) then it tries to match a SF BB, while a NSF data matches a NSF BB.
+    """
 
     # if no file then return
     if not isinstance(block_beam_input, (list, tuple)):
