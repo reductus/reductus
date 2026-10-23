@@ -6,7 +6,7 @@ let template = `
   <table class="metadata">
     <thead>
       <tr>
-        <th v-for="col in cols" :key="col">{{col}}</th>
+        <th v-for="col in cols" :key="col"><div class="metadata-entry metadata-header">{{headerLabel(col)}}</div></th>
       </tr>
     </thead>
     <tbody>
@@ -24,7 +24,7 @@ let template = `
           :contenteditable="editing && col != key_col"
           @blur="onInput(row, col, $event.target.innerText)"
           :title="pretty(row[col])"
-        >{{pretty(patched(row, col) || row[col])}}</td>
+        ><div class="metadata-entry">{{pretty(patched(row, col) || row[col])}}</div></td>
       </tr>
     </tbody>
   </table>
@@ -61,12 +61,18 @@ const MetadataTable = {
     }
   },
   methods: {
+    headerLabel(col) {
+      // put each part of a dotted metadata key (e.g. "run.configuration") on its own line
+      return String(col).replaceAll('.', '\n');
+    },
     pretty(value) {
       if (value && value.toPrecision) {
         return value.toPrecision(this.precision);
       }
+      else if (typeof value === "object") {
+        return JSON.stringify(value, null, 1); }
       else {
-        return value;
+        return String(value);
       }
     },
     onInput(row, col, value) {
@@ -107,7 +113,6 @@ export function show_plots_metadata(plotdata, plot_controls, target, old_plot) {
   target.classList.remove("plot");
   let container = document.createElement("div");
   container.classList.add("metadata-table");
-  container.style.overflowX = "scroll";
   target.appendChild(container);
 
   let metadata_table = Vue.createApp(MetadataTable, {

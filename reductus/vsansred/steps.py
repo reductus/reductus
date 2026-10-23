@@ -2052,7 +2052,7 @@ def flipper_sm_efficiency(trans_uu, trans_ud, trans_du, trans_dd, helium_par, bl
 
     helium_par (params): List of parameters related to the He3 cells time decay (given by He_3Transmission routine)
 
-    block_beam (raw): block beam transmission
+    block_beam (raw[]): block beam transmission
 
     panel_key (str): detector panel choice
 
@@ -2065,11 +2065,17 @@ def flipper_sm_efficiency(trans_uu, trans_ud, trans_du, trans_dd, helium_par, bl
 
     from .vsansdata import Parameters
 
+    #Extract appropriate block beam for each transmission data
+    bb_uu = _get_block_beam_pol(trans_uu, block_beam)
+    bb_ud = _get_block_beam_pol(trans_ud, block_beam)
+    bb_du = _get_block_beam_pol(trans_du, block_beam)
+    bb_dd = _get_block_beam_pol(trans_dd, block_beam)
+
     # Subtract blocked beam to all data
-    trans_uu_bgd = subtract_raw(trans_uu, block_beam)
-    trans_ud_bgd = subtract_raw(trans_ud, block_beam)
-    trans_du_bgd = subtract_raw(trans_du, block_beam)
-    trans_dd_bgd = subtract_raw(trans_dd, block_beam)
+    trans_uu_bgd = subtract_raw(trans_uu, bb_uu)
+    trans_ud_bgd = subtract_raw(trans_ud, bb_ud)
+    trans_du_bgd = subtract_raw(trans_du, bb_du)
+    trans_dd_bgd = subtract_raw(trans_dd, bb_dd)
 
 
     # Generate transmission between uu/ud and dd/du to use to determine Psm and Psm_f
@@ -2107,12 +2113,12 @@ def flipper_sm_efficiency(trans_uu, trans_ud, trans_du, trans_dd, helium_par, bl
     ratio_1 = ratio_uu_ud[0].params['factor'] * (t_ud / t_uu)
     ratio_2 = ratio_dd_du[0].params['factor'] * (t_du / t_dd)
 
-    p_sm = (ratio_1 - 1.0) / (pol_uu + (ratio_1 * pol_ud))
-    p_sm_f = (ratio_2 - 1.0) / (pol_dd + (ratio_2 * pol_du))
+    p_sm_f = (ratio_1 - 1.0) / (pol_uu + (ratio_1 * pol_ud))
+    p_sm = (ratio_2 - 1.0) / (pol_dd + (ratio_2 * pol_du))
 
     params_dict = {
-            "eff_sm_up": p_sm,
-            "eff_sm_down": p_sm_f,
+            "P_sm_up": p_sm,
+            "P_sm_down": p_sm_f,
     }
 
     output = Parameters(params=params_dict)
@@ -2155,9 +2161,9 @@ def spin_leakage_corr(data_uu, data_ud, data_du, data_dd, blocked_beam, flipper_
 
         data_dd(raw[])  : scattering dd file(s)
 
-        blocked_beam(raw)  : blocked beam scattering file
+        blocked_beam(raw[])  : blocked beam scattering file
 
-        flipper_par(params) : dictionary object containing eff_sm_up, eff_sm_down, gamma,rho0 and t0_cell (see flipper_sm_efficiency method)
+        flipper_par(params) : dictionary object containing P_sm_up, P_sm_down, gamma,rho0 and t0_cell (see flipper_sm_efficiency method)
 
         helium_par(params) : dictionary object containing 3He cell parameters obtained from he3_transmission
 
@@ -2181,13 +2187,13 @@ def spin_leakage_corr(data_uu, data_ud, data_du, data_dd, blocked_beam, flipper_
             f"uu={len(data_uu)}, ud={len(data_ud)}, du={len(data_du)}, dd={len(data_dd)}"
         )
 
-    p_sm = flipper_par.params['eff_sm_up']
-    p_sm_f = flipper_par.params['eff_sm_down']
+    p_sm_f = flipper_par.params['P_sm_up']
+    p_sm = flipper_par.params['P_sm_down']
 
-    epsilon_uu = (1.0 + p_sm) / 2.0
-    epsilon_ud = (1.0 - p_sm) / 2.0
-    epsilon_dd = (1.0 + p_sm_f) / 2.0
-    epsilon_du = (1.0 - p_sm_f) / 2.0
+    epsilon_uu = (1.0 + p_sm_f) / 2.0
+    epsilon_ud = (1.0 - p_sm_f) / 2.0
+    epsilon_dd = (1.0 + p_sm) / 2.0
+    epsilon_du = (1.0 - p_sm) / 2.0
 
     # 2. Extract He3 cell parameters from helium_par, which doesn't change with time
     cell = helium_par.params['cells']
@@ -2223,11 +2229,17 @@ def spin_leakage_corr(data_uu, data_ud, data_du, data_dd, blocked_beam, flipper_
 
         matrix_corr = set_pol_corr_matrix(epsilon_uu,epsilon_ud,epsilon_dd,epsilon_du,t_maj,t_min)
 
+        # Extract appropriate block beam for each transmission data
+        bb_uu = _get_block_beam_pol(curr_uu, blocked_beam)
+        bb_ud = _get_block_beam_pol(curr_ud, blocked_beam)
+        bb_du = _get_block_beam_pol(curr_du, blocked_beam)
+        bb_dd = _get_block_beam_pol(curr_dd, blocked_beam)
 
-        d_corr_uu = subtract_raw(curr_uu, blocked_beam)
-        d_corr_ud = subtract_raw(curr_ud, blocked_beam)
-        d_corr_du = subtract_raw(curr_du, blocked_beam)
-        d_corr_dd = subtract_raw(curr_dd, blocked_beam)
+
+        d_corr_uu = subtract_raw(curr_uu, bb_uu)
+        d_corr_ud = subtract_raw(curr_ud, bb_ud)
+        d_corr_du = subtract_raw(curr_du, bb_du)
+        d_corr_dd = subtract_raw(curr_dd, bb_dd)
 
         corr_datasets = [d_corr_uu, d_corr_ud, d_corr_du, d_corr_dd]
 
@@ -2282,8 +2294,6 @@ def set_pol_corr_matrix(eps_uu, eps_ud, eps_dd, eps_du, tmaj, tmin):
                    [eps_du * tmaj, eps_du * tmin, eps_dd * tmaj, eps_dd * tmin],
                    [eps_du * tmin, eps_du * tmaj, eps_dd * tmin, eps_dd * tmaj]
                 ], dtype=float)
-
-    det = np.linalg.det(matrix_corr)
 
     return np.linalg.inv(matrix_corr)
 
@@ -2924,3 +2934,49 @@ def export_vsans_1d(data_list, save_path=None, filename="output.dat"):
             f.write(export_dict["value"])
 
     return combined_1d
+
+def _get_block_beam_pol(poldata, block_beam_input):
+    """Routine that extract appropriate block beam for input Poldata, which is assumed to be associated to
+      a single magnetic cross-section so either UU, UD, DU, or DD. First choice is the front and back selected spin state for BB is identical to the data,
+      the 2nd choice is if data measures a spin-flip (SF) then it tries to match a SF BB, while a NSF data matches a NSF BB.
+    """
+
+    # if no file then return
+    if not isinstance(block_beam_input, (list, tuple)):
+        return block_beam_input
+
+    # if only one input for block beam then associate to the pol data file right away
+    if len(block_beam_input) == 1:
+        return block_beam_input[0]
+
+    # Extract incoming and outgoing spin states for pol data
+    spin_in = poldata.metadata.get('polarization.front', None)
+    spin_out = poldata.metadata.get('polarization.back', None)
+
+    target_in = str(spin_in).strip().lower()[0] if spin_in else None
+    target_out = str(spin_out).strip().lower()[0] if spin_out else None
+
+    #loop over the list of block beam
+    i_o_equal = i_o_unequal = None
+    for bb in block_beam_input:
+        bb_in = bb.metadata.get('polarization.front', None)
+        bb_out = bb.metadata.get('polarization.back', None)
+        bb_in_str = str(bb_in).strip().lower()[0] if bb_in else None
+        bb_out_str = str(bb_out).strip().lower()[0] if bb_out else None
+
+        #look for perfect match if so then allocate
+        if bb_in_str == target_in and bb_out_str == target_out:
+            return bb
+        if target_in == target_out and bb_in_str == bb_out_str:
+            i_o_equal = bb
+        elif target_in != target_out and bb_in_str != bb_out_str:
+            i_o_unequal = bb
+    else:
+        # If no return, check the two other possibilities
+        for bb in (i_o_equal, i_o_unequal, block_beam_input[0]):
+            if bb:
+                return bb
+
+
+    # Return the first blocked beam within the list if metadata is missing or unmatched
+    return block_beam_input[0]
