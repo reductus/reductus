@@ -392,6 +392,18 @@ div.block-overlay .overlay-positioner {
     justify-content: center;
 }
 
+.editor > #template-title {
+  background: white;
+  padding: 0.1em;
+  border: 3px solid darkgreen;
+  border-radius: 0.25em;
+  font-size: 125%;
+}
+
+.editor > #template-title > span.bold {
+    font-weight: bold;
+}
+
 div.block-overlay .overlay-message {
   background: white;
   padding: 0.5em;
