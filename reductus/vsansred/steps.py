@@ -2954,41 +2954,25 @@ def _get_block_beam_pol(poldata, block_beam_input):
     target_out = str(spin_out).strip().lower()[0] if spin_out else None
 
     #loop over the list of block beam
+    i_o_equal = i_o_unequal = None
     for bb in block_beam_input:
         bb_in = bb.metadata.get('polarization.front', None)
         bb_out = bb.metadata.get('polarization.back', None)
-
         bb_in_str = str(bb_in).strip().lower()[0] if bb_in else None
         bb_out_str = str(bb_out).strip().lower()[0] if bb_out else None
 
         #look for perfect match if so then allocate
         if bb_in_str == target_in and bb_out_str == target_out:
             return bb
-
-    # if no perfect match then the best is to associate a Non-Spin-flip state data with a Non-spin-flip state BB such as UU with DD
-    if target_in == target_out:
-        for bb in block_beam_input:
-            bb_in = bb.metadata.get('polarization.front', None)
-            bb_out = bb.metadata.get('polarization.back', None)
-
-            bb_in_str = str(bb_in).strip().lower()[0] if bb_in else None
-            bb_out_str = str(bb_out).strip().lower()[0] if bb_out else None
-
-            if bb_in_str == bb_out_str:
+        if target_in == target_out and bb_in_str == bb_out_str:
+            i_o_equal = bb
+        elif target_in != target_out and bb_in_str != bb_out_str:
+            i_o_unequal = bb
+    else:
+        # If no return, check the two other possibilities
+        for bb in (i_o_equal, i_o_unequal, block_beam_input[0]):
+            if bb:
                 return bb
-
-    # if no perfect match then the best is to associate a Spin-flip state data with a spin-flip state BB such as DU with UD
-    elif target_in != target_out:
-        for bb in block_beam_input:
-            bb_in = bb.metadata.get('polarization.front', None)
-            bb_out = bb.metadata.get('polarization.back', None)
-
-            bb_in_str = str(bb_in).strip().lower()[0] if bb_in else None
-            bb_out_str = str(bb_out).strip().lower()[0] if bb_out else None
-
-            if bb_in_str != bb_out_str:
-                return bb
-
 
 
     # Return the first blocked beam within the list if metadata is missing or unmatched
