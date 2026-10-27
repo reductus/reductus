@@ -721,8 +721,8 @@ def PixelsToQ(data, beam_center=[None,None], correct_solid_angle=True):
     xcenter, ycenter = [(dd + 1.0)/2.0 for dd in shape] # = 64.5 for 128x128 array
     sx = data.metadata['det.pixelsizex'] # cm
     sy = data.metadata['det.pixelsizey']
-    sx3 = 1000.0 # constant, = 10000(mm) = 1000 cm; not in the nexus file for some reason.
-    sy3 = 1000.0 # (cm) also not in the nexus file 
+    sx3 = 10000.0
+    sy3 = 10000.0
     # centers of pixels:
     dxbm = sx3*np.tan((x0-xcenter)*sx/sx3)
     dybm = sy3*np.tan((y0-ycenter)*sy/sy3)
@@ -1958,9 +1958,7 @@ def absolute_scaling(empty, sample, Tsam, div, instrument="NG7", integration_box
     print('Tsam_factor: ', Tsam_factor.x)
 
     #-----Using Kappa to Scale data-----#
-    # This is scaled by a factor of ten for now. This is not necessarily correct, but scales the data properly, compared
-    # to Igor. I am keeping the multiple of 10 for now. TODO: Find the real factor of ten.
-    Dsam = sample.metadata['sample.thk'] * 10
+    Dsam = sample.metadata['sample.thk']
     ABS = sample.__mul__(1/(kappa*Dsam*Tsam_factor))
     ABS.metadata['sample.trans'] = f"{Tsam_factor.x:.3f} ({Tsam_factor.variance})"
 
