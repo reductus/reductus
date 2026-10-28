@@ -2791,7 +2791,7 @@ def _get_shifting_factor_between_data(scale_to_data: np.ndarray, data_to_be_scal
     return (a - b) / npts
 
 
-@module
+# @module
 def export_data(data, file_path: str | pathlib.Path | os.PathLike = ".", format: str = "ASCII") -> dict:
     """Export a data file into the chose format.
 
