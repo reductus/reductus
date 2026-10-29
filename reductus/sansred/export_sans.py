@@ -10,19 +10,15 @@ from reductus.sansred.sansdata import Sans1dData, SansIQData, SansData
 
 def export_to_csv(data) -> dict:
     """Exports a data set to a csv formatted file. This call """
-    return export_to_ascii(data, file_path, ".csv", ",")
+    return export_to_ascii(data, delimiter=',', extension='.csv')
 
 
-def export_to_ascii(data, file_path: Path_Like = "", extension: str = ".txt", delimiter: str = " ") -> dict:
-    # Ensure a file path is supplied and construct the path, if needed
-    if not file_path:
-        return {}
+def export_to_ascii(data, delimiter: str = " ", extension: str = ".txt") -> dict:
     # Determine the data type (1D reduced, 2D reduced, 2D pixel space, etc.) and assign headers/locations for each data
     if isinstance(data, SansData):
         # 2D data can only be output into the .DAT format - do this
         extension = ".dat"
         columns = [data.qx, data.qy, data.data, np.sqrt(data.data)]
-        delimiter = " "
         header = 'Data columns are Qx - Qy - I(Qx,Qy) - err(I) - Qz - SigmaQ_parall - SigmaQ_perp - fSubS(beam stop shadow)'
     elif isinstance(data, Sans1dData):
         columns = [data.x, data.v, data.dv, data.dx]
@@ -35,17 +31,8 @@ def export_to_ascii(data, file_path: Path_Like = "", extension: str = ".txt", de
         columns = [[], [], [], []]
 
     # Set the file path to a common format
-    full_path = _get_full_path(file_path, data, extension)
     transposed_data = list(zip(*columns))
-    # Write to the file
-    try:
-        with open(full_path, "w") as f:
-            f.write(header + "\n")
-            writer = csv.writer(f, delimiter=delimiter)
-            writer.writerows(transposed_data)
-    except (PermissionError, OSError, FileExistsError):
-        return {}
-    return {}
+    return {"value": f"{header}\n{transposed_data}", "file_suffix": extension}
 
 
 def export_to_nxcansas(data: SansIQData, f_path: Path_Like) -> dict:
