@@ -31,6 +31,28 @@ def _b(s):
 #  - DIV/mask file handling
 
 
+def exports_nxcansas(name="nxcansas"):
+    def inner_function(f):
+        f.exporter = export_to_nxcansas
+        f.export_name = name
+        return f
+    return inner_function
+
+def exports_sans_csv(name="csv"):
+    def inner_function(f):
+        f.exporter = export_to_csv
+        f.export_name = name
+        return f
+    return inner_function
+
+def exports_sans_ascii(name="ascii"):
+    def inner_function(f):
+        f.exporter = export_to_ascii
+        f.export_name = name
+        return f
+    return inner_function
+
+
 class RawSANSData(RawVSANSData):
     suffix = ".sans"
 
