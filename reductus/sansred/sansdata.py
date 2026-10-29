@@ -15,6 +15,7 @@ import numpy as np
 
 from reductus.dataflow.lib.uncertainty import Uncertainty
 from reductus.dataflow.lib.exporters import exports_HDF5, exports_text
+from reductus.sansred.export_sans import export_to_ascii, export_to_csv, export_to_nxcansas
 from reductus.vsansred.vsansdata import RawVSANSData, _toDictItem
 
 IS_PY3 = sys.version_info[0] >= 3
