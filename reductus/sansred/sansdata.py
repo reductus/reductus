@@ -28,11 +28,8 @@ def _b(s):
         return s
 
 # TODO: Items needed for SANS data
-#  - Differentiate Raw vs Intermediate vs Reduced
-#  - Single class for any data with all others inheriting from
-#  - Method(s) to scale, shift, and mask data
 #  - DIV/mask file handling
-#  - Hold intent (emtpy/BB/open/sample) and measurement type (Scatt/Trans)
+
 
 class RawSANSData(RawVSANSData):
     suffix = ".sans"
