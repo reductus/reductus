@@ -1,8 +1,5 @@
 import csv
-import pathlib
-import os
 
-from collections import OrderedDict
 
 import h5py
 import numpy as np
@@ -10,23 +7,8 @@ import numpy as np
 from reductus.dataflow.lib.uncertainty import Uncertainty
 from reductus.sansred.sansdata import Sans1dData, SansIQData, SansData
 
-Path_Like = os.path, pathlib.Path, str
 
-
-def _get_full_path(f_path: Path_Like, data: SansData, ext: str):
-    f_path = pathlib.Path(f_path)
-    if f_path.is_dir():
-        file_name = data.metadata.get("run.filename", "default_name")
-        if isinstance(file_name, list):
-            file_name= '_'.join(file_name)
-        file_name = file_name + ext
-        full_path = f_path / file_name
-    else:
-        full_path = f_path
-    return full_path
-
-
-def export_to_csv(data, file_path: Path_Like) -> bool:
+def export_to_csv(data) -> dict:
     """Exports a data set to a csv formatted file. This call """
     return export_to_ascii(data, file_path, ".csv", ",")
 
