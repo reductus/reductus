@@ -35,14 +35,12 @@ def export_to_ascii(data, delimiter: str = " ", extension: str = ".txt") -> dict
     return {"value": f"{header}\n{transposed_data}", "file_suffix": extension}
 
 
-def export_to_nxcansas(data: SansIQData, f_path: Path_Like) -> dict:
+def export_to_nxcansas(data: SansIQData) -> dict:
     # Ensure data is in Q-space (reduced data only!) and if it is 1D or 2D data
     if not isinstance(data, (SansIQData, SansData)):
-        return {}
+        return None
 
-    full_path = _get_full_path(f_path, data, '.h5')
-
-    with h5py.File(full_path, 'w') as h5_item:
+    with h5py.File.in_memory() as h5_item:
 
         # Create Base SASentry
         entry_name = data.metadata.get("entry", "SASentry")
@@ -192,4 +190,4 @@ def export_to_nxcansas(data: SansIQData, f_path: Path_Like) -> dict:
 
         # TODO: Add in the data reduction processes to the file
 
-    return {}
+    return {"value": h5_item, "file_suffix": ".h5"}
