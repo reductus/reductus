@@ -20,7 +20,6 @@ from reductus.dataflow.core import Template
 from reductus.dataflow.lib.uncertainty import Uncertainty
 from reductus.dataflow.lib import uncertainty
 
-from .export_sans import export_to_ascii, export_to_csv, export_to_nxcansas
 from .sansdata import RawSANSData, SansData, Sans1dData, SansIQData, Parameters
 
 ALL_ACTIONS = []
@@ -2789,43 +2788,6 @@ def _get_shifting_factor_between_data(scale_to_data: np.ndarray, data_to_be_scal
     # Sum all values in the sliced section
     # Divide scale_to_data sum by data_to_be_scaled sum
     return (a - b) / npts
-
-
-# @module
-def export_data(data, file_path: str | pathlib.Path | os.PathLike = ".", format: str = "ASCII") -> dict:
-    """Export a data file into the chose format.
-
-    :param data: A single data set that will be exported.
-    :param file_path: The directory or the full file path to save the file to.
-    :param format: The file format to export the data to. Options include ASCII, CSV, and NXcanSAS
-    :return: A dictionary mapping the file name to the parameters saved.
-
-    **Inputs**
-
-    data (sans1d): SANS data
-
-    file_path (str): The directory or the full file path to save the file to.
-
-    format (opt:ASCII|CSV|NXcanSAS): The format to output the data to.
-
-    **Returns**
-
-    output (params): A map of the file path the data file was saved to.
-
-    | 2026-04-29 Jeff Krzywon initial implementation
-    """
-
-    if not file_path:
-        raise FileNotFoundError(f"")
-    full_path = pathlib.Path(file_path)
-
-    match format.lower():
-        case "nxcansas":
-            return export_to_nxcansas(data, full_path)
-        case "csv":
-            return export_to_csv(data, file_path)
-        case "ascii" | _:
-            return export_to_ascii(data, file_path)
 
 
 @module
