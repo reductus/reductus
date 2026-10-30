@@ -24,6 +24,35 @@ def _set_if_present(group, key, value):
         group[key] = value
 
 
+def _add_sasprocess(nxentry):
+    """
+    Add a SASprocess (NXprocess) group describing the reduction to *nxentry*.
+
+    The group holds an empty NXnote named TEMPLATE_NOTE_NAME; the hdf exporter
+    in reductus.dataflow.lib.exporters fills its "data" field with the active
+    template (JSON) when the file is exported.
+    """
+    from reductus import __version__
+    from reductus.dataflow.lib import iso8601
+    from reductus.dataflow.lib.exporters import TEMPLATE_NOTE_NAME
+
+    process = nxentry.create_group("sasprocess")
+    process.attrs.update({
+        "NX_class": "NXprocess",
+        "canSAS_class": "SASprocess",
+    })
+    process["name"] = "reductus"
+    process["date"] = iso8601.now()
+    process["description"] = "SANS data reduction performed with reductus. The reduction template is stored in the %s note as JSON." % TEMPLATE_NOTE_NAME
+    process["version"] = __version__  # a 'term' in the NXcanSAS definition
+
+    note = process.create_group(TEMPLATE_NOTE_NAME)
+    note.attrs["NX_class"] = "NXnote"
+    note["type"] = "application/json"
+    note["description"] = "reductus template used to produce this data"
+    return process
+
+
 def export_to_csv(data) -> dict:
     """Exports a data set to a csv formatted file. This call """
     return export_to_ascii(data, delimiter=',', extension='.csv')
@@ -231,6 +260,10 @@ def export_to_nxcansas(data) -> dict:
     source['type'] = 'Reactor Neutron Source'
     _set_if_present(source, 'incident_wavelength', data.metadata.get('resolution.lmda'))
     _set_if_present(source, 'incident_wavelength_spread', data.metadata.get('resolution.dlmda'))
+
+    # Add the reduction process (SASprocess). The active template is written into the
+    # NXnote by the hdf exporter, which only receives the template at export time.
+    _add_sasprocess(nxentry)
 
     return {
         **_name_and_entry(data),

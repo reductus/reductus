@@ -88,6 +88,14 @@ def _set_nexus_attrs(h5_item, filename):
     h5_item.attrs['HDF5_Version'] = hdf5_version
     h5_item.attrs['NeXus_version'] = NEXUS_VERSION
 
+TEMPLATE_NOTE_NAME = "reductus_template"
+def _write_process_template(process, header_string):
+    note = process.get(TEMPLATE_NOTE_NAME, None)
+    if note is not None and note.attrs.get("NX_class", "") == "NXnote":
+        note["data"] = header_string
+    else:
+        process["template_def"] = header_string
+
 def hdf(datasets, export_method=None, template_data=None, concatenate=False):
     import h5py
 
@@ -106,7 +114,7 @@ def hdf(datasets, export_method=None, template_data=None, concatenate=False):
             group_name = "%s_%s" % (export["name"], export["entry"])
             for k,v in group_to_copy.items():
                 if v.attrs.get("NX_class", "") == "NXprocess":
-                    v["template_def"] = header_string
+                    _write_process_template(v, header_string)
             container.copy(group_to_copy, group_name)
             h5_item.close()
         container.close()
@@ -123,7 +131,7 @@ def hdf(datasets, export_method=None, template_data=None, concatenate=False):
                     continue
                 for k,v in entry.items():
                     if v.attrs.get("NX_class", "") == "NXprocess":
-                        v["template_def"] = header_string
+                        _write_process_template(v, header_string)
             h5_item.flush()
             value = h5_item.id.get_file_image()
             h5_item.close()
