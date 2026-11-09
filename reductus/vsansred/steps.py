@@ -123,7 +123,7 @@ def _LoadVSANS(filelist=None, check_timestamps=True):
 
 @nocache
 @module
-def LoadVSANS(filelist=None, check_timestamps=True, load_data=True, apply_attenuation=False, apply_monitor_norm=False,apply_dead_time=False,mon0=1e8):
+def LoadVSANS(filelist=None, check_timestamps=True, load_data=True, apply_attenuation=True, apply_monitor_norm=True,apply_dead_time=True,mon0=1e8):
     """
     loads a data file into a VSansData obj and returns that. (uses cached values)
 
