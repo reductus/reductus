@@ -287,15 +287,27 @@ def _toDictItem(obj, convert_bytes=False):
         obj = obj.decode()
     return obj
 
+
 def _parse_raw_patches(patches_input):
-    """Converts multi-line string text, dicts, or lists into a typed dictionary for raw HDF5 paths."""
+    """
+    Converts text (comma-separated or multi-line), dicts, or lists into a
+    typed dictionary for raw HDF5 path overrides.
+    """
     if not patches_input:
         return {}
     if isinstance(patches_input, dict):
         return {k.lstrip('/'): v for k, v in patches_input.items()}
 
     patches = {}
-    lines = patches_input.splitlines() if isinstance(patches_input, str) else patches_input
+
+    # Standardize string inputs by splitting on both newlines and commas
+    if isinstance(patches_input, str):
+        # Replace newlines with commas so we can handle both cleanly
+        normalized_str = patches_input.replace('\n', ',')
+        lines = [item for item in normalized_str.split(',') if item.strip()]
+    else:
+        lines = patches_input
+
     for line in lines:
         if isinstance(line, (list, tuple)) and len(line) == 2:
             k, v = line
@@ -308,7 +320,7 @@ def _parse_raw_patches(patches_input):
         key = str(k).strip().lstrip('/')
         val = str(v).strip()
 
-        # Dynamic type conversion
+        # Type conversion (booleans, floats, ints)
         if val.lower() == 'true':
             val = True
         elif val.lower() == 'false':
