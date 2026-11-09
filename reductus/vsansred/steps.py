@@ -81,7 +81,7 @@ def hidden(action):
 @cache
 @module
 @hidden
-def _LoadVSANS(filelist=None, check_timestamps=True):
+def _LoadVSANS(filelist=None, check_timestamps=True, raw_patches=None):
     """
     loads a data file into a VSansData obj and returns that.
 
@@ -91,12 +91,15 @@ def _LoadVSANS(filelist=None, check_timestamps=True):
     
     check_timestamps (bool): verify that timestamps on file match request
 
+    raw_patches (str): text of metadata to patch
+
     **Returns**
 
     output (raw[]): all the entries loaded.
 
     | 2018-04-29 Brian Maranville
     | 2020-10-01 Brian Maranville adding fileinfo to metadata
+    | 2026-11-09 Jonathan Gaudet added str input to patch metadata
     """
     from reductus.dataflow.fetch import url_get
     from .loader import readVSANSNexuz
@@ -107,7 +110,7 @@ def _LoadVSANS(filelist=None, check_timestamps=True):
         path, mtime, entries = fileinfo['path'], fileinfo.get('mtime', None), fileinfo.get('entries', None)
         name = basename(path)
         fid = BytesIO(url_get(fileinfo, mtime_check=check_timestamps))
-        entries = readVSANSNexuz(name, fid)
+        entries = readVSANSNexuz(name, fid, raw_patches=raw_patches)
         for entry in entries:
             if fileinfo['path'].endswith("DIV.h5"):
                 print('div file...')
@@ -123,7 +126,7 @@ def _LoadVSANS(filelist=None, check_timestamps=True):
 
 @nocache
 @module
-def LoadVSANS(filelist=None, check_timestamps=True, load_data=True, apply_attenuation=True, apply_monitor_norm=True,apply_dead_time=True,mon0=1e8):
+def LoadVSANS(filelist=None, check_timestamps=True, load_data=True, apply_attenuation=True, apply_monitor_norm=True,apply_dead_time=True,mon0=1e8, raw_patches=None):
     """
     loads a data file into a VSansData obj and returns that. (uses cached values)
 
@@ -142,6 +145,8 @@ def LoadVSANS(filelist=None, check_timestamps=True, load_data=True, apply_attenu
     apply_dead_time (bool): whether to apply dead time correction
 
     mon0 (float): target monitor value for normalization (default: 1e8)
+
+    raw_patches (str): text of metadata to patch
 
     **Returns**
 
@@ -168,7 +173,7 @@ def LoadVSANS(filelist=None, check_timestamps=True, load_data=True, apply_attenu
     template = Template(**template_def)
     output = []
     for fi in filelist:
-        config = {"0": {"filelist": [fi], "check_timestamps": check_timestamps, "load_data": load_data}}
+        config = {"0": {"filelist": [fi], "check_timestamps": check_timestamps, "load_data": load_data, "raw_patches": raw_patches}}
         nodenum = 0
         terminal_id = "output"
         retval = process_template(template, config, target=(nodenum, terminal_id))
