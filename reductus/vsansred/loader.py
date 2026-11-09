@@ -175,7 +175,8 @@ def load_metadata(
         multiplicity: int = 1,
         i: int = 0,
         metadata_lookup_table: dict[str, tuple[str] | str] = metadata_lookup,
-        unit_specifiers_table: dict[str, str] = unit_specifiers
+        unit_specifiers_table: dict[str, str] = unit_specifiers,
+        raw_patches: dict = None
 ):
     """
     Find all metadata in an HDF5 group/entry using metadata_lookup for the potential locations and its local key.
@@ -185,13 +186,24 @@ def load_metadata(
     :param i: The array index to look for scalar quantities that are in arrays.
     :param metadata_lookup_table: A dictionary mapping local metadata keys to a tuple of potential HDF5 locations.
     :param unit_specifiers_table: A dictionary mapping local metadata keys to units the value should scale to.
+    :param raw_patches: A dictionary of metadata to manually patch as input
     """
+
+    if raw_patches is None:
+        raw_patches = {}
+
     metadata = OrderedDict()
     for mkey, locales in metadata_lookup_table.items():
         # As the location changes in the raw data, the locales change. Step through all.
         if not isinstance(locales, tuple):
             locales = (locales,)
         for locale in locales:
+
+            clean_locale = locale.lstrip('/')
+            if clean_locale in raw_patches:
+                metadata[mkey] = raw_patches[clean_locale]
+                break
+
             field = entry.get(locale, None)
             if field is not None:
                 if mkey in unit_specifiers_table:
