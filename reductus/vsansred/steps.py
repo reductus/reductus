@@ -231,7 +231,7 @@ def addSimple(data):
 
 @cache
 @module
-def LoadVSANSHe3(filelist=None, check_timestamps=True):
+def LoadVSANSHe3(filelist=None, check_timestamps=True, raw_patches=None):
     """
     loads a data file into a VSansData obj and returns that.
 
@@ -240,6 +240,8 @@ def LoadVSANSHe3(filelist=None, check_timestamps=True):
     filelist (fileinfo[]): Files to open.
     
     check_timestamps (bool): verify that timestamps on file match request
+
+    raw_patches (str): text of metadata to patch
 
     **Returns**
 
@@ -256,7 +258,7 @@ def LoadVSANSHe3(filelist=None, check_timestamps=True):
         path, mtime, entries = fileinfo['path'], fileinfo.get('mtime', None), fileinfo.get('entries', None)
         name = basename(path)
         fid = BytesIO(url_get(fileinfo, mtime_check=check_timestamps))
-        entries = readVSANSNexuz(name, fid, metadata_lookup=he3_metadata_lookup)
+        entries = readVSANSNexuz(name, fid, metadata_lookup=he3_metadata_lookup, raw_patches=raw_patches)
         data.extend(entries)
 
     return data
@@ -264,7 +266,7 @@ def LoadVSANSHe3(filelist=None, check_timestamps=True):
 
 @nocache
 @module
-def LoadVSANSHe3Parallel(filelist=None, check_timestamps=True):
+def LoadVSANSHe3Parallel(filelist=None, check_timestamps=True, raw_patches=None):
     """
     loads a data file into a VSansData obj and returns that.
 
@@ -273,6 +275,8 @@ def LoadVSANSHe3Parallel(filelist=None, check_timestamps=True):
     filelist (fileinfo[]): Files to open.
     
     check_timestamps (bool): verify that timestamps on file match request
+
+    raw_patches (str): text of metadata to patch
 
     **Returns**
 
@@ -300,7 +304,7 @@ def LoadVSANSHe3Parallel(filelist=None, check_timestamps=True):
     output = []
     for fi in filelist:
         #config = {"0": {"filelist": [{"path": fi["path"], "source": fi["source"], "mtime": fi["mtime"]}]}}
-        config = {"0": {"filelist": [fi]}}
+        config = {"0": {"filelist": [fi], "check_timestamps": check_timestamps, "raw_patches": raw_patches}}
         nodenum = 0
         terminal_id = "output"
         retval = process_template(template, config, target=(nodenum, terminal_id))
@@ -410,6 +414,8 @@ def He3_transmission(he3data, trans_panel="auto"):
     he3data (raw[]): datafiles with he3 transmissions
 
     trans_panel (opt:auto|MB|MT|ML|MR|FT|FB|FL|FR): panel to use for transmissions
+
+    raw_patches (str): Text of metadata to patch
 
     **Returns**
 
