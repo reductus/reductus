@@ -156,14 +156,35 @@ def data_as(field, units):
         value = converter(field[()], units)
         return value
 
-def load_detector(dobj, load_data=True):
+def load_detector(dobj, load_data=True, raw_patches=None):
     # load detector information from a NeXuS group
+
+    if raw_patches is None:
+        raw_patches = {}
+
+    # Get relative HDF5 path (e.g., "entry/instrument/detector_front" or "instrument/detector_front")
+    det_path = dobj.name.lstrip('/')
+
     detector = OrderedDict()
     for k in dobj:
         if not load_data and k == 'data':
             continue
         subobj = dobj[k]
-        detector[k] = OrderedDict(value=subobj[()], attrs=OrderedDict(_toDictItem(subobj.attrs)))
+
+        # Build potential patch path keys
+        patch_key = f"{det_path}/{k}"
+        # Alternative path format without leading entry name (e.g. "instrument/detector_front/distance")
+        short_patch_key = patch_key.split('/', 1)[-1] if '/' in det_path else patch_key
+
+        # Check raw_patches first; fall back to raw HDF5 read if not patched
+        if patch_key in raw_patches:
+            val = raw_patches[patch_key]
+        elif short_patch_key in raw_patches:
+            val = raw_patches[short_patch_key]
+        else:
+            val = subobj[()]
+
+        detector[k] = OrderedDict(value=val, attrs=OrderedDict(_toDictItem(subobj.attrs)))
         if hasattr(subobj, 'shape'):
             detector[k]['attrs']['shape'] = subobj.shape
         if hasattr(subobj, 'dtype'):
@@ -259,7 +280,7 @@ def readVSANSNexuz(input_file, file_obj=None, metadata_lookup=metadata_lookup, l
             )
             #print(metadata)
             detector_keys = [n for n in entry['instrument'] if n.startswith('detector_')]
-            detectors = dict([(k, load_detector(entry['instrument'][k], load_data=load_data)) for k in detector_keys])
+            detectors = dict([(k, load_detector(entry['instrument'][k], load_data=load_data, raw_patches=raw_patches)) for k in detector_keys])
             metadata['entry'] = entryname
             if metadata.get('sample.labl', None) is not None and metadata.get('run.configuration', None) is not None:
                 metadata['sample.description'] = metadata["sample.labl"].replace(metadata["run.configuration"], "")
