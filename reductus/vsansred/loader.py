@@ -228,10 +228,17 @@ def load_metadata(
                 metadata[mkey] = metadata.get(mkey, None)
     return metadata
 
-def readVSANSNexuz(input_file, file_obj=None, metadata_lookup=metadata_lookup, load_data=True):
+def readVSANSNexuz(input_file, file_obj=None, metadata_lookup=metadata_lookup, load_data=True, raw_patches=None):
     """
     Load all entries from the NeXus file into sans data sets.
     """
+
+    if raw_patches is None:
+        raw_patches = {}
+    elif isinstance(raw_patches, (str, list, tuple)):
+        raw_patches = _parse_raw_patches(raw_patches)
+
+
     datasets = []
     file = h5_open_zip(input_file, file_obj)
     for entryname, entry in file.items():
@@ -248,7 +255,7 @@ def readVSANSNexuz(input_file, file_obj=None, metadata_lookup=metadata_lookup, l
         multiplicity = 1
         for i in range(multiplicity):
             metadata = load_metadata(
-                entry, multiplicity, i, metadata_lookup_table=metadata_lookup, unit_specifiers_table=unit_specifiers
+                entry, multiplicity, i, metadata_lookup_table=metadata_lookup, unit_specifiers_table=unit_specifiers, raw_patches=raw_patches
             )
             #print(metadata)
             detector_keys = [n for n in entry['instrument'] if n.startswith('detector_')]
@@ -279,3 +286,39 @@ def _toDictItem(obj, convert_bytes=False):
     elif isinstance(obj, bytes) and convert_bytes == True:
         obj = obj.decode()
     return obj
+
+def _parse_raw_patches(patches_input):
+    """Converts multi-line string text, dicts, or lists into a typed dictionary for raw HDF5 paths."""
+    if not patches_input:
+        return {}
+    if isinstance(patches_input, dict):
+        return {k.lstrip('/'): v for k, v in patches_input.items()}
+
+    patches = {}
+    lines = patches_input.splitlines() if isinstance(patches_input, str) else patches_input
+    for line in lines:
+        if isinstance(line, (list, tuple)) and len(line) == 2:
+            k, v = line
+        elif isinstance(line, str) and (':' in line or '=' in line):
+            delimiter = ':' if ':' in line else '='
+            k, v = line.split(delimiter, 1)
+        else:
+            continue
+
+        key = str(k).strip().lstrip('/')
+        val = str(v).strip()
+
+        # Dynamic type conversion
+        if val.lower() == 'true':
+            val = True
+        elif val.lower() == 'false':
+            val = False
+        else:
+            try:
+                val = float(val) if ('.' in val or 'e' in val.lower()) else int(val)
+            except ValueError:
+                pass
+
+        patches[key] = val
+
+    return patches
