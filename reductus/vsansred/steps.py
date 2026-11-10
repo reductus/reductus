@@ -415,8 +415,6 @@ def He3_transmission(he3data, trans_panel="auto"):
 
     trans_panel (opt:auto|MB|MT|ML|MR|FT|FB|FL|FR): panel to use for transmissions
 
-    raw_patches (str): Text of metadata to patch
-
     **Returns**
 
     annotated (raw[]): datafiles grouped by cell
