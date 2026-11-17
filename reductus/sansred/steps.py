@@ -90,12 +90,14 @@ def LoadDIV(filelist=None, variance=0.0001):
     from .sans_vaxformat import readNCNRSensitivity
 
     output = []
+    if filelist is None:
+        return output
     for fileinfo in filelist:
         path, mtime, entries = fileinfo['path'], fileinfo.get('mtime', None), fileinfo.get('entries', None)
         name = basename(path)
         fid = BytesIO(url_get(fileinfo, mtime_check=False))
         sens_raw = readNCNRSensitivity(fid)
-        detectors = [{"detector": {"data": {"value": Uncertainty(sens_raw, sens_raw * variance)}}}]
+        data = Uncertainty(sens_raw, sens_raw * variance)
         metadata = OrderedDict([
             ("run.filename", name),
             ("analysis.groupid", -1),
@@ -107,7 +109,7 @@ def LoadDIV(filelist=None, variance=0.0001):
             ("sample.labl", "PLEX"),
             ("run.configuration", "DIV"),
         ])
-        sens = RawSANSData(metadata=metadata, detectors=detectors)
+        sens = SansData(data=data, metadata=metadata)
         output.append(sens)
     return output
 
@@ -139,8 +141,11 @@ def LoadRawSANS(filelist=None, check_timestamps=True):
         name = basename(path)
         fid = BytesIO(url_get(fileinfo, mtime_check=check_timestamps))
         if name.upper().endswith(".DIV"):
-            sens = LoadDIV([fileinfo])
-            entries = [sens]
+            entries = [
+                RawSANSData(metadata=sens.metadata,
+                            detectors={"detector": {"data": {"value": sens.data}}})
+                for sens in LoadDIV([fileinfo])
+            ]
         else:
             entries = readSANSNexuz(name, fid)
         
@@ -320,7 +325,7 @@ def to_sansdata(rawdata, flip=False, transpose=False):
     for i in range(shape[0]):
         subset = areaDetector[i].copy()
         if flip:
-            subset = np.fliplr(subset)
+            subset = subset[:, ::-1]
         if transpose:
             subset = subset.T
         datasets.append(SansData(data=subset, metadata=rawdata.metadata))
