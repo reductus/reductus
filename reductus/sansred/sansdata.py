@@ -46,7 +46,8 @@ class SansData:
     """
     def __init__(self, data=None, metadata=None, q=None, qx=None, qy=None, aspect_ratio=1.0,
                  xlabel="X", ylabel="Y",
-                 theta=None, Tsam=None, Temp=None, attenuation_corrected=False):
+                 theta=None, Tsam=None, Temp=None, attenuation_corrected=False,
+                 mask=None):
         if isinstance(data, np.ndarray):
             # Data is counts, so variance is counts.  Set variance on zero counts to 1
             self.data = Uncertainty(data, data + (data==0))
@@ -67,6 +68,9 @@ class SansData:
         self.aspect_ratio = aspect_ratio
         self.theta = theta
         self.attenuation_corrected = attenuation_corrected
+        # Pixels to keep in the reduction: boolean array shaped like data
+        # (True = use, False = excluded), or None when nothing is masked.
+        self.mask = mask
 
         self.Tsam = 1.0 #Tsam and Temp are used to store the transmissions for later use
         self.Temp = None
@@ -117,7 +121,8 @@ class SansData:
                         q=copy(self.q), qx=copy(self.qx), qy=copy(self.qy),
                         theta=copy(self.theta), aspect_ratio=self.aspect_ratio,
                         xlabel=self.xlabel, ylabel=self.ylabel,
-                        attenuation_corrected=self.attenuation_corrected)
+                        attenuation_corrected=self.attenuation_corrected,
+                        mask=copy(self.mask))
 
     def __copy__(self):
         return self.copy()
@@ -126,6 +131,16 @@ class SansData:
         #return self.data.x.__str__()
     #def __repr__(self):
         #return self.__str__()
+
+    def plot_extent(self):
+        """Axis limits (xmin, xmax, ymin, ymax) of the 2D plot of this data."""
+        if self.qx is None or self.qy is None:
+            return 0.0, 128, 0.0, 128
+        xmin = self.qx_min if self.qx_min is not None else self.qx.min()
+        xmax = self.qx_max if self.qx_max is not None else self.qx.max()
+        ymin = self.qy_min if self.qy_min is not None else self.qy.min()
+        ymax = self.qy_max if self.qy_max is not None else self.qy.max()
+        return xmin, xmax, ymin, ymax
 
     def get_plottable(self):
         data = self.data.x.astype("float")
@@ -142,16 +157,7 @@ class SansData:
                 zmax = data[mask].max()
             else:
                 zmax = data.max()
-        if self.qx is None or self.qy is None:
-            xmin = 0.0
-            xmax = 128
-            ymin = 0.0
-            ymax = 128
-        else:
-            xmin = self.qx_min if self.qx_min is not None else self.qx.min()
-            xmax = self.qx_max if self.qx_max is not None else self.qx.max()
-            ymin = self.qy_min if self.qy_min is not None else self.qy.min()
-            ymax = self.qy_max if self.qy_max is not None else self.qy.max()
+        xmin, xmax, ymin, ymax = self.plot_extent()
         plottable_data = {
             'entry': self.metadata['entry'],
             'type': '2d',

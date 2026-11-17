@@ -845,6 +845,8 @@ def circular_av(data):
         outer_r = r_edges[i+1]
         #print(i, qq, inner_r, outer_r)
         mask = annular_mask_antialiased(shape1, center, inner_r, outer_r)
+        if data.mask is not None:
+            mask = mask * data.mask.T
         if IGNORE_CORNER_PIXELS:
             mask[0, 0] = mask[-1, 0] = mask[-1, -1] = mask[0, -1] = 0.0
         #print("Mask: ", mask)
@@ -1018,6 +1020,9 @@ def circular_av_new(data_sets, q_min=None, q_max=None, q_step=None, mask_width=3
             mask[mask_width:-mask_width, mask_width:-mask_width] = True
         else:
             mask[:] = True
+        if data.mask is not None:
+            # regions excluded by a masking step
+            mask &= data.mask.astype(bool)
 
         # calculate the change in q that corresponds to a change in pixel of 1
         if data.qx is None:
@@ -1207,6 +1212,8 @@ def sector_cut(data, sector=[0.0, 90.0], mirror=True):
         outer_r = r_edges[i+1]
         #print(i, qq, inner_r, outer_r)
         mask = sector_cut_antialiased(shape1, center, inner_r, outer_r, start_angle=start_angle, end_angle=end_angle, mirror=mirror)
+        if data.mask is not None:
+            mask = mask * data.mask.T
         if IGNORE_CORNER_PIXELS:
             mask[0, 0] = mask[-1, 0] = mask[-1, -1] = mask[0, -1] = 0.0
         #print("Mask: ", mask)
@@ -2683,6 +2690,49 @@ def mask_1d_data(data: list[SansIQData | Sans1dData],
         data_set.q_slice = [mask[0] - 1 if mask[0] else 1, 0 - mask[1] if mask[1] else -1]
         returns.append(data_set.masked())
     return returns
+
+
+@cache
+@module
+def mask_2d_regions(data, regions=None):
+    """
+    Exclude regions of the 2D detector image from the reduction.
+
+    Draw rectangles, circles or free-form outlines on the plot.  Pixels whose
+    centers fall inside any region are masked: they are left out of the
+    circular average, annular average and sector cut.  The intensity values
+    themselves are not changed.  Regions are given in the coordinates of the
+    plot (pixels before conversion to Q, Qx/Qy after).  Any mask already on
+    the data is kept, so masks from several steps accumulate.
+
+    **Inputs**
+
+    data (sans2d[]) : data to mask
+
+    regions (region[]) : shapes to exclude, applied to every dataset
+
+    **Returns**
+
+    output (sans2d[]) : data with the mask updated
+
+    | 2026-11-17 initial implementation of rectangle, circle and free-form regions
+    """
+    from reductus.dataflow.lib.regions import keep_mask, pixel_centers, validate_regions
+
+    regions = validate_regions(regions)
+    if not regions:
+        return data
+
+    output = []
+    for dataset in data:
+        res = dataset.copy()
+        x, y = pixel_centers(res.data.x.shape, *res.plot_extent())
+        keep = keep_mask(x, y, regions)
+        if res.mask is not None:
+            keep &= res.mask.astype(bool)
+        res.mask = keep
+        output.append(res)
+    return output
 
 
 @module

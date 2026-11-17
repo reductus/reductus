@@ -8,6 +8,7 @@ import { IndexUi } from './index.js';
 import { PatchUi } from './patch.js';
 import { CoordinateUi } from './coordinate.js';
 import { RangeUi } from './range.js';
+import { RegionUi } from './region.js';
 
 export const Components = {
   FileinfoUi,
@@ -20,5 +21,6 @@ export const Components = {
   IndexUi,
   "patch_metadata-ui": PatchUi,
   CoordinateUi,
-  RangeUi
+  RangeUi,
+  "region-ui": RegionUi
 }

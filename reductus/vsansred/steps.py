@@ -1277,6 +1277,84 @@ def calculate_angles(rd):
 
     return detector_angles
 
+def _mask_regions(data, regions, inplace=False):
+    """
+    Shared implementation of the region mask steps.
+
+    Region coordinates are in the axes of the 2D plot of *data*, i.e. the
+    X, Y (realspace) or Qx, Qy (qspace) coordinates of each detector panel,
+    so one drawing can cover several panels at once.
+    """
+    from reductus.dataflow.lib.regions import keep_mask, validate_regions
+
+    regions = validate_regions(regions)
+    if not inplace:
+        data = deepcopy(data)
+    if not regions:
+        return data
+
+    for det in data.detectors.values():
+        shape = det['data'].x.shape
+        x = np.broadcast_to(det[data.xaxisname], shape)
+        y = np.broadcast_to(det[data.yaxisname], shape)
+        shadow_mask = det.get('shadow_mask', np.ones(shape, dtype=bool))
+        det['shadow_mask'] = np.logical_and(shadow_mask, keep_mask(x, y, regions))
+    return data
+
+@cache
+@module
+def mask_regions_realspace(realspace_data, regions=None, inplace=False):
+    """
+    Exclude regions of the detector panels from the reduction.
+
+    Draw rectangles, circles or free-form outlines on the plot.  Detector
+    pixels whose centers fall inside any region are added to the shadow mask,
+    alongside any masks from other steps.  Regions are given in the plot
+    coordinates (X, Y).
+
+    **Inputs**
+
+    realspace_data (realspace): datafiles in X,Y coordinates
+
+    regions (region[]): shapes to exclude, applied to every dataset
+
+    inplace (bool): do the calculation in-place, modifying the input dataset
+
+    **Returns**
+
+    masked (realspace): datafiles with the shadow mask updated
+
+    | 2026-11-17 initial implementation of rectangle, circle and free-form regions
+    """
+    return _mask_regions(realspace_data, regions, inplace=inplace)
+
+@cache
+@module
+def mask_regions_qspace(qspace_data, regions=None, inplace=False):
+    """
+    Exclude regions of the detector panels from the reduction.
+
+    Draw rectangles, circles or free-form outlines on the plot.  Detector
+    pixels whose centers fall inside any region are added to the shadow mask,
+    alongside any masks from other steps.  Regions are given in the plot
+    coordinates (Qx, Qy).
+
+    **Inputs**
+
+    qspace_data (qspace): datafiles in Qx,Qy coordinates
+
+    regions (region[]): shapes to exclude, applied to every dataset
+
+    inplace (bool): do the calculation in-place, modifying the input dataset
+
+    **Returns**
+
+    masked (qspace): datafiles with the shadow mask updated
+
+    | 2026-11-17 initial implementation of rectangle, circle and free-form regions
+    """
+    return _mask_regions(qspace_data, regions, inplace=inplace)
+
 @cache
 @module
 def sector_cut(qspace_data, sector=[0.0, 90.0], mirror=True):

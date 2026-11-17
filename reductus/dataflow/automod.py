@@ -728,6 +728,20 @@ def parse_datatype(par):
     *coordinate* -> *datatype=coordinate*
 
         A point *[x, y]* should be selected from the graph.
+
+    *region* -> *datatype=region*
+
+        A shape drawn on a 2D plot, in plot coordinates, used to select
+        pixels (for example, to exclude them from a reduction).  The value
+        is one of::
+
+            {type: "rectangle", xmin, xmax, ymin, ymax}
+            {type: "circle", cx, cy, r}
+            {type: "polygon", points: [[x, y], ...]}
+
+        The polygon type covers free-form drawing.  This makes most sense
+        as *region[]* (*length=0, multiple=false*), a list of shapes that
+        applies to all datasets.
     """
     name = par['id']
     type = par["datatype"] if par["datatype"] else "str"
@@ -803,7 +817,7 @@ def parse_datatype(par):
     par["datatype"] = type
     par["typeattr"] = attr
 
-FIELD_TYPES = set("str bool int float opt regex range index coordinate fileinfo scale patch_metadata".split())
+FIELD_TYPES = set("str bool int float opt regex range index coordinate fileinfo scale patch_metadata region".split())
 
 def check_multiplicity(par, values, bundle_length):
     """
@@ -900,6 +914,10 @@ def _validate_one(par, value, as_default):
 
     elif datatype == "patch_metadata":
         value = _patch_check(name, value)
+
+    elif datatype == "region":
+        from .lib.regions import validate_region
+        value = validate_region(value)
 
     else:
         raise ValueError("no %s type check for %s"%(datatype, name))
