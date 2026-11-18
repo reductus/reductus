@@ -1090,6 +1090,7 @@ def circular_av_new(qspace_data, q_min=None, q_max=None, q_step=None):
     | 2026-10-09 Jonathan Gaudet First shot at adding Q-resolution
     """
     from .vsansdata import short_detectors, VSans1dData
+    from .export_vsans import panel_geometry, DETECTORS_KEY
 
     output = []
     for sn in short_detectors:
@@ -1152,7 +1153,11 @@ def circular_av_new(qspace_data, q_min=None, q_max=None, q_step=None):
         #Q_var, _ = np.histogram(data.meanQ[mask][Q_var_mask], bins=q_bins, weights=Q_var_contrib)
         #Q_var[Q_mean_norm > 0] /= Q_mean_norm[Q_mean_norm > 0]
 
-        canonical_output = VSans1dData(Q, I, dx, np.sqrt(I_var), xlabel="Q", vlabel="I", xunits="1/Ang", vunits="arb.", xscale="log", vscale="log", metadata={"title": sn})
+        # keep the instrument/sample metadata and this panel's geometry for export
+        metadata = deepcopy(qspace_data.metadata)
+        metadata["title"] = sn
+        metadata[DETECTORS_KEY] = [panel_geometry(sn, det)]
+        canonical_output = VSans1dData(Q, I, dx, np.sqrt(I_var), xlabel="Q", vlabel="I", xunits="1/Ang", vunits="arb.", xscale="log", vscale="log", metadata=metadata)
         output.append(canonical_output)
 
     return output
