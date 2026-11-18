@@ -182,16 +182,6 @@
     },
     {
       "source": [
-        10,
-        "I_Q"
-      ],
-      "target": [
-        17,
-        "data_list"
-      ]
-    },
-    {
-      "source": [
         9,
         "shadowed"
       ],
@@ -366,13 +356,6 @@
         "apply_dead_time": true
       },
       "text_width": 93
-    },
-    {
-      "module": "ncnr.vsans.export_vsans_1d",
-      "title": "Export Vsans 1d",
-      "x": 1692,
-      "y": 303,
-      "text_width": 122
     },
     {
       "module": "ncnr.vsans.mask_edge_detectors",
