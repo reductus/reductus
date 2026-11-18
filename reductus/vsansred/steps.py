@@ -1782,6 +1782,8 @@ def absolute_scaling(sample, open_beam, trans_sample, margin=5, PANEL_KEY='detec
 
     # multiply data by scaling factor
     abs_data = sample * u_factor_abs
+    abs_data.metadata["intensity.units"] = "1/cm"  # used for the NXcanSAS I units
+    abs_data.metadata["sample.trans"] = T_sample
 
     return abs_data
 
