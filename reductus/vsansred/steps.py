@@ -91,7 +91,7 @@ def _LoadVSANS(filelist=None, check_timestamps=True, raw_patches=None):
     
     check_timestamps (bool): verify that timestamps on file match request
 
-    raw_patches (str): text of metadata to patch
+    raw_patches (str): text of metadata to patch. Example of correcting 2 different metadata. "/entry/instrument/sample_aperture_2/distance: 15, /entry/DAS_logs/geometry/sampleApertureOffset: 5"
 
     **Returns**
 
@@ -99,7 +99,7 @@ def _LoadVSANS(filelist=None, check_timestamps=True, raw_patches=None):
 
     | 2018-04-29 Brian Maranville
     | 2020-10-01 Brian Maranville adding fileinfo to metadata
-    | 2026-11-09 Jonathan Gaudet added str input to patch metadata
+    | 2026-11-19 Jonathan Gaudet - added patch data
     """
     from reductus.dataflow.fetch import url_get
     from .loader import readVSANSNexuz
@@ -146,7 +146,7 @@ def LoadVSANS(filelist=None, check_timestamps=True, load_data=True, apply_attenu
 
     mon0 (float): target monitor value for normalization (default: 1e8)
 
-    raw_patches (str): text of metadata to patch
+    raw_patches (str): text of metadata to patch. Example of correcting 2 different metadata. "/entry/instrument/sample_aperture_2/distance: 15, /entry/DAS_logs/geometry/sampleApertureOffset: 5"
 
     **Returns**
 
@@ -154,6 +154,7 @@ def LoadVSANS(filelist=None, check_timestamps=True, load_data=True, apply_attenu
 
     | 2018-10-30 Brian Maranville
     | 2020-09-30 Brian Maranville adding option to not load data
+    | 2026-11-19 Jonathan Gaudet - added patch data
     """
 
     from reductus.dataflow.calc import process_template
@@ -241,13 +242,14 @@ def LoadVSANSHe3(filelist=None, check_timestamps=True, raw_patches=None):
     
     check_timestamps (bool): verify that timestamps on file match request
 
-    raw_patches (str): text of metadata to patch
+    raw_patches (str): text of metadata to patch. Example of correcting 2 different metadata. "/entry/instrument/sample_aperture_2/distance: 15, /entry/DAS_logs/geometry/sampleApertureOffset: 5"
 
     **Returns**
 
     output (raw[]): all the entries loaded.
 
     2018-04-29 Brian Maranville
+    | 2026-11-19 Jonathan Gaudet - added patch data
     """
     from reductus.dataflow.fetch import url_get
     from .loader import readVSANSNexuz, he3_metadata_lookup
