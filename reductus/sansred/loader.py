@@ -4,6 +4,9 @@ SANS data loader
 
 Load SANS NeXus file into :mod:`sansred.sansdata` data structure.
 """
+
+import numpy as np
+
 from reductus.dataflow.lib import unit
 from reductus.dataflow.lib.h5_open import h5_open_zip
 
@@ -118,6 +121,34 @@ def data_as(field, units):
         converter = unit.Converter(units_in)
         value = converter(field[()], units)
         return value
+
+def _read_nexus_sensitivity(name, fid):
+    """
+    Read the 2D sensitivity map from a NeXus (HDF5) DIV file.
+
+    The map is stored as the detector data of the first entry, and has the
+    same shape and orientation as the array read from a VAX format DIV file.
+    """
+    from reductus.dataflow.lib.h5_open import h5_open_zip
+
+    f = h5_open_zip(name, fid)
+    try:
+        entry = f[next(iter(f.keys()))]
+        detector = entry["instrument/detector"]
+        if "data" in detector:
+            dataset = detector["data"]
+        else:
+            # fall back to the first dataset that looks like a 2D map
+            candidates = [detector[k] for k in detector
+                          if hasattr(detector[k], "shape") and len(detector[k].shape) >= 2]
+            if not candidates:
+                raise ValueError("No detector sensitivity data found in %s" % name)
+            dataset = candidates[0]
+        sens_raw = np.asarray(dataset[()], dtype="float64")
+    finally:
+        f.close()
+    # Drop any singleton leading dimensions (e.g. (1, 128, 128))
+    return sens_raw.reshape(sens_raw.shape[-2:]) if sens_raw.size == np.prod(sens_raw.shape[-2:]) else sens_raw
 
 def readSANSNexuz(input_file, file_obj=None, metadata_lookup=metadata_lookup):
     """
