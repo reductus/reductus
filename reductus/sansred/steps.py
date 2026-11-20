@@ -67,6 +67,47 @@ def module(action):
 # Loader stuff
 #################
 
+def _is_hdf5(fid):
+    """Return True if the file object holds an HDF5 (NeXus) file, or a zipped one."""
+    head = fid.read(8)
+    fid.seek(0)
+    return head.startswith(b"\x89HDF") or head.startswith(b"PK")
+
+def _is_div_hdf5(fid, name=""):
+    """
+    Return True if the file object is a NeXus (HDF5) detector sensitivity file.
+
+    NeXus DIV files have no distinguishing extension, so check the file name,
+    then the descriptive text stored in the file ("Sensitivity (DIV) created ...").
+    """
+    if not _is_hdf5(fid):
+        return False
+    if "DIV" in basename(name).upper():
+        return True
+    from reductus.dataflow.lib.h5_open import h5_open_zip
+    try:
+        f = h5_open_zip(name, fid)
+    except Exception:
+        return False
+    try:
+        for entry in f.values():
+            for key in ("title", "experiment_description", "sample/description", "sample/name"):
+                field = entry.get(key, None)
+                if field is None:
+                    continue
+                text = field[()]
+                if isinstance(text, bytes):
+                    text = text.decode("utf-8", "replace")
+                text = str(text)
+                if "(DIV)" in text or "Sensitivity" in text:
+                    return True
+        return False
+    except Exception:
+        return False
+    finally:
+        f.close()
+        fid.seek(0)
+
 @cache
 @module
 def LoadDIV(filelist=None, variance=0.0001):
@@ -87,6 +128,7 @@ def LoadDIV(filelist=None, variance=0.0001):
     """
     from reductus.dataflow.fetch import url_get
     from .sans_vaxformat import readNCNRSensitivity
+    from .loader import _read_nexus_sensitivity
 
     output = []
     if filelist is None:
@@ -95,7 +137,10 @@ def LoadDIV(filelist=None, variance=0.0001):
         path, mtime, entries = fileinfo['path'], fileinfo.get('mtime', None), fileinfo.get('entries', None)
         name = basename(path)
         fid = BytesIO(url_get(fileinfo, mtime_check=False))
-        sens_raw = readNCNRSensitivity(fid)
+        if _is_hdf5(fid):
+            sens_raw = _read_nexus_sensitivity(name, fid)
+        else:
+            sens_raw = readNCNRSensitivity(fid)
         data = Uncertainty(sens_raw, sens_raw * variance)
         metadata = OrderedDict([
             ("run.filename", name),
@@ -104,6 +149,7 @@ def LoadDIV(filelist=None, variance=0.0001):
             ("analysis.filepurpose", "Sensitivity"),
             ("run.experimentScanID", name),
             ("sample.description", "PLEX"),
+            ("sample.name", name),
             ("entry", "entry"),
             ("sample.labl", "PLEX"),
             ("run.configuration", "DIV"),
@@ -139,7 +185,8 @@ def LoadRawSANS(filelist=None, check_timestamps=True):
         path, mtime, entries = fileinfo['path'], fileinfo.get('mtime', None), fileinfo.get('entries', None)
         name = basename(path)
         fid = BytesIO(url_get(fileinfo, mtime_check=check_timestamps))
-        if name.upper().endswith(".DIV"):
+        if name.upper().endswith(".DIV") or _is_div_hdf5(fid, name):
+            fid.seek(0)
             entries = [
                 RawSANSData(metadata=sens.metadata,
                             detectors={"detector": {"data": {"value": sens.data}}})
@@ -2535,7 +2582,7 @@ def single_configuration(
 
     template = Template(**template_def)
 
-    div_files = [f for f in filelist if f['path'].endswith(".div")] if filelist else []
+    div_files = [f for f in filelist if f['path'].lower().endswith(".div")] if filelist else []
 
     config = {"0": {"filelist": filelist}, "8": {"filelist": div_files}}
     terminal_id = "output"
