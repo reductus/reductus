@@ -15,6 +15,7 @@ import numpy as np
 
 from reductus.dataflow.lib.uncertainty import Uncertainty
 from reductus.dataflow.lib.exporters import exports_HDF5, exports_text
+from reductus.sansred.export_sans import export_to_ascii, export_to_csv, export_to_nxcansas
 from reductus.vsansred.vsansdata import RawVSANSData, _toDictItem
 
 IS_PY3 = sys.version_info[0] >= 3
@@ -28,11 +29,8 @@ def _b(s):
         return s
 
 # TODO: Items needed for SANS data
-#  - Differentiate Raw vs Intermediate vs Reduced
-#  - Single class for any data with all others inheriting from
-#  - Method(s) to scale, shift, and mask data
 #  - DIV/mask file handling
-#  - Hold intent (emtpy/BB/open/sample) and measurement type (Scatt/Trans)
+
 
 class RawSANSData(RawVSANSData):
     suffix = ".sans"
@@ -288,6 +286,14 @@ class Sans1dData:
             "value": value.decode('utf-8'),
         }
 
+    @exports_HDF5(name="NXcanSAS")
+    def to_NXcanSAS(self):
+        return export_to_nxcansas(self)
+
+    @exports_text(name="csv")
+    def to_csv(self):
+        return export_to_csv(self)
+
 
 class SansIQData:
     def __init__(self, I=None, dI=None, Q=None, dQ=None, meanQ=None, ShadowFactor=None, label='', metadata=None):
@@ -409,40 +415,11 @@ class SansIQData:
 
     @exports_HDF5(name="NXcanSAS")
     def to_NXcanSAS(self):
-        import h5py
+        return export_to_nxcansas(self)
 
-        fid = BytesIO()
-        h5_item = h5py.File(fid, 'w')
-
-        entry_name = self.metadata.get("entry", "entry")
-        nxentry = h5_item.create_group(entry_name)
-        nxentry.attrs.update({
-            "NX_class": "NXentry",
-            "canSAS_class": "SASentry",
-            "version": "1.0"
-        })
-        nxentry["definition"] = "NXcanSAS"
-        nxentry["run"] = "<see the documentation>"
-        nxentry["title"] = self.metadata["sample.description"]
-        datagroup = nxentry.create_group("data")
-        datagroup.attrs.update({
-            "NX_class": "NXdata",
-            "canSAS_class": "SASdata",
-            "signal": "I",
-            "I_axes": "<see the documentation>",
-            "Q_indices": 1
-        })
-        datagroup["I"] = self.I
-        datagroup["I"].attrs["units"] = "1/m"
-        datagroup["Q"] = self.Q
-        datagroup["Q"].attrs["units"] = "1/nm"
-
-        return {
-            "name": self.metadata.get("name", "default_name"),
-            "entry": self.metadata.get("entry", "default_entry"),
-            "file_suffix": ".sansIQ.nx.h5",
-            "value": h5_item,
-        }
+    @exports_text(name="csv")
+    def to_csv(self):
+        return export_to_csv(self)
 
     def append_1d_data_set(self, data):
         """Concatenate another data set with the existing one. The resulting data arrays will be sorted """

@@ -1090,6 +1090,7 @@ def circular_av_new(qspace_data, q_min=None, q_max=None, q_step=None):
     | 2026-10-09 Jonathan Gaudet First shot at adding Q-resolution
     """
     from .vsansdata import short_detectors, VSans1dData
+    from .export_vsans import panel_geometry, DETECTORS_KEY
 
     output = []
     for sn in short_detectors:
@@ -1152,7 +1153,11 @@ def circular_av_new(qspace_data, q_min=None, q_max=None, q_step=None):
         #Q_var, _ = np.histogram(data.meanQ[mask][Q_var_mask], bins=q_bins, weights=Q_var_contrib)
         #Q_var[Q_mean_norm > 0] /= Q_mean_norm[Q_mean_norm > 0]
 
-        canonical_output = VSans1dData(Q, I, dx, np.sqrt(I_var), xlabel="Q", vlabel="I", xunits="1/Ang", vunits="arb.", xscale="log", vscale="log", metadata={"title": sn})
+        # keep the instrument/sample metadata and this panel's geometry for export
+        metadata = deepcopy(qspace_data.metadata)
+        metadata["title"] = sn
+        metadata[DETECTORS_KEY] = [panel_geometry(sn, det)]
+        canonical_output = VSans1dData(Q, I, dx, np.sqrt(I_var), xlabel="Q", vlabel="I", xunits="1/Ang", vunits="arb.", xscale="log", vscale="log", metadata=metadata)
         output.append(canonical_output)
 
     return output
@@ -1777,6 +1782,8 @@ def absolute_scaling(sample, open_beam, trans_sample, margin=5, PANEL_KEY='detec
 
     # multiply data by scaling factor
     abs_data = sample * u_factor_abs
+    abs_data.metadata["intensity.units"] = "1/cm"  # used for the NXcanSAS I units
+    abs_data.metadata["sample.trans"] = T_sample
 
     return abs_data
 
@@ -2573,227 +2580,6 @@ def compute_mag_cross_term(uu_90_1d, dd_90_1d, nuclear_1d):
 
     return [res_obj]
 
-@module
-def export_vsans_2d_matrix_grid(data, num_points=128, output_dir=None, filename_out="vsans_2d_reduced.dat"):
-    """
-    Grids multi-detector VSansDataQSpace data into a single uniform 2D matrix (Qx, Qy, I, dI)
-    compatible with SasView 2D ASCII format using direct index mapping and bincounting
-    (matching Reductus mag_extract_components pattern).
-
-    **Inputs**
-
-    data(qspace)  : data 2D to output
-
-    num_points(int) : number of points to output
-
-    output_dir(str) : output directory
-
-    filename_out(str) : optional file path/name to save the output directly to disk
-
-    **Returns**
-
-    result(params): output parameters
-
-    2026-10-16 Jonathan Gaudet
-    """
-
-    import numpy as np
-    from .vsansdata import Parameters, short_detectors
-    import os
-
-    sans_qspace = data
-    qx_all = []
-    qy_all = []
-    i_all = []
-    var_all = []
-
-    # 1. Collect valid data using Reductus short_detectors & shadow_mask convention
-    for sn in short_detectors:
-        detname = f'detector_{sn}'
-        if detname not in sans_qspace.detectors:
-            continue
-
-        det = sans_qspace.detectors[detname]
-        if "data" not in det or "Qx" not in det or "Qy" not in det:
-            continue
-
-        qx_panel = det["Qx"].ravel('C')
-        qy_panel = det["Qy"].ravel('C')
-        i_panel = det["data"].x.ravel('C')
-        var_panel = det["data"].variance.ravel('C')
-
-        # Reductus shadow_mask: True = VALID/UNMASKED DATA, False = MASKED
-        if 'shadow_mask' in det and det['shadow_mask'] is not None:
-            valid_mask = np.asarray(det['shadow_mask']).astype(bool).ravel('C')
-        elif 'mask' in det and det['mask'] is not None:
-            # Fallback for standard boolean mask arrays (where True = masked)
-            valid_mask = ~np.asarray(det['mask']).astype(bool).ravel('C')
-        else:
-            valid_mask = np.ones_like(i_panel, dtype=bool)
-
-        # Baseline finite check + Reductus valid_mask
-        valid = (
-                valid_mask
-                & (i_panel > 0.0)
-                & np.isfinite(i_panel)
-                & np.isfinite(qx_panel)
-                & np.isfinite(qy_panel)
-        )
-
-        # Check secondary data-level numpy boolean mask if present
-        if hasattr(det['data'], 'mask') and det['data'].mask is not None:
-            valid &= ~np.asarray(det['data'].mask).astype(bool).ravel('C')
-
-        qx_all.append(qx_panel[valid])
-        qy_all.append(qy_panel[valid])
-        i_all.append(i_panel[valid])
-        var_all.append(var_panel[valid])
-
-    if not qx_all:
-        raise ValueError("No valid unmasked detector data found to export.")
-
-    qx_pts = np.concatenate(qx_all)
-    qy_pts = np.concatenate(qy_all)
-    i_pts = np.concatenate(i_all)
-    var_pts = np.concatenate(var_all)
-
-    # 2. Setup grid extents using nan-safe min/max
-    qx_min, qx_max = np.nanmin(qx_pts), np.nanmax(qx_pts)
-    qy_min, qy_max = np.nanmin(qy_pts), np.nanmax(qy_pts)
-
-    if not (np.isfinite(qx_min) and np.isfinite(qx_max) and np.isfinite(qy_min) and np.isfinite(qy_max)):
-        raise ValueError("Calculated Q grid extents contain NaN/Inf. Check detector Qx/Qy arrays.")
-
-    dqx = (qx_max - qx_min) / num_points
-    dqy = (qy_max - qy_min) / num_points
-
-    # 3. Calculate discrete bin indices
-    ix = np.floor((qx_pts - qx_min) / dqx).astype(int)
-    iy = np.floor((qy_pts - qy_min) / dqy).astype(int)
-
-    ix = np.clip(ix, 0, num_points - 1)
-    iy = np.clip(iy, 0, num_points - 1)
-
-    flat_indices = ix * num_points + iy
-    total_bins = num_points * num_points
-
-    # 4. Perform vector bincounting
-    counts = np.bincount(flat_indices, minlength=total_bins)
-    i_sum = np.bincount(flat_indices, weights=i_pts, minlength=total_bins)
-    var_sum = np.bincount(flat_indices, weights=var_pts, minlength=total_bins)
-
-    # 5. Compute mean intensity and uncertainty with 0.0 default initialization
-    grid_i_flat = np.zeros(total_bins, dtype=float)
-    grid_di_flat = np.zeros(total_bins, dtype=float)
-
-    has_counts = counts > 0
-    grid_i_flat[has_counts] = i_sum[has_counts] / counts[has_counts]
-
-    # Safe square root for variance propagation
-    safe_var = np.maximum(0.0, var_sum[has_counts])
-    grid_di_flat[has_counts] = np.sqrt(safe_var) / counts[has_counts]
-
-    # Grid coordinate centers
-    qx_centers = qx_min + (np.arange(num_points) + 0.5) * dqx
-    qy_centers = qy_min + (np.arange(num_points) + 0.5) * dqy
-    grid_qx, grid_qy = np.meshgrid(qx_centers, qy_centers, indexing='ij')
-
-    grid_qx_flat = grid_qx.ravel('C')
-    grid_qy_flat = grid_qy.ravel('C')
-
-    is_valid_point = (counts > 0) & (grid_i_flat > 0.0) & np.isfinite(grid_i_flat) & np.isfinite(grid_di_flat)
-
-    grid_i_flat[~is_valid_point] = 0.0
-    grid_di_flat[~is_valid_point] = 0.0
-
-    fSubS_flags = np.where(is_valid_point, 1.0, 0.0)
-    mask_flags = np.where(is_valid_point, 0, 1)
-    zeros = np.zeros(total_bins, dtype=float)
-
-    # Stack columns: Qx, Qy, I, dI, Qz (0.0), SigmaQ_parall (0.0), SigmaQ_perp (0.0), fSubS, Mask
-    data_matrix = np.column_stack((
-        grid_qx_flat,
-        grid_qy_flat,
-        grid_i_flat,
-        grid_di_flat,
-        zeros,
-        zeros,
-        zeros,
-        fSubS_flags,
-        mask_flags,
-    ))
-
-    # Format data rows cleanly using vector string mapping
-    formatted_data_rows = [
-        f"{r[0]:.8e}\t{r[1]:.8e}\t{r[2]:.8e}\t{r[3]:.8e}\t{r[4]:.1f}\t{r[5]:.8e}\t{r[6]:.8e}\t{r[7]:.1f}\t{int(r[8])}"
-        for r in data_matrix
-    ]
-
-    # 6. Format standard NIST 2D ASCII text output with absolute NaN protection
-    filename = str(sans_qspace.metadata.get("run.filename", "vsans_2d"))
-    title = str(sans_qspace.metadata.get("sample.description", "VSANS 2D Grid"))
-
-    lines = [
-        f"FILE: {filename}   CREATED: XXXX-XX-XX",
-        f"LABEL: {title}",
-        "MON CNT    LAMBDA (A)   DET_OFF(cm)   DET_DIST(cm)   TRANS   THICK(cm)",
-        "1e+08      6.0          0.0           100.0          1.0     0.1",
-        "BCENT(X,Y)(cm)   A1(mm)   A2(mm)   A1A2DIST(m)   DL/L   BSTOP(mm)",
-        "0.0   0.0   10.0 mm   10.0   1.0   0.12   50",
-        f"SAM: {filename}",
-        "BGD: none",
-        "EMP: none",
-        "DIV: none",
-        "MASK: none",
-        "ABS Parameters (3-6): TSTAND=1;DSTAND=1;IZERO=1e+08;XSECT=1;SDEV=1e+05;",
-        "Average Choices: AVTYPE=QxQy_ASCII;SAVE=Yes;NAME=Auto;PLOT=Yes;BINTYPE=F1-M1-B;",
-        "Collimation type: pinhole",
-        "Panel=FL",
-        f"NumXPixels={num_points}",
-        "XPixelSize_mm=8.0",
-        f"NumYPixels={num_points}",
-        "YPixelSize_mm=8.0",
-        "Duration (s)=1800",
-        "reserved for future file definition changes",
-        "reserved for future file definition changes",
-        "reserved for future file definition changes",
-        "reserved for future file definition changes",
-        "reserved for future file definition changes",
-        "reserved for future file definition changes",
-        "*** Data written from ABS folder and may not be a fully corrected data file ***",
-        "Data columns are Qx - Qy - I(Qx,Qy) - err(I) - Qz - SigmaQ_parall - SigmaQ_perp - fSubS(beam stop shadow) - Mask",
-        "The 2D error need to be checked",
-        "ASCII data created XXXX-XX-XX",
-        ""
-    ]
-
-    content = "\n".join(lines + formatted_data_rows)
-
-    params_dict = {
-            "name": _s(sans_qspace.metadata.get("name", filename)),
-            "entry": _s(sans_qspace.metadata.get("entry", "entry")),
-            "file_suffix": ".2d.dat"
-    }
-
-    output = Parameters(params=params_dict)
-
-    # 7. File path resolution and directory auto-creation
-    if filename_out:
-        if output_dir:
-            os.makedirs(output_dir, exist_ok=True)
-            full_path = os.path.join(output_dir, os.path.basename(filename_out))
-        else:
-            full_path = filename_out
-            parent_dir = os.path.dirname(full_path)
-            if parent_dir:
-                os.makedirs(parent_dir, exist_ok=True)
-
-        with open(full_path, "w") as f:
-            f.write(content)
-
-    return output
-
-
 def average_raw(data_list):
     """
     Averages normalized SANS datasets across multiple time runs and propagates
@@ -2837,103 +2623,6 @@ def average_raw(data_list):
 
     return output
 
-@module
-def export_vsans_1d(data_list, save_path=None, filename="output.dat"):
-    """
-    Combines multi-detector VSANS 1D datasets into a single Q-sorted 1D
-    profile (Q, I, dI, dQ) preserving overlapping Q points for overplotting,
-    and optionally exports to disk in a SasView-compatible ASCII format.
-
-    **Inputs**
-
-    data_list (v1d[]) : List of VSans1dData objects (one per detector panel)
-
-    save_path (str)   : Optional output directory path
-
-    filename (str)    : Optional file name. If None, derives from dataset metadata.
-
-    **Returns**
-
-    combined_1d (v1d) : Single combined VSans1dData object
-
-    2026-10-07 Jonathan Gaudet
-    """
-    import os
-    import numpy as np
-    from .vsansdata import VSans1dData
-
-    valid_data = [d for d in data_list if len(d.x) > 0]
-    if not valid_data:
-        return None
-
-    # Filtering out Q-bins without valid measurement points (d.dv > 0)
-    filtered_data = []
-    for d in valid_data:
-        # Mask out empty bins where variance/uncertainty is zero (uncounted bins)
-        mask = d.dv > 0
-        if np.any(mask):
-            filtered_data.append({
-                'x': d.x[mask],
-                'v': d.v[mask],
-                'dv': d.dv[mask],
-                'dx': d.dx[mask]
-            })
-
-    if not filtered_data:
-        return None
-
-    # 1. Combine all dictionary arrays from every detector panel
-    all_q = np.concatenate([d['x'] for d in filtered_data])
-    all_v = np.concatenate([d['v'] for d in filtered_data])
-    all_dv = np.concatenate([d['dv'] for d in filtered_data])
-    all_dx = np.concatenate([d['dx'] for d in filtered_data])
-
-    # 2. Sort by Q so the output profile is monotonically increasing in Q
-    sort_idx = np.argsort(all_q)
-    sorted_q = all_q[sort_idx]
-    sorted_v = all_v[sort_idx]
-    sorted_dv = all_dv[sort_idx]
-    sorted_dx = all_dx[sort_idx]
-
-    # 3. Preserve base metadata
-    merged_meta = valid_data[0].metadata.copy() if valid_data[0].metadata else {}
-    merged_meta['title'] = "Overplotted Detectors"
-
-    combined_1d = VSans1dData(
-        x=sorted_q,
-        v=sorted_v,
-        dx=sorted_dx,
-        dv=sorted_dv,
-        xlabel=valid_data[0].xlabel,
-        vlabel=valid_data[0].vlabel,
-        xunits=valid_data[0].xunits,
-        vunits=valid_data[0].vunits,
-        xscale=valid_data[0].xscale,
-        vscale=valid_data[0].vscale,
-        metadata=merged_meta
-    )
-
-    # 4. Save to directory if a save_path is provided
-    if save_path is not None:
-        os.makedirs(save_path, exist_ok=True)
-
-        # Fallback if an empty string or None is passed
-        out_filename = filename if filename else "output.dat"
-
-        # Ensure the filename ends with .dat if no extension was provided
-        base, ext = os.path.splitext(out_filename)
-        if not ext:
-            out_filename = f"{base}.dat"
-
-        full_filepath = os.path.join(save_path, out_filename)
-
-        # Get exported dictionary payload from VSans1dData method
-        export_dict = combined_1d.to_column_text()
-
-        with open(full_filepath, "w", encoding="utf-8") as f:
-            f.write(export_dict["value"])
-
-    return combined_1d
 
 def _get_block_beam_pol(poldata, block_beam_input):
     """Routine that extract appropriate block beam for input Poldata, which is assumed to be associated to
