@@ -81,7 +81,7 @@ def hidden(action):
 @cache
 @module
 @hidden
-def _LoadVSANS(filelist=None, check_timestamps=True):
+def _LoadVSANS(filelist=None, check_timestamps=True, raw_patches=None):
     """
     loads a data file into a VSansData obj and returns that.
 
@@ -91,12 +91,15 @@ def _LoadVSANS(filelist=None, check_timestamps=True):
     
     check_timestamps (bool): verify that timestamps on file match request
 
+    raw_patches (str): text of metadata to patch. Example of correcting 2 different metadata. "/entry/instrument/sample_aperture_2/distance: 15, /entry/DAS_logs/geometry/sampleApertureOffset: 5"
+
     **Returns**
 
     output (raw[]): all the entries loaded.
 
     | 2018-04-29 Brian Maranville
     | 2020-10-01 Brian Maranville adding fileinfo to metadata
+    | 2026-11-19 Jonathan Gaudet - added patch data
     """
     from reductus.dataflow.fetch import url_get
     from .loader import readVSANSNexuz
@@ -107,7 +110,7 @@ def _LoadVSANS(filelist=None, check_timestamps=True):
         path, mtime, entries = fileinfo['path'], fileinfo.get('mtime', None), fileinfo.get('entries', None)
         name = basename(path)
         fid = BytesIO(url_get(fileinfo, mtime_check=check_timestamps))
-        entries = readVSANSNexuz(name, fid)
+        entries = readVSANSNexuz(name, fid, raw_patches=raw_patches)
         for entry in entries:
             if fileinfo['path'].endswith("DIV.h5"):
                 print('div file...')
@@ -123,7 +126,7 @@ def _LoadVSANS(filelist=None, check_timestamps=True):
 
 @nocache
 @module
-def LoadVSANS(filelist=None, check_timestamps=True, load_data=True, apply_attenuation=False, apply_monitor_norm=False,apply_dead_time=False,mon0=1e8):
+def LoadVSANS(filelist=None, check_timestamps=True, load_data=True, apply_attenuation=True, apply_monitor_norm=True,apply_dead_time=True,mon0=1e8, raw_patches=None):
     """
     loads a data file into a VSansData obj and returns that. (uses cached values)
 
@@ -143,12 +146,15 @@ def LoadVSANS(filelist=None, check_timestamps=True, load_data=True, apply_attenu
 
     mon0 (float): target monitor value for normalization (default: 1e8)
 
+    raw_patches (str): text of metadata to patch. Example of correcting 2 different metadata. "/entry/instrument/sample_aperture_2/distance: 15, /entry/DAS_logs/geometry/sampleApertureOffset: 5"
+
     **Returns**
 
     output (raw[]): all the entries loaded.
 
     | 2018-10-30 Brian Maranville
     | 2020-09-30 Brian Maranville adding option to not load data
+    | 2026-11-19 Jonathan Gaudet - added patch data
     """
 
     from reductus.dataflow.calc import process_template
@@ -168,7 +174,7 @@ def LoadVSANS(filelist=None, check_timestamps=True, load_data=True, apply_attenu
     template = Template(**template_def)
     output = []
     for fi in filelist:
-        config = {"0": {"filelist": [fi], "check_timestamps": check_timestamps, "load_data": load_data}}
+        config = {"0": {"filelist": [fi], "check_timestamps": check_timestamps, "load_data": load_data, "raw_patches": raw_patches}}
         nodenum = 0
         terminal_id = "output"
         retval = process_template(template, config, target=(nodenum, terminal_id))
@@ -226,7 +232,7 @@ def addSimple(data):
 
 @cache
 @module
-def LoadVSANSHe3(filelist=None, check_timestamps=True):
+def LoadVSANSHe3(filelist=None, check_timestamps=True, raw_patches=None):
     """
     loads a data file into a VSansData obj and returns that.
 
@@ -236,11 +242,14 @@ def LoadVSANSHe3(filelist=None, check_timestamps=True):
     
     check_timestamps (bool): verify that timestamps on file match request
 
+    raw_patches (str): text of metadata to patch. Example of correcting 2 different metadata. "/entry/instrument/sample_aperture_2/distance: 15, /entry/DAS_logs/geometry/sampleApertureOffset: 5"
+
     **Returns**
 
     output (raw[]): all the entries loaded.
 
     2018-04-29 Brian Maranville
+    | 2026-11-19 Jonathan Gaudet - added patch data
     """
     from reductus.dataflow.fetch import url_get
     from .loader import readVSANSNexuz, he3_metadata_lookup
@@ -251,7 +260,7 @@ def LoadVSANSHe3(filelist=None, check_timestamps=True):
         path, mtime, entries = fileinfo['path'], fileinfo.get('mtime', None), fileinfo.get('entries', None)
         name = basename(path)
         fid = BytesIO(url_get(fileinfo, mtime_check=check_timestamps))
-        entries = readVSANSNexuz(name, fid, metadata_lookup=he3_metadata_lookup)
+        entries = readVSANSNexuz(name, fid, metadata_lookup=he3_metadata_lookup, raw_patches=raw_patches)
         data.extend(entries)
 
     return data
@@ -259,7 +268,7 @@ def LoadVSANSHe3(filelist=None, check_timestamps=True):
 
 @nocache
 @module
-def LoadVSANSHe3Parallel(filelist=None, check_timestamps=True):
+def LoadVSANSHe3Parallel(filelist=None, check_timestamps=True, raw_patches=None):
     """
     loads a data file into a VSansData obj and returns that.
 
@@ -268,6 +277,8 @@ def LoadVSANSHe3Parallel(filelist=None, check_timestamps=True):
     filelist (fileinfo[]): Files to open.
     
     check_timestamps (bool): verify that timestamps on file match request
+
+    raw_patches (str): text of metadata to patch
 
     **Returns**
 
@@ -295,7 +306,7 @@ def LoadVSANSHe3Parallel(filelist=None, check_timestamps=True):
     output = []
     for fi in filelist:
         #config = {"0": {"filelist": [{"path": fi["path"], "source": fi["source"], "mtime": fi["mtime"]}]}}
-        config = {"0": {"filelist": [fi]}}
+        config = {"0": {"filelist": [fi], "check_timestamps": check_timestamps, "raw_patches": raw_patches}}
         nodenum = 0
         terminal_id = "output"
         retval = process_template(template, config, target=(nodenum, terminal_id))

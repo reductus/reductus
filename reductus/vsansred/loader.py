@@ -156,14 +156,35 @@ def data_as(field, units):
         value = converter(field[()], units)
         return value
 
-def load_detector(dobj, load_data=True):
+def load_detector(dobj, load_data=True, raw_patches=None):
     # load detector information from a NeXuS group
+
+    if raw_patches is None:
+        raw_patches = {}
+
+    # Get relative HDF5 path (e.g., "entry/instrument/detector_front" or "instrument/detector_front")
+    det_path = dobj.name.lstrip('/')
+
     detector = OrderedDict()
     for k in dobj:
         if not load_data and k == 'data':
             continue
         subobj = dobj[k]
-        detector[k] = OrderedDict(value=subobj[()], attrs=OrderedDict(_toDictItem(subobj.attrs)))
+
+        # Build potential patch path keys
+        patch_key = f"{det_path}/{k}"
+        # Alternative path format without leading entry name (e.g. "instrument/detector_front/distance")
+        short_patch_key = patch_key.split('/', 1)[-1] if '/' in det_path else patch_key
+
+        # Check raw_patches first; fall back to raw HDF5 read if not patched
+        if patch_key in raw_patches:
+            val = raw_patches[patch_key]
+        elif short_patch_key in raw_patches:
+            val = raw_patches[short_patch_key]
+        else:
+            val = subobj[()]
+
+        detector[k] = OrderedDict(value=val, attrs=OrderedDict(_toDictItem(subobj.attrs)))
         if hasattr(subobj, 'shape'):
             detector[k]['attrs']['shape'] = subobj.shape
         if hasattr(subobj, 'dtype'):
@@ -175,7 +196,8 @@ def load_metadata(
         multiplicity: int = 1,
         i: int = 0,
         metadata_lookup_table: dict[str, tuple[str] | str] = metadata_lookup,
-        unit_specifiers_table: dict[str, str] = unit_specifiers
+        unit_specifiers_table: dict[str, str] = unit_specifiers,
+        raw_patches: dict = None
 ):
     """
     Find all metadata in an HDF5 group/entry using metadata_lookup for the potential locations and its local key.
@@ -185,13 +207,24 @@ def load_metadata(
     :param i: The array index to look for scalar quantities that are in arrays.
     :param metadata_lookup_table: A dictionary mapping local metadata keys to a tuple of potential HDF5 locations.
     :param unit_specifiers_table: A dictionary mapping local metadata keys to units the value should scale to.
+    :param raw_patches: A dictionary of metadata to manually patch as input
     """
+
+    if raw_patches is None:
+        raw_patches = {}
+
     metadata = OrderedDict()
     for mkey, locales in metadata_lookup_table.items():
         # As the location changes in the raw data, the locales change. Step through all.
         if not isinstance(locales, tuple):
             locales = (locales,)
         for locale in locales:
+
+            clean_locale = locale.lstrip('/')
+            if clean_locale in raw_patches:
+                metadata[mkey] = raw_patches[clean_locale]
+                break
+
             field = entry.get(locale, None)
             if field is not None:
                 if mkey in unit_specifiers_table:
@@ -216,10 +249,17 @@ def load_metadata(
                 metadata[mkey] = metadata.get(mkey, None)
     return metadata
 
-def readVSANSNexuz(input_file, file_obj=None, metadata_lookup=metadata_lookup, load_data=True):
+def readVSANSNexuz(input_file, file_obj=None, metadata_lookup=metadata_lookup, load_data=True, raw_patches=None):
     """
     Load all entries from the NeXus file into sans data sets.
     """
+
+    if raw_patches is None:
+        raw_patches = {}
+    elif isinstance(raw_patches, (str, list, tuple)):
+        raw_patches = _parse_raw_patches(raw_patches)
+
+
     datasets = []
     file = h5_open_zip(input_file, file_obj)
     for entryname, entry in file.items():
@@ -236,11 +276,11 @@ def readVSANSNexuz(input_file, file_obj=None, metadata_lookup=metadata_lookup, l
         multiplicity = 1
         for i in range(multiplicity):
             metadata = load_metadata(
-                entry, multiplicity, i, metadata_lookup_table=metadata_lookup, unit_specifiers_table=unit_specifiers
+                entry, multiplicity, i, metadata_lookup_table=metadata_lookup, unit_specifiers_table=unit_specifiers, raw_patches=raw_patches
             )
             #print(metadata)
             detector_keys = [n for n in entry['instrument'] if n.startswith('detector_')]
-            detectors = dict([(k, load_detector(entry['instrument'][k], load_data=load_data)) for k in detector_keys])
+            detectors = dict([(k, load_detector(entry['instrument'][k], load_data=load_data, raw_patches=raw_patches)) for k in detector_keys])
             metadata['entry'] = entryname
             if metadata.get('sample.labl', None) is not None and metadata.get('run.configuration', None) is not None:
                 metadata['sample.description'] = metadata["sample.labl"].replace(metadata["run.configuration"], "")
@@ -267,3 +307,51 @@ def _toDictItem(obj, convert_bytes=False):
     elif isinstance(obj, bytes) and convert_bytes == True:
         obj = obj.decode()
     return obj
+
+
+def _parse_raw_patches(patches_input):
+    """
+    Converts text (comma-separated or multi-line), dicts, or lists into a
+    typed dictionary for raw HDF5 path overrides.
+    """
+    if not patches_input:
+        return {}
+    if isinstance(patches_input, dict):
+        return {k.lstrip('/'): v for k, v in patches_input.items()}
+
+    patches = {}
+
+    # Standardize string inputs by splitting on both newlines and commas
+    if isinstance(patches_input, str):
+        # Replace newlines with commas so we can handle both cleanly
+        normalized_str = patches_input.replace('\n', ',')
+        lines = [item for item in normalized_str.split(',') if item.strip()]
+    else:
+        lines = patches_input
+
+    for line in lines:
+        if isinstance(line, (list, tuple)) and len(line) == 2:
+            k, v = line
+        elif isinstance(line, str) and (':' in line or '=' in line):
+            delimiter = ':' if ':' in line else '='
+            k, v = line.split(delimiter, 1)
+        else:
+            continue
+
+        key = str(k).strip().lstrip('/')
+        val = str(v).strip()
+
+        # Type conversion (booleans, floats, ints)
+        if val.lower() == 'true':
+            val = True
+        elif val.lower() == 'false':
+            val = False
+        else:
+            try:
+                val = float(val) if ('.' in val or 'e' in val.lower()) else int(val)
+            except ValueError:
+                pass
+
+        patches[key] = val
+
+    return patches
