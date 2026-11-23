@@ -42,9 +42,6 @@ export const SourceList = {
     refreshAll() {
       this.datasources.forEach((d,i) => this.refresh(i));
     },
-    set_treedata(index, treedata) {
-      this.$refs.sources[index].set_treedata(treedata);
-    },
     get_checked() {
       return this.$refs.sources.map(s => s.get_checked());
     },

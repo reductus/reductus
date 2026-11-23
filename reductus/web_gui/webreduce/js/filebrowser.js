@@ -43,7 +43,6 @@ const filebrowser = {
         treedata
       };
       this.updateDataSource(datasourceIndex, datasource);
-      this.$refs.sourcelist.set_treedata(datasourceIndex, treedata);
       updateHistory(this);
     },
     
