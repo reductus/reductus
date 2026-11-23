@@ -47,7 +47,7 @@ instrument.load_file = load_sans;
 instrument.default_categories = [
   [["run.configuration"]],
   [["analysis.intent"]],
-  [["sample.name"]]
+  [["sample.name"], ["run.filename"]]
 ];
 instrument.categories = structuredClone(instrument.default_categories);
 // Don't show a tree level that repeats its parent (DIV files have configuration and intent "DIV")
