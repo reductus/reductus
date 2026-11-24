@@ -121,7 +121,7 @@ async function categorizeFiles(files_metadata, datasource, path) {
   var instrument_id = editor._instrument_id;
   var instrument = editor.instruments[instrument_id];
   var categories = instrument.categories;
-  var treedata = file_objs_to_tree(file_objs, categories, datasource, instrument.collapse_repeated_categories);
+  var treedata = file_objs_to_tree(file_objs, categories, datasource);
   const node_list = [];
   const leaf_list = [];
   const parents = {};
@@ -150,7 +150,7 @@ async function categorizeFiles(files_metadata, datasource, path) {
 }
 
 // categorizers are callbacks that take an info object and return category string
-function file_objs_to_tree(file_objs, categories, datasource, collapse_repeated = false) {
+function file_objs_to_tree(file_objs, categories, datasource) {
   // file_obj should always be a list of entries
   var tree = { id: "root", children: [] };
   var branch;
@@ -180,10 +180,6 @@ function file_objs_to_tree(file_objs, categories, datasource, collapse_repeated 
 
       for (var c = 0; c < categories.length - 1; c++) {
         category = gen.next().value;
-        if (collapse_repeated && branch.text === category) {
-          // skip a level that just repeats its parent's label (e.g. DIV > DIV)
-          continue;
-        }
         id = parent + ":" + category;
         let subindex = branch.children.findIndex(c => (c.id == id));
         if (subindex < 0) {

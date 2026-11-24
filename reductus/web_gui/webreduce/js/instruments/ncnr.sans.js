@@ -49,7 +49,5 @@ instrument.default_categories = [
   [["analysis.intent"]],
   [["sample.name"], ["run.filename"]]
 ];
-instrument.categories = structuredClone(instrument.default_categories);
-// Don't show a tree level that repeats its parent (DIV files have configuration and intent "DIV")
 instrument.collapse_repeated_categories = true;
 instrument.decorators = [add_viewer_link, add_counts];
