@@ -2636,7 +2636,12 @@ def single_configuration(
 
     template = Template(**template_def)
 
-    div_files = [f for f in filelist if re.search("((DIV|div)(.(h5|hdf5|hdf))?)$", f) is not None] if filelist else []
+    div_files = [f for f in filelist if
+                 re.search("((DIV|div)(.(h5|hdf5|hdf))?)$", f['path']) is not None] if filelist else []
+    mask_files = [f for f in filelist if
+                  re.search("((MASK|mask)(.(h5|hdf5|hdf))?)$", f['path']) is not None] if filelist else []
+    # Remove div and mask files from the main filelist
+    filelist = [f for f in filelist if f not in div_files and f not in mask_files]
 
     config = {"0": {"filelist": filelist}, "8": {"filelist": div_files}}
     terminal_id = "output"
