@@ -72,16 +72,17 @@ def _is_hdf5(fid):
     fid.seek(0)
     return head.startswith(b"\x89HDF") or head.startswith(b"PK")
 
-def _is_div_hdf5(fid, name=""):
+def _is_calibration_hdf5(fid, name, label, markers):
     """
-    Return True if the file object is a NeXus (HDF5) detector sensitivity file.
+    Return True if the file object is a NeXus (HDF5) calibration file of one kind.
 
-    NeXus DIV files have no distinguishing extension, so check the file name,
-    then the descriptive text stored in the file ("Sensitivity (DIV) created ...").
+    NeXus DIV and MASK files have no distinguishing extension, so check for
+    ``label`` in the file name, then for any of ``markers`` in the descriptive
+    text stored in the file (e.g. "Sensitivity (DIV) created ...").
     """
     if not _is_hdf5(fid):
         return False
-    if "DIV" in basename(name).upper():
+    if label in basename(name).upper():
         return True
     from reductus.dataflow.lib.h5_open import h5_open_zip
     try:
@@ -97,8 +98,7 @@ def _is_div_hdf5(fid, name=""):
                 text = field[()]
                 if isinstance(text, bytes):
                     text = text.decode("utf-8", "replace")
-                text = str(text)
-                if "(DIV)" in text or "Sensitivity" in text:
+                if any(marker in str(text) for marker in markers):
                     return True
         return False
     except Exception:
@@ -106,6 +106,18 @@ def _is_div_hdf5(fid, name=""):
     finally:
         f.close()
         fid.seek(0)
+
+def _is_div_hdf5(fid, name=""):
+    """Return True if the file object is a NeXus (HDF5) detector sensitivity file."""
+    return _is_calibration_hdf5(fid, name, "DIV", ("(DIV)", "Sensitivity"))
+
+def _is_mask_hdf5(fid, name=""):
+    """Return True if the file object is a NeXus (HDF5) detector mask file."""
+    return _is_calibration_hdf5(fid, name, "MASK", ("MASK file", "(MASK)"))
+
+def _is_mask_file(fid, name=""):
+    """Return True for a VAX format (*.MASK) or NeXus (HDF5) detector mask file."""
+    return name.upper().endswith(".MASK") or _is_mask_hdf5(fid, name)
 
 @cache
 @module
@@ -157,6 +169,42 @@ def LoadDIV(filelist=None, variance=0.0001):
         output.append(sens)
     return output
 
+def _load_masks(filelist):
+    """
+    Load detector mask files (VAX format *.MASK or NeXus HDF5) into SansData objects.
+
+    The mask is stored as the data (1 for masked pixels, 0 otherwise) so that it
+    can be listed and viewed like any other 2D detector data set.
+    """
+    from reductus.dataflow.fetch import url_get
+    from .sans_vaxformat import readMask
+    from .loader import _read_nexus_sensitivity
+
+    output = []
+    for fileinfo in filelist or []:
+        name = basename(fileinfo['path'])
+        fid = BytesIO(url_get(fileinfo, mtime_check=False))
+        if _is_hdf5(fid):
+            # same layout as the NeXus sensitivity files: the detector data of the first entry
+            mask = _read_nexus_sensitivity(name, fid)
+        else:
+            mask = readMask(fid)
+        mask = np.asarray(mask, dtype="float64")
+        metadata = OrderedDict([
+            ("run.filename", name),
+            ("analysis.groupid", -1),
+            ("analysis.intent", "MASK"),
+            ("analysis.filepurpose", "Mask"),
+            ("run.experimentScanID", name),
+            ("sample.description", "MASK"),
+            ("sample.name", name),
+            ("entry", "entry"),
+            ("sample.labl", "MASK"),
+            ("run.configuration", "MASK"),
+        ])
+        output.append(SansData(data=Uncertainty(mask, np.zeros_like(mask)), metadata=metadata))
+    return output
+
 @cache
 @module
 def LoadRawSANS(filelist=None, check_timestamps=True):
@@ -190,6 +238,13 @@ def LoadRawSANS(filelist=None, check_timestamps=True):
                 RawSANSData(metadata=sens.metadata,
                             detectors={"detector": {"data": {"value": sens.data}}})
                 for sens in LoadDIV([fileinfo])
+            ]
+        elif _is_mask_file(fid, name):
+            fid.seek(0)
+            entries = [
+                RawSANSData(metadata=mask.metadata,
+                            detectors={"detector": {"data": {"value": mask.data}}})
+                for mask in _load_masks([fileinfo])
             ]
         else:
             entries = readSANSNexuz(name, fid)
