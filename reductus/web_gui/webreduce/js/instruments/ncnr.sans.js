@@ -49,5 +49,5 @@ instrument.default_categories = [
   [["analysis.intent"]],
   [["sample.name"], ["run.filename"]]
 ];
-instrument.collapse_repeated_categories = true;
+instrument.categories = structuredClone(instrument.default_categories);
 instrument.decorators = [add_viewer_link, add_counts];
