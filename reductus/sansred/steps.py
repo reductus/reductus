@@ -6,8 +6,7 @@ Set of reduction steps for SANS reduction.
 """
 
 import itertools
-import os
-import pathlib
+import re
 from posixpath import basename
 from copy import copy, deepcopy
 from io import BytesIO
@@ -2582,7 +2581,7 @@ def single_configuration(
 
     template = Template(**template_def)
 
-    div_files = [f for f in filelist if f['path'].lower().endswith(".div")] if filelist else []
+    div_files = [f for f in filelist if re.search("((DIV|div)(.(h5|hdf5|hdf))?)$", f) is not None] if filelist else []
 
     config = {"0": {"filelist": filelist}, "8": {"filelist": div_files}}
     terminal_id = "output"
