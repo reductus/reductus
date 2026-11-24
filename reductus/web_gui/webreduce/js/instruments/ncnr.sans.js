@@ -31,8 +31,8 @@ function load_sans(load_params, db, noblock, return_type) {
 
 var NEXUS_REGEXP = /\.nxs\.[^\.\/]+(\.zip)?$/
 // VAX-format sensitivity files (*.DIV) and NeXus/HDF5 ones (e.g. Nexus_Plex_10NOV2020_DIV.hdf5)
-var DIV_REGEXP = /((\DIV|div)(\.(h5|hdf5|hdf))?)$/
-var MASK_REGEXP = /((\MASK|mask)(\.(h5|hdf5|hdf))?)$/
+var DIV_REGEXP = /((DIV|div)(\.(h5|hdf5|hdf))?)$/
+var MASK_REGEXP = /((MASK|mask)(\.(h5|hdf5|hdf))?)$/
 
 instrument.files_filter = function(x) {
   return (
