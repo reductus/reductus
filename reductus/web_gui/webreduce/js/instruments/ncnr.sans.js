@@ -45,8 +45,7 @@ instrument.files_filter = function(x) {
 
 instrument.load_file = load_sans;
 instrument.default_categories = [
-  [["run.configuration"]],
-  [["analysis.intent"]],
+  [["analysis.intent"], ["run.configuration"]],
   [["sample.name"], ["run.filename"]]
 ];
 instrument.categories = structuredClone(instrument.default_categories);
