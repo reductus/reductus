@@ -29,13 +29,14 @@ function load_sans(load_params, db, noblock, return_type) {
   return calc_params;
 }
 
-var NEXUZ_REGEXP = /\.nxz\.[^\.\/]+$/
 var NEXUS_REGEXP = /\.nxs\.[^\.\/]+(\.zip)?$/
-var DIV_REGEXP = /\.DIV$/
+// VAX-format sensitivity files (*.DIV) and NeXus/HDF5 ones (e.g. Nexus_Plex_10NOV2020_DIV.hdf5)
+var DIV_REGEXP = /((DIV|div)(\.(h5|hdf5|hdf))?)$/
+var MASK_REGEXP = /((MASK|mask)(\.(h5|hdf5|hdf))?)$/
 
 instrument.files_filter = function(x) {
   return (
-    ((NEXUS_REGEXP.test(x) || DIV_REGEXP.test(x)) &&
+    ((NEXUS_REGEXP.test(x) || DIV_REGEXP.test(x) || MASK_REGEXP.test(x)) &&
         (/^(fp_)/.test(x) == false) &&
         (/^rapidscan/.test(x) == false) &&
         (/^scripted_findpeak/.test(x) == false))
@@ -44,9 +45,8 @@ instrument.files_filter = function(x) {
 
 instrument.load_file = load_sans;
 instrument.default_categories = [
-  [["run.configuration"]],
-  [["analysis.intent"]],
-  [["sample.name"]]
+  [["analysis.intent"], ["run.configuration"]],
+  [["sample.name"], ["run.filename"]]
 ];
 instrument.categories = structuredClone(instrument.default_categories);
 instrument.decorators = [add_viewer_link, add_counts];
