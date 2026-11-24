@@ -30,11 +30,13 @@ function load_vsans(load_params, db, noblock, return_type) {
 }
 
 var NEXUS_REGEXP = /\.nxs\.[^\.\/]+(\.zip)?$/
-var DIV_REGEXP = /DIV\.h5$/
+// NeXus sensitivity (DIV) and mask (MASK) files, e.g. PLEX_DIV.h5, DEFAULT_MASK.h5 or Default.MASK.h5
+var DIV_REGEXP = /DIV\.(h5|hdf5|hdf)$/i
+var MASK_REGEXP = /MASK\.(h5|hdf5|hdf)$/i
 
 instrument.files_filter = function(x) {
   return (
-    ((NEXUS_REGEXP.test(x) || DIV_REGEXP.test(x)) &&
+    ((NEXUS_REGEXP.test(x) || DIV_REGEXP.test(x) || MASK_REGEXP.test(x)) &&
         (/^(fp_)/.test(x) == false) &&
         (/^rapidscan/.test(x) == false) &&
         (/^scripted_findpeak/.test(x) == false))

@@ -72,16 +72,17 @@ def _is_hdf5(fid):
     fid.seek(0)
     return head.startswith(b"\x89HDF") or head.startswith(b"PK")
 
-def _is_div_hdf5(fid, name=""):
+def _is_calibration_hdf5(fid, name, label, markers):
     """
-    Return True if the file object is a NeXus (HDF5) detector sensitivity file.
+    Return True if the file object is a NeXus (HDF5) calibration file of one kind.
 
-    NeXus DIV files have no distinguishing extension, so check the file name,
-    then the descriptive text stored in the file ("Sensitivity (DIV) created ...").
+    NeXus DIV and MASK files have no distinguishing extension, so check for
+    ``label`` in the file name, then for any of ``markers`` in the descriptive
+    text stored in the file (e.g. "Sensitivity (DIV) created ...").
     """
     if not _is_hdf5(fid):
         return False
-    if "DIV" in basename(name).upper():
+    if label in basename(name).upper():
         return True
     from reductus.dataflow.lib.h5_open import h5_open_zip
     try:
@@ -97,8 +98,7 @@ def _is_div_hdf5(fid, name=""):
                 text = field[()]
                 if isinstance(text, bytes):
                     text = text.decode("utf-8", "replace")
-                text = str(text)
-                if "(DIV)" in text or "Sensitivity" in text:
+                if any(marker in str(text) for marker in markers):
                     return True
         return False
     except Exception:
@@ -106,6 +106,18 @@ def _is_div_hdf5(fid, name=""):
     finally:
         f.close()
         fid.seek(0)
+
+def _is_div_hdf5(fid, name=""):
+    """Return True if the file object is a NeXus (HDF5) detector sensitivity file."""
+    return _is_calibration_hdf5(fid, name, "DIV", ("(DIV)", "Sensitivity"))
+
+def _is_mask_hdf5(fid, name=""):
+    """Return True if the file object is a NeXus (HDF5) detector mask file."""
+    return _is_calibration_hdf5(fid, name, "MASK", ("MASK file", "(MASK)"))
+
+def _is_mask_file(fid, name=""):
+    """Return True for a VAX format (*.MASK) or NeXus (HDF5) detector mask file."""
+    return name.upper().endswith(".MASK") or _is_mask_hdf5(fid, name)
 
 @cache
 @module
@@ -157,6 +169,42 @@ def LoadDIV(filelist=None, variance=0.0001):
         output.append(sens)
     return output
 
+def _load_masks(filelist):
+    """
+    Load detector mask files (VAX format *.MASK or NeXus HDF5) into SansData objects.
+
+    The mask is stored as the data (1 for masked pixels, 0 otherwise) so that it
+    can be listed and viewed like any other 2D detector data set.
+    """
+    from reductus.dataflow.fetch import url_get
+    from .sans_vaxformat import readMask
+    from .loader import _read_nexus_sensitivity
+
+    output = []
+    for fileinfo in filelist or []:
+        name = basename(fileinfo['path'])
+        fid = BytesIO(url_get(fileinfo, mtime_check=False))
+        if _is_hdf5(fid):
+            # same layout as the NeXus sensitivity files: the detector data of the first entry
+            mask = _read_nexus_sensitivity(name, fid)
+        else:
+            mask = readMask(fid)
+        mask = np.asarray(mask, dtype="float64")
+        metadata = OrderedDict([
+            ("run.filename", name),
+            ("analysis.groupid", -1),
+            ("analysis.intent", "MASK"),
+            ("analysis.filepurpose", "Mask"),
+            ("run.experimentScanID", name),
+            ("sample.description", "MASK"),
+            ("sample.name", name),
+            ("entry", "entry"),
+            ("sample.labl", "MASK"),
+            ("run.configuration", "MASK"),
+        ])
+        output.append(SansData(data=Uncertainty(mask, np.zeros_like(mask)), metadata=metadata))
+    return output
+
 @cache
 @module
 def LoadRawSANS(filelist=None, check_timestamps=True):
@@ -190,6 +238,13 @@ def LoadRawSANS(filelist=None, check_timestamps=True):
                 RawSANSData(metadata=sens.metadata,
                             detectors={"detector": {"data": {"value": sens.data}}})
                 for sens in LoadDIV([fileinfo])
+            ]
+        elif _is_mask_file(fid, name):
+            fid.seek(0)
+            entries = [
+                RawSANSData(metadata=mask.metadata,
+                            detectors={"detector": {"data": {"value": mask.data}}})
+                for mask in _load_masks([fileinfo])
             ]
         else:
             entries = readSANSNexuz(name, fid)
@@ -1016,7 +1071,7 @@ def _circular_average_igor(data, mask, bin_width=1):
 
 @nocache
 @module
-def circular_av_new(data_sets, q_min=None, q_max=None, q_step=None, mask_width=3, dQ_method='none', bin_method='IGOR', bin_width=1):
+def circular_av_new(data_sets, q_min=None, q_max=None, q_step=None, mask=None, dQ_method='none', bin_method='IGOR', bin_width=1):
     """
     Using a circular average, it converts data to 1D (Q vs. I)
 
@@ -1031,7 +1086,7 @@ def circular_av_new(data_sets, q_min=None, q_max=None, q_step=None, mask_width=3
 
     q_step (float): step size for Q bins (defaults to minimum qx step; reductus binning only)
 
-    mask_width (int): number of pixels to mask around the perimeter of the detector
+    mask (int): pixel space array of pixels that should be excluded from the reduction process
 
     dQ_method (opt:none|IGOR|statistical) : method for calculating dQ
 
@@ -1054,6 +1109,7 @@ def circular_av_new(data_sets, q_min=None, q_max=None, q_step=None, mask_width=3
     | 2019-09-05 Adding mask_width as a temporary way to handle basic masking
     | 2019-12-11 Brian Maranville adding dQ_method opts
     | 2026-10-20 Jeff Krzywon adding IGOR binning, fixed oversampled variance
+    | 2026-11-24 Jeff Krzywon Replace mask_width with a mask array
     """
 
     nominal_output = []
@@ -1062,12 +1118,11 @@ def circular_av_new(data_sets, q_min=None, q_max=None, q_step=None, mask_width=3
 
     for data in data_sets:
         # adding simple width-based mask around the perimeter:
-        mask = np.zeros_like(data.q, dtype=bool)
-        mask_width = abs(mask_width)
-        if (mask_width > 0):
-            mask[mask_width:-mask_width, mask_width:-mask_width] = True
-        else:
-            mask[:] = True
+        mask = np.asarray(mask, dtype=bool) if mask is not None else None
+        if mask is None:
+            # If no mask is sent, remove the outer 2 pixels from the circular average
+            mask = np.zeros_like(data, dtype=bool)
+            mask[3:-3, 3:-3] = True
 
         # calculate the change in q that corresponds to a change in pixel of 1
         if data.qx is None:
@@ -2531,7 +2586,7 @@ def single_configuration(
                 "config": {"correct_solid_angle": True}
             },
             {"x": 1190, "y": 35, "title": "Circular Averaged Data (Unmasked)", "module": "ncnr.sans.circular_av_new",
-                "config": {"dQ_method": "IGOR", "mask_width": 3, "bin_method": "IGOR"}
+                "config": {"dQ_method": "IGOR", "bin_method": "IGOR"}
             },
             {"x": 1375, "y": 35, "title": "Circular Averaged Data (Masked)", "module": "ncnr.sans.mask_1d_data", "text_width": 93,
                 "config": {"mask_indices": [mask]}
@@ -2581,9 +2636,20 @@ def single_configuration(
 
     template = Template(**template_def)
 
-    div_files = [f for f in filelist if re.search("((DIV|div)(.(h5|hdf5|hdf))?)$", f) is not None] if filelist else []
+    div_files = [f for f in filelist if
+                 re.search("((DIV|div)(.(h5|hdf5|hdf))?)$", f['path']) is not None] if filelist else []
+    mask_files = [f for f in filelist if
+                  re.search("((MASK|mask)(.(h5|hdf5|hdf))?)$", f['path']) is not None] if filelist else []
+    # Remove div and mask files from the main filelist
+    filelist = [f for f in filelist if f not in div_files and f not in mask_files]
 
-    config = {"0": {"filelist": filelist}, "8": {"filelist": div_files}}
+    # Create a singular mask using all mask files available
+    mask_data = _load_masks(mask_files)
+    mask_array = np.zeros_like(filelist[0].data.q, dtype=bool)
+    for mask in mask_files:
+        mask_array = np.logical_or(mask_array, mask.data)
+
+    config = {"0": {"filelist": filelist}, "8": {"filelist": div_files}, "11": {"mask": mask_array}}
     terminal_id = "output"
 
     output_lookup_table = {value.get("title", "None"):i for i, value in enumerate(template_def.get('modules', [{}]))}

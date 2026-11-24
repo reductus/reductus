@@ -1,6 +1,7 @@
 from posixpath import basename, join
 from copy import copy, deepcopy
 from io import BytesIO
+import re
 import sys
 import warnings
 import numpy as np
@@ -78,6 +79,20 @@ def hidden(action):
     action.visible = False
     return action
 
+_CALIBRATION_FILE_PATTERN = re.compile(r"(DIV|div|MASK|mask)\.(h5|hdf5|hdf)$", re.IGNORECASE)
+
+def _calibration_file_type(path):
+    """
+    Identify NeXus detector sensitivity (DIV) and mask (MASK) files by name.
+
+    Returns (filepurpose, intent) for a calibration file, otherwise None.
+    """
+    match = _CALIBRATION_FILE_PATTERN.search(path)
+    if match is None:
+        return None
+    kind = match.group(1).upper()
+    return ("Sensitivity", "DIV") if kind == "DIV" else ("Mask", "MASK")
+
 @cache
 @module
 @hidden
@@ -109,11 +124,14 @@ def _LoadVSANS(filelist=None, check_timestamps=True):
         fid = BytesIO(url_get(fileinfo, mtime_check=check_timestamps))
         entries = readVSANSNexuz(name, fid)
         for entry in entries:
-            if fileinfo['path'].endswith("DIV.h5"):
-                print('div file...')
-                entry.metadata['analysis.filepurpose'] = "Sensitivity"
-                entry.metadata['analysis.intent'] = "DIV"
-                entry.metadata['sample.description'] = entry.metadata['run.filename']
+            calibration_type = _calibration_file_type(path)
+            if calibration_type is not None:
+                # Sensitivity (DIV) and mask files are listed by filename under
+                # their own purpose heading in the data tree
+                purpose, intent = calibration_type
+                entry.metadata['analysis.filepurpose'] = purpose
+                entry.metadata['analysis.intent'] = intent
+                entry.metadata['sample.description'] = entry.metadata.get('run.filename') or name
             fi = fileinfo.copy()
             fi['entries'] = [entry.metadata['entry']]
             entry.metadata['fileinfo'] = fi

@@ -113,3 +113,54 @@ def test_load_mixed_sans_files(div_file, nexus_file):
     for item, expected in zip(loaded, [div_values, nexus_values, div_values]):
         assert isinstance(item, SansData)
         np.testing.assert_array_equal(item.data.x, expected)
+
+
+def _border_mask():
+    mask = np.zeros((128, 128), dtype=np.uint8)
+    mask[:3] = mask[-3:] = 1
+    mask[:, :3] = mask[:, -3:] = 1
+    return mask
+
+
+@pytest.fixture
+def vax_mask_file(tmp_path):
+    mask = _border_mask()
+    path = tmp_path / 'DEFAULT.MASK'
+    path.write_bytes(b'\x7f\x00\x7f\x00' + mask.tobytes() + b'\0' * 508)
+    return {'source': 'local', 'path': path.as_posix()}, mask
+
+
+@pytest.fixture
+def nexus_mask_file(tmp_path):
+    import h5py
+
+    mask = _border_mask()
+    path = tmp_path / 'DefaultNexus_SANS_MASK_file.MASK.h5'
+    with h5py.File(path, 'w') as handle:
+        entry = handle.create_group('entry')
+        entry['title'] = 'This is a MASK file for NGB 10m SANS: SANS_MASK'
+        entry['instrument/detector/data'] = mask.astype('int32')
+    return {'source': 'local', 'path': path.as_posix()}, mask
+
+
+@pytest.mark.parametrize('fixture_name', ['vax_mask_file', 'nexus_mask_file'])
+def test_load_raw_mask(request, fixture_name):
+    info, expected = request.getfixturevalue(fixture_name)
+    loaded = LoadRawSANS([info])
+    assert len(loaded) == 1
+    raw = loaded[0]
+    assert isinstance(raw, RawSANSData)
+    np.testing.assert_array_equal(raw.detectors['detector']['data']['value'].x, expected)
+    # These fields determine how the file is listed in the data tree
+    assert raw.metadata['run.configuration'] == 'MASK'
+    assert raw.metadata['analysis.intent'] == 'MASK'
+    assert raw.metadata['sample.name'] == info['path'].rsplit('/', 1)[-1]
+
+
+@pytest.mark.parametrize('fixture_name', ['vax_mask_file', 'nexus_mask_file'])
+def test_mask_is_viewable(request, fixture_name):
+    info, expected = request.getfixturevalue(fixture_name)
+    loaded = LoadSANS([info])
+    assert len(loaded) == 1
+    assert loaded[0].get_plottable()['type'] == '2d'
+    np.testing.assert_array_equal(loaded[0].data.x, expected)
