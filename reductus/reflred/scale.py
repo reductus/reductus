@@ -32,6 +32,7 @@ def apply_intensity_norm(data, base, align_by=None):
     # have zeros in it.  Ignore those channels.
     I, varI = err1d.div(data.v, data.dv**2, S + (S==0), varS)
     data.v, data.dv = I, np.sqrt(varI)
+    data.vunits = "unitless"
 
 def calculate_number(data, base, time_uncertainty=1e-6):
     """ returns the measured base flux * count time for each point """
